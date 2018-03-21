@@ -58,7 +58,8 @@ func prepareGCP() {
 		log.Printf(ctx, "Failed to get client: %s", err)
 	}
 	sqladminSvc, err := sqladmin.New(client)
-	dbSvc := sqladminSvc.Databases
+	_ = sqladminSvc
+	_ = project
 
 }
 
