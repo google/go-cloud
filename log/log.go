@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"os"
 
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 // TODO(vsekhar): make this thread safe.

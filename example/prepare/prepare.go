@@ -21,7 +21,7 @@ import (
 	"golang.org/x/oauth2/google"
 	sqladmin "google.golang.org/api/sqladmin/v1beta4"
 
-	"github.com/vsekhar/go-cloud/log"
+	"github.com/google/go-cloud/log"
 )
 
 var ctx = context.Background()

@@ -19,10 +19,10 @@ import (
 	"flag"
 	"io/ioutil"
 
-	"github.com/vsekhar/go-cloud/config"
-	"github.com/vsekhar/go-cloud/database/sql"
-	"github.com/vsekhar/go-cloud/io"
-	"github.com/vsekhar/go-cloud/log"
+	"github.com/google/go-cloud/config"
+	"github.com/google/go-cloud/database/sql"
+	"github.com/google/go-cloud/io"
+	"github.com/google/go-cloud/log"
 )
 
 var configName = flag.String("config", "", "configuration service and name, e.g. 'local://config.json'")

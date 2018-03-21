@@ -25,8 +25,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
-	cloud "github.com/vsekhar/go-cloud"
-	cloudaws "github.com/vsekhar/go-cloud/platforms/aws"
+	cloud "github.com/google/go-cloud"
+	cloudaws "github.com/google/go-cloud/platforms/aws"
 )
 
 const s3ServiceName = "s3"

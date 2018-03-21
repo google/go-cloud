@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 
 	"github.com/fsnotify/fsnotify"
-	cloud "github.com/vsekhar/go-cloud"
-	"github.com/vsekhar/go-cloud/io"
+	cloud "github.com/google/go-cloud"
+	"github.com/google/go-cloud/io"
 )
 
 const serviceName = "local"

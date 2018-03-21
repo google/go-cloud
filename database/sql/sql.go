@@ -18,7 +18,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 
-	"github.com/vsekhar/go-cloud"
+	"github.com/google/go-cloud"
 )
 
 var drivers map[string]driver.DriverContext

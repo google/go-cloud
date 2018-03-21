@@ -51,7 +51,7 @@ import (
 	"context"
 	"fmt"
 
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 // BlobProvider is passed to RegisterBlobProvider to add a new blob storage

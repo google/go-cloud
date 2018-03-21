@@ -19,7 +19,7 @@ import (
 	baseio "io"
 	"os"
 
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 const localServiceName = "local"

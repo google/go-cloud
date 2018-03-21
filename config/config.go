@@ -17,7 +17,7 @@ package config
 import (
 	"context"
 
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 var configHandlers = make(map[string]Provider)

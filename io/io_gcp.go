@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	"cloud.google.com/go/storage"
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 const gcpServiceName = "gs"

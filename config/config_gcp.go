@@ -27,8 +27,8 @@ import (
 	"golang.org/x/oauth2/google"
 	runtimeconfig "google.golang.org/api/runtimeconfig/v1beta1"
 
-	cloud "github.com/vsekhar/go-cloud"
-	"github.com/vsekhar/go-cloud/platforms/gcp"
+	cloud "github.com/google/go-cloud"
+	"github.com/google/go-cloud/platforms/gcp"
 )
 
 const grcServiceName = "grc"

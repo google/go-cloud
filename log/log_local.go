@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	cloud "github.com/vsekhar/go-cloud"
+	cloud "github.com/google/go-cloud"
 )
 
 const localServiceName = "local"

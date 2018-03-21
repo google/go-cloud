@@ -24,9 +24,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 
-	cloud "github.com/vsekhar/go-cloud"
-	"github.com/vsekhar/go-cloud/log"
-	cloudaws "github.com/vsekhar/go-cloud/platforms/aws"
+	cloud "github.com/google/go-cloud"
+	"github.com/google/go-cloud/log"
+	cloudaws "github.com/google/go-cloud/platforms/aws"
 )
 
 const ssmServiceName = "ssm"
