@@ -54,6 +54,10 @@ type Blob interface {
 	NewWriter(ctx context.Context) (BlobWriter, error)
 }
 
+// BlobProvider is passed to RegisterBlobProvider to add a new blob storage
+// implementations to the library.
+type BlobProvider func(context.Context, string) (Blob, error)
+
 // RegisterBlobProvider registers a BlobProvider for the given named service.
 func RegisterBlobProvider(service string, f BlobProvider) {
 	blobProviders[service] = f

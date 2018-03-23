@@ -54,10 +54,6 @@ import (
 	cloud "github.com/google/go-cloud"
 )
 
-// BlobProvider is passed to RegisterBlobProvider to add a new blob storage
-// implementations to the library.
-type BlobProvider func(context.Context, string) (Blob, error)
-
 var blobProviders = make(map[string]BlobProvider)
 
 // NewBlob returns a handle to a Blob represented by a path. Some example paths:
