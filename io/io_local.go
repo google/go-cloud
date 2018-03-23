@@ -87,6 +87,10 @@ func (fb *fileBlob) NewWriter(_ context.Context) (BlobWriter, error) {
 	return f, nil
 }
 
+func (fb *fileBlob) Remove(_ context.Context) error {
+	return os.Remove(fb.path)
+}
+
 type fileBlobReader struct {
 	file *os.File
 	r    baseio.Reader // limited

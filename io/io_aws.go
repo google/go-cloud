@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/awserr"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
 	cloud "github.com/google/go-cloud"
@@ -106,6 +107,25 @@ func (b *s3Blob) NewWriter(ctx context.Context) (BlobWriter, error) {
 		ret.errCh <- err
 	}()
 	return ret, nil
+}
+
+func (b *s3Blob) Remove(ctx context.Context) error {
+	req := s3Client.DeleteObjectRequest(&s3.DeleteObjectInput{
+		Bucket: aws.String(b.bucket),
+		Key:    aws.String(b.key),
+	})
+	_, err := req.Send()
+	if err != nil {
+		if arf, ok := err.(awserr.RequestFailure); ok {
+			switch arf.StatusCode() {
+			case 204, 404:
+				// not found, suppress error
+				return nil
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func reader(input *s3.GetObjectInput) (*s3Reader, error) {

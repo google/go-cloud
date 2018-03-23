@@ -52,6 +52,10 @@ type Blob interface {
 	// The caller must call Close after writing is complete to ensure all data is
 	// committed to storage.
 	NewWriter(ctx context.Context) (BlobWriter, error)
+
+	// Remove removes the Blob if it exists. Remove is a no-op if the Blob does
+	// not exist.
+	Remove(ctx context.Context) error
 }
 
 // BlobProvider is passed to RegisterBlobProvider to add a new blob storage

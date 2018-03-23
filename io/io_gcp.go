@@ -73,3 +73,7 @@ func (b *gcsBlob) NewRangeReader(ctx context.Context, offset, length int64) (Blo
 func (b *gcsBlob) NewWriter(ctx context.Context) (BlobWriter, error) {
 	return b.obj.NewWriter(ctx), nil
 }
+
+func (b *gcsBlob) Remove(ctx context.Context) error {
+	return b.obj.Delete(ctx)
+}
