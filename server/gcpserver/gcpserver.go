@@ -21,6 +21,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
 	"go.opencensus.io/exporter/stackdriver"
@@ -31,8 +32,9 @@ import (
 
 // Options holds information to initialize GCP.
 type Options struct {
-	ProjectID   gcp.ProjectID   // if empty, Init will try to fetch by itself.
-	TokenSource gcp.TokenSource // if nil, ADC is used.
+	ProjectID    gcp.ProjectID   // if empty, Init will try to fetch by itself.
+	TokenSource  gcp.TokenSource // if nil, ADC is used.
+	HealthChecks []health.Checker
 }
 
 // Init detects and initializes various clients and configurations for GCP apps.
@@ -43,9 +45,11 @@ func Init(o *Options) (*server.Server, gcp.ProjectID, gcp.TokenSource, error) {
 	ctx := context.Background()
 	var projectID gcp.ProjectID
 	var ts gcp.TokenSource
+	var checks []health.Checker
 	if o != nil {
 		projectID = gcp.ProjectID(o.ProjectID)
 		ts = gcp.TokenSource(o.TokenSource)
+		checks = o.HealthChecks
 	}
 	if projectID == "" || ts == nil {
 		creds, err := gcp.DefaultCredentials(ctx)
@@ -70,6 +74,7 @@ func Init(o *Options) (*server.Server, gcp.ProjectID, gcp.TokenSource, error) {
 	srv := server.New(&server.Options{
 		RequestLogger: reqlog,
 		TraceExporter: exporter,
+		HealthChecks:  checks,
 	})
 	return srv, projectID, ts, nil
 }
