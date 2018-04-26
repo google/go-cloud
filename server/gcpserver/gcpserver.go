@@ -25,7 +25,6 @@ import (
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
 	"go.opencensus.io/exporter/stackdriver"
-	_ "go.opencensus.io/trace"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
