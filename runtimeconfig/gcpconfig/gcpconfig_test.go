@@ -104,12 +104,12 @@ var (
 	startTime = time.Now().Unix()
 	jsonVar1  = &pb.Variable{
 		Name:       "greetings",
-		Contents:   &pb.Variable_Text{`{"hello": "hello"}`},
+		Contents:   &pb.Variable_Text{Text: `{"hello": "hello"}`},
 		UpdateTime: &tspb.Timestamp{Seconds: startTime},
 	}
 	jsonVar2 = &pb.Variable{
 		Name:       "greetings",
-		Contents:   &pb.Variable_Value{[]byte(`{"hello": "hola"}`)},
+		Contents:   &pb.Variable_Value{Value: []byte(`{"hello": "hola"}`)},
 		UpdateTime: &tspb.Timestamp{Seconds: startTime + 100},
 	}
 	jsonDataPtr *jsonData
@@ -151,7 +151,7 @@ func TestCustomDecode(t *testing.T) {
 	value := "hello world"
 	strVar := &pb.Variable{
 		Name:       "greetings",
-		Contents:   &pb.Variable_Value{[]byte(value)},
+		Contents:   &pb.Variable_Value{Value: []byte(value)},
 		UpdateTime: &tspb.Timestamp{Seconds: startTime},
 	}
 

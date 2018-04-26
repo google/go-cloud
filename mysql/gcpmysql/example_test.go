@@ -29,7 +29,7 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
-	authClient := gcp.HTTPClient{*oauth2.NewClient(ctx, creds.TokenSource)}
+	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
 	db, err := gcpmysql.Open(ctx, gcpmysql.NewCertSource(&authClient), &gcpmysql.Params{
 		// Replace these with your actual settings.
 		ProjectID: "example-project",
