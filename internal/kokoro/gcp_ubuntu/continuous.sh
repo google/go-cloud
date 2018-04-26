@@ -12,10 +12,10 @@ export GOPATH="$HOME/go"
 go get -u golang.org/x/vgo
 "$GOPATH/bin/vgo" version
 
-CODENAME_HOME="$GOPATH/src/codename"
-mkdir -p "$(dirname "$CODENAME_HOME")"
-cp -R . "$CODENAME_HOME"
-cd "$CODENAME_HOME"
+GO_CLOUD_HOME="$GOPATH/src/github.com/google/go-cloud"
+mkdir -p "$(dirname "$GO_CLOUD_HOME")"
+cp -R . "$GO_CLOUD_HOME"
+cd "$GO_CLOUD_HOME"
 
 CC=gcc "$GOPATH/bin/vgo" test -race -v -short ./...
 "$GOPATH/bin/vgo" vet ./...
