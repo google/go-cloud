@@ -4,7 +4,7 @@ set -eo pipefail
 # Display commands being run
 set -x
 # cd to project dir on Kokoro instance
-cd git/go-gcp/
+cd git/go-cloud/
 
 go version
 
