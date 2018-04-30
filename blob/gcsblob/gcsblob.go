@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcpblob provides an implementation of using blob API on GCS.
+// Package gcsblob provides an implementation of using blob API on GCS.
 // It is a wrapper around GCS client library.
-package gcpblob
+package gcsblob
 
 import (
 	"context"

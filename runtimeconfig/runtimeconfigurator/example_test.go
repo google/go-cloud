@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcpconfig_test
+package runtimeconfigurator_test
 
 import (
 	"context"
 	"log"
 
-	"github.com/google/go-cloud/runtimeconfig/gcpconfig"
+	"github.com/google/go-cloud/runtimeconfig/runtimeconfigurator"
 )
 
 // MyAppConfig is the unmarshaled type for configuration stored in key
@@ -29,13 +29,13 @@ type MyAppConfig struct {
 
 func ExampleClient_NewConfig() {
 	ctx := context.Background()
-	client, err := gcpconfig.NewClient(ctx)
+	client, err := runtimeconfigurator.NewClient(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer client.Close()
 
-	name := gcpconfig.ResourceName{
+	name := runtimeconfigurator.ResourceName{
 		ProjectID: "projectID",
 		Config:    "configName",
 		Variable:  "appConfig",

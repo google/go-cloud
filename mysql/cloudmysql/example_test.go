@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcpmysql_test
+package cloudmysql_test
 
 import (
 	"context"
 
 	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/mysql/gcpmysql"
+	"github.com/google/go-cloud/mysql/cloudmysql"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -30,7 +30,7 @@ func Example() {
 		panic(err)
 	}
 	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, err := gcpmysql.Open(ctx, gcpmysql.NewCertSource(&authClient), &gcpmysql.Params{
+	db, err := cloudmysql.Open(ctx, cloudmysql.NewCertSource(&authClient), &cloudmysql.Params{
 		// Replace these with your actual settings.
 		ProjectID: "example-project",
 		Region:    "us-central1",

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awsblob provides an implementation of using blob API on S3.
+// Package s3blob provides an implementation of using blob API on S3.
 // It is built on top of AWS Go SDK v2.
-package awsblob
+package s3blob
 
 import (
 	"context"

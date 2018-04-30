@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcpmysql provides connections to managed MySQL Cloud SQL instances.
-package gcpmysql
+// Package cloudmysql provides connections to managed MySQL Cloud SQL instances.
+package cloudmysql
 
 import (
 	"context"

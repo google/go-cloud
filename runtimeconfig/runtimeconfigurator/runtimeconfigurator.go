@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcpconfig provides a runtimeconfig driver implementation to read configurations from
+// Package runtimeconfigurator provides a runtimeconfig driver implementation to read configurations from
 // Cloud Runtime Configurator service and ability to detect changes and get updates.
 //
 // User constructs a Client that provides the gRPC connection, then use the client to construct any
 // number of runtimeconfig.Config objects using NewConfig method.
-package gcpconfig
+package runtimeconfigurator
 
 import (
 	"context"

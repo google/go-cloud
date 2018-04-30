@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package awsblob_test
+package s3blob_test
 
 import (
 	"bytes"
@@ -27,14 +27,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
-	"github.com/google/go-cloud/blob/awsblob"
+	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cmp/cmp"
 )
 
 const testBucket = "psp.test"
 
 var (
-	s3Bucket *awsblob.Bucket
+	s3Bucket *s3blob.Bucket
 	s3Client *s3.S3
 	uploader *s3manager.Uploader
 )
@@ -48,7 +48,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("error loading default config: %v", err)
 	}
-	if s3Bucket, err = awsblob.New(ctx, testBucket, &awsblob.BucketOptions{AWSConfig: &cfg}); err != nil {
+	if s3Bucket, err = s3blob.New(ctx, testBucket, &s3blob.BucketOptions{AWSConfig: &cfg}); err != nil {
 		log.Fatalf("error initializing S3 bucket: %v", err)
 	}
 	s3Client = s3.New(cfg)
@@ -76,7 +76,7 @@ func TestNewBucketNaming(t *testing.T) {
 
 	ctx := context.Background()
 	for i, test := range tests {
-		_, err := awsblob.New(ctx, test.name, nil)
+		_, err := s3blob.New(ctx, test.name, nil)
 		if test.valid && err != nil {
 			t.Errorf("%d) got %v, want nil", i, err)
 		} else if !test.valid && err == nil {
