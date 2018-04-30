@@ -25,5 +25,10 @@ CC=gcc "$GOPATH/bin/vgo" test -race -v -short ./...
 "$GOPATH/bin/vgo" vet ./...
 golint -set_exit_status ./...
 
+grep -R --exclude-dir ".git" --exclude-dir "internal" "DO NOT SUBMIT" .
+if [[ $? == 0 ]]; then
+  false
+fi
+
 # TODO(cflewis): Remove this once Kokoro moves to go 1.10.
 exit 0
