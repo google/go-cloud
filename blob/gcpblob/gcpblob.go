@@ -25,22 +25,28 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-cloud/gcp"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 var _ driver.Bucket = (*Bucket)(nil)
 
 // New returns a GCS Bucket. It handles creation of a client used to communicate
 // to GCS service.
-func New(ctx context.Context, opts *BucketOptions) (*Bucket, error) {
-	if err := validateBucketChar(opts.BucketName); err != nil {
+func New(ctx context.Context, bucketName string, opts *BucketOptions) (*Bucket, error) {
+	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
-	c, err := storage.NewClient(ctx)
+	var o []option.ClientOption
+	if opts != nil {
+		o = append(o, option.WithTokenSource(opts.TokenSource))
+	}
+	c, err := storage.NewClient(ctx, o...)
 	if err != nil {
 		return nil, err
 	}
-	return &Bucket{name: opts.BucketName, client: c}, nil
+	return &Bucket{name: bucketName, client: c}, nil
 }
 
 // Bucket represents a GCS bucket, which handles read, write and delete operations
@@ -52,8 +58,7 @@ type Bucket struct {
 
 // BucketOptions provides information settings during bucket initialization.
 type BucketOptions struct {
-	// BucketName is the name of a GCS bucket, it is required when initialize a bucket.
-	BucketName string
+	TokenSource gcp.TokenSource
 }
 
 // NewRangeReader returns a Reader that reads part of an object, reading at most
