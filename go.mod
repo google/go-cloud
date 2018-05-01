@@ -19,6 +19,7 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-sdk-go-v2 v0.0.0-20180423212408-584b9ab90028
+	github.com/dnaeon/go-vcr v0.0.0-20180323180743-b68d3628568e
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -42,4 +43,5 @@ require (
 	google.golang.org/appengine v1.0.0
 	google.golang.org/genproto v0.0.0-20180206005123-2b5a72b8730b
 	google.golang.org/grpc v1.10.0
+	gopkg.in/yaml.v2 v2.2.1
 )

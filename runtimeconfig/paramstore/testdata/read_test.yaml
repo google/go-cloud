@@ -1,0 +1,31 @@
+---
+version: 1
+rwmutex: {}
+interactions:
+- request:
+    body: '{"Path":"/"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "12"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.37 (go1.10.1; linux; amd64)
+      X-Amz-Date:
+      - 20180502T190917Z
+      X-Amz-Target:
+      - AmazonSSM.GetParametersByPath
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: "{\"Parameters\":[{\"Name\":\"cflewis-string-test\",\"Type\":\"String\",\"Value\":\"I
+      am a test with a Unicode character \U0001F926\",\"Version\":1}]}"
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Wed, 02 May 2018 19:09:18 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
