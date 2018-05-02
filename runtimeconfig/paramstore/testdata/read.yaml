@@ -1,0 +1,30 @@
+---
+version: 1
+rwmutex: {}
+interactions:
+- request:
+    body: '{"Path":"/"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "12"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.40 (go1.10.1; linux; amd64)
+      X-Amz-Date:
+      - 20180503T155016Z
+      X-Amz-Target:
+      - AmazonSSM.GetParametersByPath
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"Name":"cflewis-string-test","Type":"String","Value":"Bar","Version":1}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Thu, 03 May 2018 15:50:15 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
