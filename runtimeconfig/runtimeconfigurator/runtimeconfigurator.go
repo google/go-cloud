@@ -45,7 +45,6 @@ const (
 // List of authentication scopes required for using the Runtime Configurator API.
 var authScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
-	"https://www.googleapis.com/auth/cloudruntimeconfig",
 }
 
 // Client is a RuntimeConfigManager client.
