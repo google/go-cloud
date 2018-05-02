@@ -19,51 +19,44 @@ import (
 
 const region = "us-east-2"
 
-// TestWriteAndDelete attempts to write a value to Parameter Store and then delete it.
-func TestWriteAndDelete(t *testing.T) {
-	sess, done := newSession(t, "write")
-	defer done()
-	_, err := write(sess, "write-test", "test", "String", "foobar")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sess, done = newSession(t, "delete")
-	defer done()
-	if delete(sess, "write-test") != nil {
-		t.Error(err)
-	}
-}
-
-// TestRead attempts to read parameters from Parameter Store.
-func TestRead(t *testing.T) {
-	sess, done := newSession(t, "read")
-	defer done()
-
+// TestWriteReadDelete attempts to write, read and then delete parameters from Parameter Store.
+// This test can't be broken up into separate Test(Write|Read|Delete) tests
+// because the only way to make the test hermetic is for the test to be able
+// to perform all the functions.
+func TestWriteReadDelete(t *testing.T) {
 	tests := []struct {
-		name    string
-		path    string
-		want    string
-		wantErr bool
+		name, path, param string
+		wantErr           bool
 	}{
 		{
-			name: "Good path should return the parameter",
-			path: "/",
-			want: "cflewis-string-test",
+			name:  "Good path and param should pass",
+			path:  "/",
+			param: "paramstore-string-test",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			params, err := Read(sess, tc.path)
+			sess, done := newSession(t, "write_read_delete")
+			defer done()
+			_, err := writeParam(sess, tc.param, tc.name, "String", "foobar")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			params, err := ReadParam(sess, tc.path)
 			if err != nil {
 				t.Fatal(err)
 			}
 			switch {
 			case len(params) == 0:
 				t.Error("got 0 params, want 1")
-			case *params[0].Name != tc.want:
-				t.Errorf("want %v; got %v", tc.want, *params[0].Name)
+			case *params[0].Name != tc.param:
+				t.Errorf("want %v; got %v", tc.param, *params[0].Name)
+			}
+
+			if deleteParam(sess, tc.param) != nil {
+				t.Error(err)
 			}
 		})
 	}
@@ -82,6 +75,15 @@ func newRecorder(t *testing.T, filename string) (r *recorder.Recorder, done func
 	if err != nil {
 		t.Fatalf("unable to record: %v", err)
 	}
+
+	// Use a custom matcher as the default matcher looks for URLs and methods,
+	// which Amazon overloads as it isn't RESTful. Match against the Target
+	// instead.
+	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
+		return r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
+			r.URL.String() == i.URL &&
+			r.Method == i.Method
+	})
 
 	return r, func() { r.Stop(); scrub(path) }
 }
@@ -104,30 +106,24 @@ func newSession(t *testing.T, filename string) (sess *session.Session, done func
 
 // scrub removes *potentially* sensitive information from a golden file.
 // The golden file must only have a single interaction.
-// TODO(cflewis): Investigate possible ways to ensure this runs after
-// every test, otherwise a mistake could cause a golden file to
-// be pushed to review and become globally visible.
 func scrub(filepath string) error {
 	c, err := cassette.Load(filepath)
 	if err != nil {
 		return fmt.Errorf("unable to load golden file, do not commit to repository: %v", err)
 	}
 
-	// Always get the interaction that's going to get scrubbed.
-	c.Matcher = func(_ *http.Request, _ cassette.Request) bool { return true }
-	interaction, err := c.GetInteraction(nil)
-	if err != nil {
-		return fmt.Errorf("unable to load interaction, do not commit to repository: %v", err)
+	c.Mu.Lock()
+	for _, i := range c.Interactions {
+		i.Request.Headers.Del("Authorization")
+		i.Response.Headers.Del("X-Amzn-Requestid")
 	}
-
-	interaction.Request.Headers.Del("Authorization")
-	interaction.Response.Headers.Del("X-Amzn-Requestid")
+	c.Mu.Unlock()
 	c.Save()
 
 	return nil
 }
 
-func write(p client.ConfigProvider, name, desc, pType, value string) (int64, error) {
+func writeParam(p client.ConfigProvider, name, desc, pType, value string) (int64, error) {
 	svc := ssm.New(p)
 	resp, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(name),
@@ -143,7 +139,7 @@ func write(p client.ConfigProvider, name, desc, pType, value string) (int64, err
 	return *resp.Version, err
 }
 
-func delete(p client.ConfigProvider, name string) error {
+func deleteParam(p client.ConfigProvider, name string) error {
 	svc := ssm.New(p)
 	_, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)})
 	return err
