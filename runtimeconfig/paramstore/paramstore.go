@@ -16,19 +16,143 @@
 package paramstore
 
 import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/google/go-cloud/runtimeconfig"
+	"github.com/google/go-cloud/runtimeconfig/driver"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// ReadParam returns the parameters stored at the given path.
-// An error is returned if AWS is unreachable.
-func ReadParam(p client.ConfigProvider, path string) ([]*ssm.Parameter, error) {
-	svc := ssm.New(p)
-	resp, err := svc.GetParametersByPath(&ssm.GetParametersByPathInput{Path: aws.String(path)})
-	if err != nil {
-		return nil, err
+const defaultWait = 30 * time.Second
+
+// Client stores long-lived variables for connecting to Parameter Store.
+type Client struct {
+	sess client.ConfigProvider
+}
+
+// NewClient returns a constructed Client with the required values.
+func NewClient(ctx context.Context, p client.ConfigProvider) *Client {
+	return &Client{sess: p}
+}
+
+// NewConfig constructs a runtimeconfig.Config object with this package as the driver
+// implementation.
+func (c *Client) NewConfig(ctx context.Context, name string, opts *WatchOptions) (*runtimeconfig.Config, error) {
+	if opts == nil {
+		opts = &WatchOptions{}
+	}
+	waitTime := opts.WaitTime
+	switch {
+	case waitTime == 0:
+		waitTime = defaultWait
+	case waitTime < 0:
+		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
 
-	return resp.Parameters, nil
+	return runtimeconfig.New(&watcher{
+		sess:        c.sess,
+		waitTime:    waitTime,
+		name:        name,
+		lastVersion: -1,
+	}), nil
+}
+
+// WatchOptions provide optional configurations to the Watcher.
+type WatchOptions struct {
+	// WaitTime controls the frequency of making an HTTP call and checking for
+	// updates by the Watch method. The smaller the value, the higher the frequency
+	// of making calls, which also means a faster rate of hitting the API quota.
+	// If this option is not set or set to 0, it uses a default value.
+	WaitTime time.Duration
+}
+
+type watcher struct {
+	// sess is the AWS session to use to talk to AWS.
+	sess client.ConfigProvider
+	// name is the parameter to retrieve.
+	name string
+	// waitTime is the amount of time to wait between querying AWS.
+	waitTime    time.Duration
+	lastVersion int64
+}
+
+// Watch begins watching the given parameter and waiting for it to change.
+// The function will block until either the parameter changes, or the context
+// is cancelled.
+func (w watcher) Watch(ctx context.Context) (driver.Config, error) {
+	zeroConfig := driver.Config{}
+	t := time.NewTicker(w.waitTime)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-t.C:
+			p, err := readParam(w.sess, w.name, w.lastVersion)
+			if err != nil {
+				return zeroConfig, err
+			}
+			// version is set to 0 by readParam if the version hasn't changed.
+			if p.version != 0 && w.lastVersion != p.version {
+				w.lastVersion = p.version
+				return driver.Config{Value: p.value, UpdateTime: p.updateTime}, nil
+			}
+		case <-ctx.Done():
+			return zeroConfig, ctx.Err()
+		}
+	}
+}
+
+// Close is a no-op. Cancel the context passed to Watch if watching should end.
+func (w watcher) Close() error {
+	return nil
+}
+
+type param struct {
+	name       string
+	value      string
+	version    int64
+	updateTime time.Time
+}
+
+// readParam returns the named parameter. An error is returned if AWS is unreachable
+// or the named parameter isn't found. If the parameter hasn't changed from the
+// passed version, returns an empty param {} and nil error. This saves a
+// redundant API call.
+func readParam(p client.ConfigProvider, name string, version int64) (param, error) {
+	zeroParam := param{}
+	svc := ssm.New(p)
+
+	getResp, err := svc.GetParameter(&ssm.GetParameterInput{Name: aws.String(name)})
+	if err != nil || getResp.Parameter == nil {
+		return zeroParam, fmt.Errorf("unable to get %q parameter: %v", name, err)
+	}
+	getP := getResp.Parameter
+	if *getP.Version == version {
+		return zeroParam, nil
+	}
+
+	descResp, err := svc.DescribeParameters(&ssm.DescribeParametersInput{
+		Filters: []*ssm.ParametersFilter{
+			{Key: aws.String("Name"), Values: []*string{&name}},
+		},
+	})
+	if err != nil {
+		return zeroParam, fmt.Errorf("unable to get metadata for %q: %v", name, err)
+	}
+	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
+		return zeroParam, fmt.Errorf("unable to get single %q parameter", name)
+	}
+	descP := descResp.Parameters[0]
+
+	return param{
+		name:       *getP.Name,
+		value:      *getP.Value,
+		version:    *getP.Version,
+		updateTime: *descP.LastModifiedDate,
+	}, nil
 }
