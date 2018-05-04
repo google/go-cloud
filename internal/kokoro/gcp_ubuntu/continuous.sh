@@ -31,7 +31,18 @@ mkdir -p "$(dirname "$GO_CLOUD_HOME")"
 cp -R . "$GO_CLOUD_HOME"
 cd "$GO_CLOUD_HOME"
 
-CC=gcc $GOPATH/bin/vgo test -race -v -short ./...
+export CC=gcc
+ret=0
+$GOPATH/bin/vgo test -race -v -short ./... || ret=$?
+# vgo might be sad if vgo is bugged (such is the way of beta), so fallback
+# to standard go and try again
+echo "vgo exited with $ret"
+if [[ "$ret" != 0 ]]; then
+  # Don't use -u due to https://github.com/golang/go/issues/13084
+  go get -t ./...
+  go test -race -v -short ./...
+fi
+
 $GOPATH/bin/vgo vet ./...
 $GOPATH/bin/golint -set_exit_status ./...
 
@@ -39,7 +50,8 @@ $GOPATH/bin/golint -set_exit_status ./...
 # dying due to -e
 # TODO(light): If error capturing has to happen elsewhere, it'll be more
 # readable/safer to remove -e entirely and handle errors where they occur
-grep -R --exclude-dir ".git" --exclude-dir "internal" "DO NOT SUBMIT" || ret=$?.
-if [[ ret == 0 ]]; then
+ret=0
+grep -R --exclude-dir ".git" --exclude-dir "internal" "DO NOT SUBMIT" || ret=$?
+if [[ "$ret" == 0 ]]; then
   false
 fi

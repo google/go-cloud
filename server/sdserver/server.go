@@ -94,11 +94,11 @@ func Init(o *Options) (*server.Server, gcp.ProjectID, gcp.TokenSource, error) {
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.
 func NewExporter(id gcp.ProjectID, ts gcp.TokenSource) (*stackdriver.Exporter, error) {
+	tokOpt := option.WithTokenSource(oauth2.TokenSource(ts))
 	return stackdriver.NewExporter(stackdriver.Options{
-		ProjectID: string(id),
-		ClientOptions: []option.ClientOption{
-			option.WithTokenSource(oauth2.TokenSource(ts)),
-		},
+		ProjectID:               string(id),
+		MonitoringClientOptions: []option.ClientOption{tokOpt},
+		TraceClientOptions:      []option.ClientOption{tokOpt},
 	})
 }
 

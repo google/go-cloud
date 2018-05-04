@@ -31,7 +31,7 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a
 	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd
 	github.com/stretchr/testify v1.2.1
-	go.opencensus.io v0.8.0
+	go.opencensus.io v0.9.0
 	golang.org/x/net v0.0.0-20180218175443-cbe0f9307d01
 	golang.org/x/oauth2 v0.0.0-20180314180239-fdc9e635145a
 	golang.org/x/sync v0.0.0-20171101214715-fd80eb99c8f6
