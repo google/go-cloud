@@ -19,10 +19,15 @@ import (
 	"path"
 	"sync"
 
+	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
 	"go.opencensus.io/trace"
 )
+
+// Set is a goose provider set that produces a *Server given the
+// fields of Options.
+var Set = goose.NewSet(New, Options{})
 
 // Server is diagnostic middleware for the server.
 type Server struct {

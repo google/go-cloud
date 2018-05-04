@@ -21,12 +21,24 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
 	"go.opencensus.io/exporter/stackdriver"
+	"go.opencensus.io/trace"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
+)
+
+// Set is a goose provider set that provides a *server.Server given a
+// token source and a project ID.
+var Set = goose.NewSet(
+	server.Set,
+	NewStackdriverExporter,
+	goose.Bind(trace.Exporter(nil), (*stackdriver.Exporter)(nil)),
+	StackdriverRequestLogger,
+	goose.Bind(requestlog.Logger(nil), (*requestlog.StackdriverLogger)(nil)),
 )
 
 // Options holds information to initialize GCP.

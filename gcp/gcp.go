@@ -19,9 +19,17 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/go-cloud/goose"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
+
+// DefaultIdentity is a goose provider set that provides the project ID
+// and token source from Application Default Credentials (ADC).
+var DefaultIdentity = goose.NewSet(
+	CredentialsTokenSource,
+	DefaultCredentials,
+	DefaultProjectID)
 
 // ProjectID is a GCP Project ID.
 type ProjectID string

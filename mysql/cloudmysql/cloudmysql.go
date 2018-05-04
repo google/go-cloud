@@ -23,12 +23,20 @@ import (
 	"sync"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
-	"github.com/google/go-cloud/gcp"
-	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
-	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/goose"
+
+	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
+	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
 )
+
+// CertSourceSet is a goose provider set that binds a Cloud SQL proxy
+// certificate source from an GCP-authenticated HTTP client.
+var CertSourceSet = goose.NewSet(
+	NewCertSource,
+	goose.Bind(proxy.CertSource(nil), (*certs.RemoteCertSource)(nil)))
 
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.
