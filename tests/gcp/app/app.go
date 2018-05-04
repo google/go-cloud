@@ -25,7 +25,7 @@ import (
 
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/server/gcpserver"
+	"github.com/google/go-cloud/server/sdserver"
 )
 
 var connection = new(connectionChecker)
@@ -35,11 +35,11 @@ func main() {
 	flag.StringVar(&projectID, "project", "", "Project ID to use for the test app")
 
 	flag.Parse()
-	o := &gcpserver.Options{
+	o := &sdserver.Options{
 		ProjectID:    gcp.ProjectID(projectID),
 		HealthChecks: []health.Checker{connection},
 	}
-	srv, _, _, err := gcpserver.Init(o)
+	srv, _, _, err := sdserver.Init(o)
 	if err != nil {
 		log.Fatalf("unable to initialize server: %v", err)
 	}

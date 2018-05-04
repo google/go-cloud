@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/mysql/cloudmysql"
-	"github.com/google/go-cloud/server/gcpserver"
+	"github.com/google/go-cloud/server/sdserver"
 )
 
 // GCP is a goose provider set that includes all Google Cloud Platform services
@@ -34,4 +34,4 @@ var Services = goose.NewSet(
 	gcp.NewHTTPClient,
 	cloudmysql.CertSourceSet,
 	cloudmysql.Open,
-	gcpserver.Set)
+	sdserver.Set)

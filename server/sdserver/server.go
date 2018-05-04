@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcpserver
+// Package sdserver provides the diagnostic hooks for a server using
+// Stackdriver.
+package sdserver
 
 import (
 	"context"
@@ -31,13 +33,13 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Set is a goose provider set that provides a *server.Server given a
-// token source and a project ID.
+// Set is a goose provider set that provides the diagnostic hooks for
+// *server.Server given a GCP token source and a GCP project ID.
 var Set = goose.NewSet(
 	server.Set,
-	NewStackdriverExporter,
+	NewExporter,
 	goose.Bind(trace.Exporter(nil), (*stackdriver.Exporter)(nil)),
-	StackdriverRequestLogger,
+	NewRequestLogger,
 	goose.Bind(requestlog.Logger(nil), (*requestlog.StackdriverLogger)(nil)),
 )
 
@@ -77,11 +79,11 @@ func Init(o *Options) (*server.Server, gcp.ProjectID, gcp.TokenSource, error) {
 			ts = gcp.CredentialsTokenSource(creds)
 		}
 	}
-	exporter, err := NewStackdriverExporter(projectID, ts)
+	exporter, err := NewExporter(projectID, ts)
 	if err != nil {
 		return nil, "", nil, fmt.Errorf("creating trace exporter: %v", err)
 	}
-	reqlog := StackdriverRequestLogger()
+	reqlog := NewRequestLogger()
 	srv := server.New(&server.Options{
 		RequestLogger: reqlog,
 		TraceExporter: exporter,
@@ -90,8 +92,8 @@ func Init(o *Options) (*server.Server, gcp.ProjectID, gcp.TokenSource, error) {
 	return srv, projectID, ts, nil
 }
 
-// NewStackdriverExporter returns a new OpenCensus Stackdriver exporter.
-func NewStackdriverExporter(id gcp.ProjectID, ts gcp.TokenSource) (*stackdriver.Exporter, error) {
+// NewExporter returns a new OpenCensus Stackdriver exporter.
+func NewExporter(id gcp.ProjectID, ts gcp.TokenSource) (*stackdriver.Exporter, error) {
 	return stackdriver.NewExporter(stackdriver.Options{
 		ProjectID: string(id),
 		ClientOptions: []option.ClientOption{
@@ -100,9 +102,8 @@ func NewStackdriverExporter(id gcp.ProjectID, ts gcp.TokenSource) (*stackdriver.
 	})
 }
 
-// StackdriverRequestLogger returns a request logger that sends entries
-// to stdout.
-func StackdriverRequestLogger() *requestlog.StackdriverLogger {
+// NewRequestLogger returns a request logger that sends entries to stdout.
+func NewRequestLogger() *requestlog.StackdriverLogger {
 	// For now, request logs are written to stdout and get picked up by fluentd.
 	// This also works when running locally.
 	return requestlog.NewStackdriverLogger(os.Stdout, func(e error) { fmt.Println(e) })
