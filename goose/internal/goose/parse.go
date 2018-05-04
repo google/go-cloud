@@ -492,6 +492,9 @@ func isInjector(info *types.Info, fn *ast.FuncDecl) *ast.CallExpr {
 			return nil
 		}
 	}
+	if only == nil {
+		return nil
+	}
 	panicCall, ok := only.X.(*ast.CallExpr)
 	if !ok {
 		return nil

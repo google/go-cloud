@@ -113,7 +113,7 @@ func TestGoose(t *testing.T) {
 				}
 				out, err := exec.Command(testExePath).Output()
 				if err != nil {
-					t.Fatal("run compiled program:", err)
+					t.Error("run compiled program:", err)
 				}
 				if !bytes.Equal(out, test.wantOutput) {
 					t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
