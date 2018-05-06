@@ -54,3 +54,9 @@ grep -R --exclude-dir ".git" --exclude-dir "internal" "DO NOT SUBMIT" || ret=$?
 if [[ "$ret" == 0 ]]; then
   false
 fi
+
+# Search for files that should include a copyright line that don't
+grep -L -R -m1 --include="*.go" --include="*.sh" --include="*.cfg" "Copyright" . || ret=$?
+if [[ "$ret" == 0 ]]; then
+  false
+fi
