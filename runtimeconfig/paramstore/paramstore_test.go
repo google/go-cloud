@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/dnaeon/go-vcr/cassette"
@@ -96,7 +97,13 @@ func newSession(t *testing.T, filename string) (sess *session.Session, done func
 		Transport: r,
 	}
 
-	sess, err := session.NewSession(aws.NewConfig().WithHTTPClient(client).WithRegion(region))
+	// Provide fake creds if running in replay mode.
+	var creds *credentials.Credentials
+	if testing.Short() {
+		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
+	}
+
+	sess, err := session.NewSession(aws.NewConfig().WithHTTPClient(client).WithRegion(region).WithCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
