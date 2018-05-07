@@ -96,8 +96,8 @@ type Decode func([]byte, interface{}) error
 // decoding function (Func) for decoding retrieved bytes into Config.Value.
 type Decoder struct {
 	Type reflect.Type
-	// Func is a function that decodes given bytes into given pointer to an object of type Type.
-	Func func([]byte, interface{}) error
+	// Func is a Decode function.
+	Func Decode
 }
 
 // NewDecoder constructs a Decoder for given object that uses the given Decode function.
