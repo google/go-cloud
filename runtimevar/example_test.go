@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtimeconfig_test
+package runtimevar_test
 
 import (
 	"context"
 	"log"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/fileconfig"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/filevar"
 )
 
 type DBConfig struct {
@@ -29,10 +29,10 @@ type DBConfig struct {
 	Name     string
 }
 
-func initConfig() (*runtimeconfig.Config, func()) {
-	// Construct a runtimeconfig.Config object.
-	cfg, err := fileconfig.NewConfig("/etc/myapp/db.json",
-		runtimeconfig.NewDecoder(&DBConfig{}, runtimeconfig.JSONDecode))
+func initConfig() (*runtimevar.Variable, func()) {
+	// Construct a runtimevar.Variable object.
+	cfg, err := filevar.NewVariable("/etc/myapp/db.json",
+		runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func Example() {
 	// Call Watch to retrieve initial value before proceeding.
 	snap, err := cfg.Watch(ctx)
 	if err != nil {
-		log.Fatalf("Error in retrieving initial configurations: %v", err)
+		log.Fatalf("Error in retrieving initial variable: %v", err)
 	}
 	log.Printf("Value: %+v", snap.Value.(*DBConfig))
 

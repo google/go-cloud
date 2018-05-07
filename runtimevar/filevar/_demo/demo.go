@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This binary demonstrates watching over a Runtime Configurator variable using the runtimeconfig
-// package with the gcpconfig package as the driver implementation.  To cancel the Config.Watch
-// call, enter 'x' and '<enter>' keys on the terminal.
+// This binary demonstrates watching over a configuration file using the runtimevar package with
+// the filevar package as the driver implementation.  To cancel the Watcher.Watch call, enter 'x'
+// and '<enter>' keys on the terminal.
 package main
 
 import (
@@ -22,53 +22,35 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
-	"reflect"
+	"path/filepath"
 	"time"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/gcpconfig"
+	"github.com/google/go-cloud/runtimevar"
 )
 
 func main() {
-	if len(os.Args) != 4 {
+	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr,
-			"Usage: %s <project-id> <config-name> <var-name>\n\n",
-			path.Base(os.Args[0]))
+			"Usage: %s <config-file>\n\n",
+			filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 
-	name := gcpconfig.ResourceName{
-		ProjectID: os.Args[1],
-		Config:    os.Args[2],
-		Variable:  os.Args[3],
-	}
-
-	ctx := context.Background()
-	client, err := gcpconfig.NewClient(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	cfg, err := client.NewConfig(ctx, name, "", &gcpconfig.WatchOptions{
-		WaitTime: 10 * time.Second,
-		Decode:   stringDecode,
-	})
+	cfg, err := filevar.NewConfig(os.Args[1], runtimevar.StringDecoder)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cfg.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	go func() {
 		key := make([]byte, 1)
 		for {
 			n, err := os.Stdin.Read(key)
 			if err != nil {
-				log.Printf("stdin error: %v\n", err)
+				log.Printf("stdin error: %v", err)
 			}
 			if n == 1 && key[0] == 'x' {
 				log.Println("That's all folks!")
@@ -101,13 +83,6 @@ func main() {
 	}
 }
 
-func snapString(cfg *runtimeconfig.Snapshot) string {
+func snapString(cfg *runtimevar.Snapshot) string {
 	return fmt.Sprintf("<value: %q, updateTime: %v>", cfg.Value.(string), cfg.UpdateTime)
-}
-
-func stringDecode(b []byte, obj interface{}) error {
-	// obj is a pointer to a string.
-	v := reflect.ValueOf(obj).Elem()
-	v.SetString(string(b))
-	return nil
 }

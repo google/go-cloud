@@ -1,0 +1,200 @@
+---
+version: 1
+mu: {}
+interactions:
+- request:
+    body: '{"Name":"watch-observes-change-test","Overwrite":true,"Type":"String","Value":"foo"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "84"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221615Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "0"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":1}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:15 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"watch-observes-change-test"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "37"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221616Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+      X-Gocloud-Seq:
+      - "1"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"Name":"watch-observes-change-test","Type":"String","Value":"foo","Version":1}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:16 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Filters":[{"Key":"Name","Values":["watch-observes-change-test"]}]}'
+    form: {}
+    headers:
+      Content-Length:
+      - "68"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221616Z
+      X-Amz-Target:
+      - AmazonSSM.DescribeParameters
+      X-Gocloud-Seq:
+      - "2"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"LastModifiedDate":1.52573137565E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"watch-observes-change-test","Policies":[],"Type":"String","Version":1}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:16 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"watch-observes-change-test","Overwrite":true,"Type":"String","Value":"bar"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "84"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221616Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "3"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":2}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:16 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"watch-observes-change-test"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "37"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221618Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+      X-Gocloud-Seq:
+      - "4"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"Name":"watch-observes-change-test","Type":"String","Value":"bar","Version":2}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:17 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Filters":[{"Key":"Name","Values":["watch-observes-change-test"]}]}'
+    form: {}
+    headers:
+      Content-Length:
+      - "68"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221618Z
+      X-Amz-Target:
+      - AmazonSSM.DescribeParameters
+      X-Gocloud-Seq:
+      - "5"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"LastModifiedDate":1.525731376991E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"watch-observes-change-test","Policies":[],"Type":"String","Version":2}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:17 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"watch-observes-change-test"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "37"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180507T221618Z
+      X-Amz-Target:
+      - AmazonSSM.DeleteParameter
+      X-Gocloud-Seq:
+      - "6"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 07 May 2018 22:16:17 GMT
+    status: 200 OK
+    code: 200
+    duration: ""

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fileconfig
+package filevar
 
 import (
 	"context"
@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -45,7 +45,7 @@ func newFile() (*file, error) {
 	const fileName = "app.json"
 	const fileContent = `{"hello":"world"}`
 
-	dir, err := ioutil.TempDir("", "fileconfig_test-")
+	dir, err := ioutil.TempDir("", "filevar_test-")
 	if err != nil {
 		return nil, err
 	}
@@ -70,16 +70,16 @@ func (f *file) delete() error {
 	return os.Remove(f.name)
 }
 
-func setUp(t *testing.T) (*runtimeconfig.Config, *file, func()) {
+func setUp(t *testing.T) (*runtimevar.Variable, *file, func()) {
 	t.Helper()
 	f, err := newFile()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cfg, err := NewConfig(f.name, runtimeconfig.StringDecoder)
+	cfg, err := NewVariable(f.name, runtimevar.StringDecoder)
 	if err != nil {
-		t.Fatalf("NewConfig returned error: %v", err)
+		t.Fatalf("NewVariable returned error: %v", err)
 	}
 
 	return cfg, f, func() {
@@ -111,14 +111,14 @@ func TestFirstWatchReturnsErrorIfFileNotFound(t *testing.T) {
 	}()
 
 	name := filepath.Base(f.name) + ".nonexist"
-	cfg, err := NewConfig(filepath.Join(f.dir, name), runtimeconfig.StringDecoder)
+	cfg, err := NewVariable(filepath.Join(f.dir, name), runtimevar.StringDecoder)
 	if err != nil {
-		t.Fatalf("NewConfig returned error: %v", err)
+		t.Fatalf("NewVariable returned error: %v", err)
 	}
 
 	_, err = cfg.Watch(context.Background())
 	if err == nil {
-		t.Error("Config.Watch returns nil, want error")
+		t.Error("Variable.Watch returns nil, want error")
 	}
 }
 
@@ -130,7 +130,7 @@ func TestContextCancelledBeforeFirstWatch(t *testing.T) {
 	cancel()
 	_, err := cfg.Watch(ctx)
 	if err == nil {
-		t.Fatal("Config.Watch returned nil error, expecting an error from cancelling")
+		t.Fatal("Variable.Watch returned nil error, expecting an error from cancelling")
 	}
 }
 
@@ -141,7 +141,7 @@ func TestContextCancelledInBetweenWatchCalls(t *testing.T) {
 	ctx := context.Background()
 	_, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -149,7 +149,7 @@ func TestContextCancelledInBetweenWatchCalls(t *testing.T) {
 
 	_, err = cfg.Watch(ctx)
 	if err == nil {
-		t.Fatal("Config.Watch returned nil error, expecting an error from cancelling")
+		t.Fatal("Variable.Watch returned nil error, expecting an error from cancelling")
 	}
 }
 
@@ -160,7 +160,7 @@ func TestReturnsUpdatedSnapshot(t *testing.T) {
 	ctx := context.Background()
 	_, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	// Update the file.
@@ -171,7 +171,7 @@ func TestReturnsUpdatedSnapshot(t *testing.T) {
 
 	got, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
@@ -186,7 +186,7 @@ func TestReturnsUpdatedSnapshotConcurrently(t *testing.T) {
 	ctx := context.Background()
 	_, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	const content = `{"hello": "cloud"}`
@@ -201,7 +201,7 @@ func TestReturnsUpdatedSnapshotConcurrently(t *testing.T) {
 	// Following will block until there is a change.
 	got, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
@@ -216,7 +216,7 @@ func TestDeletedAndReset(t *testing.T) {
 	ctx := context.Background()
 	prev, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	// Delete the file.
@@ -226,7 +226,7 @@ func TestDeletedAndReset(t *testing.T) {
 
 	// Expect deleted error.
 	if _, err := cfg.Watch(ctx); err == nil {
-		t.Fatalf("Config.Watch returned nil, want error")
+		t.Fatalf("Variable.Watch returned nil, want error")
 	}
 
 	// Recreate file with new content and call Watch again.
@@ -237,7 +237,7 @@ func TestDeletedAndReset(t *testing.T) {
 
 	got, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)
@@ -254,7 +254,7 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 	ctx := context.Background()
 	prev, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	// Delete the file in a separate goroutine.
@@ -267,7 +267,7 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 
 	// Expect deleted error.
 	if _, err := cfg.Watch(ctx); err == nil {
-		t.Fatalf("Config.Watch returned nil, want error")
+		t.Fatalf("Variable.Watch returned nil, want error")
 	}
 
 	// Recreate file with new content and call Watch again.
@@ -282,7 +282,7 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 	// Following will block until file gets recreated.
 	got, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fileconfig provides a runtimeconfig driver implementation to read configurations and
+// Package filevar provides a runtimevar driver implementation to read configurations and
 // ability to detect changes and get updates on local configuration files.
 //
-// User constructs a runtimeconfig.Config object using NewConfig given a locally-accessible file.
+// User constructs a runtimevar.Variable object using NewConfig given a locally-accessible file.
 //
 // User can update a configuration file using any commands (cp, mv) or tools/editors. This package
 // does not guarantee read consistency since it does not have control over the writes. It is highly
@@ -30,7 +30,7 @@
 // * Saving a configuration file in vim using :w will incur events Rename and Create. When the
 // Rename event occurs, the file is temporarily removed and hence Watch will return error.  A
 // follow-up Watch call will then detect the Create event.
-package fileconfig
+package filevar
 
 import (
 	"context"
@@ -40,14 +40,14 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 )
 
-// NewConfig constructs a runtimeconfig.Config object with this package as the driver
+// NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-func NewConfig(file string, decoder *runtimeconfig.Decoder) (*runtimeconfig.Config, error) {
+func NewVariable(file string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
 	// Use absolute file path.
 	file, err := filepath.Abs(file)
 	if err != nil {
@@ -60,7 +60,7 @@ func NewConfig(file string, decoder *runtimeconfig.Decoder) (*runtimeconfig.Conf
 	if err != nil {
 		return nil, err
 	}
-	return runtimeconfig.New(&watcher{
+	return runtimevar.New(&watcher{
 		notifier: notifier,
 		file:     file,
 		decoder:  decoder,
@@ -71,7 +71,7 @@ func NewConfig(file string, decoder *runtimeconfig.Decoder) (*runtimeconfig.Conf
 type watcher struct {
 	notifier   *fsnotify.Watcher
 	file       string
-	decoder    *runtimeconfig.Decoder
+	decoder    *runtimevar.Decoder
 	bytes      []byte
 	isDeleted  bool
 	updateTime time.Time
@@ -85,12 +85,12 @@ var waitTime = 10 * time.Second
 // will return an error if the configuration file is deleted, however, if it has previously returned
 // an error due to missing configuration file, the next Watch call will block until the file has
 // been recreated.
-func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
-	zeroConfig := driver.Config{}
+func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+	zeroVar := driver.Variable{}
 	// Check for Context cancellation first before proceeding.
 	select {
 	case <-ctx.Done():
-		return zeroConfig, ctx.Err()
+		return zeroVar, ctx.Err()
 	default:
 		// Continue.
 	}
@@ -102,10 +102,10 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 		sd := w.processFile()
 		switch sd.state {
 		case errorState:
-			return zeroConfig, sd.err
+			return zeroVar, sd.err
 
 		case hasChangedState:
-			return *sd.config, nil
+			return *sd.variable, nil
 
 		case stillDeletedState:
 			// Last known state is deleted, need to wait for file to show up before adding a watch.
@@ -114,7 +114,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 			case <-t.C:
 			case <-ctx.Done():
 				t.Stop()
-				return zeroConfig, ctx.Err()
+				return zeroVar, ctx.Err()
 			}
 
 		case noChangeState:
@@ -129,14 +129,14 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 			w.isDeleted = true
 			w.updateTime = time.Now().UTC()
 		}
-		return zeroConfig, err
+		return zeroVar, err
 	}
 	defer w.notifier.Remove(w.file)
 
 	for {
 		select {
 		case <-ctx.Done():
-			return zeroConfig, ctx.Err()
+			return zeroVar, ctx.Err()
 
 		case event := <-w.notifier.Events:
 			if event.Name != w.file {
@@ -149,14 +149,14 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 			sd := w.processFile()
 			switch sd.state {
 			case errorState:
-				return zeroConfig, sd.err
+				return zeroVar, sd.err
 			case hasChangedState:
-				return *sd.config, nil
+				return *sd.variable, nil
 			}
 			// No changes, continue waiting.
 
 		case err := <-w.notifier.Errors:
-			return zeroConfig, err
+			return zeroVar, err
 		}
 	}
 }
@@ -173,9 +173,9 @@ const (
 
 // stateData contains a watchState and corresponding data for it.
 type stateData struct {
-	state  watchState
-	config *driver.Config // driver.Config object for hasChangedState.
-	err    error          // Error object for hasErrorState.
+	state    watchState
+	variable *driver.Variable // driver.Config object for hasChangedState.
+	err      error            // Error object for hasErrorState.
 }
 
 // processFile reads the file and determines the watchState. Depending on the watchState, it may
@@ -214,7 +214,7 @@ func (w *watcher) processFile() stateData {
 		}
 		return stateData{
 			state: hasChangedState,
-			config: &driver.Config{
+			variable: &driver.Variable{
 				Value:      val,
 				UpdateTime: tm,
 			},

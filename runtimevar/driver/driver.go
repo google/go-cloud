@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver provides the interface for providers of runtimeconfig.  This serves as a contract
-// of how the runtimeconfig API uses a provider implementation.
+// Package driver provides the interface for providers of runtimevar.  This serves as a contract
+// of how the runtimevar API uses a provider implementation.
 package driver
 
 import (
@@ -21,40 +21,39 @@ import (
 	"time"
 )
 
-// Config contains a group of runtime configurations and additional metadata about this
-// grouping.
-type Config struct {
+// Variable contains a runtime variable and additional metadata about it.
+type Variable struct {
 	Value      interface{}
 	UpdateTime time.Time
 }
 
-// Watcher watches for updates on a configuration group and returns an updated Config object if
-// there are changes.  A Watcher object is associated with a configuration group upon construction.
+// Watcher watches for updates on a variable and returns an updated Variable object if
+// there are changes.  A Watcher object is associated with a variable upon construction.
 //
-// An application can have more than one Watcher, one for each configuration group.  It is typical
-// to only have one Watcher per configuration group.
+// An application can have more than one Watcher, one for each variable.  It is typical
+// to only have one Watcher per variable.
 //
-// A Watcher provider can dictate the type of Config.Value if the backend service dictates
+// A Watcher provider can dictate the type of Variable.Value if the backend service dictates
 // a particular format and type.  If the backend service has the flexibility to store bytes and
 // allow clients to dictate the format, it is better for a Watcher provider to allow users to
-// dictate the type of Config.Value and a decoding function.  The Watcher provider can use the
-// runtimeconfig.Decoder to facilitate the decoding logic.
+// dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
+// runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
-	// Watch blocks until the configuration group changes, the Context's Done channel closes or an
+	// Watch blocks until the variable changes, the Context's Done channel closes or an
 	// error occurs.
 	//
-	// If the configuration group has changed, then method should return a Config object with the
+	// If the variable has changed, then method should return a Variable object with the
 	// new value.
 	//
 	// It is recommended that an implementation should avoid returning the same error of the
 	// previous Watch call if the implementation can detect such and treat as no changes had
-	// incurred instead.  A sample case is when the configuration is deleted, Watch should return an
+	// incurred instead.  A sample case is when the variable is deleted, Watch should return an
 	// error upon initial detection.  A succeeding Watch call may decide to block until
-	// the configuration source is restored.
+	// the variable source is restored.
 	//
 	// To stop this function from blocking, caller can passed in Context object constructed via
 	// WithCancel and call the cancel function.
-	Watch(context.Context) (Config, error)
+	Watch(context.Context) (Variable, error)
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
 }

@@ -106,7 +106,7 @@ func TestInitialWatch(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			conf, err := NewClient(ctx, sess).NewConfig(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
+			conf, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
 			res, err := conf.Watch(ctx)
 
 			switch {
@@ -147,7 +147,7 @@ func TestWatchObservesChange(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			conf, err := NewClient(ctx, sess).NewConfig(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
+			conf, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
 			res, err := conf.Watch(ctx)
 			switch {
 			case err != nil:

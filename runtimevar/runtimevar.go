@@ -10,11 +10,11 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limitations under the License.
+// limtations under the License.
 
-// Package runtimeconfig provides an interface for reading runtime configurations and
-// ability to detect changes and get updates on those configurations.
-package runtimeconfig
+// Package runtimevar provides an interface for reading runtime variables and
+// ability to detect changes and get updates on those variables.
+package runtimevar
 
 import (
 	"bytes"
@@ -25,15 +25,15 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar/driver"
 )
 
-// Snapshot contains a group of associated runtime configurations and metadata about this grouping.
+// Snapshot contains a variable and metadata about it.
 type Snapshot struct {
-	// Value is an object containing the group of associated runtime configurations.  The type of
-	// this object is set by the driver and it should always be the same type for the same Config
-	// object. A driver implementation can provide the ability to configure the object type and a
-	// decoding scheme where configurations are stored as bytes in the backend service.  Clients
+	// Value is an object containing a runtime variable  The type of
+	// this object is set by the driver and it should always be the same type for the same Variable
+	// object. A driver implementation can provide the ability to variableure the object type and a
+	// decoding scheme where variables are stored as bytes in the backend service.  Clients
 	// should not mutate this object as it can be accessed by multiple goroutines.
 	Value interface{}
 
@@ -41,28 +41,25 @@ type Snapshot struct {
 	UpdateTime time.Time
 }
 
-// Config provides the ability to read runtime configurations with its blocking Watch method.
-//
-// An application can have more than one Config, one for each configuration group.  It is typical to
-// only have one Config per configuration group.
-type Config struct {
+// Variable provides the ability to read runtime variables with its blocking Watch method.
+type Variable struct {
 	watcher driver.Watcher
 }
 
-// New constructs a Config object given a driver.Watcher implementation.
-func New(w driver.Watcher) *Config {
-	return &Config{watcher: w}
+// New constructs a Variable object given a driver.Watcher implementation.
+func New(w driver.Watcher) *Variable {
+	return &Variable{watcher: w}
 }
 
-// Watch blocks until there are configuration changes, the Context's Done channel closes or an error
+// Watch blocks until there are variable changes, the Context's Done channel closes or an error
 // occurs.
 //
-// If the configuration group has changed, then method returns a Snapshot object containing the
+// If the variable, the method returns a Snapshot object containing the
 // updated value.
 //
 // If method returns an error, the returned Snapshot object is a zero value and cannot be used.
 //
-// The first call to this method should return the current configuration unless there are errors in
+// The first call to this method should return the current variable unless there are errors in
 // retrieving the value.
 //
 // Users should not call this method from multiple goroutines as implementations may not guarantee
@@ -70,11 +67,11 @@ func New(w driver.Watcher) *Config {
 //
 // To stop this function from blocking, caller can passed in Context object constructed via
 // WithCancel and call the cancel function.
-func (c *Config) Watch(ctx context.Context) (Snapshot, error) {
+func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	cfg, err := c.watcher.Watch(ctx)
 	if err != nil {
 		// Mask underlying errors.
-		return Snapshot{}, fmt.Errorf("Config.Watch: %v", err)
+		return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
 	}
 	return Snapshot{
 		Value:      cfg.Value,
@@ -82,18 +79,18 @@ func (c *Config) Watch(ctx context.Context) (Snapshot, error) {
 	}, nil
 }
 
-// Close cleans up any resources used by the Config object.
-func (c *Config) Close() error {
+// Close cleans up any resources used by the Variable object.
+func (c *Variable) Close() error {
 	return c.watcher.Close()
 }
 
 // Decode is a function type for unmarshaling/decoding bytes into given object.
 type Decode func([]byte, interface{}) error
 
-// Decoder is a helper for decoding bytes into a particular Go type object.  The Config objects
-// produced by a particular driver.Watcher should always contain the same type for Config.Value
+// Decoder is a helper for decoding bytes into a particular Go type object.  The Variable objects
+// produced by a particular driver.Watcher should always contain the same type for Variable.Value
 // field.  A driver.Watcher can use/construct a Decoder object with an associated type (Type) and
-// decoding function (Func) for decoding retrieved bytes into Config.Value.
+// decoding function (Func) for decoding retrieved bytes into Variable.Value.
 type Decoder struct {
 	Type reflect.Type
 	// Func is a Decode function.

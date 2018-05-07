@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfig_test contains tests that exercises the runtimeconfig APIs. It does not test
+// Package runtimevar_test contains tests that exercises the runtimevar APIs. It does not test
 // driver implementations.
-package runtimeconfig_test
+package runtimevar_test
 
 import (
 	"bytes"
@@ -26,42 +26,42 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 
 // fakeWatcher is a fake implementation of driver.Watcher meant only for exercising the
 // generic APIs via tests.
 type fakeWatcher struct {
-	dc driver.Config
+	dc driver.Variable
 }
 
 func (fw *fakeWatcher) Close() error {
 	return nil
 }
 
-func (fw *fakeWatcher) Watch(context.Context) (driver.Config, error) {
+func (fw *fakeWatcher) Watch(context.Context) (driver.Variable, error) {
 	return fw.dc, nil
 }
 
 // Ensure that fakeWatcher implements driver.Watcher
 var _ driver.Watcher = &fakeWatcher{}
 
-func TestConfig(t *testing.T) {
+func TestVariable(t *testing.T) {
 	ctx := context.Background()
 
-	dc1 := driver.Config{
+	dc1 := driver.Variable{
 		Value:      42,
 		UpdateTime: time.Now(),
 	}
 	fw := &fakeWatcher{dc1}
-	cfg := runtimeconfig.New(fw)
+	cfg := runtimevar.New(fw)
 
-	// Watch should return the initial config.
+	// Watch should return the initial variable.
 	snap1, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returns error %v", err)
+		t.Fatalf("Variable.Watch returns error %v", err)
 	}
 	if got := snap1.Value.(int); got != dc1.Value {
 		t.Errorf("Snapshot.Value got %v, want %v", got, dc1.Value)
@@ -71,7 +71,7 @@ func TestConfig(t *testing.T) {
 	}
 
 	// Update the watcher's return value for Watch.
-	dc2 := driver.Config{
+	dc2 := driver.Variable{
 		Value:      8080,
 		UpdateTime: time.Now(),
 	}
@@ -80,7 +80,7 @@ func TestConfig(t *testing.T) {
 	// Retrieve next value.
 	snap2, err := cfg.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returns error %v", err)
+		t.Fatalf("Variable.Watch returns error %v", err)
 	}
 	if got := snap2.Value.(int); got != dc2.Value {
 		t.Errorf("Snapshot.Value got %v, want %v", got, dc2.Value)
@@ -129,22 +129,22 @@ func TestDecoder(t *testing.T) {
 	for _, tc := range []struct {
 		desc     string
 		encodeFn func(interface{}) ([]byte, error)
-		decodeFn runtimeconfig.Decode
+		decodeFn runtimevar.Decode
 	}{
 		{
 			desc:     "JSON",
 			encodeFn: json.Marshal,
-			decodeFn: runtimeconfig.JSONDecode,
+			decodeFn: runtimevar.JSONDecode,
 		},
 		{
 			desc:     "Gob",
 			encodeFn: gobMarshal,
-			decodeFn: runtimeconfig.GobDecode,
+			decodeFn: runtimevar.GobDecode,
 		},
 	} {
 		for i, input := range inputs {
 			t.Run(fmt.Sprintf("%s_%d", tc.desc, i), func(t *testing.T) {
-				decoder := runtimeconfig.NewDecoder(input, tc.decodeFn)
+				decoder := runtimevar.NewDecoder(input, tc.decodeFn)
 				b, err := tc.encodeFn(input)
 				if err != nil {
 					t.Fatalf("marshal error %v", err)
@@ -174,7 +174,7 @@ func gobMarshal(v interface{}) ([]byte, error) {
 
 func TestStringDecoder(t *testing.T) {
 	input := "hello world"
-	got, err := runtimeconfig.StringDecoder.Decode([]byte(input))
+	got, err := runtimevar.StringDecoder.Decode([]byte(input))
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestStringDecoder(t *testing.T) {
 
 func TestBytesDecoder(t *testing.T) {
 	input := []byte("hello world")
-	got, err := runtimeconfig.BytesDecoder.Decode(input)
+	got, err := runtimevar.BytesDecoder.Decode(input)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}

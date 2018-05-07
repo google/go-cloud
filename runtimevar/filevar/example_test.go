@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fileconfig_test
+package filevar_test
 
 import (
 	"log"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/fileconfig"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/filevar"
 )
 
 // MyAppConfig is the unmarshaled type for myapp.conf file.
@@ -28,8 +28,8 @@ type MyAppConfig struct {
 
 func ExampleNewConfig() {
 	// Configure a JSON decoder for myapp.json to unmarshal into a MyAppConfig object.
-	cfg, err := fileconfig.NewConfig("/etc/myapp/myapp.json",
-		runtimeconfig.NewDecoder(&MyAppConfig{}, runtimeconfig.JSONDecode))
+	cfg, err := filevar.NewVariable("/etc/myapp/myapp.json",
+		runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode))
 	if err != nil {
 		log.Fatalf("Error in constructing Config: %v", err)
 	}

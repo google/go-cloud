@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -40,9 +40,9 @@ func NewClient(ctx context.Context, p client.ConfigProvider) *Client {
 	return &Client{sess: p}
 }
 
-// NewConfig constructs a runtimeconfig.Config object with this package as the driver
+// NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
-func (c *Client) NewConfig(ctx context.Context, name string, opts *WatchOptions) (*runtimeconfig.Config, error) {
+func (c *Client) NewVariable(ctx context.Context, name string, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -54,7 +54,7 @@ func (c *Client) NewConfig(ctx context.Context, name string, opts *WatchOptions)
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
 
-	return runtimeconfig.New(&watcher{
+	return runtimevar.New(&watcher{
 		sess:        c.sess,
 		waitTime:    waitTime,
 		name:        name,
@@ -84,8 +84,8 @@ type watcher struct {
 // Watch begins watching the given parameter and waiting for it to change.
 // The function will block until either the parameter changes, or the context
 // is cancelled.
-func (w watcher) Watch(ctx context.Context) (driver.Config, error) {
-	zeroConfig := driver.Config{}
+func (w watcher) Watch(ctx context.Context) (driver.Variable, error) {
+	zeroVar := driver.Variable{}
 	t := time.NewTicker(w.waitTime)
 	defer t.Stop()
 
@@ -94,15 +94,15 @@ func (w watcher) Watch(ctx context.Context) (driver.Config, error) {
 		case <-t.C:
 			p, err := readParam(w.sess, w.name, w.lastVersion)
 			if err != nil {
-				return zeroConfig, err
+				return zeroVar, err
 			}
 			// version is set to 0 by readParam if the version hasn't changed.
 			if p.version != 0 && w.lastVersion != p.version {
 				w.lastVersion = p.version
-				return driver.Config{Value: p.value, UpdateTime: p.updateTime}, nil
+				return driver.Variable{Value: p.value, UpdateTime: p.updateTime}, nil
 			}
 		case <-ctx.Done():
-			return zeroConfig, ctx.Err()
+			return zeroVar, ctx.Err()
 		}
 	}
 }

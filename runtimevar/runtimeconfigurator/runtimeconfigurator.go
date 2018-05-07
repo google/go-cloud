@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfigurator provides a runtimeconfig driver implementation to read configurations from
+// Package runtimeconfigurator provides a runtimevar driver implementation to read configurations from
 // Cloud Runtime Configurator service and ability to detect changes and get updates.
 //
 // User constructs a Client that provides the gRPC connection, then use the client to construct any
-// number of runtimeconfig.Config objects using NewConfig method.
+// number of runtimevar.Variable objects using NewConfig method.
 package runtimeconfigurator
 
 import (
@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/go-cloud/runtimeconfig"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"google.golang.org/api/option"
 	transport "google.golang.org/api/transport/grpc"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -37,7 +37,7 @@ import (
 
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
-	endPoint = "runtimeconfig.googleapis.com:443"
+	endPoint = "runtimevar.googleapis.com:443"
 	// defaultWaitTimeout is the default value for WatchOptions.WaitTime if not set.
 	defaultWaitTimeout = 10 * time.Minute
 )
@@ -47,7 +47,7 @@ var authScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
 }
 
-// Client is a RuntimeConfigManager client.
+// Client is a runtimevarManager client.
 type Client struct {
 	conn *grpc.ClientConn
 	// The gRPC API client.
@@ -72,11 +72,11 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// NewConfig constructs a runtimeconfig.Config object with this package as the driver
+// NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.  Provide targetType for Config to unmarshal updated configurations into similar
 // objects during the Watch call.
-func (c *Client) NewConfig(ctx context.Context, name ResourceName, targetType interface{},
-	opts *WatchOptions) (*runtimeconfig.Config, error) {
+func (c *Client) NewVariable(ctx context.Context, name ResourceName, targetType interface{},
+	opts *WatchOptions) (*runtimevar.Variable, error) {
 
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -89,13 +89,13 @@ func (c *Client) NewConfig(ctx context.Context, name ResourceName, targetType in
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
 
-	decodeFn := runtimeconfig.JSONDecode
+	decodeFn := runtimevar.JSONDecode
 	if opts.Decode != nil {
 		decodeFn = opts.Decode
 	}
-	decoder := runtimeconfig.NewDecoder(targetType, decodeFn)
+	decoder := runtimevar.NewDecoder(targetType, decodeFn)
 
-	return runtimeconfig.New(&watcher{
+	return runtimevar.New(&watcher{
 		client:      c.client,
 		waitTime:    waitTime,
 		lastRPCTime: time.Now().Add(-1 * waitTime), // Remove wait on first Watch call.
@@ -128,7 +128,7 @@ type WatchOptions struct {
 
 	// Decode is the function to decode the configuration storage value into the specified type. If
 	// this is not set, it defaults to JSON unmarshal.
-	Decode runtimeconfig.Decode
+	Decode runtimevar.Decode
 }
 
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
@@ -138,7 +138,7 @@ type watcher struct {
 	waitTime    time.Duration
 	lastRPCTime time.Time
 	name        string
-	decoder     *runtimeconfig.Decoder
+	decoder     *runtimevar.Decoder
 	bytes       []byte
 	isDeleted   bool
 	updateTime  time.Time
@@ -151,8 +151,8 @@ func (w *watcher) Close() error {
 
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs. It
 // implements the driver.Watcher.Watch method.
-func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
-	zeroConfig := driver.Config{}
+func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+	zeroVar := driver.Variable{}
 
 	// Loop to check for changes or continue waiting.
 	for {
@@ -162,7 +162,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 		case <-t.C:
 		case <-ctx.Done():
 			t.Stop()
-			return zeroConfig, ctx.Err()
+			return zeroVar, ctx.Err()
 		}
 
 		// Use GetVariables RPC and check for deltas based on the response.
@@ -171,7 +171,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 		if err == nil {
 			updateTime, err := parseUpdateTime(vpb)
 			if err != nil {
-				return zeroConfig, err
+				return zeroVar, err
 			}
 
 			// Determine if there are any changes based on the bytes. If there are, update cache and
@@ -183,9 +183,9 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 				w.isDeleted = false
 				val, err := w.decoder.Decode(bytes)
 				if err != nil {
-					return zeroConfig, err
+					return zeroVar, err
 				}
-				return driver.Config{
+				return driver.Variable{
 					Value:      val,
 					UpdateTime: updateTime,
 				}, nil
@@ -193,14 +193,14 @@ func (w *watcher) Watch(ctx context.Context) (driver.Config, error) {
 
 		} else {
 			if st, ok := status.FromError(err); !ok || st.Code() != codes.NotFound {
-				return zeroConfig, err
+				return zeroVar, err
 			}
 			// For RPC not found error, if last known state is not deleted, mark isDeleted and
 			// return error, else treat as no change has occurred.
 			if !w.isDeleted {
 				w.isDeleted = true
 				w.updateTime = time.Now().UTC()
-				return zeroConfig, err
+				return zeroVar, err
 			}
 		}
 	}

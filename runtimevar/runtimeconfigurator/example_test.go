@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/google/go-cloud/runtimeconfig/runtimeconfigurator"
+	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 )
 
 // MyAppConfig is the unmarshaled type for configuration stored in key
@@ -40,7 +40,7 @@ func ExampleClient_NewConfig() {
 		Config:    "configName",
 		Variable:  "appConfig",
 	}
-	cfg, err := client.NewConfig(ctx, name, &MyAppConfig{}, nil)
+	cfg, err := client.NewVariable(ctx, name, &MyAppConfig{}, nil)
 	if err != nil {
 		log.Fatalf("Error in constructing Config: %v", err)
 	}

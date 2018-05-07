@@ -23,7 +23,7 @@ import (
 	"time"
 
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/google/go-cloud/runtimeconfig/driver"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
@@ -34,7 +34,7 @@ import (
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
 
-// fakeServer partially implements RuntimeConfigManagerServer for Client to connect to.  Prefill
+// fakeServer partially implements runtimevarManagerServer for Client to connect to.  Prefill
 // responses field with the ordered list of responses to GetVariable calls.
 type fakeServer struct {
 	pb.RuntimeConfigManagerServer
@@ -125,7 +125,7 @@ func TestWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewConfig(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
 	if err != nil {
 		t.Fatalf("NewConfig returned error: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestCustomDecode(t *testing.T) {
 		WaitTime: 500 * time.Millisecond,
 		Decode:   stringDecode,
 	}
-	cfg, err := client.NewConfig(ctx, resourceName, "", watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, "", watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewConfig(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestContextCancelledInBetweenWatchCalls(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewConfig(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewConfig(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig() returned error: %v", err)
 	}
