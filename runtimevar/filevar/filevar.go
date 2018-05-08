@@ -34,20 +34,38 @@ package filevar
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+
+	"github.com/fsnotify/fsnotify"
 )
+
+// defaultWait is the default amount of time for a watcher to reread the file.
+// Change the docstring for NewVariable if this time is modified.
+const defaultWait = 10 * time.Second
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-func NewVariable(file string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+// If WaitTime is not set the wait is set to 10 seconds.
+func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+	if opts == nil {
+		opts = &WatchOptions{}
+	}
+	waitTime := opts.WaitTime
+	switch {
+	case waitTime == 0:
+		waitTime = defaultWait
+	case waitTime < 0:
+		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
+	}
+
 	// Use absolute file path.
 	file, err := filepath.Abs(file)
 	if err != nil {
@@ -64,6 +82,7 @@ func NewVariable(file string, decoder *runtimevar.Decoder) (*runtimevar.Variable
 		notifier: notifier,
 		file:     file,
 		decoder:  decoder,
+		waitTime: waitTime,
 	}), nil
 }
 
@@ -74,12 +93,9 @@ type watcher struct {
 	decoder    *runtimevar.Decoder
 	bytes      []byte
 	isDeleted  bool
+	waitTime   time.Duration
 	updateTime time.Time
 }
-
-// Use of var instead of const to allow test to override value.
-// TODO: Make this into a Watcher option.
-var waitTime = 10 * time.Second
 
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs.  It
 // will return an error if the configuration file is deleted, however, if it has previously returned
@@ -109,7 +125,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 
 		case stillDeletedState:
 			// Last known state is deleted, need to wait for file to show up before adding a watch.
-			t := time.NewTimer(waitTime)
+			t := time.NewTimer(defaultWait)
 			select {
 			case <-t.C:
 			case <-ctx.Done():
@@ -159,6 +175,15 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 			return zeroVar, err
 		}
 	}
+}
+
+// WatchOptions allows the specification of various options to a watcher.
+type WatchOptions struct {
+	// WaitTime controls the frequency of making an HTTP call and checking for
+	// updates by the Watch method. The smaller the value, the higher the frequency
+	// of making calls, which also means a faster rate of hitting the API quota.
+	// If this option is not set or set to 0, it uses a default value of 10 seconds.
+	WaitTime time.Duration
 }
 
 // watchState defines the different states during a watch for the Watch call to process.

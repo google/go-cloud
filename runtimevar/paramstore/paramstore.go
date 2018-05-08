@@ -28,6 +28,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
+// defaultWait is the default amount of time for a watcher to make a new AWS
+// API call.
+// Change the docstring for NewVariable if this time is modified.
 const defaultWait = 30 * time.Second
 
 // Client stores long-lived variables for connecting to Parameter Store.
@@ -42,6 +45,7 @@ func NewClient(ctx context.Context, p client.ConfigProvider) *Client {
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
+// If WaitTime is not set the polling time is set to 30 seconds.
 func (c *Client) NewVariable(ctx context.Context, name string, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}

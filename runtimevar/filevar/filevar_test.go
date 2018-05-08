@@ -30,10 +30,7 @@ import (
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
 
-func init() {
-	// Set internal waitTime to lower value to make test execute faster.
-	waitTime = 10 * time.Millisecond
-}
+const waitTime = 5 * time.Millisecond
 
 type file struct {
 	name    string
@@ -77,13 +74,13 @@ func setUp(t *testing.T) (*runtimevar.Variable, *file, func()) {
 		t.Fatal(err)
 	}
 
-	cfg, err := NewVariable(f.name, runtimevar.StringDecoder)
+	variable, err := NewVariable(f.name, runtimevar.StringDecoder, &WatchOptions{WaitTime: waitTime})
 	if err != nil {
 		t.Fatalf("NewVariable returned error: %v", err)
 	}
 
-	return cfg, f, func() {
-		cfg.Close()
+	return variable, f, func() {
+		variable.Close()
 		os.RemoveAll(f.dir)
 	}
 }
@@ -111,7 +108,7 @@ func TestFirstWatchReturnsErrorIfFileNotFound(t *testing.T) {
 	}()
 
 	name := filepath.Base(f.name) + ".nonexist"
-	cfg, err := NewVariable(filepath.Join(f.dir, name), runtimevar.StringDecoder)
+	cfg, err := NewVariable(filepath.Join(f.dir, name), runtimevar.StringDecoder, &WatchOptions{WaitTime: waitTime})
 	if err != nil {
 		t.Fatalf("NewVariable returned error: %v", err)
 	}

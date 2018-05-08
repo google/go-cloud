@@ -29,26 +29,25 @@ type DBConfig struct {
 	Name     string
 }
 
-func initConfig() (*runtimevar.Variable, func()) {
+func initVariable() (*runtimevar.Variable, func()) {
 	// Construct a runtimevar.Variable object.
-	cfg, err := filevar.NewVariable("/etc/myapp/db.json",
-		runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode))
+	v, err := filevar.NewVariable("/etc/myapp/db.json", runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return cfg, func() {
-		cfg.Close()
+	return v, func() {
+		v.Close()
 	}
 }
 
 func Example() {
-	cfg, cleanup := initConfig()
+	v, cleanup := initVariable()
 	defer cleanup()
 
 	ctx := context.Background()
 	// Call Watch to retrieve initial value before proceeding.
-	snap, err := cfg.Watch(ctx)
+	snap, err := v.Watch(ctx)
 	if err != nil {
 		log.Fatalf("Error in retrieving initial variable: %v", err)
 	}
@@ -65,7 +64,7 @@ func Example() {
 			case <-ctx.Done():
 				return
 			default:
-				snap, err := cfg.Watch(ctx)
+				snap, err := v.Watch(ctx)
 				if err != nil {
 					// Handle errors.
 					log.Printf("Error: %v", err)

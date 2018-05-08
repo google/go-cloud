@@ -28,10 +28,9 @@ type MyAppConfig struct {
 
 func ExampleNewConfig() {
 	// Configure a JSON decoder for myapp.json to unmarshal into a MyAppConfig object.
-	cfg, err := filevar.NewVariable("/etc/myapp/myapp.json",
-		runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode))
+	v, err := filevar.NewVariable("/etc/myapp/myapp.json", runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
 	if err != nil {
-		log.Fatalf("Error in constructing Config: %v", err)
+		log.Fatalf("Error in constructing variable: %v", err)
 	}
-	defer cfg.Close()
+	v.Close()
 }

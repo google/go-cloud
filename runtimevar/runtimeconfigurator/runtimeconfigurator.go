@@ -39,6 +39,7 @@ const (
 	// endpoint is the address of the GCP Runtime Configurator API.
 	endPoint = "runtimevar.googleapis.com:443"
 	// defaultWaitTimeout is the default value for WatchOptions.WaitTime if not set.
+	// Change the docstring for NewVariable if this time is modified.
 	defaultWaitTimeout = 10 * time.Minute
 )
 
@@ -75,6 +76,7 @@ func (c *Client) Close() error {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.  Provide targetType for Config to unmarshal updated configurations into similar
 // objects during the Watch call.
+// If WaitTime is not set the poller will time out after 10 minutes.
 func (c *Client) NewVariable(ctx context.Context, name ResourceName, targetType interface{},
 	opts *WatchOptions) (*runtimevar.Variable, error) {
 
