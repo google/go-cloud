@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
+
 	"go.opencensus.io/trace"
 )
 
@@ -73,8 +74,8 @@ func (srv *Server) init() {
 }
 
 // ListenAndServe is a wrapper to use wherever http.ListenAndServe is used.
-// It wraps the passed in handler with the GCP handler, which handles tracing,
-// request logging. If the handler is nil, http.DefaultServeMux will be used.
+// It wraps the passed-in http.Handler with a handler that handles tracing and
+// request logging. If the handler is nil, then http.DefaultServeMux will be used.
 func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	srv.init()
 
@@ -97,7 +98,7 @@ func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	return http.ListenAndServe(addr, mux)
 }
 
-// handler is a GCP handler wrapper that handles tracing for users.
+// handler is a handler wrapper that handles tracing through OpenCensus for users.
 // TODO(shantuo): unify handler types from trace, requestlog, health checks, etc together.
 type handler struct {
 	handler http.Handler

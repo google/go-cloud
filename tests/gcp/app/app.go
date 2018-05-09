@@ -16,6 +16,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -23,9 +24,15 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/server/sdserver"
+
+	"go.opencensus.io/trace"
+)
+
+var appSet = goose.NewSet(
+	goose.Value([]health.Checker{connection}),
+	trace.AlwaysSample,
 )
 
 var connection = new(connectionChecker)
@@ -35,11 +42,7 @@ func main() {
 	flag.StringVar(&projectID, "project", "", "Project ID to use for the test app")
 
 	flag.Parse()
-	o := &sdserver.Options{
-		ProjectID:    gcp.ProjectID(projectID),
-		HealthChecks: []health.Checker{connection},
-	}
-	srv, _, _, err := sdserver.Init(o)
+	srv, err := initialize(context.Background())
 	if err != nil {
 		log.Fatalf("unable to initialize server: %v", err)
 	}
