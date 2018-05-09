@@ -23,6 +23,7 @@ import (
 	"time"
 
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -125,7 +126,7 @@ func TestWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("NewConfig returned error: %v", err)
 	}
@@ -165,9 +166,8 @@ func TestCustomDecode(t *testing.T) {
 	ctx := context.Background()
 	watchOpt := &WatchOptions{
 		WaitTime: 500 * time.Millisecond,
-		Decode:   stringDecode,
 	}
-	cfg, err := client.NewVariable(ctx, resourceName, "", watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder("", stringDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -220,7 +220,7 @@ func TestContextCancelledInBetweenWatchCalls(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, jsonDataPtr, watchOpt)
+	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig() returned error: %v", err)
 	}

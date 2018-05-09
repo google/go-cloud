@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 )
 
@@ -40,7 +41,7 @@ func ExampleClient_NewConfig() {
 		Config:    "configName",
 		Variable:  "appConfig",
 	}
-	cfg, err := client.NewVariable(ctx, name, &MyAppConfig{}, nil)
+	cfg, err := client.NewVariable(ctx, name, runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
 	if err != nil {
 		log.Fatalf("Error in constructing Config: %v", err)
 	}

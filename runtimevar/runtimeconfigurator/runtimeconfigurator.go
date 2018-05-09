@@ -74,11 +74,10 @@ func (c *Client) Close() error {
 }
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
-// implementation.  Provide targetType for Config to unmarshal updated configurations into similar
+// implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
 // If WaitTime is not set the poller will time out after 10 minutes.
-func (c *Client) NewVariable(ctx context.Context, name ResourceName, targetType interface{},
-	opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -90,12 +89,6 @@ func (c *Client) NewVariable(ctx context.Context, name ResourceName, targetType 
 	case waitTime < 0:
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
-
-	decodeFn := runtimevar.JSONDecode
-	if opts.Decode != nil {
-		decodeFn = opts.Decode
-	}
-	decoder := runtimevar.NewDecoder(targetType, decodeFn)
 
 	return runtimevar.New(&watcher{
 		client:      c.client,
@@ -127,10 +120,6 @@ type WatchOptions struct {
 	//
 	// If this option is not set or set to 0, it uses defaultWaitTimeout value.
 	WaitTime time.Duration
-
-	// Decode is the function to decode the configuration storage value into the specified type. If
-	// this is not set, it defaults to JSON unmarshal.
-	Decode runtimevar.Decode
 }
 
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
