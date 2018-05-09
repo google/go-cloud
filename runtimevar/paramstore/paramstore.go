@@ -46,7 +46,7 @@ func NewClient(ctx context.Context, p client.ConfigProvider) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
 // If WaitTime is not set the polling time is set to 30 seconds.
-func (c *Client) NewVariable(ctx context.Context, name string, opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(ctx context.Context, name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -60,8 +60,9 @@ func (c *Client) NewVariable(ctx context.Context, name string, opts *WatchOption
 
 	return runtimevar.New(&watcher{
 		sess:        c.sess,
-		waitTime:    waitTime,
 		name:        name,
+		waitTime:    waitTime,
+		decoder:     decoder,
 		lastVersion: -1,
 	}), nil
 }
@@ -81,7 +82,9 @@ type watcher struct {
 	// name is the parameter to retrieve.
 	name string
 	// waitTime is the amount of time to wait between querying AWS.
-	waitTime    time.Duration
+	waitTime time.Duration
+	// decoder is the decoder that unmarshals the value in the param.
+	decoder     *runtimevar.Decoder
 	lastVersion int64
 }
 
@@ -102,8 +105,16 @@ func (w watcher) Watch(ctx context.Context) (driver.Variable, error) {
 			}
 			// version is set to 0 by readParam if the version hasn't changed.
 			if p.version != 0 && w.lastVersion != p.version {
+				dec := w.decoder
+				if dec == nil {
+					dec = runtimevar.StringDecoder
+				}
+				val, err := dec.Decode([]byte(p.value))
+				if err != nil {
+					return zeroVar, err
+				}
 				w.lastVersion = p.version
-				return driver.Variable{Value: p.value, UpdateTime: p.updateTime}, nil
+				return driver.Variable{Value: val, UpdateTime: p.updateTime}, nil
 			}
 		case <-ctx.Done():
 			return zeroVar, ctx.Err()

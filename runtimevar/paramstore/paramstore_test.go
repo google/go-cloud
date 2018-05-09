@@ -35,6 +35,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cmp/cmp"
 )
 
 const region = "us-east-2"
@@ -86,7 +88,7 @@ func TestInitialWatch(t *testing.T) {
 	}{
 		{
 			name:  "Good param should return OK",
-			param: "watch-initial-test",
+			param: "test-watch-initial",
 			value: "foobar",
 		},
 	}
@@ -106,14 +108,14 @@ func TestInitialWatch(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			conf, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
-			res, err := conf.Watch(ctx)
+			variable, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, runtimevar.StringDecoder, &WatchOptions{WaitTime: time.Second})
+			got, err := variable.Watch(ctx)
 
 			switch {
 			case err != nil:
 				t.Fatal(err)
-			case res.Value != tc.value:
-				t.Errorf("want %v; got %v", tc.value, res.Value)
+			case got.Value != tc.value:
+				t.Errorf("want %v; got %v", tc.value, got.Value)
 			}
 		})
 	}
@@ -126,7 +128,7 @@ func TestWatchObservesChange(t *testing.T) {
 	}{
 		{
 			name:        "Good param should flip OK",
-			param:       "watch-observes-change-test",
+			param:       "test-watch-observes-change",
 			firstValue:  "foo",
 			secondValue: "bar",
 		},
@@ -147,13 +149,13 @@ func TestWatchObservesChange(t *testing.T) {
 			}()
 
 			ctx := context.Background()
-			conf, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, &WatchOptions{WaitTime: time.Second})
-			res, err := conf.Watch(ctx)
+			variable, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, runtimevar.StringDecoder, &WatchOptions{WaitTime: time.Second})
+			got, err := variable.Watch(ctx)
 			switch {
 			case err != nil:
 				t.Fatal(err)
-			case res.Value != tc.firstValue:
-				t.Errorf("want %v; got %v", tc.firstValue, res.Value)
+			case got.Value != tc.firstValue:
+				t.Errorf("want %v; got %v", tc.firstValue, got.Value)
 			}
 
 			// Write again and see that watch sees the new value.
@@ -161,12 +163,61 @@ func TestWatchObservesChange(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			res, err = conf.Watch(ctx)
+			got, err = variable.Watch(ctx)
 			switch {
 			case err != nil:
 				t.Fatal(err)
-			case res.Value != tc.secondValue:
-				t.Errorf("want %v; got %v", tc.secondValue, res.Value)
+			case got.Value != tc.secondValue:
+				t.Errorf("want %v; got %v", tc.secondValue, got.Value)
+			}
+		})
+	}
+}
+
+func TestJSONDecode(t *testing.T) {
+	type Message struct {
+		Name, Text string
+	}
+
+	var tests = []struct {
+		name, param, json string
+		want              []*Message
+	}{
+		{
+			name:  "Valid JSON should be unmarshaled correctly",
+			param: "test-json-decode",
+			json: `[
+{"Name": "Ed", "Text": "Knock knock."},
+{"Name": "Sam", "Text": "Who's there?"}
+]`,
+			want: []*Message{{Name: "Ed", Text: "Knock knock."}, {Name: "Sam", Text: "Who's there?"}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sess, done := newSession(t, "decoder")
+			defer done()
+
+			if _, err := writeParam(sess, tc.param, "String", tc.json); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if err := deleteParam(sess, tc.param); err != nil {
+					t.Fatal(err)
+				}
+			}()
+
+			ctx := context.Background()
+			var jsonDataPtr []*Message
+			variable, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), &WatchOptions{WaitTime: time.Second})
+			got, err := variable.Watch(ctx)
+
+			switch {
+			case err != nil:
+				t.Error(err)
+			case !cmp.Equal(got.Value.([]*Message), tc.want):
+				t.Errorf("got %+v, want %+v", got.Value, tc.want)
 			}
 		})
 	}
