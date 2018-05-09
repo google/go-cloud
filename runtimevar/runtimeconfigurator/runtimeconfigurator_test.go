@@ -126,22 +126,22 @@ func TestWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
+	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("NewConfig returned error: %v", err)
 	}
 
-	got1, err := cfg.Watch(ctx)
+	got1, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got1.Value.(*jsonData), &jsonData{"hello"}); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)
 	}
 
-	got2, err := cfg.Watch(ctx)
+	got2, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got2.Value.(*jsonData), &jsonData{"hola"}); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)
@@ -167,14 +167,14 @@ func TestCustomDecode(t *testing.T) {
 	watchOpt := &WatchOptions{
 		WaitTime: 500 * time.Millisecond,
 	}
-	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder("", stringDecode), watchOpt)
+	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder("", stringDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
 
-	got, err := cfg.Watch(ctx)
+	got, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got.Value.(string), value); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)
@@ -197,7 +197,7 @@ func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
+	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -205,9 +205,9 @@ func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	cancel()
 
-	_, err = cfg.Watch(ctx)
+	_, err = variable.Watch(ctx)
 	if err == nil {
-		t.Fatal("Config.Watch returned nil error, expecting an error from cancelling")
+		t.Fatal("Variable.Watch returned nil error, expecting an error from cancelling")
 	}
 }
 
@@ -220,22 +220,22 @@ func TestContextCancelledInBetweenWatchCalls(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
+	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
 
-	_, err = cfg.Watch(ctx)
+	_, err = variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	cancel()
 
-	_, err = cfg.Watch(ctx)
+	_, err = variable.Watch(ctx)
 	if err == nil {
-		t.Fatal("Config.Watch returned nil error, expecting an error from cancelling")
+		t.Fatal("Variable.Watch returned nil error, expecting an error from cancelling")
 	}
 }
 
@@ -250,25 +250,25 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	defer cleanUp()
 
 	ctx := context.Background()
-	cfg, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
+	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
 	if err != nil {
 		t.Fatalf("Client.NewConfig() returned error: %v", err)
 	}
 
-	prev, err := cfg.Watch(ctx)
+	prev, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 
 	// Expect deleted error.
-	if _, err := cfg.Watch(ctx); err == nil {
-		t.Fatalf("Config.Watch returned nil, want error")
+	if _, err := variable.Watch(ctx); err == nil {
+		t.Fatalf("Variable.Watch returned nil, want error")
 	}
 
 	// Calling Watch again will poll for jsonVar2.
-	got, err := cfg.Watch(ctx)
+	got, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("Config.Watch returned error: %v", err)
+		t.Fatalf("Variable.Watch returned error: %v", err)
 	}
 	if diff := cmp.Diff(got.Value.(*jsonData), &jsonData{"hola"}); diff != "" {
 		t.Errorf("Snapshot.Value: %s", diff)
