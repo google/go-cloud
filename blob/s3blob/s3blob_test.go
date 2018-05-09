@@ -31,7 +31,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const testBucket = "psp.test"
+const testBucket = "oh.test.psp"
 
 var (
 	s3Bucket *s3blob.Bucket
