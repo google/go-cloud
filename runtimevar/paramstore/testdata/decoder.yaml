@@ -1,6 +1,5 @@
 ---
 version: 1
-mu: {}
 interactions:
 - request:
     body: '{"Name":"test-json-decode","Overwrite":true,"Type":"String","Value":"[\n{\"Name\":
@@ -13,9 +12,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.44 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180509T164215Z
+      - 20180509T222444Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -28,7 +27,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 09 May 2018 16:42:14 GMT
+      - Wed, 09 May 2018 22:24:44 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -41,9 +40,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.44 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180509T164216Z
+      - 20180509T222446Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
       X-Gocloud-Seq:
@@ -58,7 +57,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 09 May 2018 16:42:15 GMT
+      - Wed, 09 May 2018 22:24:45 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -71,9 +70,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.44 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180509T164216Z
+      - 20180509T222446Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
@@ -81,12 +80,12 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.52588413536E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-json-decode","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.525904684941E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/shantuo","Name":"test-json-decode","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 09 May 2018 16:42:15 GMT
+      - Wed, 09 May 2018 22:24:45 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -99,9 +98,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.44 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180509T164216Z
+      - 20180509T222446Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -114,7 +113,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 09 May 2018 16:42:15 GMT
+      - Wed, 09 May 2018 22:24:45 GMT
     status: 200 OK
     code: 200
     duration: ""
