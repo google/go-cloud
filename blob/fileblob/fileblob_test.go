@@ -1,0 +1,291 @@
+// Copyright 2018 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package fileblob
+
+import (
+	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestNewBucket(t *testing.T) {
+	t.Run("DirMissing", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		_, err = NewBucket(filepath.Join(dir, "notfound"))
+		if err == nil {
+			t.Error("NewBucket did not return error")
+		}
+	})
+	t.Run("File", func(t *testing.T) {
+		f, err := ioutil.TempFile("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(f.Name())
+		_, err = NewBucket(f.Name())
+		if err == nil {
+			t.Error("NewBucket did not return error")
+		}
+	})
+	t.Run("DirExists", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		_, err = NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestReader(t *testing.T) {
+	t.Run("MetadataOnly", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const fileContent = "Hello, World!\n"
+		err = ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte(fileContent), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		r, err := b.NewRangeReader(ctx, "foo.txt", 0, 0)
+		if err != nil {
+			t.Fatal("NewRangeReader:", err)
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				t.Error("Close:", err)
+			}
+		}()
+		if got := r.Size(); got != int64(len(fileContent)) {
+			t.Errorf("r.Size() at beginning = %d; want %d", got, len(fileContent))
+		}
+		if got, err := ioutil.ReadAll(r); err != nil {
+			t.Errorf("Read error: %v", err)
+		} else if len(got) > 0 {
+			t.Errorf("ioutil.ReadAll(r) = %q; fileContent \"\"", got)
+		}
+		if got := r.Size(); got != int64(len(fileContent)) {
+			t.Errorf("r.Size() at end = %d; want %d", got, len(fileContent))
+		}
+	})
+	t.Run("WholeBlob", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const want = "Hello, World!\n"
+		err = ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		r, err := b.NewReader(ctx, "foo.txt")
+		if err != nil {
+			t.Fatal("NewReader:", err)
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				t.Error("Close:", err)
+			}
+		}()
+		if got := r.Size(); got != int64(len(want)) {
+			t.Errorf("r.Size() at beginning = %d; want %d", got, len(want))
+		}
+		if got, err := ioutil.ReadAll(r); err != nil {
+			t.Errorf("Read error: %v", err)
+		} else if string(got) != want {
+			t.Errorf("ioutil.ReadAll(r) = %q; want %q", got, want)
+		}
+		if got := r.Size(); got != int64(len(want)) {
+			t.Errorf("r.Size() at end = %d; want %d", got, len(want))
+		}
+	})
+	t.Run("Range", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const wholeFile = "Hello, World!\n"
+		const offset, rangeLen = 1, 4
+		const want = "ello"
+		err = ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte(wholeFile), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		r, err := b.NewRangeReader(ctx, "foo.txt", offset, rangeLen)
+		if err != nil {
+			t.Fatal("NewRangeReader:", err)
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				t.Error("Close:", err)
+			}
+		}()
+		if got := r.Size(); got != int64(len(wholeFile)) {
+			t.Errorf("r.Size() at beginning = %d; want %d", got, len(want))
+		}
+		if got, err := ioutil.ReadAll(r); err != nil {
+			t.Errorf("Read error: %v", err)
+		} else if string(got) != want {
+			t.Errorf("ioutil.ReadAll(r) = %q; want %q", got, want)
+		}
+		if got := r.Size(); got != int64(len(wholeFile)) {
+			t.Errorf("r.Size() at end = %d; want %d", got, len(want))
+		}
+	})
+	// TODO(light): For sake of conformance test completionism, this should also
+	// test range that goes past the end of the blob, but then we're just testing
+	// the OS for fileblob.
+}
+
+func TestWriter(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		w, err := b.NewWriter(ctx, "foo.txt", nil)
+		if err != nil {
+			t.Fatal("NewWriter:", err)
+		}
+		const want = "Hello, World!\n"
+		if n, err := w.Write([]byte(want)); n != len(want) || err != nil {
+			t.Errorf("w.Write(%q) = %d, %v; want %d, <nil>", want, n, err, len(want))
+		}
+		if err := w.Close(); err != nil {
+			t.Errorf("w.Close() = %v", err)
+		}
+
+		if got, err := ioutil.ReadFile(filepath.Join(dir, "foo.txt")); err != nil {
+			t.Errorf("Read foo.txt: %v", err)
+		} else if string(got) != want {
+			t.Errorf("ioutil.ReadFile(\".../foo.txt\") = %q; want %q", got, want)
+		}
+	})
+	t.Run("WithFilepathSep", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		key := filepath.Join("foo", "bar.txt")
+		w, err := b.NewWriter(ctx, key, nil)
+		if err != nil {
+			t.Fatal("NewWriter:", err)
+		}
+		const want = "Hello, World!\n"
+		if n, err := w.Write([]byte(want)); n != len(want) || err != nil {
+			t.Errorf("w.Write(%q) = %d, %v; want %d, <nil>", want, n, err, len(want))
+		}
+		if err := w.Close(); err != nil {
+			t.Errorf("w.Close() = %v", err)
+		}
+
+		if got, err := ioutil.ReadFile(filepath.Join(dir, key)); err != nil {
+			t.Errorf("Read %s: %v", key, err)
+		} else if string(got) != want {
+			t.Errorf("ioutil.ReadFile(%q) = %q; want %q", filepath.Join("...", key), got, want)
+		}
+	})
+}
+
+func TestDelete(t *testing.T) {
+	t.Run("Exists", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const fileContent = "Hello, World!\n"
+		err = ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte(fileContent), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		if err := b.Delete(ctx, "foo.txt"); err != nil {
+			t.Error("Delete:", err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {
+			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)
+		}
+	})
+	t.Run("DoesNotExistNop", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		if err := b.Delete(ctx, "foo.txt"); err != nil {
+			t.Error("Delete:", err)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {
+			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)
+		}
+	})
+}
