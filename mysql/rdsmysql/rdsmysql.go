@@ -29,7 +29,16 @@ import (
 	"sync"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/go-cloud/goose"
 	"golang.org/x/net/context/ctxhttp"
+)
+
+// Set is a Goose provider set that provides a *sql.DB given
+// *Params and an HTTP client.
+var Set = goose.NewSet(
+	Open,
+	CertFetcher{},
+	goose.Bind(CertPoolProvider(nil), (*CertFetcher)(nil)),
 )
 
 // Params specifies how to connect to an RDS database.
@@ -52,9 +61,12 @@ type CertPoolProvider interface {
 }
 
 // Open opens an encrypted connection to an RDS MySQL database.
-func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.DB, error) {
+//
+// The second return value is a Goose cleanup function that calls Close on the
+// database and ignores the error.
+func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.DB, func(), error) {
 	if params.Endpoint == "" {
-		return nil, fmt.Errorf("open RDS: endpoint empty")
+		return nil, nil, fmt.Errorf("open RDS: endpoint empty")
 	}
 	c := &connector{
 		provider: provider,
@@ -63,7 +75,8 @@ func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.
 		ready:    make(chan struct{}),
 	}
 	c.sem <- struct{}{}
-	return sql.OpenDB(c), nil
+	db := sql.OpenDB(c)
+	return db, func() { db.Close() }, nil
 }
 
 type connector struct {

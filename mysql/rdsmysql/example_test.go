@@ -22,7 +22,7 @@ import (
 
 func Example() {
 	ctx := context.Background()
-	db, err := rdsmysql.Open(ctx, new(rdsmysql.CertFetcher), &rdsmysql.Params{
+	db, cleanup, err := rdsmysql.Open(ctx, new(rdsmysql.CertFetcher), &rdsmysql.Params{
 		// Replace these with your actual settings.
 		Endpoint: "example01.xyzzy.us-west-1.rds.amazonaws.com",
 		User:     "myrole",
@@ -32,6 +32,7 @@ func Example() {
 	if err != nil {
 		panic(err)
 	}
+	defer cleanup()
 
 	// Use database in your program.
 	db.ExecContext(ctx, "CREATE TABLE foo (bar INT);")
