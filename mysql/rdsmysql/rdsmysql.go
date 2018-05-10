@@ -28,8 +28,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/rds/rdsutils"
 	"github.com/go-sql-driver/mysql"
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -72,24 +70,26 @@ func FetchCertificates(ctx context.Context, client *http.Client) ([]*x509.Certif
 
 // Params specifies how to connect to an RDS database.
 type Params struct {
+	// Endpoint is the host/port of the RDS database, like
+	// "myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:3306".
+	// If no port is given, then 3306 is assumed.
 	Endpoint string
-	Region   string // TODO(light): infer from endpoint?
-	User     string // TODO(light): infer from credentials
+	// User is the database user to connect as.
+	User string
+	// Password is the database user password to use.
+	Password string
+	// Database is the MySQL database name to connect to.
 	Database string
 }
 
 // Open opens an encrypted connection to an RDS database.
-func Open(ctx context.Context, creds *credentials.Credentials, certPool *x509.CertPool, params *Params) (*sql.DB, error) {
-	tok, err := rdsutils.BuildAuthToken(params.Endpoint, params.Region, params.User, creds)
-	if err != nil {
-		return nil, fmt.Errorf("open RDS database: auth token: %v", err)
-	}
+func Open(ctx context.Context, certPool *x509.CertPool, params *Params) (*sql.DB, error) {
 	tlsConfigCounter.mu.Lock()
 	tlsConfigNum := tlsConfigCounter.n
 	tlsConfigCounter.n++
 	tlsConfigCounter.mu.Unlock()
 	tlsConfigName := fmt.Sprintf("github.com/google/go-cloud/mysql/rdsmysql/%d", tlsConfigNum)
-	err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
+	err := mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 		RootCAs: certPool,
 	})
 	if err != nil {
@@ -99,7 +99,7 @@ func Open(ctx context.Context, creds *credentials.Credentials, certPool *x509.Ce
 		Net:                     "tcp",
 		Addr:                    params.Endpoint,
 		User:                    params.User,
-		Passwd:                  tok,
+		Passwd:                  params.Password,
 		TLSConfig:               tlsConfigName,
 		AllowCleartextPasswords: true,
 		DBName:                  params.Database,

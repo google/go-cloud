@@ -19,13 +19,11 @@ import (
 	"crypto/x509"
 	"net/http"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/google/go-cloud/mysql/rdsmysql"
 )
 
 func Example() {
 	ctx := context.Background()
-	sess := session.Must(session.NewSession())
 	certs, err := rdsmysql.FetchCertificates(ctx, http.DefaultClient)
 	if err != nil {
 		panic(err)
@@ -34,11 +32,11 @@ func Example() {
 	for _, c := range certs {
 		certPool.AddCert(c)
 	}
-	db, err := rdsmysql.Open(ctx, sess.Config.Credentials, certPool, &rdsmysql.Params{
+	db, err := rdsmysql.Open(ctx, certPool, &rdsmysql.Params{
 		// Replace these with your actual settings.
-		Endpoint: "example01.xyzzy.us-west-1.rds.amazonaws.com:3306",
-		Region:   "us-west-1",
+		Endpoint: "example01.xyzzy.us-west-1.rds.amazonaws.com",
 		User:     "myrole",
+		Password: "swordfish",
 		Database: "test",
 	})
 	if err != nil {
