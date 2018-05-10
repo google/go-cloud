@@ -36,9 +36,7 @@ gcloud container clusters create "${cluster}" \
 
 # Build the app binary and image
 cd "${test_dir}"/app
-# TODO(shantuo): reuse vgo when it supports gopkg.in better.
-# https://github.com/golang/go/issues/25243
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o app
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 vgo build -o app
 gcloud container builds submit -t gcr.io/${project}/gcp-test:latest .
 rm -f app
 
@@ -59,9 +57,7 @@ kubectl create -f gcp-test.yaml
 
 # Build the test driver binary
 cd "${test_dir}"/test-driver
-# TODO(shantuo): reuse vgo when it supports gopkg.in better.
-# https://github.com/golang/go/issues/25243
-CGO_ENABLED=0 go build -o test-driver
+CGO_ENABLED=0 vgo build -o test-driver
 
 # Wait for the load balancer to be ready
 while true; do

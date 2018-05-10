@@ -19,7 +19,7 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-sdk-go-v2 v0.0.0-20180423212408-584b9ab90028
-	github.com/dnaeon/go-vcr v0.0.0-20180323180743-b68d3628568e
+	github.com/dnaeon/go-vcr v0.0.0-20180504081357-f8a7e8b9c630
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
@@ -33,5 +33,4 @@ require (
 	go.opencensus.io v0.9.0
 	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
 	golang.org/x/tools v0.0.0-20180314180217-d853e8088c62
-	gopkg.in/yaml.v2 v2.2.1
 )

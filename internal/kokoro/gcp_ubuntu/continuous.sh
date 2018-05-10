@@ -34,15 +34,6 @@ cd "$GO_CLOUD_HOME"
 export CC=gcc
 ret=0
 $GOPATH/bin/vgo test -race -v -short ./... || ret=$?
-# vgo might be sad if vgo is bugged (such is the way of beta), so fallback
-# to standard go and try again
-echo "vgo exited with $ret"
-if [[ "$ret" != 0 ]]; then
-  # Don't use -u due to https://github.com/golang/go/issues/13084
-  go get -t ./...
-  go test -race -v -short ./...
-fi
-
 $GOPATH/bin/golint -set_exit_status ./...
 
 # Capture the grep failure into a variable as || will stop bash immediately
