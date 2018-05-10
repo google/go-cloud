@@ -24,6 +24,9 @@ import (
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
+
+	// Size returns the number of bytes in the whole blob. It must always return
+	// the same value.
 	Size() int64
 }
 
@@ -49,7 +52,7 @@ type Bucket interface {
 	//
 	// A new object will be created unless an object with this key already exists.
 	// Otherwise any previous object with the same name will be replaced.
-	// The object will not be available (and any previous object will remain)
+	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
 	// The caller must call Close on the returned Writer when done writing.
