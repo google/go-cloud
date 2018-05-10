@@ -46,36 +46,96 @@ const region = "us-east-2"
 // because the only way to make the test hermetic is for the test to be able
 // to perform all the functions.
 func TestWriteReadDelete(t *testing.T) {
+	macbeth, err := ioutil.ReadFile("testdata/macbeth.txt")
+	if err != nil {
+		t.Fatalf("error reading long data file: %v", err)
+	}
+
 	tests := []struct {
-		name, param string
-		wantErr     bool
+		name, paramName, value string
+		wantWriteErr           bool
 	}{
 		{
-			name:  "Good param should pass",
-			param: "write-read-delete-test",
+			name:      "Good param name and value should pass",
+			paramName: "test-good-param",
+			value:     "Jolly snowman to test Unicode handling: ☃️",
+		},
+		{
+			// Param names that aren't letters, numbers or common symbols can't be created.
+			name:         "Bad param name should fail",
+			paramName:    "test-bad-param-with-snowman-☃️",
+			value:        "snowman",
+			wantWriteErr: true,
+		},
+		{
+			name:         "Good param name with an empty value should fail",
+			paramName:    "test-good-empty-param",
+			wantWriteErr: true,
+		},
+		{
+			name:         "Empty param name should fail",
+			paramName:    "",
+			value:        "empty",
+			wantWriteErr: true,
+		},
+		{
+			name: "Long param name should fail",
+			paramName: `
+		Hodor. Hodor HODOR hodor, hodor hodor, hodor. Hodor hodor hodor hodor?!
+		Hodor, hodor. Hodor. Hodor, HODOR hodor, hodor hodor; hodor hodor hodor,
+		hodor. Hodor hodor, hodor, hodor hodor. Hodor. Hodor hodor... Hodor hodor
+		hodor hodor! Hodor. Hodor hodor hodor - hodor, hodor, hodor hodor. Hodor.
+		Hodor hodor hodor hodor hodor - hodor? Hodor HODOR hodor, hodor hodor
+		hodor hodor?! Hodor. Hodor hodor... Hodor hodor hodor?
+		`,
+			value:        "HODOOORRRRR!",
+			wantWriteErr: true,
+		},
+		{
+			// AWS documents that 4096 is the maximum size of a parameter value.
+			// Interestingly, it appears to accept more, but it's not obvious how
+			// much that is. Test that it at least works for 4096.
+			name:      "Good value of 4096 should pass",
+			paramName: "test-good-size-value",
+			value:     string(macbeth)[:4096],
+		},
+		{
+			name:         "Bad value of a really long parameter should fail",
+			paramName:    "test-bad-size-value",
+			value:        string(macbeth),
+			wantWriteErr: true,
 		},
 	}
 
+	sess, done := newSession(t, "write_read_delete")
+	defer done()
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sess, done := newSession(t, "write_read_delete")
-			defer done()
-			_, err := writeParam(sess, tc.param, "String", "Snowman: ☃️")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			p, err := readParam(sess, tc.param, -1)
-			if err != nil {
-				t.Fatal(err)
-			}
+			_, err := writeParam(sess, tc.paramName, tc.value)
 			switch {
-			case p.name != tc.param:
-				t.Errorf("want %s; got %s", tc.param, p.name)
+			case err != nil && !tc.wantWriteErr:
+				t.Fatalf("got error %v; want nil", err)
+			case err == nil && tc.wantWriteErr:
+				t.Errorf("got nil error; want error")
+			case err != nil && tc.wantWriteErr:
+				// Writing has failed as expected, continue other tests.
+				return
 			}
+			defer func() {
+				if err := deleteParam(sess, tc.paramName); err != nil {
+					t.Log(err)
+				}
+			}()
 
-			if deleteParam(sess, tc.param) != nil {
-				t.Error(err)
+			p, err := readParam(sess, tc.paramName, -1)
+			switch {
+			case err != nil:
+				t.Errorf("got error %v; want nil", err)
+			case p.name != tc.paramName:
+				t.Errorf("got %s; want %s", p.name, tc.paramName)
+			case p.value != tc.value:
+				t.Errorf("got %s; want %s", p.value, tc.value)
 			}
 		})
 	}
@@ -98,7 +158,7 @@ func TestInitialWatch(t *testing.T) {
 			sess, done := newSession(t, "watch_initial")
 			defer done()
 
-			if _, err := writeParam(sess, tc.param, "String", tc.value); err != nil {
+			if _, err := writeParam(sess, tc.param, tc.value); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
@@ -139,7 +199,7 @@ func TestWatchObservesChange(t *testing.T) {
 			sess, done := newSession(t, "watch_change")
 			defer done()
 
-			if _, err := writeParam(sess, tc.param, "String", tc.firstValue); err != nil {
+			if _, err := writeParam(sess, tc.param, tc.firstValue); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
@@ -159,7 +219,7 @@ func TestWatchObservesChange(t *testing.T) {
 			}
 
 			// Write again and see that watch sees the new value.
-			if _, err := writeParam(sess, tc.param, "String", tc.secondValue); err != nil {
+			if _, err := writeParam(sess, tc.param, tc.secondValue); err != nil {
 				t.Fatal(err)
 			}
 
@@ -199,7 +259,7 @@ func TestJSONDecode(t *testing.T) {
 			sess, done := newSession(t, "decoder")
 			defer done()
 
-			if _, err := writeParam(sess, tc.param, "String", tc.json); err != nil {
+			if _, err := writeParam(sess, tc.param, tc.json); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
@@ -321,11 +381,11 @@ func fixHeaders(filepath string) error {
 	return nil
 }
 
-func writeParam(p client.ConfigProvider, name, pType, value string) (int64, error) {
+func writeParam(p client.ConfigProvider, name, value string) (int64, error) {
 	svc := ssm.New(p)
 	resp, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:      aws.String(name),
-		Type:      aws.String(pType),
+		Type:      aws.String("String"),
 		Value:     aws.String(value),
 		Overwrite: aws.Bool(true),
 	})

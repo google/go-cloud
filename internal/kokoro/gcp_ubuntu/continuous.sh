@@ -33,7 +33,7 @@ cd "$GO_CLOUD_HOME"
 
 export CC=gcc
 ret=0
-$GOPATH/bin/vgo test -race -v -short ./... || ret=$?
+$GOPATH/bin/vgo test -race -short ./... || ret=$?
 $GOPATH/bin/golint -set_exit_status ./...
 
 # Capture the grep failure into a variable as || will stop bash immediately
