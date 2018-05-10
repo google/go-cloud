@@ -13,7 +13,6 @@
 // limitations under the License.
 
 // Package s3blob provides an implementation of using blob API on S3.
-// It is built on top of AWS Go SDK v2.
 package s3blob
 
 import (
@@ -26,34 +25,34 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-var _ driver.Bucket = (*Bucket)(nil)
+var _ driver.Bucket = (*bucket)(nil)
 
-// New returns an S3 Bucket. It handles creation of a client used to communicate
-// to S3. AWS config can be passed in through BucketOptions to change the default
-// configuration of the S3Bucket.
-func New(ctx context.Context, bucketName string, opts *BucketOptions) (*Bucket, error) {
+// NewBucket returns an S3 Bucket. It handles creation of a client used to
+// communicate to S3. AWS config can be passed in through BucketOptions to
+// change the default configuration of the S3Bucket.
+func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
-	if opts == nil {
-		opts = new(BucketOptions)
+	if sess == nil {
+		return nil, errors.New("sess must be provided to get bucket")
 	}
-	if opts.AWSConfig == nil {
-		cfg, err := external.LoadDefaultAWSConfig()
-		if err != nil {
-			return nil, err
-		}
-		opts.AWSConfig = &cfg
-	}
-	svc := s3.New(*opts.AWSConfig)
-	return &Bucket{name: bucketName, client: svc, ecfg: opts.AWSConfig}, nil
+	svc := s3.New(sess)
+	uploader := s3manager.NewUploader(sess)
+	return blob.NewBucket(&bucket{
+		name:     bucketName,
+		client:   svc,
+		uploader: uploader,
+	}), nil
 }
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
@@ -152,11 +151,11 @@ func (w *Writer) touch() {
 	})
 }
 
-// Bucket represents an S3 bucket and handles read, write and delete operations.
-type Bucket struct {
-	name   string
-	client *s3.S3
-	ecfg   *aws.Config
+// bucket represents an S3 bucket and handles read, write and delete operations.
+type bucket struct {
+	name     string
+	client   *s3.S3
+	uploader *s3manager.Uploader
 }
 
 // BucketOptions provides information settings during bucket initialization.
@@ -167,7 +166,7 @@ type BucketOptions struct {
 // NewRangeReader returns a Reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
-func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	if offset < 0 {
 		return nil, fmt.Errorf("negative offset %d", offset)
 	}
@@ -183,30 +182,28 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	} else if length > 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
-	req := b.client.GetObjectRequest(in)
-	res, err := req.Send()
-	if err != nil {
+	req, resp := b.client.GetObjectRequest(in)
+	if err := req.Send(); err != nil {
 		return nil, err
 	}
 	return &Reader{
-		body: res.Body,
-		size: aws.Int64Value(res.ContentLength),
+		body: resp.Body,
+		size: aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
-func (b *Bucket) newMetadataReader(ctx context.Context, key string) (driver.Reader, error) {
+func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Reader, error) {
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	req := b.client.HeadObjectRequest(in)
-	res, err := req.Send()
-	if err != nil {
+	req, resp := b.client.HeadObjectRequest(in)
+	if err := req.Send(); err != nil {
 		return nil, err
 	}
 	return &Reader{
 		body: emptyBody,
-		size: aws.Int64Value(res.ContentLength),
+		size: aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -220,16 +217,15 @@ func (b *Bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 // A WriterOptions can be given to change the default behavior of the Writer.
 //
 // The caller must call Close on the returned Writer when done writing.
-func (b *Bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if err := validateObjectChar(key); err != nil {
 		return nil, err
 	}
-	uploader := s3manager.NewUploader(*b.ecfg)
 	w := &Writer{
 		bucket:   b.name,
 		ctx:      ctx,
 		key:      key,
-		uploader: uploader,
+		uploader: b.uploader,
 		donec:    make(chan struct{}),
 	}
 	if opts != nil {
@@ -240,15 +236,14 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 
 // Delete deletes the object associated with key. It is a no-op if that object
 // does not exist.
-func (b *Bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string) error {
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
 
-	req := b.client.DeleteObjectRequest(input)
-	_, err := req.Send()
-	return err
+	req, _ := b.client.DeleteObjectRequest(input)
+	return req.Send()
 }
 
 const (

@@ -18,7 +18,6 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
-	github.com/aws/aws-sdk-go-v2 v0.0.0-20180423212408-584b9ab90028
 	github.com/dnaeon/go-vcr v0.0.0-20180504081357-f8a7e8b9c630
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc

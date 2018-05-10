@@ -23,18 +23,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/external"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/s3manager"
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/s3blob"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/go-cmp/cmp"
 )
 
-const testBucket = "oh.test.psp"
+const (
+	testBucket       = "oh.test.psp"
+	testBucketRegion = "us-east-2"
+)
 
 var (
-	s3Bucket *s3blob.Bucket
+	s3Bucket *blob.Bucket
 	s3Client *s3.S3
 	uploader *s3manager.Uploader
 )
@@ -44,15 +49,16 @@ func TestMain(m *testing.M) {
 		return
 	}
 	ctx := context.Background()
-	cfg, err := external.LoadDefaultAWSConfig()
-	if err != nil {
-		log.Fatalf("error loading default config: %v", err)
-	}
-	if s3Bucket, err = s3blob.New(ctx, testBucket, &s3blob.BucketOptions{AWSConfig: &cfg}); err != nil {
+	var err error
+	ecfg := &aws.Config{Region: aws.String(testBucketRegion)}
+	sess := session.Must(session.NewSession(ecfg))
+	if s3Bucket, err = s3blob.NewBucket(ctx, sess, testBucket); err != nil {
 		log.Fatalf("error initializing S3 bucket: %v", err)
 	}
-	s3Client = s3.New(cfg)
-	uploader = s3manager.NewUploader(cfg)
+
+	// Setup for using AWS SDK directly for verification.
+	s3Client = s3.New(sess)
+	uploader = s3manager.NewUploader(sess)
 	os.Exit(m.Run())
 }
 
@@ -75,8 +81,9 @@ func TestNewBucketNaming(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	sess := session.Must(session.NewSession(nil))
 	for i, test := range tests {
-		_, err := s3blob.New(ctx, test.name, nil)
+		_, err := s3blob.NewBucket(ctx, sess, test.name)
 		if test.valid && err != nil {
 			t.Errorf("%d) got %v, want nil", i, err)
 		} else if !test.valid && err == nil {
@@ -251,15 +258,14 @@ func TestWrite(t *testing.T) {
 				t.Errorf("%d) error closing writer: %v", i, err)
 			}
 		}
-		req := s3Client.GetObjectRequest(&s3.GetObjectInput{
+		req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(testBucket),
 			Key:    aws.String(object),
 		})
-		res, err := req.Send()
-		if err != nil {
+		if err := req.Send(); err != nil {
 			t.Fatalf("%d) error getting object: %v", i, err)
 		}
-		body := res.Body
+		body := resp.Body
 		n, err := body.Read(test.got)
 		if err != nil && err != io.EOF {
 			t.Errorf("%d) reading object: %d read, got error %v", i, n, err)
@@ -296,12 +302,12 @@ func TestCloseWithoutWrite(t *testing.T) {
 		t.Errorf("error closing writer without writing: %v", err)
 	}
 
-	req := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
+	req, resp := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(testBucket),
 		Key:    aws.String(object),
 	})
-	res, err := req.Send()
-	size := aws.Int64Value(res.ContentLength)
+	err = req.Send()
+	size := aws.Int64Value(resp.ContentLength)
 	if err != nil || size != 0 {
 		t.Errorf("want 0 bytes written, got %d bytes written, error %v", size, err)
 	}
@@ -330,11 +336,11 @@ func TestDelete(t *testing.T) {
 	if err := s3Bucket.Delete(ctx, object); err != nil {
 		t.Errorf("error occurs when deleting a non-existing object: %v", err)
 	}
-	req := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
+	req, _ := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(testBucket),
 		Key:    aws.String(object),
 	})
-	if _, err := req.Send(); err == nil {
+	if err := req.Send(); err == nil {
 		t.Errorf("object deleted, got err %v, want NotFound error", err)
 	}
 
