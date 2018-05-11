@@ -314,10 +314,6 @@ func TestJSONDecode(t *testing.T) {
 	}
 }
 
-func TestDeleteNonExistentParam(t *testing.T) {
-	// TODO(cflewis): Implement :)
-}
-
 func newRecorder(t *testing.T, filename string) (r *recorder.Recorder, done func()) {
 	path := filepath.Join("testdata", filename)
 	t.Logf("Golden file is at %v", path)
