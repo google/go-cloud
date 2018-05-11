@@ -273,6 +273,7 @@ func TestJSONDecode(t *testing.T) {
 	var tests = []struct {
 		name, param, json string
 		want              []*Message
+		wantErr           bool
 	}{
 		{
 			name:  "Valid JSON should be unmarshaled correctly",
@@ -283,13 +284,19 @@ func TestJSONDecode(t *testing.T) {
 ]`,
 			want: []*Message{{Name: "Ed", Text: "Knock knock."}, {Name: "Sam", Text: "Who's there?"}},
 		},
+		{
+			name:    "Bad JSON should fail",
+			param:   "test-bad-json-decode",
+			json:    "Silly goose",
+			wantErr: true,
+		},
 	}
+
+	sess, done := newSession(t, "decoder")
+	defer done()
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sess, done := newSession(t, "decoder")
-			defer done()
-
 			if _, err := writeParam(sess, tc.param, tc.json); err != nil {
 				t.Fatal(err)
 			}
@@ -305,9 +312,13 @@ func TestJSONDecode(t *testing.T) {
 			got, err := variable.Watch(ctx)
 
 			switch {
-			case err != nil:
+			case err != nil && !tc.wantErr:
 				t.Error(err)
-			case !cmp.Equal(got.Value.([]*Message), tc.want):
+			case err == nil && tc.wantErr:
+				t.Errorf("got %+v error; want error", variable)
+			case got.Value != nil && tc.wantErr:
+				t.Errorf("got %v; want error", got.Value)
+			case err == nil && !cmp.Equal(got.Value.([]*Message), tc.want):
 				t.Errorf("got %+v, want %+v", got.Value, tc.want)
 			}
 		})
