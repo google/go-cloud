@@ -68,14 +68,14 @@ func New(w driver.Watcher) *Variable {
 // To stop this function from blocking, caller can passed in Context object constructed via
 // WithCancel and call the cancel function.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
-	cfg, err := c.watcher.Watch(ctx)
+	variable, err := c.watcher.Watch(ctx)
 	if err != nil {
 		// Mask underlying errors.
 		return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
 	}
 	return Snapshot{
-		Value:      cfg.Value,
-		UpdateTime: cfg.UpdateTime,
+		Value:      variable.Value,
+		UpdateTime: variable.UpdateTime,
 	}, nil
 }
 
