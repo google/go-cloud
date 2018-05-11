@@ -13,7 +13,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180510T194446Z
+      - 20180511T161956Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -26,7 +26,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Thu, 10 May 2018 19:44:46 GMT
+      - Fri, 11 May 2018 16:19:56 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -41,7 +41,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180510T194447Z
+      - 20180511T161958Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
       X-Gocloud-Seq:
@@ -54,7 +54,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Thu, 10 May 2018 19:44:47 GMT
+      - Fri, 11 May 2018 16:19:57 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -69,7 +69,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180510T194447Z
+      - 20180511T161958Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
@@ -77,12 +77,12 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.525981486465E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-watch-initial","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.526055597185E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-watch-initial","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Thu, 10 May 2018 19:44:47 GMT
+      - Fri, 11 May 2018 16:19:57 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -97,7 +97,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
       X-Amz-Date:
-      - 20180510T194447Z
+      - 20180511T161958Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -110,7 +110,119 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Thu, 10 May 2018 19:44:47 GMT
+      - Fri, 11 May 2018 16:19:57 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-bad-wait-time","Overwrite":true,"Type":"String","Value":"foobar"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "79"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180511T161958Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "4"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":1}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Fri, 11 May 2018 16:19:57 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-bad-wait-time"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "29"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180511T161958Z
+      X-Amz-Target:
+      - AmazonSSM.DeleteParameter
+      X-Gocloud-Seq:
+      - "5"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Fri, 11 May 2018 16:19:57 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-canceled-context","Overwrite":true,"Type":"String","Value":"foobar"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "82"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180511T161958Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "6"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":1}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Fri, 11 May 2018 16:19:58 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-canceled-context"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "32"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      X-Amz-Date:
+      - 20180511T161959Z
+      X-Amz-Target:
+      - AmazonSSM.DeleteParameter
+      X-Gocloud-Seq:
+      - "7"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Fri, 11 May 2018 16:19:58 GMT
     status: 200 OK
     code: 200
     duration: ""

@@ -143,22 +143,43 @@ func TestWriteReadDelete(t *testing.T) {
 
 func TestInitialWatch(t *testing.T) {
 	tests := []struct {
-		name, param, value string
-		wantErr            bool
+		name, param                 string
+		ctx                         context.Context
+		waitTime                    time.Duration
+		wantNewVarErr, wantWatchErr bool
 	}{
 		{
-			name:  "Good param should return OK",
-			param: "test-watch-initial",
-			value: "foobar",
+			name:     "Good param should return OK",
+			param:    "test-watch-initial",
+			ctx:      context.Background(),
+			waitTime: time.Second,
+		},
+		{
+			name:          "Bad wait time should fail",
+			param:         "test-bad-wait-time",
+			ctx:           context.Background(),
+			waitTime:      -1,
+			wantNewVarErr: true,
+		},
+		{
+			name:  "A canceled context should fail",
+			param: "test-canceled-context",
+			ctx: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				return ctx
+			}(),
+			wantWatchErr: true,
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			sess, done := newSession(t, "watch_initial")
-			defer done()
+	sess, done := newSession(t, "watch_initial")
+	defer done()
 
-			if _, err := writeParam(sess, tc.param, tc.value); err != nil {
+	for _, tc := range tests {
+		const want = "foobar"
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := writeParam(sess, tc.param, want); err != nil {
 				t.Fatal(err)
 			}
 			defer func() {
@@ -167,15 +188,25 @@ func TestInitialWatch(t *testing.T) {
 				}
 			}()
 
-			ctx := context.Background()
-			variable, err := NewClient(ctx, sess).NewVariable(ctx, tc.param, runtimevar.StringDecoder, &WatchOptions{WaitTime: time.Second})
-			got, err := variable.Watch(ctx)
-
+			variable, err := NewClient(tc.ctx, sess).NewVariable(tc.ctx, tc.param, runtimevar.StringDecoder, &WatchOptions{WaitTime: tc.waitTime})
 			switch {
-			case err != nil:
+			case err != nil && !tc.wantNewVarErr:
 				t.Fatal(err)
-			case got.Value != tc.value:
-				t.Errorf("want %v; got %v", tc.value, got.Value)
+			case err == nil && tc.wantNewVarErr:
+				t.Fatalf("got %+v; want error", variable)
+			case err != nil && tc.wantNewVarErr:
+				// Got error as expected.
+				return
+			}
+
+			got, err := variable.Watch(tc.ctx)
+			switch {
+			case err != nil && !tc.wantWatchErr:
+				t.Fatal(err)
+			case err == nil && tc.wantWatchErr:
+				t.Errorf("got %+v; want error", got)
+			case err == nil && !tc.wantWatchErr && got.Value != want:
+				t.Errorf("got %v; want %v", got.Value, want)
 			}
 		})
 	}
@@ -281,6 +312,10 @@ func TestJSONDecode(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeleteNonExistentParam(t *testing.T) {
+	// TODO(cflewis): Implement :)
 }
 
 func newRecorder(t *testing.T, filename string) (r *recorder.Recorder, done func()) {
