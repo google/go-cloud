@@ -91,7 +91,7 @@ type watcher struct {
 // Watch begins watching the given parameter and waiting for it to change.
 // The function will block until either the parameter changes, or the context
 // is cancelled.
-func (w watcher) Watch(ctx context.Context) (driver.Variable, error) {
+func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 	zeroVar := driver.Variable{}
 	t := time.NewTicker(w.waitTime)
 	defer t.Stop()
@@ -123,7 +123,7 @@ func (w watcher) Watch(ctx context.Context) (driver.Variable, error) {
 }
 
 // Close is a no-op. Cancel the context passed to Watch if watching should end.
-func (w watcher) Close() error {
+func (w *watcher) Close() error {
 	return nil
 }
 
