@@ -37,7 +37,7 @@ import (
 
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
-	endPoint = "runtimevar.googleapis.com:443"
+	endPoint = "runtimeconfig.googleapis.com:443"
 	// defaultWaitTimeout is the default value for WatchOptions.WaitTime if not set.
 	// Change the docstring for NewVariable if this time is modified.
 	defaultWaitTimeout = 10 * time.Minute
