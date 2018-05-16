@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -93,28 +94,25 @@ type watcher struct {
 // is cancelled.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 	zeroVar := driver.Variable{}
+	// If the context is already canceled, just return.
+	if ctx.Err() != nil {
+		return zeroVar, ctx.Err()
+	}
+
 	t := time.NewTicker(w.waitTime)
 	defer t.Stop()
+
+	// Run ping() now as ticker doesn't perform an instant tick.
+	// If there's either an error or a new value, return.
+	if variable, err := w.ping(); err != nil || !cmp.Equal(variable, zeroVar) {
+		return variable, err
+	}
 
 	for {
 		select {
 		case <-t.C:
-			p, err := readParam(w.sess, w.name, w.lastVersion)
-			if err != nil {
-				return zeroVar, err
-			}
-			// version is set to 0 by readParam if the version hasn't changed.
-			if p.version != 0 && w.lastVersion != p.version {
-				dec := w.decoder
-				if dec == nil {
-					dec = runtimevar.StringDecoder
-				}
-				val, err := dec.Decode([]byte(p.value))
-				if err != nil {
-					return zeroVar, err
-				}
-				w.lastVersion = p.version
-				return driver.Variable{Value: val, UpdateTime: p.updateTime}, nil
+			if variable, err := w.ping(); err != nil || !cmp.Equal(variable, zeroVar) {
+				return variable, err
 			}
 		case <-ctx.Done():
 			return zeroVar, ctx.Err()
@@ -125,6 +123,28 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 // Close is a no-op. Cancel the context passed to Watch if watching should end.
 func (w *watcher) Close() error {
 	return nil
+}
+
+func (w *watcher) ping() (driver.Variable, error) {
+	zeroVar := driver.Variable{}
+	p, err := readParam(w.sess, w.name, w.lastVersion)
+	if err != nil {
+		return zeroVar, err
+	}
+	// version is set to 0 by readParam if the version hasn't changed.
+	if p.version != 0 && w.lastVersion != p.version {
+		dec := w.decoder
+		if dec == nil {
+			dec = runtimevar.StringDecoder
+		}
+		val, err := dec.Decode([]byte(p.value))
+		if err != nil {
+			return zeroVar, err
+		}
+		w.lastVersion = p.version
+		return driver.Variable{Value: val, UpdateTime: p.updateTime}, nil
+	}
+	return zeroVar, nil
 }
 
 type param struct {
