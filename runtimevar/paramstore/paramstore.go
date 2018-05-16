@@ -134,9 +134,6 @@ func (w *watcher) ping() (driver.Variable, error) {
 	// version is set to 0 by readParam if the version hasn't changed.
 	if p.version != 0 && w.lastVersion != p.version {
 		dec := w.decoder
-		if dec == nil {
-			dec = runtimevar.StringDecoder
-		}
 		val, err := dec.Decode([]byte(p.value))
 		if err != nil {
 			return zeroVar, err
