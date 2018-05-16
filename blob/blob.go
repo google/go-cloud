@@ -18,6 +18,7 @@ package blob
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/go-cloud/blob/driver"
 )
@@ -87,6 +88,9 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
+	if offset < 0 {
+		return nil, errors.New("new blob range reader: offset must be non-negative")
+	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
 	return &Reader{r}, err
 }
