@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cmp/cmp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -104,15 +103,23 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 
 	// Run ping() now as ticker doesn't perform an instant tick.
 	// If there's either an error or a new value, return.
-	if variable, err := w.ping(); err != nil || !cmp.Equal(variable, zeroVar) {
-		return variable, err
+	if variable, err := w.ping(); err != nil || variable != nil {
+		v := zeroVar
+		if variable != nil {
+			v = *variable
+		}
+		return v, err
 	}
 
 	for {
 		select {
 		case <-t.C:
-			if variable, err := w.ping(); err != nil || !cmp.Equal(variable, zeroVar) {
-				return variable, err
+			variable, err := w.ping()
+			if err != nil {
+				return zeroVar, err
+			}
+			if variable != nil {
+				return *variable, nil
 			}
 		case <-ctx.Done():
 			return zeroVar, ctx.Err()
@@ -125,23 +132,24 @@ func (w *watcher) Close() error {
 	return nil
 }
 
-func (w *watcher) ping() (driver.Variable, error) {
-	zeroVar := driver.Variable{}
+// ping hits AWS to read the latest parameter. If nothing had changed,
+// the Variable and error will be nil.
+func (w *watcher) ping() (*driver.Variable, error) {
 	p, err := readParam(w.sess, w.name, w.lastVersion)
 	if err != nil {
-		return zeroVar, err
+		return nil, err
 	}
 	// version is set to 0 by readParam if the version hasn't changed.
 	if p.version != 0 && w.lastVersion != p.version {
 		dec := w.decoder
 		val, err := dec.Decode([]byte(p.value))
 		if err != nil {
-			return zeroVar, err
+			return nil, err
 		}
 		w.lastVersion = p.version
-		return driver.Variable{Value: val, UpdateTime: p.updateTime}, nil
+		return &driver.Variable{Value: val, UpdateTime: p.updateTime}, nil
 	}
-	return zeroVar, nil
+	return nil, nil
 }
 
 type param struct {
