@@ -23,18 +23,18 @@ import (
 	"regexp"
 	"unicode/utf8"
 
-	"cloud.google.com/go/storage"
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cloud/gcp"
+
+	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
-var _ driver.Bucket = (*Bucket)(nil)
-
 // New returns a GCS Bucket. It handles creation of a client used to communicate
 // to GCS service.
-func New(ctx context.Context, bucketName string, opts *BucketOptions) (*Bucket, error) {
+func New(ctx context.Context, bucketName string, opts *BucketOptions) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
@@ -46,12 +46,12 @@ func New(ctx context.Context, bucketName string, opts *BucketOptions) (*Bucket, 
 	if err != nil {
 		return nil, err
 	}
-	return &Bucket{name: bucketName, client: c}, nil
+	return blob.NewBucket(&bucket{name: bucketName, client: c}), nil
 }
 
-// Bucket represents a GCS bucket, which handles read, write and delete operations
+// bucket represents a GCS bucket, which handles read, write and delete operations
 // on objects within it.
-type Bucket struct {
+type bucket struct {
 	name   string
 	client *storage.Client
 }
@@ -64,7 +64,7 @@ type BucketOptions struct {
 // NewRangeReader returns a Reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
-func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	return obj.NewRangeReader(ctx, offset, length)
@@ -80,7 +80,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // A WriterOptions can be given to change the default behavior of the Writer.
 //
 // The caller must call Close on the returned Writer when done writing.
-func (b *Bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if err := validateObjectChar(key); err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 
 // Delete deletes the object associated with key. It is a no-op if that object
 // does not exist.
-func (b *Bucket) Delete(ctx context.Context, key string) error {
+func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	return obj.Delete(ctx)
