@@ -34,8 +34,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-var _ driver.Bucket = (*bucket)(nil)
-
 // NewBucket returns an S3 Bucket. It handles creation of a client used to
 // communicate to S3. AWS config can be passed in through BucketOptions to
 // change the default configuration of the S3Bucket.
@@ -57,28 +55,28 @@ func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName strin
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
-// Reader reads an S3 object. It implements io.ReadCloser.
-type Reader struct {
+// reader reads an S3 object. It implements io.ReadCloser.
+type reader struct {
 	body io.ReadCloser
 	size int64
 }
 
-func (r *Reader) Read(p []byte) (int, error) {
+func (r *reader) Read(p []byte) (int, error) {
 	return r.body.Read(p)
 }
 
-// Close closes the Reader itself. It must be called when done reading.
-func (r *Reader) Close() error {
+// Close closes the reader itself. It must be called when done reading.
+func (r *reader) Close() error {
 	return r.body.Close()
 }
 
 // Size returns the byte size of the object.
-func (r *Reader) Size() int64 {
+func (r *reader) Size() int64 {
 	return r.size
 }
 
-// Writer writes an S3 object, it implements io.WriteCloser.
-type Writer struct {
+// writer writes an S3 object, it implements io.WriteCloser.
+type writer struct {
 	w *io.PipeWriter
 
 	bucket     string
@@ -92,7 +90,7 @@ type Writer struct {
 }
 
 // Write appends p to w. User must call Close to close the w after done writing.
-func (w *Writer) Write(p []byte) (int, error) {
+func (w *writer) Write(p []byte) (int, error) {
 	if w.w == nil {
 		if err := w.open(); err != nil {
 			return 0, err
@@ -106,7 +104,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
-func (w *Writer) open() error {
+func (w *writer) open() error {
 	pr, pw := io.Pipe()
 	w.w = pw
 
@@ -129,7 +127,7 @@ func (w *Writer) open() error {
 
 // Close completes the writer and close it.
 // Any error occuring during write will be returned.
-func (w *Writer) Close() error {
+func (w *writer) Close() error {
 	if w.w == nil {
 		w.touch()
 	} else if err := w.w.Close(); err != nil {
@@ -142,7 +140,7 @@ func (w *Writer) Close() error {
 // touch creates an empty object in the bucket if there isn't one already.
 // It is called if user creates a new writer but never calls write before
 // closing it.
-func (w *Writer) touch() {
+func (w *writer) touch() {
 	defer close(w.donec)
 	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
 		Bucket: aws.String(w.bucket),
@@ -163,7 +161,7 @@ type BucketOptions struct {
 	AWSConfig *aws.Config
 }
 
-// NewRangeReader returns a Reader that reads part of an object, reading at most
+// NewRangeReader returns a reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
@@ -186,7 +184,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
-	return &Reader{
+	return &reader{
 		body: resp.Body,
 		size: aws.Int64Value(resp.ContentLength),
 	}, nil
@@ -201,27 +199,27 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
-	return &Reader{
+	return &reader{
 		body: emptyBody,
 		size: aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
-// NewWriter returns Writer that writes to an object associated with key.
+// NewWriter returns a writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same name will be replaced.
 // The object will not be available (and any previous object will remain)
 // until Close has been called.
 //
-// A WriterOptions can be given to change the default behavior of the Writer.
+// A WriterOptions can be given to change the default behavior of the writer.
 //
-// The caller must call Close on the returned Writer when done writing.
+// The caller must call Close on the returned writer when done writing.
 func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if err := validateObjectChar(key); err != nil {
 		return nil, err
 	}
-	w := &Writer{
+	w := &writer{
 		bucket:   b.name,
 		ctx:      ctx,
 		key:      key,
