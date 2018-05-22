@@ -33,21 +33,6 @@ cd "$GO_CLOUD_HOME"
 
 export CC=gcc
 ret=0
-$GOPATH/bin/vgo test -race -short ./... || ret=$?
+$GOPATH/bin/vgo test -race -short ./...
 $GOPATH/bin/golint -set_exit_status ./...
 
-# Capture the grep failure into a variable as || will stop bash immediately
-# dying due to -e
-# TODO(light): If error capturing has to happen elsewhere, it'll be more
-# readable/safer to remove -e entirely and handle errors where they occur
-ret=0
-grep -R --exclude-dir ".git" --exclude-dir "internal" "DO NOT SUBMIT" || ret=$?
-if [[ "$ret" == 0 ]]; then
-  false
-fi
-
-# Search for files that should include a copyright line that don't
-grep -L -R -m1 --include="*.go" --include="*.sh" --include="*.cfg" "Copyright" . || ret=$?
-if [[ "$ret" == 0 ]]; then
-  false
-fi
