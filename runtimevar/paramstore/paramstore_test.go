@@ -18,13 +18,9 @@
 package paramstore
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -33,9 +29,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/testing/replay"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -325,63 +321,15 @@ func TestJSONDecode(t *testing.T) {
 	}
 }
 
-func newRecorder(t *testing.T, filename string) (r *recorder.Recorder, done func()) {
-	path := filepath.Join("testdata", filename)
-	t.Logf("Golden file is at %v", path)
-
-	mode := recorder.ModeReplaying
-	if !testing.Short() {
-		t.Logf("Recording into golden file")
-		mode = recorder.ModeRecording
-	}
-	r, err := recorder.NewAsMode(path, mode, nil)
-	if err != nil {
-		t.Fatalf("unable to record: %v", err)
-	}
-
-	// Use a custom matcher as the default matcher looks for URLs and methods,
-	// which Amazon overloads as it isn't RESTful.
-	// Sequencing is added to the requests when the cassette is saved, which
-	// allows for differentiating GETs which otherwise look identical.
-	last := -1
-	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
-		if r.Body == nil {
-			return false
-		}
-		var b bytes.Buffer
-		if _, err := b.ReadFrom(r.Body); err != nil {
-			t.Fatal(err)
-		}
-		r.Body = ioutil.NopCloser(&b)
-
-		seq, err := strconv.Atoi(i.Headers.Get("X-Gocloud-Seq"))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		t.Logf("Targets: %v | %v == %v\n", r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
-		t.Logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
-		t.Logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		t.Logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
-
-		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
-			r.URL.String() == i.URL &&
-			r.Method == i.Method &&
-			b.String() == i.Body &&
-			seq > last {
-			last = seq
-			return true
-		}
-
-		return false
-	})
-
-	return r, func() { r.Stop(); fixHeaders(path) }
-}
-
 func newSession(t *testing.T, filename string) (sess *session.Session, done func()) {
-	r, done := newRecorder(t, filename)
-	defer done()
+	mode := recorder.ModeRecording
+	if testing.Short() {
+		mode = recorder.ModeReplaying
+	}
+	r, done, err := replay.NewAWSRecorder(t.Logf, mode, filename)
+	if err != nil {
+		t.Fatalf("unable to initialize recorder: %v", err)
+	}
 
 	client := &http.Client{
 		Transport: r,
@@ -393,34 +341,12 @@ func newSession(t *testing.T, filename string) (sess *session.Session, done func
 		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
 
-	sess, err := session.NewSession(aws.NewConfig().WithHTTPClient(client).WithRegion(region).WithCredentials(creds))
+	sess, err = session.NewSession(aws.NewConfig().WithHTTPClient(client).WithRegion(region).WithCredentials(creds))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	return sess, done
-}
-
-// fixHeaders removes *potentially* sensitive information from a cassette,
-// and adds sequencing to the requests to differentiate Amazon calls, as they
-// aren't timestamped.
-// Note that sequence numbers should only be used for otherwise identical matches.
-func fixHeaders(filepath string) error {
-	c, err := cassette.Load(filepath)
-	if err != nil {
-		return fmt.Errorf("unable to load cassette, do not commit to repository: %v", err)
-	}
-
-	c.Mu.Lock()
-	for i, action := range c.Interactions {
-		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
-		action.Request.Headers.Del("Authorization")
-		action.Response.Headers.Del("X-Amzn-Requestid")
-	}
-	c.Mu.Unlock()
-	c.Save()
-
-	return nil
 }
 
 func writeParam(p client.ConfigProvider, name, value string) (int64, error) {
