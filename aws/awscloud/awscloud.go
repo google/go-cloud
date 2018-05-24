@@ -19,11 +19,10 @@ import (
 	"net/http"
 
 	"github.com/google/go-cloud/aws"
-	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/mysql/rdsmysql"
 	"github.com/google/go-cloud/runtimevar/paramstore"
-	"github.com/google/go-cloud/server/sdserver"
+	"github.com/google/go-cloud/server/xrayserver"
 )
 
 // AWS is a Goose provider set that includes all Amazon Web Services interface
@@ -31,7 +30,6 @@ import (
 var AWS = goose.NewSet(
 	Services,
 	aws.DefaultSession,
-	gcp.DefaultIdentity, // needed for Stackdriver
 	goose.Value(http.DefaultClient),
 )
 
@@ -42,4 +40,4 @@ var AWS = goose.NewSet(
 var Services = goose.NewSet(
 	rdsmysql.Set,
 	paramstore.NewClient,
-	sdserver.Set)
+	xrayserver.Set)
