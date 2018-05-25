@@ -51,8 +51,11 @@ var (
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+	var creds *credentials.Credentials
 	mode := recorder.ModeRecording
 	if testing.Short() {
+		// Provide fake creds for replay mode.
+		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 		mode = recorder.ModeReplaying
 	}
 	// recDone cannot be deferred as os.Exit() doesn't run defers.
@@ -65,10 +68,7 @@ func TestMain(m *testing.M) {
 		Transport: r,
 	}
 
-	// Provide fake creds if running in replay mode.
-	var creds *credentials.Credentials
 	if testing.Short() {
-		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
 
 	ctx := context.Background()
