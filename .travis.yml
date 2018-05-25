@@ -1,0 +1,12 @@
+language: go
+go_import_path: github.com/google/go-cloud
+go: "1.10.x"
+install:
+  - "go get -u golang.org/x/vgo"
+script:
+  - "vgo test -covermode=atomic -short -race -coverprofile=coverage.out ./..."
+jobs:
+  include:
+    - os: linux
+stages:
+  - test
