@@ -17,16 +17,21 @@ package s3blob_test
 import (
 	"bytes"
 	"context"
+	"flag"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/s3blob"
+	"github.com/google/go-cloud/testing/replay"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -45,12 +50,33 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+	mode := recorder.ModeRecording
 	if testing.Short() {
-		return
+		mode = recorder.ModeReplaying
 	}
+	// recDone cannot be deferred as os.Exit() doesn't run defers.
+	r, recDone, err := replay.NewAWSRecorder(log.Printf, mode, "blob")
+	if err != nil {
+		log.Fatalf("unable to initialize recorder: %v", err)
+	}
+
+	client := &http.Client{
+		Transport: r,
+	}
+
+	// Provide fake creds if running in replay mode.
+	var creds *credentials.Credentials
+	if testing.Short() {
+		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
+	}
+
 	ctx := context.Background()
-	var err error
-	ecfg := &aws.Config{Region: aws.String(testBucketRegion)}
+	ecfg := &aws.Config{
+		Region:      aws.String(testBucketRegion),
+		HTTPClient:  client,
+		Credentials: creds,
+	}
 	sess := session.Must(session.NewSession(ecfg))
 	if s3Bucket, err = s3blob.NewBucket(ctx, sess, testBucket); err != nil {
 		log.Fatalf("error initializing S3 bucket: %v", err)
@@ -59,14 +85,14 @@ func TestMain(m *testing.M) {
 	// Setup for using AWS SDK directly for verification.
 	s3Client = s3.New(sess)
 	uploader = s3manager.NewUploader(sess)
-	os.Exit(m.Run())
+	code := m.Run()
+	recDone()
+	os.Exit(code)
 }
 
+// TestNewBucketNaming tests if buckets can be created with incorrect characters.
+// Note that this function doesn't hit AWS, so does not require the recorder.
 func TestNewBucketNaming(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	tests := []struct {
 		name  string
 		valid bool
@@ -93,10 +119,6 @@ func TestNewBucketNaming(t *testing.T) {
 }
 
 func TestNewWriterObjectNaming(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	tests := []struct {
 		name  string
 		valid bool
@@ -123,10 +145,6 @@ func TestNewWriterObjectNaming(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	object := "test_read"
 	content := []byte("something worth reading")
 	fullen := int64(len(content))
@@ -207,10 +225,6 @@ func TestRead(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	ctx := context.Background()
 	object := "test_write"
 
@@ -230,6 +244,9 @@ func TestWrite(t *testing.T) {
 			wantSize:   12,
 			closeLater: false,
 		},
+		// This test is dependent on the previous test writing correctly.
+		// If the previous test is disabled or fails somehow, this test will
+		// also fail.
 		{
 			name:       "read before writer closes",
 			parts:      [][]byte{[]byte("!")},
@@ -240,57 +257,57 @@ func TestWrite(t *testing.T) {
 		},
 	}
 
-	for i, test := range tests {
-		w, err := s3Bucket.NewWriter(ctx, object, nil)
-		if err != nil {
-			t.Errorf("%d) error creating writer: %v", i, err)
-		}
-		var written int64 = 0
-		for _, p := range test.parts {
-			n, err := w.Write(p)
-			if n != len(p) || err != nil {
-				t.Errorf("%d) writing object: %d written, got error %v", i, n, err)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w, err := s3Bucket.NewWriter(ctx, object, nil)
+			if err != nil {
+				t.Errorf("error creating writer: %v", err)
 			}
-			written += int64(n)
-		}
-		if !test.closeLater {
-			if err := w.Close(); err != nil {
-				t.Errorf("%d) error closing writer: %v", i, err)
+			var written int64 = 0
+			for _, p := range test.parts {
+				n, err := w.Write(p)
+				if n != len(p) || err != nil {
+					t.Errorf("writing object: %d written, got error %v", n, err)
+				}
+				written += int64(n)
 			}
-		}
-		req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
-			Bucket: aws.String(testBucket),
-			Key:    aws.String(object),
+			if !test.closeLater {
+				if err := w.Close(); err != nil {
+					t.Errorf("error closing writer: %v", err)
+				}
+			}
+			req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
+				Bucket: aws.String(testBucket),
+				Key:    aws.String(object),
+			})
+			if err := req.Send(); err != nil {
+				t.Fatalf("error getting object: %v", err)
+			}
+			body := resp.Body
+			n, err := body.Read(test.got)
+			if err != nil && err != io.EOF {
+				t.Errorf("reading object: %d read, got error %v", n, err)
+			}
+			body.Close()
+			if test.closeLater {
+				if err := w.Close(); err != nil {
+					t.Fatalf("error closing writer: %v", err)
+				}
+			}
+			if !cmp.Equal(test.got, test.want) || n != test.wantSize {
+				t.Errorf("got %s, size %d, want %s, size %d", test.got, n, test.want, test.wantSize)
+			}
 		})
-		if err := req.Send(); err != nil {
-			t.Fatalf("%d) error getting object: %v", i, err)
-		}
-		body := resp.Body
-		n, err := body.Read(test.got)
-		if err != nil && err != io.EOF {
-			t.Errorf("%d) reading object: %d read, got error %v", i, n, err)
-		}
-		body.Close()
-		if test.closeLater {
-			if err := w.Close(); err != nil {
-				t.Fatalf("%d) error closing writer: %v", i, err)
-			}
-		}
-		if !cmp.Equal(test.got, test.want) || n != test.wantSize {
-			t.Errorf("%d) got %s, size %d, want %s, size %d", i, test.got, n, test.want, test.wantSize)
-		}
 	}
 
+	// Delete only after all tests have completed as the file is reused across
+	// tests.
 	if err := s3Bucket.Delete(ctx, object); err != nil {
 		t.Errorf("error deleting object: %v", err)
 	}
 }
 
 func TestCloseWithoutWrite(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	ctx := context.Background()
 	object := "test_close_without_write"
 
@@ -318,10 +335,6 @@ func TestCloseWithoutWrite(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping tests requiring network")
-	}
-	t.Parallel()
 	ctx := context.Background()
 	object := "test_delete"
 	content := []byte("something obsolete")
