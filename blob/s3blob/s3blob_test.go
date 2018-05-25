@@ -234,50 +234,40 @@ func TestWrite(t *testing.T) {
 		}
 	}()
 
-	write := func(parts [][]byte, want []byte, closeLater bool) {
-		w, err := s3Bucket.NewWriter(ctx, object, nil)
-		if err != nil {
-			t.Errorf("error creating writer: %v", err)
-		}
-		var written int64 = 0
-		for _, p := range parts {
-			n, err := w.Write(p)
-			if n != len(p) || err != nil {
-				t.Errorf("writing object: %d written, got error %v", n, err)
-			}
-			written += int64(n)
-		}
-		if !closeLater {
-			if err := w.Close(); err != nil {
-				t.Errorf("error closing writer: %v", err)
-			}
-		}
-		req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
-			Bucket: aws.String(testBucket),
-			Key:    aws.String(object),
-		})
-		if err := req.Send(); err != nil {
-			t.Fatalf("error getting object: %v", err)
-		}
-		body := resp.Body
-		got := make([]byte, 12)
-		n, err := body.Read(got)
-		if err != nil && err != io.EOF {
-			t.Errorf("reading object: %d read, got error %v", n, err)
-		}
-		body.Close()
-		if closeLater {
-			if err := w.Close(); err != nil {
-				t.Fatalf("error closing writer: %v", err)
-			}
-		}
-		if !cmp.Equal(got, want) || n != 12 {
-			t.Errorf("got %s, size %d, want %s, size %d", got, n, want, 12)
-		}
+	w, err := s3Bucket.NewWriter(ctx, object, nil)
+	if err != nil {
+		t.Errorf("error creating writer: %v", err)
 	}
 
-	write([][]byte{[]byte("HELLO!"), []byte("hello!")}, []byte("HELLO!hello!"), false)
-	write([][]byte{[]byte("!")}, []byte("HELLO!hello!"), true)
+	var written int64 = 0
+	for _, p := range [][]byte{[]byte("HELLO!"), []byte("hello!")} {
+		n, err := w.Write(p)
+		if n != len(p) || err != nil {
+			t.Errorf("writing object: %d written, got error %v", n, err)
+		}
+		written += int64(n)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("error closing writer: %v", err)
+	}
+	req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(testBucket),
+		Key:    aws.String(object),
+	})
+	if err := req.Send(); err != nil {
+		t.Fatalf("error getting object: %v", err)
+	}
+	body := resp.Body
+	got := make([]byte, 12)
+	n, err := body.Read(got)
+	if err != nil && err != io.EOF {
+		t.Errorf("reading object: %d read, got error %v", n, err)
+	}
+	defer body.Close()
+	want := []byte("HELLO!hello!")
+	if !cmp.Equal(got, want) || n != 12 {
+		t.Errorf("got %s, size %d, want %s, size %d", got, n, want, 12)
+	}
 }
 
 func TestCloseWithoutWrite(t *testing.T) {
