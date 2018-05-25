@@ -38,7 +38,7 @@ import (
 var Set = goose.NewSet(
 	Open,
 	CertFetcher{},
-	goose.Bind(CertPoolProvider(nil), (*CertFetcher)(nil)),
+	goose.Bind((*CertPoolProvider)(nil), (*CertFetcher)(nil)),
 )
 
 // Params specifies how to connect to an RDS database.
