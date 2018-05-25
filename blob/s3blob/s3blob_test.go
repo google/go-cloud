@@ -228,83 +228,56 @@ func TestWrite(t *testing.T) {
 	ctx := context.Background()
 	object := "test_write"
 
-	tests := []struct {
-		name       string
-		parts      [][]byte
-		want       []byte
-		got        []byte
-		wantSize   int
-		closeLater bool
-	}{
-		{
-			name:       "write in multiple parts",
-			parts:      [][]byte{[]byte("HELLO!"), []byte("hello!")},
-			want:       []byte("HELLO!hello!"),
-			got:        make([]byte, 12),
-			wantSize:   12,
-			closeLater: false,
-		},
-		// This test is dependent on the previous test writing correctly.
-		// If the previous test is disabled or fails somehow, this test will
-		// also fail.
-		{
-			name:       "read before writer closes",
-			parts:      [][]byte{[]byte("!")},
-			want:       []byte("HELLO!hello!"),
-			got:        make([]byte, 12),
-			wantSize:   12,
-			closeLater: true,
-		},
-	}
+	defer func() {
+		if err := s3Bucket.Delete(ctx, object); err != nil {
+			t.Errorf("error deleting object: %v", err)
+		}
+	}()
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			w, err := s3Bucket.NewWriter(ctx, object, nil)
-			if err != nil {
-				t.Errorf("error creating writer: %v", err)
+	write := func(parts [][]byte, want []byte, closeLater bool) {
+		w, err := s3Bucket.NewWriter(ctx, object, nil)
+		if err != nil {
+			t.Errorf("error creating writer: %v", err)
+		}
+		var written int64 = 0
+		for _, p := range parts {
+			n, err := w.Write(p)
+			if n != len(p) || err != nil {
+				t.Errorf("writing object: %d written, got error %v", n, err)
 			}
-			var written int64 = 0
-			for _, p := range test.parts {
-				n, err := w.Write(p)
-				if n != len(p) || err != nil {
-					t.Errorf("writing object: %d written, got error %v", n, err)
-				}
-				written += int64(n)
+			written += int64(n)
+		}
+		if !closeLater {
+			if err := w.Close(); err != nil {
+				t.Errorf("error closing writer: %v", err)
 			}
-			if !test.closeLater {
-				if err := w.Close(); err != nil {
-					t.Errorf("error closing writer: %v", err)
-				}
-			}
-			req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
-				Bucket: aws.String(testBucket),
-				Key:    aws.String(object),
-			})
-			if err := req.Send(); err != nil {
-				t.Fatalf("error getting object: %v", err)
-			}
-			body := resp.Body
-			n, err := body.Read(test.got)
-			if err != nil && err != io.EOF {
-				t.Errorf("reading object: %d read, got error %v", n, err)
-			}
-			body.Close()
-			if test.closeLater {
-				if err := w.Close(); err != nil {
-					t.Fatalf("error closing writer: %v", err)
-				}
-			}
-			if !cmp.Equal(test.got, test.want) || n != test.wantSize {
-				t.Errorf("got %s, size %d, want %s, size %d", test.got, n, test.want, test.wantSize)
-			}
+		}
+		req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
+			Bucket: aws.String(testBucket),
+			Key:    aws.String(object),
 		})
+		if err := req.Send(); err != nil {
+			t.Fatalf("error getting object: %v", err)
+		}
+		body := resp.Body
+		got := make([]byte, 12)
+		n, err := body.Read(got)
+		if err != nil && err != io.EOF {
+			t.Errorf("reading object: %d read, got error %v", n, err)
+		}
+		body.Close()
+		if closeLater {
+			if err := w.Close(); err != nil {
+				t.Fatalf("error closing writer: %v", err)
+			}
+		}
+		if !cmp.Equal(got, want) || n != 12 {
+			t.Errorf("got %s, size %d, want %s, size %d", got, n, want, 12)
+		}
 	}
 
-	// Delete only after all tests have completed as the file is reused across
-	// tests.
-	if err := s3Bucket.Delete(ctx, object); err != nil {
-		t.Errorf("error deleting object: %v", err)
-	}
+	write([][]byte{[]byte("HELLO!"), []byte("hello!")}, []byte("HELLO!hello!"), false)
+	write([][]byte{[]byte("!")}, []byte("HELLO!hello!"), true)
 }
 
 func TestCloseWithoutWrite(t *testing.T) {
