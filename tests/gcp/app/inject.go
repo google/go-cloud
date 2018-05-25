@@ -26,7 +26,7 @@ import (
 )
 
 func initialize(ctx context.Context) (*server.Server, error) {
-	panic(goose.Use(
+	panic(goose.Build(
 		appSet,
 		gcpcloud.Services,
 		gcp.DefaultIdentity,
