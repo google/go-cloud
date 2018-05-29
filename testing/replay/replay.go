@@ -86,7 +86,9 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		return false
 	})
 	return r, func() {
-		r.Stop()
+		if err := r.Stop(); err != nil {
+			fmt.Println(err)
+		}
 		if err := fixAWSHeaders(path); err != nil {
 			fmt.Println(err)
 		}
@@ -110,7 +112,9 @@ func fixAWSHeaders(filepath string) error {
 		action.Response.Headers.Del("X-Amzn-Requestid")
 	}
 	c.Mu.Unlock()
-	c.Save()
+	if err := c.Save(); err != nil {
+		fmt.Println(err)
+	}
 
 	return nil
 }

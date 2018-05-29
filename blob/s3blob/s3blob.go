@@ -118,7 +118,8 @@ func (w *writer) open() error {
 		})
 		if err != nil {
 			w.err = err
-			pr.CloseWithError(err)
+			// Throw away the error, it only fails when CloseWithError is called twice.
+			_ = pr.CloseWithError(err)
 			return
 		}
 	}()

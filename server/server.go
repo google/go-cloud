@@ -84,7 +84,7 @@ func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	// in app.yaml. We may want to do an auto-detection for flex in future.
 	hr := "/healthz/"
 	hcMux := http.NewServeMux()
-	hcMux.HandleFunc(path.Join(hr, "liveness"), health.HandleLive)
+	hcMux.HandleFunc(path.Join(hr, "liveness"), srv.healthHandler.HandleLive)
 	hcMux.Handle(path.Join(hr, "readiness"), &srv.healthHandler)
 
 	mux := http.NewServeMux()

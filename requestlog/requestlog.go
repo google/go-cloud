@@ -33,8 +33,9 @@ type Logger interface {
 
 // A Handler emits request information to a Logger.
 type Handler struct {
-	log Logger
-	h   http.Handler
+	log     Logger
+	h       http.Handler
+	errFunc func(error)
 }
 
 // NewHandler returns a handler that emits information to log and calls
@@ -78,7 +79,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rcc.err == nil && rcc.r != nil {
 		// If the handler hasn't encountered an error in the Body (like EOF),
 		// then consume the rest of the Body to provide an accurate rcc.n.
-		io.Copy(ioutil.Discard, rcc)
+		_, err := io.Copy(ioutil.Discard, rcc)
+		if err != nil && h.errFunc != nil {
+			h.errFunc(err)
+		}
 	}
 	ent.RequestBodySize = rcc.n
 	ent.Status = w2.code
@@ -87,6 +91,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ent.ResponseHeaderSize, ent.ResponseBodySize = w2.size()
 	h.log.Log(ent)
+}
+
+// SetErrorFunc runs f as a callback when an error is encountered when writing.
+// This can be useful for logging.
+func (h *Handler) SetErrorFunc(f func(error)) {
+	h.errFunc = f
 }
 
 // Entry records information about a completed HTTP request.
@@ -149,7 +159,9 @@ func (wc *writeCounter) Write(p []byte) (n int, err error) {
 
 func headerSize(h http.Header) int64 {
 	var wc writeCounter
-	h.Write(&wc)
+	// Throw this error away as it's just writing to an int64. If the program can't do that,
+	// it has bigger problems to worry about.
+	_ = h.Write(&wc)
 	return int64(wc) + 2 // for CRLF
 }
 
@@ -178,8 +190,10 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 	n, err = r.w.Write(p)
-	r.wc.Write(p[:n])
-	return
+	if err != nil {
+		return n, err
+	}
+	return r.wc.Write(p[:n])
 }
 
 func (r *responseStats) size() (hdr, body int64) {

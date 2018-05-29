@@ -24,6 +24,7 @@ import (
 // aggregate of Checkers.  The zero value is always healthy.
 type Handler struct {
 	checkers []Checker
+	errFunc  func(error)
 }
 
 // Add adds a new check to the handler.
@@ -35,33 +36,52 @@ func (h *Handler) Add(c Checker) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
 		if err := c.CheckHealth(); err != nil {
-			writeUnhealthy(w)
+			if err := writeHealthy(w); err != nil && h.errFunc != nil {
+				h.errFunc(err)
+			}
+			if err := writeUnhealthy(w); err != nil && h.errFunc != nil {
+				h.errFunc(err)
+			}
 			return
 		}
 	}
-	writeHealthy(w)
+	if err := writeHealthy(w); err != nil && h.errFunc != nil {
+		h.errFunc(err)
+	}
+
+	return
 }
 
-func writeUnhealthy(w http.ResponseWriter) {
+func writeUnhealthy(w http.ResponseWriter) error {
 	w.Header().Set("Content-Length", "9")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(w, "unhealthy")
+	_, err := io.WriteString(w, "unhealthy")
+	return err
 }
 
 // HandleLive is an http.HandleFunc that handles liveness checks by
 // immediately responding with an HTTP 200 status.
-func HandleLive(w http.ResponseWriter, _ *http.Request) {
-	writeHealthy(w)
+func (h *Handler) HandleLive(w http.ResponseWriter, _ *http.Request) {
+	if err := writeHealthy(w); err != nil && h.errFunc != nil {
+		h.errFunc(err)
+	}
 }
 
-func writeHealthy(w http.ResponseWriter) {
+// SetErrorFunc runs f as a callback when an error is encountered when writing.
+// This can be useful for logging.
+func (h *Handler) SetErrorFunc(f func(error)) {
+	h.errFunc = f
+}
+
+func writeHealthy(w http.ResponseWriter) error {
 	w.Header().Set("Content-Length", "2")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "ok")
+	_, err := io.WriteString(w, "ok")
+	return err
 }
 
 // Checker wraps the CheckHealth method.
