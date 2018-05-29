@@ -36,9 +36,6 @@ func (h *Handler) Add(c Checker) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
 		if err := c.CheckHealth(); err != nil {
-			if err := WriteHealthy(w); err != nil && h.errFunc != nil {
-				h.errFunc(err)
-			}
 			if err := WriteUnhealthy(w); err != nil && h.errFunc != nil {
 				h.errFunc(err)
 			}
@@ -50,6 +47,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+// TODO(#43): http.Error does not return errors. Perhaps these
+// should not either. That said, cursory browsing did not indicate that
+// http.Error is used to write to something that returns an error.
+// This needs more thought.
+
+// WriteHealth writes an OK message to the ResponseWriter.
+func WriteHealthy(w http.ResponseWriter) error {
+	w.Header().Set("Content-Length", "2")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, err := io.WriteString(w, "ok")
+	return err
+}
+
+// WriteUnhealthy writes out a server error to the ResponseWriter.
 func WriteUnhealthy(w http.ResponseWriter) error {
 	w.Header().Set("Content-Length", "9")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -69,15 +82,6 @@ func HandleLive(w http.ResponseWriter, _ *http.Request) error {
 // By default, no function is called.
 func (h *Handler) SetErrorFunc(f func(error)) {
 	h.errFunc = f
-}
-
-func WriteHealthy(w http.ResponseWriter) error {
-	w.Header().Set("Content-Length", "2")
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(http.StatusOK)
-	_, err := io.WriteString(w, "ok")
-	return err
 }
 
 // Checker wraps the CheckHealth method.

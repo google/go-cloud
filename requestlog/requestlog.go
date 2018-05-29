@@ -33,9 +33,8 @@ type Logger interface {
 
 // A Handler emits request information to a Logger.
 type Handler struct {
-	log     Logger
-	h       http.Handler
-	errFunc func(error)
+	log Logger
+	h   http.Handler
 }
 
 // NewHandler returns a handler that emits information to log and calls
@@ -90,12 +89,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ent.ResponseHeaderSize, ent.ResponseBodySize = w2.size()
 	h.log.Log(ent)
-}
-
-// SetErrorFunc sets the function to call when ServeHTTP encounters an error while writing a response.
-// By default, no function is called.
-func (h *Handler) SetErrorFunc(f func(error)) {
-	h.errFunc = f
 }
 
 // Entry records information about a completed HTTP request.

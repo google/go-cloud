@@ -67,6 +67,7 @@ func New(opts *Options) *Server {
 // By default, no function is called.
 func (srv *Server) SetErrorFunc(f func(error)) {
 	srv.errFunc = f
+	srv.healthHandler.SetErrorFunc(f)
 }
 
 func (srv *Server) init() {
