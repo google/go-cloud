@@ -57,7 +57,7 @@ func Example() {
 // https://github.com/google/go-cloud/blob/master/goose/README.md#injectors
 // for more details.
 func initialize(ctx context.Context) (*server.Server, func(), error) {
-	panic(goose.Use(
+	panic(goose.Build(
 		// The AWS set includes all the default wiring for AWS, including
 		// for *server.Server.
 		awscloud.AWS,

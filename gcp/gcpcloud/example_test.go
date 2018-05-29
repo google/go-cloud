@@ -57,7 +57,7 @@ func Example() {
 // https://github.com/google/go-cloud/blob/master/goose/README.md#injectors
 // for more details.
 func setup(ctx context.Context) (*server.Server, func(), error) {
-	panic(goose.Use(
+	panic(goose.Build(
 		// The GCP set includes all the default wiring for GCP, including
 		// for *server.Server.
 		gcpcloud.GCP,
