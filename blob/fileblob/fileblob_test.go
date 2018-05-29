@@ -135,6 +135,95 @@ func TestReader(t *testing.T) {
 			t.Errorf("r.Size() at end = %d; want %d", got, len(want))
 		}
 	})
+	t.Run("WithSlashSep", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const want = "Hello, World!\n"
+		if err := os.Mkdir(filepath.Join(dir, "foo"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(dir, "foo", "bar.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		r, err := b.NewReader(ctx, "foo/bar.txt")
+		if err != nil {
+			t.Fatal("NewReader:", err)
+		}
+		defer func() {
+			if err := r.Close(); err != nil {
+				t.Error("Close:", err)
+			}
+		}()
+		if got, err := ioutil.ReadAll(r); err != nil {
+			t.Errorf("Read error: %v", err)
+		} else if string(got) != want {
+			t.Errorf("ioutil.ReadAll(r) = %q; want %q", got, want)
+		}
+	})
+	t.Run("BadNames", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		subdir := filepath.Join(dir, "root")
+		if err := os.Mkdir(subdir, 0777); err != nil {
+			t.Fatal(err)
+		}
+		const want = "Hello, World!\n"
+		if err := os.Mkdir(filepath.Join(subdir, "foo"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(subdir, "foo", "bar.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(subdir, "baz.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(dir, "passwd.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(subdir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		names := []string{
+			// Backslashes not allowed.
+			"foo\\bar.txt",
+			// Aliasing problems with unclean paths.
+			"./baz.txt",
+			"foo//bar.txt",
+			"foo/../baz.txt",
+			// Reaching outside directory.
+			"../passwd.txt",
+			"foo/../../passwd.txt",
+			"/baz.txt",
+			"C:\\baz.txt",
+			"C:/baz.txt",
+		}
+		for _, name := range names {
+			r, err := b.NewReader(ctx, name)
+			if err == nil {
+				r.Close()
+				t.Errorf("b.NewReader(ctx, %q) did not return error", name)
+			}
+		}
+	})
 	t.Run("Range", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "fileblob")
 		if err != nil {
@@ -211,7 +300,7 @@ func TestWriter(t *testing.T) {
 			t.Errorf("ioutil.ReadFile(\".../foo.txt\") = %q; want %q", got, want)
 		}
 	})
-	t.Run("WithFilepathSep", func(t *testing.T) {
+	t.Run("WithSlashSep", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "fileblob")
 		if err != nil {
 			t.Fatal(err)
@@ -223,8 +312,7 @@ func TestWriter(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		key := filepath.Join("foo", "bar.txt")
-		w, err := b.NewWriter(ctx, key, nil)
+		w, err := b.NewWriter(ctx, "foo/bar.txt", nil)
 		if err != nil {
 			t.Fatal("NewWriter:", err)
 		}
@@ -236,10 +324,49 @@ func TestWriter(t *testing.T) {
 			t.Errorf("w.Close() = %v", err)
 		}
 
-		if got, err := ioutil.ReadFile(filepath.Join(dir, key)); err != nil {
-			t.Errorf("Read %s: %v", key, err)
+		fpath := filepath.Join("foo", "bar.txt")
+		if got, err := ioutil.ReadFile(filepath.Join(dir, fpath)); err != nil {
+			t.Errorf("Read %s: %v", fpath, err)
 		} else if string(got) != want {
-			t.Errorf("ioutil.ReadFile(%q) = %q; want %q", filepath.Join("...", key), got, want)
+			t.Errorf("ioutil.ReadFile(%q) = %q; want %q", filepath.Join("...", fpath), got, want)
+		}
+	})
+	t.Run("BadNames", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		subdir := filepath.Join(dir, "foo")
+		if err := os.Mkdir(subdir, 0777); err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(subdir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		names := []string{
+			// Backslashes not allowed.
+			"foo\\bar.txt",
+			// Aliasing problems with unclean paths.
+			"./baz.txt",
+			"foo//bar.txt",
+			"foo/../baz.txt",
+			// Reaching outside directory.
+			"../passwd.txt",
+			"foo/../../passwd.txt",
+			"/baz.txt",
+			"C:\\baz.txt",
+			"C:/baz.txt",
+		}
+		for _, name := range names {
+			w, err := b.NewWriter(ctx, name, nil)
+			if err == nil {
+				w.Close()
+				t.Errorf("b.NewWriter(ctx, %q, nil) did not return an error", name)
+			}
 		}
 	})
 }
@@ -286,6 +413,69 @@ func TestDelete(t *testing.T) {
 		}
 		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {
 			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)
+		}
+	})
+	t.Run("BadNames", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		subdir := filepath.Join(dir, "root")
+		if err := os.Mkdir(subdir, 0777); err != nil {
+			t.Fatal(err)
+		}
+		const want = "Hello, World!\n"
+		if err := os.Mkdir(filepath.Join(subdir, "foo"), 0777); err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(subdir, "foo", "bar.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(subdir, "baz.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(dir, "passwd.txt"), []byte(want), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(subdir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		names := []string{
+			// Backslashes not allowed.
+			"foo\\bar.txt",
+			// Aliasing problems with unclean paths.
+			"./baz.txt",
+			"foo//bar.txt",
+			"foo/../baz.txt",
+			// Reaching outside directory.
+			"../passwd.txt",
+			"foo/../../passwd.txt",
+			"/baz.txt",
+			"C:\\baz.txt",
+			"C:/baz.txt",
+		}
+		for _, name := range names {
+			err := b.Delete(ctx, name)
+			if err == nil {
+				t.Errorf("b.Delete(ctx, %q) did not return error", name)
+			}
+		}
+		mustExist := []string{
+			filepath.Join(subdir, "foo", "bar.txt"),
+			filepath.Join(subdir, "baz.txt"),
+			filepath.Join(dir, "passwd.txt"),
+		}
+		for _, name := range mustExist {
+			if _, err := os.Stat(name); err != nil {
+				t.Errorf("os.Stat(%q): %v", name, err)
+			}
 		}
 	})
 }
