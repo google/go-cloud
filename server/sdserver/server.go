@@ -36,9 +36,9 @@ import (
 var Set = goose.NewSet(
 	server.Set,
 	NewExporter,
-	goose.Bind(trace.Exporter(nil), (*stackdriver.Exporter)(nil)),
+	goose.Bind((*trace.Exporter)(nil), (*stackdriver.Exporter)(nil)),
 	NewRequestLogger,
-	goose.Bind(requestlog.Logger(nil), (*requestlog.StackdriverLogger)(nil)),
+	goose.Bind((*requestlog.Logger)(nil), (*requestlog.StackdriverLogger)(nil)),
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.
