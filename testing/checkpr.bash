@@ -27,8 +27,8 @@ module="github.com/google/go-cloud"
 vgo test "${testflags[@]}" $(vgo list "$module/..." | grep -F -v "$module/goose") || exit 1
 
 # Run Goose tests if the branch made changes under goose/.
-if [[ ! -z "$TRAVIS_PULL_REQUEST_BRANCH" && ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
-  mergebase="$(git merge-base -- "$TRAVIS_PULL_REQUEST_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")" || exit 1
+if [[ ! -z "$TRAVIS_BRANCH" && ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")" || exit 1
   if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | grep -q '^goose/'; then
     vgo test "${testflags[@]}" "$module/goose/..." || exit 1
   fi
