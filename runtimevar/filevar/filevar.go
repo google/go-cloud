@@ -149,7 +149,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 		return zeroVar, err
 	}
 	defer func() {
-		if err := w.notifier.Remove(w.file); err != nil {
+		if err := w.notifier.Remove(w.file); err != nil && w.errFunc != nil {
 			w.errFunc(err)
 		}
 	}()

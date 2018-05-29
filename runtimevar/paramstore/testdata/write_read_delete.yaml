@@ -1,10 +1,9 @@
 ---
 version: 1
-mu: {}
 interactions:
 - request:
-    body: "{\"Name\":\"test-good-param\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"Jolly
-      snowman to test Unicode handling: \u2603\uFE0F\"}"
+    body: '{"Name":"test-good-param","Overwrite":true,"Type":"String","Value":"Jolly
+      snowman to test Unicode handling: ☃️"}'
     form: {}
     headers:
       Content-Length:
@@ -50,8 +49,8 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: "{\"Parameter\":{\"Name\":\"test-good-param\",\"Type\":\"String\",\"Value\":\"Jolly
-      snowman to test Unicode handling: \u2603\uFE0F\",\"Version\":1}}"
+    body: '{"Parameter":{"Name":"test-good-param","Type":"String","Value":"Jolly snowman
+      to test Unicode handling: ☃️","Version":1}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
@@ -117,7 +116,7 @@ interactions:
     code: 200
     duration: ""
 - request:
-    body: "{\"Name\":\"test-bad-param-with-snowman-\u2603\uFE0F\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"snowman\"}"
+    body: '{"Name":"test-bad-param-with-snowman-☃️","Overwrite":true,"Type":"String","Value":"snowman"}'
     form: {}
     headers:
       Content-Length:
