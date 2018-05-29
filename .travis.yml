@@ -4,4 +4,4 @@ go: "1.10.x"
 install:
   - "go get -u golang.org/x/vgo"
 script:
-  - "vgo test -short -race ./..."
+  - 'if [[ "$TRAVIS_PULL_REQUEST" != false ]]; then testing/checkpr.bash -short -race; else vgo test -short -race ./...; fi'
