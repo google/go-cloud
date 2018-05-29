@@ -211,7 +211,7 @@ const (
 type stateData struct {
 	state    watchState
 	variable *driver.Variable // driver.Config object for hasChangedState.
-	err      error            // Error object for hasErrorState.
+	err      error
 }
 
 // processFile reads the file and determines the watchState. Depending on the watchState, it may
