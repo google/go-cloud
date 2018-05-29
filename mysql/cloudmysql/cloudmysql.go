@@ -36,7 +36,7 @@ import (
 // certificate source from an GCP-authenticated HTTP client.
 var CertSourceSet = goose.NewSet(
 	NewCertSource,
-	goose.Bind(proxy.CertSource(nil), (*certs.RemoteCertSource)(nil)))
+	goose.Bind((*proxy.CertSource)(nil), (*certs.RemoteCertSource)(nil)))
 
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.

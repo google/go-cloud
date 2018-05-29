@@ -37,16 +37,16 @@ var Set = goose.NewSet(
 	server.Set,
 	ServiceSet,
 	NewExporter,
-	goose.Bind(trace.Exporter(nil), (*exporter.Exporter)(nil)),
+	goose.Bind((*trace.Exporter)(nil), (*exporter.Exporter)(nil)),
 	NewRequestLogger,
-	goose.Bind(requestlog.Logger(nil), (*requestlog.NCSALogger)(nil)),
+	goose.Bind((*requestlog.Logger)(nil), (*requestlog.NCSALogger)(nil)),
 )
 
 // ServiceSet is a Goose provider set that provides the AWS X-Ray service
 // client given an AWS session.
 var ServiceSet = goose.NewSet(
 	NewXRayClient,
-	goose.Bind(xrayiface.XRayAPI(nil), (*xray.XRay)(nil)),
+	goose.Bind((*xrayiface.XRayAPI)(nil), (*xray.XRay)(nil)),
 )
 
 // NewExporter returns a new X-Ray exporter.

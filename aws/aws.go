@@ -28,7 +28,7 @@ import (
 var Set = goose.NewSet(
 	SessionConfig,
 	ConfigCredentials,
-	goose.Bind(client.ConfigProvider(nil), (*session.Session)(nil)),
+	goose.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
 )
 
 // DefaultSession is a Goose provider set that provides a *session.Session using
