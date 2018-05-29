@@ -37,6 +37,7 @@ type Server struct {
 	te            trace.Exporter
 	sampler       trace.Sampler
 	once          sync.Once
+	errFunc       func(error)
 }
 
 // Options is the set of optional parameters.
@@ -62,6 +63,12 @@ func New(opts *Options) *Server {
 	return srv
 }
 
+// SetErrorFunc sets the function to call when the HTTP middleware encounters an error while writing a response.
+// By default, no function is called.
+func (srv *Server) SetErrorFunc(f func(error)) {
+	srv.errFunc = f
+}
+
 func (srv *Server) init() {
 	srv.once.Do(func() {
 		if srv.te != nil {
@@ -84,7 +91,11 @@ func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	// in app.yaml. We may want to do an auto-detection for flex in future.
 	hr := "/healthz/"
 	hcMux := http.NewServeMux()
-	hcMux.HandleFunc(path.Join(hr, "liveness"), srv.healthHandler.HandleLive)
+	hcMux.HandleFunc(path.Join(hr, "liveness"), func(rw http.ResponseWriter, req *http.Request) {
+		if err := health.HandleLive(rw, req); err != nil && srv.errFunc != nil {
+			srv.errFunc(err)
+		}
+	})
 	hcMux.Handle(path.Join(hr, "readiness"), &srv.healthHandler)
 
 	mux := http.NewServeMux()

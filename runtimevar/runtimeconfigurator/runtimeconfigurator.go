@@ -147,8 +147,8 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 
 	// Loop to check for changes or continue waiting.
 	for {
-		// Block until waitTime or context cancelled/timed out.
-		t := time.NewTimer(w.waitTime - time.Now().Sub(w.lastRPCTime))
+		// Block until waitTime or context canceled/timed out.
+		t := time.NewTimer(w.waitTime - time.Since(w.lastRPCTime))
 		select {
 		case <-t.C:
 		case <-ctx.Done():

@@ -182,8 +182,8 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 	}
 }
 
-// SetErrorFunc runs f as a callback when an error is encountered when writing.
-// This can be useful for logging.
+// SetErrorFunc sets the function to call when ServeHTTP encounters an error while writing a response.
+// By default, no function is called.
 func (w *watcher) SetErrorFunc(f func(error)) {
 	w.errFunc = f
 }
