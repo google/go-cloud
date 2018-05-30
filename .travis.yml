@@ -5,4 +5,4 @@ install:
   - "go get -u golang.org/x/vgo"
 script:
   - "vgo test -short -race ./..."
-  - "golangci-lint run (find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./goose*\" ! -path \"*_demo*\")" 
+  - "golangci-lint run (find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./goose/internal/goose/testdata*\" ! -path \"*_demo*\")" 
