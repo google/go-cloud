@@ -182,10 +182,9 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 	n, err = r.w.Write(p)
-	if err != nil {
-		return n, err
+	if _, err := r.wc.Write(p[:n]); err != nil {
+		panic(err)
 	}
-	return r.wc.Write(p[:n])
 }
 
 func (r *responseStats) size() (hdr, body int64) {
