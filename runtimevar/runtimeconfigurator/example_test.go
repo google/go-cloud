@@ -22,28 +22,46 @@ import (
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 )
 
-// MyAppConfig is the unmarshaled type for configuration stored in key
-// "projects/projectID/configs/configName/variables/appConfig".
-type MyAppConfig struct {
-	MsgOfTheDay string `json:"msg_of_the_day"`
-}
-
-func ExampleClient_NewConfig() {
+func ExampleClient_NewVariable() {
+	// Assume client was created at server startup.
 	ctx := context.Background()
-	client, err := runtimeconfigurator.NewClient(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
+	client := openClient()
 
+	// MyAppConfig is an example unmarshaled type for configuration stored in key
+	// "projects/projectID/configs/configName/variables/appConfig". Runtime
+	// Configurator stores individual variables as strings or binary data, so a
+	// decoder automatically parses the data.
+	type MyAppConfig struct {
+		MsgOfTheDay string `json:"msg_of_the_day"`
+	}
+	decoder := runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode)
+
+	// Fill these in with the values from the Cloud Console.
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: "projectID",
 		Config:    "configName",
 		Variable:  "appConfig",
 	}
-	cfg, err := client.NewVariable(ctx, name, runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
+
+	// Create a variable object to watch for changes.
+	v, err := client.NewVariable(ctx, name, decoder, nil)
 	if err != nil {
-		log.Fatalf("Error in constructing Config: %v", err)
+		log.Fatal(err)
 	}
-	defer cfg.Close()
+	defer v.Close()
+
+	// Read the current value. Calling Watch() again will block until the value
+	// changes.
+	snapshot, err := v.Watch(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Value will always be of the decoder's type.
+	cfg := snapshot.Value.(*MyAppConfig)
+	log.Println(cfg.MsgOfTheDay)
+}
+
+func openClient() *runtimeconfigurator.Client {
+	return nil
 }
