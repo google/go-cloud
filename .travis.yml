@@ -6,4 +6,4 @@ install:
 script:
   # TRAVIS_PULL_REQUEST is set to "false" for branch builds, and the PR number
   # for pull request builds. Branch builds should test everything.
-  - 'if [[ "$TRAVIS_PULL_REQUEST" != false ]]; then testing/checkpr.bash -short -race; else vgo test -short -race ./...; fi'
+  - 'if [[ "$TRAVIS_PULL_REQUEST" != false ]]; then testing/checkpr.sh -short -race; else vgo test -short -race ./...; fi'
