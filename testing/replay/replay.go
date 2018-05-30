@@ -87,6 +87,9 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 	})
 	return r, func() {
 		r.Stop()
+		if mode != recorder.ModeRecording {
+			return
+		}
 		if err := fixAWSHeaders(path); err != nil {
 			fmt.Println(err)
 		}
