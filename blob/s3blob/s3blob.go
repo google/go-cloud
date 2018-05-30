@@ -118,7 +118,9 @@ func (w *writer) open() error {
 		})
 		if err != nil {
 			w.err = err
-			pr.CloseWithError(err)
+			if err := pr.CloseWithError(err); err != nil {
+				panic(err)
+			}
 			return
 		}
 	}()

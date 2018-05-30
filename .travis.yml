@@ -3,5 +3,10 @@ go_import_path: github.com/google/go-cloud
 go: "1.10.x"
 install:
   - "go get -u golang.org/x/vgo"
+  - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
 script:
   - "vgo test -short -race ./..."
+  # Vendoring is required for the linter to be able to understand the workspace.
+  - "vgo vendor"
+  # --new means that only files modified in the change are tested, not the whole repo.
+  - "golangci-lint run --new $(find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./vendor*\" ! -path \"./goose/internal/goose/testdata*\" ! -path \"*_demo*\")" 

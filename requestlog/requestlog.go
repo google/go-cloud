@@ -78,7 +78,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rcc.err == nil && rcc.r != nil {
 		// If the handler hasn't encountered an error in the Body (like EOF),
 		// then consume the rest of the Body to provide an accurate rcc.n.
-		io.Copy(ioutil.Discard, rcc)
+		// No need to surface the error, as response writers can read the request body
+		// and report that.
+		_, _ = io.Copy(ioutil.Discard, rcc)
 	}
 	ent.RequestBodySize = rcc.n
 	ent.Status = w2.code
@@ -149,7 +151,9 @@ func (wc *writeCounter) Write(p []byte) (n int, err error) {
 
 func headerSize(h http.Header) int64 {
 	var wc writeCounter
-	h.Write(&wc)
+	if err := h.Write(&wc); err != nil {
+		panic(err)
+	}
 	return int64(wc) + 2 // for CRLF
 }
 
@@ -178,8 +182,11 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 		r.WriteHeader(http.StatusOK)
 	}
 	n, err = r.w.Write(p)
-	r.wc.Write(p[:n])
-	return
+	if _, err := r.wc.Write(p[:n]); err != nil {
+		panic(err)
+	}
+
+	return n, err
 }
 
 func (r *responseStats) size() (hdr, body int64) {

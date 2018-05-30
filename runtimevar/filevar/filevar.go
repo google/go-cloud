@@ -95,6 +95,7 @@ type watcher struct {
 	isDeleted  bool
 	waitTime   time.Duration
 	updateTime time.Time
+	errFunc    func(error)
 }
 
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs.  It
@@ -147,7 +148,11 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 		}
 		return zeroVar, err
 	}
-	defer w.notifier.Remove(w.file)
+	defer func() {
+		if err := w.notifier.Remove(w.file); err != nil && w.errFunc != nil {
+			w.errFunc(err)
+		}
+	}()
 
 	for {
 		select {
@@ -177,6 +182,12 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 	}
 }
 
+// SetErrorFunc sets the function to call if there are failures during writes
+// that would otherwise not be returned.
+func (w *watcher) SetErrorFunc(f func(error)) {
+	w.errFunc = f
+}
+
 // WatchOptions allows the specification of various options to a watcher.
 type WatchOptions struct {
 	// WaitTime controls the frequency of making an HTTP call and checking for
@@ -200,7 +211,7 @@ const (
 type stateData struct {
 	state    watchState
 	variable *driver.Variable // driver.Config object for hasChangedState.
-	err      error            // Error object for hasErrorState.
+	err      error
 }
 
 // processFile reads the file and determines the watchState. Depending on the watchState, it may

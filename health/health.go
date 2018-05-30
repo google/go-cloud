@@ -24,6 +24,7 @@ import (
 // aggregate of Checkers.  The zero value is always healthy.
 type Handler struct {
 	checkers []Checker
+	errFunc  func(error)
 }
 
 // Add adds a new check to the handler.
@@ -35,33 +36,52 @@ func (h *Handler) Add(c Checker) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
 		if err := c.CheckHealth(); err != nil {
-			writeUnhealthy(w)
+			if err := WriteUnhealthy(w); err != nil && h.errFunc != nil {
+				h.errFunc(err)
+			}
 			return
 		}
 	}
-	writeHealthy(w)
+	if err := WriteHealthy(w); err != nil && h.errFunc != nil {
+		h.errFunc(err)
+	}
 }
 
-func writeUnhealthy(w http.ResponseWriter) {
-	w.Header().Set("Content-Length", "9")
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(w, "unhealthy")
-}
+// TODO(#43): http.Error does not return errors. Perhaps these
+// should not either. That said, cursory browsing did not indicate that
+// http.Error is used to write to something that returns an error.
+// This needs more thought.
 
-// HandleLive is an http.HandleFunc that handles liveness checks by
-// immediately responding with an HTTP 200 status.
-func HandleLive(w http.ResponseWriter, _ *http.Request) {
-	writeHealthy(w)
-}
-
-func writeHealthy(w http.ResponseWriter) {
+// WriteHealth writes an OK message to the ResponseWriter.
+func WriteHealthy(w http.ResponseWriter) error {
 	w.Header().Set("Content-Length", "2")
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
-	io.WriteString(w, "ok")
+	_, err := io.WriteString(w, "ok")
+	return err
+}
+
+// WriteUnhealthy writes out a server error to the ResponseWriter.
+func WriteUnhealthy(w http.ResponseWriter) error {
+	w.Header().Set("Content-Length", "9")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusInternalServerError)
+	_, err := io.WriteString(w, "unhealthy")
+	return err
+}
+
+// HandleLive is an http.HandleFunc that handles liveness checks by
+// immediately responding with an HTTP 200 status.
+func HandleLive(w http.ResponseWriter, _ *http.Request) error {
+	return WriteHealthy(w)
+}
+
+// SetErrorFunc sets the function to call when ServeHTTP encounters an error while writing a response.
+// By default, no function is called.
+func (h *Handler) SetErrorFunc(f func(error)) {
+	h.errFunc = f
 }
 
 // Checker wraps the CheckHealth method.
