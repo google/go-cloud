@@ -23,12 +23,14 @@ import (
 )
 
 func ExampleClient_NewVariable() {
-	// Obtained elsewhere:
+	// Assume client was created at server startup.
 	ctx := context.Background()
 	client := openClient()
 
 	// MyAppConfig is an example unmarshaled type for configuration stored in key
-	// "projects/projectID/configs/configName/variables/appConfig".
+	// "projects/projectID/configs/configName/variables/appConfig". Runtime
+	// Configurator stores individual variables as strings or binary data, so a
+	// decoder automatically parses the data.
 	type MyAppConfig struct {
 		MsgOfTheDay string `json:"msg_of_the_day"`
 	}
@@ -41,14 +43,15 @@ func ExampleClient_NewVariable() {
 		Variable:  "appConfig",
 	}
 
-	// Create a variable object.
+	// Create a variable object to watch for changes.
 	v, err := client.NewVariable(ctx, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
-	// Read the current value.
+	// Read the current value. Calling Watch() again will block until the value
+	// changes.
 	snapshot, err := v.Watch(ctx)
 	if err != nil {
 		log.Fatal(err)
