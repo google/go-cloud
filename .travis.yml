@@ -8,4 +8,5 @@ script:
   - "vgo test -short -race ./..."
   # Vendoring is required for the linter to be able to understand the workspace.
   - "vgo vendor"
-  - "golangci-lint run $(find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./vendor*\" ! -path \"./goose/internal/goose/testdata*\" ! -path \"*_demo*\")" 
+  # --new means that only files modified in the change are tested, not the whole repo.
+  - "golangci-lint run --new $(find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./vendor*\" ! -path \"./goose/internal/goose/testdata*\" ! -path \"*_demo*\")" 
