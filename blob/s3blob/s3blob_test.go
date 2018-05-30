@@ -68,9 +68,6 @@ func TestMain(m *testing.M) {
 		Transport: r,
 	}
 
-	if testing.Short() {
-	}
-
 	ctx := context.Background()
 	ecfg := &aws.Config{
 		Region:      aws.String(testBucketRegion),

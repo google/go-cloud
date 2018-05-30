@@ -95,7 +95,6 @@ type watcher struct {
 	isDeleted  bool
 	waitTime   time.Duration
 	updateTime time.Time
-	errFunc    func(error)
 }
 
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs.  It
@@ -148,11 +147,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 		}
 		return zeroVar, err
 	}
-	defer func() {
-		if err := w.notifier.Remove(w.file); err != nil {
-			w.errFunc(err)
-		}
-	}()
+	defer w.notifier.Remove(w.file)
 
 	for {
 		select {
@@ -180,12 +175,6 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 			return zeroVar, err
 		}
 	}
-}
-
-// SetErrorFunc runs f as a callback when an error is encountered when writing.
-// This can be useful for logging.
-func (w *watcher) SetErrorFunc(f func(error)) {
-	w.errFunc = f
 }
 
 // WatchOptions allows the specification of various options to a watcher.

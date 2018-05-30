@@ -16,7 +16,10 @@
 // filesystem. This should not be used for production: it is intended for local
 // development.
 //
-// BUG: fileblob does not sanitize its inputs, and should not be used with untrusted sources.
+// Blob names must only contain alphanumeric characters, slashes, periods,
+// spaces, underscores, and dashes. Repeated slashes, a leading "./" or "../",
+// or the sequence "/./" is not permitted. This is to ensure that blob names map
+// cleanly onto files underneath a directory.
 package fileblob
 
 import (
@@ -24,7 +27,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	slashpath "path"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -47,8 +52,36 @@ func NewBucket(dir string) (*blob.Bucket, error) {
 	return blob.NewBucket(&bucket{dir}), nil
 }
 
+// resolvePath converts a key into a relative filesystem path. It guarantees
+// that there will only be one valid key for a given path and that the resulting
+// path will not reach outside the directory.
+func resolvePath(key string) (string, error) {
+	for _, c := range key {
+		if !('A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '/' || c == '.' || c == ' ' || c == '_' || c == '-') {
+			return "", fmt.Errorf("contains invalid character %q", c)
+		}
+	}
+	if cleaned := slashpath.Clean(key); key != cleaned {
+		return "", fmt.Errorf("not a clean slash-separated path")
+	}
+	if slashpath.IsAbs(key) {
+		return "", fmt.Errorf("starts with a slash")
+	}
+	if key == "." {
+		return "", fmt.Errorf("invalid path \".\"")
+	}
+	if strings.HasPrefix(key, "../") {
+		return "", fmt.Errorf("starts with \"../\"")
+	}
+	return filepath.FromSlash(key), nil
+}
+
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	path := filepath.Join(b.dir, key)
+	relpath, err := resolvePath(key)
+	if err != nil {
+		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+	}
+	path := filepath.Join(b.dir, relpath)
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
@@ -101,12 +134,15 @@ func (r reader) Size() int64 {
 }
 
 func (b *bucket) NewWriter(ctx context.Context, key string, opt *driver.WriterOptions) (driver.Writer, error) {
-	if d := filepath.Dir(key); d != "." {
-		if err := os.MkdirAll(filepath.Join(b.dir, d), 0777); err != nil {
-			return nil, fmt.Errorf("open file blob %s: %v", key, err)
-		}
+	relpath, err := resolvePath(key)
+	if err != nil {
+		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	f, err := os.Create(filepath.Join(b.dir, key))
+	path := filepath.Join(b.dir, relpath)
+	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+	}
+	f, err := os.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
@@ -114,7 +150,12 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opt *driver.WriterOp
 }
 
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	err := os.Remove(filepath.Join(b.dir, key))
+	relpath, err := resolvePath(key)
+	if err != nil {
+		return fmt.Errorf("delete file blob %s: %v", key, err)
+	}
+	path := filepath.Join(b.dir, relpath)
+	err = os.Remove(path)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
