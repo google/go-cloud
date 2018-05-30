@@ -185,6 +185,8 @@ func (r *responseStats) Write(p []byte) (n int, err error) {
 	if _, err := r.wc.Write(p[:n]); err != nil {
 		panic(err)
 	}
+
+	return n, err
 }
 
 func (r *responseStats) size() (hdr, body int64) {
