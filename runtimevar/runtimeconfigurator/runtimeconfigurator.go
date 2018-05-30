@@ -48,7 +48,7 @@ var authScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
 }
 
-// Client is a runtimevarManager client.
+// A Client constructs runtime variables using the Runtime Configurator API.
 type Client struct {
 	conn *grpc.ClientConn
 	// The gRPC API client.
