@@ -3,5 +3,8 @@ go_import_path: github.com/google/go-cloud
 go: "1.10.x"
 install:
   - "go get -u golang.org/x/vgo"
+  - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
 script:
   - "vgo test -short -race ./..."
+  - "vgo vendor"
+  - "golangci-lint run --new-from-rev=origin/master --print-welcome=false $(find . -type d ! -path \"./.git*\" ! -path \"./tests*\" ! -path \"./vendor*\" ! -path \"./goose/internal/goose/testdata*\" ! -path \"*_demo*\")"
