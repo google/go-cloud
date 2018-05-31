@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/mysql/cloudmysql"
+	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 	"github.com/google/go-cloud/server/sdserver"
 )
 
@@ -30,8 +31,9 @@ var GCP = goose.NewSet(Services, gcp.DefaultIdentity)
 // Google Cloud Platform services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
 var Services = goose.NewSet(
-	gcp.DefaultTransport,
-	gcp.NewHTTPClient,
 	cloudmysql.CertSourceSet,
 	cloudmysql.Open,
+	gcp.DefaultTransport,
+	gcp.NewHTTPClient,
+	runtimeconfigurator.Set,
 	sdserver.Set)
