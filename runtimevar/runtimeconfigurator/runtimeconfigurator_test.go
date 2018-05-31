@@ -15,7 +15,6 @@
 package runtimeconfigurator
 
 import (
-	"codename/gcp"
 	"context"
 	"fmt"
 	"net"
@@ -25,6 +24,7 @@ import (
 
 	"cloud.google.com/go/rpcreplay"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
@@ -34,6 +34,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/status"
+)
+
+const (
+	projectID = "TODO"
+	// config is the runtimeconfig high-level config that variables sit under.
+	config      = "runtimeconfigurator_test"
+	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
 // Ensure that watcher implements driver.Watcher.
@@ -117,27 +124,72 @@ var (
 	jsonDataPtr *jsonData
 )
 
-func TestWatchReplay(t *testing.T) {
+func TestInitialWatch(t *testing.T) {
 	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rec, err := rpcreplay.NewRecorder("watcher.replay", nil)
-	if err != nil {
-		t.Fatal(err)
+	filepath := "testdata/initial-watch.replay"
+	var rOpts []grpc.DialOption
+	if testing.Short() {
+		r, err := rpcreplay.NewReplayer(filepath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rOpts = r.DialOptions()
+		defer r.Close()
+	} else {
+		r, err := rpcreplay.NewRecorder(filepath, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rOpts = r.DialOptions()
+		defer r.Close()
 	}
-	defer rec.Close()
 
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
 	}
-	opts = append(opts, rec.DialOptions()...)
-	_, err = grpc.DialContext(ctx, endPoint, opts...)
+	opts = append(opts, rOpts...)
+	conn, err := grpc.DialContext(ctx, endPoint, opts...)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
+	rn := ResourceName{
+		ProjectID: projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestWatch",
+	}
+
+	type home struct {
+		Person string `json:Person`
+		Home   string `json:Home`
+	}
+	var jsonDataPtr *home
+	want := &home{"Batman", "Gotham"}
+	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deleteConfig(ctx, client.client, rn)
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := variable.Watch(ctx)
+	if err != nil {
+		t.Fatalf("variable.Watch returned error: %v", err)
+	}
+	if diff := cmp.Diff(got.Value.(*home), want); diff != "" {
+		t.Errorf("Snapshot.Value: %s", diff)
 	}
 }
 
@@ -301,4 +353,40 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	if !got.UpdateTime.After(prev.UpdateTime) {
 		t.Errorf("Snapshot.UpdateTime is less than or equal to previous value")
 	}
+}
+
+// createConfig creates a fresh config. It will always overwrite any previous configuration,
+// thus it is not thread safe.
+func createConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName) (*pb.RuntimeConfig, error) {
+	// No need to handle this error; either the config doesn't exist (good) or the test
+	// will fail on the create step and requires human intervention anyway.
+	_ = deleteConfig(ctx, client, rn)
+	return client.CreateConfig(ctx, &pb.CreateConfigRequest{
+		Parent: "projects/" + rn.ProjectID,
+		Config: &pb.RuntimeConfig{
+			Name:        rn.configPath(),
+			Description: rn.desc,
+		},
+	})
+}
+
+func deleteConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName) error {
+	_, err := client.DeleteConfig(ctx, &pb.DeleteConfigRequest{
+		Name: rn.configPath(),
+	})
+
+	return err
+}
+
+func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, error) {
+	if _, err := createConfig(ctx, client, rn); err != nil {
+		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
+	}
+	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: value},
+		},
+	})
 }
