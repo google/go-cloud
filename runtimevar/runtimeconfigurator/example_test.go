@@ -18,9 +18,27 @@ import (
 	"context"
 	"log"
 
+	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 )
+
+func ExampleNewClient() {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	stub, cleanup, err := runtimeconfigurator.Dial(ctx, creds.TokenSource)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+	client := runtimeconfigurator.NewClient(stub)
+
+	// Now use the client.
+	_ = client
+}
 
 func ExampleClient_NewVariable() {
 	// Assume client was created at server startup.

@@ -25,14 +25,22 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"google.golang.org/api/option"
 	transport "google.golang.org/api/transport/grpc"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+// Set is a Goose provider set that provides *Client using a default
+// connection to the Runtime Configurator API given a GCP token source.
+var Set = goose.NewSet(
+	Dial,
+	NewClient,
 )
 
 const (
@@ -43,34 +51,26 @@ const (
 	defaultWaitTimeout = 10 * time.Minute
 )
 
-// List of authentication scopes required for using the Runtime Configurator API.
-var authScopes = []string{
-	"https://www.googleapis.com/auth/cloud-platform",
+// Dial opens a gRPC connection to the Runtime Configurator API.
+//
+// The second return value is a function that can be called to clean up
+// the connection opened by Dial.
+func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClient, func(), error) {
+	conn, err := transport.Dial(ctx, option.WithEndpoint(endPoint), option.WithTokenSource(ts))
+	if err != nil {
+		return nil, nil, err
+	}
+	return pb.NewRuntimeConfigManagerClient(conn), func() { conn.Close() }, nil
 }
 
 // A Client constructs runtime variables using the Runtime Configurator API.
 type Client struct {
-	conn *grpc.ClientConn
-	// The gRPC API client.
 	client pb.RuntimeConfigManagerClient
 }
 
-// NewClient constructs a Client instance from given gRPC connection.
-func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error) {
-	opts = append(opts, option.WithEndpoint(endPoint), option.WithScopes(authScopes...))
-	conn, err := transport.Dial(ctx, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{
-		conn:   conn,
-		client: pb.NewRuntimeConfigManagerClient(conn),
-	}, nil
-}
-
-// Close tears down the gRPC connection used by this Client.
-func (c *Client) Close() error {
-	return c.conn.Close()
+// NewClient returns a new client that makes calls to the given gRPC stub.
+func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
+	return &Client{client: stub}
 }
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
