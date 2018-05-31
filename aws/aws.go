@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package aws provides fundamental Goose providers for Amazon Web Services (AWS).
+// Package aws provides fundamental Wire providers for Amazon Web Services (AWS).
 package aws
 
 import (
@@ -20,23 +20,23 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/goose"
+	"github.com/google/go-cloud/wire"
 )
 
-// Set is a Goose provider set that provides a variety of common types
+// Set is a Wire provider set that provides a variety of common types
 // from the AWS session.
-var Set = goose.NewSet(
+var Set = wire.NewSet(
 	SessionConfig,
 	ConfigCredentials,
-	goose.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
+	wire.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
 )
 
-// DefaultSession is a Goose provider set that provides a *session.Session using
+// DefaultSession is a Wire provider set that provides a *session.Session using
 // the default options. It includes all the providers in aws.Set.
-var DefaultSession = goose.NewSet(
+var DefaultSession = wire.NewSet(
 	Set,
 	session.NewSessionWithOptions,
-	goose.Value(session.Options{}),
+	wire.Value(session.Options{}),
 )
 
 // SessionConfig returns sess.Config.

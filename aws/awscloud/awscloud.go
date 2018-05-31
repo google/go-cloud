@@ -12,32 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awscloud contains Goose providers for wiring up AWS.
+// Package awscloud contains Wire providers for AWS services.
 package awscloud
 
 import (
 	"net/http"
 
 	"github.com/google/go-cloud/aws"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/mysql/rdsmysql"
 	"github.com/google/go-cloud/runtimevar/paramstore"
 	"github.com/google/go-cloud/server/xrayserver"
+	"github.com/google/go-cloud/wire"
 )
 
-// AWS is a Goose provider set that includes all Amazon Web Services interface
+// AWS is a Wire provider set that includes all Amazon Web Services interface
 // implementations in go-cloud and authenticates using the default session.
-var AWS = goose.NewSet(
+var AWS = wire.NewSet(
 	Services,
 	aws.DefaultSession,
-	goose.Value(http.DefaultClient),
+	wire.Value(http.DefaultClient),
 )
 
-// Services is a Goose provider set that includes the default wiring for all
+// Services is a Wire provider set that includes the default wiring for all
 // Amazon Web Services interface implementations in go-cloud, but unlike the AWS
 // set, does not include credentials. Individual services may require additional
 // configuration.
-var Services = goose.NewSet(
+var Services = wire.NewSet(
 	rdsmysql.Set,
 	paramstore.NewClient,
 	xrayserver.Set)
