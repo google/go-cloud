@@ -84,6 +84,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	path := filepath.Join(b.dir, relpath)
 	info, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, blob.ErrObjectNotExist(err.Error())
+		}
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	if length == 0 {

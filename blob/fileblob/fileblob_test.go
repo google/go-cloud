@@ -416,7 +416,7 @@ func TestDelete(t *testing.T) {
 			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)
 		}
 	})
-	t.Run("DoesNotExistNop", func(t *testing.T) {
+	t.Run("DoesNotExistError", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "fileblob")
 		if err != nil {
 			t.Fatal(err)
