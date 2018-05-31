@@ -51,13 +51,12 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 	// allows for differentiating GETs which otherwise look identical.
 	last := -1
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
-		if r.Body == nil {
-			return false
-		}
 		var b bytes.Buffer
-		if _, err := b.ReadFrom(r.Body); err != nil {
-			logf(err.Error())
-			return false
+		if r.Body != nil {
+			if _, err := b.ReadFrom(r.Body); err != nil {
+				logf(err.Error())
+				return false
+			}
 		}
 		r.Body = ioutil.NopCloser(&b)
 
@@ -71,6 +70,7 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
 		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
 		logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
+		logf("Sequences: %v | %v == %v\n", seq, last, seq > last)
 
 		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
 			r.URL.String() == i.URL &&
@@ -78,13 +78,22 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 			b.String() == i.Body &&
 			seq > last {
 			last = seq
+			logf("Returning header match")
 			return true
 		}
 
+		logf("No match, continuing...")
 		return false
 	})
-
-	return r, func() { r.Stop(); fixAWSHeaders(path) }, nil
+	return r, func() {
+		r.Stop()
+		if mode != recorder.ModeRecording {
+			return
+		}
+		if err := fixAWSHeaders(path); err != nil {
+			fmt.Println(err)
+		}
+	}, nil
 }
 
 // fixAWSHeaders removes *potentially* sensitive information from a cassette,

@@ -17,6 +17,9 @@
 package xrayserver
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
@@ -34,16 +37,16 @@ var Set = goose.NewSet(
 	server.Set,
 	ServiceSet,
 	NewExporter,
-	goose.Bind(trace.Exporter(nil), (*exporter.Exporter)(nil)),
-	NopLogger{},
-	goose.Bind(requestlog.Logger(nil), NopLogger{}),
+	goose.Bind((*trace.Exporter)(nil), (*exporter.Exporter)(nil)),
+	NewRequestLogger,
+	goose.Bind((*requestlog.Logger)(nil), (*requestlog.NCSALogger)(nil)),
 )
 
 // ServiceSet is a Goose provider set that provides the AWS X-Ray service
 // client given an AWS session.
 var ServiceSet = goose.NewSet(
 	NewXRayClient,
-	goose.Bind(xrayiface.XRayAPI(nil), (*xray.XRay)(nil)),
+	goose.Bind((*xrayiface.XRayAPI)(nil), (*xray.XRay)(nil)),
 )
 
 // NewExporter returns a new X-Ray exporter.
@@ -63,10 +66,7 @@ func NewXRayClient(p client.ConfigProvider) *xray.XRay {
 	return xray.New(p)
 }
 
-// TODO(light): Find a real logger implementation.
-
-// NopLogger is a requestlog.Logger that does nothing.
-type NopLogger struct{}
-
-// Log does nothing.
-func (NopLogger) Log(*requestlog.Entry) {}
+// NewRequestLogger returns a request logger that sends entries to stdout.
+func NewRequestLogger() *requestlog.NCSALogger {
+	return requestlog.NewNCSALogger(os.Stdout, func(e error) { fmt.Fprintln(os.Stderr, e) })
+}

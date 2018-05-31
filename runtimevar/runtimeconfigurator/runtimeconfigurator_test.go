@@ -78,12 +78,9 @@ func setUp(t *testing.T, fs *fakeServer) (*Client, func()) {
 	if err != nil {
 		t.Fatalf("did not connect: %v", err)
 	}
-	client := &Client{
-		conn:   conn,
-		client: pb.NewRuntimeConfigManagerClient(conn),
-	}
+	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
 	return client, func() {
-		client.Close()
+		conn.Close()
 		s.Stop()
 	}
 }

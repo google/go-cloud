@@ -20,7 +20,8 @@ type ProviderSet struct{}
 
 // NewSet creates a new provider set that includes the providers in
 // its arguments. Each argument is either an exported function value,
-// an exported struct (zero) value, or a call to Bind.
+// an exported struct (zero) value, a provider set, a call to Bind, or
+// a call to Value.
 func NewSet(...interface{}) ProviderSet {
 	return ProviderSet{}
 }
@@ -32,7 +33,7 @@ func NewSet(...interface{}) ProviderSet {
 // Example:
 //
 //	func injector(ctx context.Context) (*sql.DB, error) {
-//		panic(Build(otherpkg.Foo, myProviderFunc, goose.Bind()))
+//		panic(goose.Build(otherpkg.FooSet, myProviderFunc))
 //	}
 func Build(...interface{}) string {
 	return "implementation not generated, run goose"
@@ -42,11 +43,12 @@ func Build(...interface{}) string {
 type Binding struct{}
 
 // Bind declares that a concrete type should be used to satisfy a
-// dependency on iface.
+// dependency on the type of iface, which must be a pointer to an
+// interface type.
 //
 // Example:
 //
-//	var MySet = goose.NewSet(goose.Bind(MyInterface(nil), new(MyStruct)))
+//	var MySet = goose.NewSet(goose.Bind(new(MyInterface), new(MyStruct)))
 func Bind(iface, to interface{}) Binding {
 	return Binding{}
 }
