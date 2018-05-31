@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build gooseinject
+//+build wireinject
 
 package main
 
@@ -21,12 +21,12 @@ import (
 
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/gcp/gcpcloud"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 )
 
 func initialize(ctx context.Context) (*server.Server, error) {
-	panic(goose.Build(
+	panic(wire.Build(
 		appSet,
 		gcpcloud.Services,
 		gcp.DefaultIdentity,

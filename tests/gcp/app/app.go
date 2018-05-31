@@ -24,14 +24,14 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/wire"
 
 	"go.opencensus.io/trace"
 )
 
-var appSet = goose.NewSet(
-	goose.Value([]health.Checker{connection}),
+var appSet = wire.NewSet(
+	wire.Value([]health.Checker{connection}),
 	trace.AlwaysSample,
 )
 
