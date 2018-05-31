@@ -22,11 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/rpcreplay"
+	"github.com/dnaeon/go-vcr/recorder"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/testing/replay"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
@@ -131,24 +132,16 @@ func TestInitialWatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	filepath := "testdata/initial-watch.replay"
-	var rOpts []grpc.DialOption
+	mode := recorder.ModeRecording
 	if testing.Short() {
-		r, err := rpcreplay.NewReplayer(filepath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		rOpts = r.DialOptions()
-		defer r.Close()
-	} else {
-		r, err := rpcreplay.NewRecorder(filepath, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		rOpts = r.DialOptions()
-		defer r.Close()
+		mode = recorder.ModeReplaying
 	}
 
+	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),

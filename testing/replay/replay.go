@@ -23,8 +23,10 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
+	"google.golang.org/grpc"
 )
 
 // NewAWSRecorder returns a go-vcr.Recorder which reads or writes golden files from the given path.
@@ -116,4 +118,41 @@ func fixAWSHeaders(filepath string) error {
 	c.Save()
 
 	return nil
+}
+
+// NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
+// These options allow a recorder/replayer to intercept RPCs and save RPCs to the file at filename,
+// or read the RPCs from the file and return them.
+func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string) (opts []grpc.DialOption, done func(), err error) {
+	path := filepath.Join("testdata", filename)
+	logf("Golden file is at %v", path)
+
+	if mode == recorder.ModeRecording {
+		logf("Recording into golden file")
+		r, err := rpcreplay.NewRecorder(path, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = r.DialOptions()
+		done = func() {
+			if err := r.Close(); err != nil {
+				logf("unable to close recorder: %v", err)
+			}
+		}
+		return opts, done, nil
+	}
+
+	logf("Replaying from golden file")
+	r, err := rpcreplay.NewReplayer(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	opts = r.DialOptions()
+	done = func() {
+		if err := r.Close(); err != nil {
+			logf("unable to close replayer: %v", err)
+		}
+	}
+
+	return opts, done, nil
 }
