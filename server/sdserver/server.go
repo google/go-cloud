@@ -21,9 +21,9 @@ import (
 	"os"
 
 	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"
@@ -31,14 +31,14 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Set is a goose provider set that provides the diagnostic hooks for
+// Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server given a GCP token source and a GCP project ID.
-var Set = goose.NewSet(
+var Set = wire.NewSet(
 	server.Set,
 	NewExporter,
-	goose.Bind((*trace.Exporter)(nil), (*stackdriver.Exporter)(nil)),
+	wire.Bind((*trace.Exporter)(nil), (*stackdriver.Exporter)(nil)),
 	NewRequestLogger,
-	goose.Bind((*requestlog.Logger)(nil), (*requestlog.StackdriverLogger)(nil)),
+	wire.Bind((*requestlog.Logger)(nil), (*requestlog.StackdriverLogger)(nil)),
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.

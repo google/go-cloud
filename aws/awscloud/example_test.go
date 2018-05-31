@@ -21,9 +21,9 @@ import (
 	"net/http"
 
 	"github.com/google/go-cloud/aws/awscloud"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 	"go.opencensus.io/trace"
 )
 
@@ -46,26 +46,26 @@ func Example() {
 	log.Fatal(srv.ListenAndServe(":8080", nil))
 }
 
-// setup is a Goose injector function that creates an HTTP server
+// setup is a Wire injector function that creates an HTTP server
 // configured to send diagnostics to AWS X-Ray. The second return
 // value is a clean-up function that can be called to shut down any
 // resources created by setup.
 //
-// The body of this function will be filled in by running Goose. While
+// The body of this function will be filled in by running gowire. While
 // the name of the function does not matter, the signature signals to
-// Goose what provider functions to call. See
-// https://github.com/google/go-cloud/blob/master/goose/README.md#injectors
+// Wire what provider functions to call. See
+// https://github.com/google/go-cloud/blob/master/wire/README.md#injectors
 // for more details.
 func initialize(ctx context.Context) (*server.Server, func(), error) {
-	panic(goose.Build(
+	panic(wire.Build(
 		// The AWS set includes all the default wiring for AWS, including
 		// for *server.Server.
 		awscloud.AWS,
 		// Providing nil instructs the server to use the default sampling policy.
-		goose.Value(trace.Sampler(nil)),
+		wire.Value(trace.Sampler(nil)),
 		// Health checks can be added to delay your server reporting healthy
 		// to the load balancer before critical dependencies are available.
-		goose.Value([]health.Checker(nil)),
+		wire.Value([]health.Checker(nil)),
 	))
 }
 
