@@ -156,7 +156,10 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	}
 	path := filepath.Join(b.dir, relpath)
 	err = os.Remove(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return blob.ErrObjectNotExist(err.Error())
+		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	return nil

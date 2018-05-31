@@ -19,9 +19,16 @@ package blob
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/go-cloud/blob/driver"
 )
+
+type ErrObjectNotExist string
+
+func (e ErrObjectNotExist) Error() string {
+	return fmt.Sprint("blob: object doesn't exist: ", string(e))
+}
 
 // Reader implements io.ReadCloser to read from blob. It must be closed after
 // reads finished. It also provides the size of the blob.

@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/testing/setup"
 	"github.com/google/go-cmp/cmp"
@@ -423,11 +424,6 @@ func TestDelete(t *testing.T) {
 	if err := req.Send(); err == nil {
 		t.Errorf("object deleted, got err %v, want NotFound error", err)
 	}
-
-	// Delete non-existing object, no-op
-	if err := b.Delete(ctx, obj); err != nil {
-		t.Errorf("error occurs when deleting a non-existing object: %v", err)
-	}
 }
 
 // This function doesn't report errors back because they're not really useful.
@@ -447,4 +443,12 @@ func forceDeleteBucket(svc *s3.S3, bucket string) {
 	_, _ = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bucket})
 
 	_ = svc.WaitUntilBucketNotExists(&s3.HeadBucketInput{Bucket: &bucket})
+}
+
+func TestDeleteNonexisting(t *testing.T) {
+	if err := s3Bucket.Delete(context.Background(), "test_notexist"); err == nil {
+		t.Errorf("delete non-existing object, got nil, want error type %T", blob.ErrObjectNotExist(""))
+	} else if err, ok := err.(blob.ErrObjectNotExist); !ok {
+		t.Errorf("delete non-existing object, got error type %T, want error type %T", err, blob.ErrObjectNotExist(""))
+	}
 }

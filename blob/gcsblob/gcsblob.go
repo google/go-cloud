@@ -67,7 +67,11 @@ type BucketOptions struct {
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	return obj.NewRangeReader(ctx, offset, length)
+	r, err := obj.NewRangeReader(ctx, offset, length)
+	if isErrNotExist(err) {
+		return nil, blob.ErrObjectNotExist(err.Error())
+	}
+	return r, err
 }
 
 // NewWriter returns Writer that writes to an object associated with key.
@@ -98,7 +102,11 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	return obj.Delete(ctx)
+	err := obj.Delete(ctx)
+	if isErrNotExist(err) {
+		return blob.ErrObjectNotExist(err.Error())
+	}
+	return err
 }
 
 const namingRuleURL = "https://cloud.google.com/storage/docs/naming"
@@ -137,4 +145,8 @@ func bufferSize(size int) int {
 		return size
 	}
 	return 0 // disable buffering
+}
+
+func isErrNotExist(err error) bool {
+	return err == storage.ErrObjectNotExist
 }
