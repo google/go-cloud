@@ -15,6 +15,7 @@
 package runtimeconfigurator
 
 import (
+	"codename/gcp"
 	"context"
 	"fmt"
 	"net"
@@ -22,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"cloud.google.com/go/rpcreplay"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
@@ -29,6 +31,8 @@ import (
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/status"
 )
 
@@ -115,6 +119,30 @@ var (
 	}
 	jsonDataPtr *jsonData
 )
+
+func TestWatchReplay(t *testing.T) {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rec, err := rpcreplay.NewRecorder("watcher.replay", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rec.Close()
+
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
+		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
+	}
+	opts = append(opts, rec.DialOptions()...)
+	_, err = grpc.DialContext(ctx, endPoint, opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestWatch(t *testing.T) {
 	client, cleanUp := setUp(t, &fakeServer{
