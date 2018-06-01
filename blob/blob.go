@@ -19,16 +19,9 @@ package blob
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/google/go-cloud/blob/driver"
 )
-
-type ErrObjectNotExist string
-
-func (e ErrObjectNotExist) Error() string {
-	return fmt.Sprint("blob: object doesn't exist: ", string(e))
-}
 
 // Reader implements io.ReadCloser to read from blob. It must be closed after
 // reads finished. It also provides the size of the blob.
@@ -141,4 +134,20 @@ type WriterOptions struct {
 	// If the Writer is used to write small objects concurrently, set the buffer size
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
+}
+
+type errObjectNotExist interface {
+	error
+
+	// WrapNotExist wraps the raw error returned with additional message.
+	WrapNotExist() error
+}
+
+// IsErrObjectNotExist returns an error wrapped by any additional useful message
+// if it is an errNotExist, return nil otherwise.
+func IsErrObjectNotExist(err error) error {
+	if e, ok := err.(errObjectNotExist); ok {
+		return e.WrapNotExist()
+	}
+	return nil
 }

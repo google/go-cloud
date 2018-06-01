@@ -37,10 +37,8 @@ func TestRead(t *testing.T) {
 		t.Fatal("error getting bucket:", err)
 	}
 	t.Run("ObjectNotExist", func(t *testing.T) {
-		if _, err := bucket.NewReader(ctx, "test_notexist"); err == nil {
-			t.Errorf("NewReader: got nil, want error type %T", blob.ErrObjectNotExist(""))
-		} else if e, ok := err.(blob.ErrObjectNotExist); !ok {
-			t.Errorf("NewReader: got error type %T, want error type %T", e, blob.ErrObjectNotExist(""))
+		if _, err := bucket.NewReader(ctx, "test_notexist"); err == nil || blob.IsErrObjectNotExist(err) == nil {
+			t.Errorf("NewReader: got %#v, want not exist error", err)
 		}
 	})
 }
@@ -57,10 +55,8 @@ func TestDelete(t *testing.T) {
 		t.Fatal("error getting bucket:", err)
 	}
 	t.Run("ObjectNotExist", func(t *testing.T) {
-		if err := bucket.Delete(ctx, "test_notexist"); err == nil {
-			t.Errorf("Delete: got nil, want error type %T", blob.ErrObjectNotExist(""))
-		} else if e, ok := err.(blob.ErrObjectNotExist); !ok {
-			t.Errorf("Delete: got error type %T, want error type %T", e, blob.ErrObjectNotExist(""))
+		if err := bucket.Delete(ctx, "test_notexist"); err == nil || blob.IsErrObjectNotExist(err) == nil {
+			t.Errorf("Delete: got %#v, want not exist error", err)
 		}
 	})
 }

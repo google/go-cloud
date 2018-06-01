@@ -58,7 +58,7 @@ type Bucket interface {
 	// The caller must call Close on the returned Writer when done writing.
 	NewWriter(ctx context.Context, key string, opt *WriterOptions) (Writer, error)
 
-	// Delete deletes the object associated with key. It is a no-op if that object
-	// does not exist.
+	// Delete deletes the object associated with key. It returns an error if that
+	// object does not exist.
 	Delete(ctx context.Context, key string) error
 }

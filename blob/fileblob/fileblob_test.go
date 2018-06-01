@@ -278,10 +278,8 @@ func TestReader(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		if _, err := b.NewRangeReader(ctx, "foo_not_exist.txt", 0, 0); err == nil {
-			t.Errorf("NewRangeReader: got nil, want error type %T", blob.ErrObjectNotExist(""))
-		} else if e, ok := err.(blob.ErrObjectNotExist); !ok {
-			t.Errorf("NewRangeReader: got error type %T, want error type %T", e, blob.ErrObjectNotExist(""))
+		if _, err := b.NewRangeReader(ctx, "foo_not_exist.txt", 0, 0); err == nil || blob.IsErrObjectNotExist(err) == nil {
+			t.Errorf("NewReader: got %#v, want not exist error", err)
 		}
 	})
 	// TODO(light): For sake of conformance test completionism, this should also
@@ -428,10 +426,8 @@ func TestDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		if err := b.Delete(ctx, "foo.txt"); err == nil {
-			t.Errorf("Delete: got nil, want error type %T", blob.ErrObjectNotExist(""))
-		} else if e, ok := err.(blob.ErrObjectNotExist); !ok {
-			t.Errorf("Delete: got error type %T, want %T", e, blob.ErrObjectNotExist(""))
+		if err := b.Delete(ctx, "foo.txt"); err == nil || blob.IsErrObjectNotExist(err) == nil {
+			t.Errorf("Delete: got %#v, want not exist error", err)
 		}
 		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {
 			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)

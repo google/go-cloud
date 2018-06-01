@@ -410,12 +410,8 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("error uploading test object: %v", err)
 	}
 
-	b, err := s3blob.NewBucket(ctx, sess, bkt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := b.Delete(ctx, obj); err != nil {
-		t.Errorf("error occurs when deleting a non-existing object: %v", err)
+	if err := s3Bucket.Delete(ctx, object); err != nil {
+		t.Fatalf("error occurs when deleting a existing object: %v", err)
 	}
 	req, _ := svc.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bkt),
@@ -446,9 +442,7 @@ func forceDeleteBucket(svc *s3.S3, bucket string) {
 }
 
 func TestDeleteNonexisting(t *testing.T) {
-	if err := s3Bucket.Delete(context.Background(), "test_notexist"); err == nil {
-		t.Errorf("delete non-existing object, got nil, want error type %T", blob.ErrObjectNotExist(""))
-	} else if err, ok := err.(blob.ErrObjectNotExist); !ok {
-		t.Errorf("delete non-existing object, got error type %T, want error type %T", err, blob.ErrObjectNotExist(""))
+	if err := s3Bucket.Delete(context.Background(), "test_notexist"); err == nil || blob.IsErrObjectNotExist(err) == nil {
+		t.Errorf("Delete: got %#v, want not exist error", err)
 	}
 }

@@ -179,7 +179,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
 		if e := isErrNotExist(err); e != nil {
-			return nil, blob.ErrObjectNotExist(e.Message())
+			return nil, errObjectNotExist{key: key, msg: e.Message()}
 		}
 		return nil, err
 	}
@@ -197,7 +197,7 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 	req, resp := b.client.HeadObjectRequest(in)
 	if err := req.Send(); err != nil {
 		if e := isErrNotExist(err); e != nil {
-			return nil, blob.ErrObjectNotExist(e.Message())
+			return nil, errObjectNotExist{key: key, msg: e.Message()}
 		}
 		return nil, err
 	}
@@ -244,6 +244,19 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 	req, _ := b.client.DeleteObjectRequest(input)
 	return req.Send()
+}
+
+type errObjectNotExist struct {
+	key string
+	msg string
+}
+
+func (e errObjectNotExist) WrapNotExist() error {
+	return fmt.Errorf("s3blob: object with key %s doesn't exist: %s", e.key, e.msg)
+}
+
+func (e errObjectNotExist) Error() string {
+	return e.WrapNotExist().Error()
 }
 
 func isErrNotExist(err error) awserr.Error {
