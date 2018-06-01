@@ -16,8 +16,10 @@ package runtimeconfigurator
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -38,11 +40,12 @@ import (
 )
 
 const (
-	projectID = "TODO"
 	// config is the runtimeconfig high-level config that variables sit under.
 	config      = "runtimeconfigurator_test"
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
+
+var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
@@ -71,6 +74,16 @@ func (s *fakeServer) GetVariable(context.Context, *pb.GetVariableRequest) (*pb.V
 		s.index++
 	}
 	return resp.vrbl, resp.err
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if *projectID == "" {
+		fmt.Println("-project not specified")
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
 }
 
 func setUp(t *testing.T, fs *fakeServer) (*Client, func()) {
@@ -154,7 +167,7 @@ func TestInitialWatch(t *testing.T) {
 
 	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
 	rn := ResourceName{
-		ProjectID: projectID,
+		ProjectID: *projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestWatch",
