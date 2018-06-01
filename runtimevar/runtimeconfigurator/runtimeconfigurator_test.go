@@ -139,6 +139,7 @@ var (
 )
 
 func TestInitialWatch(t *testing.T) {
+	// TODO(@cflewis): Add table-based testing that exercises writing strings as well.
 	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
@@ -150,22 +151,10 @@ func TestInitialWatch(t *testing.T) {
 		mode = recorder.ModeReplaying
 	}
 
-	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
+	client, done, err := newConfigClient(ctx, "initial-watch.replay")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer done()
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
-	}
-	opts = append(opts, rOpts...)
-	conn, err := grpc.DialContext(ctx, endPoint, opts...)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
 	rn := ResourceName{
 		ProjectID: *projectID,
 		Config:    config,
@@ -192,13 +181,12 @@ func TestInitialWatch(t *testing.T) {
 
 	got, err := variable.Watch(ctx)
 	if err != nil {
-		t.Fatalf("variable.Watch returned error: %v", err)
+		t.Fatalf("got error %v; want nil", err)
 	}
 	if diff := cmp.Diff(got.Value.(*home), want); diff != "" {
-		t.Errorf("Snapshot.Value: %s", diff)
+		t.Errorf("got diff %v; want nil", diff)
 	}
 }
-
 func TestWatch(t *testing.T) {
 	client, cleanUp := setUp(t, &fakeServer{
 		responses: []response{
@@ -359,6 +347,24 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	if !got.UpdateTime.After(prev.UpdateTime) {
 		t.Errorf("Snapshot.UpdateTime is less than or equal to previous value")
 	}
+}
+
+func newConfigClient() (pb.RuntimeConfigManagerClient, func(), error) {
+	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
+	if err != nil {
+		return nil, nil, err
+	}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
+		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
+	}
+	opts = append(opts, rOpts...)
+	conn, err := grpc.DialContext(ctx, endPoint, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done, nil
 }
 
 // createConfig creates a fresh config. It will always overwrite any previous configuration,
