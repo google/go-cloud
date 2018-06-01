@@ -138,16 +138,10 @@ var (
 	jsonDataPtr *jsonData
 )
 
-func TestInitialWatch(t *testing.T) {
-	// TODO(@cflewis): Add table-based testing that exercises writing strings as well.
+func TestInitialStringWatch(t *testing.T) {
 	ctx := context.Background()
 
-	mode := recorder.ModeRecording
-	if testing.Short() {
-		mode = recorder.ModeReplaying
-	}
-
-	client, done, err := newConfigClient(ctx, "initial-watch.replay")
+	client, done, err := newConfigClient(ctx, "initial-string-watch.replay")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +149,42 @@ func TestInitialWatch(t *testing.T) {
 		ProjectID: *projectID,
 		Config:    config,
 		desc:      description,
-		Variable:  "TestWatch",
+		Variable:  "TestStringWatch",
+	}
+
+	want := "facepalm: 🤦"
+	_, err = createStringVariable(ctx, client.client, rn, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer deleteConfig(ctx, client.client, rn)
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := variable.Watch(ctx)
+	if err != nil {
+		t.Fatalf("got error %v; want nil", err)
+	}
+	if diff := cmp.Diff(got.Value.(*home), want); diff != "" {
+		t.Errorf("got diff %v; want nil", diff)
+	}
+}
+
+func TestInitialJSONWatch(t *testing.T) {
+	ctx := context.Background()
+
+	client, done, err := newConfigClient(ctx, "initial-json-watch.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestJSONWatch",
 	}
 
 	type home struct {
@@ -163,8 +192,8 @@ func TestInitialWatch(t *testing.T) {
 		Home   string `json:Home`
 	}
 	var jsonDataPtr *home
-	want := &home{"Batman", "Gotham"}
-	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
+	want := &home{"Queen", "Buckingham Palace"}
+	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Queen", "Home": "Buckingham Palace"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,6 +212,7 @@ func TestInitialWatch(t *testing.T) {
 		t.Errorf("got diff %v; want nil", diff)
 	}
 }
+
 func TestWatch(t *testing.T) {
 	client, cleanUp := setUp(t, &fakeServer{
 		responses: []response{
@@ -349,6 +379,11 @@ func newConfigClient() (pb.RuntimeConfigManagerClient, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	mode := recorder.ModeRecording
+	if testing.Short() {
+		mode = recorder.ModeReplaying
 	}
 
 	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
