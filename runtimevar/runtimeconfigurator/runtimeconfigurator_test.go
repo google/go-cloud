@@ -141,10 +141,12 @@ var (
 func TestInitialStringWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, "initial-string-watch.replay")
+	client, done, err := newConfigClient(ctx, t.Logf, "initial-string-watch.replay")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer done()
+
 	rn := ResourceName{
 		ProjectID: *projectID,
 		Config:    config,
@@ -168,7 +170,7 @@ func TestInitialStringWatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got error %v; want nil", err)
 	}
-	if diff := cmp.Diff(got.Value.(*home), want); diff != "" {
+	if diff := cmp.Diff(got.Value, want); diff != "" {
 		t.Errorf("got diff %v; want nil", diff)
 	}
 }
@@ -176,10 +178,12 @@ func TestInitialStringWatch(t *testing.T) {
 func TestInitialJSONWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, "initial-json-watch.replay")
+	client, done, err := newConfigClient(ctx, t.Logf, "initial-json-watch.replay")
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer done()
+
 	rn := ResourceName{
 		ProjectID: *projectID,
 		Config:    config,
@@ -192,8 +196,8 @@ func TestInitialJSONWatch(t *testing.T) {
 		Home   string `json:Home`
 	}
 	var jsonDataPtr *home
-	want := &home{"Queen", "Buckingham Palace"}
-	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Queen", "Home": "Buckingham Palace"}`))
+	want := &home{"Batman", "Gotham"}
+	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -375,7 +379,7 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	}
 }
 
-func newConfigClient() (pb.RuntimeConfigManagerClient, func(), error) {
+func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -386,7 +390,7 @@ func newConfigClient() (pb.RuntimeConfigManagerClient, func(), error) {
 		mode = recorder.ModeReplaying
 	}
 
-	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
+	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -427,14 +431,33 @@ func deleteConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn 
 }
 
 func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, error) {
+	contents := &pb.Variable_Value{Value: value}
+	return createVariable(ctx, client, rn, nil, contents)
+}
+
+func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
+	contents := &pb.Variable_Text{Text: str}
+	return createVariable(ctx, client, rn, contents, nil)
+}
+
+func createVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, txt *pb.Variable_Text, val *pb.Variable_Value) (*pb.Variable, error) {
+	if txt != nil && val != nil {
+		return nil, fmt.Errorf("txt and val cannot both be set at the same time")
+	}
 	if _, err := createConfig(ctx, client, rn); err != nil {
 		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
 	}
+
+	variable := &pb.Variable{
+		Name:     rn.String(),
+		Contents: txt,
+	}
+	if val != nil {
+		variable.Contents = val
+	}
+
 	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
-		Parent: rn.configPath(),
-		Variable: &pb.Variable{
-			Name:     rn.String(),
-			Contents: &pb.Variable_Value{Value: value},
-		},
+		Parent:   rn.configPath(),
+		Variable: variable,
 	})
 }
