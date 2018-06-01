@@ -141,10 +141,6 @@ var (
 func TestInitialWatch(t *testing.T) {
 	// TODO(@cflewis): Add table-based testing that exercises writing strings as well.
 	ctx := context.Background()
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	mode := recorder.ModeRecording
 	if testing.Short() {
@@ -350,6 +346,11 @@ func TestWatchDeletedAndReset(t *testing.T) {
 }
 
 func newConfigClient() (pb.RuntimeConfigManagerClient, func(), error) {
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	rOpts, done, err := replay.NewGCPDialOptions(t.Logf, mode, "initial-watch.replay")
 	if err != nil {
 		return nil, nil, err
