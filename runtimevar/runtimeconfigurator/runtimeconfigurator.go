@@ -26,9 +26,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/wire"
 	"google.golang.org/api/option"
 	transport "google.golang.org/api/transport/grpc"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -36,9 +36,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Set is a Goose provider set that provides *Client using a default
+// Set is a Wire provider set that provides *Client using a default
 // connection to the Runtime Configurator API given a GCP token source.
-var Set = goose.NewSet(
+var Set = wire.NewSet(
 	Dial,
 	NewClient,
 )

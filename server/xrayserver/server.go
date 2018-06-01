@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/xray"
@@ -31,27 +31,27 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Set is a Goose provider set that provides the diagnostic hooks for
+// Set is a Wire provider set that provides the diagnostic hooks for
 // *server.Server. This set includes ServiceSet.
-var Set = goose.NewSet(
+var Set = wire.NewSet(
 	server.Set,
 	ServiceSet,
 	NewExporter,
-	goose.Bind((*trace.Exporter)(nil), (*exporter.Exporter)(nil)),
+	wire.Bind((*trace.Exporter)(nil), (*exporter.Exporter)(nil)),
 	NewRequestLogger,
-	goose.Bind((*requestlog.Logger)(nil), (*requestlog.NCSALogger)(nil)),
+	wire.Bind((*requestlog.Logger)(nil), (*requestlog.NCSALogger)(nil)),
 )
 
-// ServiceSet is a Goose provider set that provides the AWS X-Ray service
+// ServiceSet is a Wire provider set that provides the AWS X-Ray service
 // client given an AWS session.
-var ServiceSet = goose.NewSet(
+var ServiceSet = wire.NewSet(
 	NewXRayClient,
-	goose.Bind((*xrayiface.XRayAPI)(nil), (*xray.XRay)(nil)),
+	wire.Bind((*xrayiface.XRayAPI)(nil), (*xray.XRay)(nil)),
 )
 
 // NewExporter returns a new X-Ray exporter.
 //
-// The second return value is a Goose cleanup function that calls Close
+// The second return value is a Wire cleanup function that calls Close
 // on the exporter, ignoring the error.
 func NewExporter(api xrayiface.XRayAPI) (*exporter.Exporter, func(), error) {
 	e, err := exporter.NewExporter(exporter.WithAPI(api))

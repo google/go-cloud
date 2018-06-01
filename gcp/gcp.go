@@ -19,14 +19,14 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/go-cloud/goose"
+	"github.com/google/go-cloud/wire"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
 
-// DefaultIdentity is a goose provider set that provides the project ID
+// DefaultIdentity is a Wire provider set that provides the project ID
 // and token source from Application Default Credentials (ADC).
-var DefaultIdentity = goose.NewSet(
+var DefaultIdentity = wire.NewSet(
 	CredentialsTokenSource,
 	DefaultCredentials,
 	DefaultProjectID)

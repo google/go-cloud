@@ -12,25 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcpcloud contains goose providers for wiring up GCP.
+// Package gcpcloud contains Wire providers for GCP services.
 package gcpcloud
 
 import (
 	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/goose"
 	"github.com/google/go-cloud/mysql/cloudmysql"
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 	"github.com/google/go-cloud/server/sdserver"
+	"github.com/google/go-cloud/wire"
 )
 
-// GCP is a goose provider set that includes all Google Cloud Platform services
+// GCP is a Wire provider set that includes all Google Cloud Platform services
 // in this repository and authenticates using Application Default Credentials.
-var GCP = goose.NewSet(Services, gcp.DefaultIdentity)
+var GCP = wire.NewSet(Services, gcp.DefaultIdentity)
 
-// Services is a goose provider set that includes the default wiring for all
+// Services is a Wire provider set that includes the default wiring for all
 // Google Cloud Platform services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
-var Services = goose.NewSet(
+var Services = wire.NewSet(
 	cloudmysql.CertSourceSet,
 	cloudmysql.Open,
 	gcp.DefaultTransport,
