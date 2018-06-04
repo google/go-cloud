@@ -160,7 +160,11 @@ func TestInitialStringWatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer deleteConfig(ctx, client.client, rn)
+	defer func() {
+		if err := deleteConfig(ctx, client.client, rn); err != nil {
+			t.Logf("delete config failed, possible human cleanup required: %v", err)
+		}
+	}()
 
 	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
 	if err != nil {
@@ -193,8 +197,8 @@ func TestInitialJSONWatch(t *testing.T) {
 	}
 
 	type home struct {
-		Person string `json:Person`
-		Home   string `json:Home`
+		Person string `json:"Person"`
+		Home   string `json:"Home"`
 	}
 	var jsonDataPtr *home
 	want := &home{"Batman", "Gotham"}
@@ -202,7 +206,11 @@ func TestInitialJSONWatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer deleteConfig(ctx, client.client, rn)
+	defer func() {
+		if err := deleteConfig(ctx, client.client, rn); err != nil {
+			t.Logf("delete config failed, possible human cleanup required: %v", err)
+		}
+	}()
 
 	variable, err := client.NewVariable(ctx, rn, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), nil)
 	if err != nil {
