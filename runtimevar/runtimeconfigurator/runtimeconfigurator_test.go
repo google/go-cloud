@@ -78,9 +78,10 @@ func (s *fakeServer) GetVariable(context.Context, *pb.GetVariableRequest) (*pb.V
 
 func TestMain(m *testing.M) {
 	flag.Parse()
+	// TODO(#65) This needs to be fixed so that the test is not dependent on the project ID.
 	if *projectID == "" {
-		fmt.Println("-project not specified")
-		os.Exit(1)
+		fmt.Println("-project not specified, skipping")
+		os.Exit(0)
 	}
 
 	os.Exit(m.Run())
@@ -431,33 +432,29 @@ func deleteConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn 
 }
 
 func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, error) {
-	contents := &pb.Variable_Value{Value: value}
-	return createVariable(ctx, client, rn, nil, contents)
-}
-
-func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
-	contents := &pb.Variable_Text{Text: str}
-	return createVariable(ctx, client, rn, contents, nil)
-}
-
-func createVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, txt *pb.Variable_Text, val *pb.Variable_Value) (*pb.Variable, error) {
-	if txt != nil && val != nil {
-		return nil, fmt.Errorf("txt and val cannot both be set at the same time")
-	}
 	if _, err := createConfig(ctx, client, rn); err != nil {
 		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
 	}
 
-	variable := &pb.Variable{
-		Name:     rn.String(),
-		Contents: txt,
-	}
-	if val != nil {
-		variable.Contents = val
+	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: value},
+		},
+	})
+}
+
+func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
+	if _, err := createConfig(ctx, client, rn); err != nil {
+		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
 	}
 
 	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
-		Parent:   rn.configPath(),
-		Variable: variable,
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Text{Text: str},
+		},
 	})
 }
