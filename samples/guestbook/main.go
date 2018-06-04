@@ -261,7 +261,9 @@ func (app *app) serveBlob(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 	}
 	w.Header().Set("Content-Length", strconv.FormatInt(blobRead.Size(), 10))
-	io.Copy(w, blobRead)
+	if _, err = io.Copy(w, blobRead); err != nil {
+		log.Println("Copying blob:", err)
+	}
 }
 
 // appSet is the Wire provider set for the Guestbook application that does not
