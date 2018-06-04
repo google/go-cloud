@@ -103,12 +103,18 @@ func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *ru
 type ResourceName struct {
 	ProjectID string
 	Config    string
-	Variable  string
+	// desc is the description of the config.
+	desc     string
+	Variable string
+}
+
+func (r ResourceName) configPath() string {
+	return fmt.Sprintf("projects/%s/configs/%s", r.ProjectID, r.Config)
 }
 
 // String returns the full configuration variable path.
 func (r ResourceName) String() string {
-	return fmt.Sprintf("projects/%s/configs/%s/variables/%s", r.ProjectID, r.Config, r.Variable)
+	return fmt.Sprintf("%s/variables/%s", r.configPath(), r.Variable)
 }
 
 // WatchOptions provide optional configurations to the Watcher.
@@ -147,7 +153,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 
 	// Loop to check for changes or continue waiting.
 	for {
-		// Block until waitTime or context cancelled/timed out.
+		// Block until waitTime or context canceled/timed out.
 		t := time.NewTimer(w.waitTime - time.Now().Sub(w.lastRPCTime))
 		select {
 		case <-t.C:
