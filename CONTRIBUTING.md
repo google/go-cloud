@@ -21,3 +21,8 @@ All submissions, including submissions by project members, require review. We
 use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
+
+If you have finished making requested changes to your pull request, please
+make a comment to that effect on your pull request. GitHub notifications for
+pull request pushes are quite noisy, and not all contributors have them
+turned on.
