@@ -1,0 +1,62 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guestbook
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: guestbook
+    spec:
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: guestbook-key
+      containers:
+      - name: guestbook
+        image: gcr.io/google.com/$GCP_PROJECT_ID/guestbook
+        args: ["-env=gcp"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+        livenessProbe:
+          httpGet:
+            path: /healthz/liveness
+            port: 8080
+        readinessProbe:
+          httpGet:
+            path: /healthz/readiness
+            port: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook
+  labels:
+    app: guestbook
+spec:
+  type: LoadBalancer
+  selector:
+    app: guestbook
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
