@@ -43,9 +43,11 @@ type WriterOptions struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
-	// NewRangeReader returns a Reader that reads part of an object, reading at most
-	// length bytes starting at the given offset. If length is 0, it will read only
-	// the metadata. If length is negative, it will read till the end of the object.
+	// NewRangeReader returns a Reader that reads part of an object, reading at
+	// most length bytes starting at the given offset. If length is 0, it will read
+	// only the metadata. If length is negative, it will read till the end of the
+	// object. It returns an error if that object does not exist, which can be
+	// checked by calling blob.IsErrNotExist.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewWriter returns Writer that writes to an object associated with key.
@@ -59,6 +61,6 @@ type Bucket interface {
 	NewWriter(ctx context.Context, key string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. It returns an error if that
-	// object does not exist.
+	// object does not exist, which can be checked by calling blob.IsErrNotExist.
 	Delete(ctx context.Context, key string) error
 }

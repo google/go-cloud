@@ -25,7 +25,7 @@ import (
 
 var testBucket = flag.String("gcs-bucket", "pledged-solved-practically", "GCS bucket name used for testing")
 
-func TestRead(t *testing.T) {
+func TestReadOfNonExistentFile(t *testing.T) {
 	if testing.Short() {
 		// TODO(shantuo): use replay for short mode once
 		// https://github.com/google/go-cloud/issues/49 is fixed.
@@ -43,7 +43,7 @@ func TestRead(t *testing.T) {
 	})
 }
 
-func TestDelete(t *testing.T) {
+func TestDeleteNonExistentFile(t *testing.T) {
 	if testing.Short() {
 		// TODO(shantuo): use replay for short mode once
 		// https://github.com/google/go-cloud/issues/49 is fixed.
