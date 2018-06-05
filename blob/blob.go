@@ -44,7 +44,8 @@ func (r *Reader) Size() int64 {
 	return r.r.Size()
 }
 
-// ContentType returns the content-type of the blob object.
+// ContentType returns the RFC 1521 media type of the blob object like
+// "application/json; charset=utf-8".
 func (r *Reader) ContentType() string {
 	return r.r.ContentType()
 }
