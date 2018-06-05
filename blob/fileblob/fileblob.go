@@ -133,7 +133,8 @@ func (r reader) Size() int64 {
 	return r.size
 }
 
-// ContentType returns empty string since fileblob doesn't support content-type.
+// ContentType always returns an empty string since fileblob doesn't support 
+// having a Content-Type.
 func (r reader) ContentType() string {
 	return ""
 }
