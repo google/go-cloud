@@ -134,6 +134,7 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 		if err != nil {
 			return nil, nil, err
 		}
+		r.SetLogFunc(logf)
 		r.SetBeforeWriteFunc(scrubber)
 		opts = r.DialOptions()
 		done = func() {
