@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/dnaeon/go-vcr/recorder"
+	"github.com/golang/protobuf/proto"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
@@ -399,7 +400,7 @@ func newConfigClient(ctx context.Context, logf func(string, ...interface{}), fil
 		mode = recorder.ModeReplaying
 	}
 
-	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath)
+	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -465,4 +466,22 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 			Contents: &pb.Variable_Text{Text: str},
 		},
 	})
+
+}
+
+func scrubber(msg proto.Message) (proto.Message, error) {
+	fmt.Printf("Got:\n%s\n", msg)
+
+	switch msg.(type) {
+	case *pb.DeleteConfigRequest:
+		fmt.Println("It's a delete")
+	case *pb.CreateConfigRequest:
+		fmt.Println("It's a create config")
+	case *pb.CreateVariableRequest:
+		fmt.Println("It's a create variable")
+	default:
+		fmt.Printf("I don't know what this is, it has type of %v\n", reflect.TypeOf(msg))
+	}
+
+	return msg, nil
 }
