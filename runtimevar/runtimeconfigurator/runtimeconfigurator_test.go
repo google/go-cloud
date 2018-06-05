@@ -16,21 +16,36 @@ package runtimeconfigurator
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/dnaeon/go-vcr/recorder"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/testing/replay"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 	"google.golang.org/grpc/status"
 )
+
+const (
+	// config is the runtimeconfig high-level config that variables sit under.
+	config      = "runtimeconfigurator_test"
+	description = "Config for test variables created by runtimeconfigurator_test.go"
+)
+
+var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
@@ -59,6 +74,17 @@ func (s *fakeServer) GetVariable(context.Context, *pb.GetVariableRequest) (*pb.V
 		s.index++
 	}
 	return resp.vrbl, resp.err
+}
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	// TODO(#65) This needs to be fixed so that the test is not dependent on the project ID.
+	if *projectID == "" {
+		fmt.Println("-project not specified, skipping")
+		os.Exit(0)
+	}
+
+	os.Exit(m.Run())
 }
 
 func setUp(t *testing.T, fs *fakeServer) (*Client, func()) {
@@ -112,6 +138,93 @@ var (
 	}
 	jsonDataPtr *jsonData
 )
+
+func TestInitialStringWatch(t *testing.T) {
+	ctx := context.Background()
+
+	client, done, err := newConfigClient(ctx, t.Logf, "initial-string-watch.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestStringWatch",
+	}
+
+	want := "facepalm: 🤦"
+	_, err = createStringVariable(ctx, client.client, rn, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := deleteConfig(ctx, client.client, rn); err != nil {
+			t.Logf("delete config failed, possible human cleanup required: %v", err)
+		}
+	}()
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := variable.Watch(ctx)
+	if err != nil {
+		t.Fatalf("got error %v; want nil", err)
+	}
+	if diff := cmp.Diff(got.Value, want); diff != "" {
+		t.Errorf("got diff %v; want nil", diff)
+	}
+}
+
+func TestInitialJSONWatch(t *testing.T) {
+	ctx := context.Background()
+
+	client, done, err := newConfigClient(ctx, t.Logf, "initial-json-watch.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestJSONWatch",
+	}
+
+	type home struct {
+		Person string `json:"Person"`
+		Home   string `json:"Home"`
+	}
+	var jsonDataPtr *home
+	want := &home{"Batman", "Gotham"}
+	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := deleteConfig(ctx, client.client, rn); err != nil {
+			t.Logf("delete config failed, possible human cleanup required: %v", err)
+		}
+	}()
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := variable.Watch(ctx)
+	if err != nil {
+		t.Fatalf("got error %v; want nil", err)
+	}
+	if diff := cmp.Diff(got.Value.(*home), want); diff != "" {
+		t.Errorf("got diff %v; want nil", diff)
+	}
+}
 
 func TestWatch(t *testing.T) {
 	client, cleanUp := setUp(t, &fakeServer{
@@ -273,4 +386,83 @@ func TestWatchDeletedAndReset(t *testing.T) {
 	if !got.UpdateTime.After(prev.UpdateTime) {
 		t.Errorf("Snapshot.UpdateTime is less than or equal to previous value")
 	}
+}
+
+func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	mode := recorder.ModeRecording
+	if testing.Short() {
+		mode = recorder.ModeReplaying
+	}
+
+	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath)
+	if err != nil {
+		return nil, nil, err
+	}
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
+		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
+	}
+	opts = append(opts, rOpts...)
+	conn, err := grpc.DialContext(ctx, endPoint, opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done, nil
+}
+
+// createConfig creates a fresh config. It will always overwrite any previous configuration,
+// thus it is not thread safe.
+func createConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName) (*pb.RuntimeConfig, error) {
+	// No need to handle this error; either the config doesn't exist (good) or the test
+	// will fail on the create step and requires human intervention anyway.
+	_ = deleteConfig(ctx, client, rn)
+	return client.CreateConfig(ctx, &pb.CreateConfigRequest{
+		Parent: "projects/" + rn.ProjectID,
+		Config: &pb.RuntimeConfig{
+			Name:        rn.configPath(),
+			Description: rn.desc,
+		},
+	})
+}
+
+func deleteConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName) error {
+	_, err := client.DeleteConfig(ctx, &pb.DeleteConfigRequest{
+		Name: rn.configPath(),
+	})
+
+	return err
+}
+
+func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, error) {
+	if _, err := createConfig(ctx, client, rn); err != nil {
+		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
+	}
+
+	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: value},
+		},
+	})
+}
+
+func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
+	if _, err := createConfig(ctx, client, rn); err != nil {
+		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
+	}
+
+	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Text{Text: str},
+		},
+	})
 }

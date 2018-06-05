@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore reads and writes parameters to the AWS Systems Manager Parameter Store.
+// Package paramstore reads parameters to the AWS Systems Manager Parameter Store.
 package paramstore
 
 import (
