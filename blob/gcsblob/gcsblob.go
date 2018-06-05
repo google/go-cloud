@@ -89,6 +89,7 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 	w := obj.NewWriter(ctx)
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
+		w.ContentType = opts.ContentType
 	}
 	return w, nil
 }

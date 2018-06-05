@@ -231,7 +231,11 @@ func TestWrite(t *testing.T) {
 		}
 	}()
 
-	w, err := s3Bucket.NewWriter(ctx, object, nil)
+	wantContentType := "text/html"
+	opts := &blob.WriterOptions{
+		ObjectAttrs: blob.ObjectAttrs{ContentType: wantContentType},
+	}
+	w, err := s3Bucket.NewWriter(ctx, object, opts)
 	if err != nil {
 		t.Errorf("error creating writer: %v", err)
 	}
@@ -255,15 +259,17 @@ func TestWrite(t *testing.T) {
 		t.Fatalf("error getting object: %v", err)
 	}
 	body := resp.Body
-	got := make([]byte, 12)
+	wantSize := 12
+	got := make([]byte, wantSize)
 	n, err := body.Read(got)
 	if err != nil && err != io.EOF {
 		t.Errorf("reading object: %d read, got error %v", n, err)
 	}
 	defer body.Close()
 	want := []byte("HELLO!hello!")
-	if !cmp.Equal(got, want) || n != 12 {
-		t.Errorf("got %s, size %d, want %s, size %d", got, n, want, 12)
+	if !cmp.Equal(got, want) || n != wantSize || *resp.ContentType != wantContentType {
+		t.Errorf("got %s, size %d, content-type %s, want %s, size %d, content-type %s",
+			got, n, *resp.ContentType, want, wantSize, wantContentType)
 	}
 }
 

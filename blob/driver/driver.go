@@ -28,6 +28,9 @@ type Reader interface {
 	// Size returns the number of bytes in the whole blob. It must always return
 	// the same value.
 	Size() int64
+
+	// ContentType returns the content-type of the object.
+	ContentType() string
 }
 
 // Writer writes an object to the blob.
@@ -37,7 +40,14 @@ type Writer interface {
 
 // WriterOptions controls behaviors of Writer.
 type WriterOptions struct {
+	ObjectAttrs
 	BufferSize int
+}
+
+// ObjectAttrs contains metadata of an object.
+type ObjectAttrs struct {
+	Size        int64
+	ContentType string
 }
 
 // Bucket provides read, write and delete operations on objects within it on the

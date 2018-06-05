@@ -133,6 +133,11 @@ func (r reader) Size() int64 {
 	return r.size
 }
 
+// ContentType returns empty string since fileblob doesn't support content-type.
+func (r reader) ContentType() string {
+	return ""
+}
+
 func (b *bucket) NewWriter(ctx context.Context, key string, opt *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {

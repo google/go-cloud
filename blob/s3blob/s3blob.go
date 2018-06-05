@@ -57,8 +57,9 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads an S3 object. It implements io.ReadCloser.
 type reader struct {
-	body io.ReadCloser
-	size int64
+	body        io.ReadCloser
+	size        int64
+	contentType string
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -75,6 +76,11 @@ func (r *reader) Size() int64 {
 	return r.size
 }
 
+// ContentType returns the content-type of the object.
+func (r *reader) ContentType() string {
+	return r.contentType
+}
+
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
 	w *io.PipeWriter
@@ -84,6 +90,7 @@ type writer struct {
 	bufferSize int
 	ctx        context.Context
 	uploader   *s3manager.Uploader
+	attrs      *driver.ObjectAttrs
 	donec      chan struct{} // closed when done writing
 	// The following fields will be written before donec closes:
 	err error
@@ -112,9 +119,10 @@ func (w *writer) open() error {
 		defer close(w.donec)
 
 		_, err := w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-			Bucket: aws.String(w.bucket),
-			Key:    aws.String(w.key),
-			Body:   pr,
+			Bucket:      aws.String(w.bucket),
+			ContentType: aws.String(w.attrs.ContentType),
+			Key:         aws.String(w.key),
+			Body:        pr,
 		})
 		if err != nil {
 			w.err = err
@@ -143,9 +151,10 @@ func (w *writer) Close() error {
 func (w *writer) touch() {
 	defer close(w.donec)
 	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-		Bucket: aws.String(w.bucket),
-		Key:    aws.String(w.key),
-		Body:   emptyBody,
+		Bucket:      aws.String(w.bucket),
+		ContentType: aws.String(w.attrs.ContentType),
+		Key:         aws.String(w.key),
+		Body:        emptyBody,
 	})
 }
 
@@ -185,8 +194,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	return &reader{
-		body: resp.Body,
-		size: aws.Int64Value(resp.ContentLength),
+		body:        resp.Body,
+		contentType: aws.StringValue(resp.ContentType),
+		size:        aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -200,8 +210,9 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 		return nil, err
 	}
 	return &reader{
-		body: emptyBody,
-		size: aws.Int64Value(resp.ContentLength),
+		body:        emptyBody,
+		contentType: aws.StringValue(resp.ContentType),
+		size:        aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -224,10 +235,12 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 		ctx:      ctx,
 		key:      key,
 		uploader: b.uploader,
+		attrs:    &driver.ObjectAttrs{},
 		donec:    make(chan struct{}),
 	}
 	if opts != nil {
 		w.bufferSize = opts.BufferSize
+		w.attrs.ContentType = opts.ContentType
 	}
 	return w, nil
 }

@@ -44,6 +44,11 @@ func (r *Reader) Size() int64 {
 	return r.r.Size()
 }
 
+// ContentType returns the content-type of the blob object.
+func (r *Reader) ContentType() string {
+	return r.r.ContentType()
+}
+
 // Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
 type Writer struct {
@@ -108,6 +113,9 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	if opt != nil {
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
+			ObjectAttrs: driver.ObjectAttrs{
+				ContentType: opt.ObjectAttrs.ContentType,
+			},
 		}
 	}
 	w, err := b.b.NewWriter(ctx, key, dopt)
@@ -134,4 +142,16 @@ type WriterOptions struct {
 	// If the Writer is used to write small objects concurrently, set the buffer size
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
+
+	// ObjectAttrs sets the metadata of an object before writing to blob service.
+	ObjectAttrs
+}
+
+// ObjectAttrs contains metadata of an object.
+type ObjectAttrs struct {
+	// Size is the number of bytes in the whole blob. It is read-only.
+	Size int64
+
+	// ContentType is the MIME type of the object.
+	ContentType string
 }
