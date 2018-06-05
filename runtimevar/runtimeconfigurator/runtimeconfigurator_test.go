@@ -19,13 +19,14 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
@@ -46,7 +47,7 @@ const (
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
-var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
+var projectID = flag.String("project", "fake", "GCP project ID (string, not project number) to run tests against")
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
@@ -75,17 +76,6 @@ func (s *fakeServer) GetVariable(context.Context, *pb.GetVariableRequest) (*pb.V
 		s.index++
 	}
 	return resp.vrbl, resp.err
-}
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	// TODO(#65) This needs to be fixed so that the test is not dependent on the project ID.
-	if *projectID == "" {
-		fmt.Println("-project not specified, skipping")
-		os.Exit(0)
-	}
-
-	os.Exit(m.Run())
 }
 
 func setUp(t *testing.T, fs *fakeServer) (*Client, func()) {
@@ -163,7 +153,7 @@ func TestInitialStringWatch(t *testing.T) {
 	}
 	defer func() {
 		if err := deleteConfig(ctx, client.client, rn); err != nil {
-			t.Logf("delete config failed, possible human cleanup required: %v", err)
+			t.Fatalf("delete config failed, possible human cleanup required: %v", err)
 		}
 	}()
 
@@ -470,18 +460,38 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 }
 
 func scrubber(msg proto.Message) (proto.Message, error) {
-	fmt.Printf("Got:\n%s\n", msg)
+	// Example matches:
+	// projects/foobar
+	// /projects/foobar/baz
+	re := regexp.MustCompile(`(?U)(\/?projects\/)(.+)(\/|$)`)
+	// Without the curly braces, Go interprets the group as named $1REDACTED which
+	// doesn't match anything.
+	replacePattern := "${1}REDACTED${3}"
 
-	switch msg.(type) {
+	switch m := msg.(type) {
 	case *pb.DeleteConfigRequest:
-		fmt.Println("It's a delete")
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+		return m, nil
 	case *pb.CreateConfigRequest:
-		fmt.Println("It's a create config")
+		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
+		m.Config.Name = re.ReplaceAllString(m.GetConfig().GetName(), replacePattern)
+		return m, nil
 	case *pb.CreateVariableRequest:
-		fmt.Println("It's a create variable")
-	default:
-		fmt.Printf("I don't know what this is, it has type of %v\n", reflect.TypeOf(msg))
+		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
+		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
+		return m, nil
+	case *pb.GetVariableRequest:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+		return m, nil
+	case *pb.RuntimeConfig:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+		return m, nil
+	case *pb.Variable:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+		return m, nil
+	case *empty.Empty:
+		return m, nil
 	}
 
-	return msg, nil
+	return nil, fmt.Errorf("unknown proto type, can't scrub: %v", reflect.TypeOf(msg))
 }
