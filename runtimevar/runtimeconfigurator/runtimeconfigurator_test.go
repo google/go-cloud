@@ -459,6 +459,79 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 
 }
 
+type fakeProto struct{}
+
+func (p *fakeProto) Reset()         {}
+func (p *fakeProto) String() string { return "fake" }
+func (p *fakeProto) ProtoMessage()  {}
+
+func TestScrubber(t *testing.T) {
+	var tests = []struct {
+		name      string
+		msg, want proto.Message
+		wantErr   bool
+	}{
+		{
+			name: "Messages that match the regexp should have project IDs redacted",
+			msg: &pb.DeleteConfigRequest{
+				Name: "projects/project_id/name",
+			},
+			want: &pb.DeleteConfigRequest{
+				Name: "projects/REDACTED/name",
+			},
+		},
+		{
+			name: "Messages that have nested strings where project IDs can be found should all be redacted",
+			msg: &pb.CreateConfigRequest{
+				Parent: "/projects/project_id/parent",
+				Config: &pb.RuntimeConfig{
+					Name: "projects/project_id/config/name",
+				},
+			},
+			want: &pb.CreateConfigRequest{
+				Parent: "/projects/REDACTED/parent",
+				Config: &pb.RuntimeConfig{
+					Name: "projects/REDACTED/config/name",
+				},
+			},
+		},
+		{
+			name: "Messages that don't match the regexp should be returned unchanged",
+			msg: &pb.DeleteConfigRequest{
+				Name: "project_id/name",
+			},
+			want: &pb.DeleteConfigRequest{
+				Name: "REDACTED/name",
+			},
+		},
+		{
+			name: "Empty messages should be returned unchanged",
+			msg:  &empty.Empty{},
+			want: &empty.Empty{},
+		},
+		{
+			name:    "Unknown messages should return an error",
+			msg:     &fakeProto{},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := scrubber(tc.msg)
+
+			switch {
+			case err != nil && !tc.wantErr:
+				t.Fatal(err)
+			case err == nil && tc.wantErr:
+				t.Errorf("want error; got nil")
+			case !cmp.Equal(got, tc.want):
+				t.Errorf("got %s; want %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func scrubber(msg proto.Message) (proto.Message, error) {
 	// Example matches:
 	// projects/foobar
