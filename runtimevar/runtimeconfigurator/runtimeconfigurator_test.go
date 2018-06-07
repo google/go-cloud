@@ -47,7 +47,7 @@ const (
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
-var projectID = flag.String("project", "fake", "GCP project ID (string, not project number) to run tests against")
+var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
@@ -501,7 +501,7 @@ func TestScrubber(t *testing.T) {
 				Name: "project_id/name",
 			},
 			want: &pb.DeleteConfigRequest{
-				Name: "REDACTED/name",
+				Name: "project_id/name",
 			},
 		},
 		{
@@ -518,13 +518,17 @@ func TestScrubber(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := scrubber(tc.msg)
+			got := proto.Clone(tc.msg)
+			err := scrubber(t.Logf, "", got)
 
 			switch {
 			case err != nil && !tc.wantErr:
 				t.Fatal(err)
 			case err == nil && tc.wantErr:
 				t.Errorf("want error; got nil")
+			case err != nil && tc.wantErr:
+				// Got error as expected, test passed.
+				return
 			case !cmp.Equal(got, tc.want):
 				t.Errorf("got %s; want %s", got, tc.want)
 			}
@@ -532,39 +536,36 @@ func TestScrubber(t *testing.T) {
 	}
 }
 
-func scrubber(msg proto.Message) (proto.Message, error) {
+func scrubber(logf func(string, ...interface{}), _ string, msg proto.Message) error {
 	// Example matches:
 	// projects/foobar
 	// /projects/foobar/baz
-	re := regexp.MustCompile(`(?U)(\/?projects\/)(.+)(\/|$)`)
+	re := regexp.MustCompile(`(?U)(\/?projects\/)(.*)(\/|$)`)
 	// Without the curly braces, Go interprets the group as named $1REDACTED which
 	// doesn't match anything.
 	replacePattern := "${1}REDACTED${3}"
+	logf("Proto begins as %s", msg)
 
 	switch m := msg.(type) {
 	case *pb.DeleteConfigRequest:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-		return m, nil
 	case *pb.CreateConfigRequest:
 		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
 		m.Config.Name = re.ReplaceAllString(m.GetConfig().GetName(), replacePattern)
-		return m, nil
 	case *pb.CreateVariableRequest:
 		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
 		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
-		return m, nil
 	case *pb.GetVariableRequest:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-		return m, nil
 	case *pb.RuntimeConfig:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-		return m, nil
 	case *pb.Variable:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-		return m, nil
 	case *empty.Empty:
-		return m, nil
+	default:
+		return fmt.Errorf("unknown proto type, can't scrub: %v", reflect.TypeOf(msg))
 	}
 
-	return nil, fmt.Errorf("unknown proto type, can't scrub: %v", reflect.TypeOf(msg))
+	logf("Proto ends as %s", msg)
+	return nil
 }

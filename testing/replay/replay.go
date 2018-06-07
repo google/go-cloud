@@ -124,7 +124,7 @@ func scrubAWSHeaders(filepath string) error {
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
 // These options allow a recorder/replayer to intercept RPCs and save RPCs to the file at filename,
 // or read the RPCs from the file and return them.
-func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string, scrubber func(proto.Message) (proto.Message, error)) (opts []grpc.DialOption, done func(), err error) {
+func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string, scrubber func(func(string, ...interface{}), string, proto.Message) error) (opts []grpc.DialOption, done func(), err error) {
 	path := filepath.Join("testdata", filename)
 	logf("Golden file is at %v", path)
 
@@ -134,7 +134,9 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 		if err != nil {
 			return nil, nil, err
 		}
-		r.SetBeforeWriteFunc(scrubber)
+		r.BeforeFunc = func(s string, m proto.Message) error {
+			return scrubber(logf, s, m)
+		}
 		opts = r.DialOptions()
 		done = func() {
 			if err := r.Close(); err != nil {
@@ -149,8 +151,9 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 	if err != nil {
 		return nil, nil, err
 	}
-	r.SetLogFunc(logf)
-	r.SetBeforeReadFunc(scrubber)
+	r.BeforeFunc = func(s string, m proto.Message) error {
+		return scrubber(logf, s, m)
+	}
 	opts = r.DialOptions()
 	done = func() {
 		if err := r.Close(); err != nil {
