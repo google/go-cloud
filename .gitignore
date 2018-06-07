@@ -21,3 +21,10 @@ tests/gcp/app/gcp-test.yaml
 
 # Cryptographic keys
 *.pem
+*.json
+
+# Terraform Temporary Files
+*.tfstate
+*.tfstate.backup
+.terraform/
+terraform.tfvars

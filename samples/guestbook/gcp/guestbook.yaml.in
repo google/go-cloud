@@ -25,7 +25,7 @@ spec:
           secretName: guestbook-key
       containers:
       - name: guestbook
-        image: gcr.io/google.com/$GCP_PROJECT_ID/guestbook
+        image: {{IMAGE}}
         args: ["-env=gcp"]
         imagePullPolicy: Always
         ports:
