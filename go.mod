@@ -14,10 +14,6 @@
 
 module github.com/google/go-cloud
 
-replace (
-	cloud.google.com/go v0.23.0 => /usr/local/google/home/cflewis/src/go/src/cloud.google.com/go
-)
-
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
