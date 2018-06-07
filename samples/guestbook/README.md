@@ -1,5 +1,10 @@
 # Guestbook Sample
 
+Guestbook is a sample application that records visitors' messages, displays a
+cloud banner, and an administrative message. The main business logic is
+written in a cloud-agnostic manner using MySQL, the generic blob API, and the
+generic runtimevar API. Each of the platform-specific code is set up by Wire.
+
 ## Prerequisites
 
 You will need to install the following software to run this sample:
@@ -15,6 +20,10 @@ You will need to install the following software to run this sample:
 
 ## Building
 
+`gowire` is not compatible with `vgo` yet, so you must run `vgo vendor`
+first to download all the dependencies in `go.mod`. Running `gowire`
+generates the Wire code.
+
 ```shell
 # First time, for gowire.
 $ vgo vendor
@@ -24,6 +33,9 @@ $ gowire && vgo build
 ```
 
 ## Running Locally
+
+You will need to run a local MySQL database server using Docker, and then you
+can run the server.
 
 ```shell
 ./start-localdb.sh
@@ -38,6 +50,10 @@ $ docker stop guestbook-sql
 
 ## Running on Google Cloud Platform (GCP)
 
+If you want to run this sample on GCP, you need to create a project, download
+the gcloud SDK, and log in. You can then use Terraform, a tool for
+initializing cloud resources, to set up your project.
+
 ```shell
 gcloud auth application-default login
 gcloud config set project [MYPROJECT]
@@ -47,7 +63,8 @@ cd gcp
 terraform apply
 ```
 
-Modify `inject_gcp.go` with the values from `terraform output`, then run:
+Modify `inject_gcp.go` with the values from `terraform output`, then run the
+following to rebuild the server:
 
 ```shell
 gowire ..
@@ -59,6 +76,10 @@ To clean up the created resources, run `terraform destroy` inside the `gcp`
 directory.
 
 ## Running on Amazon Web Services (AWS)
+
+If you want to run this sample on AWS, you need to set up an account, download
+the AWS command line interface, and log in. You can then use Terraform, a tool
+for initializing cloud resources, to set up your project.
 
 ```shell
 aws configure
