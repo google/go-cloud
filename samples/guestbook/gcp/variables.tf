@@ -12,19 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "bucket_name" {}
+variable "project" {
+  type = "string"
+  description = "Project to set up."
+}
+variable "region" {
+  type = "string"
+  description = "GCP region to create database and storage in. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+}
+variable "zone" {
+  type = "string"
+  description = "GCP zone to create the GKE cluster in. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+}
 variable "server_service_account_name" {
   default = "guestbook"
+  description = "The username part of the service account email that will be used for the server running inside the GKE cluster."
 }
 variable "db_access_service_account_name" {
   default = "guestbook-db"
+  description = "The username part of the service account email that will be used for provisioning the database."
 }
 variable "db_instance" {
   default = "guestbook"
-}
-variable "db_region" {
-  default = "" # blank uses provider region
+  description = "The Cloud SQL instance name."
 }
 variable "cluster_name" {
   default = "guestbook-cluster"
+  description = "The GKE cluster name."
 }

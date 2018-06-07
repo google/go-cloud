@@ -12,19 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-locals {
-  db_region = "${coalesce(var.db_region, data.google_client_config.current.region)}"
-}
-
 provider "google" {
   version = "~> 1.13"
+  project = "${var.project}"
 }
 
 provider "random" {
   version = "~> 1.3"
 }
-
-data "google_client_config" "current" {}
 
 # TODO(light): Add cloudbuild.googleapis.com resource.
 
@@ -60,7 +55,7 @@ resource "google_project_service" "sql" {
 resource "google_sql_database_instance" "guestbook" {
   name = "${var.db_instance}"
   database_version = "MYSQL_5_6"
-  region = "${local.db_region}"
+  region = "${var.region}"
 
   settings {
     tier = "db-f1-micro"
@@ -82,9 +77,9 @@ resource "google_sql_database" "guestbook" {
 
 resource "random_string" "db_password" {
   keepers = {
-    project = "${data.google_client_config.current.project}"
+    project = "${var.project}"
     db_name = "${var.db_instance}"
-    region = "${local.db_region}"
+    region = "${var.region}"
   }
   special = false
   length = 20
@@ -150,14 +145,27 @@ resource "google_project_service" "storage" {
 
 # TODO(light): Add storage-api.googleapis.com resource.
 
+locals {
+  bucket_name = "go-guestbook-${random_string.bucket_name.result}"
+}
+
+resource "random_string" "bucket_name" {
+  keepers = {
+    project = "${var.project}"
+    region = "${var.region}"
+  }
+  special = false
+  length = 32
+}
+
 resource "google_storage_bucket" "guestbook" {
-  name = "${var.bucket_name}"
+  name = "${local.bucket_name}"
   storage_class = "REGIONAL"
-  location = "${data.google_client_config.current.region}"
+  location = "${var.region}"
 
   # Set to avoid calling Compute API.
   # See https://github.com/hashicorp/terraform/issues/13109
-  project = "${data.google_client_config.current.project}"
+  project = "${var.project}"
 
   depends_on = ["google_project_service.storage"]
 }

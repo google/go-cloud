@@ -56,9 +56,6 @@ initializing cloud resources, to set up your project.
 
 ```shell
 gcloud auth application-default login
-gcloud config set project [MYPROJECT]
-export GCLOUD_REGION=us-central1
-export GCLOUD_ZONE=us-central1-a
 cd gcp
 terraform apply
 ```
@@ -85,7 +82,7 @@ for initializing cloud resources, to set up your project.
 aws configure
 vgo build
 cd aws
-terraform apply
+terraform apply -var region=us-west-1
 ```
 
 Modify `inject_aws.go` with the values from `terraform output`, then run:
