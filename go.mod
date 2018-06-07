@@ -14,6 +14,10 @@
 
 module github.com/google/go-cloud
 
+replace (
+	cloud.google.com/go v0.23.0 => /usr/local/google/home/cflewis/src/go/src/cloud.google.com/go
+)
+
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
@@ -30,7 +34,9 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a
 	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd
 	github.com/stretchr/testify v1.2.1
-	go.opencensus.io v0.9.0
+	go.opencensus.io v0.12.0
+	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
 	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
 	golang.org/x/tools v0.0.0-20180314180217-d853e8088c62
+	google.golang.org/api v0.0.0-20180606215403-8e9de5a6de6d
 )
