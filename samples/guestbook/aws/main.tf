@@ -14,7 +14,7 @@
 
 provider "aws" {
   version = "~> 1.22"
-  region = "${var.region}"
+  region  = "${var.region}"
 }
 
 provider "random" {
@@ -28,33 +28,33 @@ resource "aws_security_group" "guestbook" {
   description = "Sandbox for the Guestbook Go Cloud sample app."
 
   ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "Public SSH access"
   }
 
   ingress {
-    from_port = 8080
-    to_port = 8080
-    protocol = "tcp"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "Public HTTP access"
   }
 
   ingress {
-    from_port = 3306
-    to_port = 3306
-    protocol = "tcp"
-    self = true
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    self        = true
     description = "MySQL within group"
   }
 
   egress {
-    from_port = 0
-    to_port = 0
-    protocol = "-1"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
     description = "All outgoing traffic allowed"
   }
@@ -64,21 +64,21 @@ resource "aws_security_group" "guestbook" {
 
 resource "random_string" "db_password" {
   special = false
-  length = 20
+  length  = 20
 }
 
 resource "aws_db_instance" "guestbook" {
-  identifier_prefix = "guestbook"
-  engine = "mysql"
-  engine_version = "5.6.39"
-  instance_class = "db.t2.micro"
-  allocated_storage = 20
-  username = "root"
-  password = "${random_string.db_password.result}"
-  name = "guestbook"
-  publicly_accessible = true
+  identifier_prefix      = "guestbook"
+  engine                 = "mysql"
+  engine_version         = "5.6.39"
+  instance_class         = "db.t2.micro"
+  allocated_storage      = 20
+  username               = "root"
+  password               = "${random_string.db_password.result}"
+  name                   = "guestbook"
+  publicly_accessible    = true
   vpc_security_group_ids = ["${aws_security_group.guestbook.id}"]
-  skip_final_snapshot = true
+  skip_final_snapshot    = true
 
   provisioner "local-exec" {
     # TODO(light): Reuse credentials from Terraform.
@@ -95,8 +95,8 @@ resource "aws_s3_bucket" "guestbook" {
 # Paramstore (SSM)
 
 resource "aws_ssm_parameter" "motd" {
-  name = "${var.paramstore_var}"
-  type = "String"
+  name  = "${var.paramstore_var}"
+  type  = "String"
   value = "ohai from AWS"
 }
 
@@ -104,6 +104,7 @@ resource "aws_ssm_parameter" "motd" {
 
 resource "aws_iam_role" "guestbook" {
   name_prefix = "guestbook"
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -118,7 +119,8 @@ EOF
 
 resource "aws_iam_role_policy" "guestbook" {
   name_prefix = "Guestbook-Policy"
-  role = "${aws_iam_role.guestbook.id}"
+  role        = "${aws_iam_role.guestbook.id}"
+
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -140,46 +142,52 @@ EOF
 
 resource "aws_iam_instance_profile" "guestbook" {
   name_prefix = "guestbook"
-  role = "${aws_iam_role.guestbook.name}"
+  role        = "${aws_iam_role.guestbook.name}"
 }
 
 data "aws_ami" "debian" {
   most_recent = true
+
   filter {
-    name = "product-code"
+    name   = "product-code"
     values = ["55q52qvgjfpdj2fpfy9mb1lo4"]
   }
+
   filter {
-    name = "product-code.type"
+    name   = "product-code.type"
     values = ["marketplace"]
   }
+
   filter {
-    name = "architecture"
+    name   = "architecture"
     values = ["x86_64"]
   }
+
   owners = ["679593333241"]
 }
 
 resource "aws_key_pair" "guestbook" {
   key_name_prefix = "guestbook"
-  public_key = "${var.ssh_public_key}"
+  public_key      = "${var.ssh_public_key}"
 }
 
 resource "aws_instance" "guestbook" {
-  ami = "${data.aws_ami.debian.id}"
-  instance_type = "t2.micro"
+  ami                    = "${data.aws_ami.debian.id}"
+  instance_type          = "t2.micro"
   vpc_security_group_ids = ["${aws_security_group.guestbook.id}"]
-  iam_instance_profile = "${aws_iam_instance_profile.guestbook.id}"
-  key_name = "${aws_key_pair.guestbook.key_name}"
+  iam_instance_profile   = "${aws_iam_instance_profile.guestbook.id}"
+  key_name               = "${aws_key_pair.guestbook.key_name}"
 
   connection {
     type = "ssh"
     user = "admin"
   }
+
   provisioner "file" {
-    source = "${path.module}/../guestbook"
+    source      = "${path.module}/../guestbook"
     destination = "/home/admin/guestbook"
   }
+
   provisioner "remote-exec" {
     inline = ["chmod +x /home/admin/guestbook"]
   }
