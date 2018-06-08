@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	awsclient "github.com/aws/aws-sdk-go/aws/client"
 	"github.com/google/go-cloud/aws/awscloud"
@@ -30,41 +29,47 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-// Configure these to your AWS project.
-const (
-	s3BucketName = "foo-bucket"
+// This file wires the generic interfaces up to Amazon Web Services (AWS). It
+// won't be directly included in the final binary, since it includes a Wire
+// injector template function (setupAWS), but the declarations will be copied
+// into wire_gen.go when gowire is run.
 
-	rdsEndpoint = "myinstance.xyzzy.us-west-1.rds.amazonaws.com"
-	rdsPassword = "xyzzy"
+// setupAWS is a Wire injector function that sets up the application using AWS.
+func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	// This will be filled in by gowire with providers from the provider sets in
+	// wire.Build.
 
-	paramstoreVar = "/guestbook/motd"
-)
-
-func setupAWS(ctx context.Context) (*app, func(), error) {
 	panic(wire.Build(
 		awscloud.AWS,
-		appSet,
+		applicationSet,
 		awsBucket,
 		awsMOTDVar,
 		awsSQLParams,
 	))
 }
 
-func awsBucket(ctx context.Context, cp awsclient.ConfigProvider) (*blob.Bucket, error) {
-	return s3blob.NewBucket(ctx, cp, s3BucketName)
+// awsBucket is a Wire provider function that returns the S3 bucket based on the
+// command-line flags.
+func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
+	return s3blob.NewBucket(ctx, cp, flags.bucket)
 }
 
-func awsSQLParams() *rdsmysql.Params {
+// awsSQLParams is a Wire provider function that returns the RDS SQL connection
+// parameters based on the command-line flags. Other providers inside
+// awscloud.AWS use the parameters to construct a *sql.DB.
+func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 	return &rdsmysql.Params{
-		Endpoint: rdsEndpoint,
-		Database: "guestbook",
-		User:     "guestbook",
-		Password: rdsPassword,
+		Endpoint: flags.dbHost,
+		Database: flags.dbName,
+		User:     flags.dbUser,
+		Password: flags.dbPassword,
 	}
 }
 
-func awsMOTDVar(ctx context.Context, client *paramstore.Client) (*runtimevar.Variable, error) {
-	return client.NewVariable(ctx, paramstoreVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
-		WaitTime: 5 * time.Second,
+// awsMOTDVar is a Wire provider function that returns the Message of the Day
+// variable from SSM Parameter Store.
+func awsMOTDVar(ctx context.Context, client *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
+	return client.NewVariable(ctx, flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
+		WaitTime: flags.motdVarWaitTime,
 	})
 }

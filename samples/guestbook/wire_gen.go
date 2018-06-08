@@ -27,18 +27,17 @@ import (
 	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
 	http "net/http"
-	time "time"
 )
 
 // Injectors from inject_aws.go:
 
-func setupAWS(ctx context.Context) (*app, func(), error) {
+func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	ncsaLogger := xrayserver.NewRequestLogger()
 	client := http.DefaultClient
 	certFetcher := &rdsmysql.CertFetcher{
 		Client: client,
 	}
-	params := awsSQLParams()
+	params := awsSQLParams(flags)
 	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
 	if err != nil {
 		return nil, nil, err
@@ -66,28 +65,23 @@ func setupAWS(ctx context.Context) (*app, func(), error) {
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options2)
-	bucket, err := awsBucket(ctx, session2)
+	bucket, err := awsBucket(ctx, session2, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
-	}
-	backends2 := backends{
-		srv:    server2,
-		db:     db,
-		bucket: bucket,
 	}
 	client2 := paramstore.NewClient(ctx, session2)
-	variable, err := awsMOTDVar(ctx, client2)
+	variable, err := awsMOTDVar(ctx, client2, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	app2 := newApp(backends2, variable)
-	return app2, func() {
+	application2 := newApplication(server2, db, bucket, variable)
+	return application2, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -96,7 +90,7 @@ func setupAWS(ctx context.Context) (*app, func(), error) {
 
 // Injectors from inject_gcp.go:
 
-func setupGCP(ctx context.Context) (*app, func(), error) {
+func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
 	roundTripper := gcp.DefaultTransport()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -113,7 +107,7 @@ func setupGCP(ctx context.Context) (*app, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	params := gcpSQLParams(projectID)
+	params := gcpSQLParams(projectID, flags)
 	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
 	if err != nil {
 		return nil, nil, err
@@ -132,15 +126,10 @@ func setupGCP(ctx context.Context) (*app, func(), error) {
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options)
-	bucket, err := gcpBucket(ctx, tokenSource)
+	bucket, err := gcpBucket(ctx, flags, tokenSource)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
-	}
-	backends2 := backends{
-		srv:    server2,
-		db:     db,
-		bucket: bucket,
 	}
 	runtimeConfigManagerClient, cleanup2, err := runtimeconfigurator.Dial(ctx, tokenSource)
 	if err != nil {
@@ -148,14 +137,14 @@ func setupGCP(ctx context.Context) (*app, func(), error) {
 		return nil, nil, err
 	}
 	client := runtimeconfigurator.NewClient(runtimeConfigManagerClient)
-	variable, cleanup3, err := gcpMOTDVar(ctx, client, projectID)
+	variable, cleanup3, err := gcpMOTDVar(ctx, client, projectID, flags)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	app2 := newApp(backends2, variable)
-	return app2, func() {
+	application2 := newApplication(server2, db, bucket, variable)
+	return application2, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -164,9 +153,9 @@ func setupGCP(ctx context.Context) (*app, func(), error) {
 
 // Injectors from inject_local.go:
 
-func setupLocal(ctx context.Context) (*app, func(), error) {
+func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	logger := requestlog.Logger(nil)
-	db, err := dialLocalSQL()
+	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -180,23 +169,18 @@ func setupLocal(ctx context.Context) (*app, func(), error) {
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options)
-	bucket, err := localBucket()
+	bucket, err := localBucket(flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	backends2 := backends{
-		srv:    server2,
-		db:     db,
-		bucket: bucket,
-	}
-	variable, cleanup2, err := localRuntimeVar()
+	variable, cleanup2, err := localRuntimeVar(flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	app2 := newApp(backends2, variable)
-	return app2, func() {
+	application2 := newApplication(server2, db, bucket, variable)
+	return application2, func() {
 		cleanup2()
 		cleanup()
 	}, nil
@@ -204,51 +188,52 @@ func setupLocal(ctx context.Context) (*app, func(), error) {
 
 // inject_aws.go:
 
-func awsBucket(ctx context.Context, cp client.ConfigProvider) (*blob.Bucket, error) {
-	return s3blob.NewBucket(ctx, cp, "wired-sound-199216-sampleapp-bucket")
+func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
+	return s3blob.NewBucket(ctx, cp, flags.bucket)
 }
 
-func awsSQLParams() *rdsmysql.Params {
+func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 	return &rdsmysql.Params{
-		Endpoint: "myinstance.c2wrxifmodyg.us-west-1.rds.amazonaws.com",
-		Database: "guestbook",
-		User:     "guestbook",
-		Password: "xyzzy",
+		Endpoint: flags.dbHost,
+		Database: flags.dbName,
+		User:     flags.dbUser,
+		Password: flags.dbPassword,
 	}
 }
 
-func awsMOTDVar(ctx context.Context, client2 *paramstore.Client) (*runtimevar.Variable, error) {
-	return client2.NewVariable(ctx, "/sampleapp/motd", runtimevar.StringDecoder, &paramstore.WatchOptions{
-		WaitTime: 5 * time.Second,
+func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
+	return client2.NewVariable(ctx, flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
+		WaitTime: flags.motdVarWaitTime,
 	})
 }
 
 // inject_gcp.go:
 
-func gcpBucket(ctx context.Context, ts gcp.TokenSource) (*blob.Bucket, error) {
-	return gcsblob.New(ctx, "wired-sound-199216-sampleapp-bucket", &gcsblob.BucketOptions{
+func gcpBucket(ctx context.Context, flags *cliFlags, ts gcp.TokenSource) (*blob.Bucket, error) {
+	return gcsblob.New(ctx, flags.bucket, &gcsblob.BucketOptions{
 		TokenSource: ts,
 	})
 }
 
-func gcpSQLParams(id gcp.ProjectID) *cloudmysql.Params {
+func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 	return &cloudmysql.Params{
 		ProjectID: string(id),
-		Region:    "us-central1",
-		Instance:  "myinstance",
-		Database:  "guestbook",
-		User:      "guestbook",
+		Region:    flags.cloudSQLRegion,
+		Instance:  flags.dbHost,
+		Database:  flags.dbName,
+		User:      flags.dbUser,
+		Password:  flags.dbPassword,
 	}
 }
 
-func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, project gcp.ProjectID) (*runtimevar.Variable, func(), error) {
+func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
-		Config:    "sampleapp",
-		Variable:  "motd",
+		Config:    flags.runtimeConfigName,
+		Variable:  flags.motdVar,
 	}
 	v, err := client2.NewVariable(ctx, name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
-		WaitTime: 5 * time.Second,
+		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -258,25 +243,25 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 
 // inject_local.go:
 
-func localBucket() (*blob.Bucket, error) {
-	return fileblob.NewBucket("blobbucket")
+func localBucket(flags *cliFlags) (*blob.Bucket, error) {
+	return fileblob.NewBucket(flags.bucket)
 }
 
-func dialLocalSQL() (*sql.DB, error) {
+func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 	cfg := &mysql.Config{
 		Net:                  "tcp",
-		Addr:                 "localhost",
-		DBName:               "guestbook",
-		User:                 "guestbook",
-		Passwd:               "xyzzy",
+		Addr:                 flags.dbHost,
+		DBName:               flags.dbName,
+		User:                 flags.dbUser,
+		Passwd:               flags.dbPassword,
 		AllowNativePasswords: true,
 	}
 	return sql.Open("mysql", cfg.FormatDSN())
 }
 
-func localRuntimeVar() (*runtimevar.Variable, func(), error) {
-	v, err := filevar.NewVariable("motd.txt", runtimevar.StringDecoder, &filevar.WatchOptions{
-		WaitTime: 5 * time.Second,
+func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
+	v, err := filevar.NewVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
+		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err

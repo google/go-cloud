@@ -26,7 +26,13 @@ spec:
       containers:
       - name: guestbook
         image: {{IMAGE}}
-        args: ["-env=gcp"]
+        args: 
+        - "-env=gcp"
+        - "-bucket={{bucket}}"
+        - "-db_host={{database_instance}}"
+        - "-cloud_sql_region={{database_region}}"
+        - "-runtime_config={{motd_var_config}}"
+        - "-motd_var={{motd_var_name}}"
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

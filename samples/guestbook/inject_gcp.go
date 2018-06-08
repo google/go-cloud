@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/gcsblob"
@@ -30,51 +29,57 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-// Configure these to your GCP project.
-const (
-	gcsBucketName = "foo-guestbook-bucket"
+// This file wires the generic interfaces up to Google Cloud Platform (GCP). It
+// won't be directly included in the final binary, since it includes a Wire
+// injector template function (setupGCP), but the declarations will be copied
+// into wire_gen.go when gowire is run.
 
-	cloudSQLRegion   = "us-central1"
-	cloudSQLInstance = "guestbook"
+// setupGCP is a Wire injector function that sets up the application using GCP.
+func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	// This will be filled in by gowire with providers from the provider sets in
+	// wire.Build.
 
-	runtimeConfigName = "guestbook"
-	runtimeConfigVar  = "motd"
-)
-
-func setupGCP(ctx context.Context) (*app, func(), error) {
 	panic(wire.Build(
 		gcpcloud.GCP,
-		appSet,
+		applicationSet,
 		gcpBucket,
 		gcpMOTDVar,
 		gcpSQLParams,
 	))
 }
 
-func gcpBucket(ctx context.Context, ts gcp.TokenSource) (*blob.Bucket, error) {
-	return gcsblob.New(ctx, gcsBucketName, &gcsblob.BucketOptions{
+// gcpBucket is a Wire provider function that returns the GCS bucket based on
+// the command-line flags.
+func gcpBucket(ctx context.Context, flags *cliFlags, ts gcp.TokenSource) (*blob.Bucket, error) {
+	return gcsblob.New(ctx, flags.bucket, &gcsblob.BucketOptions{
 		TokenSource: ts,
 	})
 }
 
-func gcpSQLParams(id gcp.ProjectID) *cloudmysql.Params {
+// gcpSQLParams is a Wire provider function that returns the Cloud SQL
+// connection parameters based on the command-line flags. Other providers inside
+// gcpcloud.GCP use the parameters to construct a *sql.DB.
+func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 	return &cloudmysql.Params{
 		ProjectID: string(id),
-		Region:    cloudSQLRegion,
-		Instance:  cloudSQLInstance,
-		Database:  "guestbook",
-		User:      "guestbook",
+		Region:    flags.cloudSQLRegion,
+		Instance:  flags.dbHost,
+		Database:  flags.dbName,
+		User:      flags.dbUser,
+		Password:  flags.dbPassword,
 	}
 }
 
-func gcpMOTDVar(ctx context.Context, client *runtimeconfigurator.Client, project gcp.ProjectID) (*runtimevar.Variable, func(), error) {
+// gcpMOTDVar is a Wire provider function that returns the Message of the Day
+// variable from Runtime Configurator.
+func gcpMOTDVar(ctx context.Context, client *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
-		Config:    runtimeConfigName,
-		Variable:  runtimeConfigVar,
+		Config:    flags.runtimeConfigName,
+		Variable:  flags.motdVar,
 	}
 	v, err := client.NewVariable(ctx, name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
-		WaitTime: 5 * time.Second,
+		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err

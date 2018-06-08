@@ -26,6 +26,11 @@ tf_state="${1:-$guestbook_dir/gcp/terraform.tfstate}"
 project_id="$( terraform output -state="$tf_state" project )" || exit 1
 cluster_name="$( terraform output -state="$tf_state" cluster_name )" || exit 1
 cluster_zone="$( terraform output -state="$tf_state" cluster_zone )" || exit 1
+bucket="$( terraform output -state="$tf_state" bucket )" || exit 1
+database_instance="$( terraform output -state="$tf_state" database_instance )" || exit 1
+database_region="$( terraform output -state="$tf_state" database_region )" || exit 1
+motd_var_config="$( terraform output -state="$tf_state" motd_var_config )" || exit 1
+motd_var_name="$( terraform output -state="$tf_state" motd_var_name )" || exit 1
 
 GCLOUD() {
   gcloud --quiet --project="$project_id" "$@"
@@ -41,7 +46,14 @@ cleanup() {
 }
 trap cleanup EXIT
 image_name="gcr.io/$( echo "$project_id" | sed -e 's|:|/|g' )/guestbook" || exit 1
-sed -e "s|{{IMAGE}}|${image_name}|" \
+# TODO(light): Some values might need escaping.
+sed \
+  -e "s|{{IMAGE}}|${image_name}|" \
+  -e "s|{{bucket}}|${bucket}|" \
+  -e "s|{{database_instance}}|${database_instance}|" \
+  -e "s|{{database_region}}|${database_region}|" \
+  -e "s|{{motd_var_config}}|${motd_var_config}|" \
+  -e "s|{{motd_var_name}}|${motd_var_name}|" \
   < "$guestbook_dir/gcp/guestbook.yaml.in" \
   > "$tempdir/guestbook.yaml" || exit 1
 

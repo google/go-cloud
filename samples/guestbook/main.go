@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// guestbook is a sample application that records visitors' messages, displays a
+// cloud banner, and an administrative message.
 package main
 
 import (
@@ -26,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/health"
@@ -37,25 +40,57 @@ import (
 	"go.opencensus.io/trace"
 )
 
+type cliFlags struct {
+	bucket          string
+	dbHost          string
+	dbName          string
+	dbUser          string
+	dbPassword      string
+	motdVar         string
+	motdVarWaitTime time.Duration
+
+	cloudSQLRegion    string
+	runtimeConfigName string
+}
+
 var envFlag string
 
 func main() {
 	// Determine environment to set up based on flag.
+	cf := new(cliFlags)
 	flag.StringVar(&envFlag, "env", "local", "environment to run under")
 	addr := flag.String("listen", ":8080", "port to listen for HTTP on")
+	flag.StringVar(&cf.bucket, "bucket", "", "bucket name")
+	flag.StringVar(&cf.dbHost, "db_host", "", "database host or Cloud SQL instance name")
+	flag.StringVar(&cf.dbName, "db_name", "guestbook", "database name")
+	flag.StringVar(&cf.dbUser, "db_user", "guestbook", "database user")
+	flag.StringVar(&cf.dbPassword, "db_password", "", "database user password")
+	flag.StringVar(&cf.motdVar, "motd_var", "", "message of the day variable location")
+	flag.DurationVar(&cf.motdVarWaitTime, "motd_var_wait_time", 5*time.Second, "polling frequency of message of the day")
+	flag.StringVar(&cf.cloudSQLRegion, "cloud_sql_region", "", "region of the Cloud SQL instance (GCP only)")
+	flag.StringVar(&cf.runtimeConfigName, "runtime_config", "", "Runtime Configurator config resource (GCP only)")
 	flag.Parse()
 
 	ctx := context.Background()
-	var app *app
+	var app *application
 	var cleanup func()
 	var err error
 	switch envFlag {
 	case "gcp":
-		app, cleanup, err = setupGCP(ctx)
+		app, cleanup, err = setupGCP(ctx, cf)
 	case "aws":
-		app, cleanup, err = setupAWS(ctx)
+		if cf.dbPassword == "" {
+			cf.dbPassword = "xyzzy"
+		}
+		app, cleanup, err = setupAWS(ctx, cf)
 	case "local":
-		app, cleanup, err = setupLocal(ctx)
+		if cf.dbHost == "" {
+			cf.dbHost = "localhost"
+		}
+		if cf.dbPassword == "" {
+			cf.dbPassword = "xyzzy"
+		}
+		app, cleanup, err = setupLocal(ctx, cf)
 	default:
 		log.Fatalf("unknown -env=%s", envFlag)
 	}
@@ -75,31 +110,41 @@ func main() {
 	log.Fatal(app.srv.ListenAndServe(*addr, r))
 }
 
-// app is the main server struct for Guestbook.
-type app struct {
-	backends
+// applicationSet is the Wire provider set for the Guestbook application that
+// does not depend on the underlying platform.
+var applicationSet = wire.NewSet(
+	newApplication,
+	appHealthChecks,
+	trace.AlwaysSample,
+)
+
+// application is the main server struct for Guestbook. It contains the state of
+// the most recently read message of the day.
+type application struct {
+	srv    *server.Server
+	db     *sql.DB
+	bucket *blob.Bucket
 
 	// The following fields are protected by mu:
 	mu   sync.RWMutex
 	motd string // message of the day
 }
 
-// backends is a set of platform-independent services that the Guestbook uses.
-type backends struct {
-	srv    *server.Server
-	db     *sql.DB
-	bucket *blob.Bucket
-}
-
-func newApp(b backends, v *runtimevar.Variable) *app {
-	a := &app{backends: b}
-	go a.watchMOTDVar(v)
-	return a
+// newApplication creates a new application struct based on the backends and the message
+// of the day variable.
+func newApplication(srv *server.Server, db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
+	app := &application{
+		srv:    srv,
+		db:     db,
+		bucket: bucket,
+	}
+	go app.watchMOTDVar(motdVar)
+	return app
 }
 
 // watchMOTDVar listens for changes in v and updates the app's message of the
 // day. It is run in a separate goroutine.
-func (app *app) watchMOTDVar(v *runtimevar.Variable) {
+func (app *application) watchMOTDVar(v *runtimevar.Variable) {
 	ctx := context.Background()
 	for {
 		snap, err := v.Watch(ctx)
@@ -114,10 +159,10 @@ func (app *app) watchMOTDVar(v *runtimevar.Variable) {
 	}
 }
 
-// index serves the server's landing page.
-// It lists the 100 most recent greetings, shows a cloud environment banner, and
-// displays the message of the day.
-func (app *app) index(w http.ResponseWriter, r *http.Request) {
+// index serves the server's landing page. It lists the 100 most recent
+// greetings, shows a cloud environment banner, and displays the message of the
+// day.
+func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		MOTD      string
 		Env       string
@@ -216,7 +261,7 @@ blockquote {
 `))
 
 // sign is a form action handler for adding a greeting.
-func (app *app) sign(w http.ResponseWriter, r *http.Request) {
+func (app *application) sign(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
 		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
@@ -240,7 +285,7 @@ func (app *app) sign(w http.ResponseWriter, r *http.Request) {
 }
 
 // serveBlob handles a request for a static asset by retrieving it from a bucket.
-func (app *app) serveBlob(w http.ResponseWriter, r *http.Request) {
+func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
 	blobRead, err := app.bucket.NewReader(r.Context(), key)
 	if err != nil {
@@ -265,15 +310,6 @@ func (app *app) serveBlob(w http.ResponseWriter, r *http.Request) {
 		log.Println("Copying blob:", err)
 	}
 }
-
-// appSet is the Wire provider set for the Guestbook application that does not
-// depend on the underlying platform.
-var appSet = wire.NewSet(
-	backends{},
-	newApp,
-	appHealthChecks,
-	trace.AlwaysSample,
-)
 
 // appHealthChecks returns a health check for the database. This will signal
 // to Kubernetes or other orchestrators that the server should not receive

@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/blob"
@@ -32,43 +31,53 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Configure these as you wish.
-const (
-	fileBucketDir = "blobbucket"
-	motdFile      = "motd.txt"
-)
+// This file wires the generic interfaces up to local implementations. It won't
+// be directly included in the final binary, since it includes a Wire injector
+// template function (setupLocal), but the declarations will be copied into
+// wire_gen.go when gowire is run.
 
-func setupLocal(ctx context.Context) (*app, func(), error) {
+// setupLocal is a Wire injector function that sets up the application using
+// local implementations.
+func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	// This will be filled in by gowire with providers from the provider sets in
+	// wire.Build.
+
 	panic(wire.Build(
 		wire.Value(requestlog.Logger(nil)),
 		wire.Value(trace.Exporter(nil)),
 		server.Set,
-		appSet,
+		applicationSet,
 		dialLocalSQL,
 		localBucket,
 		localRuntimeVar,
 	))
 }
 
-func localBucket() (*blob.Bucket, error) {
-	return fileblob.NewBucket("blobbucket")
+// localBucket is a Wire provider function that returns a directory-based bucket
+// based on the command-line flags.
+func localBucket(flags *cliFlags) (*blob.Bucket, error) {
+	return fileblob.NewBucket(flags.bucket)
 }
 
-func dialLocalSQL() (*sql.DB, error) {
+// dialLocalSQL is a Wire provider function that connects to a MySQL database
+// (usually on localhost).
+func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 	cfg := &mysql.Config{
 		Net:                  "tcp",
-		Addr:                 "localhost",
-		DBName:               "guestbook",
-		User:                 "guestbook",
-		Passwd:               "xyzzy",
+		Addr:                 flags.dbHost,
+		DBName:               flags.dbName,
+		User:                 flags.dbUser,
+		Passwd:               flags.dbPassword,
 		AllowNativePasswords: true,
 	}
 	return sql.Open("mysql", cfg.FormatDSN())
 }
 
-func localRuntimeVar() (*runtimevar.Variable, func(), error) {
-	v, err := filevar.NewVariable(motdFile, runtimevar.StringDecoder, &filevar.WatchOptions{
-		WaitTime: 5 * time.Second,
+// localRuntimeVar is a Wire provider function that returns the Message of the
+// Day variable based on a local file.
+func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
+	v, err := filevar.NewVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
+		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err
