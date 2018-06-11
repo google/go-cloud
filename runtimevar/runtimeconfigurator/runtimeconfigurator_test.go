@@ -313,7 +313,7 @@ func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClien
 		},
 	})
 
-	return v, func() { deleteConfig(ctx, client, rn) }, err
+	return v, func() { _ = deleteConfig(ctx, client, rn) }, err
 }
 
 func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, func(), error) {
@@ -329,18 +329,17 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 		},
 	})
 
-	return v, func() { deleteConfig(ctx, client, rn) }, err
+	return v, func() { _ = deleteConfig(ctx, client, rn) }, err
 }
 
 func updateVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
-	uvr := &pb.UpdateVariableRequest{
+	return client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
 		Name: rn.String(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
 			Contents: &pb.Variable_Text{Text: str},
 		},
-	}
-	return client.UpdateVariable(ctx, uvr)
+	})
 }
 
 type fakeProto struct{}
