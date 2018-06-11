@@ -439,6 +439,7 @@ func scrubber(logf func(string, ...interface{}), _ string, msg proto.Message) er
 		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
 		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
 	case *pb.UpdateVariableRequest:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
 		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
 	case *pb.GetVariableRequest:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
