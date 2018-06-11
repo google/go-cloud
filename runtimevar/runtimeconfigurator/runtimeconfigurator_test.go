@@ -147,15 +147,11 @@ func TestInitialStringWatch(t *testing.T) {
 	}
 
 	want := "facepalm: 🤦"
-	_, err = createStringVariable(ctx, client.client, rn, want)
+	_, done, err = createStringVariable(ctx, client.client, rn, want)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := deleteConfig(ctx, client.client, rn); err != nil {
-			t.Fatalf("delete config failed, possible human cleanup required: %v", err)
-		}
-	}()
+	defer done()
 
 	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
 	if err != nil {
@@ -193,15 +189,11 @@ func TestInitialJSONWatch(t *testing.T) {
 	}
 	var jsonDataPtr *home
 	want := &home{"Batman", "Gotham"}
-	_, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
+	_, done, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := deleteConfig(ctx, client.client, rn); err != nil {
-			t.Logf("delete config failed, possible human cleanup required: %v", err)
-		}
-	}()
+	defer done()
 
 	variable, err := client.NewVariable(ctx, rn, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), nil)
 	if err != nil {
@@ -217,16 +209,23 @@ func TestInitialJSONWatch(t *testing.T) {
 	}
 }
 
-func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
-	client, cleanUp := setUp(t, &fakeServer{
-		responses: []response{
-			{vrbl: jsonVar1},
-		},
-	})
-	defer cleanUp()
-
+func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 	ctx := context.Background()
-	variable, err := client.NewVariable(ctx, resourceName, runtimevar.NewDecoder(jsonDataPtr, runtimevar.JSONDecode), watchOpt)
+
+	client, done, err := newConfigClient(ctx, t.Logf, "watch-cancel.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestWatchCancel",
+	}
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
 	if err != nil {
 		t.Fatalf("Client.NewConfig returned error: %v", err)
 	}
@@ -236,7 +235,48 @@ func TestWatchCancelledBeforeFirstWatch(t *testing.T) {
 
 	_, err = variable.Watch(ctx)
 	if err == nil {
-		t.Fatal("Variable.Watch returned nil error, expecting an error from cancelling")
+		t.Fatal("Variable.Watch returned nil error, expecting an error from canceling")
+	}
+}
+
+func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
+	ctx := context.Background()
+
+	client, done, err := newConfigClient(ctx, t.Logf, "watch-inbetween-cancel.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestWatchInbetweenCancel",
+	}
+
+	_, done, err = createStringVariable(ctx, client.client, rn, "getting canceled")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, nil)
+	if err != nil {
+		t.Fatalf("Client.NewConfig returned error: %v", err)
+	}
+
+	_, err = variable.Watch(ctx)
+	if err != nil {
+		t.Fatalf("Variable.Watch returned error: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	cancel()
+
+	_, err = variable.Watch(ctx)
+	if err == nil {
+		t.Fatal("Variable.Watch returned nil error, expecting an error from canceling")
 	}
 }
 
@@ -358,26 +398,28 @@ func deleteConfig(ctx context.Context, client pb.RuntimeConfigManagerClient, rn 
 	return err
 }
 
-func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, error) {
+func createByteVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, value []byte) (*pb.Variable, func(), error) {
 	if _, err := createConfig(ctx, client, rn); err != nil {
-		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
+		return nil, nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
 	}
 
-	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+	v, err := client.CreateVariable(ctx, &pb.CreateVariableRequest{
 		Parent: rn.configPath(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
 			Contents: &pb.Variable_Value{Value: value},
 		},
 	})
+
+	return v, func() { deleteConfig(ctx, client, rn) }, err
 }
 
-func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
+func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, func(), error) {
 	if _, err := createConfig(ctx, client, rn); err != nil {
-		return nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
+		return nil, nil, fmt.Errorf("unable to create parent config for %+v: %v", rn, err)
 	}
 
-	return client.CreateVariable(ctx, &pb.CreateVariableRequest{
+	v, err := client.CreateVariable(ctx, &pb.CreateVariableRequest{
 		Parent: rn.configPath(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
@@ -385,6 +427,16 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 		},
 	})
 
+	return v, func() { deleteConfig(ctx, client, rn) }, err
+}
+
+func updateVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
+	return client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Text{Text: str},
+		},
+	})
 }
 
 type fakeProto struct{}
