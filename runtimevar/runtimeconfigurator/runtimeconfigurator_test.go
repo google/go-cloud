@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/golang/protobuf/proto"
@@ -197,6 +198,57 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 	}
 }
 
+func TestWatchObservesChange(t *testing.T) {
+	ctx := context.Background()
+
+	client, done, err := newConfigClient(ctx, t.Logf, "watch-observes-change.replay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	rn := ResourceName{
+		ProjectID: *projectID,
+		Config:    config,
+		desc:      description,
+		Variable:  "TestWatchObserveChange",
+	}
+
+	want := "cash 💰 change"
+	_, done, err = createStringVariable(ctx, client.client, rn, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	variable, err := client.NewVariable(ctx, rn, runtimevar.StringDecoder, &WatchOptions{WaitTime: 1 * time.Second})
+	if err != nil {
+		t.Fatalf("Client.NewConfig returned error: %v", err)
+	}
+	got, err := variable.Watch(ctx)
+	switch {
+	case err != nil:
+		t.Fatal(err)
+	case got.Value != want:
+		t.Errorf("got %v; want %v", got.Value, want)
+	}
+
+	// Update the value and see that watch sees the new value.
+	want = "be the change you want to see in the 🌎"
+	_, err = updateVariable(ctx, client.client, rn, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err = variable.Watch(ctx)
+	switch {
+	case err != nil:
+		t.Fatal(err)
+	case got.Value != want:
+		t.Errorf("got %v; want %v", got.Value, want)
+	}
+}
+
 func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
@@ -281,13 +333,21 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 }
 
 func updateVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, rn ResourceName, str string) (*pb.Variable, error) {
-	return client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+	uvr := &pb.UpdateVariableRequest{
+		Name: rn.String(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
 			Contents: &pb.Variable_Text{Text: str},
 		},
-	})
+	}
+	return client.UpdateVariable(ctx, uvr)
 }
+
+type fakeProto struct{}
+
+func (p *fakeProto) Reset()         {}
+func (p *fakeProto) String() string { return "fake" }
+func (p *fakeProto) ProtoMessage()  {}
 
 func TestScrubber(t *testing.T) {
 	var tests = []struct {
@@ -378,6 +438,8 @@ func scrubber(logf func(string, ...interface{}), _ string, msg proto.Message) er
 		m.Config.Name = re.ReplaceAllString(m.GetConfig().GetName(), replacePattern)
 	case *pb.CreateVariableRequest:
 		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
+		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
+	case *pb.UpdateVariableRequest:
 		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
 	case *pb.GetVariableRequest:
 		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
