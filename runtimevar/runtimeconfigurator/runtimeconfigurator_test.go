@@ -19,12 +19,14 @@ import (
 	"flag"
 	"fmt"
 	"net"
-	"os"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/dnaeon/go-vcr/recorder"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
@@ -74,17 +76,6 @@ func (s *fakeServer) GetVariable(context.Context, *pb.GetVariableRequest) (*pb.V
 		s.index++
 	}
 	return resp.vrbl, resp.err
-}
-
-func TestMain(m *testing.M) {
-	flag.Parse()
-	// TODO(#65) This needs to be fixed so that the test is not dependent on the project ID.
-	if *projectID == "" {
-		fmt.Println("-project not specified, skipping")
-		os.Exit(0)
-	}
-
-	os.Exit(m.Run())
 }
 
 func setUp(t *testing.T, fs *fakeServer) (*Client, func()) {
@@ -162,7 +153,7 @@ func TestInitialStringWatch(t *testing.T) {
 	}
 	defer func() {
 		if err := deleteConfig(ctx, client.client, rn); err != nil {
-			t.Logf("delete config failed, possible human cleanup required: %v", err)
+			t.Fatalf("delete config failed, possible human cleanup required: %v", err)
 		}
 	}()
 
@@ -399,7 +390,7 @@ func newConfigClient(ctx context.Context, logf func(string, ...interface{}), fil
 		mode = recorder.ModeReplaying
 	}
 
-	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath)
+	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -465,4 +456,116 @@ func createStringVariable(ctx context.Context, client pb.RuntimeConfigManagerCli
 			Contents: &pb.Variable_Text{Text: str},
 		},
 	})
+
+}
+
+type fakeProto struct{}
+
+func (p *fakeProto) Reset()         {}
+func (p *fakeProto) String() string { return "fake" }
+func (p *fakeProto) ProtoMessage()  {}
+
+func TestScrubber(t *testing.T) {
+	var tests = []struct {
+		name      string
+		msg, want proto.Message
+		wantErr   bool
+	}{
+		{
+			name: "Messages that match the regexp should have project IDs redacted",
+			msg: &pb.DeleteConfigRequest{
+				Name: "projects/project_id/name",
+			},
+			want: &pb.DeleteConfigRequest{
+				Name: "projects/REDACTED/name",
+			},
+		},
+		{
+			name: "Messages that have nested strings where project IDs can be found should all be redacted",
+			msg: &pb.CreateConfigRequest{
+				Parent: "/projects/project_id/parent",
+				Config: &pb.RuntimeConfig{
+					Name: "projects/project_id/config/name",
+				},
+			},
+			want: &pb.CreateConfigRequest{
+				Parent: "/projects/REDACTED/parent",
+				Config: &pb.RuntimeConfig{
+					Name: "projects/REDACTED/config/name",
+				},
+			},
+		},
+		{
+			name: "Messages that don't match the regexp should be returned unchanged",
+			msg: &pb.DeleteConfigRequest{
+				Name: "project_id/name",
+			},
+			want: &pb.DeleteConfigRequest{
+				Name: "project_id/name",
+			},
+		},
+		{
+			name: "Empty messages should be returned unchanged",
+			msg:  &empty.Empty{},
+			want: &empty.Empty{},
+		},
+		{
+			name:    "Unknown messages should return an error",
+			msg:     &fakeProto{},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := proto.Clone(tc.msg)
+			err := scrubber(t.Logf, "", got)
+
+			switch {
+			case err != nil && !tc.wantErr:
+				t.Fatal(err)
+			case err == nil && tc.wantErr:
+				t.Errorf("want error; got nil")
+			case err != nil && tc.wantErr:
+				// Got error as expected, test passed.
+				return
+			case !cmp.Equal(got, tc.want):
+				t.Errorf("got %s; want %s", got, tc.want)
+			}
+		})
+	}
+}
+
+func scrubber(logf func(string, ...interface{}), _ string, msg proto.Message) error {
+	// Example matches:
+	// projects/foobar
+	// /projects/foobar/baz
+	re := regexp.MustCompile(`(?U)(\/?projects\/)(.*)(\/|$)`)
+	// Without the curly braces, Go interprets the group as named $1REDACTED which
+	// doesn't match anything.
+	replacePattern := "${1}REDACTED${3}"
+	logf("Proto begins as %s", msg)
+
+	switch m := msg.(type) {
+	case *pb.DeleteConfigRequest:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+	case *pb.CreateConfigRequest:
+		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
+		m.Config.Name = re.ReplaceAllString(m.GetConfig().GetName(), replacePattern)
+	case *pb.CreateVariableRequest:
+		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
+		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
+	case *pb.GetVariableRequest:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+	case *pb.RuntimeConfig:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+	case *pb.Variable:
+		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
+	case *empty.Empty:
+	default:
+		return fmt.Errorf("unknown proto type, can't scrub: %v", reflect.TypeOf(msg))
+	}
+
+	logf("Proto ends as %s", msg)
+	return nil
 }

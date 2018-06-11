@@ -26,6 +26,7 @@ import (
 	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 )
 
@@ -92,20 +93,20 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		if mode != recorder.ModeRecording {
 			return
 		}
-		if err := fixAWSHeaders(path); err != nil {
+		if err := scrubAWSHeaders(path); err != nil {
 			fmt.Println(err)
 		}
 	}, nil
 }
 
-// fixAWSHeaders removes *potentially* sensitive information from a cassette,
+// scrubAWSHeaders removes *potentially* sensitive information from a cassette,
 // and adds sequencing to the requests to differentiate Amazon calls, as they
 // aren't timestamped.
 // Note that sequence numbers should only be used for otherwise identical matches.
-func fixAWSHeaders(filepath string) error {
+func scrubAWSHeaders(filepath string) error {
 	c, err := cassette.Load(filepath)
 	if err != nil {
-		return fmt.Errorf("unable to load cassette, do not commit to repository: %v", err)
+		return fmt.Errorf("unable to load golden file, do not commit to repository: %v", err)
 	}
 
 	c.Mu.Lock()
@@ -123,7 +124,7 @@ func fixAWSHeaders(filepath string) error {
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
 // These options allow a recorder/replayer to intercept RPCs and save RPCs to the file at filename,
 // or read the RPCs from the file and return them.
-func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string) (opts []grpc.DialOption, done func(), err error) {
+func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string, scrubber func(func(string, ...interface{}), string, proto.Message) error) (opts []grpc.DialOption, done func(), err error) {
 	path := filepath.Join("testdata", filename)
 	logf("Golden file is at %v", path)
 
@@ -132,6 +133,9 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 		r, err := rpcreplay.NewRecorder(path, nil)
 		if err != nil {
 			return nil, nil, err
+		}
+		r.BeforeFunc = func(s string, m proto.Message) error {
+			return scrubber(logf, s, m)
 		}
 		opts = r.DialOptions()
 		done = func() {
@@ -146,6 +150,9 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 	r, err := rpcreplay.NewReplayer(path)
 	if err != nil {
 		return nil, nil, err
+	}
+	r.BeforeFunc = func(s string, m proto.Message) error {
+		return scrubber(logf, s, m)
 	}
 	opts = r.DialOptions()
 	done = func() {
