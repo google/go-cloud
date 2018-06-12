@@ -15,12 +15,15 @@
 package s3blob_test
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/testing/setup"
 )
 
@@ -79,7 +82,6 @@ func TestNewBucketNaming(t *testing.T) {
 
 	sess, done := setup.NewAWSSession(t, region, "test-naming")
 	defer done()
-
 	svc := s3.New(sess)
 
 	for _, tc := range tests {
@@ -90,7 +92,7 @@ func TestNewBucketNaming(t *testing.T) {
 				CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 			})
 			defer func() {
-				_, _ = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bkt})
+				_ = forceDeleteBucket(svc, bkt)
 			}()
 
 			switch {
@@ -103,31 +105,88 @@ func TestNewBucketNaming(t *testing.T) {
 	}
 }
 
-//func TestNewWriterObjectNaming(t *testing.T) {
-//tests := []struct {
-//name  string
-//valid bool
-//}{
-//{"object-name", true},
-//{"文件名", true},
-//{"ファイル名", true},
-//{"", false},
-//{"\xF4\x90\x80\x80", false},
-//{strings.Repeat("a", 1024), true},
-//{strings.Repeat("a", 1025), false},
-//{strings.Repeat("☺", 342), false},
-//}
+func TestNewWriterObjectNaming(t *testing.T) {
+	tests := []struct {
+		name, objName string
+		wantErr       bool
+	}{
+		{
+			name:    "An ASCII name should pass",
+			objName: "object-name",
+		},
+		{
+			name:    "A Unicode name should pass",
+			objName: "文件名",
+		},
 
-//ctx := context.Background()
-//for i, test := range tests {
-//_, err := s3Bucket.NewWriter(ctx, test.name, nil)
-//if test.valid && err != nil {
-//t.Errorf("%d) got %v, want nil", i, err)
-//} else if !test.valid && err == nil {
-//t.Errorf("%d) got nil, want invalid error", i)
-//}
-//}
-//}
+		{
+			name:    "An empty name should fail",
+			wantErr: true,
+		},
+		{
+			name:    "A name of escaped chars should fail",
+			objName: "\xF4\x90\x80\x80",
+			wantErr: true,
+		},
+		{
+			name:    "A name of 1024 chars should succeed",
+			objName: strings.Repeat("a", 1024),
+		},
+		{
+			name:    "A name of 1025 chars should fail",
+			objName: strings.Repeat("a", 1025),
+			wantErr: true,
+		},
+		{
+			name:    "A long name of Unicode chars should fail",
+			objName: strings.Repeat("☺", 342),
+			wantErr: true,
+		},
+	}
+
+	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	defer done()
+	svc := s3.New(sess)
+
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-obj-naming")
+	_, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: &bkt,
+		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = forceDeleteBucket(svc, bkt)
+	}()
+
+	ctx := context.Background()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := s3blob.NewBucket(ctx, sess, bkt)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			w, err := b.NewWriter(ctx, tc.objName, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = io.WriteString(w, "foo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = w.Close()
+			switch {
+			case err != nil && !tc.wantErr:
+				t.Errorf("got %q; want nil", err)
+			case err == nil && tc.wantErr:
+				t.Errorf("got nil; want error")
+			}
+		})
+	}
+}
 
 //func TestRead(t *testing.T) {
 //object := "test_read"
@@ -310,3 +369,30 @@ func TestNewBucketNaming(t *testing.T) {
 //t.Errorf("error occurs when deleting a non-existing object: %v", err)
 //}
 //}
+
+func forceDeleteBucket(svc *s3.S3, bucket string) error {
+	resp, err := svc.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
+	if err != nil {
+		return err
+	}
+
+	var objs []*s3.ObjectIdentifier
+	for _, o := range resp.Contents {
+		objs = append(objs, &s3.ObjectIdentifier{Key: aws.String(*o.Key)})
+	}
+
+	var items s3.Delete
+	items.SetObjects(objs)
+
+	_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{Bucket: &bucket, Delete: &items})
+	if err != nil {
+		return err
+	}
+
+	_, err = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bucket})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

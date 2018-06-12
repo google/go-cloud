@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -212,9 +211,6 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 //
 // The caller must call Close on the returned writer when done writing.
 func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
-	if err := validateObjectChar(key); err != nil {
-		return nil, err
-	}
 	w := &writer{
 		bucket:   b.name,
 		ctx:      ctx,
@@ -238,22 +234,4 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 	req, _ := b.client.DeleteObjectRequest(input)
 	return req.Send()
-}
-
-const (
-	bucketNamingRuleURL = "https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html"
-	objectNamingRuleURL = "https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html"
-)
-
-func validateObjectChar(name string) error {
-	if name == "" {
-		return errors.New("object name is empty")
-	}
-	if !utf8.ValidString(name) {
-		return fmt.Errorf("object name is not vlid UTF-8, see %s for detailed requirements", objectNamingRuleURL)
-	}
-	if len(name) > 1024 {
-		return fmt.Errorf("object name is longer than 1024 bytes, see %s for detailed requirements", objectNamingRuleURL)
-	}
-	return nil
 }
