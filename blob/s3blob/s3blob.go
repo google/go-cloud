@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -38,9 +37,6 @@ import (
 // communicate to S3. AWS config can be passed in through BucketOptions to
 // change the default configuration of the S3Bucket.
 func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
-	if err := validateBucketChar(bucketName); err != nil {
-		return nil, err
-	}
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
@@ -249,22 +245,6 @@ const (
 	objectNamingRuleURL = "https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html"
 )
 
-// validateBucketChar checks whether character set and length meet the general
-// requirement of bucket naming rule. See
-// https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-// for the full requirements and best practice.
-func validateBucketChar(name string) error {
-	v := regexp.MustCompile(`^[a-z0-9][a-z0-9-.]{1,61}[a-z0-9]$`)
-	if !v.MatchString(name) {
-		return fmt.Errorf("invalid bucket name, see %s for detailed requirements", bucketNamingRuleURL)
-	}
-	return nil
-}
-
-// validateObjectChar checks whether name is a valid UTF-8 encoded string, and its
-// length is between 1-1024 bytes. See
-// https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html for the full
-// requirements and best practice.
 func validateObjectChar(name string) error {
 	if name == "" {
 		return errors.New("object name is empty")
