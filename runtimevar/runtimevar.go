@@ -152,6 +152,9 @@ func bytesDecode(b []byte, obj interface{}) error {
 	return nil
 }
 
+// Pinger runs a function that returns a Variable and an error after every waitTime.
+// Pinger blocks until the function returns a non-nil variable or non-nil error, or
+// the context is canceled.
 func Pinger(ctx context.Context, f func(context.Context) (*driver.Variable, error), waitTime time.Duration) (driver.Variable, error) {
 	zeroVar := driver.Variable{}
 	// If the context is already canceled, just return.

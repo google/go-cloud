@@ -150,17 +150,15 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 }
 
 func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
-	zeroVar := driver.Variable{}
-
 	// Use GetVariables RPC and check for deltas based on the response.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
 	w.lastRPCTime = time.Now()
 	if err != nil {
-		return &zeroVar, err
+		return nil, err
 	}
 	updateTime, err := parseUpdateTime(vpb)
 	if err != nil {
-		return &zeroVar, err
+		return nil, err
 	}
 
 	// Determine if there are any changes based on the bytes. If there are, update cache and
@@ -171,7 +169,7 @@ func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 		w.updateTime = updateTime
 		val, err := w.decoder.Decode(bytes)
 		if err != nil {
-			return &zeroVar, err
+			return nil, err
 		}
 		return &driver.Variable{
 			Value:      val,
