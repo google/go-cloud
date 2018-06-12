@@ -32,8 +32,6 @@ import (
 	"google.golang.org/api/option"
 	transport "google.golang.org/api/transport/grpc"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Set is a Wire provider set that provides *Client using a default
@@ -137,7 +135,6 @@ type watcher struct {
 	name        string
 	decoder     *runtimevar.Decoder
 	bytes       []byte
-	isDeleted   bool
 	updateTime  time.Time
 }
 
@@ -149,58 +146,40 @@ func (w *watcher) Close() error {
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs. It
 // implements the driver.Watcher.Watch method.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+	return runtimevar.Pinger(ctx, w.ping, w.waitTime)
+}
+
+func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 	zeroVar := driver.Variable{}
 
-	// Loop to check for changes or continue waiting.
-	for {
-		// Block until waitTime or context canceled/timed out.
-		t := time.NewTimer(w.waitTime - time.Now().Sub(w.lastRPCTime))
-		select {
-		case <-t.C:
-		case <-ctx.Done():
-			t.Stop()
-			return zeroVar, ctx.Err()
-		}
-
-		// Use GetVariables RPC and check for deltas based on the response.
-		vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
-		w.lastRPCTime = time.Now()
-		if err == nil {
-			updateTime, err := parseUpdateTime(vpb)
-			if err != nil {
-				return zeroVar, err
-			}
-
-			// Determine if there are any changes based on the bytes. If there are, update cache and
-			// return nil, else continue on.
-			bytes := bytesFromProto(vpb)
-			if w.isDeleted || bytesNotEqual(w.bytes, bytes) {
-				w.bytes = bytes
-				w.updateTime = updateTime
-				w.isDeleted = false
-				val, err := w.decoder.Decode(bytes)
-				if err != nil {
-					return zeroVar, err
-				}
-				return driver.Variable{
-					Value:      val,
-					UpdateTime: updateTime,
-				}, nil
-			}
-
-		} else {
-			if st, ok := status.FromError(err); !ok || st.Code() != codes.NotFound {
-				return zeroVar, err
-			}
-			// For RPC not found error, if last known state is not deleted, mark isDeleted and
-			// return error, else treat as no change has occurred.
-			if !w.isDeleted {
-				w.isDeleted = true
-				w.updateTime = time.Now().UTC()
-				return zeroVar, err
-			}
-		}
+	// Use GetVariables RPC and check for deltas based on the response.
+	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
+	w.lastRPCTime = time.Now()
+	if err != nil {
+		return &zeroVar, err
 	}
+	updateTime, err := parseUpdateTime(vpb)
+	if err != nil {
+		return &zeroVar, err
+	}
+
+	// Determine if there are any changes based on the bytes. If there are, update cache and
+	// return nil, else continue on.
+	bytes := bytesFromProto(vpb)
+	if bytesNotEqual(w.bytes, bytes) {
+		w.bytes = bytes
+		w.updateTime = updateTime
+		val, err := w.decoder.Decode(bytes)
+		if err != nil {
+			return &zeroVar, err
+		}
+		return &driver.Variable{
+			Value:      val,
+			UpdateTime: updateTime,
+		}, nil
+	}
+
+	return nil, nil
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {
