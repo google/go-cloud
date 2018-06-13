@@ -1,0 +1,209 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T223820Z
+      X-Gocloud-Seq:
+      - "0"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.test-write</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>test_read</Key><LastModified>2018-06-13T22:27:15.000Z</LastModified><ETag>&quot;e6e8d3ea274df5606478655df72a3d16&quot;</ETag><Size>23</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 22:38:22 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - Gej5fiR60Sm5Sja1TMHdgSzAUxHG+5SsxhRdB6EXlFtBiCh8A0F94H+mrgiKOS0yVErRkEnOLAA=
+      X-Amz-Request-Id:
+      - 18FF3A2F4B84AA31
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: <Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Object><Key>test_read</Key></Object></Delete>
+    form: {}
+    headers:
+      Content-Length:
+      - "102"
+      Content-Md5:
+      - PD5EJIqWiR5ZbtOZo31YDw==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - 537f2e50460b59855faa0fc7af34bfd533f40e6b21c98ab314aaca3ec2adb6d5
+      X-Amz-Date:
+      - 20180613T223821Z
+      X-Gocloud-Seq:
+      - "1"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write?delete=
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Deleted><Key>test_read</Key></Deleted></DeleteResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 22:38:22 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - PSiUxVMv7nHNfnRjf1H8ECq52xPx7MGQK7InCXiLGGwXCjzgNHtEeCpSqY1JEGMTolhL/WbG41s=
+      X-Amz-Request-Id:
+      - B2A0AED8A7AD4C26
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T223821Z
+      X-Gocloud-Seq:
+      - "2"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Wed, 13 Jun 2018 22:38:22 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - eWQkSnHchZyK1W+V7LYcxuoM3IIgtN3aBZtIuW0t7Bo1aDz6qRmK/bdOBYAf+gn6rXRXFAqmi4A=
+      X-Amz-Request-Id:
+      - 16B51A81DA82A2B4
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: <CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LocationConstraint>us-east-2</LocationConstraint></CreateBucketConfiguration>
+    form: {}
+    headers:
+      Content-Length:
+      - "153"
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
+      X-Amz-Date:
+      - 20180613T223822Z
+      X-Gocloud-Seq:
+      - "3"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 22:38:23 GMT
+      Location:
+      - http://go-x-cloud.test-write.s3.amazonaws.com/
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - b2G2x3ApN7+lvc/258kp4IHiBdiFRZNiZj2pNuSVYt8R6ShJDe9sjfsxDPPatJcGO4zD8OwFlFc=
+      X-Amz-Request-Id:
+      - F5D3A0CC70D23713
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: HELLO!hello!
+    form: {}
+    headers:
+      Content-Length:
+      - "12"
+      Content-Md5:
+      - TZuSLgZcZAweEtLD77DQEg==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - d5dac1bcbde4a2ccd6c742a9a808b749fdea7ca857f593ff99030c0c31e24d8a
+      X-Amz-Date:
+      - 20180613T223822Z
+      X-Gocloud-Seq:
+      - "4"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write/test_write
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 22:38:23 GMT
+      Etag:
+      - '"4d9b922e065c640c1e12d2c3efb0d012"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Ie+yKLw5aU1c33FvkcatEe19QCJ/iy2IE7Da9utJgbAFUldzYUTWGR6/MrT5nwcrYDDXe6MhiUA=
+      X-Amz-Request-Id:
+      - A29B173841EF6866
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T223822Z
+      X-Gocloud-Seq:
+      - "5"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write/test_write
+    method: GET
+  response:
+    body: HELLO!hello!
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "12"
+      Content-Type:
+      - binary/octet-stream
+      Date:
+      - Wed, 13 Jun 2018 22:38:23 GMT
+      Etag:
+      - '"4d9b922e065c640c1e12d2c3efb0d012"'
+      Last-Modified:
+      - Wed, 13 Jun 2018 22:38:23 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - K5reS+JpKV9lZeUa/CFi3pBxLAHY7e2HvEyNR/gd5pmjT1aJbWO+imq5HKaLIuI6zI9fW6q1FSI=
+      X-Amz-Request-Id:
+      - AAEF9524F0D930C5
+    status: 200 OK
+    code: 200
+    duration: ""

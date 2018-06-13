@@ -145,7 +145,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	sess, done := setup.NewAWSSession(t, region, "test-obj-naming")
 	defer done()
 	svc := s3.New(sess)
 
@@ -237,11 +237,11 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	sess, done := setup.NewAWSSession(t, region, "test-read")
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-write")
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-read")
 	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
@@ -289,51 +289,64 @@ func TestRead(t *testing.T) {
 	}
 }
 
-//func TestWrite(t *testing.T) {
-//ctx := context.Background()
-//object := "test_write"
+func TestWrite(t *testing.T) {
+	sess, done := setup.NewAWSSession(t, region, "test-write")
+	defer done()
+	svc := s3.New(sess)
 
-//defer func() {
-//if err := s3Bucket.Delete(ctx, object); err != nil {
-//t.Errorf("error deleting object: %v", err)
-//}
-//}()
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-write")
+	_ = forceDeleteBucket(svc, bkt)
+	_, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: &bkt,
+		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-//w, err := s3Bucket.NewWriter(ctx, object, nil)
-//if err != nil {
-//t.Errorf("error creating writer: %v", err)
-//}
+	ctx := context.Background()
 
-//var written int64 = 0
-//for _, p := range [][]byte{[]byte("HELLO!"), []byte("hello!")} {
-//n, err := w.Write(p)
-//if n != len(p) || err != nil {
-//t.Errorf("writing object: %d written, got error %v", n, err)
-//}
-//written += int64(n)
-//}
-//if err := w.Close(); err != nil {
-//t.Fatalf("error closing writer: %v", err)
-//}
-//req, resp := s3Client.GetObjectRequest(&s3.GetObjectInput{
-//Bucket: aws.String(testBucket),
-//Key:    aws.String(object),
-//})
-//if err := req.Send(); err != nil {
-//t.Fatalf("error getting object: %v", err)
-//}
-//body := resp.Body
-//got := make([]byte, 12)
-//n, err := body.Read(got)
-//if err != nil && err != io.EOF {
-//t.Errorf("reading object: %d read, got error %v", n, err)
-//}
-//defer body.Close()
-//want := []byte("HELLO!hello!")
-//if !cmp.Equal(got, want) || n != 12 {
-//t.Errorf("got %s, size %d, want %s, size %d", got, n, want, 12)
-//}
-//}
+	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj := "test_write"
+	w, err := b.NewWriter(ctx, obj, nil)
+	if err != nil {
+		t.Errorf("error creating writer: %v", err)
+	}
+
+	var written int64 = 0
+	for _, p := range [][]byte{[]byte("HELLO!"), []byte("hello!")} {
+		n, err := w.Write(p)
+		if n != len(p) || err != nil {
+			t.Errorf("writing obj: %d written, got error %v", n, err)
+		}
+		written += int64(n)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("error closing writer: %v", err)
+	}
+	req, resp := svc.GetObjectRequest(&s3.GetObjectInput{
+		Bucket: aws.String(bkt),
+		Key:    aws.String(obj),
+	})
+	if err := req.Send(); err != nil {
+		t.Fatalf("error getting object: %v", err)
+	}
+	body := resp.Body
+	got := make([]byte, 12)
+	n, err := body.Read(got)
+	if err != nil && err != io.EOF {
+		t.Errorf("reading object: %d read, got error %v", n, err)
+	}
+	defer body.Close()
+	want := []byte("HELLO!hello!")
+	if !cmp.Equal(got, want) || n != 12 {
+		t.Errorf("got %s, size %d; want %s, size %d", got, n, want, 12)
+	}
+}
 
 //func TestCloseWithoutWrite(t *testing.T) {
 //ctx := context.Background()
@@ -363,7 +376,7 @@ func TestRead(t *testing.T) {
 //}
 
 func TestDelete(t *testing.T) {
-	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	sess, done := setup.NewAWSSession(t, region, "test-delete")
 	defer done()
 	svc := s3.New(sess)
 
