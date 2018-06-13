@@ -27,6 +27,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/testing/setup"
+	"github.com/google/go-cmp/cmp"
 )
 
 const region = "us-east-2"
@@ -89,13 +90,11 @@ func TestNewBucketNaming(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bkt := fmt.Sprintf("go-x-cloud.%s", tc.bucketName)
+			_ = forceDeleteBucket(svc, bkt)
 			_, err := svc.CreateBucket(&s3.CreateBucketInput{
 				Bucket: &bkt,
 				CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 			})
-			defer func() {
-				_ = forceDeleteBucket(svc, bkt)
-			}()
 
 			switch {
 			case err != nil && !tc.wantErr:
@@ -151,6 +150,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-obj-naming")
+	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -158,9 +158,6 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		_ = forceDeleteBucket(svc, bkt)
-	}()
 
 	ctx := context.Background()
 	for _, tc := range tests {
@@ -190,85 +187,107 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	}
 }
 
-//func TestRead(t *testing.T) {
-//object := "test_read"
-//content := []byte("something worth reading")
-//fullen := int64(len(content))
-//if _, err := uploader.Upload(&s3manager.UploadInput{
-//Bucket: aws.String(testBucket),
-//Key:    aws.String(object),
-//Body:   bytes.NewReader(content),
-//}); err != nil {
-//t.Fatalf("error uploading test object: %v", err)
-//}
+func TestRead(t *testing.T) {
+	content := []byte("something worth reading")
+	contentSize := int64(len(content))
 
-//tests := []struct {
-//name           string
-//offset, length int64
-//want           []byte
-//got            []byte
-//wantSize       int64
-//wantError      bool
-//}{
-//{
-//name:      "negative offset",
-//offset:    -1,
-//wantError: true,
-//},
-//{
-//name:     "read metadata",
-//length:   0,
-//want:     make([]byte, 0),
-//got:      make([]byte, 0),
-//wantSize: fullen,
-//},
-//{
-//name:     "read from positive offset to end",
-//offset:   10,
-//length:   -1,
-//want:     content[10:],
-//got:      make([]byte, fullen-10),
-//wantSize: fullen - 10,
-//},
-//{
-//name:     "read a part in middle",
-//offset:   10,
-//length:   5,
-//want:     content[10:15],
-//got:      make([]byte, 5),
-//wantSize: 5,
-//},
-//{
-//name:     "read in full",
-//offset:   0,
-//length:   -1,
-//want:     content,
-//got:      make([]byte, fullen),
-//wantSize: fullen,
-//},
-//}
+	tests := []struct {
+		name           string
+		offset, length int64
+		want           []byte
+		got            []byte
+		wantSize       int64
+		wantError      bool
+	}{
+		{
+			name:      "negative offset",
+			offset:    -1,
+			wantError: true,
+		},
+		{
+			name:     "read metadata",
+			length:   0,
+			want:     make([]byte, 0),
+			got:      make([]byte, 0),
+			wantSize: contentSize,
+		},
+		{
+			name:     "read from positive offset to end",
+			offset:   10,
+			length:   -1,
+			want:     content[10:],
+			got:      make([]byte, contentSize-10),
+			wantSize: contentSize - 10,
+		},
+		{
+			name:     "read a part in middle",
+			offset:   10,
+			length:   5,
+			want:     content[10:15],
+			got:      make([]byte, 5),
+			wantSize: 5,
+		},
+		{
+			name:     "read in full",
+			offset:   0,
+			length:   -1,
+			want:     content,
+			got:      make([]byte, contentSize),
+			wantSize: contentSize,
+		},
+	}
 
-//for i, test := range tests {
-//r, err := s3Bucket.NewRangeReader(context.Background(), object, test.offset, test.length)
-//if test.wantError {
-//if err == nil {
-//t.Errorf("%d) want error got nil", i)
-//}
-//continue
-//}
-//if err != nil {
-//t.Fatalf("%d) cannot create new reader: %v", i, err)
+	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	defer done()
+	svc := s3.New(sess)
 
-//}
-//if _, err := r.Read(test.got); err != nil && err != io.EOF {
-//t.Fatalf("%d) error during read: %v", i, err)
-//}
-//if !cmp.Equal(test.got, test.want) || r.Size() != test.wantSize {
-//t.Errorf("%d) got %s of size %d, want %s of size %d", i, test.got, r.Size(), test.want, test.wantSize)
-//}
-//r.Close()
-//}
-//}
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-write")
+	_ = forceDeleteBucket(svc, bkt)
+	_, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: &bkt,
+		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	obj := "test_read"
+	uploader := s3manager.NewUploader(sess)
+	if _, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bkt),
+		Key:    aws.String(obj),
+		Body:   bytes.NewReader(content),
+	}); err != nil {
+		t.Fatalf("error uploading test object: %v", err)
+	}
+
+	ctx := context.Background()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := s3blob.NewBucket(ctx, sess, bkt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r, err := b.NewRangeReader(context.Background(), obj, tc.offset, tc.length)
+			switch {
+			case err != nil && !tc.wantError:
+				t.Fatalf("cannot create new reader: %v", err)
+			case err == nil && tc.wantError:
+				t.Fatal("got nil error; want error")
+			case tc.wantError:
+				return
+			}
+
+			if _, err := r.Read(tc.got); err != nil && err != io.EOF {
+				t.Fatalf("error during read: %v", err)
+			}
+			if !cmp.Equal(tc.got, tc.want) || r.Size() != tc.wantSize {
+				t.Errorf("got %s of size %d; want %s of size %d", tc.got, r.Size(), tc.want, tc.wantSize)
+			}
+			r.Close()
+		})
+	}
+}
 
 //func TestWrite(t *testing.T) {
 //ctx := context.Background()
@@ -349,6 +368,7 @@ func TestDelete(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-delete")
+	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -356,9 +376,6 @@ func TestDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		_ = forceDeleteBucket(svc, bkt)
-	}()
 
 	ctx := context.Background()
 	obj := "test_delete"
