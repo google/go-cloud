@@ -34,9 +34,9 @@ $ gowire && vgo build
 
 ## Running Locally
 
-You will need to run a local MySQL database server and set up a directory that
-simulates a bucket. `localdb.sh` is a script that runs a temporary database
-using Docker:
+You will need to run a local MySQL database server, set up a directory that
+simulates a bucket, and create a local message of the day. `localdb.sh` is a
+script that runs a temporary database using Docker:
 
 ```shell
 ./localdb.sh
@@ -48,8 +48,11 @@ In another terminal, you can run:
 # Create the local bucket directory.
 mkdir blobs
 
+# Set a local Message of the Day
+echo 'Hello, World!' > motd.txt
+
 # Run the server.
-./guestbook -env=local -bucket=blobs
+./guestbook -env=local -bucket=blobs -motd_var=motd.txt
 ```
 
 Your server should be running on http://localhost:8080/.
