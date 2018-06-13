@@ -164,20 +164,19 @@ func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 	// Determine if there are any changes based on the bytes. If there are, update cache and
 	// return nil, else continue on.
 	bytes := bytesFromProto(vpb)
-	if bytesNotEqual(w.bytes, bytes) {
-		w.bytes = bytes
-		w.updateTime = updateTime
-		val, err := w.decoder.Decode(bytes)
-		if err != nil {
-			return nil, err
-		}
-		return &driver.Variable{
-			Value:      val,
-			UpdateTime: updateTime,
-		}, nil
+	if !bytesNotEqual(w.bytes, bytes) {
+		return nil, nil
 	}
-
-	return nil, nil
+	w.bytes = bytes
+	w.updateTime = updateTime
+	val, err := w.decoder.Decode(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return &driver.Variable{
+		Value:      val,
+		UpdateTime: updateTime,
+	}, nil
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {
