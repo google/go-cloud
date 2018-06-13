@@ -3,7 +3,7 @@
 Guestbook is a sample application that records visitors' messages, displays a
 cloud banner, and an administrative message. The main business logic is
 written in a cloud-agnostic manner using MySQL, the generic blob API, and the
-generic runtimevar API. Each of the platform-specific code is set up by Wire.
+generic runtimevar API. All platform-specific code is set up by Wire.
 
 ## Prerequisites
 
@@ -34,19 +34,23 @@ $ gowire && vgo build
 
 ## Running Locally
 
-You will need to run a local MySQL database server using Docker, and then you
-can run the server.
+You will need to run a local MySQL database server. `localdb.sh` is a script
+that runs a temporary database using Docker:
 
 ```shell
-./start-localdb.sh
+./localdb.sh
+```
+
+In another terminal, you can run:
+
+```shell
 ./guestbook -env=local
 ```
 
-Stop the MySQL database server with:
+Your server should be running on http://localhost:8080/.
 
-```shell
-$ docker stop guestbook-sql
-```
+You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
+(SIGINT).
 
 ## Running on Google Cloud Platform (GCP)
 
@@ -60,9 +64,15 @@ Kubernetes cluster created by Terraform.
 gcloud auth application-default login
 cd gcp
 terraform init
+
+# Terraform will prompt you for your GCP project ID, desired region,
+# and desired zone.
 terraform apply
+
 ./deploy.sh
 ```
+
+The deploy script will display the URL of your running service.
 
 To clean up the created resources, run `terraform destroy` inside the `gcp`
 directory using the same variables you entered during `terraform apply`.
@@ -93,6 +103,10 @@ command-line flag values with values from the output of `terraform apply`.
 AWS_REGION=us-west-1 ./guestbook -env=aws \
   -bucket=... -db_host=... -motd_var=...
 ```
+
+You can then visit the server at `http://INSTANCE_HOST:8080/`, where
+`INSTANCE_HOST` is the value of `terraform output instance_host` run on your
+local machine.
 
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
