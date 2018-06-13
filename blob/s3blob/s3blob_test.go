@@ -90,7 +90,6 @@ func TestNewBucketNaming(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			bkt := fmt.Sprintf("go-x-cloud.%s", tc.bucketName)
-			_ = forceDeleteBucket(svc, bkt)
 			_, err := svc.CreateBucket(&s3.CreateBucketInput{
 				Bucket: &bkt,
 				CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -101,6 +100,8 @@ func TestNewBucketNaming(t *testing.T) {
 				t.Errorf("got %q; want nil", err)
 			case err == nil && tc.wantErr:
 				t.Errorf("got nil error; want error")
+			case !tc.wantErr:
+				forceDeleteBucket(svc, bkt)
 			}
 		})
 	}
@@ -150,11 +151,11 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-obj-naming")
-	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
+	defer forceDeleteBucket(svc, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,11 +243,11 @@ func TestRead(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-read")
-	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
+	defer forceDeleteBucket(svc, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,11 +296,11 @@ func TestWrite(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-write")
-	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
+	defer forceDeleteBucket(svc, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -348,32 +349,50 @@ func TestWrite(t *testing.T) {
 	}
 }
 
-//func TestCloseWithoutWrite(t *testing.T) {
-//ctx := context.Background()
-//object := "test_close_without_write"
+func TestCloseWithoutWrite(t *testing.T) {
+	sess, done := setup.NewAWSSession(t, region, "test-close-without-write")
+	defer done()
+	svc := s3.New(sess)
 
-//w, err := s3Bucket.NewWriter(ctx, object, nil)
-//if err != nil {
-//t.Errorf("error creating new writer: %v", err)
-//}
-//if err := w.Close(); err != nil {
-//t.Errorf("error closing writer without writing: %v", err)
-//}
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-close-without-write")
+	_, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: &bkt,
+		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
+	})
+	defer forceDeleteBucket(svc, bkt)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-//req, resp := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
-//Bucket: aws.String(testBucket),
-//Key:    aws.String(object),
-//})
-//err = req.Send()
-//size := aws.Int64Value(resp.ContentLength)
-//if err != nil || size != 0 {
-//t.Errorf("want 0 bytes written, got %d bytes written, error %v", size, err)
-//}
+	ctx := context.Background()
+	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-//if err := s3Bucket.Delete(ctx, object); err != nil {
-//t.Errorf("error deleting object: %v", err)
-//}
-//}
+	obj := "test_close_without_write"
+	w, err := b.NewWriter(ctx, obj, nil)
+	if err != nil {
+		t.Errorf("error creating new writer: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Errorf("error closing writer without writing: %v", err)
+	}
+
+	req, resp := svc.HeadObjectRequest(&s3.HeadObjectInput{
+		Bucket: aws.String(bkt),
+		Key:    aws.String(obj),
+	})
+	err = req.Send()
+	size := aws.Int64Value(resp.ContentLength)
+	if err != nil || size != 0 {
+		t.Errorf("want 0 bytes written, got %d bytes written, error %v", size, err)
+	}
+
+	if err := b.Delete(ctx, obj); err != nil {
+		t.Errorf("error deleting obj: %v", err)
+	}
+}
 
 func TestDelete(t *testing.T) {
 	sess, done := setup.NewAWSSession(t, region, "test-delete")
@@ -381,11 +400,11 @@ func TestDelete(t *testing.T) {
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("go-x-cloud.%s", "test-delete")
-	_ = forceDeleteBucket(svc, bkt)
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
+	defer forceDeleteBucket(svc, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -422,12 +441,10 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func forceDeleteBucket(svc *s3.S3, bucket string) error {
-	resp, err := svc.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
-	if err != nil {
-		return err
-	}
-
+// This function doesn't report errors back because they're not really useful.
+// If the bucket can't be deleted it'll become obvious later.
+func forceDeleteBucket(svc *s3.S3, bucket string) {
+	resp, _ := svc.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	var objs []*s3.ObjectIdentifier
 	for _, o := range resp.Contents {
 		objs = append(objs, &s3.ObjectIdentifier{Key: aws.String(*o.Key)})
@@ -436,15 +453,11 @@ func forceDeleteBucket(svc *s3.S3, bucket string) error {
 	var items s3.Delete
 	items.SetObjects(objs)
 
-	_, err = svc.DeleteObjects(&s3.DeleteObjectsInput{Bucket: &bucket, Delete: &items})
-	if err != nil {
-		return err
-	}
+	_, _ = svc.DeleteObjects(&s3.DeleteObjectsInput{Bucket: &bucket, Delete: &items})
 
-	_, err = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bucket})
-	if err != nil {
-		return err
-	}
+	_, _ = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bucket})
 
-	return nil
+	_ = svc.WaitUntilBucketNotExists(&s3.HeadBucketInput{Bucket: &bucket})
+
+	return
 }

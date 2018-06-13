@@ -12,10 +12,10 @@ interactions:
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180613T230150Z
+      - 20180613T230152Z
       X-Gocloud-Seq:
       - "0"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write
     method: PUT
   response:
     body: ""
@@ -23,35 +23,33 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Wed, 13 Jun 2018 23:01:51 GMT
+      - Wed, 13 Jun 2018 23:01:53 GMT
       Location:
-      - http://go-x-cloud.test-write.s3.amazonaws.com/
+      - http://go-x-cloud.test-close-without-write.s3.amazonaws.com/
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - q1I2yESJxoNpOb98pNPollXBYm3koKyj8Cuxyv+k2jrJqh+E9QdRADDUn2hxQalJaEWVLRWbdbI=
+      - WyEnLGgTwGntsez2OWJn1uiFVtEhnft96teA4oQ0SdTDjSvSnKN5Okgnruov5gwtpnUrYC6ALeM=
       X-Amz-Request-Id:
-      - EC616F5CD40D6453
+      - 2DB6CABBAA40D9A9
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: HELLO!hello!
+    body: ""
     form: {}
     headers:
-      Content-Length:
-      - "12"
       Content-Md5:
-      - TZuSLgZcZAweEtLD77DQEg==
+      - 1B2M2Y8AsgTpgAmY7PhCfg==
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
-      - d5dac1bcbde4a2ccd6c742a9a808b749fdea7ca857f593ff99030c0c31e24d8a
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180613T230150Z
+      - 20180613T230152Z
       X-Gocloud-Seq:
       - "1"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write/test_write
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write/test_close_without_write
     method: PUT
   response:
     body: ""
@@ -59,15 +57,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Wed, 13 Jun 2018 23:01:51 GMT
+      - Wed, 13 Jun 2018 23:01:53 GMT
       Etag:
-      - '"4d9b922e065c640c1e12d2c3efb0d012"'
+      - '"d41d8cd98f00b204e9800998ecf8427e"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - GTXb7XrC3/ZLx7/A49YNmjwVKF11fQe6jYYb5dyPVV51IpPIvBDiwrwkAMxtJsQkeQ11FhgN7M0=
+      - vZ0YB5T2T0DvzO6O/3xNtJCy9sjuwQeiTJQbubL40fSj/YXbANkkraI/CfvaMLslpWaqsAYKcVQ=
       X-Amz-Request-Id:
-      - 34C6EA4580B50FFE
+      - FE3A9D33137D5A45
     status: 200 OK
     code: 200
     duration: ""
@@ -80,32 +78,32 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180613T230151Z
+      - 20180613T230152Z
       X-Gocloud-Seq:
       - "2"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write/test_write
-    method: GET
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write/test_close_without_write
+    method: HEAD
   response:
-    body: HELLO!hello!
+    body: ""
     headers:
       Accept-Ranges:
       - bytes
       Content-Length:
-      - "12"
+      - "0"
       Content-Type:
       - binary/octet-stream
       Date:
-      - Wed, 13 Jun 2018 23:01:52 GMT
+      - Wed, 13 Jun 2018 23:01:53 GMT
       Etag:
-      - '"4d9b922e065c640c1e12d2c3efb0d012"'
+      - '"d41d8cd98f00b204e9800998ecf8427e"'
       Last-Modified:
-      - Wed, 13 Jun 2018 23:01:51 GMT
+      - Wed, 13 Jun 2018 23:01:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 8+HVAw5UWSosQhOLt0cwNGuAa27AQNisThxg9xK4ImS/5T0wonwRckzQJurW/w5gStiJ7dOA45Y=
+      - JIy0IBvqFLbI+gcyGskRQBiBBRXwr6yY5Q+kV1QSxXY9uJvnWSKxm3papkBt84D16pSbvjdALoU=
       X-Amz-Request-Id:
-      - 4655E630B71ABFBA
+      - 1A00AD05FC009AA8
     status: 200 OK
     code: 200
     duration: ""
@@ -118,92 +116,84 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180613T230151Z
+      - 20180613T230152Z
       X-Gocloud-Seq:
       - "3"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
-    method: GET
-  response:
-    body: |-
-      <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.test-write</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>test_write</Key><LastModified>2018-06-13T23:01:51.000Z</LastModified><ETag>&quot;4d9b922e065c640c1e12d2c3efb0d012&quot;</ETag><Size>12</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
-    headers:
-      Content-Type:
-      - application/xml
-      Date:
-      - Wed, 13 Jun 2018 23:01:52 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Bucket-Region:
-      - us-east-2
-      X-Amz-Id-2:
-      - EJIut/YT8Nx/tisxYwrafmieR8Wva3RIQAafT7JhkBiAdTN6pxu4HrnuHXX1oVnVfSspLYj+Vrc=
-      X-Amz-Request-Id:
-      - FED41BFA38BC2B91
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: <Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Object><Key>test_write</Key></Object></Delete>
-    form: {}
-    headers:
-      Content-Length:
-      - "103"
-      Content-Md5:
-      - 2R06tn4zpwzu3DoA2Y9AGA==
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
-      X-Amz-Content-Sha256:
-      - e0543540eab3107af9716a3dc4dd3ab5887233de73471d578f71b4ec629b795a
-      X-Amz-Date:
-      - 20180613T230151Z
-      X-Gocloud-Seq:
-      - "4"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write?delete=
-    method: POST
-  response:
-    body: |-
-      <?xml version="1.0" encoding="UTF-8"?>
-      <DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Deleted><Key>test_write</Key></Deleted></DeleteResult>
-    headers:
-      Content-Type:
-      - application/xml
-      Date:
-      - Wed, 13 Jun 2018 23:01:52 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - SG+O3BhLhrYupzTaf3MBBkuExj2KJefqnTjP9LMWuGKDxKTwLnLT7gOj4Fk3eD+NXeEEt7Bzqvk=
-      X-Amz-Request-Id:
-      - 9607736A82318776
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
-      X-Amz-Content-Sha256:
-      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-      X-Amz-Date:
-      - 20180613T230151Z
-      X-Gocloud-Seq:
-      - "5"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write/test_close_without_write
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Wed, 13 Jun 2018 23:01:52 GMT
+      - Wed, 13 Jun 2018 23:01:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 59PijO4nCDIyAOYnzjEwonPVMma+jrBltqWDnC98HfMTnjHU1krgkgYR3M0PrNDtdpIB2OE0+48=
+      - ycWr3y+iu8OVKJ7NohdCOMN0eKl05TPWoUaj/jEa8y5zZ5hKikh9e5KkunUMtln8mj1J4o0PKeI=
       X-Amz-Request-Id:
-      - 72A5ADA2390CB7DF
+      - 890FE2E694D18B95
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T230152Z
+      X-Gocloud-Seq:
+      - "4"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.test-close-without-write</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:53 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - NaQAd6ilhpfrmNIbYpgMlX95VIH6oqJBCL1vk2IYtceffSJjebDkwzZaAp43dD6sEZeeLKPBZZM=
+      X-Amz-Request-Id:
+      - 12E76D90A6463E33
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T230152Z
+      X-Gocloud-Seq:
+      - "5"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Wed, 13 Jun 2018 23:01:53 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 2dOs7s4iqagQsGTmN3GqJThe+Xn8RYpsKm5e1mBT3Ps31tgdXwpceJuQHMu0J10Zz62O2S6E4Ew=
+      X-Amz-Request-Id:
+      - 5ECB4578BE75A5B4
     status: 204 No Content
     code: 204
     duration: ""
@@ -216,10 +206,10 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180613T230152Z
+      - 20180613T230153Z
       X-Gocloud-Seq:
       - "6"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-write
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-close-without-write
     method: HEAD
   response:
     body: ""
@@ -227,13 +217,13 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 13 Jun 2018 23:01:51 GMT
+      - Wed, 13 Jun 2018 23:01:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 48ip44I96OWs3yAqWY15gl6hfujT//hZdnPOvbgJa10BUFrKXVXFvIY3niBTXM2GFSt8rM7Dp6Y=
+      - Bei6TDK8U8AeEoKdC5BdJO881ZfBzddtaGLm3fOQ+RV806EkJOA/92CSxFdPOBYqVo23BgocNzQ=
       X-Amz-Request-Id:
-      - 2DB24840EF73975A
+      - 4F505C6E2FB7C0A1
     status: 404 Not Found
     code: 404
     duration: ""
