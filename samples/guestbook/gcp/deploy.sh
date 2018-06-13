@@ -45,7 +45,7 @@ cleanup() {
   rm -rf "$tempdir"
 }
 trap cleanup EXIT
-image_name="gcr.io/$( echo "$project_id" | sed -e 's|:|/|g' )/guestbook" || exit 1
+image_name="gcr.io/${project_id//:/\/}/guestbook" || exit 1
 # TODO(light): Some values might need escaping.
 sed \
   -e "s|{{IMAGE}}|${image_name}|" \

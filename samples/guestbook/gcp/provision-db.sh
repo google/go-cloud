@@ -62,7 +62,7 @@ service_account_key_id="$( jq -r .private_key_id "$service_account_voldir/key.js
 cleanup2() {
   GCLOUD iam service-accounts keys delete \
     --iam-account="$service_account" \
-    "$service_accout_key_id"
+    "$service_account_key_id"
   cleanup1
 }
 trap cleanup2 EXIT
