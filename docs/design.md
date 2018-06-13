@@ -25,3 +25,13 @@ attempts to provide succinct rationales.
     can be implemented independently: if one method is mutually exclusive with
     another, it would be better to return a more complicated data type from one
     methodthan to have separate methods.
+
+-   Transient network errors should be handled by an interface's implementation
+    and not bubbled up as a distinguishible error through a generic interface.
+    Retry logic is best handled as low in the stack as possible to avoid
+    [cascading failure][]. APIs should try to surface "permanent" errors (e.g.
+    malformed request, bad permissions) where appropriate so that application
+    logic does not attempt to retry idempotent operations, but the
+    responsibility is largely on the library, not on the application.
+
+[cascading failure]: https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
