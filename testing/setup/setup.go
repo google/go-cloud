@@ -35,6 +35,7 @@ func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session
 		HTTPClient:  client,
 		Region:      aws.String(region),
 		Credentials: creds,
+		MaxRetries:  aws.Int(0),
 	})
 	if err != nil {
 		t.Fatal(err)
