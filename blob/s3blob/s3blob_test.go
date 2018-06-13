@@ -15,6 +15,7 @@
 package s3blob_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/testing/setup"
 )
@@ -341,34 +343,54 @@ func TestNewWriterObjectNaming(t *testing.T) {
 //}
 //}
 
-//func TestDelete(t *testing.T) {
-//ctx := context.Background()
-//object := "test_delete"
-//content := []byte("something obsolete")
-//if _, err := uploader.Upload(&s3manager.UploadInput{
-//Bucket: aws.String(testBucket),
-//Key:    aws.String(object),
-//Body:   bytes.NewReader(content),
-//}); err != nil {
-//t.Fatalf("error uploading test object: %v", err)
-//}
+func TestDelete(t *testing.T) {
+	sess, done := setup.NewAWSSession(t, region, "test-naming")
+	defer done()
+	svc := s3.New(sess)
 
-//if err := s3Bucket.Delete(ctx, object); err != nil {
-//t.Errorf("error occurs when deleting a non-existing object: %v", err)
-//}
-//req, _ := s3Client.HeadObjectRequest(&s3.HeadObjectInput{
-//Bucket: aws.String(testBucket),
-//Key:    aws.String(object),
-//})
-//if err := req.Send(); err == nil {
-//t.Errorf("object deleted, got err %v, want NotFound error", err)
-//}
+	bkt := fmt.Sprintf("go-x-cloud.%s", "test-delete")
+	_, err := svc.CreateBucket(&s3.CreateBucketInput{
+		Bucket: &bkt,
+		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = forceDeleteBucket(svc, bkt)
+	}()
 
-//// Delete non-existing object, no-op
-//if err := s3Bucket.Delete(ctx, object); err != nil {
-//t.Errorf("error occurs when deleting a non-existing object: %v", err)
-//}
-//}
+	ctx := context.Background()
+	obj := "test_delete"
+	uploader := s3manager.NewUploader(sess)
+	if _, err := uploader.Upload(&s3manager.UploadInput{
+		Bucket: aws.String(bkt),
+		Key:    aws.String(obj),
+		Body:   bytes.NewReader([]byte("something obsolete")),
+	}); err != nil {
+		t.Fatalf("error uploading test object: %v", err)
+	}
+
+	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Delete(ctx, obj); err != nil {
+		t.Errorf("error occurs when deleting a non-existing object: %v", err)
+	}
+	req, _ := svc.HeadObjectRequest(&s3.HeadObjectInput{
+		Bucket: aws.String(bkt),
+		Key:    aws.String(obj),
+	})
+	if err := req.Send(); err == nil {
+		t.Errorf("object deleted, got err %v, want NotFound error", err)
+	}
+
+	// Delete non-existing object, no-op
+	if err := b.Delete(ctx, obj); err != nil {
+		t.Errorf("error occurs when deleting a non-existing object: %v", err)
+	}
+}
 
 func forceDeleteBucket(svc *s3.S3, bucket string) error {
 	resp, err := svc.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
