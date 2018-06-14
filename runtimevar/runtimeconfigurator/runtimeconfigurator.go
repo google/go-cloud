@@ -45,9 +45,9 @@ var Set = wire.NewSet(
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
 	endPoint = "runtimeconfig.googleapis.com:443"
-	// defaultWaitTimeout is the default value for WatchOptions.WaitTime if not set.
+	// defaultWait is the default value for WatchOptions.WaitTime if not set.
 	// Change the docstring for NewVariable if this time is modified.
-	defaultWaitTimeout = 10 * time.Minute
+	defaultWait = 30 * time.Second
 )
 
 // Dial opens a gRPC connection to the Runtime Configurator API.
@@ -75,7 +75,7 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-// If WaitTime is not set the poller will time out after 10 minutes.
+// If WaitTime is not set the poller will check for updates to the variable every 30 seconds.
 func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 
 	if opts == nil {
@@ -84,7 +84,7 @@ func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *ru
 	waitTime := opts.WaitTime
 	switch {
 	case waitTime == 0:
-		waitTime = defaultWaitTimeout
+		waitTime = defaultWait
 	case waitTime < 0:
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
@@ -118,12 +118,12 @@ func (r ResourceName) String() string {
 
 // WatchOptions provide optional configurations to the Watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of making RPC and checking for updates by the Watch method.
+	// WaitTime controls the frequency of RPC calls and checking for updates by the Watch method.
 	// A Watcher keeps track of the last time it made an RPC, when Watch is called, it waits for
 	// configured WaitTime from the last RPC before making another RPC. The smaller the value, the
 	// higher the frequency of making RPCs, which also means faster rate of hitting the API quota.
 	//
-	// If this option is not set or set to 0, it uses defaultWaitTimeout value.
+	// If this option is not set or set to 0, it uses defaultWait value.
 	WaitTime time.Duration
 }
 
@@ -144,7 +144,7 @@ func (w *watcher) Close() error {
 	return nil
 }
 
-// Watch blocks until the file changes, the Context's Done channel closes or an error occurs. It
+// Watch blocks until the variable changes, the Context's Done channel closes or an error occurs. It
 // implements the driver.Watcher.Watch method.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 	return internal.Pinger(ctx, w.ping, w.waitTime)
