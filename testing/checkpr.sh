@@ -22,14 +22,28 @@ set -o pipefail
 
 testflags=( "$@" )
 module="github.com/google/go-cloud"
+changed=()
+
+has_files() {
+  printf "%s\n" "${changed[@]}" | grep -q "$1"
+}
+
+if [[ ! -z "$TRAVIS_BRANCH" && ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  # Place changed files into changed array.
+  mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")" || exit 1
+  mapfile -t changed < <( git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- ) || exit 1
+
+  # Only run tests if Go files were modified.
+  if ! has_files '\.go$\|^go\.mod$\|/testdata/'; then
+    echo "No Go files modified. Skipping tests." 1>&2
+    exit 0
+  fi
+fi
 
 # Run the non-Wire tests.
 vgo test "${testflags[@]}" $(vgo list "$module/..." | grep -F -v "$module/wire") || exit 1
 
 # Run Wire tests if the branch made changes under wire/.
-if [[ ! -z "$TRAVIS_BRANCH" && ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
-  mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")" || exit 1
-  if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | grep -q '^wire/'; then
-    vgo test "${testflags[@]}" "$module/wire/..." || exit 1
-  fi
+if has_files '^wire/'; then
+  vgo test "${testflags[@]}" "$module/wire/..." || exit 1
 fi
