@@ -18,11 +18,13 @@ produce a value. These functions are ordinary Go code.
 ```go
 package foobarbaz
 
-type Foo int
+type Foo struct {
+	X int
+}
 
 // ProvideFoo returns a Foo.
 func ProvideFoo() Foo {
-	return 42
+	return Foo{X: 42}
 }
 ```
 
@@ -33,11 +35,13 @@ package foobarbaz
 
 // ...
 
-type Bar int
+type Bar struct {
+	X int
+}
 
 // ProvideBar returns a Bar: a negative Foo.
 func ProvideBar(foo Foo) Bar {
-	return Bar(-foo)
+	return Bar{X: -foo.X}
 }
 ```
 
@@ -53,14 +57,16 @@ import (
 
 // ...
 
-type Baz int
+type Baz struct {
+	X int
+}
 
 // ProvideBaz returns a value if Bar is not zero.
 func ProvideBaz(ctx context.Context, bar Bar) (Baz, error) {
 	if bar == 0 {
 		return 0, errors.New("cannot provide baz when bar is zero")
 	}
-	return Baz(bar), nil
+	return Baz{X: bar.X}, nil
 }
 ```
 
@@ -123,7 +129,7 @@ import (
 
 func initializeApp(ctx context.Context) (foobarbaz.Baz, error) {
 	wire.Build(foobarbaz.MegaSet)
-	return 0, nil
+	return foobarbaz.Baz{}, nil
 }
 ```
 
@@ -313,11 +319,13 @@ Instead of having injectors depend on a throwaway provider function, you can
 add a value expression to a provider set.
 
 ```go
-type Foo int
+type Foo struct {
+	X int
+}
 
 func injectFoo() Foo {
-	wire.Build(wire.Value(Foo(42)))
-	return 0
+	wire.Build(wire.Value(Foo{X: 42}))
+	return Foo{}
 }
 ```
 
@@ -325,7 +333,7 @@ The generated injector would look like this:
 
 ```go
 func injectFoo() Foo {
-	foo := Foo(42)
+	foo := Foo{X: 42}
 	return foo
 }
 ```
@@ -361,8 +369,9 @@ of the provider's inputs and must have the signature `func()`.
 
 ### Alternate Injector Syntax
 
-If you grow weary of writing `return nil, nil` at the end of your injector
-function declaration, you can instead write it more concisely with a panic:
+If you grow weary of writing `return foobarbaz.Foo{}, nil` at the end of your
+injector function declaration, you can instead write it more concisely with a
+`panic`:
 
 ```go
 func injectFoo() Foo {
