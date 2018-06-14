@@ -103,7 +103,7 @@ func (w *watcher) Close() error {
 
 // ping hits AWS to read the latest parameter. If nothing had changed,
 // the Variable and error will be nil.
-func (w *watcher) ping(_ context.Context) (*driver.Variable, error) {
+func (w *watcher) ping() (*driver.Variable, error) {
 	p, err := readParam(w.sess, w.name, w.lastVersion)
 	if err != nil {
 		return nil, err
