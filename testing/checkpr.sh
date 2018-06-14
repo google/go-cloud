@@ -62,6 +62,7 @@ mapfile -t lintdirs < <( find . -type d \
 golangci-lint run \
   --new-from-rev="$mergebase" \
   --print-welcome=false \
-  --disable=varcheck \
+  --disable=deadcode \
   --disable=typecheck \
+  --disable=varcheck \
   "${lintdirs[@]}" || exit 1
