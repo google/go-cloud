@@ -30,21 +30,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const region = "us-east-2"
-
-//func TestMain(m *testing.M) {
-//sess, err := setup.NewAWSSession(t, region, "testmain")
-//if s3Bucket, err = s3blob.NewBucket(ctx, sess, testBucket); err != nil {
-//log.Fatalf("error initializing S3 bucket: %v", err)
-//}
-
-//// Setup for using AWS SDK directly for verification.
-//s3Client = s3.New(sess)
-//uploader = s3manager.NewUploader(sess)
-//code := m.Run()
-//recDone()
-//os.Exit(code)
-//}
+const (
+	bucketPrefix = "go-x-cloud"
+	region       = "us-east-2"
+)
 
 // TestNewBucketNaming tests if buckets can be created with incorrect characters.
 // Note that this function doesn't hit AWS, so does not require the recorder.
@@ -89,7 +78,7 @@ func TestNewBucketNaming(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			bkt := fmt.Sprintf("go-x-cloud.%s", tc.bucketName)
+			bkt := fmt.Sprintf("%s.%s", bucketPrefix, tc.bucketName)
 			_, err := svc.CreateBucket(&s3.CreateBucketInput{
 				Bucket: &bkt,
 				CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -150,7 +139,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-obj-naming")
+	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-obj-naming")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -242,7 +231,7 @@ func TestRead(t *testing.T) {
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-read")
+	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-read")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -295,7 +284,7 @@ func TestWrite(t *testing.T) {
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-write")
+	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-write")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -322,7 +311,7 @@ func TestWrite(t *testing.T) {
 	for _, p := range [][]byte{[]byte("HELLO!"), []byte("hello!")} {
 		n, err := w.Write(p)
 		if n != len(p) || err != nil {
-			t.Errorf("writing obj: %d written, got error %v", n, err)
+			t.Errorf("writing object: %d written, got error %v", n, err)
 		}
 		written += int64(n)
 	}
@@ -354,7 +343,7 @@ func TestCloseWithoutWrite(t *testing.T) {
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-close-without-write")
+	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-close-without-write")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
@@ -390,7 +379,7 @@ func TestCloseWithoutWrite(t *testing.T) {
 	}
 
 	if err := b.Delete(ctx, obj); err != nil {
-		t.Errorf("error deleting obj: %v", err)
+		t.Errorf("error deleting object: %v", err)
 	}
 }
 
@@ -399,7 +388,7 @@ func TestDelete(t *testing.T) {
 	defer done()
 	svc := s3.New(sess)
 
-	bkt := fmt.Sprintf("go-x-cloud.%s", "test-delete")
+	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-delete")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},

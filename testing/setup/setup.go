@@ -11,6 +11,11 @@ import (
 	"github.com/google/go-cloud/testing/replay"
 )
 
+// NewAWSSession creates a new session for testing against AWS.
+// If the test is short, the session reads a replay file and runs the test as a replay,
+// which never makes an outgoing HTTP call and uses fake credentials.
+// If the test is not short, the test will call out to AWS, and the results recorded
+// as a new replay file.
 func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session, done func()) {
 	mode := recorder.ModeRecording
 	if testing.Short() {
