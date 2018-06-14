@@ -1,10 +1,9 @@
 ---
 version: 1
-mu: {}
 interactions:
 - request:
-    body: "{\"Name\":\"test-good-param\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"Jolly
-      snowman to test Unicode handling: \u2603\uFE0F\"}"
+    body: '{"Name":"test-good-param","Overwrite":true,"Type":"String","Value":"Jolly
+      snowman to test Unicode handling: ☃️"}'
     form: {}
     headers:
       Content-Length:
@@ -12,9 +11,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182635Z
+      - 20180614T203754Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -27,7 +26,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:35 GMT
+      - Thu, 14 Jun 2018 20:37:54 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -40,9 +39,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182636Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
       X-Gocloud-Seq:
@@ -50,13 +49,13 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: "{\"Parameter\":{\"Name\":\"test-good-param\",\"Type\":\"String\",\"Value\":\"Jolly
-      snowman to test Unicode handling: \u2603\uFE0F\",\"Version\":1}}"
+    body: '{"Parameter":{"Name":"test-good-param","Type":"String","Value":"Jolly snowman
+      to test Unicode handling: ☃️","Version":1}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:35 GMT
+      - Thu, 14 Jun 2018 20:37:54 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -69,9 +68,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182636Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
@@ -79,12 +78,12 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.526495196443E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-param","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.529008675032E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-param","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:35 GMT
+      - Thu, 14 Jun 2018 20:37:54 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -97,9 +96,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182636Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -112,12 +111,12 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:35 GMT
+      - Thu, 14 Jun 2018 20:37:55 GMT
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: "{\"Name\":\"test-bad-param-with-snowman-\u2603\uFE0F\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"snowman\"}"
+    body: '{"Name":"test-bad-param-with-snowman-☃️","Overwrite":true,"Type":"String","Value":"snowman"}'
     form: {}
     headers:
       Content-Length:
@@ -125,9 +124,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182636Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -143,7 +142,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:36 GMT
+      - Thu, 14 Jun 2018 20:37:55 GMT
     status: 400 Bad Request
     code: 400
     duration: ""
@@ -161,9 +160,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182636Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -179,7 +178,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:37 GMT
+      - Thu, 14 Jun 2018 20:37:55 GMT
     status: 400 Bad Request
     code: 400
     duration: ""
@@ -247,9 +246,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182637Z
+      - 20180614T203755Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -262,7 +261,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:41 GMT
+      - Thu, 14 Jun 2018 20:37:55 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -275,43 +274,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182641Z
+      - 20180614T203756Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
       X-Gocloud-Seq:
       - "7"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: ""
-    headers:
-      Content-Length:
-      - "0"
-      Date:
-      - Wed, 16 May 18 18:26:44 GMT
-      X-Amz-Request-Id:
-      - 1D72E2839278020F
-    status: 503 Service Unavailable
-    code: 503
-    duration: ""
-- request:
-    body: '{"Name":"test-good-size-value"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "31"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
-      X-Amz-Date:
-      - 20180516T182645Z
-      X-Amz-Target:
-      - AmazonSSM.GetParameter
-      X-Gocloud-Seq:
-      - "8"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -375,7 +344,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:45 GMT
+      - Thu, 14 Jun 2018 20:37:56 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -388,22 +357,22 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182646Z
+      - 20180614T203756Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
-      - "9"
+      - "8"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.526495201476E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.529008676248E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:46 GMT
+      - Thu, 14 Jun 2018 20:37:56 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -416,13 +385,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182646Z
+      - 20180614T203756Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
-      - "10"
+      - "9"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -431,7 +400,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:46 GMT
+      - Thu, 14 Jun 2018 20:37:56 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -2101,13 +2070,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.41 (go1.10.2; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180516T182646Z
+      - 20180614T203756Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
-      - "11"
+      - "10"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -3775,7 +3744,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 16 May 2018 18:26:46 GMT
+      - Thu, 14 Jun 2018 20:37:56 GMT
     status: 400 Bad Request
     code: 400
     duration: ""
