@@ -102,9 +102,10 @@ calls providers in dependency order. With Wire, you write the injector's
 signature, then Wire generates the function's body.
 
 An injector is declared by writing a function declaration whose body is a call
-to `panic()` with a call to `wire.Build` as its argument. Let's say that the
-above providers were defined in a package called `example.com/foobarbaz`. The
-following would declare an injector to obtain a `Baz`:
+to `wire.Build`. The return values don't matter, as they will be ignored in the
+generated code. Let's say that the above providers were defined in a package
+called `example.com/foobarbaz`. The following would declare an injector to
+obtain a `Baz`:
 
 ```go
 // +build wireinject
@@ -121,7 +122,8 @@ import (
 )
 
 func initializeApp(ctx context.Context) (foobarbaz.Baz, error) {
-	panic(wire.Build(foobarbaz.MegaSet))
+	wire.Build(foobarbaz.MegaSet)
+	return 0, nil
 }
 ```
 
@@ -314,7 +316,8 @@ add a value expression to a provider set.
 type Foo int
 
 func injectFoo() Foo {
-	panic(wire.Build(wire.Value(Foo(42))))
+	wire.Build(wire.Value(Foo(42)))
+	return 0
 }
 ```
 
@@ -355,3 +358,14 @@ func provideFile(log Logger, path Path) (*os.File, func(), error) {
 
 A cleanup function is guaranteed to be called before the cleanup function of any
 of the provider's inputs and must have the signature `func()`.
+
+### Alternate Injector Syntax
+
+If you grow weary of writing `return nil, nil` at the end of your injector
+function declaration, you can instead write it more concisely with a panic:
+
+```go
+func injectFoo() Foo {
+	panic(wire.Build(/* ... */))
+}
+```
