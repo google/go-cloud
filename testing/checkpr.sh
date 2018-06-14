@@ -64,5 +64,6 @@ golangci-lint run \
   --print-welcome=false \
   --disable=deadcode \
   --disable=typecheck \
+  --disable=unused \
   --disable=varcheck \
   "${lintdirs[@]}" || exit 1
