@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/internal"
 	"github.com/google/go-cloud/wire"
 	"google.golang.org/api/option"
 	transport "google.golang.org/api/transport/grpc"
@@ -146,7 +147,7 @@ func (w *watcher) Close() error {
 // Watch blocks until the file changes, the Context's Done channel closes or an error occurs. It
 // implements the driver.Watcher.Watch method.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
-	return runtimevar.Pinger(ctx, w.ping, w.waitTime)
+	return internal.Pinger(ctx, w.ping, w.waitTime)
 }
 
 func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {

@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -92,7 +93,7 @@ type watcher struct {
 // The function will block until either the parameter changes, or the context
 // is canceled.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
-	return runtimevar.Pinger(ctx, w.ping, w.waitTime)
+	return internal.Pinger(ctx, w.ping, w.waitTime)
 }
 
 // Close is a no-op. Cancel the context passed to Watch if watching should end.
