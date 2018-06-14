@@ -447,6 +447,4 @@ func forceDeleteBucket(svc *s3.S3, bucket string) {
 	_, _ = svc.DeleteBucket(&s3.DeleteBucketInput{Bucket: &bucket})
 
 	_ = svc.WaitUntilBucketNotExists(&s3.HeadBucketInput{Bucket: &bucket})
-
-	return
 }
