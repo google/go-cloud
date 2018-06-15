@@ -108,7 +108,8 @@ calls providers in dependency order. With Wire, you write the injector's
 signature, then Wire generates the function's body.
 
 An injector is declared by writing a function declaration whose body is a call
-to `wire.Build`. The return values don't matter, as they will be ignored in the
+to `wire.Build`. The return values don't matter as long as they are of the correct
+type. The values themselves will be ignored in the
 generated code. Let's say that the above providers were defined in a package
 called `example.com/foobarbaz`. The following would declare an injector to
 obtain a `Baz`:
