@@ -99,7 +99,7 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 				return nil, fmt.Errorf("input of %s conflicts with value at %s",
 					types.TypeString(g, nil), fset.Position(pv.Value().Pos))
 			default:
-				panic("unreachable")
+				panic("unknown return value from ProviderSet.For")
 			}
 		}
 		index.Set(g, i)
@@ -185,7 +185,7 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 				valueTypeInfo: v.info,
 			})
 		default:
-			panic("unreachable")
+			panic("unknown return value from ProviderSet.For")
 		}
 		return nil
 	}
