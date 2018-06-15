@@ -14,15 +14,12 @@
 
 module github.com/google/go-cloud
 
-replace (
-	cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
-)
+replace cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
 
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
-	github.com/aws/aws-sdk-go-v2 v0.0.0-20180526011417-ff1a530c3150
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/dnaeon/go-vcr v0.0.0-20180504081357-f8a7e8b9c630
@@ -30,6 +27,8 @@ require (
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.2.0
+	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb
+	github.com/gorilla/context v1.1.1
 	github.com/gorilla/mux v1.6.1
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7
 	github.com/smartystreets/assertions v0.0.0-20180301161246-7678a5452ebe
