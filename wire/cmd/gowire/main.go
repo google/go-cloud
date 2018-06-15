@@ -234,15 +234,15 @@ func gather(info *wire.Info, key wire.ProviderSetID) (_ []outGroup, imports map[
 				}
 				for i := range groups {
 					if sameTypeKeys(groups[i].inputs, in) {
-						groups[i].outputs.Set(p.Out, p)
-						inputVisited.Set(p.Out, i)
+						groups[i].outputs.Set(curr, p)
+						inputVisited.Set(curr, i)
 						continue dfs
 					}
 				}
 				out := new(typeutil.Map)
 				out.SetHasher(hash)
-				out.Set(p.Out, p)
-				inputVisited.Set(p.Out, len(groups))
+				out.Set(curr, p)
+				inputVisited.Set(curr, len(groups))
 				groups = append(groups, outGroup{
 					inputs:  in,
 					outputs: out,
@@ -251,8 +251,8 @@ func gather(info *wire.Info, key wire.ProviderSetID) (_ []outGroup, imports map[
 				v := pv.Value()
 				for i := range groups {
 					if groups[i].inputs.Len() == 0 {
-						groups[i].outputs.Set(v.Out, v)
-						inputVisited.Set(v.Out, i)
+						groups[i].outputs.Set(curr, v)
+						inputVisited.Set(curr, i)
 						continue dfs
 					}
 				}
@@ -260,8 +260,8 @@ func gather(info *wire.Info, key wire.ProviderSetID) (_ []outGroup, imports map[
 				in.SetHasher(hash)
 				out := new(typeutil.Map)
 				out.SetHasher(hash)
-				out.Set(v.Out, v)
-				inputVisited.Set(v.Out, len(groups))
+				out.Set(curr, v)
+				inputVisited.Set(curr, len(groups))
 				groups = append(groups, outGroup{
 					inputs:  in,
 					outputs: out,
