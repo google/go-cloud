@@ -20,13 +20,13 @@ You will need to install the following software to run this sample:
 
 ## Building
 
-`gowire` is not compatible with `vgo` yet, so you must run `vgo vendor`
+`gowire` is not compatible with `vgo` yet, so you must run `vgo mod -vendor`
 first to download all the dependencies in `go.mod`. Running `gowire`
 generates the Wire code.
 
 ```shell
 # First time, for gowire.
-$ vgo vendor
+$ vgo mod -vendor
 
 # Now build:
 $ gowire && vgo build
