@@ -11,7 +11,7 @@ initialization.
 
 ## Basics
 
-Wire has two basic concepts: providers and injectors.
+Wire has two core concepts: providers and injectors.
 
 ### Defining Providers
 
@@ -30,6 +30,9 @@ func ProvideFoo() Foo {
 	return Foo{X: 42}
 }
 ```
+
+Provider functions must be exported in order to be used from other packages,
+just like ordinary functions.
 
 Providers can specify dependencies with parameters:
 
@@ -73,8 +76,9 @@ func ProvideBaz(ctx context.Context, bar Bar) (Baz, error) {
 }
 ```
 
-Providers can be grouped into **provider sets**.  To add these providers to a
-new set called `SuperSet`, use the `wire.NewSet` function:
+Providers can be grouped into **provider sets**. This is useful if several
+providers will frequently be used together. To add these providers to a new set
+called `SuperSet`, use the `wire.NewSet` function:
 
 ```go
 package foobarbaz
@@ -344,27 +348,34 @@ func injectFoo() Foo {
 
 ## Best Practices
 
--   If you need to inject a common type like `string`, create a new string type
-    to avoid conflicts with other providers. For example:
+The following are practices we recommend for using Wire. This list will grow
+over time.
 
-    ```go
-    type MySQLConnectionString string
-    ```
+### Distinguishing Types
 
--   A provider function that might need to include more dependencies in the future can
-    pair the function with an options struct.
+If you need to inject a common type like `string`, create a new string type
+to avoid conflicts with other providers. For example:
 
-    ```go
-    type Options struct {
-    	// Messages is the set of recommended greetings.
-    	Messages []Message
-    	// Writer is the location to send greetings. nil goes to stdout.
-    	Writer io.Writer
-    }
+```go
+type MySQLConnectionString string
+```
 
-    func NewGreeter(ctx context.Context, opts *Options) (*Greeter, error) {
-    	// ...
-    }
+### Options Structs
 
-    var GreeterSet = wire.NewSet(Options{}, NewGreeter)
-    ```
+A provider function that includes many dependencies can pair the function with
+an options struct.
+
+```go
+type Options struct {
+	// Messages is the set of recommended greetings.
+	Messages []Message
+	// Writer is the location to send greetings. nil goes to stdout.
+	Writer io.Writer
+}
+
+func NewGreeter(ctx context.Context, opts *Options) (*Greeter, error) {
+	// ...
+}
+
+var GreeterSet = wire.NewSet(Options{}, NewGreeter)
+```
