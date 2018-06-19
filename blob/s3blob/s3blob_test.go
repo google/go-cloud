@@ -281,6 +281,27 @@ func TestRead(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
+	tests := []struct {
+		name, obj       string
+		want            []byte
+		wantContentType string
+		wantSize        int64
+	}{
+		{
+			name:            "write HTML",
+			obj:             "write_html",
+			want:            []byte("Hello, HTML!"),
+			wantContentType: "text/html",
+			wantSize:        12,
+		},
+		{
+			name:            "write JSON",
+			obj:             "write_json",
+			want:            []byte("Hello, JSON!"),
+			wantContentType: "application/json",
+			wantSize:        12,
+		},
+	}
 	sess, done := setup.NewAWSSession(t, region, "test-write")
 	defer done()
 	svc := s3.New(sess)
@@ -302,46 +323,42 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantContentType := "text/html"
-	opts := &blob.WriterOptions{
-		ObjectAttrs: blob.ObjectAttrs{ContentType: wantContentType},
-	}
-	obj := "test_write"
-	w, err := b.NewWriter(ctx, obj, opts)
-	if err != nil {
-		t.Errorf("error creating writer: %v", err)
-	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := &blob.WriterOptions{
+				ObjectAttrs: blob.ObjectAttrs{ContentType: tc.wantContentType},
+			}
+			w, err := b.NewWriter(ctx, tc.obj, opts)
+			if err != nil {
+				t.Errorf("error creating writer: %v", err)
+			}
 
-	var written int64 = 0
-	for _, p := range [][]byte{[]byte("HELLO!"), []byte("hello!")} {
-		n, err := w.Write(p)
-		if n != len(p) || err != nil {
-			t.Errorf("writing object: %d written, got error %v", n, err)
-		}
-		written += int64(n)
-	}
-	if err := w.Close(); err != nil {
-		t.Fatalf("error closing writer: %v", err)
-	}
-	req, resp := svc.GetObjectRequest(&s3.GetObjectInput{
-		Bucket: aws.String(bkt),
-		Key:    aws.String(obj),
-	})
-	if err := req.Send(); err != nil {
-		t.Fatalf("error getting object: %v", err)
-	}
-	body := resp.Body
-	wantSize := 12
-	got := make([]byte, wantSize)
-	n, err := body.Read(got)
-	if err != nil && err != io.EOF {
-		t.Errorf("reading object: %d read, got error %v", n, err)
-	}
-	defer body.Close()
-	want := []byte("HELLO!hello!")
-	if !cmp.Equal(got, want) || n != wantSize || *resp.ContentType != wantContentType {
-		t.Errorf("got %s, size %d, content-type %s, want %s, size %d, content-type %s",
-			got, n, *resp.ContentType, want, wantSize, wantContentType)
+			n, err := w.Write(tc.want)
+			if n != len(tc.want) || err != nil {
+				t.Errorf("writing object: %d written, got error %v", n, err)
+			}
+			if err := w.Close(); err != nil {
+				t.Fatalf("error closing writer: %v", err)
+			}
+			req, resp := svc.GetObjectRequest(&s3.GetObjectInput{
+				Bucket: aws.String(bkt),
+				Key:    aws.String(tc.obj),
+			})
+			if err := req.Send(); err != nil {
+				t.Fatalf("error getting object: %v", err)
+			}
+			body := resp.Body
+			got := make([]byte, tc.wantSize)
+			n, err = body.Read(got)
+			if err != nil && err != io.EOF {
+				t.Errorf("reading object: %d read, got error %v", n, err)
+			}
+			defer body.Close()
+			if !cmp.Equal(got, tc.want) || int64(n) != tc.wantSize || *resp.ContentType != tc.wantContentType {
+				t.Errorf("got %s, size %d, content-type %s, want %s, size %d, content-type %s",
+					got, n, *resp.ContentType, tc.want, tc.wantSize, tc.wantContentType)
+			}
+		})
 	}
 }
 
