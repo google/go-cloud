@@ -16,7 +16,6 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or S3)
 
 and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud providers. 
 	
-
 ## Project status
 Go X Cloud is currently in __pre-alpha__. API breakage may occur at any time, import paths may change, compiles may break. We encourage contributions to help evolve Go X Cloud to meet your needs, but under no circumstances should it be deployed to any production environments. Sadness will ensue :(
 
@@ -34,6 +33,12 @@ Go X Cloud builds at the tip release of Go, previous Go versions may compile but
 ## Example application
 An example application which runs a guestbook app (just like it's [1999!](https://www.oocities.org/)) on Google Cloud Platform or Amazon Web Services can be found in [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook). The instructions take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the cloud resources needed for the application.
 
+## Current Features
 
-[travis]: https://travis-ci.com/google/go-cloud
-[godoc]: http://godoc.org/github.com/google/go-cloud
+Go X Cloud provides generic APIs for:
+
+-   Unstructured binary (blob) storage
+-   Variables that change at runtime (configuration)
+-   Connecting to MySQL databases
+-   Server startup and diagnostics: request logging, tracing, and health
+    checking
