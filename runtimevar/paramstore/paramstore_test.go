@@ -20,18 +20,14 @@ package paramstore
 import (
 	"context"
 	"io/ioutil"
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/testing/replay"
+	"github.com/google/go-cloud/testing/setup"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -103,7 +99,7 @@ func TestWriteReadDelete(t *testing.T) {
 		},
 	}
 
-	sess, done := newSession(t, "write_read_delete")
+	sess, done := setup.NewAWSSession(t, region, "write_read_delete")
 	defer done()
 
 	for _, tc := range tests {
@@ -169,7 +165,7 @@ func TestInitialWatch(t *testing.T) {
 		},
 	}
 
-	sess, done := newSession(t, "watch_initial")
+	sess, done := setup.NewAWSSession(t, region, "watch_initial")
 	defer done()
 
 	for _, tc := range tests {
@@ -223,7 +219,7 @@ func TestWatchObservesChange(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sess, done := newSession(t, "watch_change")
+			sess, done := setup.NewAWSSession(t, region, "watch_change")
 			defer done()
 
 			if _, err := writeParam(sess, tc.param, tc.firstValue); err != nil {
@@ -288,7 +284,7 @@ func TestJSONDecode(t *testing.T) {
 		},
 	}
 
-	sess, done := newSession(t, "decoder")
+	sess, done := setup.NewAWSSession(t, region, "decoder")
 	defer done()
 
 	for _, tc := range tests {
@@ -319,34 +315,6 @@ func TestJSONDecode(t *testing.T) {
 			}
 		})
 	}
-}
-
-func newSession(t *testing.T, filename string) (sess *session.Session, done func()) {
-	mode := recorder.ModeRecording
-	if testing.Short() {
-		mode = recorder.ModeReplaying
-	}
-	r, done, err := replay.NewAWSRecorder(t.Logf, mode, filename)
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
-	client := &http.Client{
-		Transport: r,
-	}
-
-	// Provide fake creds if running in replay mode.
-	var creds *credentials.Credentials
-	if testing.Short() {
-		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
-	}
-
-	sess, err = session.NewSession(aws.NewConfig().WithHTTPClient(client).WithRegion(region).WithCredentials(creds))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return sess, done
 }
 
 func writeParam(p client.ConfigProvider, name, value string) (int64, error) {

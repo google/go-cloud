@@ -1,0 +1,381 @@
+---
+version: 1
+interactions:
+- request:
+    body: <CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LocationConstraint>us-east-2</LocationConstraint></CreateBucketConfiguration>
+    form: {}
+    headers:
+      Content-Length:
+      - "153"
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
+      X-Amz-Date:
+      - 20180613T230146Z
+      X-Gocloud-Seq:
+      - "0"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 23:01:47 GMT
+      Location:
+      - http://go-x-cloud.test-obj-naming.s3.amazonaws.com/
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 9zliMsLz87TWzJb/F0JUAGuIvpcnhoQgiiqUt7V8brHPKyPGcaUopyTxz1sZlqV5bpW+I1S4zX8=
+      X-Amz-Request-Id:
+      - 1D25C5DA6966039D
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230146Z
+      X-Gocloud-Seq:
+      - "1"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/object-name
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 23:01:47 GMT
+      Etag:
+      - '"acbd18db4cc2f85cedef654fccc4a4d8"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - II9mcow3Md9jJFLZYQrtx8YZA8uk9zOaJln/CqwX71EC8WGXV1245rzu7GM9KDwICWH/U2YsnrQ=
+      X-Amz-Request-Id:
+      - 76A7E0889D01811A
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230146Z
+      X-Gocloud-Seq:
+      - "2"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/%E6%96%87%E4%BB%B6%E5%90%8D
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 23:01:47 GMT
+      Etag:
+      - '"acbd18db4cc2f85cedef654fccc4a4d8"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - tOfMTp9KUUvGfXvB2cBQHBguMqS24cGFiROwezOiVqEaCJ8rWbahJ4ZYprzsdpN5EFIjNvkbbWA=
+      X-Amz-Request-Id:
+      - D848AB5EC7E84858
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230146Z
+      X-Gocloud-Seq:
+      - "3"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/%F4%90%80%80
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>InvalidURI</Code><Message>Couldn't parse the specified URI.</Message><URI>/go-x-cloud.test-obj-naming/%F4%90%80%80</URI><RequestId>9FECF187C17FB5E9</RequestId><HostId>jkG0b6ewjFsoGvVikl3ajwHqEcbVX4BBleJDM4up0XKzpSDvs+WQM3rg+jfH0a+HRWRrEviD3tk=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:46 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - jkG0b6ewjFsoGvVikl3ajwHqEcbVX4BBleJDM4up0XKzpSDvs+WQM3rg+jfH0a+HRWRrEviD3tk=
+      X-Amz-Request-Id:
+      - 9FECF187C17FB5E9
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230147Z
+      X-Gocloud-Seq:
+      - "4"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Wed, 13 Jun 2018 23:01:48 GMT
+      Etag:
+      - '"acbd18db4cc2f85cedef654fccc4a4d8"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 4VkK6nzSMdv929gpwijeWWPIDvGVBFXpLYLtQ3ZknL34SBOAcP9oK3l38ao2uGHj0DHNp663dwQ=
+      X-Amz-Request-Id:
+      - 5F796D43FAC85431
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230147Z
+      X-Gocloud-Seq:
+      - "5"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>KeyTooLongError</Code><Message>Your key is too long</Message><Size>1025</Size><MaxSizeAllowed>1024</MaxSizeAllowed><RequestId>91FE8124BAC9CE73</RequestId><HostId>Q7RCivh6Trpbq9NwA9aPkkidQqeR48RuP8UHxSTFBNVghoBiV1PCNWbtA4NMkNnSc6TR4KKCLAM=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:46 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Q7RCivh6Trpbq9NwA9aPkkidQqeR48RuP8UHxSTFBNVghoBiV1PCNWbtA4NMkNnSc6TR4KKCLAM=
+      X-Amz-Request-Id:
+      - 91FE8124BAC9CE73
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180613T230147Z
+      X-Gocloud-Seq:
+      - "6"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming/%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA%E2%98%BA
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>KeyTooLongError</Code><Message>Your key is too long</Message><Size>1026</Size><MaxSizeAllowed>1024</MaxSizeAllowed><RequestId>67F99B7CCD0B6ABB</RequestId><HostId>nIuNJQRSa/sPl3uOVaAdZfMWZquJlRfb1TuWDBeQCdPttRcL4EGWT8SN3rwHPTcU4Yc0SGPIUos=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:47 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - nIuNJQRSa/sPl3uOVaAdZfMWZquJlRfb1TuWDBeQCdPttRcL4EGWT8SN3rwHPTcU4Yc0SGPIUos=
+      X-Amz-Request-Id:
+      - 67F99B7CCD0B6ABB
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T230147Z
+      X-Gocloud-Seq:
+      - "7"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.test-obj-naming</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</Key><LastModified>2018-06-13T23:01:48.000Z</LastModified><ETag>&quot;acbd18db4cc2f85cedef654fccc4a4d8&quot;</ETag><Size>3</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>object-name</Key><LastModified>2018-06-13T23:01:47.000Z</LastModified><ETag>&quot;acbd18db4cc2f85cedef654fccc4a4d8&quot;</ETag><Size>3</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>文件名</Key><LastModified>2018-06-13T23:01:47.000Z</LastModified><ETag>&quot;acbd18db4cc2f85cedef654fccc4a4d8&quot;</ETag><Size>3</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:48 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - tj0a4U/uOnso30WoNgGv/geqLhnW9P+uNWVKLqZQFm+2R9IOd3Xi8vP6HRxFOGwGNa05kbnkas0=
+      X-Amz-Request-Id:
+      - 950830F6A8AB28EC
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: <Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Object><Key>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</Key></Object><Object><Key>object-name</Key></Object><Object><Key>文件名</Key></Object></Delete>
+    form: {}
+    headers:
+      Content-Length:
+      - "1193"
+      Content-Md5:
+      - F0sz+eF/qd1EJ7EVmq4nTA==
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - 46e9002b8cd5cf43150ad26eee04978b9c612728ff32f1d690e6d7a15e89cbf1
+      X-Amz-Date:
+      - 20180613T230148Z
+      X-Gocloud-Seq:
+      - "8"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming?delete=
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Deleted><Key>文件名</Key></Deleted><Deleted><Key>object-name</Key></Deleted><Deleted><Key>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</Key></Deleted></DeleteResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:49 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - wd2ghHwwwuqKwufuO9o9UUaibBEK0ZKrZo3nxAlvkcXcR/9UGCjxOLjDcQyQnHnyS5Yo1rgAag0=
+      X-Amz-Request-Id:
+      - 98A65B098DB13C73
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T230148Z
+      X-Gocloud-Seq:
+      - "9"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Wed, 13 Jun 2018 23:01:49 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - W2DPLr87XoLJv2tyTr+gRLwjKYjLwz+YHxSTkCayL0z/WqDP2EwCke2MME/++/IywEfCoMlZV7s=
+      X-Amz-Request-Id:
+      - C616C5F322774697
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.2; linux; amd64) Waiter
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180613T230148Z
+      X-Gocloud-Seq:
+      - "10"
+    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.test-obj-naming
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 13 Jun 2018 23:01:48 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - eK56j5lwjv2awtHNVVXjThvNVhwYbCoEdNfyF6jSvWecXiK14312QknqDAcq4vHX2gu9Z/WulmQ=
+      X-Amz-Request-Id:
+      - 237B6231620C5AFE
+    status: 404 Not Found
+    code: 404
+    duration: ""

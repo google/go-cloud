@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore reads and writes parameters to the AWS Systems Manager Parameter Store.
+// Package paramstore reads parameters to the AWS Systems Manager Parameter Store.
 package paramstore
 
 import (
@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -90,41 +91,9 @@ type watcher struct {
 
 // Watch begins watching the given parameter and waiting for it to change.
 // The function will block until either the parameter changes, or the context
-// is cancelled.
+// is canceled.
 func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
-	zeroVar := driver.Variable{}
-	// If the context is already canceled, just return.
-	if ctx.Err() != nil {
-		return zeroVar, ctx.Err()
-	}
-
-	t := time.NewTicker(w.waitTime)
-	defer t.Stop()
-
-	// Run ping() now as ticker doesn't perform an instant tick.
-	// If there's either an error or a new value, return.
-	if variable, err := w.ping(); err != nil || variable != nil {
-		v := zeroVar
-		if variable != nil {
-			v = *variable
-		}
-		return v, err
-	}
-
-	for {
-		select {
-		case <-t.C:
-			variable, err := w.ping()
-			if err != nil {
-				return zeroVar, err
-			}
-			if variable != nil {
-				return *variable, nil
-			}
-		case <-ctx.Done():
-			return zeroVar, ctx.Err()
-		}
-	}
+	return internal.Pinger(ctx, w.ping, w.waitTime)
 }
 
 // Close is a no-op. Cancel the context passed to Watch if watching should end.
@@ -134,7 +103,7 @@ func (w *watcher) Close() error {
 
 // ping hits AWS to read the latest parameter. If nothing had changed,
 // the Variable and error will be nil.
-func (w *watcher) ping() (*driver.Variable, error) {
+func (w *watcher) ping(_ context.Context) (*driver.Variable, error) {
 	p, err := readParam(w.sess, w.name, w.lastVersion)
 	if err != nil {
 		return nil, err
