@@ -272,8 +272,8 @@ func TestRead(t *testing.T) {
 			if _, err := r.Read(tc.got); err != nil && err != io.EOF {
 				t.Fatalf("error during read: %v", err)
 			}
-			if !cmp.Equal(tc.got, tc.want) || r.Size() != tc.wantSize {
-				t.Errorf("got %s of size %d; want %s of size %d", tc.got, r.Size(), tc.want, tc.wantSize)
+			if !cmp.Equal(tc.got, tc.want) || r.Attrs().Size != tc.wantSize {
+				t.Errorf("got %s of size %d; want %s of size %d", tc.got, r.Attrs().Size, tc.want, tc.wantSize)
 			}
 			r.Close()
 		})
@@ -326,7 +326,7 @@ func TestWrite(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := &blob.WriterOptions{
-				ObjectAttrs: blob.ObjectAttrs{ContentType: tc.wantContentType},
+				ContentType: tc.wantContentType,
 			}
 			w, err := b.NewWriter(ctx, tc.obj, opts)
 			if err != nil {

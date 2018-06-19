@@ -85,8 +85,8 @@ func (readerStub) Read([]byte) (int, error) {
 	return 0, errors.New("unimplemented")
 }
 
-func (readerStub) Size() int64 {
-	return 0
+func (readerStub) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{}
 }
 
 func (readerStub) Close() error {

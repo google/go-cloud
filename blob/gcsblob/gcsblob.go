@@ -61,13 +61,25 @@ type BucketOptions struct {
 	TokenSource gcp.TokenSource
 }
 
+type reader struct {
+	*storage.Reader
+}
+
+func (r *reader) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{
+		Size:        r.Size(),
+		ContentType: r.ContentType(),
+	}
+}
+
 // NewRangeReader returns a Reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	return obj.NewRangeReader(ctx, offset, length)
+	r, err := obj.NewRangeReader(ctx, offset, length)
+	return &reader{r}, err
 }
 
 // NewWriter returns Writer that writes to an object associated with key.

@@ -39,14 +39,9 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// Size returns the content size of the blob object.
-func (r *Reader) Size() int64 {
-	return r.r.Size()
-}
-
-// ContentType returns the content-type of the blob object.
-func (r *Reader) ContentType() string {
-	return r.r.ContentType()
+// Attrs returns the driver.ObjectAttrs of the object.
+func (r *Reader) Attrs() *driver.ObjectAttrs {
+	return r.r.Attrs()
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
@@ -112,10 +107,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	var dopt *driver.WriterOptions
 	if opt != nil {
 		dopt = &driver.WriterOptions{
-			BufferSize: opt.BufferSize,
-			ObjectAttrs: driver.ObjectAttrs{
-				ContentType: opt.ObjectAttrs.ContentType,
-			},
+			BufferSize:  opt.BufferSize,
+			ContentType: opt.ContentType,
 		}
 	}
 	w, err := b.b.NewWriter(ctx, key, dopt)
@@ -143,8 +136,8 @@ type WriterOptions struct {
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
 
-	// ObjectAttrs sets the metadata of an object before writing to blob service.
-	ObjectAttrs
+	// ContentType sets the content-type of an object before writing to blob service.
+	ContentType string
 }
 
 // ObjectAttrs contains metadata of an object.

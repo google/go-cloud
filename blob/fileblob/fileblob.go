@@ -129,13 +129,10 @@ func (r reader) Close() error {
 	return r.c.Close()
 }
 
-func (r reader) Size() int64 {
-	return r.size
-}
-
-// ContentType returns empty string since fileblob doesn't support content-type.
-func (r reader) ContentType() string {
-	return ""
+func (r reader) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{
+		Size: r.size,
+	}
 }
 
 func (b *bucket) NewWriter(ctx context.Context, key string, opt *driver.WriterOptions) (driver.Writer, error) {

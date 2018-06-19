@@ -66,27 +66,24 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-// Size returns the byte size of the object.
-func (r *reader) Size() int64 {
-	return r.size
-}
-
-// ContentType returns the content-type of the object.
-func (r *reader) ContentType() string {
-	return r.contentType
+func (r *reader) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{
+		Size:        r.size,
+		ContentType: r.contentType,
+	}
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
 	w *io.PipeWriter
 
-	bucket     string
-	key        string
-	bufferSize int
-	ctx        context.Context
-	uploader   *s3manager.Uploader
-	attrs      *driver.ObjectAttrs
-	donec      chan struct{} // closed when done writing
+	bucket      string
+	key         string
+	bufferSize  int
+	ctx         context.Context
+	uploader    *s3manager.Uploader
+	contentType string
+	donec       chan struct{} // closed when done writing
 	// The following fields will be written before donec closes:
 	err error
 }
@@ -115,7 +112,7 @@ func (w *writer) open() error {
 
 		_, err := w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
 			Bucket:      aws.String(w.bucket),
-			ContentType: aws.String(w.attrs.ContentType),
+			ContentType: aws.String(w.contentType),
 			Key:         aws.String(w.key),
 			Body:        pr,
 		})
@@ -147,7 +144,7 @@ func (w *writer) touch() {
 	defer close(w.donec)
 	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
 		Bucket:      aws.String(w.bucket),
-		ContentType: aws.String(w.attrs.ContentType),
+		ContentType: aws.String(w.contentType),
 		Key:         aws.String(w.key),
 		Body:        emptyBody,
 	})
@@ -227,12 +224,11 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 		ctx:      ctx,
 		key:      key,
 		uploader: b.uploader,
-		attrs:    &driver.ObjectAttrs{},
 		donec:    make(chan struct{}),
 	}
 	if opts != nil {
 		w.bufferSize = opts.BufferSize
-		w.attrs.ContentType = opts.ContentType
+		w.contentType = opts.ContentType
 	}
 	return w, nil
 }

@@ -25,12 +25,8 @@ import (
 type Reader interface {
 	io.ReadCloser
 
-	// Size returns the number of bytes in the whole blob. It must always return
-	// the same value.
-	Size() int64
-
-	// ContentType returns the content-type of the object.
-	ContentType() string
+	// Attrs returns the ObjectAttrs associated with the object.
+	Attrs() *ObjectAttrs
 }
 
 // Writer writes an object to the blob.
@@ -40,8 +36,8 @@ type Writer interface {
 
 // WriterOptions controls behaviors of Writer.
 type WriterOptions struct {
-	ObjectAttrs
-	BufferSize int
+	BufferSize  int
+	ContentType string
 }
 
 // ObjectAttrs contains metadata of an object.
