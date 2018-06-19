@@ -31,7 +31,7 @@ $ vgo get -u github.com/google/go-cloud
 Go X Cloud builds at the tip release of Go, previous Go versions may compile but are not supported.
 
 ## Example application
-An example application which runs a guestbook app (just like it's [1999!](https://www.oocities.org/)) on Google Cloud Platform or Amazon Web Services can be found in [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook). The instructions take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the cloud resources needed for the application.
+An example application which runs a guestbook app (just like it's [1999!](https://www.oocities.org/)) on Google Cloud Platform or Amazon Web Services can be found in [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook). The instructions take about 5 minutes to follow if running locally. If you want to see the guestbook app running on cloud resources, it will take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the  resources needed.
 
 ## Current Features
 
