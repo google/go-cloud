@@ -85,7 +85,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fileError{path: path, msg: err.Error(), kind: driver.NotFound}
+			return nil, fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
 		}
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
@@ -161,7 +161,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	err = os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fileError{path: path, msg: err.Error(), kind: driver.NotFound}
+			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
 		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
@@ -169,12 +169,12 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 type fileError struct {
-	path, msg string
-	kind      driver.ErrorKind
+	relpath, msg string
+	kind         driver.ErrorKind
 }
 
 func (e fileError) Error() string {
-	return fmt.Sprintf("fileblob: object %s error: %v", e.path, e.msg)
+	return fmt.Sprintf("fileblob: object %s: %v", e.relpath, e.msg)
 }
 
 func (e fileError) BlobError() driver.ErrorKind {

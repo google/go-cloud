@@ -256,7 +256,7 @@ func (e s3Error) BlobError() driver.ErrorKind {
 }
 
 func (e s3Error) Error() string {
-	return fmt.Sprintf("s3blob: object %s in %s error: %s", e.key, e.bucket, e.msg)
+	return fmt.Sprintf("s3://%s/%s: %s", e.bucket, e.key, e.msg)
 }
 
 func isErrNotExist(err error) awserr.Error {

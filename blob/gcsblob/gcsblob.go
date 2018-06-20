@@ -153,7 +153,7 @@ type gcsError struct {
 }
 
 func (e gcsError) Error() string {
-	return fmt.Sprintf("gcsblob: object %s in %s error: %s", e.key, e.bucket, e.msg)
+	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
 }
 
 func (e gcsError) BlobError() driver.ErrorKind {
