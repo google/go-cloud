@@ -77,7 +77,7 @@ func NewBucket(b driver.Bucket) *Bucket {
 }
 
 // NewReader returns a Reader to read from an object, or an error when the object
-// is not found by the given key, use IsErrNotExist to check for it.
+// is not found by the given key, use IsNotExist to check for it.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
@@ -88,7 +88,7 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 // most length bytes starting at the given offset. If length is 0, it will read
 // only the metadata. If length is negative, it will read till the end of the
 // object. It returns an error if that object does not exist, which can be
-// checked by calling IsErrNotExist.
+// checked by calling IsNotExist.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
@@ -119,7 +119,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 }
 
 // Delete deletes the object associated with key. It returns an error if that
-// object does not exist, which can be checked by calling IsErrNotExist.
+// object does not exist, which can be checked by calling IsNotExist.
 func (b *Bucket) Delete(ctx context.Context, key string) error {
 	return newBlobError(b.b.Delete(ctx, key))
 }
