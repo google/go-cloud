@@ -96,7 +96,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, errors.New("new blob range reader: offset must be non-negative")
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
-	return &Reader{r}, err
+	return &Reader{r}, newBlobError(err)
 }
 
 // NewWriter returns Writer that writes to an object associated with key.
@@ -121,7 +121,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 // Delete deletes the object associated with key. It returns an error if that
 // object does not exist, which can be checked by calling IsErrNotExist.
 func (b *Bucket) Delete(ctx context.Context, key string) error {
-	return b.b.Delete(ctx, key)
+	return newBlobError(b.b.Delete(ctx, key))
 }
 
 // WriterOptions controls behaviors of Writer.
@@ -140,10 +140,34 @@ type WriterOptions struct {
 	BufferSize int
 }
 
+type blobError struct {
+	msg  string
+	kind driver.ErrorKind
+}
+
+func (e blobError) Error() string {
+	return e.msg
+}
+
+func (e blobError) Code() driver.ErrorKind {
+	return e.kind
+}
+
+func newBlobError(err error) error {
+	if err == nil {
+		return nil
+	}
+	berr := blobError{msg: err.Error()}
+	if e, ok := err.(driver.Error); ok {
+		berr.kind = e.BlobError()
+	}
+	return berr
+}
+
 // IsErrObjectNotExist returns wheter an error is a driver.Error with NotFound kind.
 func IsErrObjectNotExist(err error) bool {
-	if e, ok := err.(driver.Error); ok {
-		return e.BlobError() == driver.NotFound
+	if e, ok := err.(blobError); ok {
+		return e.Code() == driver.NotFound
 	}
 	return false
 }
