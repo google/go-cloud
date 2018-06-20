@@ -37,7 +37,7 @@ func TestReadOfNonExistentFile(t *testing.T) {
 		t.Fatal("error getting bucket:", err)
 	}
 	t.Run("ObjectNotExist", func(t *testing.T) {
-		if _, err := bucket.NewReader(ctx, "test_notexist"); err == nil || !blob.IsErrObjectNotExist(err) {
+		if _, err := bucket.NewReader(ctx, "test_notexist"); err == nil || !blob.IsNotExist(err) {
 			t.Errorf("NewReader: got %#v, want not exist error", err)
 		}
 	})
@@ -55,7 +55,7 @@ func TestDeleteNonExistentFile(t *testing.T) {
 		t.Fatal("error getting bucket:", err)
 	}
 	t.Run("ObjectNotExist", func(t *testing.T) {
-		if err := bucket.Delete(ctx, "test_notexist"); err == nil || !blob.IsErrObjectNotExist(err) {
+		if err := bucket.Delete(ctx, "test_notexist"); err == nil || !blob.IsNotExist(err) {
 			t.Errorf("Delete: got %#v, want not exist error", err)
 		}
 	})

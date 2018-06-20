@@ -425,7 +425,7 @@ func TestDelete(t *testing.T) {
 		t.Errorf("object deleted, got err %v, want NotFound error", err)
 	}
 
-	if err := b.Delete(ctx, obj); err == nil || !blob.IsErrObjectNotExist(err) {
+	if err := b.Delete(ctx, obj); err == nil || !blob.IsNotExist(err) {
 		t.Errorf("Delete: got %#v, want not exist error", err)
 	}
 }

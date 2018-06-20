@@ -278,7 +278,7 @@ func TestReader(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		if _, err := b.NewRangeReader(ctx, "foo_not_exist.txt", 0, 0); err == nil || !blob.IsErrObjectNotExist(err) {
+		if _, err := b.NewRangeReader(ctx, "foo_not_exist.txt", 0, 0); err == nil || !blob.IsNotExist(err) {
 			t.Errorf("NewReader: got %#v, want not exist error", err)
 		}
 	})
@@ -426,7 +426,7 @@ func TestDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		if err := b.Delete(ctx, "foo.txt"); err == nil || !blob.IsErrObjectNotExist(err) {
+		if err := b.Delete(ctx, "foo.txt"); err == nil || !blob.IsNotExist(err) {
 			t.Errorf("Delete: got %#v, want not exist error", err)
 		}
 		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {

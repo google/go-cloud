@@ -62,8 +62,8 @@ type Bucket interface {
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is 0, it will read
 	// only the metadata. If length is negative, it will read till the end of the
-	// object. It returns an error if that object does not exist, which can be
-	// checked by calling blob.IsErrNotExist.
+	// object. If the specified object does not exist, NewRangeReader must return
+	// an error whose BlobError method returns NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewWriter returns Writer that writes to an object associated with key.
@@ -76,7 +76,8 @@ type Bucket interface {
 	// The caller must call Close on the returned Writer when done writing.
 	NewWriter(ctx context.Context, key string, opt *WriterOptions) (Writer, error)
 
-	// Delete deletes the object associated with key. It returns an error if that
-	// object does not exist, which can be checked by calling blob.IsErrNotExist.
+	// Delete deletes the object associated with key. If the specified object does
+	// not exist, NewRangeReader must return an error whose BlobError method
+	// returns NotFound.
 	Delete(ctx context.Context, key string) error
 }

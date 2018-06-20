@@ -145,29 +145,25 @@ type blobError struct {
 	kind driver.ErrorKind
 }
 
-func (e blobError) Error() string {
+func (e *blobError) Error() string {
 	return e.msg
-}
-
-func (e blobError) Code() driver.ErrorKind {
-	return e.kind
 }
 
 func newBlobError(err error) error {
 	if err == nil {
 		return nil
 	}
-	berr := blobError{msg: err.Error()}
+	berr := &blobError{msg: err.Error()}
 	if e, ok := err.(driver.Error); ok {
 		berr.kind = e.BlobError()
 	}
 	return berr
 }
 
-// IsErrObjectNotExist returns wheter an error is a driver.Error with NotFound kind.
-func IsErrObjectNotExist(err error) bool {
-	if e, ok := err.(blobError); ok {
-		return e.Code() == driver.NotFound
+// IsNotExist returns wheter an error is a driver.Error with NotFound kind.
+func IsNotExist(err error) bool {
+	if e, ok := err.(*blobError); ok {
+		return e.kind == driver.NotFound
 	}
 	return false
 }
