@@ -4,7 +4,7 @@
 # The Go X Cloud Project
 _Write once, run on any cloud ☁️_
 
-The Go X Cloud Project is an initiative that will allow application developers to seamlessly deploy cloud applications on any combination of cloud providers. It does this by providing stable, idiomatic interfaces for common uses like storage, PubSub and databases. Think `database/sql` for cloud.
+The Go X Cloud Project is an initiative that will allow application developers to seamlessly deploy cloud applications on any combination of cloud providers. It does this by providing stable, idiomatic interfaces for common uses like storage and databases. Think `database/sql` for cloud products.
 
 A key part of the project is to also provide a code generator called [Wire](https://github.com/google/go-cloud/blob/master/wire/README.md). It creates human-readable code that only imports the cloud SDKs for providers you use. This allows Go X Cloud to grow to support any number of cloud providers, without increasing compile times or binary sizes, and avoiding any side effects from `init()` functions.
 
