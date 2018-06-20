@@ -85,7 +85,7 @@ func TestReader(t *testing.T) {
 				t.Error("Close:", err)
 			}
 		}()
-		if got := r.Attrs().Size; got != int64(len(fileContent)) {
+		if got := r.Size(); got != int64(len(fileContent)) {
 			t.Errorf("r.Attrs().Size at beginning = %d; want %d", got, len(fileContent))
 		}
 		if got, err := ioutil.ReadAll(r); err != nil {
@@ -93,7 +93,7 @@ func TestReader(t *testing.T) {
 		} else if len(got) > 0 {
 			t.Errorf("ioutil.ReadAll(r) = %q; fileContent \"\"", got)
 		}
-		if got := r.Attrs().Size; got != int64(len(fileContent)) {
+		if got := r.Size(); got != int64(len(fileContent)) {
 			t.Errorf("r.Attrs().Size at end = %d; want %d", got, len(fileContent))
 		}
 	})
@@ -123,7 +123,7 @@ func TestReader(t *testing.T) {
 				t.Error("Close:", err)
 			}
 		}()
-		if got := r.Attrs().Size; got != int64(len(want)) {
+		if got := r.Size(); got != int64(len(want)) {
 			t.Errorf("r.Attrs().Size at beginning = %d; want %d", got, len(want))
 		}
 		if got, err := ioutil.ReadAll(r); err != nil {
@@ -131,7 +131,7 @@ func TestReader(t *testing.T) {
 		} else if string(got) != want {
 			t.Errorf("ioutil.ReadAll(r) = %q; want %q", got, want)
 		}
-		if got := r.Attrs().Size; got != int64(len(want)) {
+		if got := r.Size(); got != int64(len(want)) {
 			t.Errorf("r.Attrs().Size at end = %d; want %d", got, len(want))
 		}
 	})
@@ -252,7 +252,7 @@ func TestReader(t *testing.T) {
 				t.Error("Close:", err)
 			}
 		}()
-		if got := r.Attrs().Size; got != int64(len(wholeFile)) {
+		if got := r.Size(); got != int64(len(wholeFile)) {
 			t.Errorf("r.Attrs().Size at beginning = %d; want %d", got, len(want))
 		}
 		if got, err := ioutil.ReadAll(r); err != nil {
@@ -260,7 +260,7 @@ func TestReader(t *testing.T) {
 		} else if string(got) != want {
 			t.Errorf("ioutil.ReadAll(r) = %q; want %q", got, want)
 		}
-		if got := r.Attrs().Size; got != int64(len(wholeFile)) {
+		if got := r.Size(); got != int64(len(wholeFile)) {
 			t.Errorf("r.Attrs().Size at end = %d; want %d", got, len(want))
 		}
 	})

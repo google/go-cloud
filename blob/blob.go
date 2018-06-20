@@ -39,9 +39,14 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// Attrs returns the driver.ObjectAttrs of the object.
-func (r *Reader) Attrs() *driver.ObjectAttrs {
-	return r.r.Attrs()
+// ContentType returns the content-type of the object.
+func (r *Reader) ContentType() string {
+	return r.r.Attrs().ContentType
+}
+
+// Size returns the content size of the blob object.
+func (r *Reader) Size() int64 {
+	return r.r.Attrs().Size
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
