@@ -45,9 +45,6 @@ script that runs a temporary database using Docker:
 In another terminal, you can run:
 
 ```shell
-# Create the local bucket directory.
-mkdir blobs
-
 # Set a local Message of the Day
 echo 'Hello, World!' > motd.txt
 
@@ -118,3 +115,8 @@ local machine.
 
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
+
+## Gophers
+
+The Go gopher was designed by Renee French and used under the [Creative Commons
+3.0 Attributions](https://creativecommons.org/licenses/by/3.0/) license.
