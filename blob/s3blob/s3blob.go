@@ -179,7 +179,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
 		if e := isErrNotExist(err); e != nil {
-			return nil, s3Error{key: key, msg: e.Message(), kind: driver.NotFound}
+			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
 		}
 		return nil, err
 	}
@@ -197,7 +197,7 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 	req, resp := b.client.HeadObjectRequest(in)
 	if err := req.Send(); err != nil {
 		if e := isErrNotExist(err); e != nil {
-			return nil, s3Error{key: key, msg: e.Message(), kind: driver.NotFound}
+			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
 		}
 		return nil, err
 	}
@@ -247,8 +247,8 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 type s3Error struct {
-	key, msg string
-	kind     driver.ErrorKind
+	bucket, key, msg string
+	kind             driver.ErrorKind
 }
 
 func (e s3Error) BlobError() driver.ErrorKind {
@@ -256,7 +256,7 @@ func (e s3Error) BlobError() driver.ErrorKind {
 }
 
 func (e s3Error) Error() string {
-	return fmt.Sprintf("s3blob: object with key %s error: %s", e.key, e.msg)
+	return fmt.Sprintf("s3blob: object %s in %s error: %s", e.key, e.bucket, e.msg)
 }
 
 func isErrNotExist(err error) awserr.Error {
