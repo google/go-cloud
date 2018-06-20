@@ -74,8 +74,23 @@ func TestWire(t *testing.T) {
 					defer t.Logf("wire_gen.go:\n%s", gen)
 				}
 				if len(errs) > 0 {
+					for _, e := range errs {
+						t.Log(e)
+					}
 					if !test.wantError {
-						t.Fatalf("wirego: %v", errs)
+						t.Fatal("Did not expect errors.")
+					}
+					for _, s := range test.wantErrorStrings {
+						found := false
+						for _, e := range errs {
+							if strings.Contains(e.Error(), s) {
+								found = true
+								break
+							}
+						}
+						if !found {
+							t.Errorf("errors did not contain %q", s)
+						}
 					}
 					return
 				}
@@ -269,7 +284,9 @@ type testCase struct {
 	pkg        string
 	goFiles    map[string][]byte
 	wantOutput []byte
-	wantError  bool
+
+	wantError        bool
+	wantErrorStrings []string
 }
 
 // loadTestCase reads a test case from a directory.
@@ -279,8 +296,10 @@ type testCase struct {
 //	root/
 //		pkg        file containing the package name containing the inject function
 //		           (must also be package main)
-//		out.txt    file containing the expected output, or the magic string "ERROR"
-//		           if this test should cause generation to fail
+//		out.txt    file containing the expected output, or starting with the
+//		           magic line "ERROR" if this test should cause generation to
+//		           fail (any subsequent lines are substrings that should
+//		           appear in the errors).
 //		...        any Go files found recursively placed under GOPATH/src/...
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
@@ -293,8 +312,11 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	wantError := false
-	if bytes.Equal(bytes.TrimSpace(out), []byte("ERROR")) {
+	wantErrorStrings := []string(nil)
+	const errorPrefix = "ERROR\n"
+	if bytes.HasPrefix(out, []byte(errorPrefix)) {
 		wantError = true
+		wantErrorStrings = strings.Split(string(bytes.Trim(out[len(errorPrefix):], "\n")), "\n")
 		out = nil
 	}
 	goFiles := map[string][]byte{
@@ -322,11 +344,12 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	return &testCase{
-		name:       name,
-		pkg:        string(bytes.TrimSpace(pkg)),
-		goFiles:    goFiles,
-		wantOutput: out,
-		wantError:  wantError,
+		name:             name,
+		pkg:              string(bytes.TrimSpace(pkg)),
+		goFiles:          goFiles,
+		wantOutput:       out,
+		wantError:        wantError,
+		wantErrorStrings: wantErrorStrings,
 	}, nil
 }
 
