@@ -15,6 +15,9 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or S3)
 ```
 
 and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud providers. 
+
+[travis]: https://travis-ci.com/google/go-cloud
+[godoc]: http://godoc.org/github.com/google/go-cloud
 	
 ## Project status
 While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go Cloud X and make contributions to help evolve it to meet your needs!
@@ -41,6 +44,3 @@ Go X Cloud provides generic APIs for:
 -   Connecting to MySQL databases
 -   Server startup and diagnostics: request logging, tracing, and health
     checking
-
--[travis]: https://travis-ci.com/google/go-cloud
--[godoc]: http://godoc.org/github.com/google/go-cloud
