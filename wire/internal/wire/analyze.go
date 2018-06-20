@@ -245,9 +245,15 @@ func buildProviderMap(fset *token.FileSet, hasher typeutil.Hasher, set *Provider
 }
 
 func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) error {
+	// We must visit every provider type inside provider map, but we don't
+	// have a well-defined starting point and there may be several
+	// distinct graphs. Thus, we start a depth-first search at every
+	// provider, but keep a shared record of visited providers to avoid
+	// duplicating work.
 	visited := new(typeutil.Map) // to bool
 	visited.SetHasher(hasher)
 	for _, root := range providerMap.Keys() {
+		// Depth-first search using a stack of trails through the provider map.
 		stk := [][]types.Type{{root}}
 		for len(stk) > 0 {
 			curr := stk[len(stk)-1]
@@ -259,7 +265,9 @@ func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) error {
 			visited.Set(head, true)
 			switch x := providerMap.At(head).(type) {
 			case nil:
-				// Input; ignore.
+				// Leaf: input.
+			case *Value:
+				// Leaf: values do not have dependencies.
 			case *Provider:
 				for _, arg := range x.Args {
 					a := arg.Type
@@ -278,8 +286,6 @@ func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) error {
 					next := append(append([]types.Type(nil), curr...), a)
 					stk = append(stk, next)
 				}
-			case *Value:
-				// Values do not have dependencies.
 			default:
 				panic("invalid provider map value")
 			}
