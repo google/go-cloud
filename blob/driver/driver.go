@@ -21,6 +21,22 @@ import (
 	"io"
 )
 
+// ErrorKind is a code to indicate the kind of failure.
+type ErrorKind int
+
+const (
+	GenericError ErrorKind = iota
+	NotFound
+)
+
+// Error is an interface that may be implemented by an error returned by
+// a driver to indicate the kind of failure.  If an error does not have the
+// BlobError method, then it is assumed to be GenericError.
+type Error interface {
+	error
+	BlobError() ErrorKind
+}
+
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser

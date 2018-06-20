@@ -69,7 +69,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if isErrNotExist(err) {
-		return nil, errObjectNotExist{key}
+		return nil, gcsError{key: key, msg: err.Error(), kind: driver.NotFound}
 	}
 	return r, err
 }
@@ -104,7 +104,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	obj := bkt.Object(key)
 	err := obj.Delete(ctx)
 	if isErrNotExist(err) {
-		return errObjectNotExist{key}
+		return gcsError{key: key, msg: err.Error(), kind: driver.NotFound}
 	}
 	return err
 }
@@ -147,16 +147,17 @@ func bufferSize(size int) int {
 	return 0 // disable buffering
 }
 
-type errObjectNotExist struct {
-	key string
+type gcsError struct {
+	key, msg string
+	kind     driver.ErrorKind
 }
 
-func (e errObjectNotExist) WrapNotExist() error {
-	return fmt.Errorf("gcsblob: object with key %s doesn't exist", e.key)
+func (e gcsError) Error() string {
+	return fmt.Sprintf("gcsblob: object with key %s error: %s", e.key, e.msg)
 }
 
-func (e errObjectNotExist) Error() string {
-	return e.WrapNotExist().Error()
+func (e gcsError) BlobError() driver.ErrorKind {
+	return e.kind
 }
 
 func isErrNotExist(err error) bool {

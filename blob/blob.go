@@ -140,18 +140,10 @@ type WriterOptions struct {
 	BufferSize int
 }
 
-type errObjectNotExist interface {
-	error
-
-	// WrapNotExist wraps the raw error returned with additional message.
-	WrapNotExist() error
-}
-
-// IsErrObjectNotExist returns an error wrapped by any additional useful message
-// if it is an errNotExist, return nil otherwise.
-func IsErrObjectNotExist(err error) error {
-	if e, ok := err.(errObjectNotExist); ok {
-		return e.WrapNotExist()
+// IsErrObjectNotExist returns wheter an error is a driver.Error with NotFound kind.
+func IsErrObjectNotExist(err error) bool {
+	if e, ok := err.(driver.Error); ok {
+		return e.BlobError() == driver.NotFound
 	}
-	return nil
+	return false
 }
