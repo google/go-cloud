@@ -50,7 +50,7 @@ type WriterOptions struct {
 	// size to a smaller size to avoid high memory usage.
 	BufferSize int
 
-	// ContentType sets the content-type of an object before writing to blob
+	// ContentType sets the MIME type of an object before writing to blob
 	// service. If not set, the content-type will be sniffed using
 	// net/http.DefaultContentType.
 	ContentType string
