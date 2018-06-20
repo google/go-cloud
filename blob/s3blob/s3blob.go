@@ -218,17 +218,17 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 // A WriterOptions can be given to change the default behavior of the writer.
 //
 // The caller must call Close on the returned writer when done writing.
-func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	w := &writer{
-		bucket:   b.name,
-		ctx:      ctx,
-		key:      key,
-		uploader: b.uploader,
-		donec:    make(chan struct{}),
+		bucket:      b.name,
+		ctx:         ctx,
+		key:         key,
+		uploader:    b.uploader,
+		contentType: contentType,
+		donec:       make(chan struct{}),
 	}
 	if opts != nil {
 		w.bufferSize = opts.BufferSize
-		w.contentType = opts.ContentType
 	}
 	return w, nil
 }

@@ -103,20 +103,28 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // NewWriter returns Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced.
-// The object will not be available (and any previous object will remain)
-// until Close has been called.
+// Otherwise any previous object with the same name will be replaced. The object
+// will not be available (and any previous object will remain) until Close has
+// been called.
+//
+// The content-type can be set through WriterOptions, it defaults to
+// application/octet-stream.
+// TODO(shantuo): auto-detect content-type, see
+// https://github.com/google/go-cloud/issues/112.
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
 	var dopt *driver.WriterOptions
+	ct := "application/octet-stream"
 	if opt != nil {
 		dopt = &driver.WriterOptions{
-			BufferSize:  opt.BufferSize,
-			ContentType: opt.ContentType,
+			BufferSize: opt.BufferSize,
+		}
+		if opt.ContentType != "" {
+			ct = opt.ContentType
 		}
 	}
-	w, err := b.b.NewWriter(ctx, key, dopt)
+	w, err := b.b.NewWriter(ctx, key, ct, dopt)
 	return &Writer{w}, err
 }
 

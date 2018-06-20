@@ -71,7 +71,7 @@ func (b *bucketSpy) NewRangeReader(ctx context.Context, key string, offset, leng
 	return readerStub{}, nil
 }
 
-func (b *bucketSpy) NewWriter(context.Context, string, *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucketSpy) NewWriter(context.Context, string, string, *driver.WriterOptions) (driver.Writer, error) {
 	return nil, errors.New("unimplemented")
 }
 
