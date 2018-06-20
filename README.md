@@ -17,7 +17,7 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or S3)
 and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud providers. 
 	
 ## Project status
-While in alpha, the API is subject to breaking changes. We encourage contributions to help evolve Go X Cloud to meet your needs, but under no circumstances should it be deployed to any production environments. Sadness will ensue :(
+While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go Cloud X and make contributions to help evolve it to meet your needs!
 
 The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. We are moving towards a goal where implementations of clouds sit in separate repositories, regardless of whether they are written by Go Cloud team or are externally-owned contributions. During this pre-alpha phase where APIs continue to evolve, we are storing GCP and AWS in this repository in order to make atomic changes. This will change in the future.
 
@@ -31,7 +31,7 @@ $ vgo get -u github.com/google/go-cloud
 Go X Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
 
 ## Example application
-An example application which runs a guestbook app (just like it's 1999!) on Google Cloud Platform or Amazon Web Services can be found in [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook). The instructions take about 5 minutes to follow if running locally. If you want to see the guestbook app running on cloud resources, it will take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the  resources needed.
+[`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook) contains an example guestbook application (just like it's 1999!) that can be run locally, on Google Cloud Platform or on Amazon Web Services. The instructions take about 5 minutes to follow if running locally. If you want to see the guestbook app running on cloud resources, it will take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the resources needed.
 
 ## Current Features
 
