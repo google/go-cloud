@@ -147,17 +147,16 @@ resource "google_project_service" "storage" {
 # TODO(light): Add storage-api.googleapis.com resource.
 
 locals {
-  bucket_name = "go-guestbook-${random_string.bucket_name.result}"
+  bucket_name = "go-guestbook-${random_id.bucket_name.hex}"
 }
 
-resource "random_string" "bucket_name" {
+resource "random_id" "bucket_name" {
   keepers = {
     project = "${var.project}"
     region  = "${var.region}"
   }
 
-  special = false
-  length  = 32
+  byte_length = 16
 }
 
 resource "google_storage_bucket" "guestbook" {
@@ -176,6 +175,30 @@ resource "google_storage_bucket_iam_member" "guestbook_server_view" {
   bucket = "${google_storage_bucket.guestbook.name}"
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:${google_service_account.server.email}"
+}
+
+resource "google_storage_bucket_object" "aws" {
+  bucket       = "${google_storage_bucket.guestbook.name}"
+  name         = "aws.png"
+  content_type = "image/png"
+  source       = "${path.module}/../blobs/aws.png"
+  depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
+}
+
+resource "google_storage_bucket_object" "gcp" {
+  bucket       = "${google_storage_bucket.guestbook.name}"
+  name         = "gcp.png"
+  content_type = "image/png"
+  source       = "${path.module}/../blobs/gcp.png"
+  depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
+}
+
+resource "google_storage_bucket_object" "gophers" {
+  bucket       = "${google_storage_bucket.guestbook.name}"
+  name         = "gophers.jpg"
+  content_type = "image/jpeg"
+  source       = "${path.module}/../blobs/gophers.jpg"
+  depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
 }
 
 # Kubernetes Engine

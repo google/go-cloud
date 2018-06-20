@@ -37,7 +37,7 @@ fi
 docker_flags+=( --env 'MYSQL_DATABASE=guestbook' )
 docker_flags+=( --env 'MYSQL_ROOT_PASSWORD=password' )
 docker_flags+=( --detach )
-#docker_flags+=( --publish 3306:3306 )
+docker_flags+=( --publish 3306:3306 )
 container_id="$( docker run "${docker_flags[@]}" "$image" )" || exit 1
 log "Started container $container_id, waiting for healthy"
 
