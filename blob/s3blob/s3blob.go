@@ -21,9 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -38,9 +36,6 @@ import (
 // communicate to S3. AWS config can be passed in through BucketOptions to
 // change the default configuration of the S3Bucket.
 func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
-	if err := validateBucketChar(bucketName); err != nil {
-		return nil, err
-	}
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
@@ -216,9 +211,6 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 //
 // The caller must call Close on the returned writer when done writing.
 func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
-	if err := validateObjectChar(key); err != nil {
-		return nil, err
-	}
 	w := &writer{
 		bucket:   b.name,
 		ctx:      ctx,
@@ -242,38 +234,4 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 	req, _ := b.client.DeleteObjectRequest(input)
 	return req.Send()
-}
-
-const (
-	bucketNamingRuleURL = "https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html"
-	objectNamingRuleURL = "https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html"
-)
-
-// validateBucketChar checks whether character set and length meet the general
-// requirement of bucket naming rule. See
-// https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-// for the full requirements and best practice.
-func validateBucketChar(name string) error {
-	v := regexp.MustCompile(`^[a-z0-9][a-z0-9-.]{1,61}[a-z0-9]$`)
-	if !v.MatchString(name) {
-		return fmt.Errorf("invalid bucket name, see %s for detailed requirements", bucketNamingRuleURL)
-	}
-	return nil
-}
-
-// validateObjectChar checks whether name is a valid UTF-8 encoded string, and its
-// length is between 1-1024 bytes. See
-// https://docs.aws.amazon.com/AmazonS3/latest/dev/UsingMetadata.html for the full
-// requirements and best practice.
-func validateObjectChar(name string) error {
-	if name == "" {
-		return errors.New("object name is empty")
-	}
-	if !utf8.ValidString(name) {
-		return fmt.Errorf("object name is not vlid UTF-8, see %s for detailed requirements", objectNamingRuleURL)
-	}
-	if len(name) > 1024 {
-		return fmt.Errorf("object name is longer than 1024 bytes, see %s for detailed requirements", objectNamingRuleURL)
-	}
-	return nil
 }
