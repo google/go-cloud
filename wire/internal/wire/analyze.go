@@ -108,8 +108,8 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 	}
 
 	// Topological sort of the directed graph defined by the providers
-	// using a depth-first search. The graph may contain cycles, which
-	// should trigger an error.
+	// using a depth-first search. Provider set graphs are guaranteed to
+	// be acyclic.
 	var calls []call
 	var visit func(trail []ProviderInput) error
 	visit = func(trail []ProviderInput) error {
