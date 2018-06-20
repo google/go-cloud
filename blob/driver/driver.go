@@ -36,7 +36,23 @@ type Writer interface {
 
 // WriterOptions controls behaviors of Writer.
 type WriterOptions struct {
-	BufferSize  int
+	// BufferSize changes the default size in byte of the maximum part Writer can
+	// write in a single request. Larger objects will be split into multiple
+	// requests.
+	//
+	// The support specification of this operation varies depending on the
+	// underlying blob service. If zero value is given, it is set to a reasonable
+	// default value. If negative value is given, it will be either disabled (if
+	// supported by the service), which means Writer will write as a whole, or
+	// reset to default value. It could be a no-op when not supported at all.
+	//
+	// If the Writer is used to write small objects concurrently, set the buffer
+	// size to a smaller size to avoid high memory usage.
+	BufferSize int
+
+	// ContentType sets the content-type of an object before writing to blob
+	// service. If not set, the content-type will be sniffed using
+	// net/http.DefaultContentType.
 	ContentType string
 }
 
