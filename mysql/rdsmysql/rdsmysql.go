@@ -29,7 +29,7 @@ import (
 	"sync"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-x-cloud/wire"
 	"golang.org/x/net/context/ctxhttp"
 )
 
@@ -102,7 +102,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		tlsConfigNum := tlsConfigCounter.n
 		tlsConfigCounter.n++
 		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("github.com/google/go-cloud/mysql/rdsmysql/%d", tlsConfigNum)
+		tlsConfigName := fmt.Sprintf("github.com/google/go-x-cloud/mysql/rdsmysql/%d", tlsConfigNum)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})

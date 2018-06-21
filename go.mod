@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module github.com/google/go-cloud
+module github.com/google/go-x-cloud
 
 replace cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
 

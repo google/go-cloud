@@ -20,7 +20,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-x-cloud/blob/driver"
 )
 
 // Reader implements io.ReadCloser to read from blob. It must be closed after
