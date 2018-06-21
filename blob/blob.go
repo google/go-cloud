@@ -39,7 +39,7 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// ContentType returns the content-type of the object.
+// ContentType returns the MIME type of the object content.
 func (r *Reader) ContentType() string {
 	return r.r.Attrs().ContentType
 }
@@ -104,11 +104,10 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same name will be replaced. The object
-// will not be available (and any previous object will remain) until Close has
-// been called.
+// is not guaranteed to be available until Close has been called.
 //
-// The content-type can be set through WriterOptions, it defaults to
-// application/octet-stream.
+// The content-type can be set through WriterOptions.ContentType. If it is
+// empty, then "application/octet-stream" will be used.
 // TODO(shantuo): auto-detect content-type, see
 // https://github.com/google/go-cloud/issues/112.
 //
@@ -150,16 +149,8 @@ type WriterOptions struct {
 	BufferSize int
 
 	// ContentType sets the MIME type of an object before writing to blob
-	// service. If not set, the content-type will be sniffed using
-	// net/http.DefaultContentType.
-	ContentType string
-}
-
-// ObjectAttrs contains metadata of an object.
-type ObjectAttrs struct {
-	// Size is the number of bytes in the whole blob. It is read-only.
-	Size int64
-
-	// ContentType is the MIME type of the object.
+	// service. If not set, then "application/octet-stream" will be used.
+	// TODO(shantuo): auto-detect content-type, see
+	// https://github.com/google/go-cloud/issues/112.
 	ContentType string
 }
