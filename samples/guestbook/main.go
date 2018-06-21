@@ -236,7 +236,8 @@ blockquote {
 	font-family: cursive, Helvetica, sans-serif;
 }
 .banner {
-	max-height: 7em;
+	height: 125px;
+	width: 250px;
 }
 .greeting {
 	font-size: 85%;
