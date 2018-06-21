@@ -65,6 +65,9 @@ type Bucket interface {
 	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
+	// contentType sets the MIME type of the object to be written. It must not be
+	// empty.
+	//
 	// The caller must call Close on the returned Writer when done writing.
 	NewWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
