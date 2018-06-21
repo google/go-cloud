@@ -39,8 +39,10 @@ log() {
 log "Downloading Docker images..."
 docker pull "$mysql_image" || exit 1
 
-# Create a temporary directory to hold the service account key.
-tempdir="$( mktemp -d 2>/dev/null || mktemp -d -t 'guestbook-service-acct' )" || exit 1
+# Create a temporary directory to hold the certificates.
+# We resolve all symlinks to avoid Docker on Mac issues, see
+# https://github.com/google/go-cloud/issues/110.
+tempdir="$( cd "$( mktemp -d 2>/dev/null || mktemp -d -t 'guestbook-ca' )" && pwd -P )" || exit 1
 cleanup1() {
   rm -rf "$tempdir"
 }

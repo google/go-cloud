@@ -25,8 +25,8 @@ import (
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/go-sql-driver/mysql"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-x-cloud/wire"
 
 	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
@@ -64,7 +64,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		Port:  3307,
 		Certs: certSource,
 	}
-	dialerName := fmt.Sprintf("github.com/google/go-cloud/mysql/gcpmysql/%d", dialerNum)
+	dialerName := fmt.Sprintf("github.com/google/go-x-cloud/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
 
 	cfg := &mysql.Config{

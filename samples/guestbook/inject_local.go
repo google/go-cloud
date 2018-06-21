@@ -21,13 +21,13 @@ import (
 	"database/sql"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
-	"github.com/google/go-cloud/requestlog"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/filevar"
-	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/fileblob"
+	"github.com/google/go-x-cloud/requestlog"
+	"github.com/google/go-x-cloud/runtimevar"
+	"github.com/google/go-x-cloud/runtimevar/filevar"
+	"github.com/google/go-x-cloud/server"
+	"github.com/google/go-x-cloud/wire"
 	"go.opencensus.io/trace"
 )
 
