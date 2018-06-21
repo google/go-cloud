@@ -39,7 +39,7 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// ContentType returns the MIME type of the object content.
+// ContentType returns the MIME type of the blob object.
 func (r *Reader) ContentType() string {
 	return r.r.Attrs().ContentType
 }

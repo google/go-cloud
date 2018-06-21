@@ -25,7 +25,9 @@ import (
 type Reader interface {
 	io.ReadCloser
 
-	// Attrs returns the ObjectAttrs associated with the object.
+	// Attrs returns the object's metadata. It may return a different pointer each
+	// time, but it must return the exact same values each time it is called. The
+	// caller must not modify any fields in the returned ObjectAttrs.
 	Attrs() *ObjectAttrs
 }
 
@@ -46,7 +48,7 @@ type WriterOptions struct {
 type ObjectAttrs struct {
 	// Size is the size of the object in bytes.
 	Size int64
-	// ContentType is the MIME type of the object content. It must not be empty.
+	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
 }
 
