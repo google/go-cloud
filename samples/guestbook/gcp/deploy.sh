@@ -59,7 +59,7 @@ sed \
 
 # Build Guestbook Docker image.
 log "Building $image_name..."
-( cd "$guestbook_dir" && vgo build -o gcp/guestbook ) || exit 1
+( cd "$guestbook_dir" && GOOS=linux GOARCH=amd64 vgo build -o gcp/guestbook ) || exit 1
 GCLOUD container builds submit \
   -t "$image_name" \
   "$guestbook_dir/gcp" || exit 1

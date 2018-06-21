@@ -21,7 +21,15 @@ provider "random" {
   version = "~> 1.3"
 }
 
-# TODO(light): Add cloudbuild.googleapis.com resource.
+locals {
+  service_count = "${var.project_services ? 1 : 0}"
+}
+
+resource "google_project_service" "cloudbuild" {
+  count              = "${local.service_count}"
+  service            = "cloudbuild.googleapis.com"
+  disable_on_destroy = false
+}
 
 # Service account for the running server
 
@@ -36,7 +44,11 @@ resource "google_service_account_key" "server" {
 
 # Stackdriver Tracing
 
-# TODO(light): Add cloudtrace.googleapis.com resource.
+resource "google_project_service" "trace" {
+  count              = "${local.service_count}"
+  service            = "cloudtrace.googleapis.com"
+  disable_on_destroy = false
+}
 
 resource "google_project_iam_member" "server_trace" {
   role   = "roles/cloudtrace.agent"
@@ -46,11 +58,16 @@ resource "google_project_iam_member" "server_trace" {
 # Cloud SQL
 
 resource "google_project_service" "sql" {
+  count              = "${local.service_count}"
   service            = "sql.googleapis.com"
   disable_on_destroy = false
 }
 
-# TODO(light): Add sqladmin.googleapis.com resource.
+resource "google_project_service" "sqladmin" {
+  count              = "${local.service_count}"
+  service            = "sqladmin.googleapis.com"
+  disable_on_destroy = false
+}
 
 resource "google_sql_database_instance" "guestbook" {
   name             = "${var.db_instance}"
@@ -62,7 +79,10 @@ resource "google_sql_database_instance" "guestbook" {
     disk_size = 10            # GiB
   }
 
-  depends_on = ["google_project_service.sql"]
+  depends_on = [
+    "google_project_service.sql",
+    "google_project_service.sqladmin",
+  ]
 }
 
 resource "google_sql_database" "guestbook" {
@@ -116,6 +136,7 @@ resource "google_project_iam_member" "db_access_cloudsql" {
 # Runtime Configurator
 
 resource "google_project_service" "runtimeconfig" {
+  count              = "${local.service_count}"
   service            = "runtimeconfig.googleapis.com"
   disable_on_destroy = false
 }
@@ -140,11 +161,16 @@ resource "google_project_iam_member" "server_runtimeconfig" {
 # Google Cloud Storage
 
 resource "google_project_service" "storage" {
+  count              = "${local.service_count}"
   service            = "storage.googleapis.com"
   disable_on_destroy = false
 }
 
-# TODO(light): Add storage-api.googleapis.com resource.
+resource "google_project_service" "storage_api" {
+  count              = "${local.service_count}"
+  service            = "storage-api.googleapis.com"
+  disable_on_destroy = false
+}
 
 locals {
   bucket_name = "go-guestbook-${random_id.bucket_name.hex}"
@@ -168,7 +194,10 @@ resource "google_storage_bucket" "guestbook" {
   # See https://github.com/hashicorp/terraform/issues/13109
   project = "${var.project}"
 
-  depends_on = ["google_project_service.storage"]
+  depends_on = [
+    "google_project_service.storage",
+    "google_project_service.storage_api",
+  ]
 }
 
 resource "google_storage_bucket_iam_member" "guestbook_server_view" {
@@ -204,12 +233,14 @@ resource "google_storage_bucket_object" "gophers" {
 # Kubernetes Engine
 
 resource "google_project_service" "container" {
+  count              = "${local.service_count}"
   service            = "container.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_container_cluster" "guestbook" {
   name               = "${var.cluster_name}"
+  zone               = "${var.zone}"
   initial_node_count = 3
 
   node_config {
