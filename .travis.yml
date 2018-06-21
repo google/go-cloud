@@ -4,7 +4,9 @@ os:
 
 language: go
 go_import_path: github.com/google/go-cloud
-go: "1.10.x"
+# Travis has Go 1.9 on Mac OS X. That should be OK for us.
+# TODO(cflewis): File a bug against Travis.
+go: "1.9.x"
 before_install:
   # The Bash that comes with OS X is ancient.
   # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
