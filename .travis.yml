@@ -9,7 +9,10 @@ before_install:
   # The Bash that comes with OS X is ancient.
   # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
   # customers as checkpr.sh is only for us to run on Travis.
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then HOMEBREW_NO_AUTO_UPDATE=1 brew install bash; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install bash; 
+      export PATH=$(brew --prefix)/bin:$PATH;
+    fi
 install:
   - "go get -u golang.org/x/vgo"
   - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
