@@ -5,6 +5,11 @@ os:
 language: go
 go_import_path: github.com/google/go-cloud
 go: "1.10.x"
+before_install:
+  # The Bash that comes with OS X is ancient.
+  # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
+  # customers as checkpr.sh is only for us to run on Travis.
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install bash; fi
 install:
   - "go get -u golang.org/x/vgo"
   - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
