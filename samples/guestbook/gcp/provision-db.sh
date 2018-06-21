@@ -47,7 +47,9 @@ log "Getting database metadata..."
 db_conn_str="$( GCLOUD sql instances describe --format='value(connectionName)' "$db_instance" )" || exit 1
 
 # Create a temporary directory to hold the service account key.
-service_account_voldir="$( mktemp -d 2>/dev/null || mktemp -d -t 'guestbook-service-acct' )" || exit 1
+# We resolve all symlinks to avoid Docker on Mac issues, see
+# https://github.com/google/go-cloud/issues/110.
+service_account_voldir="$( cd "$( mktemp -d 2>/dev/null || mktemp -d -t 'guestbook-service-acct' )" && pwd -P )" || exit 1
 cleanup1() {
   rm -rf "$service_account_voldir"
 }
