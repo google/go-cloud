@@ -29,7 +29,7 @@ generates the Wire code.
 $ vgo mod -vendor
 
 # Now build:
-$ gowire && GOOS=linux GOARCH=amd64 vgo build
+$ gowire && vgo build
 ```
 
 ## Running Locally
