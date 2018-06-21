@@ -15,7 +15,7 @@
 
 # Runs only tests relevant to the current pull request.
 # At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
+# See https://github.com/google/go-x-cloud/issues/28 for solving the
 # general case.
 
 set -o pipefail
@@ -26,7 +26,7 @@ if [[ -z "$TRAVIS_BRANCH" || -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
 fi
 
 testflags=( "$@" )
-module="github.com/google/go-cloud"
+module="github.com/google/go-x-cloud"
 
 # Place changed files into changed array.
 mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")" || exit 1

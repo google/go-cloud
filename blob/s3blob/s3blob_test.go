@@ -25,9 +25,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/testing/setup"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/s3blob"
+	"github.com/google/go-x-cloud/testing/setup"
 	"github.com/google/go-cmp/cmp"
 )
 
