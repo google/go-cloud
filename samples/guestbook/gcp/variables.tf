@@ -46,3 +46,8 @@ variable "cluster_name" {
   default     = "guestbook-cluster"
   description = "The GKE cluster name."
 }
+
+variable "project_services" {
+  default     = false
+  description = "Whether to enable project APIs. This is off by default due to https://github.com/google/go-cloud/issues/108."
+}
