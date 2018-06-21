@@ -29,7 +29,7 @@ generates the Wire code.
 $ vgo mod -vendor
 
 # Now build:
-$ gowire && vgo build
+$ gowire && GOOS=linux GOARCH=amd64 vgo build
 ```
 
 ## Running Locally
@@ -95,7 +95,7 @@ SSH to and run your binary.
 ```shell
 aws configure
 ssh-add
-vgo build
+GOOS=linux GOARCH=amd64 vgo build
 cd aws
 terraform init
 terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.pub)"
