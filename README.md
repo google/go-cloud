@@ -20,9 +20,9 @@ and being able to run that code on any cloud you want, avoiding all the ceremony
 [godoc]: http://godoc.org/github.com/google/go-cloud
 	
 ## Project status
-While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go Cloud X and make contributions to help evolve it to meet your needs!
+While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go X Cloud and make contributions to help evolve it to meet your needs!
 
-The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. We are moving towards a goal where implementations of clouds sit in separate repositories, regardless of whether they are written by Go Cloud team or are externally-owned contributions. During this pre-alpha phase where APIs continue to evolve, we are storing GCP and AWS in this repository in order to make atomic changes. This will change in the future.
+The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. As the interfaces become more solidified, it will be easier for community contributions to implement support for other cloud platforms.
 
 ## Installation instructions
 Installation is easy, but does require `vgo`. `vgo` is not yet stable, and so builds may break with `vgo` changes, but experience has shown this to be rare.
