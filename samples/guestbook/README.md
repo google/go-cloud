@@ -94,6 +94,7 @@ SSH to and run your binary.
 
 ```shell
 aws configure
+ssh-add
 vgo build
 cd aws
 terraform init
