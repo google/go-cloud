@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
-[![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
-
 # The Go X Cloud Project
 _Write once, run on any cloud ☁️_
+
+[![Build Status](https://travis-ci.com/google/go-x-cloud.svg?branch=master)][travis]
+[![godoc](https://godoc.org/github.com/google/go-x-cloud?status.svg)][godoc]
 
 The Go X Cloud Project is an initiative that will allow application developers to seamlessly deploy cloud applications on any combination of cloud providers. It does this by providing stable, idiomatic interfaces for common uses like storage and databases. Think `database/sql` for cloud products.
 
@@ -14,22 +14,22 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or S3)
 	blobReader, err := bucket.NewReader(context.Background(), "my-blob")
 ```
 
-and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud providers. 
-
-[travis]: https://travis-ci.com/google/go-cloud
-[godoc]: http://godoc.org/github.com/google/go-cloud
+and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud platforms.
 	
 ## Project status
 While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go X Cloud and make contributions to help evolve it to meet your needs!
 
-The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. As the interfaces become more solidified, it will be easier for community contributions to implement support for other cloud platforms.
+[travis]: https://travis-ci.com/google/go-x-cloud
+[godoc]: http://godoc.org/github.com/google/go-x-cloud
+
+The GitHub repository at [google/go-x-cloud](https://github.com/google/go-x-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. As the interfaces become more solidified, it will be easier for community contributions to implement support for other cloud platforms.
 
 ## Installation instructions
 Installation is easy, but does require `vgo`. `vgo` is not yet stable, and so builds may break with `vgo` changes, but experience has shown this to be rare.
 
 ```shell
 $ go get -u golang.org/x/vgo
-$ vgo get -u github.com/google/go-cloud
+$ vgo get -u github.com/google/go-x-cloud
 ```
 Go X Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
 

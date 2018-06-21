@@ -92,6 +92,27 @@ resource "aws_s3_bucket" "guestbook" {
   bucket_prefix = "guestbook"
 }
 
+resource "aws_s3_bucket_object" "aws" {
+  bucket = "${aws_s3_bucket.guestbook.bucket}"
+  key = "aws.png"
+  content_type = "image/png"
+  source = "${path.module}/../blobs/aws.png"
+}
+
+resource "aws_s3_bucket_object" "gcp" {
+  bucket = "${aws_s3_bucket.guestbook.bucket}"
+  key = "gcp.png"
+  content_type = "image/png"
+  source = "${path.module}/../blobs/gcp.png"
+}
+
+resource "aws_s3_bucket_object" "gophers" {
+  bucket = "${aws_s3_bucket.guestbook.bucket}"
+  key = "gophers.jpg"
+  content_type = "image/jpeg"
+  source = "${path.module}/../blobs/gophers.jpg"
+}
+
 # Paramstore (SSM)
 
 resource "aws_ssm_parameter" "motd" {
