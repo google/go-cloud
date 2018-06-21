@@ -20,6 +20,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/go-cloud/blob"
 )
 
 func TestNewBucket(t *testing.T) {
@@ -264,6 +266,22 @@ func TestReader(t *testing.T) {
 			t.Errorf("r.Size() at end = %d; want %d", got, len(want))
 		}
 	})
+	t.Run("ObjectDoesNotExist", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := context.Background()
+		if _, err := b.NewRangeReader(ctx, "foo_not_exist.txt", 0, 0); err == nil || !blob.IsNotExist(err) {
+			t.Errorf("NewReader: got %#v, want not exist error", err)
+		}
+	})
 	// TODO(light): For sake of conformance test completionism, this should also
 	// test range that goes past the end of the blob, but then we're just testing
 	// the OS for fileblob.
@@ -396,7 +414,7 @@ func TestDelete(t *testing.T) {
 			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)
 		}
 	})
-	t.Run("DoesNotExistNop", func(t *testing.T) {
+	t.Run("DoesNotExistError", func(t *testing.T) {
 		dir, err := ioutil.TempDir("", "fileblob")
 		if err != nil {
 			t.Fatal(err)
@@ -408,8 +426,8 @@ func TestDelete(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		if err := b.Delete(ctx, "foo.txt"); err != nil {
-			t.Error("Delete:", err)
+		if err := b.Delete(ctx, "foo.txt"); err == nil || !blob.IsNotExist(err) {
+			t.Errorf("Delete: got %#v, want not exist error", err)
 		}
 		if _, err := os.Stat(filepath.Join(dir, "foo.txt")); !os.IsNotExist(err) {
 			t.Errorf("os.Stat(\".../foo.txt\") = _, %v; want not exist", err)

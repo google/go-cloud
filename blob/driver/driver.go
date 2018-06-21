@@ -21,6 +21,22 @@ import (
 	"io"
 )
 
+// ErrorKind is a code to indicate the kind of failure.
+type ErrorKind int
+
+const (
+	GenericError ErrorKind = iota
+	NotFound
+)
+
+// Error is an interface that may be implemented by an error returned by
+// a driver to indicate the kind of failure.  If an error does not have the
+// BlobError method, then it is assumed to be GenericError.
+type Error interface {
+	error
+	BlobError() ErrorKind
+}
+
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
@@ -43,9 +59,11 @@ type WriterOptions struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
-	// NewRangeReader returns a Reader that reads part of an object, reading at most
-	// length bytes starting at the given offset. If length is 0, it will read only
-	// the metadata. If length is negative, it will read till the end of the object.
+	// NewRangeReader returns a Reader that reads part of an object, reading at
+	// most length bytes starting at the given offset. If length is 0, it will read
+	// only the metadata. If length is negative, it will read till the end of the
+	// object. If the specified object does not exist, NewRangeReader must return
+	// an error whose BlobError method returns NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewWriter returns Writer that writes to an object associated with key.
@@ -58,7 +76,8 @@ type Bucket interface {
 	// The caller must call Close on the returned Writer when done writing.
 	NewWriter(ctx context.Context, key string, opt *WriterOptions) (Writer, error)
 
-	// Delete deletes the object associated with key. It is a no-op if that object
-	// does not exist.
+	// Delete deletes the object associated with key. If the specified object does
+	// not exist, NewRangeReader must return an error whose BlobError method
+	// returns NotFound.
 	Delete(ctx context.Context, key string) error
 }
