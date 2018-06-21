@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/testing/setup"
 	"github.com/google/go-cmp/cmp"
@@ -414,7 +415,7 @@ func TestDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := b.Delete(ctx, obj); err != nil {
-		t.Errorf("error occurs when deleting a non-existing object: %v", err)
+		t.Errorf("error occurs when deleting an existing object: %v", err)
 	}
 	req, _ := svc.HeadObjectRequest(&s3.HeadObjectInput{
 		Bucket: aws.String(bkt),
@@ -424,9 +425,8 @@ func TestDelete(t *testing.T) {
 		t.Errorf("object deleted, got err %v, want NotFound error", err)
 	}
 
-	// Delete non-existing object, no-op
-	if err := b.Delete(ctx, obj); err != nil {
-		t.Errorf("error occurs when deleting a non-existing object: %v", err)
+	if err := b.Delete(ctx, obj); err == nil || !blob.IsNotExist(err) {
+		t.Errorf("Delete: got %#v, want not exist error", err)
 	}
 }
 
