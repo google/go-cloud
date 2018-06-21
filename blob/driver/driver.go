@@ -44,7 +44,9 @@ type WriterOptions struct {
 
 // ObjectAttrs contains metadata of an object.
 type ObjectAttrs struct {
-	Size        int64
+	// Size is the size of the object in bytes.
+	Size int64
+	// ContentType is the MIME type of the object content. It must not be empty.
 	ContentType string
 }
 
