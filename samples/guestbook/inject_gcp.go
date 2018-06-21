@@ -19,14 +19,14 @@ package main
 import (
 	"context"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/gcpcloud"
-	"github.com/google/go-cloud/mysql/cloudmysql"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/gcsblob"
+	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-x-cloud/gcp/gcpcloud"
+	"github.com/google/go-x-cloud/mysql/cloudmysql"
+	"github.com/google/go-x-cloud/runtimevar"
+	"github.com/google/go-x-cloud/runtimevar/runtimeconfigurator"
+	"github.com/google/go-x-cloud/wire"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It

@@ -23,10 +23,11 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/driver"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -177,6 +178,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
+		if e := isErrNotExist(err); e != nil {
+			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
+		}
 		return nil, err
 	}
 	return &reader{
@@ -192,6 +196,9 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 	}
 	req, resp := b.client.HeadObjectRequest(in)
 	if err := req.Send(); err != nil {
+		if e := isErrNotExist(err); e != nil {
+			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
+		}
 		return nil, err
 	}
 	return &reader{
@@ -227,6 +234,9 @@ func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterO
 // Delete deletes the object associated with key. It is a no-op if that object
 // does not exist.
 func (b *bucket) Delete(ctx context.Context, key string) error {
+	if _, err := b.newMetadataReader(ctx, key); err != nil {
+		return err
+	}
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -234,4 +244,24 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 	req, _ := b.client.DeleteObjectRequest(input)
 	return req.Send()
+}
+
+type s3Error struct {
+	bucket, key, msg string
+	kind             driver.ErrorKind
+}
+
+func (e s3Error) BlobError() driver.ErrorKind {
+	return e.kind
+}
+
+func (e s3Error) Error() string {
+	return fmt.Sprintf("s3://%s/%s: %s", e.bucket, e.key, e.msg)
+}
+
+func isErrNotExist(err error) awserr.Error {
+	if e, ok := err.(awserr.Error); ok && e.Code() == "NotFound" {
+		return e
+	}
+	return nil
 }

@@ -18,9 +18,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
+	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-x-cloud/runtimevar"
+	"github.com/google/go-x-cloud/runtimevar/runtimeconfigurator"
 )
 
 func ExampleNewClient() {

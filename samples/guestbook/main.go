@@ -30,12 +30,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/health/sqlhealth"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/health"
+	"github.com/google/go-x-cloud/health/sqlhealth"
+	"github.com/google/go-x-cloud/runtimevar"
+	"github.com/google/go-x-cloud/server"
+	"github.com/google/go-x-cloud/wire"
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 )
@@ -291,13 +291,13 @@ func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	blobRead, err := app.bucket.NewReader(r.Context(), key)
 	if err != nil {
 		// TODO(light): Distinguish 404.
-		// https://github.com/google/go-cloud/issues/2
+		// https://github.com/google/go-x-cloud/issues/2
 		log.Println("serve blob:", err)
 		http.Error(w, "blob read error", http.StatusInternalServerError)
 		return
 	}
 	// TODO(light): Get content type from blob storage.
-	// https://github.com/google/go-cloud/issues/9
+	// https://github.com/google/go-x-cloud/issues/9
 	switch {
 	case strings.HasSuffix(key, ".png"):
 		w.Header().Set("Content-Type", "image/png")
