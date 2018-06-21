@@ -96,7 +96,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, errors.New("new blob range reader: offset must be non-negative")
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
-	return &Reader{r}, newBlobError(err)
+	return &Reader{r: r}, newBlobError(err)
 }
 
 // NewWriter returns Writer that writes to an object associated with key.
