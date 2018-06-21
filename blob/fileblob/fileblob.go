@@ -31,8 +31,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/driver"
 )
 
 type bucket struct {

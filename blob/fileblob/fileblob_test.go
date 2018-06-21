@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-cloud/blob"
+	"github.com/google/go-x-cloud/blob"
 )
 
 func TestNewBucket(t *testing.T) {
