@@ -73,8 +73,9 @@ kubectl apply -f "$tempdir/guestbook.yaml" || exit 1
 kubectl scale --replicas=0 deployment/guestbook || exit 1
 kubectl scale --replicas=1 deployment/guestbook || exit 1
 # Wait for endpoint then print it.
+log "Waiting for load balancer..."
 while true; do
-  if endpoint="$( kubectl get service guestbook -o json | jq -r '.status.loadBalancer.ingress[0].ip' )" && [[ ! -z "$endpoint" ]]; then
+  if endpoint="$( kubectl get service guestbook -o json | jq -r '.status.loadBalancer.ingress[0].ip' )" && [[ "$endpoint" != null ]]; then
     log "Deployed at http://${endpoint}:8080/"
     break
   fi
