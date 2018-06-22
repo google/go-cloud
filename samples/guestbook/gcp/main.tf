@@ -167,7 +167,7 @@ resource "google_project_iam_member" "server_runtimeconfig" {
 
 resource "google_project_service" "storage" {
   count              = "${local.service_count}"
-  service            = "storage.googleapis.com"
+  service            = "storage-component.googleapis.com"
   disable_on_destroy = false
 }
 
