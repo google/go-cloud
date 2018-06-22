@@ -12,13 +12,15 @@ If your issue is a bug, open one [here](https://github.com/google/go-x-cloud/iss
 Unlike the core Go project, we do not have a formal proposal process for changes. If you have a change you would like to see in Go X Cloud, please file an issue with the necessary details.
 
 ### Triaging
-The Go X Cloud team triages issues at least every two weeks, but usually within two business days. Bugs or feature requests are either placed into a **Sprint** milestone which means the issue is intended to be worked on. Issues that we would like to address but do not have time for are placed into the **Unplanned** milestone.
+The Go X Cloud team triages issues at least every two weeks, but usually within two business days. Bugs or feature requests are either placed into a **Sprint** milestone which means the issue is intended to be worked on. Issues that we would like to address but do not have time for are placed into the [Unplanned][] milestone.
+
+[Unplanned]: https://github.com/google/go-x-cloud/milestone/2
 
 ## Contributing Code
 We love accepting contributions! If your change is minor, please feel free submit a [pull request](https://help.github.com/articles/about-pull-requests/). If your change is larger, or adds a feature, please file an issue beforehand so that we can discuss the change. You're welcome to file an implementation pull request immediately as well, although we generally lean towards discussing the change and then reviewing the implementation separately.
 
 ### Finding something to work on
-If you want to write some code, but don't know where to start or what you might want to do, take a look at our **Unplanned** milestone. This is where you can find issues we would like to address but can't currently find time for. See if any of the latest ones look interesting! If you want help before you can start work, you can comment on the issue and we will try to help as best we can.
+If you want to write some code, but don't know where to start or what you might want to do, take a look at our [Unplanned][] milestone. This is where you can find issues we would like to address but can't currently find time for. See if any of the latest ones look interesting! If you need help before you can start work, you can comment on the issue and we will try to help as best we can.
 
 ### Contributor License Agreement
 
@@ -32,8 +34,6 @@ As a personal contributor, you only need to sign the Google CLA once across all 
 
 ### A Warning About Tests
 Tests that interact with cloud providers are written using a replay method, where the test is run and actually performs the operations, and the requests/results of the operations are stored in a replay file. This replay file is then read back in unit tests on Travis, so the tests get to operate with real data. Unfortunately, while the Go X Cloud can generate these replay files against our test cloud infrastructure, it is not yet possible for external contributors to do the same. We want to improve this process in the future and are researching how we can do this. If you have any ideas, please file an issue!
-
-Tests are run differently depending on whether you have a cloud environment available to run tests against or not.
 
 
 #### Writing and running tests against a cloud environment
