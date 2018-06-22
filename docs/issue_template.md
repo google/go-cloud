@@ -1,5 +1,5 @@
 Please answer these questions before submitting your issue. Thanks!
-(note: you can use `go bug` next time to fill out much of this information automatically!)
+(Note: You can use `go bug` next time to fill out much of this information automatically.)
 
 ### What version of Go are you using (`go version`)?
 
