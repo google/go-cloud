@@ -55,10 +55,54 @@ func TestNewRangeReader(t *testing.T) {
 	})
 }
 
+func TestNewWriter(t *testing.T) {
+	tests := []struct {
+		name, passContentType, wantContentType string
+		wantErr                                bool
+	}{
+		{
+			name:            "ParseContentType",
+			passContentType: `FORM-DATA;name="foo"`,
+			wantContentType: `form-data; name=foo`,
+		},
+		{
+			name:            "EmptyContentType",
+			wantContentType: "application/octet-stream",
+		},
+		{
+			name:            "InvalidContentType",
+			passContentType: "application/octet/stream",
+			wantErr:         true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spy := new(bucketSpy)
+			b := NewBucket(spy)
+			ctx := context.Background()
+			opt := &WriterOptions{
+				ContentType: tc.passContentType,
+			}
+			_, err := b.NewWriter(ctx, "foo", opt)
+			if tc.wantErr && err == nil {
+				t.Error("b.NewWriter: want error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("b.NewWriter: want nil error, got %v", err)
+			}
+			if spy.writeContentType != tc.wantContentType {
+				t.Errorf("b.NewWriter: got Content-Type %v, want %v", spy.writeContentType, tc.wantContentType)
+			}
+		})
+	}
+}
+
 type bucketSpy struct {
 	key    string
 	offset int64
 	length int64
+
+	writeContentType string
 
 	readCalled bool
 }
@@ -71,8 +115,9 @@ func (b *bucketSpy) NewRangeReader(ctx context.Context, key string, offset, leng
 	return readerStub{}, nil
 }
 
-func (b *bucketSpy) NewWriter(context.Context, string, string, *driver.WriterOptions) (driver.Writer, error) {
-	return nil, errors.New("unimplemented")
+func (b *bucketSpy) NewWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+	b.writeContentType = contentType
+	return writerStub{}, nil
 }
 
 func (b *bucketSpy) Delete(context.Context, string) error {
@@ -86,9 +131,19 @@ func (readerStub) Read([]byte) (int, error) {
 }
 
 func (readerStub) Attrs() *driver.ObjectAttrs {
-	return &driver.ObjectAttrs{}
+	return nil
 }
 
 func (readerStub) Close() error {
 	return errors.New("unimplemented")
+}
+
+type writerStub struct{}
+
+func (writerStub) Write([]byte) (n int, err error) {
+	panic("unimplemented")
+}
+
+func (writerStub) Close() error {
+	panic("unimplemented")
 }

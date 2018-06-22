@@ -136,7 +136,7 @@ func (r reader) Close() error {
 func (r reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
 		Size: r.size,
-		// TODO(shantuo): support content-type, see https://github.com/google/go-cloud/issues/111.
+		// TODO(#111): support content-type.
 		ContentType: "application/octet-stream",
 	}
 }

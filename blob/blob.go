@@ -19,6 +19,7 @@ package blob
 import (
 	"context"
 	"errors"
+	"mime"
 
 	"github.com/google/go-x-cloud/blob/driver"
 )
@@ -112,8 +113,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 //
 // The content-type can be set through WriterOptions.ContentType. If it is
 // empty, then "application/octet-stream" will be used.
-// TODO(shantuo): auto-detect content-type, see
-// https://github.com/google/go-cloud/issues/112.
+// TODO(#112): auto-detect content-type
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
@@ -124,7 +124,11 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			BufferSize: opt.BufferSize,
 		}
 		if opt.ContentType != "" {
-			ct = opt.ContentType
+			t, p, err := mime.ParseMediaType(opt.ContentType)
+			if err != nil {
+				return nil, err
+			}
+			ct = mime.FormatMediaType(t, p)
 		}
 	}
 	w, err := b.b.NewWriter(ctx, key, ct, dopt)
@@ -154,8 +158,7 @@ type WriterOptions struct {
 
 	// ContentType sets the MIME type of an object before writing to blob
 	// service. If not set, then "application/octet-stream" will be used.
-	// TODO(shantuo): auto-detect content-type, see
-	// https://github.com/google/go-cloud/issues/112.
+	// TODO(#112): auto-detect content-type
 	ContentType string
 }
 

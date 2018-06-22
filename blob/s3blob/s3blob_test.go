@@ -282,24 +282,25 @@ func TestRead(t *testing.T) {
 
 func TestWrite(t *testing.T) {
 	tests := []struct {
-		name, obj       string
-		want            []byte
-		wantContentType string
-		wantSize        int64
+		name, obj   string
+		want        []byte
+		wantErr     bool
+		contentType string
+		wantSize    int64
 	}{
 		{
-			name:            "write HTML",
-			obj:             "write_html",
-			want:            []byte("Hello, HTML!"),
-			wantContentType: "text/html",
-			wantSize:        12,
+			name:        "write HTML",
+			obj:         "write_html",
+			want:        []byte("Hello, HTML!"),
+			contentType: "text/html",
+			wantSize:    12,
 		},
 		{
-			name:            "write JSON",
-			obj:             "write_json",
-			want:            []byte("Hello, JSON!"),
-			wantContentType: "application/json",
-			wantSize:        12,
+			name:        "write JSON",
+			obj:         "write_json",
+			want:        []byte("Hello, JSON!"),
+			contentType: "application/json",
+			wantSize:    12,
 		},
 	}
 	sess, done := setup.NewAWSSession(t, region, "test-write")
@@ -326,7 +327,7 @@ func TestWrite(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			opts := &blob.WriterOptions{
-				ContentType: tc.wantContentType,
+				ContentType: tc.contentType,
 			}
 			w, err := b.NewWriter(ctx, tc.obj, opts)
 			if err != nil {
@@ -354,9 +355,9 @@ func TestWrite(t *testing.T) {
 				t.Errorf("reading object: %d read, got error %v", n, err)
 			}
 			defer body.Close()
-			if !cmp.Equal(got, tc.want) || int64(n) != tc.wantSize || *resp.ContentType != tc.wantContentType {
+			if !cmp.Equal(got, tc.want) || int64(n) != tc.wantSize || *resp.ContentType != tc.contentType {
 				t.Errorf("got %s, size %d, content-type %s, want %s, size %d, content-type %s",
-					got, n, *resp.ContentType, tc.want, tc.wantSize, tc.wantContentType)
+					got, n, *resp.ContentType, tc.want, tc.wantSize, tc.contentType)
 			}
 		})
 	}
