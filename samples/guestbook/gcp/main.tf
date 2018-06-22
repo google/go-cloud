@@ -35,6 +35,7 @@ resource "google_project_service" "cloudbuild" {
 
 resource "google_service_account" "server" {
   account_id   = "${var.server_service_account_name}"
+  project      = "${var.project}"
   display_name = "Guestbook Server"
 }
 
@@ -73,6 +74,7 @@ resource "google_sql_database_instance" "guestbook" {
   name             = "${var.db_instance}"
   database_version = "MYSQL_5_6"
   region           = "${var.region}"
+  project          = "${var.project}"
 
   settings {
     tier      = "db-f1-micro"
@@ -120,6 +122,7 @@ resource "google_sql_user" "guestbook" {
 
 resource "google_service_account" "db_access" {
   account_id   = "${var.db_access_service_account_name}"
+  project      = "${var.project}"
   display_name = "Guestbook Database Access"
 }
 
@@ -142,15 +145,17 @@ resource "google_project_service" "runtimeconfig" {
 }
 
 resource "google_runtimeconfig_config" "guestbook" {
-  name = "guestbook"
+  name    = "guestbook"
+  project = "${var.project}"
 
   depends_on = ["google_project_service.runtimeconfig"]
 }
 
 resource "google_runtimeconfig_variable" "motd" {
-  name   = "motd"
-  parent = "${google_runtimeconfig_config.guestbook.name}"
-  text   = "ohai from GCP runtime configuration"
+  name    = "motd"
+  parent  = "${google_runtimeconfig_config.guestbook.name}"
+  project = "${var.project}"
+  text    = "ohai from GCP runtime configuration"
 }
 
 resource "google_project_iam_member" "server_runtimeconfig" {
