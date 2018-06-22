@@ -1,24 +1,2 @@
-Please answer these questions before submitting your issue. Thanks!
-(Note: You can use `go bug` next time to fill out much of this information automatically.)
-
-### What version of Go are you using (`go version`)?
-
-
-### Does this issue reproduce with the latest release?
-
-
-### What operating system and processor architecture are you using (`go env`)?
-
-
-### What did you do?
-
-If possible, provide a recipe for reproducing the error.
-A complete runnable program is good.
-A link on play.golang.org is best.
-
-
-### What did you expect to see?
-
-
-### What did you see instead?
+Note: You can use `go bug` to have a cool, automatically filled out bug template!
 
