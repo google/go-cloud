@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dnaeon/go-vcr/recorder"
-	"github.com/google/go-x-cloud/testing/replay"
+	"github.com/google/go-x-cloud/internal/testing/replay"
 )
 
 // NewAWSSession creates a new session for testing against AWS.
