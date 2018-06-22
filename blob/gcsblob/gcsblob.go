@@ -23,9 +23,9 @@ import (
 	"regexp"
 	"unicode/utf8"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/driver"
+	"github.com/google/go-x-cloud/gcp"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
@@ -79,6 +79,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
+	if isErrNotExist(err) {
+		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+	}
 	return &reader{r}, err
 }
 
@@ -111,7 +114,11 @@ func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, 
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	return obj.Delete(ctx)
+	err := obj.Delete(ctx)
+	if isErrNotExist(err) {
+		return gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+	}
+	return err
 }
 
 const namingRuleURL = "https://cloud.google.com/storage/docs/naming"
@@ -150,4 +157,21 @@ func bufferSize(size int) int {
 		return size
 	}
 	return 0 // disable buffering
+}
+
+type gcsError struct {
+	bucket, key, msg string
+	kind             driver.ErrorKind
+}
+
+func (e gcsError) Error() string {
+	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
+}
+
+func (e gcsError) BlobError() driver.ErrorKind {
+	return e.kind
+}
+
+func isErrNotExist(err error) bool {
+	return err == storage.ErrObjectNotExist
 }

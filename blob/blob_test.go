@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-x-cloud/blob/driver"
 )
 
 func TestNewRangeReader(t *testing.T) {

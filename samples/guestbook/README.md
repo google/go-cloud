@@ -45,9 +45,6 @@ script that runs a temporary database using Docker:
 In another terminal, you can run:
 
 ```shell
-# Create the local bucket directory.
-mkdir blobs
-
 # Set a local Message of the Day
 echo 'Hello, World!' > motd.txt
 
@@ -88,17 +85,20 @@ directory using the same variables you entered during `terraform apply`.
 ## Running on Amazon Web Services (AWS)
 
 If you want to run this sample on AWS, you need to set up an account, download
-the AWS command line interface, and log in. You can then use Terraform, a tool
-for initializing cloud resources, to set up your project. This will create an
-EC2 instance you can connect to and run your binary, copying over the
-configuration
+the AWS command line interface, and log in. You will also need an SSH key. If you
+don't already have one, you can follow [this guide from GitHub][GitHub SSH].
+
+Once everything is set up, you can then use Terraform, a tool for initializing
+cloud resources, to set up your project. This will create an EC2 instance you can
+SSH to and run your binary.
 
 ```shell
 aws configure
-vgo build
+ssh-add
+GOOS=linux GOARCH=amd64 vgo build
 cd aws
 terraform init
-terraform apply -var region=us-west-1
+terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.pub)"
 
 # SSH into the EC2 instance.
 ssh "admin@$( terraform output instance_host )"
@@ -118,3 +118,10 @@ local machine.
 
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
+
+[GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
+
+## Gophers
+
+The Go gopher was designed by Renee French and used under the [Creative Commons
+3.0 Attributions](https://creativecommons.org/licenses/by/3.0/) license.

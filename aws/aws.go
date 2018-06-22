@@ -20,23 +20,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/wire"
-)
-
-// Set is a Wire provider set that provides a variety of common types
-// from the AWS session.
-var Set = wire.NewSet(
-	SessionConfig,
-	ConfigCredentials,
-	wire.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
+	"github.com/google/go-x-cloud/wire"
 )
 
 // DefaultSession is a Wire provider set that provides a *session.Session using
-// the default options. It includes all the providers in aws.Set.
+// the default options.
 var DefaultSession = wire.NewSet(
-	Set,
+	SessionConfig,
+	ConfigCredentials,
 	session.NewSessionWithOptions,
 	wire.Value(session.Options{}),
+	wire.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
 )
 
 // SessionConfig returns sess.Config.

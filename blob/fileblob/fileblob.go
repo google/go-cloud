@@ -32,8 +32,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-x-cloud/blob"
+	"github.com/google/go-x-cloud/blob/driver"
 )
 
 type bucket struct {
@@ -85,6 +85,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	path := filepath.Join(b.dir, relpath)
 	info, err := os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
+		}
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	if length == 0 {
@@ -164,8 +167,24 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	}
 	path := filepath.Join(b.dir, relpath)
 	err = os.Remove(path)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
+		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	return nil
+}
+
+type fileError struct {
+	relpath, msg string
+	kind         driver.ErrorKind
+}
+
+func (e fileError) Error() string {
+	return fmt.Sprintf("fileblob: object %s: %v", e.relpath, e.msg)
+}
+
+func (e fileError) BlobError() driver.ErrorKind {
+	return e.kind
 }
