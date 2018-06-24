@@ -151,6 +151,7 @@ type gen struct {
 	currPackage string
 	buf         bytes.Buffer
 	imports     map[string]string
+	values      map[ast.Expr]string
 	prog        *loader.Program // for positions and determining package names
 }
 
@@ -158,6 +159,7 @@ func newGen(prog *loader.Program, pkg string) *gen {
 	return &gen{
 		currPackage: pkg,
 		imports:     make(map[string]string),
+		values:      make(map[ast.Expr]string),
 		prog:        prog,
 	}
 }
@@ -207,6 +209,12 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 	if err != nil {
 		return err
 	}
+	type pendingVar struct {
+		name     string
+		expr     ast.Expr
+		typeInfo *types.Info
+	}
+	var pendingVars []pendingVar
 	for i := range calls {
 		c := &calls[i]
 		if c.hasCleanup && !injectSig.cleanup {
@@ -220,6 +228,15 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 				// TODO(light): Display line number of value expression.
 				ts := types.TypeString(c.out, nil)
 				return fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err)
+			}
+			if g.values[c.valueExpr] == "" {
+				name := disambiguate("_wireValue", g.nameInFileScope)
+				g.values[c.valueExpr] = name
+				pendingVars = append(pendingVars, pendingVar{
+					name:     name,
+					expr:     c.valueExpr,
+					typeInfo: c.valueTypeInfo,
+				})
 			}
 		}
 	}
@@ -235,6 +252,15 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 		errVar:  disambiguate("err", g.nameInFileScope),
 		discard: false,
 	})
+	if len(pendingVars) > 0 {
+		g.p("var (\n")
+		for _, pv := range pendingVars {
+			g.p("\t%s = ", pv.name)
+			g.writeAST(pv.typeInfo, pv.expr)
+			g.p("\n")
+		}
+		g.p(")\n\n")
+	}
 	return nil
 }
 
@@ -398,6 +424,11 @@ func (g *gen) nameInFileScope(name string) bool {
 			return true
 		}
 	}
+	for _, other := range g.values {
+		if other == name {
+			return true
+		}
+	}
 	_, obj := g.prog.Package(g.currPackage).Pkg.Scope().LookupParent(name, 0)
 	return obj != nil
 }
@@ -553,10 +584,7 @@ func (ig *injectorGen) structProviderCall(lname string, c *call) {
 }
 
 func (ig *injectorGen) valueExpr(lname string, c *call) {
-	ig.p("\t%s", lname)
-	ig.p(" := ")
-	ig.writeAST(c.valueTypeInfo, c.valueExpr)
-	ig.p("\n")
+	ig.p("\t%s := %s\n", lname, ig.g.values[c.valueExpr])
 }
 
 // nameInInjector reports whether name collides with any other identifier
