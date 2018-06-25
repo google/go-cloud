@@ -110,7 +110,7 @@ func ExampleBucket_NewWriter() {
 	}
 	// The blob writer implements io.Writer, so we can use any function that
 	// accepts an io.Writer. A writer must always be closed.
-	_, printErr := fmt.Fprintln(w, "Hello, World!\n")
+	_, printErr := fmt.Fprintln(w, "Hello, World!")
 	closeErr := w.Close()
 	if printErr != nil {
 		log.Fatal(printErr)
