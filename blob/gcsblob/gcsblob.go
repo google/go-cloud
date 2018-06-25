@@ -82,7 +82,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if isErrNotExist(err) {
 		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
-	return &reader{r}, err
+	return &reader{Reader: r}, err
 }
 
 // NewWriter returns Writer that writes to an object associated with key.
