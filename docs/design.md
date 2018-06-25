@@ -10,7 +10,7 @@ The generic APIs that Go X Cloud exports (like [`blob.Bucket`][] or
 imagine if we used a plain interface:
 
 ![Diagram showing user code depending on blob.Bucket, which is implemented by
-awsblob.Bucket.](img/abstract-type-no-driver.png)
+awsblob.Bucket.](img/user-facing-type-no-driver.png)
 
 Consider the [`Bucket.NewReader` method][], which is defined to be the same as
 calling `NewRangeReader` with some default argument values. If `blob.Bucket` was
@@ -27,7 +27,7 @@ implementation-agnostic logic from the interface. We call the interface the
 like this:
 
 ![Diagram showing user code depending on blob.Bucket, which holds a
-driver.Bucket implemented by awsblob.Bucket.](img/abstract-type.png)
+driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
 
 This has a number of benefits:
 
