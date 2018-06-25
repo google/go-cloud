@@ -3,6 +3,52 @@
 This document outlines important design decisions made for this repository and
 attempts to provide succinct rationales.
 
+## Drivers and User-Facing Types
+
+The generic APIs that Go X Cloud exports (like [`blob.Bucket`][] or
+[`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
+imagine if we used a plain interface:
+
+![Diagram showing user code depending on blob.Bucket, which is implemented by
+awsblob.Bucket.](img/abstract-type-no-driver.png)
+
+Consider the [`Bucket.NewReader` method][], which is defined to be the same as
+calling `NewRangeReader` with some default argument values. If `blob.Bucket` was
+an interface, each implementation of `blob.Bucket` would have to copy an
+implementation of `NewReader`. In this simple example, this might not be that
+bad, but it does not scale for more complex behaviors: conformance tests would
+need to ensure that each operation actually behaves in the way that the docs
+describe. This makes the interfaces hard to implement, which runs counter to the
+goals of the project.
+
+Instead, we follow the example of [`database/sql`][] and separate out the
+implementation-agnostic logic from the interface. We call the interface the
+**driver type** and the wrapper the **user-facing type**. Visually, it looks
+like this:
+
+![Diagram showing user code depending on blob.Bucket, which holds a
+driver.Bucket implemented by awsblob.Bucket.](img/abstract-type.png)
+
+This has a number of benefits:
+
+-  The user-facing type can perform higher level logic without making the
+   interface complex to implement. In the blob example, the user-facing type can
+   have a `NewReader` method that is guaranteed to act the same, regardless of
+   underlying implementation, without requiring conformance testing.
+-  Methods can be added to the user-facing type without breaking compatibility.
+-  As new operations on the driver are added as new optional interfaces, the
+   user-facing type can hide the need for type-assertions from the user.
+
+As a rule, if a method `Foo` has the same inputs and semantics in the
+user-facing type and the driver type, then the driver method may be called
+`Foo`, even though the return signatures may differ. Otherwise, the driver
+method name must be different to reduce confusion.
+
+[`blob.Bucket`]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket
+[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-x-cloud/runtimevar#Variable
+[`Bucket.NewReader` method]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket.NewReader
+[`database/sql`]: https://godoc.org/database/sql
+
 ## Errors
 
 -   The callee is expected to return `error`s with messages that include
