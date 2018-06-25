@@ -19,6 +19,7 @@ package blob
 import (
 	"context"
 	"errors"
+	"mime"
 
 	"github.com/google/go-x-cloud/blob/driver"
 )
@@ -39,9 +40,14 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
+// ContentType returns the MIME type of the blob object.
+func (r *Reader) ContentType() string {
+	return r.r.Attrs().ContentType
+}
+
 // Size returns the content size of the blob object.
 func (r *Reader) Size() int64 {
-	return r.r.Size()
+	return r.r.Attrs().Size
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
@@ -102,19 +108,30 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // NewWriter returns Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced.
-// The object will not be available (and any previous object will remain)
-// until Close has been called.
+// Otherwise any previous object with the same name will be replaced. The object
+// is not guaranteed to be available until Close has been called.
+//
+// The content-type can be set through WriterOptions.ContentType. If it is
+// empty, then "application/octet-stream" will be used.
+// TODO(#112): auto-detect content-type
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
 	var dopt *driver.WriterOptions
+	ct := "application/octet-stream"
 	if opt != nil {
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
 		}
+		if opt.ContentType != "" {
+			t, p, err := mime.ParseMediaType(opt.ContentType)
+			if err != nil {
+				return nil, err
+			}
+			ct = mime.FormatMediaType(t, p)
+		}
 	}
-	w, err := b.b.NewWriter(ctx, key, dopt)
+	w, err := b.b.NewWriter(ctx, key, ct, dopt)
 	return &Writer{w}, err
 }
 
@@ -138,6 +155,11 @@ type WriterOptions struct {
 	// If the Writer is used to write small objects concurrently, set the buffer size
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
+
+	// ContentType sets the MIME type of an object before writing to blob
+	// service. If not set, then "application/octet-stream" will be used.
+	// TODO(#112): auto-detect content-type
+	ContentType string
 }
 
 type blobError struct {
