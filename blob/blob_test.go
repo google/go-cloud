@@ -97,6 +97,7 @@ func TestNewWriter(t *testing.T) {
 	}
 }
 
+// bucketSpy implements driver.Bucket and is for testing purpose.
 type bucketSpy struct {
 	key    string
 	offset int64
@@ -121,6 +122,7 @@ func (b *bucketSpy) NewWriter(ctx context.Context, key string, contentType strin
 }
 
 func (b *bucketSpy) Delete(context.Context, string) error {
+	// TODO(#142): change these unimplemented error to panic.
 	return errors.New("unimplemented")
 }
 

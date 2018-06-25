@@ -126,8 +126,9 @@ func (w *writer) open() error {
 	return nil
 }
 
-// Close completes the writer and close it.
-// Any error occuring during write will be returned.
+// Close completes the writer and close it. Any error occuring during write will
+// be returned. If a writer is closed before any Write is called, Close will
+// create an empty file at the given key.
 func (w *writer) Close() error {
 	if w.w == nil {
 		w.touch()
@@ -138,10 +139,12 @@ func (w *writer) Close() error {
 	return w.err
 }
 
-// touch creates an empty object in the bucket if there isn't one already.
-// It is called if user creates a new writer but never calls write before
-// closing it.
+// touch creates an empty object in the bucket. It is called if user creates a
+// new writer but never calls write before closing it.
 func (w *writer) touch() {
+	if w.w != nil {
+		return
+	}
 	defer close(w.donec)
 	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
 		Bucket:      aws.String(w.bucket),
