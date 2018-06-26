@@ -142,6 +142,9 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 				index.Set(curr.t, i)
 				continue
 			}
+			// Ensure that all argument types have been visited. If not, push them
+			// on the stack in reverse order so that calls are added in argument
+			// order.
 			visitedArgs := true
 			for i := len(p.Args) - 1; i >= 0; i-- {
 				a := p.Args[i]
@@ -151,7 +154,6 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 						stk = append(stk, curr)
 						visitedArgs = false
 					}
-					// Push in reverse order so that calls are added in argument order.
 					stk = append(stk, frame{t: a.Type, from: curr.t})
 				}
 			}
