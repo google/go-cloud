@@ -12,14 +12,13 @@ imagine if we used a plain interface:
 ![Diagram showing user code depending on blob.Bucket, which is implemented by
 awsblob.Bucket.](img/user-facing-type-no-driver.png)
 
-Consider the [`Bucket.NewReader` method][], which is defined to be the same as
-calling `NewRangeReader` with some default argument values. If `blob.Bucket` was
-an interface, each implementation of `blob.Bucket` would have to copy an
-implementation of `NewReader`. In this simple example, this might not be that
-bad, but it does not scale for more complex behaviors: conformance tests would
-need to ensure that each operation actually behaves in the way that the docs
-describe. This makes the interfaces hard to implement, which runs counter to the
-goals of the project.
+Consider the [`Bucket.NewWriter` method][], which infers the content type of the
+blob based on the first bytes written to it. If `blob.Bucket` was an interface,
+each implementation of `blob.Bucket` would have to replicate this behavior
+precisely. This does not scale: conformance tests would be needed to ensure that
+each interface method actually behaves in the way that the docs describe. This
+makes the interfaces hard to implement, which runs counter to the goals of the
+project.
 
 Instead, we follow the example of [`database/sql`][] and separate out the
 implementation-agnostic logic from the interface. We call the interface the
@@ -32,10 +31,11 @@ driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
 This has a number of benefits:
 
 -  The user-facing type can perform higher level logic without making the
-   interface complex to implement. In the blob example, the user-facing type can
-   have a `NewReader` method that is guaranteed to act the same, regardless of
-   underlying implementation, without requiring conformance testing.
+   interface complex to implement. In the blob example, the user-facing type's
+   `NewWriter` method can do the content type detection and then pass the final
+   result to the driver type.
 -  Methods can be added to the user-facing type without breaking compatibility.
+   Contrast with adding methods to an interface, which is a breaking change.
 -  As new operations on the driver are added as new optional interfaces, the
    user-facing type can hide the need for type-assertions from the user.
 
