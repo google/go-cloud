@@ -61,6 +61,17 @@ type BucketOptions struct {
 	TokenSource gcp.TokenSource
 }
 
+type reader struct {
+	*storage.Reader
+}
+
+func (r *reader) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{
+		Size:        r.Size(),
+		ContentType: r.ContentType(),
+	}
+}
+
 // NewRangeReader returns a Reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
@@ -71,7 +82,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if isErrNotExist(err) {
 		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
-	return r, err
+	return &reader{Reader: r}, err
 }
 
 // NewWriter returns Writer that writes to an object associated with key.
@@ -84,13 +95,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // A WriterOptions can be given to change the default behavior of the Writer.
 //
 // The caller must call Close on the returned Writer when done writing.
-func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if err := validateObjectChar(key); err != nil {
 		return nil, err
 	}
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
+	w.ContentType = contentType
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
 	}
