@@ -13,7 +13,7 @@
 # limitations under the License.
 
 provider "google" {
-  version = "~> 1.13"
+  version = "~> 1.15"
   project = "${var.project}"
 }
 
@@ -21,12 +21,7 @@ provider "random" {
   version = "~> 1.3"
 }
 
-locals {
-  service_count = "${var.project_services ? 1 : 0}"
-}
-
 resource "google_project_service" "cloudbuild" {
-  count              = "${local.service_count}"
   service            = "cloudbuild.googleapis.com"
   disable_on_destroy = false
 }
@@ -45,7 +40,6 @@ resource "google_service_account_key" "server" {
 # Stackdriver Tracing
 
 resource "google_project_service" "trace" {
-  count              = "${local.service_count}"
   service            = "cloudtrace.googleapis.com"
   disable_on_destroy = false
 }
@@ -58,13 +52,11 @@ resource "google_project_iam_member" "server_trace" {
 # Cloud SQL
 
 resource "google_project_service" "sql" {
-  count              = "${local.service_count}"
   service            = "sql.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "sqladmin" {
-  count              = "${local.service_count}"
   service            = "sqladmin.googleapis.com"
   disable_on_destroy = false
 }
@@ -136,7 +128,6 @@ resource "google_project_iam_member" "db_access_cloudsql" {
 # Runtime Configurator
 
 resource "google_project_service" "runtimeconfig" {
-  count              = "${local.service_count}"
   service            = "runtimeconfig.googleapis.com"
   disable_on_destroy = false
 }
@@ -161,13 +152,11 @@ resource "google_project_iam_member" "server_runtimeconfig" {
 # Google Cloud Storage
 
 resource "google_project_service" "storage" {
-  count              = "${local.service_count}"
-  service            = "storage.googleapis.com"
+  service            = "storage-component.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "storage_api" {
-  count              = "${local.service_count}"
   service            = "storage-api.googleapis.com"
   disable_on_destroy = false
 }
@@ -233,7 +222,6 @@ resource "google_storage_bucket_object" "gophers" {
 # Kubernetes Engine
 
 resource "google_project_service" "container" {
-  count              = "${local.service_count}"
   service            = "container.googleapis.com"
   disable_on_destroy = false
 }
