@@ -25,14 +25,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/go-x-cloud/gcp"
 	"github.com/google/go-x-cloud/runtimevar"
 	"github.com/google/go-x-cloud/runtimevar/driver"
 	"github.com/google/go-x-cloud/runtimevar/internal"
 	"github.com/google/go-x-cloud/wire"
-	"google.golang.org/api/option"
-	transport "google.golang.org/api/transport/grpc"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Set is a Wire provider set that provides *Client using a default
@@ -54,8 +53,8 @@ const (
 //
 // The second return value is a function that can be called to clean up
 // the connection opened by Dial.
-func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClient, func(), error) {
-	conn, err := transport.Dial(ctx, option.WithEndpoint(endPoint), option.WithTokenSource(ts))
+func Dial(ctx context.Context, creds credentials.TransportCredentials) (pb.RuntimeConfigManagerClient, func(), error) {
+	conn, err := grpc.DialContext(ctx, endPoint, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		return nil, nil, err
 	}
