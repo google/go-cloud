@@ -230,7 +230,8 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 				return fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err)
 			}
 			if g.values[c.valueExpr] == "" {
-				name := disambiguate("_wireValue", g.nameInFileScope)
+				t := c.valueTypeInfo.TypeOf(c.valueExpr)
+				name := disambiguate("_wire"+export(typeVariableName(t))+"Value", g.nameInFileScope)
 				g.values[c.valueExpr] = name
 				pendingVars = append(pendingVars, pendingVar{
 					name:     name,
@@ -465,7 +466,7 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 		pi := params.At(i)
 		a := pi.Name()
 		if a == "" || a == "_" {
-			a = typeVariableName(pi.Type())
+			a = unexport(typeVariableName(pi.Type()))
 			if a == "" {
 				a = "arg"
 			}
@@ -485,7 +486,7 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 	}
 	for i := range calls {
 		c := &calls[i]
-		lname := typeVariableName(c.out)
+		lname := unexport(typeVariableName(c.out))
 		if lname == "" {
 			lname = "v"
 		}
@@ -659,16 +660,32 @@ func typeVariableName(t types.Type) string {
 	if p, ok := t.(*types.Pointer); ok {
 		t = p.Elem()
 	}
-	tn, ok := t.(*types.Named)
-	if !ok {
-		return ""
+	switch t := t.(type) {
+	case *types.Basic:
+		switch t.Kind() {
+		case types.Bool:
+			return "bool"
+		case types.Int:
+			return "int"
+		case types.Rune:
+			return "rune"
+		case types.Float64:
+			return "float64"
+		case types.String:
+			return "string"
+		}
+	case *types.Named:
+		// TODO(light): Include package name when appropriate.
+		return t.Obj().Name()
 	}
-	// TODO(light): Include package name when appropriate.
-	return unexport(tn.Obj().Name())
+	return ""
 }
 
 // unexport converts a name that is potentially exported to an unexported name.
 func unexport(name string) string {
+	if name == "" {
+		return ""
+	}
 	r, sz := utf8.DecodeRuneInString(name)
 	if !unicode.IsUpper(r) {
 		// foo -> foo
@@ -694,6 +711,23 @@ func unexport(name string) string {
 		r, sz = r2, sz2
 	}
 	sbuf.WriteString(name[i:])
+	return sbuf.String()
+}
+
+// export converts a name that is potentially unexported to an exported name.
+func export(name string) string {
+	if name == "" {
+		return ""
+	}
+	r, sz := utf8.DecodeRuneInString(name)
+	if unicode.IsUpper(r) {
+		// Foo -> Foo
+		return name
+	}
+	// fooBar -> FooBar
+	sbuf := new(strings.Builder)
+	sbuf.WriteRune(unicode.ToUpper(r))
+	sbuf.WriteString(name[sz:])
 	return sbuf.String()
 }
 
