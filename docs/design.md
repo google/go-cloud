@@ -46,7 +46,7 @@ method name should be different to reduce confusion.
 
 [`blob.Bucket`]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket
 [`runtimevar.Variable`]: https://godoc.org/github.com/google/go-x-cloud/runtimevar#Variable
-[`Bucket.NewReader` method]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket.NewReader
+[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
 ## Errors
