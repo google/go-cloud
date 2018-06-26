@@ -53,8 +53,9 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads an S3 object. It implements io.ReadCloser.
 type reader struct {
-	body io.ReadCloser
-	size int64
+	body        io.ReadCloser
+	size        int64
+	contentType string
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -66,21 +67,24 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-// Size returns the byte size of the object.
-func (r *reader) Size() int64 {
-	return r.size
+func (r *reader) Attrs() *driver.ObjectAttrs {
+	return &driver.ObjectAttrs{
+		Size:        r.size,
+		ContentType: r.contentType,
+	}
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
 	w *io.PipeWriter
 
-	bucket     string
-	key        string
-	bufferSize int
-	ctx        context.Context
-	uploader   *s3manager.Uploader
-	donec      chan struct{} // closed when done writing
+	bucket      string
+	key         string
+	bufferSize  int
+	ctx         context.Context
+	uploader    *s3manager.Uploader
+	contentType string
+	donec       chan struct{} // closed when done writing
 	// The following fields will be written before donec closes:
 	err error
 }
@@ -108,9 +112,10 @@ func (w *writer) open() error {
 		defer close(w.donec)
 
 		_, err := w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-			Bucket: aws.String(w.bucket),
-			Key:    aws.String(w.key),
-			Body:   pr,
+			Bucket:      aws.String(w.bucket),
+			ContentType: aws.String(w.contentType),
+			Key:         aws.String(w.key),
+			Body:        pr,
 		})
 		if err != nil {
 			w.err = err
@@ -121,8 +126,9 @@ func (w *writer) open() error {
 	return nil
 }
 
-// Close completes the writer and close it.
-// Any error occuring during write will be returned.
+// Close completes the writer and close it. Any error occuring during write will
+// be returned. If a writer is closed before any Write is called, Close will
+// create an empty file at the given key.
 func (w *writer) Close() error {
 	if w.w == nil {
 		w.touch()
@@ -133,15 +139,18 @@ func (w *writer) Close() error {
 	return w.err
 }
 
-// touch creates an empty object in the bucket if there isn't one already.
-// It is called if user creates a new writer but never calls write before
-// closing it.
+// touch creates an empty object in the bucket. It is called if user creates a
+// new writer but never calls write before closing it.
 func (w *writer) touch() {
+	if w.w != nil {
+		return
+	}
 	defer close(w.donec)
 	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-		Bucket: aws.String(w.bucket),
-		Key:    aws.String(w.key),
-		Body:   emptyBody,
+		Bucket:      aws.String(w.bucket),
+		ContentType: aws.String(w.contentType),
+		Key:         aws.String(w.key),
+		Body:        emptyBody,
 	})
 }
 
@@ -184,8 +193,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	return &reader{
-		body: resp.Body,
-		size: aws.Int64Value(resp.ContentLength),
+		body:        resp.Body,
+		contentType: aws.StringValue(resp.ContentType),
+		size:        aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -202,8 +212,9 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 		return nil, err
 	}
 	return &reader{
-		body: emptyBody,
-		size: aws.Int64Value(resp.ContentLength),
+		body:        emptyBody,
+		contentType: aws.StringValue(resp.ContentType),
+		size:        aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -217,13 +228,14 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 // A WriterOptions can be given to change the default behavior of the writer.
 //
 // The caller must call Close on the returned writer when done writing.
-func (b *bucket) NewWriter(ctx context.Context, key string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	w := &writer{
-		bucket:   b.name,
-		ctx:      ctx,
-		key:      key,
-		uploader: b.uploader,
-		donec:    make(chan struct{}),
+		bucket:      b.name,
+		ctx:         ctx,
+		key:         key,
+		uploader:    b.uploader,
+		contentType: contentType,
+		donec:       make(chan struct{}),
 	}
 	if opts != nil {
 		w.bufferSize = opts.BufferSize
