@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-x-cloud/gcp"
 	"github.com/google/go-x-cloud/runtimevar"
 	"github.com/google/go-x-cloud/runtimevar/driver"
-	"github.com/google/go-x-cloud/testing/replay"
+	"github.com/google/go-x-cloud/internal/testing/replay"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
