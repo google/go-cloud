@@ -42,7 +42,7 @@ This has a number of benefits:
 As a rule, if a method `Foo` has the same inputs and semantics in the
 user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
-method name must be different to reduce confusion.
+method name should be different to reduce confusion.
 
 [`blob.Bucket`]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket
 [`runtimevar.Variable`]: https://godoc.org/github.com/google/go-x-cloud/runtimevar#Variable
