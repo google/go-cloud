@@ -655,25 +655,16 @@ func zeroValue(t types.Type, qf types.Qualifier) string {
 }
 
 // typeVariableName invents a variable name derived from the type name
-// or returns the empty string if one could not be found.
+// or returns the empty string if one could not be found. There are no
+// guarantees about whether the name is exported or unexported: call
+// export() or unexport() to convert.
 func typeVariableName(t types.Type) string {
 	if p, ok := t.(*types.Pointer); ok {
 		t = p.Elem()
 	}
 	switch t := t.(type) {
 	case *types.Basic:
-		switch t.Kind() {
-		case types.Bool:
-			return "bool"
-		case types.Int:
-			return "int"
-		case types.Rune:
-			return "rune"
-		case types.Float64:
-			return "float64"
-		case types.String:
-			return "string"
-		}
+		return t.Name()
 	case *types.Named:
 		// TODO(light): Include package name when appropriate.
 		return t.Obj().Name()
