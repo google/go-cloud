@@ -32,15 +32,15 @@ import (
 	"google.golang.org/api/option"
 )
 
-// New returns a GCS Bucket. It handles creation of a client used to communicate
+// NewBucket returns a GCS Bucket. It handles creation of a client used to communicate
 // to GCS service.
-func New(ctx context.Context, bucketName string, opts *BucketOptions) (*blob.Bucket, error) {
+func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
 	var o []option.ClientOption
-	if opts != nil {
-		o = append(o, option.WithTokenSource(opts.TokenSource))
+	if client != nil {
+		o = append(o, option.WithHTTPClient(&client.Client))
 	}
 	c, err := storage.NewClient(ctx, o...)
 	if err != nil {
@@ -54,11 +54,6 @@ func New(ctx context.Context, bucketName string, opts *BucketOptions) (*blob.Buc
 type bucket struct {
 	name   string
 	client *storage.Client
-}
-
-// BucketOptions provides information settings during bucket initialization.
-type BucketOptions struct {
-	TokenSource gcp.TokenSource
 }
 
 type reader struct {
