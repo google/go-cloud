@@ -17,6 +17,8 @@ package blob
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-x-cloud/blob/driver"
@@ -67,7 +69,7 @@ func TestNewWriter(t *testing.T) {
 		},
 		{
 			name:            "EmptyContentType",
-			wantContentType: "application/octet-stream",
+			wantContentType: "",
 		},
 		{
 			name:            "InvalidContentType",
@@ -92,6 +94,57 @@ func TestNewWriter(t *testing.T) {
 			}
 			if spy.writeContentType != tc.wantContentType {
 				t.Errorf("b.NewWriter: got Content-Type %v, want %v", spy.writeContentType, tc.wantContentType)
+			}
+		})
+	}
+}
+
+func TestWriteCloseDetectContentType(t *testing.T) {
+	tests := []struct {
+		name            string
+		files           []string
+		wantContentType string
+	}{
+		{
+			name:            "OneLargeFile",
+			files:           []string{"test-large.jpg"},
+			wantContentType: "image/jpeg",
+		},
+		{
+			name:            "MediumFilesDetectDuringWrite",
+			files:           []string{"test-medium-1", "test-medium-2", "test-medium-3"},
+			wantContentType: "text/html; charset=utf-8",
+		},
+		{
+			name:            "SmallFilesDetectDuringClose",
+			files:           []string{"test-small-1", "test-small-2", "test-small-3"},
+			wantContentType: "text/plain; charset=utf-8",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spy := new(bucketSpy)
+			b := NewBucket(spy)
+			ctx := context.Background()
+			w, err := b.NewWriter(ctx, "foo", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, f := range tc.files {
+				fp := filepath.Join("testdata", f)
+				d, err := ioutil.ReadFile(fp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := w.Write(d); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if spy.writeContentType != tc.wantContentType {
+				t.Errorf("Write got Content-Type %s, want %s", spy.writeContentType, tc.wantContentType)
 			}
 		})
 	}
@@ -143,9 +196,9 @@ func (readerStub) Close() error {
 type writerStub struct{}
 
 func (writerStub) Write([]byte) (n int, err error) {
-	panic("unimplemented")
+	return 0, nil
 }
 
 func (writerStub) Close() error {
-	panic("unimplemented")
+	return nil
 }

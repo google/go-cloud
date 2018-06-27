@@ -17,9 +17,11 @@
 package blob
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"mime"
+	"net/http"
 
 	"github.com/google/go-x-cloud/blob/driver"
 )
@@ -54,7 +56,15 @@ func (r *Reader) Size() int64 {
 // all writes are done.
 type Writer struct {
 	w driver.Writer
+
+	bucket driver.Bucket
+	key    string
+	opt    *driver.WriterOptions
+	buf    *bytes.Buffer
 }
+
+// sniffLen is the byte size of Writer.buf used to detect content-type.
+const sniffLen = 512
 
 // Write implements the io.Writer interface.
 //
@@ -62,12 +72,48 @@ type Writer struct {
 // even if the actual write fails. Use the error returned from Close method to
 // check and handle error.
 func (w *Writer) Write(p []byte) (n int, err error) {
-	return w.w.Write(p)
+	if w.w != nil {
+		return w.w.Write(p)
+	}
+	ctx := context.Background()
+	ob := w.buf.Bytes()
+	l := len(p)
+	if len(ob)+l > sniffLen {
+		l = sniffLen - len(ob)
+	}
+	w.buf.Write(p[:l])
+	if len(w.buf.Bytes()) >= sniffLen {
+		ct := http.DetectContentType(w.buf.Bytes())
+		if w.w, err = w.bucket.NewWriter(ctx, w.key, ct, w.opt); err != nil {
+			return 0, err
+		}
+		var n1, n2 int
+		if n1, err = w.w.Write(w.buf.Bytes()); err != nil {
+			return n1, err
+		}
+		if l < len(p) {
+			n2, err = w.w.Write(p[l:])
+		}
+		return n1 + n2 - len(ob), err
+	}
+	return l, nil
 }
 
 // Close flushes any buffered data and completes the Write. It is user's responsibility
 // to call it after finishing the write and handle the error if returned.
 func (w *Writer) Close() error {
+	if w.w != nil {
+		return w.w.Close()
+	}
+	ctx := context.Background()
+	var err error
+	ct := http.DetectContentType(w.buf.Bytes())
+	if w.w, err = w.bucket.NewWriter(ctx, w.key, ct, w.opt); err != nil {
+		return err
+	}
+	if _, err = w.w.Write(w.buf.Bytes()); err != nil {
+		return err
+	}
 	return w.w.Close()
 }
 
@@ -112,13 +158,13 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // is not guaranteed to be available until Close has been called.
 //
 // The content-type can be set through WriterOptions.ContentType. If it is
-// empty, then "application/octet-stream" will be used.
-// TODO(#112): auto-detect content-type
+// empty, then it will be sniffed automatically using
+// net/http.DetectContentType.
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
 	var dopt *driver.WriterOptions
-	ct := "application/octet-stream"
+	var w driver.Writer
 	if opt != nil {
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
@@ -128,11 +174,17 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			if err != nil {
 				return nil, err
 			}
-			ct = mime.FormatMediaType(t, p)
+			ct := mime.FormatMediaType(t, p)
+			w, err = b.b.NewWriter(ctx, key, ct, dopt)
+			return &Writer{w: w}, err
 		}
 	}
-	w, err := b.b.NewWriter(ctx, key, ct, dopt)
-	return &Writer{w}, err
+	return &Writer{
+		bucket: b.b,
+		key:    key,
+		opt:    dopt,
+		buf:    bytes.NewBuffer([]byte{}),
+	}, nil
 }
 
 // Delete deletes the object associated with key. It returns an error if that
@@ -156,9 +208,9 @@ type WriterOptions struct {
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
 
-	// ContentType sets the MIME type of an object before writing to blob
-	// service. If not set, then "application/octet-stream" will be used.
-	// TODO(#112): auto-detect content-type
+	// ContentType sets the MIME type of an object before writing to blob service.
+	// If not set, then it will be sniffed automatically using
+	// net/http.DetectContentType.
 	ContentType string
 }
 
