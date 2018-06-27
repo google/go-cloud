@@ -32,17 +32,15 @@ import (
 	"google.golang.org/api/option"
 )
 
-// NewBucket returns a GCS Bucket. It handles creation of a client used to communicate
-// to GCS service.
+// NewBucket returns a GCS Bucket that communicates using the passed HTTP client.
 func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
-	var o []option.ClientOption
 	if client != nil {
-		o = append(o, option.WithHTTPClient(&client.Client))
+		return nil, fmt.Errorf("NewBucket requires an HTTP client to communicate using")
 	}
-	c, err := storage.NewClient(ctx, o...)
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
 		return nil, err
 	}
