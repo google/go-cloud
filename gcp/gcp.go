@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package gcp provides fundamental Wire providers and types for Google Cloud Platform (GCP).
 package gcp
 
 import (
