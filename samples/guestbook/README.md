@@ -3,7 +3,8 @@
 Guestbook is a sample application that records visitors' messages, displays a
 cloud banner, and an administrative message. The main business logic is
 written in a cloud-agnostic manner using MySQL, the generic blob API, and the
-generic runtimevar API. All platform-specific code is set up by Wire.
+generic runtimevar API. All platform-specific code is set up by 
+[Wire](https://github.com/google/go-x-cloud/tree/master/wire).
 
 ## Prerequisites
 
@@ -11,8 +12,9 @@ You will need to install the following software to run this sample:
 
 - [Go](https://golang.org/doc/install) and
   [vgo](https://go.googlesource.com/vgo)
+- [gowire](https://github.com/google/go-x-cloud/blob/master/wire/README.md#installing)
 - [Docker](https://docs.docker.com/install/)
-- [Terraform](https://www.terraform.io/intro/getting-started/install.html)
+- [Terraform][TF]
 - [jq](https://stedolan.github.io/jq/download/)
 - [gcloud CLI](https://cloud.google.com/sdk/downloads), if you want to use GCP
 - [aws CLI](https://docs.aws.amazon.com/cli/latest/userguide/installing.html),
@@ -60,7 +62,7 @@ You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
 ## Running on Google Cloud Platform (GCP)
 
 If you want to run this sample on GCP, you need to create a project, download
-the gcloud SDK, and log in. You can then use Terraform, a tool for
+the gcloud SDK, and log in. You can then use [Terraform][TF], a tool for
 initializing cloud resources, to set up your project. Finally, this sample
 provides a script for building the Guestbook binary and deploying it to the
 Kubernetes cluster created by Terraform.
@@ -125,3 +127,5 @@ directory using the same variables you entered during `terraform apply`.
 
 The Go gopher was designed by Renee French and used under the [Creative Commons
 3.0 Attributions](https://creativecommons.org/licenses/by/3.0/) license.
+
+[TF]: https://www.terraform.io/intro/getting-started/install.html

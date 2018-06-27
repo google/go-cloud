@@ -32,7 +32,7 @@ import (
 // placed in main().
 func Example() {
 	// Connect and authenticate to AWS.
-	srv, cleanup, err := initialize(context.Background())
+	srv, cleanup, err := setup(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func Example() {
 // Wire what provider functions to call. See
 // https://github.com/google/go-x-cloud/blob/master/wire/README.md#injectors
 // for more details.
-func initialize(ctx context.Context) (*server.Server, func(), error) {
+func setup(ctx context.Context) (*server.Server, func(), error) {
 	panic(wire.Build(
 		// The AWS set includes all the default wiring for AWS, including
 		// for *server.Server.
