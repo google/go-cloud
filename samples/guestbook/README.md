@@ -12,6 +12,7 @@ You will need to install the following software to run this sample:
 
 - [Go](https://golang.org/doc/install) and
   [vgo](https://go.googlesource.com/vgo)
+- [gowire](https://github.com/google/go-x-cloud/blob/master/wire/README.md#installing)
 - [Docker](https://docs.docker.com/install/)
 - [Terraform][TF]
 - [jq](https://stedolan.github.io/jq/download/)
