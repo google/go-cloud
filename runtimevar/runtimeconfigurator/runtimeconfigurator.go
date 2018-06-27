@@ -56,11 +56,10 @@ const (
 // The second return value is a function that can be called to clean up
 // the connection opened by Dial.
 func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClient, func(), error) {
-	opts := []grpc.DialOption{
+	conn, err := grpc.DialContext(ctx, endPoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{ts}),
-	}
-	conn, err := grpc.DialContext(ctx, endPoint, opts...)
+		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
+	)
 	if err != nil {
 		return nil, nil, err
 	}
