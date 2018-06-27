@@ -41,9 +41,10 @@ type Error interface {
 type Reader interface {
 	io.ReadCloser
 
-	// Size returns the number of bytes in the whole blob. It must always return
-	// the same value.
-	Size() int64
+	// Attrs returns the object's metadata. It may return a different pointer each
+	// time, but it must return the exact same values each time it is called. The
+	// caller must not modify any fields in the returned ObjectAttrs.
+	Attrs() *ObjectAttrs
 }
 
 // Writer writes an object to the blob.
@@ -53,7 +54,18 @@ type Writer interface {
 
 // WriterOptions controls behaviors of Writer.
 type WriterOptions struct {
+	// BufferSize changes the default size in byte of the maximum part Writer can
+	// write in a single request, if supported. Larger objects will be split into
+	// multiple requests.
 	BufferSize int
+}
+
+// ObjectAttrs contains metadata of an object.
+type ObjectAttrs struct {
+	// Size is the size of the object in bytes.
+	Size int64
+	// ContentType is the MIME type of the blob object. It must not be empty.
+	ContentType string
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
@@ -73,8 +85,11 @@ type Bucket interface {
 	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
+	// contentType sets the MIME type of the object to be written. It must not be
+	// empty.
+	//
 	// The caller must call Close on the returned Writer when done writing.
-	NewWriter(ctx context.Context, key string, opt *WriterOptions) (Writer, error)
+	NewWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, NewRangeReader must return an error whose BlobError method
