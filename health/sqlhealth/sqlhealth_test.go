@@ -71,7 +71,7 @@ type stubConn struct {
 }
 
 func (conn *stubConn) Prepare(query string) (driver.Stmt, error) {
-	return nil, errors.New("not implemented")
+	panic("not implemented")
 }
 
 func (conn *stubConn) Close() error {
@@ -79,7 +79,7 @@ func (conn *stubConn) Close() error {
 }
 
 func (conn *stubConn) Begin() (driver.Tx, error) {
-	return nil, errors.New("not implemented")
+	panic("not implemented")
 }
 
 func (conn *stubConn) Ping(ctx context.Context) error {
