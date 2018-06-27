@@ -37,7 +37,7 @@ func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
-	if client != nil {
+	if client == nil {
 		return nil, fmt.Errorf("NewBucket requires an HTTP client to communicate using")
 	}
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
