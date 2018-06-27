@@ -16,7 +16,6 @@ package blob
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/google/go-x-cloud/blob/driver"
@@ -122,14 +121,13 @@ func (b *bucketSpy) NewWriter(ctx context.Context, key string, contentType strin
 }
 
 func (b *bucketSpy) Delete(context.Context, string) error {
-	// TODO(#142): change these unimplemented error to panic.
-	return errors.New("unimplemented")
+	panic("not implemented")
 }
 
 type readerStub struct{}
 
 func (readerStub) Read([]byte) (int, error) {
-	return 0, errors.New("unimplemented")
+	panic("not implemented")
 }
 
 func (readerStub) Attrs() *driver.ObjectAttrs {
@@ -137,15 +135,15 @@ func (readerStub) Attrs() *driver.ObjectAttrs {
 }
 
 func (readerStub) Close() error {
-	return errors.New("unimplemented")
+	return nil
 }
 
 type writerStub struct{}
 
 func (writerStub) Write([]byte) (n int, err error) {
-	panic("unimplemented")
+	panic("not implemented")
 }
 
 func (writerStub) Close() error {
-	panic("unimplemented")
+	panic("not implemented")
 }
