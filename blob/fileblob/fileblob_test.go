@@ -360,10 +360,7 @@ func TestWriter(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		b, err := NewBucket(subdir)
-		if err != nil {
-			t.Fatal(err)
-		}
+		b := &bucket{dir: subdir}
 		ctx := context.Background()
 		names := []string{
 			// Backslashes not allowed.
@@ -380,7 +377,7 @@ func TestWriter(t *testing.T) {
 			"C:/baz.txt",
 		}
 		for _, name := range names {
-			w, err := b.NewWriter(ctx, name, nil)
+			w, err := b.NewWriter(ctx, name, "application/octet-stream", nil)
 			if err == nil {
 				w.Close()
 				t.Errorf("b.NewWriter(ctx, %q, nil) did not return an error", name)

@@ -24,7 +24,6 @@ package fileblob
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -145,9 +144,6 @@ func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, 
 	relpath, err := resolvePath(key)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
-	if contentType != "application/octet-stream" {
-		return nil, errors.New("fileblob doesn't support custom content-type yet, see https://github.com/google/go-cloud/issues/111")
 	}
 	path := filepath.Join(b.dir, relpath)
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
