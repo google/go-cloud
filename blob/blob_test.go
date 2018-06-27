@@ -136,7 +136,6 @@ func (readerStub) Attrs() *driver.ObjectAttrs {
 
 func (readerStub) Close() error {
 	return nil
-	//panic("not implemented")
 }
 
 type writerStub struct{}
