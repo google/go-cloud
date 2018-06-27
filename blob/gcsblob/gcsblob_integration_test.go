@@ -32,7 +32,7 @@ func TestReadOfNonExistentFile(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	ctx := context.Background()
-	bucket, err := gcsblob.New(ctx, *testBucket, nil)
+	bucket, err := gcsblob.NewBucket(ctx, *testBucket, nil)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}
@@ -50,7 +50,7 @@ func TestDeleteNonExistentFile(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	ctx := context.Background()
-	bucket, err := gcsblob.New(ctx, *testBucket, nil)
+	bucket, err := gcsblob.NewBucket(ctx, *testBucket, nil)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}

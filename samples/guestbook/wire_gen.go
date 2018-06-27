@@ -132,7 +132,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options)
-	bucket, err := gcpBucket(ctx, flags, tokenSource)
+	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -220,10 +220,8 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 
 // inject_gcp.go:
 
-func gcpBucket(ctx context.Context, flags *cliFlags, ts gcp.TokenSource) (*blob.Bucket, error) {
-	return gcsblob.New(ctx, flags.bucket, &gcsblob.BucketOptions{
-		TokenSource: ts,
-	})
+func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
+	return gcsblob.NewBucket(ctx, flags.bucket, client2)
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
