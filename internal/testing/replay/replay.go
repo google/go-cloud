@@ -127,6 +127,7 @@ func scrubAWSHeaders(filepath string) error {
 // This is very dodgy and doesn't work if the value has a " in it,
 // or if the key is the last in the list, or probably other things
 // too. If the case isn't tested, it probably doesn't work.
+// json.Decoder.Token could be used to make this way better.
 func removeJSONString(s, key string) string {
 	re := regexp.MustCompile(`(?U)\"` + key + `\":\".*\",`)
 	return re.ReplaceAllString(s, "")
