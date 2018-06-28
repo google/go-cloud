@@ -81,15 +81,8 @@ func TestWire(t *testing.T) {
 						t.Fatal("Did not expect errors.")
 					}
 					for _, s := range test.wantErrorStrings {
-						found := false
-						for _, e := range errs {
-							if strings.Contains(e.Error(), s) {
-								found = true
-								break
-							}
-						}
-						if !found {
-							t.Errorf("errors did not contain %q", s)
+						if !errorListContains(errs, s) {
+							t.Errorf("Errors did not contain %q", s)
 						}
 					}
 					return
@@ -311,12 +304,8 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
-	wantError := false
-	wantErrorStrings := []string(nil)
-	const errorPrefix = "ERROR\n"
-	if bytes.HasPrefix(out, []byte(errorPrefix)) {
-		wantError = true
-		wantErrorStrings = strings.Split(string(bytes.Trim(out[len(errorPrefix):], "\n")), "\n")
+	wantErrorStrings, wantError := parseGoldenOutput(out)
+	if wantError {
 		out = nil
 	}
 	goFiles := map[string][]byte{
@@ -598,4 +587,26 @@ func runDiff(a, b []byte) ([]byte, error) {
 	c := exec.Command("diff", "-u", fa.Name(), fb.Name())
 	out, err := c.Output()
 	return out, err
+}
+
+func parseGoldenOutput(out []byte) (errorStrings []string, wantError bool) {
+	const errorPrefix = "ERROR\n"
+	if !bytes.HasPrefix(out, []byte(errorPrefix)) {
+		return nil, false
+	}
+	// Skip past first line.
+	out = out[len(errorPrefix):]
+	// Remove any leading or trailing blank lines.
+	out = bytes.Trim(out[len(errorPrefix):], "\n")
+	// Split lines.
+	return strings.Split(string(out), "\n"), true
+}
+
+func errorListContains(errs []error, substr string) bool {
+	for _, e := range errs {
+		if strings.Contains(e.Error(), substr) {
+			return true
+		}
+	}
+	return false
 }
