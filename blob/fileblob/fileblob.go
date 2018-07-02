@@ -145,6 +145,7 @@ func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, 
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
+	// TODO(#111): support content-type in fileblob.
 	path := filepath.Join(b.dir, relpath)
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)

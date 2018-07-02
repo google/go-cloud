@@ -57,6 +57,9 @@ func (r *Reader) Size() int64 {
 type Writer struct {
 	w driver.Writer
 
+	// This fields exist only when w is not created in the first place when
+	// NewWriter is called.
+	ctx    context.Context
 	bucket driver.Bucket
 	key    string
 	opt    *driver.WriterOptions
@@ -75,28 +78,26 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	if w.w != nil {
 		return w.w.Write(p)
 	}
-	ctx := context.Background()
-	ob := w.buf.Bytes()
-	l := len(p)
-	if len(ob)+l > sniffLen {
-		l = sniffLen - len(ob)
-	}
-	w.buf.Write(p[:l])
-	if len(w.buf.Bytes()) >= sniffLen {
-		ct := http.DetectContentType(w.buf.Bytes())
-		if w.w, err = w.bucket.NewWriter(ctx, w.key, ct, w.opt); err != nil {
+
+	// If w is not created due to no content-type is passed in, Write will try to
+	// sniff the MIME type base on at most 512 bytes of the blob content of p.
+
+	// Detect the content-type directly if the first chunk is at least 512 bytes.
+	if w.buf.Len() == 0 && len(p) >= sniffLen {
+		ct := http.DetectContentType(p[:sniffLen])
+		if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
 			return 0, err
 		}
-		var n1, n2 int
-		if n1, err = w.w.Write(w.buf.Bytes()); err != nil {
-			return n1, err
-		}
-		if l < len(p) {
-			n2, err = w.w.Write(p[l:])
-		}
-		return n1 + n2 - len(ob), err
+		return w.w.Write(p)
 	}
-	return l, nil
+
+	// Store p in w.buf and detect the content-type when the size of content in
+	// w.buf is at least 512 bytes.
+	w.buf.Write(p)
+	if w.buf.Len() >= sniffLen {
+		return w.flush()
+	}
+	return len(p), nil
 }
 
 // Close flushes any buffered data and completes the Write. It is user's responsibility
@@ -105,16 +106,20 @@ func (w *Writer) Close() error {
 	if w.w != nil {
 		return w.w.Close()
 	}
-	ctx := context.Background()
-	var err error
-	ct := http.DetectContentType(w.buf.Bytes())
-	if w.w, err = w.bucket.NewWriter(ctx, w.key, ct, w.opt); err != nil {
-		return err
-	}
-	if _, err = w.w.Write(w.buf.Bytes()); err != nil {
+	if _, err := w.flush(); err != nil {
 		return err
 	}
 	return w.w.Close()
+}
+
+// flush tries to detect the MIME type of the content inside the buffer and
+// write the content to the blob.
+func (w *Writer) flush() (n int, err error) {
+	ct := http.DetectContentType(w.buf.Bytes())
+	if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
+		return 0, err
+	}
+	return w.w.Write(w.buf.Bytes())
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
@@ -180,6 +185,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 		}
 	}
 	return &Writer{
+		ctx:    ctx,
 		bucket: b.b,
 		key:    key,
 		opt:    dopt,

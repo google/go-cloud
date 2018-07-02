@@ -68,10 +68,6 @@ func TestNewWriter(t *testing.T) {
 			wantContentType: `form-data; name=foo`,
 		},
 		{
-			name:            "EmptyContentType",
-			wantContentType: "",
-		},
-		{
 			name:            "InvalidContentType",
 			passContentType: "application/octet/stream",
 			wantErr:         true,
@@ -85,7 +81,7 @@ func TestNewWriter(t *testing.T) {
 			opt := &WriterOptions{
 				ContentType: tc.passContentType,
 			}
-			_, err := b.NewWriter(ctx, "foo", opt)
+			w, err := b.NewWriter(ctx, "foo", opt)
 			if tc.wantErr && err == nil {
 				t.Error("b.NewWriter: want error, got nil")
 			}
@@ -95,6 +91,12 @@ func TestNewWriter(t *testing.T) {
 			if spy.writeContentType != tc.wantContentType {
 				t.Errorf("b.NewWriter: got Content-Type %v, want %v", spy.writeContentType, tc.wantContentType)
 			}
+			if w == nil {
+				return
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 }
@@ -102,22 +104,29 @@ func TestNewWriter(t *testing.T) {
 func TestWriteCloseDetectContentType(t *testing.T) {
 	tests := []struct {
 		name            string
-		files           []string
+		file            string
+		firstChunkSize  int
 		wantContentType string
 	}{
 		{
 			name:            "OneLargeFile",
-			files:           []string{"test-large.jpg"},
+			file:            "test-large.jpg",
 			wantContentType: "image/jpeg",
 		},
 		{
 			name:            "MediumFilesDetectDuringWrite",
-			files:           []string{"test-medium-1", "test-medium-2", "test-medium-3"},
+			file:            "test-medium.html",
+			firstChunkSize:  256,
 			wantContentType: "text/html; charset=utf-8",
 		},
 		{
 			name:            "SmallFilesDetectDuringClose",
-			files:           []string{"test-small-1", "test-small-2", "test-small-3"},
+			file:            "test-small.txt",
+			firstChunkSize:  8,
+			wantContentType: "text/plain; charset=utf-8",
+		},
+		{
+			name:            "NoFile",
 			wantContentType: "text/plain; charset=utf-8",
 		},
 	}
@@ -126,17 +135,23 @@ func TestWriteCloseDetectContentType(t *testing.T) {
 			spy := new(bucketSpy)
 			b := NewBucket(spy)
 			ctx := context.Background()
-			w, err := b.NewWriter(ctx, "foo", nil)
+			w, err := b.NewWriter(ctx, tc.name, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, f := range tc.files {
-				fp := filepath.Join("testdata", f)
+			if tc.file != "" {
+				fp := filepath.Join("testdata", tc.file)
 				d, err := ioutil.ReadFile(fp)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := w.Write(d); err != nil {
+				off := 0
+				if tc.firstChunkSize > 0 {
+					if off, err = w.Write(d[:off]); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if _, err := w.Write(d[off:]); err != nil {
 					t.Fatal(err)
 				}
 			}
