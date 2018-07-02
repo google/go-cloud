@@ -159,12 +159,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // NewWriter returns Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced. The object
+// Otherwise any previous object with the same key will be replaced. The object
 // is not guaranteed to be available until Close has been called.
-//
-// The content-type can be set through WriterOptions.ContentType. If it is
-// empty, then it will be sniffed automatically using
-// net/http.DetectContentType.
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
@@ -214,9 +210,9 @@ type WriterOptions struct {
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
 
-	// ContentType sets the MIME type of an object before writing to blob service.
-	// If not set, then it will be sniffed automatically using
-	// net/http.DetectContentType.
+	// ContentType specifies the MIME type of the object being written. If not set,
+	// then it will be inferred from the content using the algorithm described at
+	// http://mimesniff.spec.whatwg.org/
 	ContentType string
 }
 
