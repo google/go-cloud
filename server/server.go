@@ -20,9 +20,9 @@ import (
 	"path"
 	"sync"
 
-	"github.com/google/go-x-cloud/health"
-	"github.com/google/go-x-cloud/requestlog"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/wire"
 
 	"go.opencensus.io/trace"
 )

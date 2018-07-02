@@ -5,7 +5,7 @@ attempts to provide succinct rationales.
 
 ## Developers and Operators
 
-Go X Cloud is designed with two different personas in mind: the developer and
+Go Cloud is designed with two different personas in mind: the developer and
 the operator. In the world of DevOps, these may be the same person. A developer
 may be directly deploying their application into production, especially on
 smaller teams. In a larger organization, these may be different teams entirely,
@@ -20,7 +20,7 @@ different ways of looking at a Go program:
   focus is making software run predictably and reliably with the resources at
   hand.
 
-Go X Cloud uses Go interfaces at the boundary between these two personas: a
+Go Cloud uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
 implementation of that interface. The [`blob.Bucket`] type is a prime example:
 the API does not provide a way of creating a new bucket, as that is an
@@ -29,11 +29,11 @@ determine the content type of incoming data, as that is a developer's concern.
 This separation of concerns allows these two personas to communicate using a
 shared language while focusing on their respective areas of expertise.
 
-[`blob.Bucket`]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket
+[`blob.Bucket`]: https://godoc.org/github.com/google/go-cloud/blob#Bucket
 
 ## Drivers and User-Facing Types
 
-The generic APIs that Go X Cloud exports (like [`blob.Bucket`][] or
+The generic APIs that Go Cloud exports (like [`blob.Bucket`][] or
 [`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
@@ -72,8 +72,8 @@ user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
-[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-x-cloud/runtimevar#Variable
-[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket.NewWriter
+[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
+[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
 ## Errors
