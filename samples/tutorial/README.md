@@ -1,6 +1,6 @@
-# Getting Started with GoCloud
+# Getting Started with Go X Cloud
 
-The best way to understand GoCloud is to write some code and use it. To do that,
+The best way to understand Go X Cloud is to write some code and use it. To do that,
 let's start with something simple. Blob storage is a well-understood concept and
 is one of the most frequently used cloud services. So let's build a command line
 application that uploads files to blog storage on both AWS and GCP. We'll call
@@ -14,7 +14,7 @@ have to learn the semantics of uploading files to both blob storage services.
 And, even worse, we would have two code paths that effectively do the same
 thing, but would have to be maintained separately (ugh!). It would be much nicer
 if we could write the upload logic once and reuse it across providers. That's
-exactly what GoCloud makes possible. So, let's write some code!
+exactly what Go X Cloud makes possible. So, let's write some code!
 
 When we're done, our command line application will work like this:
 
@@ -55,7 +55,7 @@ both clouds. This will be the only step that requires cloud-specific APIs.
 
 As a first pass, let's connect to a GCS bucket. Then, we will connect to an S3
 bucket. In both cases, we are going to create a pointer to a `blob.Bucket`, the
-type GoCloud provides as the cloud-agnostic interface into blob storage across
+type Go X Cloud provides as the cloud-agnostic interface into blob storage across
 clouds.
 
 ``` go
@@ -167,7 +167,7 @@ concerns from leaking throughout our application code. In other words, by using
 `blob.Bucket` we avoid being tightly coupled to one cloud.
 
 With the setup done, we're ready to use the bucket connection. Note, as a design
-principle of GoCloud, `blob.Bucket` does not support creating a bucket and
+principle of Go X Cloud, `blob.Bucket` does not support creating a bucket and
 instead focuses solely on interacting with it. This separates the concerns of
 provisioning infrastructure and using infrastructure.
 
