@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-x-cloud/gcp"
-	"github.com/google/go-x-cloud/requestlog"
-	"github.com/google/go-x-cloud/server"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"

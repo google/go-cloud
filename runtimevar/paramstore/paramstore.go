@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/runtimevar/driver"
-	"github.com/google/go-x-cloud/runtimevar/internal"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
