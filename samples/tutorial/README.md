@@ -18,7 +18,7 @@ exactly what GoCloud makes possible. So, let's write some code!
 
 When we're done, our command line application will work like this:
 
-```
+``` shell
 # uploads gopher.png to GCS
 $ ./upload -cloud gcp -file ./gopher.png
 
@@ -29,7 +29,7 @@ $ ./upload -cloud aws -file ./gopher.png
 We start with a skeleton for our program with flags to configure the cloud to
 use and the path of the file to upload.
 
-```
+``` go
 package main
 
 import "flag"
@@ -58,7 +58,7 @@ bucket. In both cases, we are going to create a pointer to a `blob.Bucket`, the
 type GoCloud provides as the cloud-agnostic interface into blob storage across
 clouds.
 
-```
+``` go
 package main
 
 import (
@@ -115,7 +115,7 @@ invocations to create a bucket.
 
 Let's handle the S3 connection logic next:
 
-```
+``` go
 package main
 
 import (
@@ -174,7 +174,7 @@ provisioning infrastructure and using infrastructure.
 We need to convert our file into a slice of bytes before uploading it. The
 process is the usual one:
 
-```
+``` go
 package main
 
 import (
@@ -208,7 +208,7 @@ func main() {
 Now, we have `data`, our file in a slice of bytes. Let's get to the fun part and
 write those bytes to the bucket!
 
-```
+``` go
 package main
 
 // no new imports
@@ -259,19 +259,19 @@ for details.
 With our buckets created in S3 and GCS and our credentials for both set up,
 we'll build the program first:
 
-```
+``` shell
 $ go build -o upload
 ```
 
 Then, we will send `gopher.png` (in the same directory as this README) to GCS:
 
-```
+``` shell
 $ ./upload -cloud gcp -file gopher.png
 ```
 
 And then, we send that same gopher to S3:
 
-```
+``` shell
 $ ./upload -cloud aws -file gopher.png
 ```
 
