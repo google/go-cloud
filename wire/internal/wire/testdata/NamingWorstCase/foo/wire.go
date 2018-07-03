@@ -23,6 +23,5 @@ import (
 )
 
 func inject(context stdcontext.Context, err struct{}) (context, error) {
-	wire.Build(provide)
-	return context{}, nil
+	panic(wire.Build(provide))
 }
