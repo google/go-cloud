@@ -300,7 +300,9 @@ func TestWriter(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		w, err := b.NewWriter(ctx, "foo.txt", nil)
+		w, err := b.NewWriter(ctx, "foo.txt", &blob.WriterOptions{
+			ContentType: "application/octet-stream",
+		})
 		if err != nil {
 			t.Fatal("NewWriter:", err)
 		}
@@ -330,7 +332,9 @@ func TestWriter(t *testing.T) {
 			t.Fatal(err)
 		}
 		ctx := context.Background()
-		w, err := b.NewWriter(ctx, "foo/bar.txt", nil)
+		w, err := b.NewWriter(ctx, "foo/bar.txt", &blob.WriterOptions{
+			ContentType: "application/octet-stream",
+		})
 		if err != nil {
 			t.Fatal("NewWriter:", err)
 		}

@@ -114,6 +114,7 @@ func (w *Writer) open(p []byte) (n int, err error) {
 	if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
 		return 0, err
 	}
+	w.buf = &bytes.Buffer{}
 	return w.w.Write(p)
 }
 
