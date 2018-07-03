@@ -14,61 +14,83 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-usage() { echo "Usage: $0 [project_id]"; exit 1; }
+set -o pipefail
 
-set -e
+project_id="$1"
+if [[ -z "$project_id" ]]; then
+  echo "usage: test.sh PROJECT" 1>&2
+  exit 64
+fi
+test_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" || exit 1
+export TF_IN_AUTOMATION=1
 
-export project="$1"
-if [[ -z "${project}" ]]; then
-    usage
+GCLOUD() {
+  gcloud --quiet --project="$project_id" "$@"
+}
+log() {
+  echo "tests/gcp/test.sh:" "$@" 1>&2
+}
+
+tempdir="$( mktemp -d 2>/dev/null || mktemp -d -t 'go-cloud-gcp-test' )" || exit 1
+cleanup1() {
+  rm -rf "$tempdir"
+}
+trap cleanup1 EXIT
+
+# Perform local tasks first.
+log "Building driver..."
+( cd "$test_dir/test-driver" && vgo build -o "$tempdir/test-driver" ) || exit 1
+
+log "Provisioning GCP resources..."
+terraform init -input=false "$test_dir" || exit 1
+cleanup2() {
+  log "Tearing down GCP resources..."
+  terraform destroy -auto-approve -var project="$project_id" "$test_dir"
+  cleanup1
+}
+trap cleanup2 EXIT
+terraform apply -auto-approve -input=false -var project="$project_id" "$test_dir" || exit 1
+
+# Add vgo container.
+log "Building application..."
+vgo_image="gcr.io/${project_id//:/\/}/vgo"
+if ! GCLOUD container images describe --format='value(image_summary.digest)' "$vgo_image" 1>/dev/null 2>/dev/null; then
+  GCLOUD container builds submit \
+    -t "$vgo_image" \
+    "$test_dir/../../internal/vgo_docker" || exit 1
 fi
 
-cd "$(dirname $0)"
-cluster="gcp-test"
-test_dir="$(pwd)"
+# Build the app binary.
+app_image="gcr.io/${project_id//:/\/}/gcp-test"
+build_id="$( GCLOUD container builds submit \
+  --async \
+  --format='value(id)' \
+  --config="$test_dir/app/cloudbuild.yaml" \
+  --substitutions="_IMAGE_NAME=$app_image,_VGO_IMAGE_NAME=$vgo_image" \
+  "$test_dir/../.." )" || exit 1
+GCLOUD container builds log --stream "$build_id" || exit 1
 
-# Create a cluster
-gcloud container clusters create "${cluster}" \
-    --async \
-    --disk-size=10 \
-    --scopes="cloud-platform" \
-    --num-nodes=1
+# Deploy the app on the cluster.
+log "Deploying..."
+# TODO(light): Some values might need escaping.
+sed -e "s|{{IMAGE}}|${app_image}:${build_id}|" \
+  < "$test_dir/app/gcp-test.yaml.in" \
+  > "$tempdir/gcp-test.yaml" || exit 1
+cluster_name="$( terraform output -state="$test_dir/terraform.tfstate" cluster_name )" || exit 1
+cluster_zone="$( terraform output -state="$test_dir/terraform.tfstate" cluster_zone )" || exit 1
+GCLOUD container clusters get-credentials \
+  --zone="$cluster_zone" "$cluster_name" || exit 1
+kubectl apply -f "$tempdir/gcp-test.yaml" || exit 1
 
-# Build the app binary and image
-cd "${test_dir}"/app
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 vgo build -o app
-gcloud container builds submit -t gcr.io/${project}/gcp-test:latest .
-rm -f app
-
-# Wait for the cluster to be created
+# Wait for load balancer to come up.
+log "Waiting for load balancer..."
 while true; do
-    status="$(gcloud container clusters describe --format='get(status)' ${cluster})"
-    if [[ "${status}" == "RUNNING" ]]; then
-        break
-    fi
-    echo "Cluster ${cluster} is ${status}, retrying in 30s."
-    sleep 30s
+  if endpoint="$( kubectl get service gcp-test -o json | jq -r '.status.loadBalancer.ingress[0].ip' )" && [[ "$endpoint" != null ]]; then
+    break
+  fi
+  sleep 5
 done
 
-# Create a deployment and service for the test app
-gcloud container clusters get-credentials "${cluster}"
-sed "s/PROJECT_ID/${project}/g" gcp-test.yaml.in > gcp-test.yaml
-kubectl create -f gcp-test.yaml
-
-# Build the test driver binary
-cd "${test_dir}"/test-driver
-CGO_ENABLED=0 vgo build -o test-driver
-
-# Wait for the load balancer to be ready
-while true; do
-    ingress="$(kubectl describe service/gcp-test | grep '^LoadBalancer Ingress' \
-        | cut -d':' -f2 | sed 's/^[ \t]*//')"
-    if [[ -n "${ingress}" ]]; then
-        ./test-driver --address "http://${ingress}" --project "${project}"
-        break
-    fi
-    echo "Waiting for LoadBalancer to be created, retrying in 30s."
-    sleep 30s
-done
-
-# TODO(shantuo): add tear-down after finishing the test.
+# Run test driver.
+log "Running test:"
+"$tempdir/test-driver" --address "http://${endpoint}" --project "$project_id" || exit 1
