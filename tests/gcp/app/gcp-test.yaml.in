@@ -29,8 +29,7 @@ spec:
         app: gcp-test
     spec:
       containers:
-      # Replace the image tag and version as needed
-      - image: gcr.io/PROJECT_ID/gcp-test:latest
+      - image: {{IMAGE}}
         name: gcp-test
         ports:
         - name: http-server
