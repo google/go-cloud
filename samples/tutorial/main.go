@@ -1,3 +1,4 @@
+// Command upload saves files to blob storage on GCP and AWS.
 package main
 
 import (
