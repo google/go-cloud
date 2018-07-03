@@ -11,21 +11,21 @@ import (
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	mysql "github.com/go-sql-driver/mysql"
-	blob "github.com/google/go-x-cloud/blob"
-	fileblob "github.com/google/go-x-cloud/blob/fileblob"
-	gcsblob "github.com/google/go-x-cloud/blob/gcsblob"
-	s3blob "github.com/google/go-x-cloud/blob/s3blob"
-	gcp "github.com/google/go-x-cloud/gcp"
-	cloudmysql "github.com/google/go-x-cloud/mysql/cloudmysql"
-	rdsmysql "github.com/google/go-x-cloud/mysql/rdsmysql"
-	requestlog "github.com/google/go-x-cloud/requestlog"
-	runtimevar "github.com/google/go-x-cloud/runtimevar"
-	filevar "github.com/google/go-x-cloud/runtimevar/filevar"
-	paramstore "github.com/google/go-x-cloud/runtimevar/paramstore"
-	runtimeconfigurator "github.com/google/go-x-cloud/runtimevar/runtimeconfigurator"
-	server "github.com/google/go-x-cloud/server"
-	sdserver "github.com/google/go-x-cloud/server/sdserver"
-	xrayserver "github.com/google/go-x-cloud/server/xrayserver"
+	blob "github.com/google/go-cloud/blob"
+	fileblob "github.com/google/go-cloud/blob/fileblob"
+	gcsblob "github.com/google/go-cloud/blob/gcsblob"
+	s3blob "github.com/google/go-cloud/blob/s3blob"
+	gcp "github.com/google/go-cloud/gcp"
+	cloudmysql "github.com/google/go-cloud/mysql/cloudmysql"
+	rdsmysql "github.com/google/go-cloud/mysql/rdsmysql"
+	requestlog "github.com/google/go-cloud/requestlog"
+	runtimevar "github.com/google/go-cloud/runtimevar"
+	filevar "github.com/google/go-cloud/runtimevar/filevar"
+	paramstore "github.com/google/go-cloud/runtimevar/paramstore"
+	runtimeconfigurator "github.com/google/go-cloud/runtimevar/runtimeconfigurator"
+	server "github.com/google/go-cloud/server"
+	sdserver "github.com/google/go-cloud/server/sdserver"
+	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
 	http "net/http"
 )
@@ -34,7 +34,7 @@ import (
 
 func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	ncsaLogger := xrayserver.NewRequestLogger()
-	client := http.DefaultClient
+	client := _wireValue
 	certFetcher := &rdsmysql.CertFetcher{
 		Client: client,
 	}
@@ -44,7 +44,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	options := session.Options{}
+	options := _wireValue2
 	session2, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		cleanup2()
@@ -89,6 +89,11 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}, nil
 }
 
+var (
+	_wireValue  = http.DefaultClient
+	_wireValue2 = session.Options{}
+)
+
 // Injectors from inject_gcp.go:
 
 func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
@@ -127,7 +132,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options)
-	bucket, err := gcpBucket(ctx, flags, tokenSource)
+	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -155,13 +160,13 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // Injectors from inject_local.go:
 
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	logger := requestlog.Logger(nil)
+	logger := _wireValue3
 	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup := appHealthChecks(db)
-	exporter := trace.Exporter(nil)
+	exporter := _wireValue4
 	sampler := trace.AlwaysSample()
 	options := &server.Options{
 		RequestLogger:         logger,
@@ -187,6 +192,11 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 	}, nil
 }
 
+var (
+	_wireValue3 = requestlog.Logger(nil)
+	_wireValue4 = trace.Exporter(nil)
+)
+
 // inject_aws.go:
 
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
@@ -210,10 +220,8 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 
 // inject_gcp.go:
 
-func gcpBucket(ctx context.Context, flags *cliFlags, ts gcp.TokenSource) (*blob.Bucket, error) {
-	return gcsblob.New(ctx, flags.bucket, &gcsblob.BucketOptions{
-		TokenSource: ts,
-	})
+func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
+	return gcsblob.NewBucket(ctx, flags.bucket, client2)
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {

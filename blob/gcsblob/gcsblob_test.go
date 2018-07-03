@@ -15,8 +15,13 @@
 package gcsblob
 
 import (
+	"context"
+	"fmt"
+	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cloud/gcp"
 
 	"google.golang.org/api/googleapi"
 )
@@ -95,5 +100,34 @@ func TestBufferSize(t *testing.T) {
 		if got != test.want {
 			t.Errorf("%d) got buffer size %d, want %d", i, got, test.want)
 		}
+	}
+}
+
+type transportSpy struct {
+	called bool
+}
+
+func (ts *transportSpy) RoundTrip(*http.Request) (*http.Response, error) {
+	ts.called = true
+	return nil, fmt.Errorf("this is a spy")
+}
+
+func TestHTTPClientOpt(t *testing.T) {
+	ctx := context.Background()
+
+	ts := &transportSpy{}
+	b, err := NewBucket(ctx, "black-bucket", &gcp.HTTPClient{Client: http.Client{Transport: ts}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w, err := b.NewWriter(ctx, "green-blob", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	if !ts.called {
+		t.Errorf("got %v; want %v", ts.called, "true")
 	}
 }

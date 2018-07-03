@@ -3,6 +3,79 @@
 This document outlines important design decisions made for this repository and
 attempts to provide succinct rationales.
 
+## Developers and Operators
+
+Go Cloud is designed with two different personas in mind: the developer and
+the operator. In the world of DevOps, these may be the same person. A developer
+may be directly deploying their application into production, especially on
+smaller teams. In a larger organization, these may be different teams entirely,
+but working closely together. Regardless, these two personas have two very
+different ways of looking at a Go program:
+
+- The developer persona wants to write business logic that is agnostic of
+  underlying cloud provider. Their focus is on making software correct for the
+  requirements at hand.
+- The operator persona wants to incorporate the business logic into the
+  organization's policies and provision resources for the logic to run. Their
+  focus is making software run predictably and reliably with the resources at
+  hand.
+
+Go Cloud uses Go interfaces at the boundary between these two personas: a
+developer is meant to use an interface, and an operator is meant to provide an
+implementation of that interface. The [`blob.Bucket`] type is a prime example:
+the API does not provide a way of creating a new bucket, as that is an
+operator's concern. An implementor of the `Bucket` interface does not need to
+determine the content type of incoming data, as that is a developer's concern.
+This separation of concerns allows these two personas to communicate using a
+shared language while focusing on their respective areas of expertise.
+
+[`blob.Bucket`]: https://godoc.org/github.com/google/go-cloud/blob#Bucket
+
+## Drivers and User-Facing Types
+
+The generic APIs that Go Cloud exports (like [`blob.Bucket`][] or
+[`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
+imagine if we used a plain interface:
+
+![Diagram showing user code depending on blob.Bucket, which is implemented by
+awsblob.Bucket.](img/user-facing-type-no-driver.png)
+
+Consider the [`Bucket.NewWriter` method][], which infers the content type of the
+blob based on the first bytes written to it. If `blob.Bucket` was an interface,
+each implementation of `blob.Bucket` would have to replicate this behavior
+precisely. This does not scale: conformance tests would be needed to ensure that
+each interface method actually behaves in the way that the docs describe. This
+makes the interfaces hard to implement, which runs counter to the goals of the
+project.
+
+Instead, we follow the example of [`database/sql`][] and separate out the
+implementation-agnostic logic from the interface. We call the interface the
+**driver type** and the wrapper the **user-facing type**. Visually, it looks
+like this:
+
+![Diagram showing user code depending on blob.Bucket, which holds a
+driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
+
+This has a number of benefits:
+
+-  The user-facing type can perform higher level logic without making the
+   interface complex to implement. In the blob example, the user-facing type's
+   `NewWriter` method can do the content type detection and then pass the final
+   result to the driver type.
+-  Methods can be added to the user-facing type without breaking compatibility.
+   Contrast with adding methods to an interface, which is a breaking change.
+-  As new operations on the driver are added as new optional interfaces, the
+   user-facing type can hide the need for type-assertions from the user.
+
+As a rule, if a method `Foo` has the same inputs and semantics in the
+user-facing type and the driver type, then the driver method may be called
+`Foo`, even though the return signatures may differ. Otherwise, the driver
+method name should be different to reduce confusion.
+
+[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
+[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
+[`database/sql`]: https://godoc.org/database/sql
+
 ## Errors
 
 -   The callee is expected to return `error`s with messages that include

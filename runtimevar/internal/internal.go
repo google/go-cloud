@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/go-x-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/driver"
 )
 
 // Pinger runs a function that returns a Variable and an error after every waitTime.

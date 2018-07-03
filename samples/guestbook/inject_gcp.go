@@ -19,14 +19,14 @@ package main
 import (
 	"context"
 
-	"github.com/google/go-x-cloud/blob"
-	"github.com/google/go-x-cloud/blob/gcsblob"
-	"github.com/google/go-x-cloud/gcp"
-	"github.com/google/go-x-cloud/gcp/gcpcloud"
-	"github.com/google/go-x-cloud/mysql/cloudmysql"
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/runtimevar/runtimeconfigurator"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/gcsblob"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/gcp/gcpcloud"
+	"github.com/google/go-cloud/mysql/cloudmysql"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
+	"github.com/google/go-cloud/wire"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It
@@ -50,10 +50,8 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
-func gcpBucket(ctx context.Context, flags *cliFlags, ts gcp.TokenSource) (*blob.Bucket, error) {
-	return gcsblob.New(ctx, flags.bucket, &gcsblob.BucketOptions{
-		TokenSource: ts,
-	})
+func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, error) {
+	return gcsblob.NewBucket(ctx, flags.bucket, client)
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL

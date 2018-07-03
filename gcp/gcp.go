@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package gcp provides fundamental Wire providers and types for Google Cloud Platform (GCP).
 package gcp
 
 import (
@@ -19,7 +20,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )

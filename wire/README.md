@@ -9,6 +9,14 @@ initialization.
 
 [dependency injection]: https://en.wikipedia.org/wiki/Dependency_injection
 
+## Installing
+
+Install `gowire` by running the following inside the Go Cloud repository:
+
+```shell
+vgo install github.com/google/go-cloud/wire/cmd/gowire
+```
+
 ## Basics
 
 Wire has two core concepts: providers and injectors.
@@ -85,7 +93,7 @@ package foobarbaz
 
 import (
 	// ...
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 // ...
@@ -130,7 +138,7 @@ package main
 import (
 	"context"
 
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 	"example.com/foobarbaz"
 )
 
@@ -304,9 +312,10 @@ func injectFoo() Foo {
 }
 ```
 
-It's important to note that the expression will be copied, so references to
-variables will be evaluated during the call to the injector. `gowire` will emit
-an error if the expression calls any functions.
+It's important to note that the expression will be copied to the injector's
+package; references to variables will be evaluated during the injector
+package's initialization. `gowire` will emit an error if the expression calls
+any functions or receives from any channels.
 
 ### Cleanup functions
 

@@ -23,26 +23,24 @@ import (
 	"regexp"
 	"unicode/utf8"
 
-	"github.com/google/go-x-cloud/blob"
-	"github.com/google/go-x-cloud/blob/driver"
-	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-cloud/gcp"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
 
-// New returns a GCS Bucket. It handles creation of a client used to communicate
-// to GCS service.
-func New(ctx context.Context, bucketName string, opts *BucketOptions) (*blob.Bucket, error) {
+// NewBucket returns a GCS Bucket that communicates using the given HTTP client.
+func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
-	var o []option.ClientOption
-	if opts != nil {
-		o = append(o, option.WithTokenSource(opts.TokenSource))
+	if client == nil {
+		return nil, fmt.Errorf("NewBucket requires an HTTP client to communicate using")
 	}
-	c, err := storage.NewClient(ctx, o...)
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +52,6 @@ func New(ctx context.Context, bucketName string, opts *BucketOptions) (*blob.Buc
 type bucket struct {
 	name   string
 	client *storage.Client
-}
-
-// BucketOptions provides information settings during bucket initialization.
-type BucketOptions struct {
-	TokenSource gcp.TokenSource
 }
 
 type reader struct {

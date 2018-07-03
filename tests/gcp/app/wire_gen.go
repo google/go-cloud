@@ -7,10 +7,10 @@ package main
 
 import (
 	context "context"
-	gcp "github.com/google/go-x-cloud/gcp"
-	health "github.com/google/go-x-cloud/health"
-	server "github.com/google/go-x-cloud/server"
-	sdserver "github.com/google/go-x-cloud/server/sdserver"
+	gcp "github.com/google/go-cloud/gcp"
+	health "github.com/google/go-cloud/health"
+	server "github.com/google/go-cloud/server"
+	sdserver "github.com/google/go-cloud/server/sdserver"
 	trace "go.opencensus.io/trace"
 )
 
@@ -18,7 +18,7 @@ import (
 
 func initialize(ctx context.Context) (*server.Server, error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
-	v := []health.Checker{connection}
+	v := _wireValue
 	credentials, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, err
@@ -42,3 +42,7 @@ func initialize(ctx context.Context) (*server.Server, error) {
 	server2 := server.New(options)
 	return server2, nil
 }
+
+var (
+	_wireValue = []health.Checker{connection}
+)

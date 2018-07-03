@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package server provides a preconfigured HTTP server with diagnostic hooks.
 package server
 
 import (
@@ -19,18 +20,20 @@ import (
 	"path"
 	"sync"
 
-	"github.com/google/go-x-cloud/health"
-	"github.com/google/go-x-cloud/requestlog"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/wire"
 
 	"go.opencensus.io/trace"
 )
 
-// Set is a Wire provider set that produces a *Server given the
-// fields of Options.
+// Set is a Wire provider set that produces a *Server given the fields of
+// Options. This set might add new inputs over time, but they can always be the
+// zero value.
 var Set = wire.NewSet(New, Options{})
 
-// Server is diagnostic middleware for the server.
+// Server is a preconfigured HTTP server with diagnostic hooks.
+// The zero value is a server with the default options.
 type Server struct {
 	reqlog        requestlog.Logger
 	healthHandler health.Handler

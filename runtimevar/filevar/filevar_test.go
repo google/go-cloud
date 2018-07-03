@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 

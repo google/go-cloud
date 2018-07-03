@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-x-cloud/health"
+	"github.com/google/go-cloud/health"
 )
 
 var _ = health.Checker((*Checker)(nil))
@@ -71,7 +71,7 @@ type stubConn struct {
 }
 
 func (conn *stubConn) Prepare(query string) (driver.Stmt, error) {
-	return nil, errors.New("not implemented")
+	panic("not implemented")
 }
 
 func (conn *stubConn) Close() error {
@@ -79,7 +79,7 @@ func (conn *stubConn) Close() error {
 }
 
 func (conn *stubConn) Begin() (driver.Tx, error) {
-	return nil, errors.New("not implemented")
+	panic("not implemented")
 }
 
 func (conn *stubConn) Ping(ctx context.Context) error {
