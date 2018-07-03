@@ -35,7 +35,7 @@ ENV PATH /usr/local/go/bin:/usr/local/bin:/usr/bin
 # vgo uses $GOPATH/v as cache.
 VOLUME /gopath
 ENV GOPATH /gopath
-LABEL "github.com/google/go-x-cloud/go-version"="1.10.3"
-LABEL "github.com/google/go-x-cloud/vgo-commit"="0f3e556044ecbd8a0805d098e52a743a1d0e3566"
+LABEL "github.com/google/go-cloud/go-version"="1.10.3"
+LABEL "github.com/google/go-cloud/vgo-commit"="0f3e556044ecbd8a0805d098e52a743a1d0e3566"
 
 ENTRYPOINT ["vgo"]

@@ -45,7 +45,7 @@ resource "random_id" "cluster" {
 }
 
 locals {
-  cluster_name = "go-x-cloud-test-${random_id.cluster.hex}"
+  cluster_name = "go-cloud-test-${random_id.cluster.hex}"
 }
 
 resource "google_container_cluster" "cluster" {
