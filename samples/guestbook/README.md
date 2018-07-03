@@ -56,7 +56,7 @@ echo 'Hello, World!' > motd.txt
 
 Your server should be running on http://localhost:8080/.
 
-You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
+You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
 (SIGINT).
 
 ## Running on Google Cloud Platform (GCP)
