@@ -23,9 +23,9 @@ import (
 	"regexp"
 	"unicode/utf8"
 
-	"github.com/google/go-x-cloud/blob"
-	"github.com/google/go-x-cloud/blob/driver"
-	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
+	"github.com/google/go-cloud/gcp"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"

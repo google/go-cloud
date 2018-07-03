@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"cloud.google.com/go/rpcreplay"
@@ -114,11 +115,22 @@ func scrubAWSHeaders(filepath string) error {
 		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
 		action.Request.Headers.Del("Authorization")
 		action.Response.Headers.Del("X-Amzn-Requestid")
+		action.Response.Body = removeJSONString(action.Response.Body, "LastModifiedUser")
 	}
 	c.Mu.Unlock()
 	c.Save()
 
 	return nil
+}
+
+// removeJSONString removes a stringed value from a JSON string.
+// This is very dodgy and doesn't work if the value has a " in it,
+// or if the key is the last in the list, or probably other things
+// too. If the case isn't tested, it probably doesn't work.
+// json.Decoder.Token could be used to make this way better.
+func removeJSONString(s, key string) string {
+	re := regexp.MustCompile(`(?U)\"` + key + `\":\".*\",`)
+	return re.ReplaceAllString(s, "")
 }
 
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.

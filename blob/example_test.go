@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-x-cloud/blob/fileblob"
+	"github.com/google/go-cloud/blob/fileblob"
 )
 
 func ExampleBucket_NewReader() {
@@ -133,7 +133,7 @@ func ExampleBucket_NewWriter() {
 }
 
 func newTempDir() (string, func()) {
-	dir, err := ioutil.TempDir("", "go-x-cloud-blob-example")
+	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {
 		panic(err)
 	}

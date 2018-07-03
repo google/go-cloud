@@ -18,8 +18,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/runtimevar/filevar"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/filevar"
 )
 
 type DBConfig struct {

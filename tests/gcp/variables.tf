@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/base:latest
-COPY app /app
-EXPOSE 8080
-ENTRYPOINT [ "/app" ]
+variable "project" {
+  type        = "string"
+  description = "Project to set up."
+}
+
+variable "zone" {
+  type        = "string"
+  default     = "us-central1-a"
+  description = "GCP zone to create the GKE cluster in. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+}
