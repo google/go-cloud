@@ -5,31 +5,37 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-x-cloud/blob"
-	"github.com/google/go-x-cloud/blob/gcsblob"
-	"github.com/google/go-x-cloud/blob/s3blob"
-	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/gcsblob"
+	"github.com/google/go-cloud/blob/s3blob"
+	"github.com/google/go-cloud/gcp"
 )
 
 func main() {
+	// Define our input.
 	cloud := flag.String("cloud", "", "Cloud storage to use")
-	file := flag.String("file", "", "Path to the file to upload")
 	flag.Parse()
+	if flag.NArg() != 1 {
+		log.Fatal("Failed to provide file to upload")
+	}
+	file := flag.Arg(0)
 
+	ctx := context.Background()
+	// Open a connection to the bucket.
 	var (
 		b   *blob.Bucket
 		err error
 	)
 	switch *cloud {
 	case "gcp":
-		// gcp.DefaultCredentials assumes GOOGLE_APPLICATION_CREDENTIALS is present
-		// in tne environment and points to a service-account.json file.
-		creds, err := gcp.DefaultCredentials(context.Background())
+		// DefaultCredentials assumes a user has logged in with gcloud.
+		// See here for more information:
+		// https://cloud.google.com/docs/authentication/getting-started
+		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
 			log.Fatalf("Failed to create default credentials for GCP: %s", err)
 		}
@@ -37,7 +43,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to create HTTP client: %s", err)
 		}
-		b, err = gcsblob.NewBucket(context.Background(), "enocom-tutorial-bucket", c)
+		// The bucket name must be globally unique.
+		b, err = gcsblob.NewBucket(ctx, "my-cool-bucket", c)
 		if err != nil {
 			log.Fatalf("Failed to connect to bucket: %s", err)
 		}
@@ -51,7 +58,7 @@ func main() {
 			Credentials: credentials.NewEnvCredentials(),
 		}
 		s := session.Must(session.NewSession(c))
-		b, err = s3blob.NewBucket(context.Background(), s, "enocom-tutorial-bucket")
+		b, err = s3blob.NewBucket(ctx, s, "my-cool-bucket")
 		if err != nil {
 			log.Fatalf("Failed to connect to S3 bucket: %s", err)
 		}
@@ -59,23 +66,13 @@ func main() {
 		log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
 	}
 
-	f, err := os.Open(*file)
-	if err != nil {
-		log.Fatalf("Failed to open file: %s", err)
-	}
-	data, err := ioutil.ReadAll(f)
+	// Prepare the file for upload.
+	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Failed to read file: %s", err)
 	}
-	if err = f.Close(); err != nil {
-		log.Fatalf("Failed to close file: %s", err)
-	}
 
-	w, err := b.NewWriter(context.Background(), "gopher", &blob.WriterOptions{
-		// png is hard coded here for brevity to avoid dealing with mime type
-		// parsing.
-		ContentType: "image/png",
-	})
+	w, err := b.NewWriter(ctx, file, nil)
 	if err != nil {
 		log.Fatalf("Failed to obtain writer: %s", err)
 	}
