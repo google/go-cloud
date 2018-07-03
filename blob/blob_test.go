@@ -210,8 +210,8 @@ func (readerStub) Close() error {
 
 type writerStub struct{}
 
-func (writerStub) Write([]byte) (n int, err error) {
-	return 0, nil
+func (writerStub) Write(p []byte) (n int, err error) {
+	return len(p), nil
 }
 
 func (writerStub) Close() error {
