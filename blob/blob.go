@@ -84,18 +84,14 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 	// Detect the content-type directly if the first chunk is at least 512 bytes.
 	if w.buf.Len() == 0 && len(p) >= sniffLen {
-		ct := http.DetectContentType(p[:sniffLen])
-		if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
-			return 0, err
-		}
-		return w.w.Write(p)
+		return w.open(p)
 	}
 
 	// Store p in w.buf and detect the content-type when the size of content in
 	// w.buf is at least 512 bytes.
 	w.buf.Write(p)
 	if w.buf.Len() >= sniffLen {
-		return w.flush()
+		return w.open(w.buf.Bytes())
 	}
 	return len(p), nil
 }
@@ -106,20 +102,19 @@ func (w *Writer) Close() error {
 	if w.w != nil {
 		return w.w.Close()
 	}
-	if _, err := w.flush(); err != nil {
+	if _, err := w.open(w.buf.Bytes()); err != nil {
 		return err
 	}
 	return w.w.Close()
 }
 
-// flush tries to detect the MIME type of the content inside the buffer and
-// write the content to the blob.
-func (w *Writer) flush() (n int, err error) {
-	ct := http.DetectContentType(w.buf.Bytes())
+// open tries to detect the MIME type of p and write it to the blob.
+func (w *Writer) open(p []byte) (n int, err error) {
+	ct := http.DetectContentType(p)
 	if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
 		return 0, err
 	}
-	return w.w.Write(w.buf.Bytes())
+	return w.w.Write(p)
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
