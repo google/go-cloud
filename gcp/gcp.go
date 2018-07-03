@@ -20,7 +20,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )

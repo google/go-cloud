@@ -26,8 +26,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/internal/testing/setup"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cmp/cmp"
 )
 

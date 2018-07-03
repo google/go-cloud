@@ -67,15 +67,25 @@ func TestWire(t *testing.T) {
 			t.Skip("go toolchain not available:", err)
 		}
 		for _, test := range tests {
+			test := test
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
 				bctx := test.buildContext()
 				gen, errs := Generate(bctx, wd, test.pkg)
 				if len(gen) > 0 {
 					defer t.Logf("wire_gen.go:\n%s", gen)
 				}
 				if len(errs) > 0 {
+					for _, e := range errs {
+						t.Log(e)
+					}
 					if !test.wantError {
-						t.Fatalf("wirego: %v", errs)
+						t.Fatal("Did not expect errors.")
+					}
+					for _, s := range test.wantErrorStrings {
+						if !errorListContains(errs, s) {
+							t.Errorf("Errors did not contain %q", s)
+						}
 					}
 					return
 				}
@@ -123,15 +133,14 @@ func TestWire(t *testing.T) {
 	})
 
 	t.Run("Determinism", func(t *testing.T) {
-		runs := 10
-		if testing.Short() {
-			runs = 3
-		}
+		const runs = 2
 		for _, test := range tests {
 			if test.wantError {
 				continue
 			}
+			test := test
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
 				bctx := test.buildContext()
 				gold, errs := Generate(bctx, wd, test.pkg)
 				if len(errs) > 0 {
@@ -269,7 +278,9 @@ type testCase struct {
 	pkg        string
 	goFiles    map[string][]byte
 	wantOutput []byte
-	wantError  bool
+
+	wantError        bool
+	wantErrorStrings []string
 }
 
 // loadTestCase reads a test case from a directory.
@@ -279,8 +290,10 @@ type testCase struct {
 //	root/
 //		pkg        file containing the package name containing the inject function
 //		           (must also be package main)
-//		out.txt    file containing the expected output, or the magic string "ERROR"
-//		           if this test should cause generation to fail
+//		out.txt    file containing the expected output, or starting with the
+//		           magic line "ERROR" if this test should cause generation to
+//		           fail (any subsequent lines are substrings that should
+//		           appear in the errors).
 //		...        any Go files found recursively placed under GOPATH/src/...
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
@@ -292,13 +305,12 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
-	wantError := false
-	if bytes.Equal(bytes.TrimSpace(out), []byte("ERROR")) {
-		wantError = true
+	wantErrorStrings, wantError := parseGoldenOutput(out)
+	if wantError {
 		out = nil
 	}
 	goFiles := map[string][]byte{
-		"github.com/google/go-x-cloud/wire/wire.go": wireGoSrc,
+		"github.com/google/go-cloud/wire/wire.go": wireGoSrc,
 	}
 	err = filepath.Walk(root, func(src string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -322,11 +334,12 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	return &testCase{
-		name:       name,
-		pkg:        string(bytes.TrimSpace(pkg)),
-		goFiles:    goFiles,
-		wantOutput: out,
-		wantError:  wantError,
+		name:             name,
+		pkg:              string(bytes.TrimSpace(pkg)),
+		goFiles:          goFiles,
+		wantOutput:       out,
+		wantError:        wantError,
+		wantErrorStrings: wantErrorStrings,
 	}, nil
 }
 
@@ -575,4 +588,26 @@ func runDiff(a, b []byte) ([]byte, error) {
 	c := exec.Command("diff", "-u", fa.Name(), fb.Name())
 	out, err := c.Output()
 	return out, err
+}
+
+func parseGoldenOutput(out []byte) (errorStrings []string, wantError bool) {
+	const errorPrefix = "ERROR\n"
+	if !bytes.HasPrefix(out, []byte(errorPrefix)) {
+		return nil, false
+	}
+	// Skip past first line.
+	out = out[len(errorPrefix):]
+	// Remove any leading or trailing blank lines.
+	out = bytes.Trim(out[len(errorPrefix):], "\n")
+	// Split lines.
+	return strings.Split(string(out), "\n"), true
+}
+
+func errorListContains(errs []error, substr string) bool {
+	for _, e := range errs {
+		if strings.Contains(e.Error(), substr) {
+			return true
+		}
+	}
+	return false
 }
