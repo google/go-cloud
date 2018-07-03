@@ -51,7 +51,8 @@ func Provide(context2 stdcontext.Context) (context, error) {
 }
 
 func inject(context stdcontext.Context, err struct{}) (context, error) {
-	panic(wire.Build(Provide))
+	wire.Build(Provide)
+	return context{}, nil
 }
 
 func (context) Provide() {
