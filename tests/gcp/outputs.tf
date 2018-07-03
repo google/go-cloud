@@ -12,7 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/base:latest
-COPY app /app
-EXPOSE 8080
-ENTRYPOINT [ "/app" ]
+output "project" {
+  value       = "${var.project}"
+  description = "The GCP project ID."
+}
+
+output "cluster_name" {
+  value       = "${local.cluster_name}"
+  description = "GKE cluster name."
+}
+
+output "cluster_zone" {
+  value       = "${google_container_cluster.cluster.zone}"
+  description = "GCP zone that the GKE cluster is in."
+}
