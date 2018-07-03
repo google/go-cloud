@@ -33,7 +33,9 @@ $ vgo get -u github.com/google/go-cloud
 ```
 Go Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
 
-## Example application
+## Samples
+[`samples/tutorial`](https://github.com/google/go-cloud/tree/master/samples/tutorial) shows how to get started with the project by using blob storage.
+
 [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook) contains an example guestbook application (just like it's 1999!) that can be run locally, on Google Cloud Platform or on Amazon Web Services. The instructions take about 5 minutes to follow if running locally. If you want to see the guestbook app running on cloud resources, it will take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the resources needed.
 
 ## Current features

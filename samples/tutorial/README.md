@@ -285,8 +285,6 @@ $ ./upload -cloud aws gopher.png
 And if we check both buckets, we should see our gopher in both places! We're
 done!
 
-**TODO: ADD links to check buckets**
-
 ## Wrapping Up
 
 In conclusion, we have a program that can seamlessly switch between GCS and S3
