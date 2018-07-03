@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/gcsblob"
+	"github.com/google/go-cloud/gcp"
 )
 
 var testBucket = flag.String("gcs-bucket", "pledged-solved-practically", "GCS bucket name used for testing")
@@ -32,7 +33,15 @@ func TestReadOfNonExistentFile(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	ctx := context.Background()
-	bucket, err := gcsblob.NewBucket(ctx, *testBucket, nil)
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bucket, err := gcsblob.NewBucket(ctx, *testBucket, c)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}
@@ -50,7 +59,15 @@ func TestDeleteNonExistentFile(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	ctx := context.Background()
-	bucket, err := gcsblob.NewBucket(ctx, *testBucket, nil)
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bucket, err := gcsblob.NewBucket(ctx, *testBucket, c)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}

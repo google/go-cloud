@@ -16,7 +16,6 @@ package blob
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
