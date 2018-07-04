@@ -86,7 +86,7 @@ func main() {
     )
     switch *cloud {
     case "gcp":
-	    // DefaultCredentials assumes a user has logged in with gcloud.
+        // DefaultCredentials assumes a user has logged in with gcloud.
         // See here for more information:
         // https://cloud.google.com/docs/authentication/getting-started
         creds, err := gcp.DefaultCredentials(ctx)
