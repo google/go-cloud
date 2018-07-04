@@ -252,9 +252,11 @@ And that's it! Let's try it out. As setup, we will to create an [S3
 bucket][s3-bucket] and a
 [GCS bucket][gcs-bucket]. In the code above, I called that bucket `my-cool-bucket`, but you
 can change that to match whatever your bucket is called. For GCP, you will need
-a service account key.  See
-[here](https://cloud.google.com/iam/docs/creating-managing-service-account-keys)
-for details. For AWS, you will need an access key ID and a secret access key.
+to login with
+[gcloud](https://cloud.google.com/sdk/install).
+If you do not want to install `gcloud`, see
+[here](https://cloud.google.com/docs/authentication/production) for
+alternatives. For AWS, you will need an access key ID and a secret access key.
 See
 [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
 for details.
@@ -289,7 +291,7 @@ using just one code path.
 I hope this example demonstrates how having one type for multiple clouds is a
 huge win for simplicity and maintainability. By writing an application using a
 generic interface like `*blob.Bucket`, we retain the option of using
-infrastructure in whichever cloud best fits our needs all without having to
+infrastructure in whichever cloud that best fits our needs all without having to
 worry about a rewrite.
 
 [s3-bucket]: https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html
