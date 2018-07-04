@@ -51,7 +51,8 @@ func main() {
 		}
 	case "aws":
 		c := &aws.Config{
-			Region: aws.String("us-east-2"), // or wherever the bucket is
+			// Either hard-code the region or use AWS_REGION.
+			Region: aws.String("us-east-2"),
 			// credentials.NewEnvCredentials assumes two environment variables are
 			// present:
 			// 1. AWS_ACCESS_KEY_ID, and

@@ -1,20 +1,19 @@
 # Getting Started with Go Cloud
 
-The best way to understand Go Cloud is to write some code and use it. To do
-that, let's start with something simple. Blob storage stores binary data under a
-string key, and is one of the most frequently used cloud services. So let's
+The best way to understand Go Cloud is to write some code and use it. Let's
 build a command line application that uploads files to blog storage on both AWS
-and GCP. We'll call it `upload`.
+and GCP. Blob storage stores binary data under a string key, and is one of the
+most frequently used cloud services. We'll call the tool `upload`.
 
-Before we start with any code, it helps to think about possible designs. If a
-product manager asked us to build an upload tool, we could very well write a
-code path for Simple Storage Service (S3) and another code path for Google Cloud
-Storage (GCS). And that would work. However, it would also be tedious. We would
-have to learn the semantics of uploading files to both blob storage services.
-And, even worse, we would have two code paths that effectively do the same
-thing, but would have to be maintained separately (ugh!). It would be much nicer
-if we could write the upload logic once and reuse it across providers. That's
-exactly what Go Cloud makes possible. So, let's write some code!
+Before we start with any code, it helps to think about possible designs. We
+could very well write a code path for Simple Storage Service (S3) and another
+code path for Google Cloud Storage (GCS). And that would work. However, it would
+also be tedious. We would have to learn the semantics of uploading files to both
+blob storage services.  And, even worse, we would have two code paths that
+effectively do the same thing, but would have to be maintained separately
+(ugh!). It would be much nicer if we could write the upload logic once and reuse
+it across providers. That's exactly what Go Cloud makes possible. So, let's
+write some code!
 
 When we're done, our command line application will work like this:
 
@@ -60,7 +59,7 @@ both clouds. This will be the only step that requires cloud-specific APIs.
 
 As a first pass, let's write the code to connect to a GCS bucket. Then, we will
 connect to an S3 bucket. In both cases, we are going to create a pointer to a
-blob.Bucket, the cloud-agnostic blob storage type.
+`blob.Bucket`, the cloud-agnostic blob storage type.
 
 ``` go
 package main
@@ -87,7 +86,7 @@ func main() {
     )
     switch *cloud {
     case "gcp":
-		// DefaultCredentials assumes a user has logged in with gcloud.
+	    // DefaultCredentials assumes a user has logged in with gcloud.
         // See here for more information:
         // https://cloud.google.com/docs/authentication/getting-started
         creds, err := gcp.DefaultCredentials(ctx)
@@ -104,7 +103,6 @@ func main() {
             log.Fatalf("Failed to connect to bucket: %s", err)
         }
     case "aws":
-        // connect to s3 bucket
         // ...
     default:
         log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
@@ -153,8 +151,9 @@ func main() {
         // ...
     case "aws":
         c := &aws.Config{
-            Region: aws.String("us-east-2"), // or wherever the bucket is
-            // credentials.NewEnvCredentials assumes two environment variables are
+            // Either hard-code the region or use AWS_REGION.
+            Region: aws.String("us-east-2"),
+            // credentials.NewEnvCredentials assumes three environment variables are
             // present:
             // 1. AWS_ACCESS_KEY_ID, and
             // 2. AWS_SECRET_ACCESS_KEY.
@@ -172,12 +171,11 @@ func main() {
 ```
 
 The important point here is that in spite of the differences in setup for GCS
-and S3, the result is the same: we have a pointer to a `blob.Bucket`. It's hard
-to understate how powerful it is to have one type that can be used across
-clouds. Provided we go through the setup, once we have a `blob.Bucket` pointer,
-we may design our system around that type and prevent any cloud specific
-concerns from leaking throughout our application code. In other words, by using
-`blob.Bucket` we avoid being tightly coupled to one cloud provider.
+and S3, the result is the same: we have a pointer to a `blob.Bucket`. Provided
+we go through the setup, once we have a `blob.Bucket` pointer, we may design our
+system around that type and prevent any cloud specific concerns from leaking
+throughout our application code. In other words, by using `blob.Bucket` we avoid
+being tightly coupled to one cloud provider.
 
 With the setup done, we're ready to use the bucket connection. Note, as a design
 principle of Go Cloud, `blob.Bucket` does not support creating a bucket and
@@ -188,7 +186,7 @@ for more on this point.
 
 ## Reading the file
 
-We need to convert our file into a slice of bytes before uploading it. The
+We need to read our file into a slice of bytes before uploading it. The
 process is the usual one:
 
 ``` go
@@ -238,15 +236,13 @@ func main() {
 }
 ```
 
-First, we create a write based on the bucket connection. In addition to a
-`context.Context` type, the method takes the key underwich the data will be
-store and the mime type of the data. For brevity's sake, I have hard-coded
-`image/png`, but adding mime type detection isn't difficult.
+First, we create a writer based on the bucket connection. In addition to a
+`context.Context` type, the method takes the key under which the data will be
+stored and the mime type of the data.
 
 The call to `NewWriter` creates a `blob.Writer`, which is similar to the
-well-known `io.Writer`. With the writer, we simply call `Write` passing in the
-data. In response, we get the number of bytes written and any error that might
-have occurred.
+`io.Writer`. With the writer, we call `Write` passing in the data. In response,
+we get the number of bytes written and any error that might have occurred.
 
 Finally, we close the writer with `Close` and check the error.
 
@@ -290,11 +286,11 @@ done!
 In conclusion, we have a program that can seamlessly switch between GCS and S3
 using just one code path.
 
-Granted, this example isn't complex, but I hope it demonstrates how even for
-small programs, having one type for multiple clouds is a huge win for simplicity
-and maintainability. By writing an application using a generic interface like
-`*blob.Bucket`, we retain the option of using infrastructure in whichever cloud
-best fits our needs all without having to worry about a rewrite.
+I hope this example demonstrates how having one type for multiple clouds is a
+huge win for simplicity and maintainability. By writing an application using a
+generic interface like `*blob.Bucket`, we retain the option of using
+infrastructure in whichever cloud best fits our needs all without having to
+worry about a rewrite.
 
 [s3-bucket]: https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html
 [gcs-bucket]: https://cloud.google.com/storage/docs/creating-buckets
