@@ -53,7 +53,7 @@ resource "google_project_iam_member" "server_trace" {
 # Cloud SQL
 
 resource "google_project_service" "sql" {
-  service            = "sql.googleapis.com"
+  service            = "sql-component.googleapis.com"
   disable_on_destroy = false
 }
 
