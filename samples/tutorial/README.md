@@ -6,11 +6,11 @@ and GCP. Blob storage stores binary data under a string key, and is one of the
 most frequently used cloud services. We'll call the tool `upload`.
 
 Before we start with any code, it helps to think about possible designs. We
-could very well write a code path for Simple Storage Service (S3) and another
-code path for Google Cloud Storage (GCS). And that would work. However, it would
-also be tedious. We would have to learn the semantics of uploading files to both
-blob storage services.  And, even worse, we would have two code paths that
-effectively do the same thing, but would have to be maintained separately
+could very well write a code path for Amazon's Simple Storage Service (S3) and
+another code path for Google Cloud Storage (GCS). And that would work. However,
+it would also be tedious. We would have to learn the semantics of uploading files
+to both blob storage services.  And, even worse, we would have two code paths
+that effectively do the same thing, but would have to be maintained separately
 (ugh!). It would be much nicer if we could write the upload logic once and reuse
 it across providers. That's exactly what Go Cloud makes possible. So, let's
 write some code!
