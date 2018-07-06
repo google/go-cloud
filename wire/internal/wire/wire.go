@@ -51,14 +51,18 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 			return path == mainPkg.ImportPath
 		},
 		FindPackage: func(bctx *build.Context, importPath, fromDir string, mode build.ImportMode) (*build.Package, error) {
-			if importPath != mainPkg.ImportPath {
-				return bctx.Import(importPath, fromDir, mode)
+			if importPath == mainPkg.ImportPath {
+				// Load in the generated package with the wireinject build tag
+				// to pick up the injector template. The imported packages
+				// should be imported as normal. Since the *build.Context is
+				// shared between calls to FindPackage, this uses a copy.
+				bctx2 := new(build.Context)
+				*bctx2 = *bctx
+				n := len(bctx2.BuildTags)
+				bctx2.BuildTags = append(bctx2.BuildTags[:n:n], "wireinject")
+				bctx = bctx2
 			}
-			bctx2 := new(build.Context)
-			*bctx2 = *bctx
-			n := len(bctx2.BuildTags)
-			bctx2.BuildTags = append(bctx2.BuildTags[:n:n], "wireinject")
-			return bctx2.Import(importPath, fromDir, mode)
+			return bctx.Import(importPath, fromDir, mode)
 		},
 	}
 	conf.Import(pkg)
