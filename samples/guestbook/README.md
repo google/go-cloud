@@ -65,10 +65,10 @@ If you want to run this sample on GCP, you need to create a project, download
 the gcloud SDK, install `kubectl` and log in.
 
 ``` shell
-# install kubectl
+# Install kubectl.
 gcloud components install kubectl
 
-# login
+# Opens a browser to log you into GCP.
 gcloud auth login
 ```
 
