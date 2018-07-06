@@ -1,7 +1,7 @@
 # Getting Started with Go Cloud
 
 The best way to understand Go Cloud is to write some code and use it. Let's
-build a command line application that uploads files to blog storage on both AWS
+build a command line application that uploads files to blob storage on both AWS
 and GCP. Blob storage stores binary data under a string key, and is one of the
 most frequently used cloud services. We'll call the tool `upload`.
 
