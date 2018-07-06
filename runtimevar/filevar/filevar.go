@@ -125,7 +125,7 @@ func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
 
 		case stillDeletedState:
 			// Last known state is deleted, need to wait for file to show up before adding a watch.
-			t := time.NewTimer(defaultWait)
+			t := time.NewTimer(w.waitTime)
 			select {
 			case <-t.C:
 			case <-ctx.Done():
