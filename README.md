@@ -29,7 +29,9 @@ Installation is easy, but does require `vgo`. `vgo` is not yet stable, and so bu
 
 ```shell
 $ go get -u golang.org/x/vgo
-$ vgo get -u github.com/google/go-cloud
+$ git clone https://github.com/google/go-cloud.git
+$ cd go-cloud
+$ vgo install ./wire/cmd/gowire
 ```
 Go Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
 
