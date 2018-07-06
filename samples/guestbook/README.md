@@ -65,11 +65,11 @@ If you want to run this sample on GCP, you need to create a project, download
 the gcloud SDK, install `kubectl` and log in.
 
 ``` shell
-# login
-gcloud auth login
-
 # install kubectl
 gcloud components install kubectl
+
+# login
+gcloud auth login
 ```
 
 You can then use [Terraform][TF], a tool for initializing cloud resources, to
