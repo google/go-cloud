@@ -16,6 +16,8 @@ import (
 	"github.com/google/go-cloud/gcp"
 )
 
+const bucketName = "my-cool-bucket"
+
 func main() {
 	// Define our input.
 	cloud := flag.String("cloud", "", "Cloud storage to use")
@@ -45,7 +47,7 @@ func main() {
 			log.Fatalf("Failed to create HTTP client: %s", err)
 		}
 		// The bucket name must be globally unique.
-		b, err = gcsblob.NewBucket(ctx, "my-cool-bucket", c)
+		b, err = gcsblob.NewBucket(ctx, bucketName, c)
 		if err != nil {
 			log.Fatalf("Failed to connect to bucket: %s", err)
 		}
@@ -60,7 +62,7 @@ func main() {
 			Credentials: credentials.NewEnvCredentials(),
 		}
 		s := session.Must(session.NewSession(c))
-		b, err = s3blob.NewBucket(ctx, s, "my-cool-bucket")
+		b, err = s3blob.NewBucket(ctx, s, bucketName)
 		if err != nil {
 			log.Fatalf("Failed to connect to S3 bucket: %s", err)
 		}

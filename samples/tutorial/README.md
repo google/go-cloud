@@ -7,9 +7,9 @@ most frequently used cloud services. We'll call the tool `upload`.
 
 Before we start with any code, it helps to think about possible designs. We
 could very well write a code path for Amazon's Simple Storage Service (S3) and
-another code path for Google Cloud Storage (GCS). And that would work. However,
+another code path for Google Cloud Storage (GCS). That would work. However,
 it would also be tedious. We would have to learn the semantics of uploading files
-to both blob storage services.  And, even worse, we would have two code paths
+to both blob storage services. Even worse, we would have two code paths
 that effectively do the same thing, but would have to be maintained separately
 (ugh!). It would be much nicer if we could write the upload logic once and reuse
 it across providers. That's exactly what Go Cloud makes possible. So, let's
@@ -74,6 +74,8 @@ import (
     "github.com/google/go-cloud/gcp"
 )
 
+const bucketName = "my-cool-bucket"
+
 func main() {
     // flag setup omitted
     // ...
@@ -98,12 +100,12 @@ func main() {
             log.Fatalf("Failed to create HTTP client: %s", err)
         }
         // The bucket name must be globally unique.
-        b, err = gcsblob.NewBucket(ctx, "my-cool-bucket", c)
+        b, err = gcsblob.NewBucket(ctx, bucketName, c)
         if err != nil {
             log.Fatalf("Failed to connect to bucket: %s", err)
         }
     case "aws":
-        // ...
+        // AWS is handled below in the next code sample.
     default:
         log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
     }
@@ -121,7 +123,7 @@ well.
 
 With Go Cloud, only your setup code is platform dependent. The business logic
 makes no demands on a particular platform, which means your application itself
-requires less work to move from one cloud to another. And, in any case, the
+requires less work to move from one cloud to another. In any case, the
 setup code in an application grows far less than the business logic does.
 Anything we can do to separate the business logic from an underlying platform
 is well-worth doing.
@@ -160,7 +162,7 @@ func main() {
             Credentials: credentials.NewEnvCredentials(),
         }
         s := session.Must(session.NewSession(c))
-        b, err = s3blob.NewBucket(ctx, s, "my-cool-bucket")
+        b, err = s3blob.NewBucket(ctx, s, bucketname)
         if err != nil {
             log.Fatalf("Failed to connect to S3 bucket: %s", err)
         }
@@ -240,15 +242,15 @@ First, we create a writer based on the bucket connection. In addition to a
 `context.Context` type, the method takes the key under which the data will be
 stored and the mime type of the data.
 
-The call to `NewWriter` creates a `blob.Writer`, which is similar to the
-`io.Writer`. With the writer, we call `Write` passing in the data. In response,
-we get the number of bytes written and any error that might have occurred.
+The call to `NewWriter` creates a `blob.Writer`, which implements `io.Writer`.
+With the writer, we call `Write` passing in the data. In response, we get the
+number of bytes written and any error that might have occurred.
 
 Finally, we close the writer with `Close` and check the error.
 
 ## Uploading an image
 
-And that's it! Let's try it out. As setup, we will to create an [S3
+That's it! Let's try it out. As setup, we will to create an [S3
 bucket][s3-bucket] and a
 [GCS bucket][gcs-bucket]. In the code above, I called that bucket `my-cool-bucket`, but you
 can change that to match whatever your bucket is called. For GCP, you will need
@@ -274,13 +276,13 @@ Then, we will send `gopher.png` (in the same directory as this README) to GCS:
 $ ./upload -cloud gcp gopher.png
 ```
 
-And then, we send that same gopher to S3:
+Then, we send that same gopher to S3:
 
 ``` shell
 $ ./upload -cloud aws gopher.png
 ```
 
-And if we check both buckets, we should see our gopher in both places! We're
+If we check both buckets, we should see our gopher in both places! We're
 done!
 
 ## Wrapping Up
