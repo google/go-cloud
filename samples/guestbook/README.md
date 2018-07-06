@@ -23,8 +23,8 @@ You will need to install the following software to run this sample:
 ## Building
 
 `gowire` is not compatible with `vgo` yet, so you must run `vgo mod -vendor`
-first to download all the dependencies in `go.mod`. Running `gowire`
-generates the Wire code.
+first to download all the dependencies in `go.mod`. Running `gowire` generates
+the Wire code. Run the following in the `samples/guestbook` directory:
 
 ```shell
 # First time, for gowire.
