@@ -62,10 +62,20 @@ You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
 ## Running on Google Cloud Platform (GCP)
 
 If you want to run this sample on GCP, you need to create a project, download
-the gcloud SDK, and log in. You can then use [Terraform][TF], a tool for
-initializing cloud resources, to set up your project. Finally, this sample
-provides a script for building the Guestbook binary and deploying it to the
-Kubernetes cluster created by Terraform.
+the gcloud SDK, install `kubectl` and log in.
+
+``` shell
+# Install kubectl.
+gcloud components install kubectl
+
+# Opens a browser to log you into GCP.
+gcloud auth login
+```
+
+You can then use [Terraform][TF], a tool for initializing cloud resources, to
+set up your project. Finally, this sample provides a script for building the
+Guestbook binary and deploying it to the Kubernetes cluster created by
+Terraform.
 
 ```shell
 gcloud auth application-default login
