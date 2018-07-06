@@ -58,8 +58,8 @@ both clouds. This will be the only step that requires cloud-specific APIs.
 ## GCP authentication & connection
 
 As a first pass, let's write the code to connect to a GCS bucket. Then, we will
-connect to an S3 bucket. In both cases, we are going to create a pointer to a
-`blob.Bucket`, the cloud-agnostic blob storage type.
+write the code to connect to an S3 bucket. In both cases, we are going to create
+a pointer to a `blob.Bucket`, the cloud-agnostic blob storage type.
 
 ``` go
 package main
