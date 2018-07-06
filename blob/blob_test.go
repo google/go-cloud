@@ -16,6 +16,8 @@ package blob
 
 import (
 	"context"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -65,10 +67,6 @@ func TestNewWriter(t *testing.T) {
 			wantContentType: `form-data; name=foo`,
 		},
 		{
-			name:            "EmptyContentType",
-			wantContentType: "application/octet-stream",
-		},
-		{
 			name:            "InvalidContentType",
 			passContentType: "application/octet/stream",
 			wantErr:         true,
@@ -82,7 +80,7 @@ func TestNewWriter(t *testing.T) {
 			opt := &WriterOptions{
 				ContentType: tc.passContentType,
 			}
-			_, err := b.NewWriter(ctx, "foo", opt)
+			w, err := b.NewWriter(ctx, "foo", opt)
 			if tc.wantErr && err == nil {
 				t.Error("b.NewWriter: want error, got nil")
 			}
@@ -91,6 +89,76 @@ func TestNewWriter(t *testing.T) {
 			}
 			if spy.writeContentType != tc.wantContentType {
 				t.Errorf("b.NewWriter: got Content-Type %v, want %v", spy.writeContentType, tc.wantContentType)
+			}
+			if w == nil {
+				return
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestWriteCloseDetectContentType(t *testing.T) {
+	tests := []struct {
+		name            string
+		file            string
+		firstChunkSize  int
+		wantContentType string
+	}{
+		{
+			name:            "OneLargeFile",
+			file:            "test-large.jpg",
+			wantContentType: "image/jpeg",
+		},
+		{
+			name:            "MediumFilesDetectDuringWrite",
+			file:            "test-medium.html",
+			firstChunkSize:  256,
+			wantContentType: "text/html; charset=utf-8",
+		},
+		{
+			name:            "SmallFilesDetectDuringClose",
+			file:            "test-small.txt",
+			firstChunkSize:  8,
+			wantContentType: "text/plain; charset=utf-8",
+		},
+		{
+			name:            "NoFile",
+			wantContentType: "text/plain; charset=utf-8",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spy := new(bucketSpy)
+			b := NewBucket(spy)
+			ctx := context.Background()
+			w, err := b.NewWriter(ctx, tc.name, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.file != "" {
+				fp := filepath.Join("testdata", tc.file)
+				d, err := ioutil.ReadFile(fp)
+				if err != nil {
+					t.Fatal(err)
+				}
+				off := 0
+				if tc.firstChunkSize > 0 {
+					if off, err = w.Write(d[:off]); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if _, err := w.Write(d[off:]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if spy.writeContentType != tc.wantContentType {
+				t.Errorf("Write got Content-Type %s, want %s", spy.writeContentType, tc.wantContentType)
 			}
 		})
 	}
@@ -140,10 +208,10 @@ func (readerStub) Close() error {
 
 type writerStub struct{}
 
-func (writerStub) Write([]byte) (n int, err error) {
-	panic("not implemented")
+func (writerStub) Write(p []byte) (n int, err error) {
+	return len(p), nil
 }
 
 func (writerStub) Close() error {
-	panic("not implemented")
+	return nil
 }
