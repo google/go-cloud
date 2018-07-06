@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/distroless/base:latest
-COPY app /app
-EXPOSE 8080
-ENTRYPOINT [ "/app" ]
+steps:
+- name: '$_VGO_IMAGE_NAME'
+  args: ['build']
+  dir: 'tests/gcp/app'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '$_IMAGE_NAME:$BUILD_ID', '.']
+  dir: 'tests/gcp/app'
+images:
+- '$_IMAGE_NAME:$BUILD_ID'

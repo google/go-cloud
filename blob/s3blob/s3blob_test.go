@@ -25,14 +25,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/internal/testing/setup"
+	"github.com/google/go-cmp/cmp"
 )
 
 const (
-	bucketPrefix = "go-x-cloud"
+	bucketPrefix = "go-cloud"
 	region       = "us-east-2"
 )
 
