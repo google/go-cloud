@@ -23,7 +23,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-x-cloud/blob/fileblob"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/fileblob"
 )
 
 func ExampleBucket_NewReader() {
@@ -104,7 +105,11 @@ func ExampleBucket_NewWriter() {
 
 	// Open a writer using the key "foo.txt" and the default options.
 	ctx := context.Background()
-	w, err := bucket.NewWriter(ctx, "foo.txt", nil)
+	// fileblob doesn't support custom content-type yet, see
+	// https://github.com/google/go-cloud/issues/111.
+	w, err := bucket.NewWriter(ctx, "foo.txt", &blob.WriterOptions{
+		ContentType: "application/octet-stream",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +138,7 @@ func ExampleBucket_NewWriter() {
 }
 
 func newTempDir() (string, func()) {
-	dir, err := ioutil.TempDir("", "go-x-cloud-blob-example")
+	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {
 		panic(err)
 	}

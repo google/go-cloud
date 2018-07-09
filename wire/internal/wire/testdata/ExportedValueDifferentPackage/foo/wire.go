@@ -20,9 +20,10 @@ import (
 	"os"
 
 	"bar"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func injectedFile() *os.File {
-	panic(wire.Build(bar.Value))
+	wire.Build(bar.Value)
+	return nil
 }

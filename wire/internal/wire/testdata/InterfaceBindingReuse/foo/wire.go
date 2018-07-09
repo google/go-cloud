@@ -17,12 +17,14 @@
 package main
 
 import (
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func injectFooBar() FooBar {
-	panic(wire.Build(
+	wire.Build(
 		provideBar,
 		provideFooBar,
-		wire.Bind((*Fooer)(nil), (*Bar)(nil))))
+		wire.Bind((*Fooer)(nil), (*Bar)(nil)),
+	)
+	return FooBar{}
 }

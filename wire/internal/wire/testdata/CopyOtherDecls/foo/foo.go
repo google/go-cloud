@@ -22,7 +22,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func main() {
@@ -35,5 +35,6 @@ func provideMessage() string {
 }
 
 func injectedMessage() string {
-	panic(wire.Build(provideMessage))
+	wire.Build(provideMessage)
+	return ""
 }

@@ -713,7 +713,7 @@ func isWireImport(path string) bool {
 	if i := strings.LastIndex(path, vendorPart); i != -1 && (i == 0 || path[i-1] == '/') {
 		path = path[i+len(vendorPart):]
 	}
-	return path == "github.com/google/go-x-cloud/wire"
+	return path == "github.com/google/go-cloud/wire"
 }
 
 func isProviderSetType(t types.Type) bool {

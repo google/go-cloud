@@ -17,11 +17,13 @@
 package blob
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"mime"
+	"net/http"
 
-	"github.com/google/go-x-cloud/blob/driver"
+	"github.com/google/go-cloud/blob/driver"
 )
 
 // Reader implements io.ReadCloser to read from blob. It must be closed after
@@ -54,7 +56,18 @@ func (r *Reader) Size() int64 {
 // all writes are done.
 type Writer struct {
 	w driver.Writer
+
+	// This fields exist only when w is not created in the first place when
+	// NewWriter is called.
+	ctx    context.Context
+	bucket driver.Bucket
+	key    string
+	opt    *driver.WriterOptions
+	buf    *bytes.Buffer
 }
+
+// sniffLen is the byte size of Writer.buf used to detect content-type.
+const sniffLen = 512
 
 // Write implements the io.Writer interface.
 //
@@ -62,13 +75,47 @@ type Writer struct {
 // even if the actual write fails. Use the error returned from Close method to
 // check and handle error.
 func (w *Writer) Write(p []byte) (n int, err error) {
-	return w.w.Write(p)
+	if w.w != nil {
+		return w.w.Write(p)
+	}
+
+	// If w is not created due to no content-type is passed in, Write will try to
+	// sniff the MIME type base on at most 512 bytes of the blob content of p.
+
+	// Detect the content-type directly if the first chunk is at least 512 bytes.
+	if w.buf.Len() == 0 && len(p) >= sniffLen {
+		return w.open(p)
+	}
+
+	// Store p in w.buf and detect the content-type when the size of content in
+	// w.buf is at least 512 bytes.
+	w.buf.Write(p)
+	if w.buf.Len() >= sniffLen {
+		return w.open(w.buf.Bytes())
+	}
+	return len(p), nil
 }
 
 // Close flushes any buffered data and completes the Write. It is user's responsibility
 // to call it after finishing the write and handle the error if returned.
 func (w *Writer) Close() error {
+	if w.w != nil {
+		return w.w.Close()
+	}
+	if _, err := w.open(w.buf.Bytes()); err != nil {
+		return err
+	}
 	return w.w.Close()
+}
+
+// open tries to detect the MIME type of p and write it to the blob.
+func (w *Writer) open(p []byte) (n int, err error) {
+	ct := http.DetectContentType(p)
+	if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
+		return 0, err
+	}
+	w.buf = nil
+	return w.w.Write(p)
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
@@ -108,17 +155,13 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // NewWriter returns Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced. The object
+// Otherwise any previous object with the same key will be replaced. The object
 // is not guaranteed to be available until Close has been called.
-//
-// The content-type can be set through WriterOptions.ContentType. If it is
-// empty, then "application/octet-stream" will be used.
-// TODO(#112): auto-detect content-type
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
 	var dopt *driver.WriterOptions
-	ct := "application/octet-stream"
+	var w driver.Writer
 	if opt != nil {
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
@@ -128,11 +171,18 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			if err != nil {
 				return nil, err
 			}
-			ct = mime.FormatMediaType(t, p)
+			ct := mime.FormatMediaType(t, p)
+			w, err = b.b.NewWriter(ctx, key, ct, dopt)
+			return &Writer{w: w}, err
 		}
 	}
-	w, err := b.b.NewWriter(ctx, key, ct, dopt)
-	return &Writer{w}, err
+	return &Writer{
+		ctx:    ctx,
+		bucket: b.b,
+		key:    key,
+		opt:    dopt,
+		buf:    bytes.NewBuffer([]byte{}),
+	}, nil
 }
 
 // Delete deletes the object associated with key. It returns an error if that
@@ -156,9 +206,9 @@ type WriterOptions struct {
 	// to a smaller size to avoid high memory usage.
 	BufferSize int
 
-	// ContentType sets the MIME type of an object before writing to blob
-	// service. If not set, then "application/octet-stream" will be used.
-	// TODO(#112): auto-detect content-type
+	// ContentType specifies the MIME type of the object being written. If not set,
+	// then it will be inferred from the content using the algorithm described at
+	// http://mimesniff.spec.whatwg.org/
 	ContentType string
 }
 

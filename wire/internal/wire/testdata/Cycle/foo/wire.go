@@ -17,9 +17,10 @@
 package main
 
 import (
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func injectedBaz() Baz {
-	panic(wire.Build(provideFoo, provideBar, provideBaz))
+	wire.Build(provideFoo, provideBar, provideBaz)
+	return 0
 }

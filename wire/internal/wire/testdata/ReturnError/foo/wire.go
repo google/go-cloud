@@ -17,9 +17,10 @@
 package main
 
 import (
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func injectFoo() (Foo, error) {
-	panic(wire.Build(Set))
+	wire.Build(Set)
+	return 0, nil
 }

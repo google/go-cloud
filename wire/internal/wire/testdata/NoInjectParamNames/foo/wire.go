@@ -19,12 +19,13 @@ package main
 import (
 	stdcontext "context"
 
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 // The notable characteristic of this test is that there are no
 // parameter names on the inject stub.
 
 func inject(stdcontext.Context, struct{}) (context, error) {
-	panic(wire.Build(provide))
+	wire.Build(provide)
+	return context{}, nil
 }

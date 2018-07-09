@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build wireinject
+//+build !wireinject
 
-package main
+// Package bar includes both wireinject and non-wireinject variants.
+package bar
 
-import (
-	"github.com/google/go-x-cloud/wire"
-)
+import "github.com/google/go-cloud/wire"
 
-func injectedMessage() string {
-	wire.Build(provideMessage)
-	return ""
-}
+// Set provides a friendly user greeting.
+var Set = wire.NewSet(wire.Value("Hello, World!"))

@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-x-cloud/gcp"
+	"github.com/google/go-cloud/gcp"
 
 	"google.golang.org/api/googleapi"
 )

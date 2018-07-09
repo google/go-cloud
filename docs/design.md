@@ -3,9 +3,37 @@
 This document outlines important design decisions made for this repository and
 attempts to provide succinct rationales.
 
+## Developers and Operators
+
+Go Cloud is designed with two different personas in mind: the developer and
+the operator. In the world of DevOps, these may be the same person. A developer
+may be directly deploying their application into production, especially on
+smaller teams. In a larger organization, these may be different teams entirely,
+but working closely together. Regardless, these two personas have two very
+different ways of looking at a Go program:
+
+- The developer persona wants to write business logic that is agnostic of
+  underlying cloud provider. Their focus is on making software correct for the
+  requirements at hand.
+- The operator persona wants to incorporate the business logic into the
+  organization's policies and provision resources for the logic to run. Their
+  focus is making software run predictably and reliably with the resources at
+  hand.
+
+Go Cloud uses Go interfaces at the boundary between these two personas: a
+developer is meant to use an interface, and an operator is meant to provide an
+implementation of that interface. The [`blob.Bucket`] type is a prime example:
+the API does not provide a way of creating a new bucket, as that is an
+operator's concern. An implementor of the `Bucket` interface does not need to
+determine the content type of incoming data, as that is a developer's concern.
+This separation of concerns allows these two personas to communicate using a
+shared language while focusing on their respective areas of expertise.
+
+[`blob.Bucket`]: https://godoc.org/github.com/google/go-cloud/blob#Bucket
+
 ## Drivers and User-Facing Types
 
-The generic APIs that Go X Cloud exports (like [`blob.Bucket`][] or
+The generic APIs that Go Cloud exports (like [`blob.Bucket`][] or
 [`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
@@ -44,9 +72,8 @@ user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
-[`blob.Bucket`]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket
-[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-x-cloud/runtimevar#Variable
-[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-x-cloud/blob#Bucket.NewWriter
+[`runtimevar.Variable`]: https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
+[`Bucket.NewWriter` method]: https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
 ## Errors

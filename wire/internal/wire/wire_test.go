@@ -67,7 +67,9 @@ func TestWire(t *testing.T) {
 			t.Skip("go toolchain not available:", err)
 		}
 		for _, test := range tests {
+			test := test
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
 				bctx := test.buildContext()
 				gen, errs := Generate(bctx, wd, test.pkg)
 				if len(gen) > 0 {
@@ -131,15 +133,14 @@ func TestWire(t *testing.T) {
 	})
 
 	t.Run("Determinism", func(t *testing.T) {
-		runs := 10
-		if testing.Short() {
-			runs = 3
-		}
+		const runs = 2
 		for _, test := range tests {
 			if test.wantError {
 				continue
 			}
+			test := test
 			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
 				bctx := test.buildContext()
 				gold, errs := Generate(bctx, wd, test.pkg)
 				if len(errs) > 0 {
@@ -309,7 +310,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		out = nil
 	}
 	goFiles := map[string][]byte{
-		"github.com/google/go-x-cloud/wire/wire.go": wireGoSrc,
+		"github.com/google/go-cloud/wire/wire.go": wireGoSrc,
 	}
 	err = filepath.Walk(root, func(src string, info os.FileInfo, err error) error {
 		if err != nil {

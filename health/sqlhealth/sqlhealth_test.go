@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-x-cloud/health"
+	"github.com/google/go-cloud/health"
 )
 
 var _ = health.Checker((*Checker)(nil))

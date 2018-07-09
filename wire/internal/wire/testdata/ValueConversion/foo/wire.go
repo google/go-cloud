@@ -17,9 +17,10 @@
 package main
 
 import (
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/wire"
 )
 
 func injectedMessage() Foo {
-	panic(wire.Build(wire.Value(Foo("Hello, World!"))))
+	wire.Build(wire.Value(Foo("Hello, World!")))
+	return ""
 }

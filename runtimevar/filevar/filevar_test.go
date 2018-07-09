@@ -19,11 +19,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/google/go-x-cloud/runtimevar"
-	"github.com/google/go-x-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -188,21 +189,30 @@ func TestReturnsUpdatedSnapshotConcurrently(t *testing.T) {
 
 	const content = `{"hello": "cloud"}`
 	// Update the file in a separate goroutine.
+	written := make(chan struct{})
+	defer func() {
+		<-written
+	}()
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		defer close(written)
 		if err := f.write(content); err != nil {
-			t.Fatal(err)
+			t.Error("Writing:", err)
 		}
 	}()
 
 	// Following will block until there is a change.
-	got, err := cfg.Watch(ctx)
-	if err != nil {
-		t.Fatalf("Variable.Watch returned error: %v", err)
-	}
-
-	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
-		t.Errorf("Snapshot.Value: %s", diff)
+	for {
+		got, err := cfg.Watch(ctx)
+		if err != nil {
+			t.Fatalf("Variable.Watch returned error: %v", err)
+		}
+		if got.Value.(string) == content {
+			break
+		}
+		// Check for partial read or something entirely different.
+		if !strings.HasPrefix(content, got.Value.(string)) {
+			t.Errorf("Snapshot.Value = %q; want %q", got.Value.(string), content)
+		}
 	}
 }
 
@@ -255,10 +265,12 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 	}
 
 	// Delete the file in a separate goroutine.
+	deleted := make(chan struct{})
+	defer func() { <-deleted }()
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		defer close(deleted)
 		if err := f.delete(); err != nil {
-			t.Fatal(err)
+			t.Error("Deleting file:", err)
 		}
 	}()
 
@@ -269,22 +281,30 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 
 	// Recreate file with new content and call Watch again.
 	const content = `{"hello": "psp"}`
+	created := make(chan struct{})
+	defer func() { <-created }()
 	go func() {
-		time.Sleep(100 * time.Millisecond)
+		defer close(created)
 		if err := f.write(content); err != nil {
-			t.Fatal(err)
+			t.Error("Writing file:", err)
 		}
 	}()
 
 	// Following will block until file gets recreated.
-	got, err := cfg.Watch(ctx)
-	if err != nil {
-		t.Fatalf("Variable.Watch returned error: %v", err)
-	}
-	if diff := cmp.Diff(got.Value.(string), content); diff != "" {
-		t.Errorf("Snapshot.Value: %s", diff)
-	}
-	if !got.UpdateTime.After(prev.UpdateTime) {
-		t.Errorf("Snapshot.UpdateTime is less than or equal to previous value")
+	for {
+		got, err := cfg.Watch(ctx)
+		if err != nil {
+			t.Fatalf("Variable.Watch returned error: %v", err)
+		}
+		if !got.UpdateTime.After(prev.UpdateTime) {
+			t.Errorf("Snapshot.UpdateTime is less than or equal to previous value")
+		}
+		if got.Value.(string) == content {
+			break
+		}
+		// Check for partial read or something entirely different.
+		if !strings.HasPrefix(content, got.Value.(string)) {
+			t.Errorf("Snapshot.Value = %q; want %q", got.Value.(string), content)
+		}
 	}
 }

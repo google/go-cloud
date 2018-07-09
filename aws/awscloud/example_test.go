@@ -20,10 +20,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/google/go-x-cloud/aws/awscloud"
-	"github.com/google/go-x-cloud/health"
-	"github.com/google/go-x-cloud/server"
-	"github.com/google/go-x-cloud/wire"
+	"github.com/google/go-cloud/aws/awscloud"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/wire"
 	"go.opencensus.io/trace"
 )
 
@@ -54,7 +54,7 @@ func Example() {
 // The body of this function will be filled in by running gowire. While
 // the name of the function does not matter, the signature signals to
 // Wire what provider functions to call. See
-// https://github.com/google/go-x-cloud/blob/master/wire/README.md#injectors
+// https://github.com/google/go-cloud/blob/master/wire/README.md#injectors
 // for more details.
 func setup(ctx context.Context) (*server.Server, func(), error) {
 	panic(wire.Build(

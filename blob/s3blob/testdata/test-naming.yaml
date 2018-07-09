@@ -8,14 +8,14 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175808Z
+      - 20180703T232932Z
       X-Gocloud-Seq:
       - "0"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.good-bucket
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.good-bucket
     method: PUT
   response:
     body: ""
@@ -23,15 +23,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:33 GMT
       Location:
-      - http://go-x-cloud.good-bucket.s3.amazonaws.com/
+      - http://go-cloud.good-bucket.s3.amazonaws.com/
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 9NNYtoV8VsQUaoZXYCc2SGPaaAEmQhCn2WQXa9+yKCVu1zTlJ/ZtAqUEMOqE1IOdsFIeh5BHFVM=
+      - bWFzSjXLDsZtdEcr8AEOGIMoE44GMbbLODtSMBP+OzglQOiiHGPAvWGUQOmW8prbFZm5vWvh33U=
       X-Amz-Request-Id:
-      - C6B9BAF6D9837F8F
+      - 2BA4BB1E7E9697A8
     status: 200 OK
     code: 200
     duration: ""
@@ -40,32 +40,32 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175808Z
+      - 20180703T232933Z
       X-Gocloud-Seq:
       - "1"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.good-bucket
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.good-bucket
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.good-bucket</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud.good-bucket</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - rVDHDuaCFnOvcWKN1hwl2QZgpbP+orv5CRUF6isXqpqgzN2odtUXyEYVvPgAK9rdkl1CmRuneLQ=
+      - 25xNnVsUvoS5xmRLiAMScEYyibMka4G666wAG8yN8swNGwpPA0AbrETk1H165uMt6XQXvm3w3aA=
       X-Amz-Request-Id:
-      - 2291451E6A561210
+      - 3E864A3BA93BAE98
     status: 200 OK
     code: 200
     duration: ""
@@ -74,26 +74,26 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175808Z
+      - 20180703T232933Z
       X-Gocloud-Seq:
       - "2"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.good-bucket
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.good-bucket
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - TlcPSoYf/7wEFs9VFGTDqOpES7iferNbd1xZvWO66XHTcTkA9oh5ZEt0Gmx2bWepGY9DxdF7Jfk=
+      - M4KrJFwSjwr7WpUStIKg3L8FeI04UuAnZb5e6PeQVAGBZ7lh10rpBlvB7SYQ4/W8fS654druAPk=
       X-Amz-Request-Id:
-      - 6076FF831149FE83
+      - DF7D612F048DDAB5
     status: 204 No Content
     code: 204
     duration: ""
@@ -102,14 +102,14 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) Waiter
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64) Waiter
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175809Z
+      - 20180703T232933Z
       X-Gocloud-Seq:
       - "3"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.good-bucket
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.good-bucket
     method: HEAD
   response:
     body: ""
@@ -117,13 +117,13 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:33 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - mvF7HFhKvlDGjFWt0qgQQyUb76zky117EjAA8Ps2xtSfUvf0/8HPxmHggTaDHGQWm3AuEYQx3/s=
+      - /KIsXlPdW6G/ywmftZDGWP2CpyCz3hlKMW+gOqNiXhASzhZVrDYiUT/fnOX9wjuc3esMMYLylMQ=
       X-Amz-Request-Id:
-      - 67855E8D45D5DBA5
+      - 1E6160CABD130966
     status: 404 Not Found
     code: 404
     duration: ""
@@ -134,14 +134,14 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175809Z
+      - 20180703T232933Z
       X-Gocloud-Seq:
       - "4"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.8ucket-nam3
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.8ucket-nam3
     method: PUT
   response:
     body: ""
@@ -149,15 +149,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Location:
-      - http://go-x-cloud.8ucket-nam3.s3.amazonaws.com/
+      - http://go-cloud.8ucket-nam3.s3.amazonaws.com/
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 1iKGi215UyH8DT9bSP6au1a5DFLfXWlD5W1ItqU1iF+cG1TqlTERRxtPOhPJgZRqdP0Un33/WJk=
+      - Y00Zca0G9Fe6wH/dOyiQh1uE8Za4JydRZiqo+zgCdL7z8dZSTVyXJtcaUQfJPexbdtuRDnKb+Tk=
       X-Amz-Request-Id:
-      - 6AE6A8E0A87CBED1
+      - 4406EB58B3CEE486
     status: 200 OK
     code: 200
     duration: ""
@@ -166,32 +166,32 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175809Z
+      - 20180703T232934Z
       X-Gocloud-Seq:
       - "5"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.8ucket-nam3
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.8ucket-nam3
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-x-cloud.8ucket-nam3</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud.8ucket-nam3</Name><Prefix></Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:35 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - l3IUKEdb0F7/CGY/TNf40JioX12HUTsjxTAMEenwEDgYiwhjKGvOmt58p8+5JdtJgf4hxnhJhNY=
+      - /9+2OQtbe5xdCsI2HzAAOuo7CaHVlL5EQCpj22bhB/idcWVpJA5g4eKdgMW7/oBwhg0wXHtKUWY=
       X-Amz-Request-Id:
-      - 0A9E40C222DFDEC8
+      - 2F1A7FDD0A7BA68E
     status: 200 OK
     code: 200
     duration: ""
@@ -200,26 +200,26 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175809Z
+      - 20180703T232934Z
       X-Gocloud-Seq:
       - "6"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.8ucket-nam3
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.8ucket-nam3
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:35 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - sPCoOlC705yn8vf+rmrXrRJ8PztjkXIKvo3wtTbHTA0j3dfKwBWfh5rKCSsQ2fgkI5LbdtnDXy8=
+      - mdDNGnWTVqr12/It5X35b5OyBFzVF7BtXx56KT5MXE3F0BPJ7d6MckCIgK1s5jT3DsX1yzks4s4=
       X-Amz-Request-Id:
-      - A148A377DD08FA9B
+      - 770BBB09F88DA9E5
     status: 204 No Content
     code: 204
     duration: ""
@@ -228,14 +228,14 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) Waiter
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64) Waiter
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180627T175810Z
+      - 20180703T232934Z
       X-Gocloud-Seq:
       - "7"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.8ucket-nam3
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.8ucket-nam3
     method: HEAD
   response:
     body: ""
@@ -243,13 +243,13 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:33 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - fe4Tr0jaZPmewCeg8Cg55pjOT/SOC8V4n5cwuTAAm6dVeeEfkyy43RHh2XpIpZMy4f9KrwDJ0qU=
+      - 7myFn5Vd22Djs9PHHkqtV02fhKUi3/jZKU/MxZcR6ENJCZ8w82TiDi1JkVLxyQ3T+oXW7ekh/HY=
       X-Amz-Request-Id:
-      - 221A6C1FEE38ED41
+      - 071CF5661464FD5B
     status: 404 Not Found
     code: 404
     duration: ""
@@ -260,30 +260,30 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175810Z
+      - 20180703T232934Z
       X-Gocloud-Seq:
       - "8"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud._bucketname_
+    url: https://s3.us-east-2.amazonaws.com/go-cloud._bucketname_
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-x-cloud._bucketname_</BucketName><RequestId>28FE0BFB4CD30C9B</RequestId><HostId>jSQhNG+/XJR/m8zt2cDUXCOyHIpzwWsB9ykVMTO5/bzwnLYDkLYjThjBANEMQsz8K60v+AehSTQ=</HostId></Error>
+      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-cloud._bucketname_</BucketName><RequestId>9A5EB1CB7B902703</RequestId><HostId>jS/ZQfHBEIVYgeZjv2OxFBD2iyKbO3Z1tgR9p2YjTpXkJhc9wZegrHbtYpyKA0NJS3Vhfp5a3YI=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - jSQhNG+/XJR/m8zt2cDUXCOyHIpzwWsB9ykVMTO5/bzwnLYDkLYjThjBANEMQsz8K60v+AehSTQ=
+      - jS/ZQfHBEIVYgeZjv2OxFBD2iyKbO3Z1tgR9p2YjTpXkJhc9wZegrHbtYpyKA0NJS3Vhfp5a3YI=
       X-Amz-Request-Id:
-      - 28FE0BFB4CD30C9B
+      - 9A5EB1CB7B902703
     status: 400 Bad Request
     code: 400
     duration: ""
@@ -294,30 +294,30 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175810Z
+      - 20180703T232934Z
       X-Gocloud-Seq:
       - "9"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.bucketnameUpper
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.bucketnameUpper
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-x-cloud.bucketnameUpper</BucketName><RequestId>756C0AF81F93B906</RequestId><HostId>2Zz1lrX+OIQ/6094f55abcKIToH3FdP+3c/DRwtmGviQt4ZeLn67V8DFS1Hv4tnEKllu5AyUufw=</HostId></Error>
+      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-cloud.bucketnameUpper</BucketName><RequestId>A4FEF2A050E820D5</RequestId><HostId>mIDGQj5EGqmics1n56yF2YNCF4sUb1Rg6uwjrk4svWJgzqx79iE5stKD4kINeflUy1Pp4QeLqwU=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 2Zz1lrX+OIQ/6094f55abcKIToH3FdP+3c/DRwtmGviQt4ZeLn67V8DFS1Hv4tnEKllu5AyUufw=
+      - mIDGQj5EGqmics1n56yF2YNCF4sUb1Rg6uwjrk4svWJgzqx79iE5stKD4kINeflUy1Pp4QeLqwU=
       X-Amz-Request-Id:
-      - 756C0AF81F93B906
+      - A4FEF2A050E820D5
     status: 400 Bad Request
     code: 400
     duration: ""
@@ -328,30 +328,30 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175810Z
+      - 20180703T232935Z
       X-Gocloud-Seq:
       - "10"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.bucketname%3Finvalidchar
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.bucketname%3Finvalidchar
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-x-cloud.bucketname?invalidchar</BucketName><RequestId>5FF0F829540FACD7</RequestId><HostId>wTS1V3s7kJ9pi5KwgMCy+D1gjCHbcrdCtSoIKDVBwrPesjv71AHmcDZGAWMLEFfOOa8tmmQKiwA=</HostId></Error>
+      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-cloud.bucketname?invalidchar</BucketName><RequestId>A9CA589A5E1E2A47</RequestId><HostId>hnoOaGXG2usSxbx+zK1Zz4B94m04tWWD4b79U8J5+G7Yp/2ZiPeZqKVV+HprX7VjRENjlhhQKAk=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:09 GMT
+      - Tue, 03 Jul 2018 23:29:35 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - wTS1V3s7kJ9pi5KwgMCy+D1gjCHbcrdCtSoIKDVBwrPesjv71AHmcDZGAWMLEFfOOa8tmmQKiwA=
+      - hnoOaGXG2usSxbx+zK1Zz4B94m04tWWD4b79U8J5+G7Yp/2ZiPeZqKVV+HprX7VjRENjlhhQKAk=
       X-Amz-Request-Id:
-      - 5FF0F829540FACD7
+      - A9CA589A5E1E2A47
     status: 400 Bad Request
     code: 400
     duration: ""
@@ -362,30 +362,30 @@ interactions:
       Content-Length:
       - "153"
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; darwin; amd64)
       X-Amz-Content-Sha256:
       - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
       X-Amz-Date:
-      - 20180627T175810Z
+      - 20180703T232935Z
       X-Gocloud-Seq:
       - "11"
-    url: https://s3.us-east-2.amazonaws.com/go-x-cloud.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-x-cloud.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</BucketName><RequestId>6F3EC769A60CC6FB</RequestId><HostId>+r5duKj5brMQ/8aMxwEYCMyvOw9Ux8qw34SOD//KGR35C5DbBENP29Jqxx+YVBZklwr3wgheDC4=</HostId></Error>
+      <Error><Code>InvalidBucketName</Code><Message>The specified bucket is not valid.</Message><BucketName>go-cloud.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</BucketName><RequestId>D612AE2776975640</RequestId><HostId>FiXi71CaTWBcKMS7JxFfd3s1IjaKqwPbI8Qp5ZegEfaIYDMDxPdLRo0hvtP0GLaeBcEao9tvnTc=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 27 Jun 2018 17:58:10 GMT
+      - Tue, 03 Jul 2018 23:29:34 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - +r5duKj5brMQ/8aMxwEYCMyvOw9Ux8qw34SOD//KGR35C5DbBENP29Jqxx+YVBZklwr3wgheDC4=
+      - FiXi71CaTWBcKMS7JxFfd3s1IjaKqwPbI8Qp5ZegEfaIYDMDxPdLRo0hvtP0GLaeBcEao9tvnTc=
       X-Amz-Request-Id:
-      - 6F3EC769A60CC6FB
+      - D612AE2776975640
     status: 400 Bad Request
     code: 400
     duration: ""
