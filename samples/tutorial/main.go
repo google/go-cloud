@@ -47,7 +47,7 @@ func main() {
 			log.Fatalf("Failed to create HTTP client: %s", err)
 		}
 		// The bucket name must be globally unique.
-		b, err = gcsblob.NewBucket(ctx, bucketName, c)
+		b, err = gcsblob.OpenBucket(ctx, bucketName, c)
 		if err != nil {
 			log.Fatalf("Failed to connect to bucket: %s", err)
 		}
@@ -62,7 +62,7 @@ func main() {
 			Credentials: credentials.NewEnvCredentials(),
 		}
 		s := session.Must(session.NewSession(c))
-		b, err = s3blob.NewBucket(ctx, s, bucketName)
+		b, err = s3blob.OpenBucket(ctx, s, bucketName)
 		if err != nil {
 			log.Fatalf("Failed to connect to S3 bucket: %s", err)
 		}

@@ -41,7 +41,7 @@ func TestReadOfNonExistentFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bucket, err := gcsblob.NewBucket(ctx, *testBucket, c)
+	bucket, err := gcsblob.OpenBucket(ctx, *testBucket, c)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}
@@ -67,7 +67,7 @@ func TestDeleteNonExistentFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bucket, err := gcsblob.NewBucket(ctx, *testBucket, c)
+	bucket, err := gcsblob.OpenBucket(ctx, *testBucket, c)
 	if err != nil {
 		t.Fatal("error getting bucket:", err)
 	}

@@ -116,7 +116,7 @@ func TestHTTPClientOpt(t *testing.T) {
 	ctx := context.Background()
 
 	ts := &transportSpy{}
-	b, err := NewBucket(ctx, "black-bucket", &gcp.HTTPClient{Client: http.Client{Transport: ts}})
+	b, err := OpenBucket(ctx, "black-bucket", &gcp.HTTPClient{Client: http.Client{Transport: ts}})
 	if err != nil {
 		t.Fatal(err)
 	}

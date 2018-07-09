@@ -153,7 +153,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := s3blob.NewBucket(ctx, sess, bkt)
+			b, err := s3blob.OpenBucket(ctx, sess, bkt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -255,7 +255,7 @@ func TestRead(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, err := s3blob.NewBucket(ctx, sess, bkt)
+			b, err := s3blob.OpenBucket(ctx, sess, bkt)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -319,7 +319,7 @@ func TestWrite(t *testing.T) {
 
 	ctx := context.Background()
 
-	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	b, err := s3blob.OpenBucket(ctx, sess, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,7 +379,7 @@ func TestCloseWithoutWrite(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	b, err := s3blob.OpenBucket(ctx, sess, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,7 +434,7 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("error uploading test object: %v", err)
 	}
 
-	b, err := s3blob.NewBucket(ctx, sess, bkt)
+	b, err := s3blob.OpenBucket(ctx, sess, bkt)
 	if err != nil {
 		t.Fatal(err)
 	}
