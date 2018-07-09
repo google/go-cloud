@@ -148,9 +148,9 @@ func (w *watcher) Close() error {
 	return nil
 }
 
-// Watch blocks until the variable changes, the Context's Done channel closes or an error occurs. It
-// implements the driver.Watcher.Watch method.
-func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+// WatchVariable blocks until the variable changes, the Context's Done channel closes or an error occurs. It
+// implements the driver.Watcher.WatchVariable method.
+func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	return internal.Pinger(ctx, w.ping, w.waitTime)
 }
 
