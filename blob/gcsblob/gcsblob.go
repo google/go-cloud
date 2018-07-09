@@ -44,7 +44,7 @@ func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (
 	if err != nil {
 		return nil, err
 	}
-	return blob.NewBucket(&bucket{name: bucketName, client: c}), nil
+	return blob.OpenBucket(&bucket{name: bucketName, client: c}), nil
 }
 
 // bucket represents a GCS bucket, which handles read, write and delete operations

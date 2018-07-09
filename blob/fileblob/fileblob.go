@@ -50,7 +50,7 @@ func NewBucket(dir string) (*blob.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("open file bucket: %s is not a directory", dir)
 	}
-	return blob.NewBucket(&bucket{dir}), nil
+	return blob.OpenBucket(&bucket{dir: dir}), nil
 }
 
 // resolvePath converts a key into a relative filesystem path. It guarantees

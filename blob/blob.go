@@ -124,8 +124,8 @@ type Bucket struct {
 	b driver.Bucket
 }
 
-// NewBucket creates a new Bucket for a group of objects for a blob service.
-func NewBucket(b driver.Bucket) *Bucket {
+// OpenBucket creates a new Bucket for a group of objects for a blob service.
+func OpenBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 

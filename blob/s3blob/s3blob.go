@@ -42,7 +42,7 @@ func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName strin
 	}
 	svc := s3.New(sess)
 	uploader := s3manager.NewUploader(sess)
-	return blob.NewBucket(&bucket{
+	return blob.OpenBucket(&bucket{
 		name:     bucketName,
 		client:   svc,
 		uploader: uploader,
