@@ -27,7 +27,7 @@ func TestNewRangeReader(t *testing.T) {
 	t.Run("EntireBlob", func(t *testing.T) {
 		const key = "foo"
 		spy := new(bucketSpy)
-		b := NewBucket(spy)
+		b := OpenBucket(spy)
 		ctx := context.Background()
 		r, err := b.NewRangeReader(ctx, key, 0, -1)
 		if err != nil {
@@ -43,7 +43,7 @@ func TestNewRangeReader(t *testing.T) {
 	})
 	t.Run("NegativeOffset", func(t *testing.T) {
 		spy := new(bucketSpy)
-		b := NewBucket(spy)
+		b := OpenBucket(spy)
 		ctx := context.Background()
 		r, err := b.NewRangeReader(ctx, "foo", -1, -1)
 		if err == nil {
@@ -75,7 +75,7 @@ func TestNewWriter(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			spy := new(bucketSpy)
-			b := NewBucket(spy)
+			b := OpenBucket(spy)
 			ctx := context.Background()
 			opt := &WriterOptions{
 				ContentType: tc.passContentType,
@@ -132,7 +132,7 @@ func TestWriteCloseDetectContentType(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			spy := new(bucketSpy)
-			b := NewBucket(spy)
+			b := OpenBucket(spy)
 			ctx := context.Background()
 			w, err := b.NewWriter(ctx, tc.name, nil)
 			if err != nil {
