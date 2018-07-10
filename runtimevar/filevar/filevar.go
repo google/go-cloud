@@ -97,11 +97,11 @@ type watcher struct {
 	updateTime time.Time
 }
 
-// Watch blocks until the file changes, the Context's Done channel closes or an error occurs.  It
+// WatchVariable blocks until the file changes, the Context's Done channel closes or an error occurs.  It
 // will return an error if the configuration file is deleted, however, if it has previously returned
-// an error due to missing configuration file, the next Watch call will block until the file has
+// an error due to missing configuration file, the next WatchVariable call will block until the file has
 // been recreated.
-func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	zeroVar := driver.Variable{}
 	// Check for Context cancellation first before proceeding.
 	select {

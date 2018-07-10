@@ -41,7 +41,7 @@ func (fw *fakeWatcher) Close() error {
 	return nil
 }
 
-func (fw *fakeWatcher) Watch(context.Context) (driver.Variable, error) {
+func (fw *fakeWatcher) WatchVariable(context.Context) (driver.Variable, error) {
 	return fw.dc, nil
 }
 

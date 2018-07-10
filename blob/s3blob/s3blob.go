@@ -218,7 +218,7 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 	}, nil
 }
 
-// NewWriter returns a writer that writes to an object associated with key.
+// NewTypedWriter returns a writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same name will be replaced.
@@ -228,7 +228,7 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 // A WriterOptions can be given to change the default behavior of the writer.
 //
 // The caller must call Close on the returned writer when done writing.
-func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	w := &writer{
 		bucket:      b.name,
 		ctx:         ctx,
