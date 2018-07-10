@@ -78,7 +78,7 @@ type Bucket interface {
 	// an error whose BlobError method returns NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
-	// NewWriter returns Writer that writes to an object associated with key.
+	// NewTypedWriter returns Writer that writes to an object associated with key.
 	//
 	// A new object will be created unless an object with this key already exists.
 	// Otherwise any previous object with the same name will be replaced.
@@ -89,7 +89,7 @@ type Bucket interface {
 	// empty.
 	//
 	// The caller must call Close on the returned Writer when done writing.
-	NewWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
+	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, NewRangeReader must return an error whose BlobError method

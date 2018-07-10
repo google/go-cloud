@@ -89,10 +89,10 @@ type watcher struct {
 	lastVersion int64
 }
 
-// Watch begins watching the given parameter and waiting for it to change.
+// WatchVariable begins watching the given parameter and waiting for it to change.
 // The function will block until either the parameter changes, or the context
 // is canceled.
-func (w *watcher) Watch(ctx context.Context) (driver.Variable, error) {
+func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	return internal.Pinger(ctx, w.ping, w.waitTime)
 }
 
