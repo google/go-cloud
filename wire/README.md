@@ -388,3 +388,25 @@ func NewGreeter(ctx context.Context, opts *Options) (*Greeter, error) {
 
 var GreeterSet = wire.NewSet(Options{}, NewGreeter)
 ```
+
+### Evolving Provider Sets
+
+When creating a provider set for use in a library, the only changes you can make
+without breaking compatibility are:
+
+-  Change which provider a provider set uses to provide a specific output, as
+   long as it does not introduce a new input to the provider set. It may remove
+   inputs. However, note that existing injectors will use the old provider until
+   they are regenerated.
+-  Introduce a new output type into the provider set, but only if the type itself
+   is newly added. If the type is not new, it is possible that some injector
+   already has the output type included, which would cause a conflict.
+
+All other changes are not safe. This includes:
+
+-  Requiring a new input in the provider set.
+-  Removing an output type from a provider set.
+-  Adding an existing output type into the provider set.
+
+Instead of making one of these breaking changes, consider adding a new provider
+set.
