@@ -43,10 +43,15 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 	if err != nil {
 		return nil, []error{fmt.Errorf("load: %v", err)}
 	}
-	// TODO(light): Stop errors from printing to stderr.
+	problems := new(problemCollector)
 	conf := &loader.Config{
 		Build: bctx,
 		Cwd:   wd,
+		TypeChecker: types.Config{
+			Error: func(err error) {
+				problems.add(err)
+			},
+		},
 		TypeCheckFuncBodies: func(path string) bool {
 			return path == mainPkg.ImportPath
 		},
@@ -68,8 +73,11 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 	conf.Import(pkg)
 
 	prog, err := conf.Load()
+	if errs := problems.errorList(); len(errs) > 0 {
+		return nil, errs
+	}
 	if err != nil {
-		return nil, []error{fmt.Errorf("load: %v", err)}
+		return nil, []error{err}
 	}
 	if len(prog.InitialPackages()) != 1 {
 		// This is more of a violated precondition than anything else.
@@ -79,7 +87,7 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 	g := newGen(prog, pkgInfo.Pkg.Path())
 	injectorFiles, err := generateInjectors(g, pkgInfo)
 	if err != nil {
-		return nil, []error{err}
+		return nil, errorsFromProblems(problemsFromError(err))
 	}
 	copyNonInjectorDecls(g, injectorFiles, &pkgInfo.Info)
 	goSrc := g.frame()
@@ -96,6 +104,7 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*ast.File, _ error) {
 	oc := newObjectCache(g.prog)
 	injectorFiles = make([]*ast.File, 0, len(pkgInfo.Files))
+	problems := new(problemCollector)
 	for _, f := range pkgInfo.Files {
 		for _, decl := range f.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
@@ -115,13 +124,18 @@ func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*as
 			}
 			set, err := oc.processNewSet(pkgInfo, buildCall)
 			if err != nil {
-				return nil, fmt.Errorf("%v: %v", g.prog.Fset.Position(fn.Pos()), err)
+				problems.add(notePosition(g.prog.Fset.Position(fn.Pos()), err))
+				continue
 			}
 			sig := pkgInfo.ObjectOf(fn.Name).Type().(*types.Signature)
-			if err := g.inject(fn.Name.Name, sig, set); err != nil {
-				return nil, fmt.Errorf("%v: %v", g.prog.Fset.Position(fn.Pos()), err)
+			if err := g.inject(fn.Pos(), fn.Name.Name, sig, set); err != nil {
+				problems.add(err)
+				continue
 			}
 		}
+	}
+	if err := problems.err(); err != nil {
+		return nil, problems.err()
 	}
 	return injectorFiles, nil
 }
@@ -205,10 +219,13 @@ func (g *gen) frame() []byte {
 }
 
 // inject emits the code for an injector.
-func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error {
+func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *ProviderSet) error {
 	injectSig, err := funcOutput(sig)
 	if err != nil {
-		return fmt.Errorf("inject %s: %v", name, err)
+		return &problem{
+			error:    fmt.Errorf("inject %s: %v", name, err),
+			position: g.prog.Fset.Position(pos),
+		}
 	}
 	params := sig.Params()
 	given := make([]types.Type, params.Len())
@@ -217,7 +234,15 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 	}
 	calls, err := solve(g.prog.Fset, injectSig.out, given, set)
 	if err != nil {
-		return err
+		pc := new(problemCollector)
+		pc.add(err) // Copies all problems into a new slice.
+		for i := range pc.problems {
+			pc.problems[i].error = fmt.Errorf("inject %s: %v", name, pc.problems[i].error)
+			if !pc.problems[i].position.IsValid() {
+				pc.problems[i].position = g.prog.Fset.Position(pos)
+			}
+		}
+		return pc.err()
 	}
 	type pendingVar struct {
 		name     string
@@ -225,19 +250,31 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 		typeInfo *types.Info
 	}
 	var pendingVars []pendingVar
+	problems := new(problemCollector)
 	for i := range calls {
 		c := &calls[i]
 		if c.hasCleanup && !injectSig.cleanup {
-			return fmt.Errorf("inject %s: provider for %s returns cleanup but injection does not return cleanup function", name, types.TypeString(c.out, nil))
+			ts := types.TypeString(c.out, nil)
+			problems.add(&problem{
+				error:    fmt.Errorf("inject %s: provider for %s returns cleanup but injection does not return cleanup function", name, ts),
+				position: g.prog.Fset.Position(pos),
+			})
 		}
 		if c.hasErr && !injectSig.err {
-			return fmt.Errorf("inject %s: provider for %s returns error but injection not allowed to fail", name, types.TypeString(c.out, nil))
+			ts := types.TypeString(c.out, nil)
+			problems.add(&problem{
+				error:    fmt.Errorf("inject %s: provider for %s returns error but injection not allowed to fail", name, ts),
+				position: g.prog.Fset.Position(pos),
+			})
 		}
 		if c.kind == valueExpr {
 			if err := accessibleFrom(c.valueTypeInfo, c.valueExpr, g.currPackage); err != nil {
 				// TODO(light): Display line number of value expression.
 				ts := types.TypeString(c.out, nil)
-				return fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err)
+				problems.add(&problem{
+					error:    fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err),
+					position: g.prog.Fset.Position(pos),
+				})
 			}
 			if g.values[c.valueExpr] == "" {
 				t := c.valueTypeInfo.TypeOf(c.valueExpr)
@@ -250,6 +287,9 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 				})
 			}
 		}
+	}
+	if err := problems.err(); err != nil {
+		return problems.err()
 	}
 
 	// Perform one pass to collect all imports, followed by the real pass.
