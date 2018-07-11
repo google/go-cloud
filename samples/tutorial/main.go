@@ -35,39 +35,14 @@ func main() {
 	)
 	switch *cloud {
 	case "gcp":
-		// DefaultCredentials assumes a user has logged in with gcloud.
-		// See here for more information:
-		// https://cloud.google.com/docs/authentication/getting-started
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			log.Fatalf("Failed to create default credentials for GCP: %s", err)
-		}
-		c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
-		if err != nil {
-			log.Fatalf("Failed to create HTTP client: %s", err)
-		}
-		// The bucket name must be globally unique.
-		b, err = gcsblob.OpenBucket(ctx, bucketName, c)
-		if err != nil {
-			log.Fatalf("Failed to connect to bucket: %s", err)
-		}
+		b, err = setupGCP(ctx)
 	case "aws":
-		c := &aws.Config{
-			// Either hard-code the region or use AWS_REGION.
-			Region: aws.String("us-east-2"),
-			// credentials.NewEnvCredentials assumes two environment variables are
-			// present:
-			// 1. AWS_ACCESS_KEY_ID, and
-			// 2. AWS_SECRET_ACCESS_KEY.
-			Credentials: credentials.NewEnvCredentials(),
-		}
-		s := session.Must(session.NewSession(c))
-		b, err = s3blob.OpenBucket(ctx, s, bucketName)
-		if err != nil {
-			log.Fatalf("Failed to connect to S3 bucket: %s", err)
-		}
+		b, err = setupAWS(ctx)
 	default:
 		log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
+	}
+	if err != nil {
+		log.Fatalf("Failed to setup bucket: %s", err)
 	}
 
 	// Prepare the file for upload.
@@ -87,4 +62,34 @@ func main() {
 	if err := w.Close(); err != nil {
 		log.Fatalf("Failed to close: %s", err)
 	}
+}
+
+func setupGCP(ctx context.Context) (*blob.Bucket, error) {
+	// DefaultCredentials assumes a user has logged in with gcloud.
+	// See here for more information:
+	// https://cloud.google.com/docs/authentication/getting-started
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		return nil, err
+	}
+	// The bucket name must be globally unique.
+	return gcsblob.OpenBucket(ctx, bucketName, c)
+}
+
+func setupAWS(ctx context.Context) (*blob.Bucket, error) {
+	c := &aws.Config{
+		// Either hard-code the region or use AWS_REGION.
+		Region: aws.String("us-east-2"),
+		// credentials.NewEnvCredentials assumes two environment variables are
+		// present:
+		// 1. AWS_ACCESS_KEY_ID, and
+		// 2. AWS_SECRET_ACCESS_KEY.
+		Credentials: credentials.NewEnvCredentials(),
+	}
+	s := session.Must(session.NewSession(c))
+	return s3blob.OpenBucket(ctx, s, bucketName)
 }
