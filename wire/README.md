@@ -410,3 +410,37 @@ All other changes are not safe. This includes:
 
 Instead of making one of these breaking changes, consider adding a new provider
 set.
+
+As an example, if you have a provider set like this:
+
+```go
+var GreeterSet = wire.NewSet(NewStdoutGreeter)
+
+func DefaultGreeter(ctx context.Context) *Greeter {
+	// ...
+}
+
+func NewStdoutGreeter(ctx context.Context, msgs []Message) *Greeter {
+	// ...
+}
+
+func NewGreeter(ctx context.Context, w io.Writer, msgs []Message) (*Greeter, error) {
+	// ...
+}
+```
+
+You may:
+
+-  Use `DefaultGreeter` instead of `NewStdoutGreeter` in `GreeterSet`.
+-  Create a new type `T` and add a provider for `T` to `GreeterSet`, as long as
+   `T` is introduced in the same commit/release as the provider is added.
+
+You may not:
+
+-  Use `NewGreeter` instead of `NewStdoutGreeter` in `GreeterSet`. This both
+   adds an input type (`io.Writer`) and requires injectors to return an `error`
+   where the provider of `*Greeter` did not require this before.
+-  Remove `NewStdoutGreeter` from `GreeterSet`. Injectors depending on
+   `*Greeter` will be broken.
+-  Add a provider for `io.Writer` to `GreeterSet`. Injectors might already have
+   a provider for `io.Writer` which might conflict with this one.

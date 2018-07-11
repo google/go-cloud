@@ -17,6 +17,7 @@ module github.com/google/go-cloud
 replace cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
 
 require (
+	cloud.google.com/go v0.24.0
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
@@ -27,6 +28,7 @@ require (
 	github.com/go-ini/ini v1.37.0
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/protobuf v1.1.0
 	github.com/google/go-cmp v0.2.0
 	github.com/googleapis/gax-go v1.0.0
 	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb
@@ -41,7 +43,9 @@ require (
 	go.opencensus.io v0.12.0
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d
 	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
+	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
 	golang.org/x/sys v0.0.0-20180329131831-378d26f46672
+	golang.org/x/text v0.3.0
 	golang.org/x/tools v0.0.0-20180314180217-d853e8088c62
 	google.golang.org/api v0.0.0-20180606215403-8e9de5a6de6d
 	google.golang.org/appengine v1.1.0
