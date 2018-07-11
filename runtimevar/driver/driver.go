@@ -39,21 +39,21 @@ type Variable struct {
 // dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
 // runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
-	// Watch blocks until the variable changes, the Context's Done channel closes or an
+	// WatchVariable blocks until the variable changes, the Context's Done channel closes or an
 	// error occurs.
 	//
 	// If the variable has changed, then method should return a Variable object with the
 	// new value.
 	//
 	// It is recommended that an implementation should avoid returning the same error of the
-	// previous Watch call if the implementation can detect such and treat as no changes had
-	// incurred instead.  A sample case is when the variable is deleted, Watch should return an
-	// error upon initial detection.  A succeeding Watch call may decide to block until
+	// previous WatchVariable call if the implementation can detect such and treat as no changes had
+	// incurred instead.  A sample case is when the variable is deleted, WatchVariable should return an
+	// error upon initial detection.  A succeeding WatchVariable call may decide to block until
 	// the variable source is restored.
 	//
 	// To stop this function from blocking, caller can passed in Context object constructed via
 	// WithCancel and call the cancel function.
-	Watch(context.Context) (Variable, error)
+	WatchVariable(context.Context) (Variable, error)
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
 }

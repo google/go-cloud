@@ -78,7 +78,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	return &reader{Reader: r}, err
 }
 
-// NewWriter returns Writer that writes to an object associated with key.
+// NewTypedWriter returns Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same name will be replaced.
@@ -88,7 +88,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // A WriterOptions can be given to change the default behavior of the Writer.
 //
 // The caller must call Close on the returned Writer when done writing.
-func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if err := validateObjectChar(key); err != nil {
 		return nil, err
 	}

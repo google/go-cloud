@@ -111,7 +111,7 @@ func (w *Writer) Close() error {
 // open tries to detect the MIME type of p and write it to the blob.
 func (w *Writer) open(p []byte) (n int, err error) {
 	ct := http.DetectContentType(p)
-	if w.w, err = w.bucket.NewWriter(w.ctx, w.key, ct, w.opt); err != nil {
+	if w.w, err = w.bucket.NewTypedWriter(w.ctx, w.key, ct, w.opt); err != nil {
 		return 0, err
 	}
 	w.buf = nil
@@ -172,7 +172,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 				return nil, err
 			}
 			ct := mime.FormatMediaType(t, p)
-			w, err = b.b.NewWriter(ctx, key, ct, dopt)
+			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
 			return &Writer{w: w}, err
 		}
 	}

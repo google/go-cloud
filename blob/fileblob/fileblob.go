@@ -141,7 +141,7 @@ func (r reader) Attrs() *driver.ObjectAttrs {
 	}
 }
 
-func (b *bucket) NewWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
