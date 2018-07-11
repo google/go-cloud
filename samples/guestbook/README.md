@@ -98,40 +98,69 @@ directory using the same variables you entered during `terraform apply`.
 
 If you want to run this sample on AWS, you need to set up an account, download
 the AWS command line interface, and log in. You will also need an SSH key. If you
-don't already have one, you can follow [this guide from GitHub][GitHub SSH].
+don't already have one, you can follow [this guide from GitHub][GitHub SSH]. Follow the instructions for "Adding your key to the ssh-agent" if you want the key to persist across terminal sessions.
 
-Once everything is set up, you can then use Terraform, a tool for initializing
-cloud resources, to set up your project. This will create an EC2 instance you can
-SSH to and run your binary.
+### Agree to the AWS Terms and Conditions
+You have to agree to the [AWS Terms and Conditions][AWS T&C] in order to provision the resources.
+
+### Provision resources with Terraform
+With the SSH keys generated and AWS Terms and Conditions signed, you can then
+use Terraform, a tool for initializing cloud resources, to set up your project.
+This will create an EC2 instance you can SSH to and run your binary.
 
 ```shell
 aws configure
 ssh-add
+
+# Build for deploying on the AWS Linux VM.
 GOOS=linux GOARCH=amd64 vgo build
+
+# Enter AWS directory from samples/guestbook.
 cd aws
 terraform init
+
+# Provisioning can take up to 10 minutes.
+# Keep track of the output of this command as it is needed later.
 terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.pub)"
+```
+
+### Connect to the new server and run the guestbook binary
+You now need to connect to the new remote server to execute the `guestbook` binary. The final output of `terraform apply` lists the required variables `guestbook` requires to execute. Here's an example (with redacted output!):
+
+```shell
+localhost$ terraform apply
+
+<snip>
+
+Outputs:
+
+bucket = guestbook[timestamp]
+database_host = guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com
+database_root_password = <sensitive>
+instance_host = [redacted]
+paramstore_var = /guestbook/motd
+region = us-west-1
 
 # SSH into the EC2 instance.
-ssh "admin@$( terraform output instance_host )"
+localhost$ ssh "admin@$( terraform output instance_host )"
+
+server$ AWS_REGION=us-west-1 ./guestbook -env=aws \
+  -bucket=guestbook[timestamp] \
+	-db_host=guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com \
+	-motd_var=/guestbook/motd
 ```
 
-When you're connected to the server, run the server binary. Replace the
-command-line flag values with values from the output of `terraform apply`.
-
-```
-AWS_REGION=us-west-1 ./guestbook -env=aws \
-  -bucket=... -db_host=... -motd_var=...
-```
-
+### View the guestbook application
 You can then visit the server at `http://INSTANCE_HOST:8080/`, where
 `INSTANCE_HOST` is the value of `terraform output instance_host` run on your
 local machine.
 
+### Cleanup
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
 
 [GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
+[AWS T&C]: https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4
 
 ## Gophers
 
