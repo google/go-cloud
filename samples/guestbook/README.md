@@ -125,7 +125,7 @@ terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.p
 ```
 
 ### Connect to the new server and run the guestbook binary
-You know need to connect to the new remote server to execute the `guestbook` binary. The final output of `terraform apply` lists the required variables `guestbook` requires to execute. Here's an example (with redacted output!):
+You now need to connect to the new remote server to execute the `guestbook` binary. The final output of `terraform apply` lists the required variables `guestbook` requires to execute. Here's an example (with redacted output!):
 
 ```shell
 localhost$ terraform apply
