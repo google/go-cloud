@@ -183,7 +183,7 @@ func (b *bucketSpy) NewRangeReader(ctx context.Context, key string, offset, leng
 	return readerStub{}, nil
 }
 
-func (b *bucketSpy) NewWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucketSpy) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
 	b.writeContentType = contentType
 	return writerStub{}, nil
 }
