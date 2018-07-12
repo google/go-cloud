@@ -77,7 +77,7 @@ func setupGCP(ctx context.Context) (*blob.Bucket, error) {
 		return nil, err
 	}
 	// The bucket name must be globally unique.
-	return gcsblob.NewBucket(ctx, bucketName, c)
+	return gcsblob.OpenBucket(ctx, bucketName, c)
 }
 
 func setupAWS(ctx context.Context) (*blob.Bucket, error) {
@@ -91,5 +91,5 @@ func setupAWS(ctx context.Context) (*blob.Bucket, error) {
 		Credentials: credentials.NewEnvCredentials(),
 	}
 	s := session.Must(session.NewSession(c))
-	return s3blob.NewBucket(ctx, s, bucketName)
+	return s3blob.OpenBucket(ctx, s, bucketName)
 }
