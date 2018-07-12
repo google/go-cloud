@@ -34,7 +34,7 @@ import (
 
 func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	ncsaLogger := xrayserver.NewRequestLogger()
-	client := _wireValue
+	client := _wireClientValue
 	certFetcher := &rdsmysql.CertFetcher{
 		Client: client,
 	}
@@ -44,7 +44,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	options := _wireValue2
+	options := _wireOptionsValue
 	session2, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		cleanup2()
@@ -90,8 +90,8 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireValue  = http.DefaultClient
-	_wireValue2 = session.Options{}
+	_wireClientValue  = http.DefaultClient
+	_wireOptionsValue = session.Options{}
 )
 
 // Injectors from inject_gcp.go:
@@ -160,13 +160,13 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // Injectors from inject_local.go:
 
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	logger := _wireValue3
+	logger := _wireLoggerValue
 	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup := appHealthChecks(db)
-	exporter := _wireValue4
+	exporter := _wireExporterValue
 	sampler := trace.AlwaysSample()
 	options := &server.Options{
 		RequestLogger:         logger,
@@ -193,14 +193,14 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 }
 
 var (
-	_wireValue3 = requestlog.Logger(nil)
-	_wireValue4 = trace.Exporter(nil)
+	_wireLoggerValue   = requestlog.Logger(nil)
+	_wireExporterValue = trace.Exporter(nil)
 )
 
 // inject_aws.go:
 
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.NewBucket(ctx, cp, flags.bucket)
+	return s3blob.OpenBucket(ctx, cp, flags.bucket)
 }
 
 func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
@@ -221,7 +221,7 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 // inject_gcp.go:
 
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.NewBucket(ctx, flags.bucket, client2)
+	return gcsblob.OpenBucket(ctx, flags.bucket, client2)
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
