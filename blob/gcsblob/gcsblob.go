@@ -32,8 +32,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-// NewBucket returns a GCS Bucket that communicates using the given HTTP client.
-func NewBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
+// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
+func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
 	if err := validateBucketChar(bucketName); err != nil {
 		return nil, err
 	}
