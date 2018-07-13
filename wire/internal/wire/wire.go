@@ -51,18 +51,21 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 			return path == mainPkg.ImportPath
 		},
 		FindPackage: func(bctx *build.Context, importPath, fromDir string, mode build.ImportMode) (*build.Package, error) {
-			if importPath == mainPkg.ImportPath {
-				// Load in the generated package with the wireinject build tag
-				// to pick up the injector template. The imported packages
-				// should be imported as normal. Since the *build.Context is
-				// shared between calls to FindPackage, this uses a copy.
+			// Optimistically try to load in the package with normal build tags.
+			pkg, err := bctx.Import(importPath, fromDir, mode)
+
+			// If this is the generated package, then load it in with the
+			// wireinject build tag to pick up the injector template. Since
+			// the *build.Context is shared between calls to FindPackage, this
+			// uses a copy.
+			if pkg != nil && pkg.ImportPath == mainPkg.ImportPath {
 				bctx2 := new(build.Context)
 				*bctx2 = *bctx
 				n := len(bctx2.BuildTags)
 				bctx2.BuildTags = append(bctx2.BuildTags[:n:n], "wireinject")
-				bctx = bctx2
+				pkg, err = bctx2.Import(importPath, fromDir, mode)
 			}
-			return bctx.Import(importPath, fromDir, mode)
+			return pkg, err
 		},
 	}
 	conf.Import(pkg)
@@ -77,9 +80,9 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 	}
 	pkgInfo := prog.InitialPackages()[0]
 	g := newGen(prog, pkgInfo.Pkg.Path())
-	injectorFiles, err := generateInjectors(g, pkgInfo)
-	if err != nil {
-		return nil, []error{err}
+	injectorFiles, errs := generateInjectors(g, pkgInfo)
+	if len(errs) > 0 {
+		return nil, errs
 	}
 	copyNonInjectorDecls(g, injectorFiles, &pkgInfo.Info)
 	goSrc := g.frame()
@@ -93,7 +96,7 @@ func Generate(bctx *build.Context, wd string, pkg string) ([]byte, []error) {
 }
 
 // generateInjectors generates the injectors for a given package.
-func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*ast.File, _ error) {
+func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*ast.File, _ []error) {
 	oc := newObjectCache(g.prog)
 	injectorFiles = make([]*ast.File, 0, len(pkgInfo.Files))
 	for _, f := range pkgInfo.Files {
@@ -113,13 +116,23 @@ func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*as
 				g.p("// Injectors from %s:\n\n", name)
 				injectorFiles = append(injectorFiles, f)
 			}
-			set, err := oc.processNewSet(pkgInfo, buildCall)
-			if err != nil {
-				return nil, fmt.Errorf("%v: %v", g.prog.Fset.Position(fn.Pos()), err)
+			set, errs := oc.processNewSet(pkgInfo, buildCall)
+			if len(errs) > 0 {
+				position := g.prog.Fset.Position(fn.Pos())
+				errs = append([]error(nil), errs...)
+				for i := range errs {
+					errs[i] = fmt.Errorf("%v: %v", position, errs[i])
+				}
+				return nil, errs
 			}
 			sig := pkgInfo.ObjectOf(fn.Name).Type().(*types.Signature)
-			if err := g.inject(fn.Name.Name, sig, set); err != nil {
-				return nil, fmt.Errorf("%v: %v", g.prog.Fset.Position(fn.Pos()), err)
+			if errs := g.inject(fn.Name.Name, sig, set); len(errs) > 0 {
+				position := g.prog.Fset.Position(fn.Pos())
+				errs = append([]error(nil), errs...)
+				for i := range errs {
+					errs[i] = fmt.Errorf("%v: %v", position, errs[i])
+				}
+				return nil, errs
 			}
 		}
 	}
@@ -205,19 +218,19 @@ func (g *gen) frame() []byte {
 }
 
 // inject emits the code for an injector.
-func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error {
+func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) []error {
 	injectSig, err := funcOutput(sig)
 	if err != nil {
-		return fmt.Errorf("inject %s: %v", name, err)
+		return []error{fmt.Errorf("inject %s: %v", name, err)}
 	}
 	params := sig.Params()
 	given := make([]types.Type, params.Len())
 	for i := 0; i < params.Len(); i++ {
 		given[i] = params.At(i).Type()
 	}
-	calls, err := solve(g.prog.Fset, injectSig.out, given, set)
-	if err != nil {
-		return err
+	calls, errs := solve(g.prog.Fset, injectSig.out, given, set)
+	if len(errs) > 0 {
+		return errs
 	}
 	type pendingVar struct {
 		name     string
@@ -228,16 +241,16 @@ func (g *gen) inject(name string, sig *types.Signature, set *ProviderSet) error 
 	for i := range calls {
 		c := &calls[i]
 		if c.hasCleanup && !injectSig.cleanup {
-			return fmt.Errorf("inject %s: provider for %s returns cleanup but injection does not return cleanup function", name, types.TypeString(c.out, nil))
+			return []error{fmt.Errorf("inject %s: provider for %s returns cleanup but injection does not return cleanup function", name, types.TypeString(c.out, nil))}
 		}
 		if c.hasErr && !injectSig.err {
-			return fmt.Errorf("inject %s: provider for %s returns error but injection not allowed to fail", name, types.TypeString(c.out, nil))
+			return []error{fmt.Errorf("inject %s: provider for %s returns error but injection not allowed to fail", name, types.TypeString(c.out, nil))}
 		}
 		if c.kind == valueExpr {
 			if err := accessibleFrom(c.valueTypeInfo, c.valueExpr, g.currPackage); err != nil {
 				// TODO(light): Display line number of value expression.
 				ts := types.TypeString(c.out, nil)
-				return fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err)
+				return []error{fmt.Errorf("inject %s: value %s can't be used: %v", name, ts, err)}
 			}
 			if g.values[c.valueExpr] == "" {
 				t := c.valueTypeInfo.TypeOf(c.valueExpr)

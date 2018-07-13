@@ -33,10 +33,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-// NewBucket returns an S3 Bucket. It handles creation of a client used to
+// OpenBucket returns an S3 Bucket. It handles creation of a client used to
 // communicate to S3. AWS config can be passed in through BucketOptions to
 // change the default configuration of the S3Bucket.
-func NewBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
+func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
