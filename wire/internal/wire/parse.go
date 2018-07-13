@@ -241,7 +241,10 @@ func (oc *objectCache) get(obj types.Object) (val interface{}, errs []error) {
 		return ent.val, append([]error(nil), ent.errs...)
 	}
 	defer func() {
-		oc.objects[ref] = objCacheEntry{val, append([]error(nil), errs...)}
+		oc.objects[ref] = objCacheEntry{
+			val:  val,
+			errs: append([]error(nil), errs...),
+		}
 	}()
 	switch obj := obj.(type) {
 	case *types.Var:
