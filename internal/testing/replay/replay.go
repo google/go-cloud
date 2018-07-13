@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
@@ -50,9 +51,7 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 	}
 
 	// Use a custom matcher as the default matcher looks for URLs and methods,
-	// which Amazon overloads as it isn't RESTful.
-	// Sequencing is added to the requests when the cassette is saved, which
-	// allows for differentiating GETs which otherwise look identical.
+	// AWS inspects the bodies as well.
 	last := -1
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
 		var b bytes.Buffer
@@ -129,7 +128,8 @@ func scrubAWSHeaders(filepath string) error {
 // too. If the case isn't tested, it probably doesn't work.
 // json.Decoder.Token could be used to make this way better.
 func removeJSONString(s, key string) string {
-	re := regexp.MustCompile(`(?U)\"` + key + `\":\".*\",`)
+	re := regexp.MustCompile(`(?U)\"` + key + `\":\s?\".*\",`)
+	s = strings.Replace(s, "\n", "", -1)
 	return re.ReplaceAllString(s, "")
 }
 
@@ -174,4 +174,98 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 	}
 
 	return opts, done, nil
+}
+
+func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filename string) (r *recorder.Recorder, done func(), err error) {
+	path := filepath.Join("testdata", filename)
+	logf("Golden file is at %v", path)
+
+	if mode == recorder.ModeRecording {
+		logf("Recording into golden file")
+	} else {
+		logf("Replaying from golden file")
+	}
+
+	r, err = recorder.NewAsMode(path, mode, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Use a custom matcher as the default matcher looks for URLs and methods.
+	// GCS inspects the bodies as well.
+	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
+		var b bytes.Buffer
+		if r.Body != nil {
+			if _, err := b.ReadFrom(r.Body); err != nil {
+				logf(err.Error())
+				return false
+			}
+		}
+		r.Body = ioutil.NopCloser(&b)
+
+		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
+		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
+		logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
+
+		if scrubGCSURL(r.URL.String()) == i.URL &&
+			r.Method == i.Method &&
+			scrubGCSBody(b.String()) == i.Body {
+			logf("Returning header match")
+			return true
+		}
+
+		logf("No match, continuing...")
+		return false
+	})
+
+	return r, func() {
+		r.Stop()
+		if mode != recorder.ModeRecording {
+			return
+		}
+		if err := scrubGCSHeaders(path); err != nil {
+			fmt.Println(err)
+		}
+	}, nil
+}
+
+func scrubGCSURL(url string) string {
+	return strings.Split(url, "&")[0]
+}
+
+func scrubGCSBody(body string) string {
+	if strings.Contains(body, `"debugInfo"`) {
+		return ""
+	}
+
+	return body
+}
+
+// scrubGCSHeaders removes *potentially* sensitive information from a cassette.
+func scrubGCSHeaders(filepath string) error {
+	c, err := cassette.Load(filepath)
+	if err != nil {
+		return fmt.Errorf("unable to load golden file, do not commit to repository: %v", err)
+	}
+
+	c.Mu.Lock()
+	for _, action := range c.Interactions {
+		action.Request.URL = scrubGCSURL(action.Request.URL)
+		action.Request.Headers.Del("Authorization")
+		action.Response.Body = scrubGCSBody(action.Response.Body)
+		action.Response.Body = removeJSONString(action.Response.Body, "selfLink")
+		action.Response.Body = removeJSONString(action.Response.Body, "name")
+		action.Response.Body = removeJSONString(action.Response.Body, "id")
+		action.Response.Body = removeJSONString(action.Response.Body, "projectNumber")
+
+		for header, _ := range action.Response.Headers {
+			if strings.HasPrefix(header, "X-Google") || strings.HasPrefix(header, "X-Guploader") {
+				action.Response.Headers.Del(header)
+			}
+		}
+	}
+	c.Mu.Unlock()
+	c.Save()
+
+	return nil
 }

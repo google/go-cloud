@@ -18,10 +18,7 @@ package gcsblob
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"regexp"
-	"unicode/utf8"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -34,9 +31,6 @@ import (
 
 // OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
 func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
-	if err := validateBucketChar(bucketName); err != nil {
-		return nil, err
-	}
 	if client == nil {
 		return nil, fmt.Errorf("NewBucket requires an HTTP client to communicate using")
 	}
@@ -89,9 +83,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	if err := validateObjectChar(key); err != nil {
-		return nil, err
-	}
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
@@ -115,33 +106,6 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 const namingRuleURL = "https://cloud.google.com/storage/docs/naming"
-
-// validateBucketChar checks whether character set and length meet the general requirement
-// of bucket naming rule. See https://cloud.google.com/storage/docs/naming for
-// the full requirements and best practice.
-func validateBucketChar(name string) error {
-	v := regexp.MustCompile(`^[a-z0-9][a-z0-9-_.]{1,220}[a-z0-9]$`)
-	if !v.MatchString(name) {
-		return fmt.Errorf("invalid bucket name, see %s for detailed requirements", namingRuleURL)
-	}
-	return nil
-}
-
-// validateObjectChar checks whether name is a valid UTF-8 encoded string, and its
-// length is between 1-1024 bytes. See https://cloud.google.com/storage/docs/naming
-// for the full requirements and best practice.
-func validateObjectChar(name string) error {
-	if name == "" {
-		return errors.New("object name is empty")
-	}
-	if !utf8.ValidString(name) {
-		return fmt.Errorf("object name is not valid UTF-8, see %s for detailed requirements", namingRuleURL)
-	}
-	if len(name) > 1024 {
-		return fmt.Errorf("object name is longer than 1024 bytes, see %s for detailed requirements", namingRuleURL)
-	}
-	return nil
-}
 
 func bufferSize(size int) int {
 	if size == 0 {
