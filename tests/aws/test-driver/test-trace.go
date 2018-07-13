@@ -15,13 +15,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"time"
 
-	"google.golang.org/api/iterator"
-	cloudtracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v1"
-
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/xray"
 	"github.com/google/go-cloud/tests"
 )
 
@@ -40,17 +38,19 @@ func (t testTrace) Run() error {
 }
 
 func (t testTrace) readTrace(tok string) error {
-	req := &cloudtracepb.ListTracesRequest{
-		ProjectId: projectID,
-		Filter:    fmt.Sprintf("+root:%s%s", t.url, tok),
-	}
-	it := traceClient.ListTraces(context.Background(), req)
-	_, err := it.Next()
-	if err == iterator.Done {
-		return fmt.Errorf("no trace found for %s", tok)
-	}
+	now := time.Now()
+	// This filter ideally should have a filter on the tok but the trace summary
+	// sent to X-Ray doesn't match the client library on this part ("name" vs
+	// "http.url").
+	out, err := xrayClient.GetTraceSummaries(&xray.GetTraceSummariesInput{
+		StartTime: aws.Time(now.Add(-time.Minute)),
+		EndTime:   aws.Time(now),
+	})
 	if err != nil {
 		return err
+	}
+	if len(out.TraceSummaries) == 0 {
+		return fmt.Errorf("no trace found for %s", tok)
 	}
 	return nil
 }

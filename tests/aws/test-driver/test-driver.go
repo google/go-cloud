@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // The test-driver command makes various requests to the deployed test app and
-// tests features initialized with the server by the SDK.
+// tests features initialized by the AWS server packages.
 package main
 
 import (
@@ -24,20 +24,24 @@ import (
 	"sync"
 
 	"cloud.google.com/go/logging/logadmin"
-	tracepb "cloud.google.com/go/trace/apiv1"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/xray"
 	"github.com/google/go-cloud/tests"
 )
 
 var (
 	address        string
-	projectID      string
+	awsRegion      string
+	gcpProjectID   string
 	logadminClient *logadmin.Client
-	traceClient    *tracepb.Client
+	xrayClient     *xray.XRay
 )
 
 func init() {
 	flag.StringVar(&address, "address", "http://localhost:8080", "address to hit")
-	flag.StringVar(&projectID, "project", "", "GCP project used to deploy and run tests")
+	flag.StringVar(&awsRegion, "aws-region", "us-west-1", "the region used to run the sample app")
+	flag.StringVar(&gcpProjectID, "gcp-project", "", "GCP project used to collect request logs")
 }
 
 func main() {
@@ -49,14 +53,18 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logadminClient, err = logadmin.NewClient(ctx, projectID)
+	logadminClient, err = logadmin.NewClient(ctx, gcpProjectID)
 	if err != nil {
 		log.Fatalf("error creating logadmin client: %v\n", err)
 	}
-	traceClient, err = tracepb.NewClient(ctx)
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(awsRegion),
+	})
 	if err != nil {
-		log.Fatalf("error creating trace client: %v\n", err)
+		log.Fatalf("error creating an AWS session: %v\n", err)
 	}
+	xrayClient = xray.New(sess)
 
 	testCases := []tests.Test{
 		testRequestlog{

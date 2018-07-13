@@ -21,6 +21,8 @@ import (
 
 	"cloud.google.com/go/logging/logadmin"
 	"google.golang.org/api/iterator"
+
+	"github.com/google/go-cloud/tests"
 )
 
 type testRequestlog struct {
@@ -28,7 +30,7 @@ type testRequestlog struct {
 }
 
 func (t testRequestlog) Run() error {
-	tok, err := get(address + t.url)
+	tok, err := tests.TestGet(address + t.url)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
