@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -82,8 +83,8 @@ func TestNewBucketNaming(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			bkt := c.Bucket(fmt.Sprintf("%s-%s", bucketPrefix, tc.bucketName))
-			err = bkt.Create(ctx, *projectID, nil)
+			b := c.Bucket(fmt.Sprintf("%s-%s", bucketPrefix, tc.bucketName))
+			err = b.Create(ctx, *projectID, nil)
 
 			switch {
 			case err != nil && !tc.wantErr:
@@ -91,37 +92,93 @@ func TestNewBucketNaming(t *testing.T) {
 			case err == nil && tc.wantErr:
 				t.Errorf("got nil error; want error")
 			case !tc.wantErr:
-				_ = bkt.Delete(ctx)
+				_ = b.Delete(ctx)
 			}
 		})
 	}
 }
 
-//func TestValidateObjectChar(t *testing.T) {
-//t.Parallel()
-//tests := []struct {
-//name  string
-//valid bool
-//}{
-//{"object-name", true},
-//{"文件名", true},
-//{"ファイル名", true},
-//{"", false},
-//{"\xF4\x90\x80\x80", false},
-//{strings.Repeat("a", 1024), true},
-//{strings.Repeat("a", 1025), false},
-//{strings.Repeat("☺", 342), false},
-//}
+func TestNewWriterObjectNaming(t *testing.T) {
+	tests := []struct {
+		name, objName string
+		wantErr       bool
+	}{
+		{
+			name:    "An ASCII name should pass",
+			objName: "object-name",
+		},
+		//{
+		//name:    "A Unicode name should pass",
+		//objName: "文件名",
+		//},
 
-//for i, test := range tests {
-//err := validateObjectChar(test.name)
-//if test.valid && err != nil {
-//t.Errorf("%d) got %v, want nil", i, err)
-//} else if !test.valid && err == nil {
-//t.Errorf("%d) got nil, want invalid error", i)
-//}
-//}
-//}
+		//{
+		//name:    "An empty name should fail",
+		//wantErr: true,
+		//},
+		//{
+		//name:    "A name of escaped chars should fail",
+		//objName: "\xF4\x90\x80\x80",
+		//wantErr: true,
+		//},
+		//{
+		//name:    "A name of 1024 chars should succeed",
+		//objName: strings.Repeat("a", 1024),
+		//},
+		//{
+		//name:    "A name of 1025 chars should fail",
+		//objName: strings.Repeat("a", 1025),
+		//wantErr: true,
+		//},
+		//{
+		//name:    "A long name of Unicode chars should fail",
+		//objName: strings.Repeat("☺", 342),
+		//wantErr: true,
+		//},
+	}
+
+	ctx := context.Background()
+	gcsC, done, err := newGCSClient(ctx, t.Logf, "test-obj-naming")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(&gcsC.Client))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bkt := fmt.Sprintf("%s-%s", bucketPrefix, "test-obj-naming")
+	b := c.Bucket(bkt)
+	defer b.Delete(ctx)
+	err = b.Create(ctx, *projectID, nil)
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, err := OpenBucket(ctx, bkt, gcsC)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			w, err := b.NewWriter(ctx, tc.objName, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = io.WriteString(w, "foo")
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = w.Close()
+
+			switch {
+			case err != nil && !tc.wantErr:
+				t.Errorf("got %q; want nil", err)
+			case err == nil && tc.wantErr:
+				t.Errorf("got nil error; want error")
+			}
+		})
+	}
+}
 
 func TestBufferSize(t *testing.T) {
 	t.Parallel()

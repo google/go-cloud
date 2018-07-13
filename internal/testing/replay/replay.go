@@ -203,9 +203,9 @@ func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		}
 		r.Body = ioutil.NopCloser(&b)
 
-		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
+		logf("URLs: %v | %v == %v\n", scrubGCSURL(r.URL.String()), i.URL, scrubGCSURL(r.URL.String()) == i.URL)
 		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
+		logf("Bodies:\n%v\n%v\n==%v\n", scrubGCSBody(b.String()), i.Body, scrubGCSBody(b.String()) == i.Body)
 
 		if scrubGCSURL(r.URL.String()) == i.URL &&
 			r.Method == i.Method &&
