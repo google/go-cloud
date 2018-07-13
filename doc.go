@@ -33,9 +33,7 @@ gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then,
 the blob.Bucket can be used throughout your application without worrying
 about the underlying implementation.
 
-For sample applications and a tutorial, see the samples directory.
-
-For a full list of packages, see
-https://godoc.org/github.com/google/go-cloud.
+For sample applications and a tutorial, see the samples directory
+(https://github.com/google/go-cloud/tree/master/samples).
 */
 package cloud // import "github.com/google/go-cloud"
