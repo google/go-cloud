@@ -178,9 +178,7 @@ being tightly coupled to one cloud provider.
 With the setup done, we're ready to use the bucket connection. Note, as a design
 principle of Go Cloud, `blob.Bucket` does not support creating a bucket and
 instead focuses solely on interacting with it. This separates the concerns of
-provisioning infrastructure and using infrastructure. See
-[Design Decisions](../../internal/docs/design.md#developers-and-operators)
-for more on this point.
+provisioning infrastructure and using infrastructure.
 
 ## Reading the file
 
