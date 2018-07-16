@@ -40,6 +40,10 @@ func (w writer) setAttrs() error {
 func getAttrs(path string) (*xattrs, error) {
 	f, err := os.Open(path + attrsExt)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// Handle gracefully for non-existing .attr files.
+			return nil, nil
+		}
 		return nil, err
 	}
 	xa := new(xattrs)

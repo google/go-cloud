@@ -97,6 +97,10 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, fmt.Errorf("open file attributes %s: %v", key, err)
 	}
+	if xa == nil {
+		// Fallback to default for non-existing .attr files.
+		xa = &xattrs{MIMEType: "application/octet-stream"}
+	}
 	if length == 0 {
 		return reader{
 			size: info.Size(),
@@ -219,6 +223,9 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
 		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
+	}
+	if err = os.Remove(path + attrsExt); err != nil && !os.IsNotExist(err) {
+		return err
 	}
 	return nil
 }
