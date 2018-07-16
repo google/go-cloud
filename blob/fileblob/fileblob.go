@@ -97,10 +97,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, fmt.Errorf("open file attributes %s: %v", key, err)
 	}
-	if xa == nil {
-		// Fallback to default for non-existing .attr files.
-		xa = &xattrs{MIMEType: "application/octet-stream"}
-	}
 	if length == 0 {
 		return reader{
 			size: info.Size(),
@@ -132,7 +128,7 @@ type reader struct {
 	r    io.Reader
 	c    io.Closer
 	size int64
-	xa   *xattrs
+	xa   xattrs
 }
 
 func (r reader) Read(p []byte) (int, error) {
@@ -180,7 +176,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	attrs := &xattrs{
+	attrs := xattrs{
 		MIMEType: mt,
 		Charset:  p["charset"],
 	}
@@ -194,7 +190,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 type writer struct {
 	w     io.WriteCloser
 	path  string
-	attrs *xattrs
+	attrs xattrs
 }
 
 func (w writer) Write(p []byte) (n int, err error) {
@@ -202,7 +198,7 @@ func (w writer) Write(p []byte) (n int, err error) {
 }
 
 func (w writer) Close() error {
-	if err := w.setAttrs(); err != nil {
+	if err := setAttrs(w.path, w.attrs); err != nil {
 		return fmt.Errorf("write blob attributes: %v", err)
 	}
 	return w.w.Close()

@@ -21,34 +21,46 @@ import (
 
 const attrsExt = ".attrs"
 
+// xattrs stores extended attributes for an object. It follows general
+// attributes that are widely used, see
+// https://www.freedesktop.org/wiki/CommonExtendedAttributes.
 type xattrs struct {
 	MIMEType string `json:"user.mime_type"`
 	Charset  string `json:"user.charset"`
 }
 
-func (w writer) setAttrs() error {
-	f, err := os.Create(w.path + attrsExt)
+// setAttrs creates a "path.attrs" file along with blob to store the attributes,
+// it uses JSON format.
+func setAttrs(path string, xa xattrs) error {
+	f, err := os.Create(path + attrsExt)
 	if err != nil {
 		return err
 	}
-	if err := json.NewEncoder(f).Encode(w.attrs); err != nil {
+	if err := json.NewEncoder(f).Encode(xa); err != nil {
+		f.Close()
 		return err
 	}
 	return f.Close()
 }
 
-func getAttrs(path string) (*xattrs, error) {
+// getAttrs looks at the "path.attrs" file to retrieve the attributes and
+// decodes them into a xattrs struct. It doesn't return error when there is no
+// such .attrs file.
+func getAttrs(path string) (xattrs, error) {
 	f, err := os.Open(path + attrsExt)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Handle gracefully for non-existing .attr files.
-			return nil, nil
+			return xattrs{
+				MIMEType: "application/octet-stream",
+			}, nil
 		}
-		return nil, err
+		return xattrs{}, err
 	}
 	xa := new(xattrs)
 	if err := json.NewDecoder(f).Decode(xa); err != nil {
-		return nil, err
+		f.Close()
+		return xattrs{}, err
 	}
-	return xa, f.Close()
+	return *xa, f.Close()
 }
