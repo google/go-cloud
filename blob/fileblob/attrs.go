@@ -21,12 +21,11 @@ import (
 
 const attrsExt = ".attrs"
 
-// xattrs stores extended attributes for an object. It follows general
-// attributes that are widely used, see
+// xattrs stores extended attributes for an object. The format is like
+// filesystem extended attributes, see
 // https://www.freedesktop.org/wiki/CommonExtendedAttributes.
 type xattrs struct {
-	MIMEType string `json:"user.mime_type"`
-	Charset  string `json:"user.charset"`
+	ContentType string `json:"user.content_type"`
 }
 
 // setAttrs creates a "path.attrs" file along with blob to store the attributes,
@@ -52,7 +51,7 @@ func getAttrs(path string) (xattrs, error) {
 		if os.IsNotExist(err) {
 			// Handle gracefully for non-existing .attr files.
 			return xattrs{
-				MIMEType: "application/octet-stream",
+				ContentType: "application/octet-stream",
 			}, nil
 		}
 		return xattrs{}, err

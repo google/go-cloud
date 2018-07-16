@@ -26,7 +26,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime"
 	"os"
 	slashpath "path"
 	"path/filepath"
@@ -146,13 +145,9 @@ func (r reader) Close() error {
 }
 
 func (r reader) Attrs() *driver.ObjectAttrs {
-	p := make(map[string]string)
-	if r.xa.Charset != "" {
-		p["charset"] = r.xa.Charset
-	}
 	return &driver.ObjectAttrs{
 		Size:        r.size,
-		ContentType: mime.FormatMediaType(r.xa.MIMEType, p),
+		ContentType: r.xa.ContentType,
 	}
 }
 
@@ -172,13 +167,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	mt, p, err := mime.ParseMediaType(contentType)
-	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
 	attrs := xattrs{
-		MIMEType: mt,
-		Charset:  p["charset"],
+		ContentType: contentType,
 	}
 	return &writer{
 		w:     f,
@@ -221,7 +211,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	if err = os.Remove(path + attrsExt); err != nil && !os.IsNotExist(err) {
-		return err
+		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	return nil
 }
