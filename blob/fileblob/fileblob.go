@@ -83,6 +83,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return nil, fmt.Errorf("open file blob %s: extentsion %q cannot be directly read", key, attrsExt)
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -159,6 +162,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return nil, fmt.Errorf("open file blob %s: extentsion %q is reserved and cannot be used", key, attrsExt)
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
@@ -204,6 +210,9 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return fmt.Errorf("delete file blob %s: extentsion %q cannot be directly deleted", key, attrsExt)
+	}
 	err = os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
