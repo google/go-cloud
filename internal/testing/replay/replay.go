@@ -72,7 +72,7 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		logf("Targets: %v | %v == %v\n", r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
 		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
 		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
+		logf("Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
 		logf("Sequences: %v | %v == %v\n", seq, last, seq > last)
 
 		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
@@ -202,14 +202,16 @@ func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 			}
 		}
 		r.Body = ioutil.NopCloser(&b)
+		body := scrubGCSBody(b.String())
+		url := scrubGCSURL(r.URL.String())
 
-		logf("URLs: %v | %v == %v\n", scrubGCSURL(r.URL.String()), i.URL, scrubGCSURL(r.URL.String()) == i.URL)
+		logf("URLs: %v | %v == %v\n", url, i.URL, url == i.URL)
 		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n%v\n==%v\n", scrubGCSBody(b.String()), i.Body, scrubGCSBody(b.String()) == i.Body)
+		logf("Bodies:\n%v\n~~~~~~~~~~\n%v\n==%v\n", body, i.Body, body == i.Body)
 
-		if scrubGCSURL(r.URL.String()) == i.URL &&
+		if url == i.URL &&
 			r.Method == i.Method &&
-			scrubGCSBody(b.String()) == i.Body {
+			body == i.Body {
 			logf("Returning header match")
 			return true
 		}
@@ -223,7 +225,7 @@ func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		if mode != recorder.ModeRecording {
 			return
 		}
-		if err := scrubGCSHeaders(path); err != nil {
+		if err := scrubGCS(path); err != nil {
 			fmt.Println(err)
 		}
 	}, nil
@@ -238,11 +240,13 @@ func scrubGCSBody(body string) string {
 		return ""
 	}
 
-	return body
+	re := regexp.MustCompile(`(?m)^\s*--.*$`)
+	return re.ReplaceAllString(body, "")
 }
 
-// scrubGCSHeaders removes *potentially* sensitive information from a cassette.
-func scrubGCSHeaders(filepath string) error {
+// scrubGCS scrubs both the headers and body for sensitive information, and massages the
+// GCS request/response bodies to remove unique identifiers that prevent body matching.
+func scrubGCS(filepath string) error {
 	c, err := cassette.Load(filepath)
 	if err != nil {
 		return fmt.Errorf("unable to load golden file, do not commit to repository: %v", err)
@@ -252,6 +256,7 @@ func scrubGCSHeaders(filepath string) error {
 	for _, action := range c.Interactions {
 		action.Request.URL = scrubGCSURL(action.Request.URL)
 		action.Request.Headers.Del("Authorization")
+		action.Request.Body = scrubGCSBody(action.Request.Body)
 		action.Response.Body = scrubGCSBody(action.Response.Body)
 		action.Response.Body = removeJSONString(action.Response.Body, "selfLink")
 		action.Response.Body = removeJSONString(action.Response.Body, "name")

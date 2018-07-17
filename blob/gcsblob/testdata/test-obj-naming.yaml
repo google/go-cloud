@@ -24,7 +24,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 17:00:37 GMT
+      - Tue, 17 Jul 2018 16:57:13 GMT
       Server:
       - UploadServer
       Vary:
@@ -34,14 +34,12 @@ interactions:
     code: 409
     duration: ""
 - request:
-    body: "--6568082e8982da7b1a22cc98fd6608e934901352de7a694caa9880b3cd60\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"name\":\"object-name\"}\n\r\n--6568082e8982da7b1a22cc98fd6608e934901352de7a694caa9880b3cd60\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nfoo\r\n--6568082e8982da7b1a22cc98fd6608e934901352de7a694caa9880b3cd60--\r\n"
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"object-name\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=6568082e8982da7b1a22cc98fd6608e934901352de7a694caa9880b3cd60
+      - multipart/related; boundary=092fdac93c375aad8ae941cbc70166586a43d66fe57ee30914c6f5ef23ed
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -50,24 +48,24 @@ interactions:
     method: POST
   response:
     body: '{ "kind": "storage#object",    "bucket": "go-cloud-test-obj-naming", "generation":
-      "1531501237429273", "metageneration": "1", "contentType": "text/plain; charset=utf-8",
-      "timeCreated": "2018-07-13T17:00:37.428Z", "updated": "2018-07-13T17:00:37.428Z",
-      "storageClass": "STANDARD", "timeStorageClassUpdated": "2018-07-13T17:00:37.428Z",
-      "size": "3", "md5Hash": "rL0Y20zC+Fzt72VPzMSk2A==", "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-test-obj-naming/o/object-name?generation=1531501237429273&alt=media",
+      "1531846633117957", "metageneration": "1", "contentType": "text/plain; charset=utf-8",
+      "timeCreated": "2018-07-17T16:57:13.117Z", "updated": "2018-07-17T16:57:13.117Z",
+      "storageClass": "STANDARD", "timeStorageClassUpdated": "2018-07-17T16:57:13.117Z",
+      "size": "3", "md5Hash": "rL0Y20zC+Fzt72VPzMSk2A==", "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-test-obj-naming/o/object-name?generation=1531846633117957&alt=media",
       "acl": [  {   "kind": "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531501237429273",   "entity": "project-owners-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "owners"   },   "etag": "CJnI69nGnNwCEAE="  },  {   "kind":
+      "object-name",   "generation": "1531846633117957",   "entity": "project-owners-640193379878",   "role":
+      "OWNER",   "projectTeam": {        "team": "owners"   },   "etag": "CIWyq7PNptwCEAE="  },  {   "kind":
       "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531501237429273",   "entity": "project-editors-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "editors"   },   "etag": "CJnI69nGnNwCEAE="  },  {   "kind":
+      "object-name",   "generation": "1531846633117957",   "entity": "project-editors-640193379878",   "role":
+      "OWNER",   "projectTeam": {        "team": "editors"   },   "etag": "CIWyq7PNptwCEAE="  },  {   "kind":
       "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531501237429273",   "entity": "project-viewers-640193379878",   "role":
-      "READER",   "projectTeam": {        "team": "viewers"   },   "etag": "CJnI69nGnNwCEAE="  },  {   "kind":
+      "object-name",   "generation": "1531846633117957",   "entity": "project-viewers-640193379878",   "role":
+      "READER",   "projectTeam": {        "team": "viewers"   },   "etag": "CIWyq7PNptwCEAE="  },  {   "kind":
       "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531501237429273",   "entity": "user-cflewis@google.com",   "role":
-      "OWNER",   "email": "cflewis@google.com",   "etag": "CJnI69nGnNwCEAE="  } ],
+      "object-name",   "generation": "1531846633117957",   "entity": "user-cflewis@google.com",   "role":
+      "OWNER",   "email": "cflewis@google.com",   "etag": "CIWyq7PNptwCEAE="  } ],
       "owner": {  "entity": "user-cflewis@google.com" }, "crc32c": "z8SuHQ==", "etag":
-      "CJnI69nGnNwCEAE="}'
+      "CIWyq7PNptwCEAE="}'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -78,9 +76,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 17:00:37 GMT
+      - Tue, 17 Jul 2018 16:57:13 GMT
       Etag:
-      - CJnI69nGnNwCEAE=
+      - CIWyq7PNptwCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -115,9 +113,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 17:00:37 GMT
+      - Tue, 17 Jul 2018 16:57:13 GMT
       Expires:
-      - Fri, 13 Jul 2018 17:00:37 GMT
+      - Tue, 17 Jul 2018 16:57:13 GMT
       Server:
       - UploadServer
       Vary:
