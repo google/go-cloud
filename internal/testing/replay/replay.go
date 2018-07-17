@@ -115,20 +115,13 @@ func scrubAWSHeaders(filepath string) error {
 		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
 		action.Request.Headers.Del("Authorization")
 		action.Response.Headers.Del("X-Amzn-Requestid")
-		action.Response.Body = removeJSONField(action.Response.Body, "LastModifiedUser")
+		// Ignore an error if LastModifiedUser isn't deleted, it's not really important.
+		action.Response.Body, _ = sjson.Delete(action.Response.Body, "LastModifiedUser")
 	}
 	c.Mu.Unlock()
 	c.Save()
 
 	return nil
-}
-
-// removeJSONField removes a field value from a JSON string, specified by standard JSON
-// dot syntax (e.g. given {"name":{"first":"Larry","last":"Page"}} "name.last" will wipe
-// the JSON's "last":"Page" text.
-func removeJSONField(s, field string) string {
-	v, _ := sjson.Delete(s, field)
-	return v
 }
 
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
@@ -244,7 +237,10 @@ func scrubGCSResponse(body string) string {
 	}
 
 	for _, v := range []string{"selfLink", "md5Hash", "generation", "acl", "mediaLink", "owner"} {
-		body = removeJSONField(body, v)
+		// Ignore errors, as they'll contain issues like the key not existing, which is fine.
+		// This is a best effort scrub and the golden files should be code reviewed
+		// anyway.
+		body, _ := sjson.Delete(s, field)
 	}
 
 	return body
