@@ -3,6 +3,13 @@
 This document outlines important design decisions made for this repository and
 attempts to provide succinct rationales.
 
+This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The
+decisions in here are not set in stone, but simply describe our current thinking
+about how to guide the Go Cloud project. While it is useful to link to this
+document when having discussions in an issue, it is not to be used as a means of
+closing issues without discussion at all. Discussion on an issue can lead to
+revisions of this document.
+
 ## Developers and Operators
 
 Go Cloud is designed with two different personas in mind: the developer and the
@@ -22,14 +29,30 @@ ways of looking at a Go program:
 
 Go Cloud uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
-implementation of that interface. The [`blob.Bucket`] type is a prime example:
-the API does not provide a way of creating a new bucket, as that is an
-operator's concern. An implementor of the `Bucket` interface does not need to
-determine the content type of incoming data, as that is a developer's concern.
-This separation of concerns allows these two personas to communicate using a
-shared language while focusing on their respective areas of expertise.
+implementation of that interface. This distinction prevents Go Cloud going down
+a path of complexity that makes application portability difficult.  The
+[`blob.Bucket`] type is a prime example: the API does not provide a way of
+creating a new bucket.  To properly and safely create such a bucket requires
+careful consideration, getting something like ACLs wrong could lead to a
+catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
+users and roles for each cloud platform, and some way of mapping those users and
+roles across clouds. While not impossible, the level of complexity and the high
+likelihood of a leaky abstraction leads us to believe this is not the right
+direction for Go Cloud.
+
+Instead of adding large amounts of leaky complexity to Go Cloud, we expect the
+operator role to handle the management of non-portable platform-specific
+resources. An implementor of the `Bucket` interface does not need to determine
+the content type of incoming data, as that is a developer's concern.  This
+separation of concerns allows these two personas to communicate using a shared
+language while focusing on their respective areas of expertise.
 
 [`blob.Bucket`]: https://godoc.org/github.com/google/go-cloud/blob#Bucket
+
+The distinction between developer and operator becomes more blurred when
+investigating testing. Integration tests might well want to create and destroy
+resources. We recommend [Terraform](http://terraform.io) for such cases, but
+we have not investigated the CI workflow for this at the time of writing.
 
 ## Drivers and User-Facing Types
 
@@ -99,10 +122,10 @@ https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 		interface should document these assumptions. Just remember that each method
 		can be implemented independently: if one method is mutually exclusive with
 		another, it would be better to return a more complicated data type from one
-		methodthan to have separate methods.
+		method than to have separate methods.
 
 -   Transient network errors should be handled by an interface's implementation
-		and not bubbled up as a distinguishible error through a generic interface.
+		and not bubbled up as a distinguishable error through a generic interface.
 		Retry logic is best handled as low in the stack as possible to avoid
 		[cascading failure][]. APIs should try to surface "permanent" errors (e.g.
 		malformed request, bad permissions) where appropriate so that application
