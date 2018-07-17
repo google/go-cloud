@@ -144,21 +144,29 @@ type Value struct {
 }
 
 // Load finds all the provider sets in the given packages, as well as
-// the provider sets' transitive dependencies. It may return both an error
+// the provider sets' transitive dependencies. It may return both errors
 // and Info.
 func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
-	// TODO(light): Stop errors from printing to stderr.
+	ec := new(errorCollector)
 	conf := &loader.Config{
-		Build:               bctx,
-		Cwd:                 wd,
+		Build: bctx,
+		Cwd:   wd,
+		TypeChecker: types.Config{
+			Error: func(err error) {
+				ec.add(err)
+			},
+		},
 		TypeCheckFuncBodies: func(string) bool { return false },
 	}
 	for _, p := range pkgs {
 		conf.Import(p)
 	}
 	prog, err := conf.Load()
+	if len(ec.errors) > 0 {
+		return nil, ec.errors
+	}
 	if err != nil {
-		return nil, []error{fmt.Errorf("load: %v", err)}
+		return nil, []error{err}
 	}
 	info := &Info{
 		Fset: prog.Fset,
@@ -168,21 +176,23 @@ func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
 	for _, pkgInfo := range prog.InitialPackages() {
 		scope := pkgInfo.Pkg.Scope()
 		for _, name := range scope.Names() {
-			item, err := oc.get(scope.Lookup(name))
-			if err != nil {
+			obj := scope.Lookup(name)
+			if !isProviderSetType(obj.Type()) {
 				continue
 			}
-			pset, ok := item.(*ProviderSet)
-			if !ok {
+			item, errs := oc.get(obj)
+			if len(errs) > 0 {
+				ec.add(notePositionAll(prog.Fset.Position(obj.Pos()), errs)...)
 				continue
 			}
+			pset := item.(*ProviderSet)
 			// pset.Name may not equal name, since it could be an alias to
 			// another provider set.
 			id := ProviderSetID{ImportPath: pset.PkgPath, VarName: name}
 			info.Sets[id] = pset
 		}
 	}
-	return info, nil
+	return info, ec.errors
 }
 
 // Info holds the result of Load.
@@ -207,7 +217,7 @@ func (id ProviderSetID) String() string {
 // objectCache is a lazily evaluated mapping of objects to Wire structures.
 type objectCache struct {
 	prog    *loader.Program
-	objects map[objRef]interface{} // *Provider, *ProviderSet, *IfaceBinding, or *Value
+	objects map[objRef]objCacheEntry
 	hasher  typeutil.Hasher
 }
 
@@ -216,10 +226,15 @@ type objRef struct {
 	name       string
 }
 
+type objCacheEntry struct {
+	val  interface{} // *Provider, *ProviderSet, *IfaceBinding, or *Value
+	errs []error
+}
+
 func newObjectCache(prog *loader.Program) *objectCache {
 	return &objectCache{
 		prog:    prog,
-		objects: make(map[objRef]interface{}),
+		objects: make(map[objRef]objCacheEntry),
 		hasher:  typeutil.MakeHasher(),
 	}
 }
@@ -227,22 +242,25 @@ func newObjectCache(prog *loader.Program) *objectCache {
 // get converts a Go object into a Wire structure. It may return a
 // *Provider, a structProviderPair, an *IfaceBinding, a *ProviderSet,
 // or a *Value.
-func (oc *objectCache) get(obj types.Object) (interface{}, error) {
+func (oc *objectCache) get(obj types.Object) (val interface{}, errs []error) {
 	ref := objRef{
 		importPath: obj.Pkg().Path(),
 		name:       obj.Name(),
 	}
-	if val, cached := oc.objects[ref]; cached {
-		if val == nil {
-			return nil, fmt.Errorf("%v is not a provider or a provider set", obj)
-		}
-		return val, nil
+	if ent, cached := oc.objects[ref]; cached {
+		return ent.val, append([]error(nil), ent.errs...)
 	}
+	defer func() {
+		oc.objects[ref] = objCacheEntry{
+			val:  val,
+			errs: append([]error(nil), errs...),
+		}
+	}()
 	switch obj := obj.(type) {
 	case *types.Var:
 		spec := oc.varDecl(obj)
 		if len(spec.Values) == 0 {
-			return nil, fmt.Errorf("%v is not a provider or a provider set", obj)
+			return nil, []error{fmt.Errorf("%v is not a provider or a provider set", obj)}
 		}
 		var i int
 		for i = range spec.Names {
@@ -252,16 +270,9 @@ func (oc *objectCache) get(obj types.Object) (interface{}, error) {
 		}
 		return oc.processExpr(oc.prog.Package(obj.Pkg().Path()), spec.Values[i])
 	case *types.Func:
-		p, err := processFuncProvider(oc.prog.Fset, obj)
-		if err != nil {
-			oc.objects[ref] = nil
-			return nil, err
-		}
-		oc.objects[ref] = p
-		return p, nil
+		return processFuncProvider(oc.prog.Fset, obj)
 	default:
-		oc.objects[ref] = nil
-		return nil, fmt.Errorf("%v is not a provider or a provider set", obj)
+		return nil, []error{fmt.Errorf("%v is not a provider or a provider set", obj)}
 	}
 }
 
@@ -288,55 +299,51 @@ func (oc *objectCache) varDecl(obj *types.Var) *ast.ValueSpec {
 // processExpr converts an expression into a Wire structure. It may
 // return a *Provider, a structProviderPair, an *IfaceBinding, a
 // *ProviderSet, or a *Value.
-func (oc *objectCache) processExpr(pkg *loader.PackageInfo, expr ast.Expr) (interface{}, error) {
+func (oc *objectCache) processExpr(pkg *loader.PackageInfo, expr ast.Expr) (interface{}, []error) {
 	exprPos := oc.prog.Fset.Position(expr.Pos())
 	expr = astutil.Unparen(expr)
 	if obj := qualifiedIdentObject(&pkg.Info, expr); obj != nil {
-		item, err := oc.get(obj)
-		if err != nil {
-			return nil, fmt.Errorf("%v: %v", exprPos, err)
-		}
-		return item, nil
+		item, errs := oc.get(obj)
+		return item, mapErrors(errs, func(err error) error {
+			return notePosition(exprPos, err)
+		})
 	}
 	if call, ok := expr.(*ast.CallExpr); ok {
 		fnObj := qualifiedIdentObject(&pkg.Info, call.Fun)
 		if fnObj == nil || !isWireImport(fnObj.Pkg().Path()) {
-			return nil, fmt.Errorf("%v: unknown pattern", exprPos)
+			return nil, []error{notePosition(exprPos, errors.New("unknown pattern"))}
 		}
 		switch fnObj.Name() {
 		case "NewSet":
-			pset, err := oc.processNewSet(pkg, call)
-			if err != nil {
-				return nil, fmt.Errorf("%v: %v", exprPos, err)
-			}
-			return pset, nil
+			pset, errs := oc.processNewSet(pkg, call)
+			return pset, notePositionAll(exprPos, errs)
 		case "Bind":
 			b, err := processBind(oc.prog.Fset, &pkg.Info, call)
 			if err != nil {
-				return nil, fmt.Errorf("%v: %v", exprPos, err)
+				return nil, []error{notePosition(exprPos, err)}
 			}
 			return b, nil
 		case "Value":
 			v, err := processValue(oc.prog.Fset, &pkg.Info, call)
 			if err != nil {
-				return nil, fmt.Errorf("%v: %v", exprPos, err)
+				return nil, []error{notePosition(exprPos, err)}
 			}
 			return v, nil
 		default:
-			return nil, fmt.Errorf("%v: unknown pattern", exprPos)
+			return nil, []error{notePosition(exprPos, errors.New("unknown pattern"))}
 		}
 	}
 	if tn := structArgType(&pkg.Info, expr); tn != nil {
-		p, err := processStructProvider(oc.prog.Fset, tn)
-		if err != nil {
-			return nil, fmt.Errorf("%v: %v", exprPos, err)
+		p, errs := processStructProvider(oc.prog.Fset, tn)
+		if len(errs) > 0 {
+			return nil, notePositionAll(exprPos, errs)
 		}
 		ptrp := new(Provider)
 		*ptrp = *p
 		ptrp.Out = types.NewPointer(p.Out)
 		return structProviderPair{p, ptrp}, nil
 	}
-	return nil, fmt.Errorf("%v: unknown pattern", exprPos)
+	return nil, []error{notePosition(exprPos, errors.New("unknown pattern"))}
 }
 
 type structProviderPair struct {
@@ -344,17 +351,19 @@ type structProviderPair struct {
 	ptrProvider *Provider
 }
 
-func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr) (*ProviderSet, error) {
+func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr) (*ProviderSet, []error) {
 	// Assumes that call.Fun is wire.NewSet or wire.Build.
 
 	pset := &ProviderSet{
 		Pos:     call.Pos(),
 		PkgPath: pkg.Pkg.Path(),
 	}
+	ec := new(errorCollector)
 	for _, arg := range call.Args {
-		item, err := oc.processExpr(pkg, arg)
-		if err != nil {
-			return nil, err
+		item, errs := oc.processExpr(pkg, arg)
+		if len(errs) > 0 {
+			ec.add(errs...)
+			continue
 		}
 		switch item := item.(type) {
 		case *Provider:
@@ -371,13 +380,16 @@ func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr
 			panic("unknown item type")
 		}
 	}
-	var err error
-	pset.providerMap, err = buildProviderMap(oc.prog.Fset, oc.hasher, pset)
-	if err != nil {
-		return nil, err
+	if len(ec.errors) > 0 {
+		return nil, ec.errors
 	}
-	if err := verifyAcyclic(pset.providerMap, oc.hasher); err != nil {
-		return nil, err
+	var errs []error
+	pset.providerMap, errs = buildProviderMap(oc.prog.Fset, oc.hasher, pset)
+	if len(errs) > 0 {
+		return nil, errs
+	}
+	if errs := verifyAcyclic(pset.providerMap, oc.hasher); len(errs) > 0 {
+		return nil, errs
 	}
 	return pset, nil
 }
@@ -420,12 +432,12 @@ func qualifiedIdentObject(info *types.Info, expr ast.Expr) types.Object {
 }
 
 // processFuncProvider creates a provider for a function declaration.
-func processFuncProvider(fset *token.FileSet, fn *types.Func) (*Provider, error) {
+func processFuncProvider(fset *token.FileSet, fn *types.Func) (*Provider, []error) {
 	sig := fn.Type().(*types.Signature)
 	fpos := fn.Pos()
 	providerSig, err := funcOutput(sig)
 	if err != nil {
-		return nil, fmt.Errorf("%v: wrong signature for provider %s: %v", fset.Position(fpos), fn.Name(), err)
+		return nil, []error{notePosition(fset.Position(fpos), fmt.Errorf("wrong signature for provider %s: %v", fn.Name(), err))}
 	}
 	params := sig.Params()
 	provider := &Provider{
@@ -443,7 +455,7 @@ func processFuncProvider(fset *token.FileSet, fn *types.Func) (*Provider, error)
 		}
 		for j := 0; j < i; j++ {
 			if types.Identical(provider.Args[i].Type, provider.Args[j].Type) {
-				return nil, fmt.Errorf("%v: provider has multiple parameters of type %s", fset.Position(fpos), types.TypeString(provider.Args[j].Type, nil))
+				return nil, []error{notePosition(fset.Position(fpos), fmt.Errorf("provider has multiple parameters of type %s", types.TypeString(provider.Args[j].Type, nil)))}
 			}
 		}
 	}
@@ -493,11 +505,11 @@ func funcOutput(sig *types.Signature) (outputSignature, error) {
 
 // processStructProvider creates a provider for a named struct type.
 // It only produces the non-pointer variant.
-func processStructProvider(fset *token.FileSet, typeName *types.TypeName) (*Provider, error) {
+func processStructProvider(fset *token.FileSet, typeName *types.TypeName) (*Provider, []error) {
 	out := typeName.Type()
 	st, ok := out.Underlying().(*types.Struct)
 	if !ok {
-		return nil, fmt.Errorf("%v does not name a struct", typeName)
+		return nil, []error{fmt.Errorf("%v does not name a struct", typeName)}
 	}
 
 	pos := typeName.Pos()
@@ -518,7 +530,7 @@ func processStructProvider(fset *token.FileSet, typeName *types.TypeName) (*Prov
 		provider.Fields[i] = f.Name()
 		for j := 0; j < i; j++ {
 			if types.Identical(provider.Args[i].Type, provider.Args[j].Type) {
-				return nil, fmt.Errorf("%v: provider struct has multiple fields of type %s", fset.Position(pos), types.TypeString(provider.Args[j].Type, nil))
+				return nil, []error{notePosition(fset.Position(pos), fmt.Errorf("provider struct has multiple fields of type %s", types.TypeString(provider.Args[j].Type, nil)))}
 			}
 		}
 	}
@@ -530,24 +542,24 @@ func processBind(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*If
 	// Assumes that call.Fun is wire.Bind.
 
 	if len(call.Args) != 2 {
-		return nil, fmt.Errorf("%v: call to Bind takes exactly two arguments", fset.Position(call.Pos()))
+		return nil, notePosition(fset.Position(call.Pos()), errors.New("call to Bind takes exactly two arguments"))
 	}
 	// TODO(light): Verify that arguments are simple expressions.
 	ifaceArgType := info.TypeOf(call.Args[0])
 	ifacePtr, ok := ifaceArgType.(*types.Pointer)
 	if !ok {
-		return nil, fmt.Errorf("%v: first argument to bind must be a pointer to an interface type; found %s", fset.Position(call.Pos()), types.TypeString(ifaceArgType, nil))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
 	}
 	methodSet, ok := ifacePtr.Elem().Underlying().(*types.Interface)
 	if !ok {
-		return nil, fmt.Errorf("%v: first argument to bind must be a pointer to an interface type; found %s", fset.Position(call.Pos()), types.TypeString(ifaceArgType, nil))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
 	}
 	provided := info.TypeOf(call.Args[1])
 	if types.Identical(ifacePtr.Elem(), provided) {
-		return nil, fmt.Errorf("%v: cannot bind interface to itself", fset.Position(call.Pos()))
+		return nil, notePosition(fset.Position(call.Pos()), errors.New("cannot bind interface to itself"))
 	}
 	if !types.Implements(provided, methodSet) {
-		return nil, fmt.Errorf("%v: %s does not implement %s", fset.Position(call.Pos()), types.TypeString(provided, nil), types.TypeString(ifaceArgType, nil))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(ifaceArgType, nil)))
 	}
 	return &IfaceBinding{
 		Pos:      call.Pos(),
@@ -561,7 +573,7 @@ func processValue(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*V
 	// Assumes that call.Fun is wire.Value.
 
 	if len(call.Args) != 1 {
-		return nil, fmt.Errorf("%v: call to Value takes exactly one argument", fset.Position(call.Pos()))
+		return nil, notePosition(fset.Position(call.Pos()), errors.New("call to Value takes exactly one argument"))
 	}
 	ok := true
 	ast.Inspect(call.Args[0], func(node ast.Node) bool {
@@ -588,7 +600,7 @@ func processValue(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*V
 		return true
 	})
 	if !ok {
-		return nil, fmt.Errorf("%v: argument to Value is too complex", fset.Position(call.Pos()))
+		return nil, notePosition(fset.Position(call.Pos()), errors.New("argument to Value is too complex"))
 	}
 	return &Value{
 		Pos:  call.Args[0].Pos(),
@@ -654,6 +666,15 @@ func isWireImport(path string) bool {
 		path = path[i+len(vendorPart):]
 	}
 	return path == "github.com/google/go-cloud/wire"
+}
+
+func isProviderSetType(t types.Type) bool {
+	n, ok := t.(*types.Named)
+	if !ok {
+		return false
+	}
+	obj := n.Obj()
+	return obj.Pkg() != nil && isWireImport(obj.Pkg().Path()) && obj.Name() == "ProviderSet"
 }
 
 // ProviderOrValue is a pointer to a Provider or a Value. The zero value is

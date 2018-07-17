@@ -14,7 +14,7 @@
 
 module github.com/google/go-cloud
 
-replace cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
+replace cloud.google.com/go => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
 
 require (
 	cloud.google.com/go v0.25.0

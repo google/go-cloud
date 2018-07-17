@@ -19,6 +19,10 @@ The Go Cloud team triages issues at least every two weeks, but usually within tw
 ## Contributing Code
 We love accepting contributions! If your change is minor, please feel free submit a [pull request](https://help.github.com/articles/about-pull-requests/). If your change is larger, or adds a feature, please file an issue beforehand so that we can discuss the change. You're welcome to file an implementation pull request immediately as well, although we generally lean towards discussing the change and then reviewing the implementation separately.
 
+Be sure to take a look at the [internal docs][], which include more information about conventions and design patterns found in the project.
+
+[internal docs]: internal/docs/README.md
+
 ### Finding something to work on
 If you want to write some code, but don't know where to start or what you might want to do, take a look at our [Unplanned][] milestone. This is where you can find issues we would like to address but can't currently find time for. See if any of the latest ones look interesting! If you need help before you can start work, you can comment on the issue and we will try to help as best we can.
 
