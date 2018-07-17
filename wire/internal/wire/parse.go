@@ -552,7 +552,7 @@ func processBind(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*If
 	}
 	methodSet, ok := ifacePtr.Elem().Underlying().(*types.Interface)
 	if !ok {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", fset.Position(call.Pos()), types.TypeString(ifaceArgType, nil)))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
 	}
 	provided := info.TypeOf(call.Args[1])
 	if types.Identical(ifacePtr.Elem(), provided) {
