@@ -12,7 +12,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175710Z
+      - 20180717T210950Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -25,7 +25,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:10 GMT
+      - Tue, 17 Jul 2018 21:09:50 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -40,7 +40,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
       X-Gocloud-Seq:
@@ -53,7 +53,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:10 GMT
+      - Tue, 17 Jul 2018 21:09:50 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -68,7 +68,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
@@ -76,12 +76,12 @@ interactions:
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.530122230966E9,"Name":"test-watch-initial","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.531861791054E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-watch-initial","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:50 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -96,7 +96,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -109,7 +109,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:50 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -124,7 +124,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -137,7 +137,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:50 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -152,7 +152,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -165,7 +165,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:51 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -180,7 +180,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
@@ -193,7 +193,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:51 GMT
     status: 200 OK
     code: 200
     duration: ""
@@ -208,7 +208,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180627T175711Z
+      - 20180717T210951Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
       X-Gocloud-Seq:
@@ -221,7 +221,7 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Wed, 27 Jun 2018 17:57:11 GMT
+      - Tue, 17 Jul 2018 21:09:51 GMT
     status: 200 OK
     code: 200
     duration: ""

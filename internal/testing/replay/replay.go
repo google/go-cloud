@@ -23,11 +23,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/golang/protobuf/proto"
+	"github.com/tidwall/sjson"
 	"google.golang.org/grpc"
 )
 
@@ -50,9 +52,7 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 	}
 
 	// Use a custom matcher as the default matcher looks for URLs and methods,
-	// which Amazon overloads as it isn't RESTful.
-	// Sequencing is added to the requests when the cassette is saved, which
-	// allows for differentiating GETs which otherwise look identical.
+	// AWS inspects the bodies as well.
 	last := -1
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
 		var b bytes.Buffer
@@ -73,7 +73,7 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		logf("Targets: %v | %v == %v\n", r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
 		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
 		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
+		logf("Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
 		logf("Sequences: %v | %v == %v\n", seq, last, seq > last)
 
 		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
@@ -90,7 +90,9 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		return false
 	})
 	return r, func() {
-		r.Stop()
+		if err := r.Stop(); err != nil {
+			fmt.Println(err)
+		}
 		if mode != recorder.ModeRecording {
 			return
 		}
@@ -115,22 +117,11 @@ func scrubAWSHeaders(filepath string) error {
 		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
 		action.Request.Headers.Del("Authorization")
 		action.Response.Headers.Del("X-Amzn-Requestid")
-		action.Response.Body = removeJSONString(action.Response.Body, "LastModifiedUser")
+		// Ignore an error if LastModifiedUser isn't deleted, it's not really important.
+		action.Response.Body, _ = sjson.Delete(action.Response.Body, "LastModifiedUser")
 	}
 	c.Mu.Unlock()
-	c.Save()
-
-	return nil
-}
-
-// removeJSONString removes a stringed value from a JSON string.
-// This is very dodgy and doesn't work if the value has a " in it,
-// or if the key is the last in the list, or probably other things
-// too. If the case isn't tested, it probably doesn't work.
-// json.Decoder.Token could be used to make this way better.
-func removeJSONString(s, key string) string {
-	re := regexp.MustCompile(`(?U)\"` + key + `\":\".*\",`)
-	return re.ReplaceAllString(s, "")
+	return c.Save()
 }
 
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
@@ -174,4 +165,110 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 	}
 
 	return opts, done, nil
+}
+
+func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filename string) (r *recorder.Recorder, done func(), err error) {
+	path := filepath.Join("testdata", filename)
+	logf("Golden file is at %v", path)
+
+	if mode == recorder.ModeRecording {
+		logf("Recording into golden file")
+	} else {
+		logf("Replaying from golden file")
+	}
+
+	r, err = recorder.NewAsMode(path, mode, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Use a custom matcher as the default matcher looks for URLs and methods.
+	// GCS inspects the bodies as well.
+	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
+		var b bytes.Buffer
+		if r.Body != nil {
+			if _, err := b.ReadFrom(r.Body); err != nil {
+				logf(err.Error())
+				return false
+			}
+		}
+		r.Body = ioutil.NopCloser(&b)
+		body := scrubGCSIDs(b.String()) //scrubGCSResponse(b.String())
+		url := scrubGCSURL(r.URL.String())
+
+		logf("URLs: %v | %v == %v\n", url, i.URL, url == i.URL)
+		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
+		logf("Bodies:\n%v\n~~~~~~~~~~\n%v\n==%v\n", body, i.Body, body == i.Body)
+
+		if url == i.URL &&
+			r.Method == i.Method &&
+			body == i.Body {
+			logf("Returning header match")
+			return true
+		}
+
+		logf("No match, continuing...")
+		return false
+	})
+
+	return r, func() {
+		if err := r.Stop(); err != nil {
+			fmt.Println(err)
+		}
+		if mode != recorder.ModeRecording {
+			return
+		}
+		if err := scrubGCS(path); err != nil {
+			fmt.Println(err)
+		}
+	}, nil
+}
+
+func scrubGCSURL(url string) string {
+	return strings.Split(url, "&")[0]
+}
+
+func scrubGCSIDs(body string) string {
+	re := regexp.MustCompile(`(?m)^\s*--.*$`)
+	return re.ReplaceAllString(body, "")
+}
+
+func scrubGCSResponse(body string) string {
+	if strings.Contains(body, `"debugInfo"`) {
+		return ""
+	}
+
+	for _, v := range []string{"selfLink", "md5Hash", "generation", "acl", "mediaLink", "owner"} {
+		// Ignore errors, as they'll contain issues like the key not existing, which is fine.
+		// This is a best effort scrub and the golden files should be code reviewed
+		// anyway.
+		body, _ = sjson.Delete(body, v)
+	}
+
+	return body
+}
+
+// scrubGCS scrubs both the headers and body for sensitive information, and massages the
+// GCS request/response bodies to remove unique identifiers that prevent body matching.
+func scrubGCS(filepath string) error {
+	c, err := cassette.Load(filepath)
+	if err != nil {
+		return fmt.Errorf("unable to load golden file, do not commit to repository: %v", err)
+	}
+
+	c.Mu.Lock()
+	for _, action := range c.Interactions {
+		action.Request.URL = scrubGCSURL(action.Request.URL)
+		action.Request.Headers.Del("Authorization")
+		action.Request.Body = scrubGCSIDs(action.Request.Body)
+		action.Response.Body = scrubGCSResponse(action.Response.Body)
+
+		for header, _ := range action.Response.Headers {
+			if strings.HasPrefix(header, "X-Google") || strings.HasPrefix(header, "X-Guploader") {
+				action.Response.Headers.Del(header)
+			}
+		}
+	}
+	c.Mu.Unlock()
+	return c.Save()
 }
