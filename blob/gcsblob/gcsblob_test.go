@@ -237,10 +237,6 @@ func TestHTTPClientOpt(t *testing.T) {
 }
 
 func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*gcp.HTTPClient, func(), error) {
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	mode := recorder.ModeRecording
 	if testing.Short() {
@@ -250,9 +246,17 @@ func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepa
 	if err != nil {
 		return nil, nil, err
 	}
-	c, err := gcp.NewHTTPClient(r, gcp.CredentialsTokenSource(creds))
-	if err != nil {
-		return nil, nil, err
+
+	c := &gcp.HTTPClient{http.Client{Transport: r}}
+	if mode == recorder.ModeRecording {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		c, err = gcp.NewHTTPClient(r, gcp.CredentialsTokenSource(creds))
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return c, done, err
