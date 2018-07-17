@@ -51,9 +51,8 @@ language while focusing on their respective areas of expertise.
 
 The distinction between developer and operator becomes more blurred when
 investigating testing. Integration tests might well want to create and destroy
-resources. We expect to recommend [Terraform](http://terraform.io) for such
-cases, but we have not investigated the actual workflow for this at the time of
-writing.
+resources. We recommend [Terraform](http://terraform.io) for such cases, but
+we have not investigated the CI workflow for this at the time of writing.
 
 ## Drivers and User-Facing Types
 
