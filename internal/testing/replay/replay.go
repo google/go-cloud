@@ -90,7 +90,9 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		return false
 	})
 	return r, func() {
-		r.Stop()
+		if err := r.Stop(); err != nil {
+			fmt.Println(err)
+		}
 		if mode != recorder.ModeRecording {
 			return
 		}
@@ -119,9 +121,7 @@ func scrubAWSHeaders(filepath string) error {
 		action.Response.Body, _ = sjson.Delete(action.Response.Body, "LastModifiedUser")
 	}
 	c.Mu.Unlock()
-	c.Save()
-
-	return nil
+	return c.Save()
 }
 
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
@@ -212,7 +212,9 @@ func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 	})
 
 	return r, func() {
-		r.Stop()
+		if err := r.Stop(); err != nil {
+			fmt.Println(err)
+		}
 		if mode != recorder.ModeRecording {
 			return
 		}
@@ -268,7 +270,5 @@ func scrubGCS(filepath string) error {
 		}
 	}
 	c.Mu.Unlock()
-	c.Save()
-
-	return nil
+	return c.Save()
 }

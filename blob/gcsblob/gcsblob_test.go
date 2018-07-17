@@ -149,8 +149,11 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	}
 	bkt := fmt.Sprintf("%s-%s", bucketPrefix, "test-obj-naming")
 	b := c.Bucket(bkt)
-	defer b.Delete(ctx)
+	defer func() { _ = b.Delete(ctx) }()
 	err = b.Create(ctx, *projectID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -247,7 +250,7 @@ func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepa
 		return nil, nil, err
 	}
 
-	c := &gcp.HTTPClient{http.Client{Transport: r}}
+	c := &gcp.HTTPClient{Client: http.Client{Transport: r}}
 	if mode == recorder.ModeRecording {
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
