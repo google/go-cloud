@@ -19,6 +19,7 @@ replace cloud.google.com/go v0.23.0 => cloud.google.com/go v0.0.0-20180608230132
 require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
+	github.com/Jeffail/gabs v0.0.0-20180420203615-7a0fed31069a
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
@@ -38,6 +39,9 @@ require (
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a
 	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd
 	github.com/stretchr/testify v1.2.1
+	github.com/tidwall/gjson v1.1.2
+	github.com/tidwall/match v0.0.0-20171002075945-1731857f09b1
+	github.com/tidwall/sjson v1.0.0
 	go.opencensus.io v0.12.0
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d
 	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a

@@ -29,6 +29,7 @@ import (
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/golang/protobuf/proto"
+	"github.com/tidwall/sjson"
 	"google.golang.org/grpc"
 )
 
@@ -114,7 +115,7 @@ func scrubAWSHeaders(filepath string) error {
 		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
 		action.Request.Headers.Del("Authorization")
 		action.Response.Headers.Del("X-Amzn-Requestid")
-		action.Response.Body = removeJSONString(action.Response.Body, "LastModifiedUser")
+		action.Response.Body = removeJSONField(action.Response.Body, "LastModifiedUser")
 	}
 	c.Mu.Unlock()
 	c.Save()
@@ -122,15 +123,12 @@ func scrubAWSHeaders(filepath string) error {
 	return nil
 }
 
-// removeJSONString removes a stringed value from a JSON string.
-// This is very dodgy and doesn't work if the value has a " in it,
-// or if the key is the last in the list, or probably other things
-// too. If the case isn't tested, it probably doesn't work.
-// json.Decoder.Token could be used to make this way better.
-func removeJSONString(s, key string) string {
-	re := regexp.MustCompile(`(?U)\"` + key + `\":\s?\".*\",`)
-	s = strings.Replace(s, "\n", "", -1)
-	return re.ReplaceAllString(s, "")
+// removeJSONField removes a field value from a JSON string, specified by standard JSON
+// dot syntax (e.g. given {"name":{"first":"Larry","last":"Page"}} "name.last" will wipe
+// the JSON's "last":"Page" text.
+func removeJSONField(s, field string) string {
+	v, _ := sjson.Delete(s, field)
+	return v
 }
 
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
@@ -202,7 +200,7 @@ func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 			}
 		}
 		r.Body = ioutil.NopCloser(&b)
-		body := scrubGCSBody(b.String())
+		body := scrubGCSIDs(b.String()) //scrubGCSResponse(b.String())
 		url := scrubGCSURL(r.URL.String())
 
 		logf("URLs: %v | %v == %v\n", url, i.URL, url == i.URL)
@@ -235,13 +233,21 @@ func scrubGCSURL(url string) string {
 	return strings.Split(url, "&")[0]
 }
 
-func scrubGCSBody(body string) string {
+func scrubGCSIDs(body string) string {
+	re := regexp.MustCompile(`(?m)^\s*--.*$`)
+	return re.ReplaceAllString(body, "")
+}
+
+func scrubGCSResponse(body string) string {
 	if strings.Contains(body, `"debugInfo"`) {
 		return ""
 	}
 
-	re := regexp.MustCompile(`(?m)^\s*--.*$`)
-	return re.ReplaceAllString(body, "")
+	for _, v := range []string{"selfLink", "md5Hash", "generation", "acl", "mediaLink", "owner"} {
+		body = removeJSONField(body, v)
+	}
+
+	return body
 }
 
 // scrubGCS scrubs both the headers and body for sensitive information, and massages the
@@ -256,12 +262,8 @@ func scrubGCS(filepath string) error {
 	for _, action := range c.Interactions {
 		action.Request.URL = scrubGCSURL(action.Request.URL)
 		action.Request.Headers.Del("Authorization")
-		action.Request.Body = scrubGCSBody(action.Request.Body)
-		action.Response.Body = scrubGCSBody(action.Response.Body)
-		action.Response.Body = removeJSONString(action.Response.Body, "selfLink")
-		action.Response.Body = removeJSONString(action.Response.Body, "name")
-		action.Response.Body = removeJSONString(action.Response.Body, "id")
-		action.Response.Body = removeJSONString(action.Response.Body, "projectNumber")
+		action.Request.Body = scrubGCSIDs(action.Request.Body)
+		action.Response.Body = scrubGCSResponse(action.Response.Body)
 
 		for header, _ := range action.Response.Headers {
 			if strings.HasPrefix(header, "X-Google") || strings.HasPrefix(header, "X-Guploader") {

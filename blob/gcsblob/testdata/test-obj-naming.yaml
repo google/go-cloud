@@ -24,7 +24,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:13 GMT
       Server:
       - UploadServer
       Vary:
@@ -39,7 +39,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=fcbcefb9e25977797bf90c099fd05a43b1a42851b09edc5abd597956f5c5
+      - multipart/related; boundary=ea47d144cb85a2f74d87222b28bc4c9812952fdb9fbec1c1ec7ac512d92e
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -47,25 +47,22 @@ interactions:
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
     method: POST
   response:
-    body: '{ "kind": "storage#object",    "bucket": "go-cloud-test-obj-naming", "generation":
-      "1531855254148445", "metageneration": "1", "contentType": "text/plain; charset=utf-8",
-      "timeCreated": "2018-07-17T19:20:54.148Z", "updated": "2018-07-17T19:20:54.148Z",
-      "storageClass": "STANDARD", "timeStorageClassUpdated": "2018-07-17T19:20:54.148Z",
-      "size": "3", "md5Hash": "rL0Y20zC+Fzt72VPzMSk2A==", "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-test-obj-naming/o/object-name?generation=1531855254148445&alt=media",
-      "acl": [  {   "kind": "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531855254148445",   "entity": "project-owners-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "owners"   },   "etag": "CN2qlcLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531855254148445",   "entity": "project-editors-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "editors"   },   "etag": "CN2qlcLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531855254148445",   "entity": "project-viewers-640193379878",   "role":
-      "READER",   "projectTeam": {        "team": "viewers"   },   "etag": "CN2qlcLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "object-name",   "generation": "1531855254148445",   "entity": "user-cflewis@google.com",   "role":
-      "OWNER",   "email": "cflewis@google.com",   "etag": "CN2qlcLtptwCEAE="  } ],
-      "owner": {  "entity": "user-cflewis@google.com" }, "crc32c": "z8SuHQ==", "etag":
-      "CN2qlcLtptwCEAE="}'
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/object-name/1531860733931388",
+       "name": "object-name",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T20:52:13.931Z",
+       "updated": "2018-07-17T20:52:13.931Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T20:52:13.931Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "CPzekPeBp9wCEAE="
+      }
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -76,9 +73,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Etag:
-      - CN2qlcLtptwCEAE=
+      - CPzekPeBp9wCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -97,7 +94,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=8da40ca1e0a0c404569c3189814620e0476e1665c7da4b5293a3c650ed14
+      - multipart/related; boundary=bcb62971220b03dd9d1bbc17f251cce6ac5ae9761738b989af8f1c53d9da
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -105,25 +102,22 @@ interactions:
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
     method: POST
   response:
-    body: '{ "kind": "storage#object",    "bucket": "go-cloud-test-obj-naming", "generation":
-      "1531855254335180", "metageneration": "1", "contentType": "text/plain; charset=utf-8",
-      "timeCreated": "2018-07-17T19:20:54.334Z", "updated": "2018-07-17T19:20:54.334Z",
-      "storageClass": "STANDARD", "timeStorageClassUpdated": "2018-07-17T19:20:54.334Z",
-      "size": "3", "md5Hash": "rL0Y20zC+Fzt72VPzMSk2A==", "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-test-obj-naming/o/%E6%96%87%E4%BB%B6%E5%90%8D?generation=1531855254335180&alt=media",
-      "acl": [  {   "kind": "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "文件名",   "generation": "1531855254335180",   "entity": "project-owners-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "owners"   },   "etag": "CMzdoMLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "文件名",   "generation": "1531855254335180",   "entity": "project-editors-640193379878",   "role":
-      "OWNER",   "projectTeam": {        "team": "editors"   },   "etag": "CMzdoMLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "文件名",   "generation": "1531855254335180",   "entity": "project-viewers-640193379878",   "role":
-      "READER",   "projectTeam": {        "team": "viewers"   },   "etag": "CMzdoMLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "文件名",   "generation": "1531855254335180",   "entity": "user-cflewis@google.com",   "role":
-      "OWNER",   "email": "cflewis@google.com",   "etag": "CMzdoMLtptwCEAE="  } ],
-      "owner": {  "entity": "user-cflewis@google.com" }, "crc32c": "z8SuHQ==", "etag":
-      "CMzdoMLtptwCEAE="}'
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/文件名/1531860734159656",
+       "name": "文件名",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T20:52:14.159Z",
+       "updated": "2018-07-17T20:52:14.159Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T20:52:14.159Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "CKjWnveBp9wCEAE="
+      }
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -134,9 +128,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Etag:
-      - CMzdoMLtptwCEAE=
+      - CKjWnveBp9wCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -155,7 +149,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=d3caaa4bd35f094c0d1237572c5c980d3664ea7855ef7c5303d4dd4d096c
+      - multipart/related; boundary=55b06b563589427886e543391216c7ecab32ed6c292aaf3b4e8b24e3cb60
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -172,7 +166,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Server:
       - UploadServer
       Vary:
@@ -188,7 +182,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=19eda93634b841818e7f41b59342f78a56878e4f7a9ea042abd166d5a731
+      - multipart/related; boundary=f89b778e24793b5a94066b816a37d98eaf35c5d08ef2b712bcb1bb4b5096
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -196,28 +190,22 @@ interactions:
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
     method: POST
   response:
-    body: '{ "kind": "storage#object",    "bucket": "go-cloud-test-obj-naming", "generation":
-      "1531855254688430", "metageneration": "1", "contentType": "text/plain; charset=utf-8",
-      "timeCreated": "2018-07-17T19:20:54.688Z", "updated": "2018-07-17T19:20:54.688Z",
-      "storageClass": "STANDARD", "timeStorageClassUpdated": "2018-07-17T19:20:54.688Z",
-      "size": "3", "md5Hash": "rL0Y20zC+Fzt72VPzMSk2A==", "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-test-obj-naming/o/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?generation=1531855254688430&alt=media",
-      "acl": [  {   "kind": "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",   "generation":
-      "1531855254688430",   "entity": "project-owners-640193379878",   "role": "OWNER",   "projectTeam":
-      {        "team": "owners"   },   "etag": "CK6ltsLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",   "generation":
-      "1531855254688430",   "entity": "project-editors-640193379878",   "role": "OWNER",   "projectTeam":
-      {        "team": "editors"   },   "etag": "CK6ltsLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",   "generation":
-      "1531855254688430",   "entity": "project-viewers-640193379878",   "role": "READER",   "projectTeam":
-      {        "team": "viewers"   },   "etag": "CK6ltsLtptwCEAE="  },  {   "kind":
-      "storage#objectAccessControl",         "bucket": "go-cloud-test-obj-naming",   "object":
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",   "generation":
-      "1531855254688430",   "entity": "user-cflewis@google.com",   "role": "OWNER",   "email":
-      "cflewis@google.com",   "etag": "CK6ltsLtptwCEAE="  } ], "owner": {  "entity":
-      "user-cflewis@google.com" }, "crc32c": "z8SuHQ==", "etag": "CK6ltsLtptwCEAE="}'
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/1531860734384861",
+       "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T20:52:14.384Z",
+       "updated": "2018-07-17T20:52:14.384Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T20:52:14.384Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "CN21rPeBp9wCEAE="
+      }
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -228,9 +216,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Etag:
-      - CK6ltsLtptwCEAE=
+      - CN21rPeBp9wCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -250,7 +238,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=6b5964160b0671db711e217afa1609bfc5caad0259731bf9e90abd29d01e
+      - multipart/related; boundary=b2b14e4359377d84b947774d4c06083a32385dcccf471952b7cef1057608
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -267,7 +255,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Server:
       - UploadServer
       Vary:
@@ -283,7 +271,7 @@ interactions:
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=0c7b2b0a88dbfce96158a8374f597e843277787c35d5bbe5f00b3eefa017
+      - multipart/related; boundary=5e69d74b8fc16098c4f5a46ab2065b74af7f9ab679b00bb16ffcf1a1d6c7
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -300,7 +288,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:54 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Server:
       - UploadServer
       Vary:
@@ -331,9 +319,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 17 Jul 2018 19:20:55 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Expires:
-      - Tue, 17 Jul 2018 19:20:55 GMT
+      - Tue, 17 Jul 2018 20:52:14 GMT
       Server:
       - UploadServer
       Vary:
