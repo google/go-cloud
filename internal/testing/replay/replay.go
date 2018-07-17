@@ -240,7 +240,7 @@ func scrubGCSResponse(body string) string {
 		// Ignore errors, as they'll contain issues like the key not existing, which is fine.
 		// This is a best effort scrub and the golden files should be code reviewed
 		// anyway.
-		body, _ := sjson.Delete(s, field)
+		body, _ = sjson.Delete(body, v)
 	}
 
 	return body

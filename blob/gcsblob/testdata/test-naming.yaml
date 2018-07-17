@@ -15,9 +15,19 @@ interactions:
     url: https://www.googleapis.com/storage/v1/b?alt=json
     method: POST
   response:
-    body: '{ "kind": "storage#bucket",     "timeCreated": "2018-07-13T16:23:13.852Z",
-      "updated": "2018-07-13T16:23:13.852Z", "metageneration": "1", "location": "US",
-      "storageClass": "STANDARD", "etag": "CAE="}'
+    body: |
+      {
+       "kind": "storage#bucket",
+       "id": "go-cloud-bucket-name",
+       "projectNumber": "640193379878",
+       "name": "go-cloud-bucket-name",
+       "timeCreated": "2018-07-17T21:05:20.390Z",
+       "updated": "2018-07-17T21:05:20.390Z",
+       "metageneration": "1",
+       "location": "US",
+       "storageClass": "STANDARD",
+       "etag": "CAE="
+      }
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -28,7 +38,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:13 GMT
+      - Tue, 17 Jul 2018 21:05:20 GMT
       Etag:
       - CAE=
       Expires:
@@ -65,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Jul 2018 16:23:14 GMT
+      - Tue, 17 Jul 2018 21:05:20 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -92,9 +102,19 @@ interactions:
     url: https://www.googleapis.com/storage/v1/b?alt=json
     method: POST
   response:
-    body: '{ "kind": "storage#bucket",     "timeCreated": "2018-07-13T16:23:14.650Z",
-      "updated": "2018-07-13T16:23:14.650Z", "metageneration": "1", "location": "US",
-      "storageClass": "STANDARD", "etag": "CAE="}'
+    body: |
+      {
+       "kind": "storage#bucket",
+       "id": "go-cloud-8ucket_nam3",
+       "projectNumber": "640193379878",
+       "name": "go-cloud-8ucket_nam3",
+       "timeCreated": "2018-07-17T21:05:21.291Z",
+       "updated": "2018-07-17T21:05:21.291Z",
+       "metageneration": "1",
+       "location": "US",
+       "storageClass": "STANDARD",
+       "etag": "CAE="
+      }
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -105,7 +125,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:14 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Etag:
       - CAE=
       Expires:
@@ -142,7 +162,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Jul 2018 16:23:15 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -178,7 +198,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:15 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Server:
       - UploadServer
       Vary:
@@ -210,7 +230,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:15 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Server:
       - UploadServer
       Vary:
@@ -242,7 +262,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:15 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Server:
       - UploadServer
       Vary:
@@ -274,7 +294,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 13 Jul 2018 16:23:15 GMT
+      - Tue, 17 Jul 2018 21:05:21 GMT
       Server:
       - UploadServer
       Vary:
