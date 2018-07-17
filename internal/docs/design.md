@@ -37,7 +37,7 @@ careful consideration, getting something like ACLs wrong could lead to a
 catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
 users and roles for each cloud platform, and some way of mapping those users and
 roles across clouds. While not impossible, the level of complexity and the high
-liklihood of a leaky abstraction leads us to believe this is not the right
+likelihood of a leaky abstraction leads us to believe this is not the right
 direction for Go Cloud.
 
 Instead of adding large amounts of leaky complexity to Go Cloud, we expect the
