@@ -217,6 +217,7 @@ func TestReader(t *testing.T) {
 			"/baz.txt",
 			"C:\\baz.txt",
 			"C:/baz.txt",
+			"foo.txt.attrs",
 		}
 		for _, name := range names {
 			r, err := b.NewReader(ctx, name)
@@ -382,6 +383,7 @@ func TestWriter(t *testing.T) {
 			"/baz.txt",
 			"C:\\baz.txt",
 			"C:/baz.txt",
+			"foo.bar.attrs",
 		}
 		for _, name := range names {
 			w, err := b.NewWriter(ctx, name, &blob.WriterOptions{
@@ -484,6 +486,7 @@ func TestDelete(t *testing.T) {
 			"/baz.txt",
 			"C:\\baz.txt",
 			"C:/baz.txt",
+			"foo.txt.attrs",
 		}
 		for _, name := range names {
 			err := b.Delete(ctx, name)

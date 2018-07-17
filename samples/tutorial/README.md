@@ -7,13 +7,14 @@ most frequently used cloud services. We'll call the tool `upload`.
 
 Before we start with any code, it helps to think about possible designs. We
 could very well write a code path for Amazon's Simple Storage Service (S3) and
-another code path for Google Cloud Storage (GCS). That would work. However,
-it would also be tedious. We would have to learn the semantics of uploading files
-to both blob storage services. Even worse, we would have two code paths
-that effectively do the same thing, but would have to be maintained separately
-(ugh!). It would be much nicer if we could write the upload logic once and reuse
-it across providers. That's exactly what Go Cloud makes possible. So, let's
-write some code!
+another code path for Google Cloud Storage (GCS). That would work. However, it
+would also be tedious. We would have to learn the semantics of uploading files
+to both blob storage services. Even worse, we would have two code paths that
+effectively do the same thing, but would have to be maintained separately
+(ugh!). It would be much nicer if we could write the upload logic once and
+reuse it across providers. That's exactly the kind of
+[separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns)
+that Go Cloud makes possible. So, let's write some code!
 
 When we're done, our command line application will work like this:
 
@@ -177,9 +178,7 @@ being tightly coupled to one cloud provider.
 With the setup done, we're ready to use the bucket connection. Note, as a design
 principle of Go Cloud, `blob.Bucket` does not support creating a bucket and
 instead focuses solely on interacting with it. This separates the concerns of
-provisioning infrastructure and using infrastructure. See
-[Design Decisions](https://github.com/google/go-cloud/blob/master/docs/design.md)
-for more on this point.
+provisioning infrastructure and using infrastructure.
 
 ## Reading the file
 

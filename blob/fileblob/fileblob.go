@@ -24,7 +24,6 @@ package fileblob
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -83,6 +82,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -90,8 +92,15 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
+	xa, err := getAttrs(path)
+	if err != nil {
+		return nil, fmt.Errorf("open file attributes %s: %v", key, err)
+	}
 	if length == 0 {
-		return reader{size: info.Size()}, nil
+		return reader{
+			size: info.Size(),
+			xa:   xa,
+		}, nil
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -110,6 +119,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		r:    r,
 		c:    f,
 		size: info.Size(),
+		xa:   xa,
 	}, nil
 }
 
@@ -117,6 +127,7 @@ type reader struct {
 	r    io.Reader
 	c    io.Closer
 	size int64
+	xa   xattrs
 }
 
 func (r reader) Read(p []byte) (int, error) {
@@ -135,9 +146,8 @@ func (r reader) Close() error {
 
 func (r reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
-		Size: r.size,
-		// TODO(#111): support content-type.
-		ContentType: "application/octet-stream",
+		Size:        r.size,
+		ContentType: r.xa.ContentType,
 	}
 }
 
@@ -146,10 +156,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	if contentType != "application/octet-stream" {
-		return nil, errors.New("fileblob doesn't support custom content-type yet, see https://github.com/google/go-cloud/issues/111")
-	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
@@ -157,7 +167,31 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	return f, nil
+	attrs := xattrs{
+		ContentType: contentType,
+	}
+	return &writer{
+		w:     f,
+		path:  path,
+		attrs: attrs,
+	}, nil
+}
+
+type writer struct {
+	w     io.WriteCloser
+	path  string
+	attrs xattrs
+}
+
+func (w writer) Write(p []byte) (n int, err error) {
+	return w.w.Write(p)
+}
+
+func (w writer) Close() error {
+	if err := setAttrs(w.path, w.attrs); err != nil {
+		return fmt.Errorf("write blob attributes: %v", err)
+	}
+	return w.w.Close()
 }
 
 func (b *bucket) Delete(ctx context.Context, key string) error {
@@ -166,11 +200,17 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
+	if strings.HasSuffix(path, attrsExt) {
+		return fmt.Errorf("delete file blob %s: extension %q cannot be directly deleted", key, attrsExt)
+	}
 	err = os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
 		}
+		return fmt.Errorf("delete file blob %s: %v", key, err)
+	}
+	if err = os.Remove(path + attrsExt); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
 	return nil
