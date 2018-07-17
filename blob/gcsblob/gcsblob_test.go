@@ -150,10 +150,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	bkt := fmt.Sprintf("%s-%s", bucketPrefix, "test-obj-naming")
 	b := c.Bucket(bkt)
 	defer func() { _ = b.Delete(ctx) }()
-	err = b.Create(ctx, *projectID, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = b.Create(ctx, *projectID, nil)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
