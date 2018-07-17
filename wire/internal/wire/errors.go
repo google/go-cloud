@@ -44,22 +44,27 @@ func mapErrors(errs []error, f func(error) error) []error {
 	return newErrs
 }
 
-// A problem is an error with an optional position.
-type problem struct {
+// A wireErr is an error with an optional position.
+type wireErr struct {
 	error    error
 	position token.Position
 }
 
 // notePosition wraps an error with position information if it doesn't already
 // have it.
+//
+// notePosition is usually called multiple times as an error goes up the call
+// stack, so calling notePosition on an existing *wireErr will not modify the
+// position, as the assumption is that deeper calls have more precise position
+// information about the source of the error.
 func notePosition(p token.Position, e error) error {
 	switch e.(type) {
 	case nil:
 		return nil
-	case *problem:
+	case *wireErr:
 		return e
 	default:
-		return &problem{error: e, position: p}
+		return &wireErr{error: e, position: p}
 	}
 }
 
@@ -71,9 +76,9 @@ func notePositionAll(p token.Position, errs []error) []error {
 }
 
 // Error returns the error message prefixed by the position if valid.
-func (p *problem) Error() string {
-	if !p.position.IsValid() {
-		return p.error.Error()
+func (w *wireErr) Error() string {
+	if !w.position.IsValid() {
+		return w.error.Error()
 	}
-	return p.position.String() + ": " + p.error.Error()
+	return w.position.String() + ": " + w.error.Error()
 }

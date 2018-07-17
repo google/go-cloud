@@ -236,8 +236,8 @@ func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *Prov
 	calls, errs := solve(g.prog.Fset, injectSig.out, given, set)
 	if len(errs) > 0 {
 		return mapErrors(errs, func(e error) error {
-			if p, ok := e.(*problem); ok {
-				return notePosition(p.position, fmt.Errorf("inject %s: %v", name, p.error))
+			if w, ok := e.(*wireErr); ok {
+				return notePosition(w.position, fmt.Errorf("inject %s: %v", name, w.error))
 			}
 			return notePosition(g.prog.Fset.Position(pos), fmt.Errorf("inject %s: %v", name, e))
 		})
