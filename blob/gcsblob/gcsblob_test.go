@@ -107,34 +107,34 @@ func TestNewWriterObjectNaming(t *testing.T) {
 			name:    "An ASCII name should pass",
 			objName: "object-name",
 		},
-		//{
-		//name:    "A Unicode name should pass",
-		//objName: "文件名",
-		//},
+		{
+			name:    "A Unicode name should pass",
+			objName: "文件名",
+		},
 
-		//{
-		//name:    "An empty name should fail",
-		//wantErr: true,
-		//},
-		//{
-		//name:    "A name of escaped chars should fail",
-		//objName: "\xF4\x90\x80\x80",
-		//wantErr: true,
-		//},
-		//{
-		//name:    "A name of 1024 chars should succeed",
-		//objName: strings.Repeat("a", 1024),
-		//},
-		//{
-		//name:    "A name of 1025 chars should fail",
-		//objName: strings.Repeat("a", 1025),
-		//wantErr: true,
-		//},
-		//{
-		//name:    "A long name of Unicode chars should fail",
-		//objName: strings.Repeat("☺", 342),
-		//wantErr: true,
-		//},
+		{
+			name:    "An empty name should fail",
+			wantErr: true,
+		},
+		{
+			name:    "A name of escaped chars should fail",
+			objName: "\xF4\x90\x80\x80",
+			wantErr: true,
+		},
+		{
+			name:    "A name of 1024 chars should succeed",
+			objName: strings.Repeat("a", 1024),
+		},
+		{
+			name:    "A name of 1025 chars should fail",
+			objName: strings.Repeat("a", 1025),
+			wantErr: true,
+		},
+		{
+			name:    "A long name of Unicode chars should fail",
+			objName: strings.Repeat("☺", 342),
+			wantErr: true,
+		},
 	}
 
 	ctx := context.Background()
