@@ -84,16 +84,10 @@ resource "aws_instance" "app" {
     inline = [
       "sudo mkdir -p /etc/google/auth",
       "sudo mv '/home/admin/gcp-adc.json' '/etc/google/auth/application_default_credentials.json'",
-      "chmod +x /home/admin/app",
-      "curl -sSO https://dl.google.com/cloudagents/install-monitoring-agent.sh",
-      "sudo bash install-monitoring-agent.sh",
       "curl -sSO https://dl.google.com/cloudagents/install-logging-agent.sh",
       "sudo bash install-logging-agent.sh",
+      "chmod +x /home/admin/app",
     ]
-  }
-
-  provisioner "local-exec" {
-    command = "ssh -o 'StrictHostKeyChecking no' admin@${self.public_ip} 'nohup /home/admin/app 2>&1 | logger &'"
   }
 }
 
