@@ -17,14 +17,12 @@ blobReader, err := bucket.NewReader(context.Background(), "my-blob")
 and being able to run that code on any cloud you want, avoiding all the ceremony of cloud-specific authorization, tracing, SDKs and all the other code required to make an application portable across cloud platforms.
 
 ## Installation instructions
-Installation is easy, but does require `vgo`. `vgo` is not yet stable, and so builds may break with `vgo` changes, but experience has shown this to be rare.
 
 ```shell
-$ go get -u golang.org/x/vgo
-$ git clone https://github.com/google/go-cloud.git
-$ cd go-cloud
-$ vgo install ./wire/cmd/gowire
+go get github.com/google/go-cloud
+go install github.com/google/go-cloud/wire/cmd/gowire
 ```
+
 Go Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
 
 ## Samples
