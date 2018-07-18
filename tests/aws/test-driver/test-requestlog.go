@@ -29,7 +29,7 @@ type testRequestlog struct {
 }
 
 func (t testRequestlog) Run() error {
-	tok, err := tests.TestGet(address + t.url)
+	tok, err := tests.TestGet(serverAddr + t.url)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}

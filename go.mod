@@ -43,6 +43,7 @@ require (
 	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd // indirect
 	github.com/stretchr/testify v1.2.1 // indirect
 	go.opencensus.io v0.12.0
+	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d
 	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f // indirect
