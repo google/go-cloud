@@ -48,7 +48,7 @@ While we figure out how to properly generate replay files for contributors, writ
 
 ## Making a pull request
 * Follow the normal [pull request flow](https://help.github.com/articles/creating-a-pull-request/)
-* Build your changes using `vgo build .`, _do not use `go`_. Go Cloud CI uses `vgo` in order to ensure [reproducible builds](https://research.swtch.com/vgo-repro).
+* Build your changes using Go 1.11 with Go modules enabled or use `vgo`. Go Cloud's continuous integration uses Go modules in order to ensure [reproducible builds](https://research.swtch.com/vgo-repro).
 * Test your changes using `vgo test -short .`. You can omit the `-short` if you actually want to test your change against a cloud platform and you have a permissions level that enable you to do so. Please add tests that show the change does what it says it does, even if there wasn't a test in the first place. Don't add the replay files to your commits.
 * Feel free to make as many commits as you want; we will squash them all into a single commit before merging your change.
 * Check the diffs, write a useful description (including something like `Fixes #123` if it's fixing a bug) and send the PR out. Please start the title of your pull request with the name of the affected package, followed by a colon, followed by a short summary of the change, like "blob/gcsblob: add more tests".
