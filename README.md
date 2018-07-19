@@ -20,7 +20,7 @@ and being able to run that code on any cloud you want, avoiding all the ceremony
 
 ```shell
 go get github.com/google/go-cloud
-go install github.com/google/go-cloud/wire/cmd/gowire
+go get github.com/google/go-cloud/wire/cmd/gowire
 ```
 
 Go Cloud builds at the latest stable release of Go. Previous Go versions may compile but are not supported.
