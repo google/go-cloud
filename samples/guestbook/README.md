@@ -10,8 +10,7 @@ generic runtimevar API. All platform-specific code is set up by
 
 You will need to install the following software to run this sample:
 
-- [Go](https://golang.org/doc/install) and
-  [vgo](https://go.googlesource.com/vgo)
+- [Go](https://golang.org/doc/install)
 - [gowire](https://github.com/google/go-cloud/blob/master/wire/README.md#installing)
 - [Docker](https://docs.docker.com/install/)
 - [Terraform][TF]
@@ -22,16 +21,10 @@ You will need to install the following software to run this sample:
 
 ## Building
 
-`gowire` is not compatible with `vgo` yet, so you must run `vgo mod -vendor`
-first to download all the dependencies in `go.mod`. Running `gowire` generates
-the Wire code. Run the following in the `samples/guestbook` directory:
+Run the following in the `samples/guestbook` directory:
 
 ```shell
-# First time, for gowire.
-$ vgo mod -vendor
-
-# Now build:
-$ gowire && vgo build
+go generate && go build
 ```
 
 ## Running Locally
@@ -113,7 +106,7 @@ aws configure
 ssh-add
 
 # Build for deploying on the AWS Linux VM.
-GOOS=linux GOARCH=amd64 vgo build
+GOOS=linux GOARCH=amd64 go build
 
 # Enter AWS directory from samples/guestbook.
 cd aws
