@@ -89,10 +89,10 @@ func main() {
     )
     switch *cloud {
     case "gcp":
-        b, err = setupGCP(ctx)
+        b, err = setupGCP(ctx, bucketName)
     case "aws":
         // AWS is handled below in the next code sample.
-        b, err = setupAWS(ctx)
+        b, err = setupAWS(ctx, bucketName)
     default:
         log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
     }
@@ -101,7 +101,7 @@ func main() {
     }
 }
 
-func setupGCP(ctx context.Context) (*blob.Bucket, error) {
+func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
     // DefaultCredentials assumes a user has logged in with gcloud.
     // See here for more information:
     // https://cloud.google.com/docs/authentication/getting-started
@@ -114,7 +114,7 @@ func setupGCP(ctx context.Context) (*blob.Bucket, error) {
         return nil, err
     }
     // The bucket name must be globally unique.
-    return gcsblob.NewBucket(ctx, bucketName, c)
+    return gcsblob.NewBucket(ctx, bucket, c)
 }
 ```
 
@@ -153,7 +153,7 @@ import (
 
 // ... main
 
-func setupAWS(ctx context.Context) (*blob.Bucket, error) {
+func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
     c := &aws.Config{
         // Either hard-code the region or use AWS_REGION.
         Region: aws.String("us-east-2"),
@@ -164,7 +164,7 @@ func setupAWS(ctx context.Context) (*blob.Bucket, error) {
         Credentials: credentials.NewEnvCredentials(),
     }
     s := session.Must(session.NewSession(c))
-    return s3blob.NewBucket(ctx, s, bucketName)
+    return s3blob.NewBucket(ctx, s, bucket)
 }
 ```
 
@@ -278,6 +278,52 @@ $ ./upload -cloud aws gopher.png
 
 If we check both buckets, we should see our gopher in both places! We're
 done!
+
+## Separating setup code from application code
+
+Now that we have a working application, let's take one extra step to further
+separate setup code from application code. We will move all setup concerns that
+use any specific cloud-provider SDK out into a `setup.go` file and replace our
+`switch` statement with a single function:
+
+``` go
+// main.go
+
+func main() {
+    // ...
+
+    cxt := context.Background()
+    // Open a connection to the bucket.
+    b, err := setupGenericBucket(ctx, *cloud, bucketName)
+    if err != nil {
+        log.Fatalf("Failed to setup bucket: %s", err
+    }
+
+    // Prepare the file for upload.
+    // ...
+}
+```
+
+After moving the `setupGCP` and `setupAWS` functions into `setup.go`, we add
+our new `setupGenericBucket` function next:
+
+``` go
+func setupGenericBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
+	if cloud == "aws" {
+		return setupAWS(ctx, bucket)
+	}
+	if cloud == "gcp" {
+		return setupGCP(ctx, bucket)
+	}
+	return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
+}
+```
+
+Now, our application code consists of two files: `main.go` with the bulk of the
+application logic and `setup.go` with the cloud-provider specific details. A
+benefit of this organization is that adding support for additional cloud
+providers is a matter of changing only the internals of `setupGenericBucket`.
+The application logic may remain untouched.
 
 ## Wrapping Up
 
