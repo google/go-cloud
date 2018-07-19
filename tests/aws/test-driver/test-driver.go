@@ -47,11 +47,11 @@ var (
 )
 
 func init() {
-	flag.StringVar(&hostIP, "host-ip", "127.0.0.1", "host IP address of the instance")
+	flag.StringVar(&hostIP, "host-ip", "0.0.0.0", "host IP address of the instance")
 	flag.StringVar(&awsRegion, "aws-region", "us-west-1", "the region used to run the sample app")
 	flag.StringVar(&gcpProjectID, "gcp-project", "", "GCP project used to collect request logs")
 	flag.StringVar(&sshUser, "ssh-user", "admin", "user name used to ssh into the EC2 instance")
-	flag.StringVar(&sshKeyPath, "key-path", "~/.ssh/id_rsa", "path to the key file")
+	flag.StringVar(&sshKeyPath, "key-path", "", "path to the key file")
 }
 
 func main() {
