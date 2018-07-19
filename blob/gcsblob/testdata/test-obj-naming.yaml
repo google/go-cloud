@@ -1,0 +1,332 @@
+---
+version: 1
+interactions:
+- request:
+    body: |
+      {"name":"go-cloud-test-obj-naming"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "12868"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 409 Conflict
+    code: 409
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"object-name\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=29c97802f4a3a38c3024a2f94ad891024897abbf39d86ff370fa6b7e0604
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/object-name/1531867283905376",
+       "name": "object-name",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T22:41:23.905Z",
+       "updated": "2018-07-17T22:41:23.905Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T22:41:23.905Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "COC2s6qap9wCEAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "3020"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Etag:
+      - COC2s6qap9wCEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"文件名\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=ee30428dd489bebf190f116fe8b3106f5e9b1d4d5313102db6667dc9c280
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/文件名/1531867284126001",
+       "name": "文件名",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T22:41:24.125Z",
+       "updated": "2018-07-17T22:41:24.125Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T22:41:24.125Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "CLHywKqap9wCEAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "3096"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Etag:
+      - CLHywKqap9wCEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=5b8e111b6048e50c59af9321333724ea478e68fc14397c7d81513a975276
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "2986"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}\n\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=d9bf94f2959acc832d258feebede6a1d05c38dc414c0dce658618df2cef7
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/1531867284523467",
+       "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T22:41:24.523Z",
+       "updated": "2018-07-17T22:41:24.523Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T22:41:24.523Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "CMuT2aqap9wCEAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "19228"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Etag:
+      - CMuT2aqap9wCEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}\n\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=998633caca4de0036018fffe81bac39542a7f4637f87e9944f4002f5cbba
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "4823"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺☺\"}\n\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=5038ac2314e9bea10382f13b2bb37146a1571865f09e406656a6226def66
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "5594"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-test-obj-naming?alt=json
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
+      Content-Length:
+      - "12273"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Expires:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 409 Conflict
+    code: 409
+    duration: ""

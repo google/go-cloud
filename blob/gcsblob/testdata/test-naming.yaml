@@ -1,0 +1,305 @@
+---
+version: 1
+interactions:
+- request:
+    body: |
+      {"name":"go-cloud-bucket-name"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#bucket",
+       "id": "go-cloud-bucket-name",
+       "projectNumber": "640193379878",
+       "name": "go-cloud-bucket-name",
+       "timeCreated": "2018-07-17T22:41:21.898Z",
+       "updated": "2018-07-17T22:41:21.898Z",
+       "metageneration": "1",
+       "location": "US",
+       "storageClass": "STANDARD",
+       "etag": "CAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "378"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:22 GMT
+      Etag:
+      - CAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-bucket-name?alt=json
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "0"
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Jul 2018 22:41:22 GMT
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: |
+      {"name":"go-cloud-8ucket_nam3"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#bucket",
+       "id": "go-cloud-8ucket_nam3",
+       "projectNumber": "640193379878",
+       "name": "go-cloud-8ucket_nam3",
+       "timeCreated": "2018-07-17T22:41:22.690Z",
+       "updated": "2018-07-17T22:41:22.690Z",
+       "metageneration": "1",
+       "location": "US",
+       "storageClass": "STANDARD",
+       "etag": "CAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "378"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:22 GMT
+      Etag:
+      - CAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-8ucket_nam3?alt=json
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "0"
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: |
+      {"name":"go-cloud-_bucketname_"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "3198"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: |
+      {"name":"go-cloud-bucketnameUpper"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "3216"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: |
+      {"name":"go-cloud-bucketname?invalidchar"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "3258"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: |
+      {"name":"go-cloud-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "13512"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""
