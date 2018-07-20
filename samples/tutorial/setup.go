@@ -1,3 +1,17 @@
+// Copyright 2018 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -13,7 +27,8 @@ import (
 	"github.com/google/go-cloud/gcp"
 )
 
-func setupGenericBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
+// setupBucket creates a connection to a particular cloud provider's blob storage.
+func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
 	if cloud == "aws" {
 		return setupAWS(ctx, bucket)
 	}
@@ -23,6 +38,7 @@ func setupGenericBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket
 	return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 }
 
+// setupGCP creates a connection to Google Cloud Storage (GCS).
 func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	// DefaultCredentials assumes a user has logged in with gcloud.
 	// See here for more information:
@@ -35,10 +51,10 @@ func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The bucket name must be globally unique.
 	return gcsblob.OpenBucket(ctx, bucket, c)
 }
 
+// setupAWS creates a connection to Simple Cloud Storage Service (S3).
 func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	c := &aws.Config{
 		// Either hard-code the region or use AWS_REGION.

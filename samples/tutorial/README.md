@@ -28,8 +28,8 @@ $ ./upload -cloud aws gopher.png
 
 ## Flags & setup
 
-We start with a skeleton for our program with flags to configure the cloud to
-use and the path of the file to upload.
+We start with a skeleton for our program with flags to configure the cloud
+provider and the bucket name.
 
 ``` go
 // Command upload saves files to blob storage on GCP and AWS.
@@ -43,6 +43,7 @@ import (
 func main() {
     // Define our input.
     cloud := flag.String("cloud", "", "Cloud storage to use")
+    bucketName := flag.String("bucket", "go-cloud-bucket", "Name of bucket")
     flag.Parse()
     if flag.NArg() != 1 {
         log.Fatal("Failed to provide file to upload")
@@ -75,8 +76,6 @@ import (
     "github.com/google/go-cloud/gcp"
 )
 
-const bucketName = "my-cool-bucket"
-
 func main() {
     // flag setup omitted
     // ...
@@ -89,10 +88,10 @@ func main() {
     )
     switch *cloud {
     case "gcp":
-        b, err = setupGCP(ctx, bucketName)
+        b, err = setupGCP(ctx, *bucketName)
     case "aws":
         // AWS is handled below in the next code sample.
-        b, err = setupAWS(ctx, bucketName)
+        b, err = setupAWS(ctx, *bucketName)
     default:
         log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
     }
@@ -294,7 +293,7 @@ func main() {
 
     cxt := context.Background()
     // Open a connection to the bucket.
-    b, err := setupGenericBucket(ctx, *cloud, bucketName)
+    b, err := setupBucket(ctx, *cloud, *bucketName)
     if err != nil {
         log.Fatalf("Failed to setup bucket: %s", err
     }
@@ -305,25 +304,25 @@ func main() {
 ```
 
 After moving the `setupGCP` and `setupAWS` functions into `setup.go`, we add
-our new `setupGenericBucket` function next:
+our new `setupBucket` function next:
 
 ``` go
-func setupGenericBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
-	if cloud == "aws" {
-		return setupAWS(ctx, bucket)
-	}
-	if cloud == "gcp" {
-		return setupGCP(ctx, bucket)
-	}
-	return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
+func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
+    if cloud == "aws" {
+        return setupAWS(ctx, bucket)
+    }
+    if cloud == "gcp" {
+        return setupGCP(ctx, bucket)
+    }
+    return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 }
 ```
 
-Now, our application code consists of two files: `main.go` with the bulk of the
-application logic and `setup.go` with the cloud-provider specific details. A
-benefit of this organization is that adding support for additional cloud
-providers is a matter of changing only the internals of `setupGenericBucket`.
-The application logic may remain untouched.
+Now, our application code consists of two files: `main.go` with the application
+logic and `setup.go` with the cloud-provider specific details. A benefit of
+this separation is that changing any part of blob storage is a matter of
+changing only the internals of `setupBucket`. The application logic does not
+need to be changed.
 
 ## Wrapping Up
 
