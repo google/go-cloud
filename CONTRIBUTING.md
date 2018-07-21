@@ -49,7 +49,21 @@ While we figure out how to properly generate replay files for contributors, writ
 ## Making a pull request
 * Follow the normal [pull request flow](https://help.github.com/articles/creating-a-pull-request/)
 * Build your changes using Go 1.11 with Go modules enabled or use `vgo`. Go Cloud's continuous integration uses Go modules in order to ensure [reproducible builds](https://research.swtch.com/vgo-repro).
-* Test your changes using `vgo test -short .`. You can omit the `-short` if you actually want to test your change against a cloud platform and you have a permissions level that enable you to do so. Please add tests that show the change does what it says it does, even if there wasn't a test in the first place. Don't add the replay files to your commits.
+* Test your changes using one of the following invocations:
+```
+# Run fast tests only.
+vgo ./...
+
+# Run fast tests and replaying tests.
+vgo -tags=replay ./...
+
+# Run fast tests and recording tests.
+vgo -tags=record ./...
+
+# Run fast tests and slow, local tests (wire).
+vgo -tags=over1s ./...
+```
+Use `-tags=record` if you actually want to test your change against a cloud platform and you have a permissions level that enable you to do so. Please add tests that show the change does what it says it does, even if there wasn't a test in the first place. Don't add the replay files to your commits.
 * Feel free to make as many commits as you want; we will squash them all into a single commit before merging your change.
 * Check the diffs, write a useful description (including something like `Fixes #123` if it's fixing a bug) and send the PR out. Please start the title of your pull request with the name of the affected package, followed by a colon, followed by a short summary of the change, like "blob/gcsblob: add more tests".
 * [Travis CI](http://travis-ci.com) will run tests against the PR. This should happen within 10 minutes or so. If a test fails, go back to the coding stage and try to fix the test and push the same branch again. You won't need to make a new pull request, the changes will be rolled directly into the PR you already opened. Wait for Travis again. There is no need to assign a reviewer to the PR, the project team will assign someone for review during the standard [triage](#triaging) process.
