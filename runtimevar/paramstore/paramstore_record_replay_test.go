@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build record replay
+
 // These tests utilize a recorder to replay AWS endpoint hits from golden files.
 // Golden files are used if -short is passed to `go test`.
 // If -short is not passed, the recorder will make a call to AWS and save a new golden file.
@@ -26,8 +28,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/internal/testing/setup"
+	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cmp/cmp"
 )
 

@@ -1,3 +1,5 @@
+// +build replay
+
 package setup
 
 import (
@@ -17,10 +19,7 @@ import (
 // If the test is not short, the test will call out to AWS, and the results recorded
 // as a new replay file.
 func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session, done func()) {
-	mode := recorder.ModeRecording
-	if testing.Short() {
-		mode = recorder.ModeReplaying
-	}
+	mode := recorder.ModeReplaying
 	r, done, err := replay.NewAWSRecorder(t.Logf, mode, filename)
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
