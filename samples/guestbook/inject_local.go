@@ -34,12 +34,12 @@ import (
 // This file wires the generic interfaces up to local implementations. It won't
 // be directly included in the final binary, since it includes a Wire injector
 // template function (setupLocal), but the declarations will be copied into
-// wire_gen.go when gowire is run.
+// wire_gen.go when Wire is run.
 
 // setupLocal is a Wire injector function that sets up the application using
 // local implementations.
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	// This will be filled in by gowire with providers from the provider sets in
+	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 
 	panic(wire.Build(

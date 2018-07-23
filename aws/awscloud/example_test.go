@@ -51,7 +51,7 @@ func Example() {
 // value is a clean-up function that can be called to shut down any
 // resources created by setup.
 //
-// The body of this function will be filled in by running gowire. While
+// The body of this function will be filled in by running Wire. While
 // the name of the function does not matter, the signature signals to
 // Wire what provider functions to call. See
 // https://github.com/google/go-cloud/blob/master/wire/README.md#injectors
