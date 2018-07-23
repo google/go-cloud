@@ -11,7 +11,7 @@ generic runtimevar API. All platform-specific code is set up by
 You will need to install the following software to run this sample:
 
 - [Go](https://golang.org/doc/install)
-- [gowire](https://github.com/google/go-cloud/blob/master/wire/README.md#installing)
+- [Wire](https://github.com/google/go-cloud/blob/master/wire/README.md#installing)
 - [Docker](https://docs.docker.com/install/)
 - [Terraform][TF]
 - [jq](https://stedolan.github.io/jq/download/)
