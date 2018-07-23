@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// wire is a compile-time dependency injection tool.
+// Wire is a compile-time dependency injection tool.
 //
 // For an overview, see https://github.com/google/go-cloud/blob/master/wire/README.md
 package main
