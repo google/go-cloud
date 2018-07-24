@@ -29,13 +29,14 @@ import (
 
 // setupBucket creates a connection to a particular cloud provider's blob storage.
 func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
-	if cloud == "aws" {
+	switch cloud {
+	case "aws":
 		return setupAWS(ctx, bucket)
-	}
-	if cloud == "gcp" {
+	case "gcp":
 		return setupGCP(ctx, bucket)
+	default:
+		return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 	}
-	return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 }
 
 // setupGCP creates a connection to Google Cloud Storage (GCS).
