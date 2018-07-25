@@ -59,20 +59,15 @@ func Example() {
 
 	// Have a separate goroutine that waits for changes.
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				snap, err := v.Watch(ctx)
-				if err != nil {
-					// Handle errors.
-					log.Printf("Error: %v", err)
-					continue
-				}
-				// Use updated configuration accordingly.
-				log.Printf("Value: %+v", snap.Value.(*DBConfig))
+		for ctx.Err() == nil {
+			snap, err := v.Watch(ctx)
+			if err != nil {
+				// Handle errors.
+				log.Printf("Error: %v", err)
+				continue
 			}
+			// Use updated configuration accordingly.
+			log.Printf("Value: %+v", snap.Value.(*DBConfig))
 		}
 	}()
 }
