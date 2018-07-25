@@ -53,7 +53,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to write to bucket: %s", err)
 	}
-	if err := w.Close(); err != nil {
+	if err = w.Close(); err != nil {
 		log.Fatalf("Failed to close: %s", err)
 	}
 }
