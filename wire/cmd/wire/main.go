@@ -42,7 +42,7 @@ func main() {
 	switch {
 	case len(os.Args) == 2 && (os.Args[1] == "help" || os.Args[1] == "-h" || os.Args[1] == "-help" || os.Args[1] == "--help"):
 		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(2)
+		os.Exit(0)
 	case len(os.Args) == 1 || len(os.Args) == 2 && os.Args[1] == "gen":
 		err = generate(".")
 	case len(os.Args) == 2 && os.Args[1] == "show":
