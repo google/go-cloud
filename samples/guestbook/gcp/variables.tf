@@ -19,12 +19,12 @@ variable "project" {
 
 variable "region" {
   type        = "string"
-  description = "GCP region to create database and storage in. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+  description = "GCP region to create database and storage in, for example 'us-central1'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
 }
 
 variable "zone" {
   type        = "string"
-  description = "GCP zone to create the GKE cluster in. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+  description = "GCP zone to create the GKE cluster in, for example 'us-central1-a'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
 }
 
 variable "server_service_account_name" {
