@@ -50,5 +50,9 @@ Go Cloud provides generic APIs for:
 -   Server startup and diagnostics: request logging, tracing, and health
     checking
 
+## Code of Conduct
+
+This project is covered by a [Code of Conduct](./CODE_OF_CONDUCT.md).
+
 [travis]: https://travis-ci.com/google/go-cloud
 [godoc]: http://godoc.org/github.com/google/go-cloud
