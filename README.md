@@ -34,12 +34,7 @@ Go Cloud builds at the latest stable release of Go. Previous Go versions may com
 
 **This project is in alpha and is not yet suitable for production.**
 
-While in alpha, the API is subject to breaking changes. We encourage you to experiment with Go Cloud and make contributions to help evolve it to meet your needs! All ideas and feedback are welcome.
-
-The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. Unfortunately, we cannot support every cloud provider directly from the project.
-
-If you create a repository that implements the Go Cloud interfaces for other cloud providers, let us know! :heart:
-We would be happy to link to it here and give you a heads-up before making any breaking changes.
+While in alpha, the API is subject to breaking changes.
 
 ## Current features
 
@@ -49,6 +44,19 @@ Go Cloud provides generic APIs for:
 -   Connecting to MySQL databases
 -   Server startup and diagnostics: request logging, tracing, and health
     checking
+
+## Contributing
+
+Thank you for your interest in contributing to Go Cloud! :heart:
+
+Everyone is welcome to contribute to Go Cloud, whether it's in the form of code, documentation, bug reports, feature requests, or anything else. We encourage you to experiment with Go Cloud and make contributions to help evolve it to meet your needs!
+
+The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. Unfortunately, we cannot support every cloud provider directly from the project.
+
+If you create a repository that implements the Go Cloud interfaces for other cloud providers, let us know!
+We would be happy to link to it here and give you a heads-up before making any breaking changes.
+
+See [the contributing guide](./CONTRIBUTING.md) for more details.
 
 ## Code of Conduct
 
