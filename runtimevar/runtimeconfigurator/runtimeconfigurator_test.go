@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build record replay
+
 package runtimeconfigurator
 
 import (
@@ -23,18 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/internal/testing/replay"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 const (
@@ -247,34 +243,6 @@ func TestWatchObservesChange(t *testing.T) {
 	case got.Value != want:
 		t.Errorf("got %v; want %v", got.Value, want)
 	}
-}
-
-func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mode := recorder.ModeRecording
-	if testing.Short() {
-		mode = recorder.ModeReplaying
-	}
-
-	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
-	if err != nil {
-		return nil, nil, err
-	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
-	}
-	opts = append(opts, rOpts...)
-	conn, err := grpc.DialContext(ctx, endPoint, opts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done, nil
 }
 
 // createConfig creates a fresh config. It will always overwrite any previous configuration,
