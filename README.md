@@ -31,12 +31,15 @@ Go Cloud builds at the latest stable release of Go. Previous Go versions may com
 [`samples/guestbook`](https://github.com/google/go-cloud/tree/master/samples/guestbook) contains an example guestbook application (just like it's 1999!) that can be run locally, on Google Cloud Platform or on Amazon Web Services. The instructions take about 5 minutes to follow if running locally. If you want to see the guestbook app running on cloud resources, it will take about 30 minutes to follow, and uses [Terraform](http://terraform.io) to automatically provision the resources needed.
 
 ## Project status
-While in alpha, the API is subject to breaking changes so is not yet suitable for production. We encourage you to experiment with Go Cloud and make contributions to help evolve it to meet your needs!
 
-[travis]: https://travis-ci.com/google/go-cloud
-[godoc]: http://godoc.org/github.com/google/go-cloud
+**This project is in alpha and is not yet suitable for production.**
 
-The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. If you create a repository that implements the Go Cloud interfaces for other cloud providers, let us know and we would be happy to link to it here.
+While in alpha, the API is subject to breaking changes. We encourage you to experiment with Go Cloud and make contributions to help evolve it to meet your needs! All ideas and feedback are welcome.
+
+The GitHub repository at [google/go-cloud](https://github.com/google/go-cloud) currently contains [Google Cloud Platform](http://cloud.google.com) and [Amazon Web Services](http://aws.amazon.com) implementations as examples to prove everything is working. Unfortunately, we cannot support every cloud provider directly from the project.
+
+If you create a repository that implements the Go Cloud interfaces for other cloud providers, let us know! :heart:
+We would be happy to link to it here and give you a heads-up before making any breaking changes.
 
 ## Current features
 
@@ -46,3 +49,6 @@ Go Cloud provides generic APIs for:
 -   Connecting to MySQL databases
 -   Server startup and diagnostics: request logging, tracing, and health
     checking
+
+[travis]: https://travis-ci.com/google/go-cloud
+[godoc]: http://godoc.org/github.com/google/go-cloud
