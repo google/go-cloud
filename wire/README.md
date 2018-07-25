@@ -142,7 +142,7 @@ import (
 	"example.com/foobarbaz"
 )
 
-func initializeApp(ctx context.Context) (foobarbaz.Baz, error) {
+func initializeBaz(ctx context.Context) (foobarbaz.Baz, error) {
 	wire.Build(foobarbaz.MegaSet)
 	return foobarbaz.Baz{}, nil
 }
