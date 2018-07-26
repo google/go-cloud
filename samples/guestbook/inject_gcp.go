@@ -45,7 +45,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		gcpMOTDVar,
 		gcpSQLParams,
 	)
-	return nil, func() {}, nil
+	return nil, nil, nil
 }
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on

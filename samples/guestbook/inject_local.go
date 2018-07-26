@@ -50,7 +50,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		localBucket,
 		localRuntimeVar,
 	)
-	return nil, func() {}, nil
+	return nil, nil, nil
 }
 
 // localBucket is a Wire provider function that returns a directory-based bucket

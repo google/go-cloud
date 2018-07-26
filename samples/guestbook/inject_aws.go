@@ -45,7 +45,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		awsMOTDVar,
 		awsSQLParams,
 	)
-	return nil, func() {}, nil
+	return nil, nil, nil
 }
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
