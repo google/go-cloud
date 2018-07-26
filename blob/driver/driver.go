@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"io"
+	"time"
 )
 
 // ErrorKind is a code to indicate the kind of failure.
@@ -66,6 +67,8 @@ type ObjectAttrs struct {
 	Size int64
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
+	// ModTime is the modified time of the blob object.
+	ModTime time.Time
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
