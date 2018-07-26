@@ -19,6 +19,7 @@ package gcsblob
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -50,12 +51,14 @@ type bucket struct {
 
 type reader struct {
 	*storage.Reader
+	modTime time.Time
 }
 
 func (r *reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
 		Size:        r.Size(),
 		ContentType: r.ContentType(),
+		ModTime:     r.modTime,
 	}
 }
 
@@ -65,11 +68,18 @@ func (r *reader) Attrs() *driver.ObjectAttrs {
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		if isErrNotExist(err) {
+			return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+		}
+		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+	}
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if isErrNotExist(err) {
 		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
-	return &reader{Reader: r}, err
+	return &reader{Reader: r, modTime: attrs.Updated}, err
 }
 
 // NewTypedWriter returns Writer that writes to an object associated with key.
