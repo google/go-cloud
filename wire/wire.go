@@ -30,10 +30,15 @@ func NewSet(...interface{}) ProviderSet {
 // providers to use. Its arguments are the same as NewSet. Its return
 // value is an error message that can be sent to panic.
 //
-// Example:
+// Examples:
 //
 //	func injector(ctx context.Context) (*sql.DB, error) {
 //		panic(wire.Build(otherpkg.FooSet, myProviderFunc))
+//	}
+//
+//	func injector(ctx context.Context) (*sql.DB, error) {
+//		wire.Build(otherpkg.FooSet, myProviderFunc)
+//		return nil, nil
 //	}
 func Build(...interface{}) string {
 	return "implementation not generated, run wire"
