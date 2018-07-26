@@ -21,8 +21,10 @@ before_install:
 install:
   - "go get -u golang.org/x/vgo"
   - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
+  - "vgo install ./wire/cmd/wire"
 
 script:
   # TRAVIS_PULL_REQUEST is set to "false" for branch builds, and the PR number
   # for pull request builds. Branch builds should test everything.
   - 'if [[ "$TRAVIS_PULL_REQUEST" != false ]]; then internal/testing/checkpr.sh -short -race; else vgo test -short -race ./...; fi'
+  - '[[ "$TRAVIS_PULL_REQUEST" != false ]] || internal/testing/wirecheck.sh'
