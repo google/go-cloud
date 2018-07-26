@@ -38,14 +38,14 @@ import (
 func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
-
-	panic(wire.Build(
+	wire.Build(
 		gcpcloud.GCP,
 		applicationSet,
 		gcpBucket,
 		gcpMOTDVar,
 		gcpSQLParams,
-	))
+	)
+	return nil, nil, nil
 }
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
