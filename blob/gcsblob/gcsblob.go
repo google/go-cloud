@@ -105,8 +105,6 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return err
 }
 
-const namingRuleURL = "https://cloud.google.com/storage/docs/naming"
-
 func bufferSize(size int) int {
 	if size == 0 {
 		return googleapi.DefaultUploadChunkSize

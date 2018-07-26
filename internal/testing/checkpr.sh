@@ -65,5 +65,5 @@ golangci-lint run \
   --disable=deadcode \
   --disable=typecheck \
   --disable=unused \
-  --disable=varcheck \
+  --build-tags wireinject \
   "${lintdirs[@]}" || exit 1
