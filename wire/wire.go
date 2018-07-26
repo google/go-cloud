@@ -33,12 +33,12 @@ func NewSet(...interface{}) ProviderSet {
 // Examples:
 //
 //	func injector(ctx context.Context) (*sql.DB, error) {
-//		panic(wire.Build(otherpkg.FooSet, myProviderFunc))
+//		wire.Build(otherpkg.FooSet, myProviderFunc)
+//		return nil, nil
 //	}
 //
 //	func injector(ctx context.Context) (*sql.DB, error) {
-//		wire.Build(otherpkg.FooSet, myProviderFunc)
-//		return nil, nil
+//		panic(wire.Build(otherpkg.FooSet, myProviderFunc))
 //	}
 func Build(...interface{}) string {
 	return "implementation not generated, run wire"
