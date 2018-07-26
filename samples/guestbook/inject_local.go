@@ -41,8 +41,7 @@ import (
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
-
-	panic(wire.Build(
+	wire.Build(
 		wire.Value(requestlog.Logger(nil)),
 		wire.Value(trace.Exporter(nil)),
 		server.Set,
@@ -50,7 +49,8 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		dialLocalSQL,
 		localBucket,
 		localRuntimeVar,
-	))
+	)
+	return nil, nil, nil
 }
 
 // localBucket is a Wire provider function that returns a directory-based bucket

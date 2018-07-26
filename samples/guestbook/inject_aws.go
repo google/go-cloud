@@ -38,14 +38,14 @@ import (
 func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
-
-	panic(wire.Build(
+	wire.Build(
 		awscloud.AWS,
 		applicationSet,
 		awsBucket,
 		awsMOTDVar,
 		awsSQLParams,
-	))
+	)
+	return nil, nil, nil
 }
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
