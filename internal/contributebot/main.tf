@@ -21,12 +21,32 @@ locals {
   appengine_service_account = "${var.project}@appspot.gserviceaccount.com"
 }
 
+resource "google_project_service" "cloudbuild" {
+  service            = "cloudbuild.googleapis.com"
+  project            = "${var.project}"
+  disable_on_destroy = false
+}
+
+# Service account for the event worker
+
+resource "google_service_account" "worker" {
+  account_id   = "${var.worker_service_account_name}"
+  project      = "${var.project}"
+  display_name = "Contribute Bot Server"
+}
+
 # Stackdriver Tracing
 
 resource "google_project_service" "trace" {
   service            = "cloudtrace.googleapis.com"
   project            = "${var.project}"
   disable_on_destroy = false
+}
+
+resource "google_project_iam_member" "worker_trace" {
+  role    = "roles/cloudtrace.agent"
+  project = "${var.project}"
+  member  = "serviceAccount:${google_service_account.worker.email}"
 }
 
 # Pub/Sub
@@ -44,10 +64,40 @@ data "google_iam_policy" "github_events" {
       "serviceAccount:${local.appengine_service_account}",
     ]
   }
+
+  binding {
+    role = "roles/pubsub.subscriber"
+
+    members = [
+      "serviceAccount:${google_service_account.worker.email}",
+    ]
+  }
 }
 
 resource "google_pubsub_topic_iam_policy" "github_events" {
   topic       = "${google_pubsub_topic.github_events.name}"
   project     = "${var.project}"
   policy_data = "${data.google_iam_policy.github_events.policy_data}"
+}
+
+resource "google_pubsub_subscription" "worker" {
+  name    = "contributebot-github-events"
+  topic   = "${google_pubsub_topic.github_events.id}"
+  project = "${var.project}"
+}
+
+data "google_iam_policy" "worker_subscription" {
+  binding {
+    role = "roles/pubsub.subscriber"
+
+    members = [
+      "serviceAccount:${google_service_account.worker.email}",
+    ]
+  }
+}
+
+resource "google_pubsub_subscription_iam_policy" "worker" {
+  subscription = "${google_pubsub_subscription.worker.id}"
+  project      = "${var.project}"
+  policy_data  = "${data.google_iam_policy.worker_subscription.policy_data}"
 }
