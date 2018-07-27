@@ -57,7 +57,7 @@ func Example() {
 // https://github.com/google/go-cloud/blob/master/wire/README.md#injectors
 // for more details.
 func setup(ctx context.Context) (*server.Server, func(), error) {
-	panic(wire.Build(
+	wire.Build(
 		// The GCP set includes all the default wiring for GCP, including
 		// for *server.Server.
 		gcpcloud.GCP,
@@ -66,7 +66,8 @@ func setup(ctx context.Context) (*server.Server, func(), error) {
 		// Health checks can be added to delay your server reporting healthy
 		// to the load balancer before critical dependencies are available.
 		wire.Value([]health.Checker{}),
-	))
+	)
+	return nil, nil, nil
 }
 
 // greet is an ordinary http.HandleFunc.
