@@ -24,6 +24,7 @@ if [[ -z "$TRAVIS_BRANCH" || -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
     echo "TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_SHA environment variables must be set." 1>&2
     exit 1
 fi
+cd "$( dirname "${BASH_SOURCE[0]}" )/../.." || exit 1
 
 testflags=( "$@" )
 module="github.com/google/go-cloud"
@@ -51,7 +52,7 @@ if has_files '^wire/'; then
   vgo test "${testflags[@]}" "$module/wire/..." || exit 1
 fi
 
-# Run linter.
+# Run linter and Wire checks.
 vgo mod -vendor || exit 1
 mapfile -t lintdirs < <( find . -type d \
   ! -path "./.git*" \
@@ -67,3 +68,4 @@ golangci-lint run \
   --disable=unused \
   --build-tags=wireinject \
   "${lintdirs[@]}" || exit 1
+internal/testing/wirecheck.sh || exit 1
