@@ -26,9 +26,10 @@ import (
 )
 
 func initialize(ctx context.Context) (*server.Server, error) {
-	panic(wire.Build(
+	wire.Build(
 		appSet,
 		gcpcloud.Services,
 		gcp.DefaultIdentity,
-	))
+	)
+	return nil, nil
 }
