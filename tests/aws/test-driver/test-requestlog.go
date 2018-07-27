@@ -19,35 +19,33 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/api/iterator"
-	cloudtracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v1"
-
+	"cloud.google.com/go/logging/logadmin"
 	"github.com/google/go-cloud/tests"
+	"google.golang.org/api/iterator"
 )
 
-type testTrace struct {
+type testRequestlog struct {
 	url string
 }
 
-func (t testTrace) Run() error {
-	tok, err := tests.TestGet(address + t.url)
+func (t testRequestlog) Run() error {
+	tok, err := tests.TestGet(serverAddr + t.url)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
 
 	time.Sleep(time.Minute)
-	return t.readTrace(tok)
+	return t.readLogEntries(tok)
 }
 
-func (t testTrace) readTrace(tok string) error {
-	req := &cloudtracepb.ListTracesRequest{
-		ProjectId: projectID,
-		Filter:    fmt.Sprintf("+root:%s%s", t.url, tok),
-	}
-	it := traceClient.ListTraces(context.Background(), req)
-	_, err := it.Next()
+func (t testRequestlog) readLogEntries(tok string) error {
+	iter := logadminClient.Entries(context.Background(),
+		logadmin.Filter(fmt.Sprintf(`timestamp >= %q`, tok)),
+		logadmin.Filter(fmt.Sprintf(`"%s%s"`, t.url, tok)),
+	)
+	_, err := iter.Next()
 	if err == iterator.Done {
-		return fmt.Errorf("no trace found for %s", tok)
+		return fmt.Errorf("no entry found for request log that matches %s", tok)
 	}
 	if err != nil {
 		return err
@@ -55,6 +53,6 @@ func (t testTrace) readTrace(tok string) error {
 	return nil
 }
 
-func (t testTrace) String() string {
+func (t testRequestlog) String() string {
 	return fmt.Sprintf("%T:%s", t, t.url)
 }

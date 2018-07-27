@@ -19,15 +19,13 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"sync"
-	"time"
 
 	"cloud.google.com/go/logging/logadmin"
 	tracepb "cloud.google.com/go/trace/apiv1"
+	"github.com/google/go-cloud/tests"
 )
 
 var (
@@ -60,7 +58,7 @@ func main() {
 		log.Fatalf("error creating trace client: %v\n", err)
 	}
 
-	tests := []test{
+	testCases := []tests.Test{
 		testRequestlog{
 			url: "/requestlog/",
 		},
@@ -69,10 +67,10 @@ func main() {
 		},
 	}
 	var wg sync.WaitGroup
-	wg.Add(len(tests))
+	wg.Add(len(testCases))
 
-	for _, t := range tests {
-		go func(t test) {
+	for _, tc := range testCases {
+		go func(t tests.Test) {
 			defer wg.Done()
 			log.Printf("Test %s running\n", t)
 			if err := t.Run(); err != nil {
@@ -80,22 +78,8 @@ func main() {
 			} else {
 				log.Printf("Test %s passed\n", t)
 			}
-		}(t)
+		}(tc)
 	}
 
 	wg.Wait()
-}
-
-type test interface {
-	Run() error
-}
-
-// get sends a GET request to the address with a suffix of random string.
-func get(addr string) (string, error) {
-	tok := url.PathEscape(time.Now().Format(time.RFC3339))
-	resp, err := http.Get(addr + tok)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error response got: %s", resp.Status)
-	}
-	return tok, err
 }
