@@ -12,7 +12,7 @@ import (
 	"github.com/google/go-cloud/internal/testing/replay"
 )
 
-var record = flag.Bool("record", false, "whether to record")
+var record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
 
 // NewAWSSession creates a new session for testing against AWS.
 // If the test is short, the session reads a replay file and runs the test as a replay,

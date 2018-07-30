@@ -43,8 +43,10 @@ const (
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
-var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
-var record = flag.Bool("record", false, "whether to record")
+var (
+	projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
+	record    = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
+)
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}

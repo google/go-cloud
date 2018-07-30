@@ -24,8 +24,10 @@ import (
 	"github.com/google/go-cloud/gcp"
 )
 
-var record = flag.Bool("record", false, "whether to record")
-var testBucket = flag.String("gcs-bucket", "pledged-solved-practically", "GCS bucket name used for testing")
+var (
+	record     = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
+	testBucket = flag.String("gcs-bucket", "pledged-solved-practically", "GCS bucket name used for testing")
+)
 
 func TestReadOfNonExistentFile(t *testing.T) {
 	if !*record {
