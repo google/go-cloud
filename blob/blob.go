@@ -156,7 +156,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if r, err = b.b.NewRangeReader(ctx, key, offset, length); err != nil {
 		return nil, newBlobError(err)
 	}
-	return &Reader{r: r},nil
+	return &Reader{r: r}, nil
 }
 
 // NewWriter returns a Writer that writes to an object associated with key.
