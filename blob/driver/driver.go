@@ -67,7 +67,7 @@ type ObjectAttrs struct {
 	Size int64
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
-	// ModTime is the modified time of the blob object.
+	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
 	ModTime time.Time
 }
 
