@@ -151,7 +151,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
 	}
-	var r io.Reader
+	var r driver.Reader
 	var err error
 	if r, err = b.b.NewRangeReader(ctx, key, offset, length); err != nil {
 		return nil, newBlobError(err)
