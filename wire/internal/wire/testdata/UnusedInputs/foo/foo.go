@@ -16,26 +16,24 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/google/go-cloud/wire"
 )
 
 func main() {
-	fmt.Println(injectFooBar(40))
+	fmt.Println(injectBaz())
 }
 
 type Foo int
 type Bar int
-type FooBar int
+type Baz int
 
-var Set = wire.NewSet(
-	provideBar,
-	provideFooBar)
+func provideFoo() Foo {
+	return 1
+}
 
 func provideBar() Bar {
 	return 2
 }
 
-func provideFooBar(foo Foo, bar Bar) FooBar {
-	return FooBar(foo) + FooBar(bar)
+func provideBaz(foo Foo) Baz {
+	return Baz(foo)
 }

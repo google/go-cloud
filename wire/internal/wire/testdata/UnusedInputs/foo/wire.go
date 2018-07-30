@@ -20,7 +20,7 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-func injectFooBar(foo Foo) FooBar {
-	wire.Build(Set)
+func injectBaz() Baz {
+	wire.Build(provideFoo, provideBar)
 	return 0
 }
