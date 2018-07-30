@@ -24,11 +24,12 @@ import (
 	"github.com/google/go-cloud/gcp"
 )
 
+var record = flag.Bool("record", false, "whether to record")
 var testBucket = flag.String("gcs-bucket", "pledged-solved-practically", "GCS bucket name used for testing")
 
 func TestReadOfNonExistentFile(t *testing.T) {
-	if testing.Short() {
-		// TODO(shantuo): use replay for short mode once
+	if !*record {
+		// TODO(shantuo): use replay once
 		// https://github.com/google/go-cloud/issues/49 is fixed.
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -53,8 +54,8 @@ func TestReadOfNonExistentFile(t *testing.T) {
 }
 
 func TestDeleteNonExistentFile(t *testing.T) {
-	if testing.Short() {
-		// TODO(shantuo): use replay for short mode once
+	if !*record {
+		// TODO(shantuo): use replay once
 		// https://github.com/google/go-cloud/issues/49 is fixed.
 		t.Skip("Skipping integration test in short mode")
 	}

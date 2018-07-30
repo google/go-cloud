@@ -239,7 +239,7 @@ func TestHTTPClientOpt(t *testing.T) {
 func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*gcp.HTTPClient, func(), error) {
 
 	mode := recorder.ModeRecording
-	if testing.Short() {
+	if !*record {
 		mode = recorder.ModeReplaying
 	}
 	r, done, err := replay.NewGCSRecorder(logf, mode, filepath)
