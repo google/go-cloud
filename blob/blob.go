@@ -26,8 +26,8 @@ import (
 	"github.com/google/go-cloud/blob/driver"
 )
 
-// Reader implements io.ReadCloser to read from blob. It must be closed after
-// reads finished. It also provides the size of the blob.
+// Reader implements io.ReadCloser to read a blob. It must be closed after
+// reads are finished. It also provides the Size and ContentType of the blob.
 type Reader struct {
 	r driver.Reader
 }
@@ -52,12 +52,12 @@ func (r *Reader) Size() int64 {
 	return r.r.Attrs().Size
 }
 
-// Writer implements io.WriteCloser to write to blob. It must be closed after
+// Writer implements io.WriteCloser to write a blob. It must be closed after
 // all writes are done.
 type Writer struct {
 	w driver.Writer
 
-	// This fields exist only when w is not created in the first place when
+	// These fields exist only when w is not created in the first place when
 	// NewWriter is called.
 	ctx    context.Context
 	bucket driver.Bucket
@@ -72,15 +72,15 @@ const sniffLen = 512
 // Write implements the io.Writer interface.
 //
 // The writes happen asynchronously, which means the returned error can be nil
-// even if the actual write fails. Use the error returned from Close method to
-// check and handle error.
+// even if the actual write fails. Use the error returned from Close to
+// check and handle errors.
 func (w *Writer) Write(p []byte) (n int, err error) {
 	if w.w != nil {
 		return w.w.Write(p)
 	}
 
-	// If w is not created due to no content-type is passed in, Write will try to
-	// sniff the MIME type base on at most 512 bytes of the blob content of p.
+	// If w is not yet created due to no content-type being passed in, try to sniff
+	// the MIME type based on at most 512 bytes of the blob content of p.
 
 	// Detect the content-type directly if the first chunk is at least 512 bytes.
 	if w.buf.Len() == 0 && len(p) >= sniffLen {
@@ -96,8 +96,8 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Close flushes any buffered data and completes the Write. It is user's responsibility
-// to call it after finishing the write and handle the error if returned.
+// Close flushes any buffered data and completes the Write. It is the user's
+// responsibility to call it after finishing the write and handle the error if returned.
 func (w *Writer) Close() error {
 	if w.w != nil {
 		return w.w.Close()
@@ -115,6 +115,9 @@ func (w *Writer) open(p []byte) (n int, err error) {
 		return 0, err
 	}
 	w.buf = nil
+	w.ctx = nil
+	w.key = ""
+	w.opt = nil
 	return w.w.Write(p)
 }
 
@@ -130,7 +133,7 @@ func NewBucket(b driver.Bucket) *Bucket {
 }
 
 // NewReader returns a Reader to read from an object, or an error when the object
-// is not found by the given key, use IsNotExist to check for it.
+// is not found by the given key, which can be checked by calling IsNotExist.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
@@ -148,11 +151,15 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
 	}
-	r, err := b.b.NewRangeReader(ctx, key, offset, length)
-	return &Reader{r: r}, newBlobError(err)
+	var r io.Reader
+	var err error
+	if r, err = b.b.NewRangeReader(ctx, key, offset, length); err != nil {
+		return nil, newBlobError(err)
+	}
+	return &Reader{r: r},nil
 }
 
-// NewWriter returns Writer that writes to an object associated with key.
+// NewWriter returns a Writer that writes to an object associated with key.
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same key will be replaced. The object
@@ -172,8 +179,10 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 				return nil, err
 			}
 			ct := mime.FormatMediaType(t, p)
-			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
-			return &Writer{w: w}, err
+			if w, err = b.b.NewTypedWriter(ctx, key, ct, dopt); err != nil {
+				return nil, err
+			}
+			return &Writer{w: w}, nil
 		}
 	}
 	return &Writer{
@@ -191,9 +200,9 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 	return newBlobError(b.b.Delete(ctx, key))
 }
 
-// WriterOptions controls behaviors of Writer.
+// WriterOptions controls Writer behaviors.
 type WriterOptions struct {
-	// BufferSize changes the default size in byte of the maximum part Writer can
+	// BufferSize changes the default size in bytes of the maximum part Writer can
 	// write in a single request. Larger objects will be split into multiple requests.
 	//
 	// The support specification of this operation varies depending on the underlying
@@ -232,7 +241,7 @@ func newBlobError(err error) error {
 	return berr
 }
 
-// IsNotExist returns wheter an error is a driver.Error with NotFound kind.
+// IsNotExist returns whether an error is a driver.Error with NotFound kind.
 func IsNotExist(err error) bool {
 	if e, ok := err.(*blobError); ok {
 		return e.kind == driver.NotFound
