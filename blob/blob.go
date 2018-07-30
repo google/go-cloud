@@ -27,7 +27,7 @@ import (
 )
 
 // Reader implements io.ReadCloser to read a blob. It must be closed after
-// reads are finished. It also provides the Size and ContentType of the blob.
+// reads are finished.
 type Reader struct {
 	r driver.Reader
 }
@@ -151,12 +151,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
 	}
-	var r driver.Reader
-	var err error
-	if r, err = b.b.NewRangeReader(ctx, key, offset, length); err != nil {
-		return nil, newBlobError(err)
-	}
-	return &Reader{r: r}, nil
+	r, err := b.b.NewRangeReader(ctx, key, offset, length)
+	return &Reader{r: r}, newBlobError(err)
 }
 
 // NewWriter returns a Writer that writes to an object associated with key.
@@ -179,10 +175,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 				return nil, err
 			}
 			ct := mime.FormatMediaType(t, p)
-			if w, err = b.b.NewTypedWriter(ctx, key, ct, dopt); err != nil {
-				return nil, err
-			}
-			return &Writer{w: w}, nil
+			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
+			return &Writer{w: w}, err
 		}
 	}
 	return &Writer{
