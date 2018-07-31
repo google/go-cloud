@@ -36,7 +36,7 @@ func (f *Foo) Foo() string {
 }
 
 func provideFoo() *Foo {
-	f :=new (Foo)
+	f := new(Foo)
 	*f = 1
 	return f
 }
