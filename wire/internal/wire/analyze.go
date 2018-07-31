@@ -241,7 +241,17 @@ dfs:
 	if len(ec.errors) > 0 {
 		return nil, ec.errors
 	}
+	verifyArgsUsed(set, ec) 
+	if len(ec.errors) > 0 {
+		return nil, ec.errors
+	}
 	return calls, nil
+}
+
+func verifyArgsUsed(set *ProviderSet, ec *errorCollector) {
+	fmt.Println("++VERIFY ARGS")
+	for _, imp := range set.Imports {
+		fmt.Printf("
 }
 
 // buildProviderMap creates the providerMap and srcMap fields for a given provider set.
@@ -263,6 +273,7 @@ func buildProviderMap(fset *token.FileSet, hasher typeutil.Hasher, set *Provider
 				continue
 			}
 			providerMap.Set(k, imp.providerMap.At(k))
+			srcMap.Set(k, &providerSetSrc{Import: imp})
 			setMap.Set(k, imp)
 		}
 	}
@@ -277,6 +288,7 @@ func buildProviderMap(fset *token.FileSet, hasher typeutil.Hasher, set *Provider
 			continue
 		}
 		providerMap.Set(p.Out, p)
+		srcMap.Set(p.Out, &providerSetSrc{Provider: p})
 		setMap.Set(p.Out, set)
 	}
 	for _, v := range set.Values {
@@ -285,6 +297,7 @@ func buildProviderMap(fset *token.FileSet, hasher typeutil.Hasher, set *Provider
 			continue
 		}
 		providerMap.Set(v.Out, v)
+		srcMap.Set(v.Out, &providerSetSrc{Value: v})
 		setMap.Set(v.Out, set)
 	}
 	if len(ec.errors) > 0 {
@@ -306,6 +319,7 @@ func buildProviderMap(fset *token.FileSet, hasher typeutil.Hasher, set *Provider
 			continue
 		}
 		providerMap.Set(b.Iface, concrete)
+		srcMap.Set(b.Iface, &providerSetSrc{Binding: b})
 		setMap.Set(b.Iface, set)
 	}
 	if len(ec.errors) > 0 {

@@ -36,6 +36,7 @@ type providerSetSrc struct {
 	Binding *IfaceBinding
 	Value *Value
 	Import *ProviderSet
+	Refere
 }
 
 // A ProviderSet describes a set of providers.  The zero value is an empty
