@@ -28,6 +28,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/replay"
+	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
@@ -43,10 +44,7 @@ const (
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
-var (
-	projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
-	record    = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
-)
+var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
@@ -259,7 +257,7 @@ func newConfigClient(ctx context.Context, logf func(string, ...interface{}), fil
 	}
 
 	mode := recorder.ModeReplaying
-	if *record {
+	if *setup.Record {
 		mode = recorder.ModeRecording
 	}
 

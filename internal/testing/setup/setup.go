@@ -12,7 +12,7 @@ import (
 	"github.com/google/go-cloud/internal/testing/replay"
 )
 
-var record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
+var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
 
 // NewAWSSession creates a new session for testing against AWS.
 // If the test is short, the session reads a replay file and runs the test as a replay,
@@ -21,7 +21,7 @@ var record = flag.Bool("record", false, "whether to run tests against cloud reso
 // as a new replay file.
 func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session, done func()) {
 	mode := recorder.ModeReplaying
-	if *record {
+	if *Record {
 		mode = recorder.ModeRecording
 	}
 	r, done, err := replay.NewAWSRecorder(t.Logf, mode, filename)
@@ -35,7 +35,7 @@ func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session
 
 	// Provide fake creds if running in replay mode.
 	var creds *credentials.Credentials
-	if !*record {
+	if !*Record {
 		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
 
