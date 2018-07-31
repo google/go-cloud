@@ -89,4 +89,4 @@ done
 
 # Run test driver.
 log "Running test:"
-cd "$test_dir/app" && vgo test -v -args --address "http://${endpoint}" --project "$project_id" || exit 1
+( cd "$test_dir/app" && vgo test -v -args --address "http://${endpoint}" --project "$project_id" ) || exit 1

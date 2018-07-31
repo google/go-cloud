@@ -18,15 +18,18 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
-	"net/url"
 	"testing"
-	"time"
 
 	"cloud.google.com/go/logging/logadmin"
 	tracepb "cloud.google.com/go/trace/apiv1"
+	"github.com/google/go-cloud/tests/internal/testutil"
 	"google.golang.org/api/iterator"
 	cloudtracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v1"
+)
+
+const (
+	requestlogURL = "/requestlog/"
+	traceURL      = "/trace/"
 )
 
 var (
@@ -39,75 +42,53 @@ func init() {
 	flag.StringVar(&projectID, "project", "", "GCP project used to deploy and run tests")
 }
 
-// get sends a GET request to the address with a suffix of random string.
-func get(addr string) (string, error) {
-	tok := url.PathEscape(time.Now().Format(time.RFC3339))
-	resp, err := http.Get(addr + tok)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error response got: %s", resp.Status)
-	}
-	return tok, err
-}
-
 func TestRequestlog(t *testing.T) {
 	t.Parallel()
-	const url = "/requestlog/"
-	tok, err := get(address + url)
-	if err != nil {
-		t.Fatal("error sending request:", err)
-	}
-
-	time.Sleep(time.Minute)
-	readLogEntries(context.Background(), t, url, tok)
+	tok := testutil.URLSuffix(address + requestlogURL)
+	testutil.Retry(t, address+requestlogURL+tok, testutil.Get)
+	testutil.Retry(t, tok, readLogEntries)
 }
 
-func readLogEntries(ctx context.Context, t *testing.T, url, tok string) {
+func readLogEntries(tok string) error {
+	ctx := context.Background()
 	logadminClient, err := logadmin.NewClient(ctx, projectID)
 	if err != nil {
-		t.Fatal("error creating logadmin client:", err)
+		return fmt.Errorf("error creating logadmin client: %v", err)
 	}
 
 	iter := logadminClient.Entries(context.Background(),
-		logadmin.Filter(fmt.Sprintf(`timestamp >= %q`, tok)),
-		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = "%s%s"`, url, tok)),
+		logadmin.ProjectIDs([]string{projectID}),
+		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = "%s%s"`, requestlogURL, tok)),
 	)
 	_, err = iter.Next()
 	if err == iterator.Done {
-		t.Errorf("no entry found for request log that matches %s", tok)
+		return fmt.Errorf("no entry found for request log that matches %s", tok)
 	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	return err
 }
 
 func TestTrace(t *testing.T) {
 	t.Parallel()
-	const url = "/trace/"
-	tok, err := get(address + url)
-	if err != nil {
-		t.Fatal("error sending request:", err)
-	}
-
-	time.Sleep(time.Minute)
-	readTrace(context.Background(), t, url, tok)
+	tok := testutil.URLSuffix(address + traceURL)
+	testutil.Retry(t, address+traceURL+tok, testutil.Get)
+	testutil.Retry(t, tok, readTrace)
 }
 
-func readTrace(ctx context.Context, t *testing.T, url, tok string) {
+func readTrace(tok string) error {
+	ctx := context.Background()
 	traceClient, err := tracepb.NewClient(ctx)
 	if err != nil {
-		t.Fatalf("error creating trace client: %v\n", err)
+		return fmt.Errorf("error creating trace client: %v\n", err)
 	}
 
 	req := &cloudtracepb.ListTracesRequest{
 		ProjectId: projectID,
-		Filter:    fmt.Sprintf("+root:%s%s", url, tok),
+		Filter:    fmt.Sprintf("+root:%s%s", traceURL, tok),
 	}
 	it := traceClient.ListTraces(context.Background(), req)
 	_, err = it.Next()
 	if err == iterator.Done {
-		t.Errorf("no trace found for %s", tok)
+		return fmt.Errorf("no trace found for %s", tok)
 	}
-	if err != nil {
-		t.Fatal(err)
-	}
+	return err
 }
