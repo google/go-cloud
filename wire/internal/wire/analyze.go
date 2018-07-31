@@ -230,14 +230,15 @@ dfs:
 	if len(ec.errors) > 0 {
 		return nil, ec.errors
 	}
-	verifyArgsUsed(set, used, ec)
-	if len(ec.errors) > 0 {
-		return nil, ec.errors
+	if errs := verifyArgsUsed(set, used); len(errs) > 0 {
+		return nil, errs
 	}
 	return calls, nil
 }
 
-func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector) {
+// verifyArgsUsed ensures that all of the arguments in set were used during solve.
+func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
+	var errs []error
 	for _, imp := range set.Imports {
 		found := false
 		for _, u := range used {
@@ -247,7 +248,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector
 			}
 		}
 		if !found {
-			ec.add(errors.New("unused provider set"))
+			errs = append(errs, errors.New("unused provider set"))
 		}
 	}
 	for _, p := range set.Providers {
@@ -259,7 +260,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector
 			}
 		}
 		if !found {
-			ec.add(fmt.Errorf("unused provider %q", p.Name))
+			errs = append(errs, fmt.Errorf("unused provider %q", p.Name))
 		}
 	}
 	for _, v := range set.Values {
@@ -271,7 +272,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector
 			}
 		}
 		if !found {
-			ec.add(errors.New("unused value"))
+			errs = append(errs, errors.New("unused value"))
 		}
 	}
 	for _, b := range set.Bindings {
@@ -283,9 +284,10 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector
 			}
 		}
 		if !found {
-			ec.add(errors.New("unused interface binding"))
+			errs = append(errs, errors.New("unused interface binding"))
 		}
 	}
+	return errs
 }
 
 // buildProviderMap creates the providerMap and srcMap fields for a given provider set.
