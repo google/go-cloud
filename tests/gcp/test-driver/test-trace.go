@@ -17,7 +17,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/google/go-cloud/tests/internal"
 
 	"google.golang.org/api/iterator"
 	cloudtracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v1"
@@ -28,13 +29,12 @@ type testTrace struct {
 }
 
 func (t testTrace) Run() error {
-	tok, err := get(address + t.url)
+	tok, err := internal.TestGet(address + t.url)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
 
-	time.Sleep(time.Minute)
-	return t.readTrace(tok)
+	return internal.Retry(tok, t.readTrace)
 }
 
 func (t testTrace) readTrace(tok string) error {

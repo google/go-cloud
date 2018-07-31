@@ -17,7 +17,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/google/go-cloud/tests/internal"
 
 	"cloud.google.com/go/logging/logadmin"
 	"google.golang.org/api/iterator"
@@ -28,13 +29,12 @@ type testRequestlog struct {
 }
 
 func (t testRequestlog) Run() error {
-	tok, err := get(address + t.url)
+	tok, err := internal.TestGet(address + t.url)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
 
-	time.Sleep(time.Minute)
-	return t.readLogEntries(tok)
+	return internal.Retry(tok, t.readLogEntries)
 }
 
 func (t testRequestlog) readLogEntries(tok string) error {

@@ -19,16 +19,20 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"net/url"
-	"sync"
+	"os"
 	"time"
+
+	"github.com/google/go-cloud/tests/internal"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 
 	"cloud.google.com/go/logging/logadmin"
 	tracepb "cloud.google.com/go/trace/apiv1"
 )
+
+const dialTimeout = 5 * time.Second
 
 var (
 	address        string
@@ -46,21 +50,28 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	var err error
-	if _, err = http.Get(address); err != nil {
+	err := internal.Retry(address, func(url string) error {
+		client := http.Client{
+			Timeout: dialTimeout,
+		}
+		_, err := client.Get(url)
+		return err
+	})
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	logadminClient, err = logadmin.NewClient(ctx, projectID)
+	opt := option.WithGRPCDialOption(grpc.WithTimeout(dialTimeout))
+	logadminClient, err = logadmin.NewClient(ctx, projectID, opt)
 	if err != nil {
 		log.Fatalf("error creating logadmin client: %v\n", err)
 	}
-	traceClient, err = tracepb.NewClient(ctx)
+	traceClient, err = tracepb.NewClient(ctx, opt)
 	if err != nil {
 		log.Fatalf("error creating trace client: %v\n", err)
 	}
 
-	tests := []test{
+	tests := []internal.Test{
 		testRequestlog{
 			url: "/requestlog/",
 		},
@@ -68,34 +79,7 @@ func main() {
 			url: "/trace/",
 		},
 	}
-	var wg sync.WaitGroup
-	wg.Add(len(tests))
-
-	for _, t := range tests {
-		go func(t test) {
-			defer wg.Done()
-			log.Printf("Test %s running\n", t)
-			if err := t.Run(); err != nil {
-				log.Printf("Test %s failed: %v\n", t, err)
-			} else {
-				log.Printf("Test %s passed\n", t)
-			}
-		}(t)
+	if !internal.RunTests(tests) {
+		os.Exit(1)
 	}
-
-	wg.Wait()
-}
-
-type test interface {
-	Run() error
-}
-
-// get sends a GET request to the address with a suffix of random string.
-func get(addr string) (string, error) {
-	tok := url.PathEscape(time.Now().Format(time.RFC3339))
-	resp, err := http.Get(addr + tok)
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error response got: %s", resp.Status)
-	}
-	return tok, err
 }

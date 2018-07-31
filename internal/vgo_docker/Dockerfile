@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://dl.google.com/go/go1.10.3.linux-amd64.tar.gz \
   | tar -C /usr/local -xzf -
 RUN git clone https://go.googlesource.com/vgo /gopath/src/golang.org/x/vgo \
-  && git -C /gopath/src/golang.org/x/vgo checkout 0f3e556044ecbd8a0805d098e52a743a1d0e3566 \
+  && git -C /gopath/src/golang.org/x/vgo checkout 1e80ef2e105ea83a5443ba96d4414a35e8719672 \
   && GOPATH=/gopath /usr/local/go/bin/go build -o /usr/local/bin/vgo golang.org/x/vgo \
   && rm -rf /gopath
 
@@ -36,6 +36,6 @@ ENV PATH /usr/local/go/bin:/usr/local/bin:/usr/bin
 VOLUME /gopath
 ENV GOPATH /gopath
 LABEL "github.com/google/go-cloud/go-version"="1.10.3"
-LABEL "github.com/google/go-cloud/vgo-commit"="0f3e556044ecbd8a0805d098e52a743a1d0e3566"
+LABEL "github.com/google/go-cloud/vgo-commit"="1e80ef2e105ea83a5443ba96d4414a35e8719672"
 
 ENTRYPOINT ["vgo"]
