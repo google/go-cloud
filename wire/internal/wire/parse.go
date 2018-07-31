@@ -33,10 +33,9 @@ import (
 // Exactly one of the fields will be set.
 type providerSetSrc struct {
 	Provider *Provider
-	Binding *IfaceBinding
-	Value *Value
-	Import *ProviderSet
-	Refere
+	Binding  *IfaceBinding
+	Value    *Value
+	Import   *ProviderSet
 }
 
 // A ProviderSet describes a set of providers.  The zero value is an empty

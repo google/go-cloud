@@ -80,10 +80,6 @@ type call struct {
 // solve finds the sequence of calls required to produce an output type
 // with an optional set of provided inputs.
 func solve(fset *token.FileSet, out types.Type, given []types.Type, set *ProviderSet) ([]call, []error) {
-	fmt.Printf("++solve out: %v, given: %v, set.Pos: %v\n", out, given, set.Pos)
-	for _, p := range set.Providers {
-		fmt.Printf("  provider %v\n", p)
-	}
 	ec := new(errorCollector)
 	for i, g := range given {
 		for _, h := range given[:i] {
@@ -121,6 +117,7 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 	// guaranteed to be acyclic. An index value of errAbort indicates that
 	// the type was visited, but failed due to an error added to ec.
 	errAbort := errors.New("failed to visit")
+	var used []*providerSetSrc
 	var calls []call
 	type frame struct {
 		t    types.Type
@@ -129,15 +126,11 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 	stk := []frame{{t: out}}
 dfs:
 	for len(stk) > 0 {
-		fmt.Printf("stk now of size %d\n", len(stk))
 		curr := stk[len(stk)-1]
 		stk = stk[:len(stk)-1]
-		fmt.Printf("  %v -> %v\n", curr.t, curr.from)
 		if index.At(curr.t) != nil {
-			fmt.Printf("  -> already found in index\n")
 			continue
 		}
-		fmt.Printf("  set.For = %v\n", set.For(curr.t))
 
 		switch pv := set.For(curr.t); {
 		case pv.IsNil():
@@ -152,16 +145,15 @@ dfs:
 			continue
 		case pv.IsProvider():
 			p := pv.Provider()
-			fmt.Printf("  found provider %v\n", p)
+			src := set.srcMap.At(curr.t).(*providerSetSrc)
+			used = append(used, src)
 			if !types.Identical(p.Out, curr.t) {
 				// Interface binding.  Don't create a call ourselves.
 				i := index.At(p.Out)
 				if i == nil {
-					fmt.Printf("  interface binding\n")
 					stk = append(stk, curr, frame{t: p.Out, from: curr.t})
 					continue
 				}
-				fmt.Printf("  setting to %d\n", i)
 				index.Set(curr.t, i)
 				continue
 			}
@@ -171,23 +163,18 @@ dfs:
 			visitedArgs := true
 			for i := len(p.Args) - 1; i >= 0; i-- {
 				a := p.Args[i]
-				fmt.Printf("    checking provider arg %d=%v\n", i, a)
 				if index.At(a.Type) == nil {
-					fmt.Printf("    not found in index\n")
 					if visitedArgs {
 						// Make sure to re-visit this type after visiting all arguments.
-						fmt.Printf("    adding curr to stack\n")
 						stk = append(stk, curr)
 						visitedArgs = false
 					}
-					fmt.Printf("    adding %v -> %v to stack\n", a.Type, curr.t)
 					stk = append(stk, frame{t: a.Type, from: curr.t})
 				}
 			}
 			if !visitedArgs {
 				continue
 			}
-			fmt.Printf("    visited args, generating call!\n")
 			args := make([]int, len(p.Args))
 			ins := make([]types.Type, len(p.Args))
 			for i := range p.Args {
@@ -227,6 +214,8 @@ dfs:
 				index.Set(curr.t, i)
 				continue
 			}
+			src := set.srcMap.At(curr.t).(*providerSetSrc)
+			used = append(used, src)
 			index.Set(curr.t, len(given)+len(calls))
 			calls = append(calls, call{
 				kind:          valueExpr,
@@ -241,17 +230,61 @@ dfs:
 	if len(ec.errors) > 0 {
 		return nil, ec.errors
 	}
-	verifyArgsUsed(set, ec) 
+	verifyArgsUsed(set, used, ec)
 	if len(ec.errors) > 0 {
 		return nil, ec.errors
 	}
 	return calls, nil
 }
 
-func verifyArgsUsed(set *ProviderSet, ec *errorCollector) {
-	fmt.Println("++VERIFY ARGS")
+func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc, ec *errorCollector) {
 	for _, imp := range set.Imports {
-		fmt.Printf("  import %v\n", imp)
+		found := false
+		for _, u := range used {
+			if u.Import == imp {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ec.add(errors.New("unused provider set"))
+		}
+	}
+	for _, p := range set.Providers {
+		found := false
+		for _, u := range used {
+			if u.Provider == p {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ec.add(fmt.Errorf("unused provider %q", p.Name))
+		}
+	}
+	for _, v := range set.Values {
+		found := false
+		for _, u := range used {
+			if u.Value == v {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ec.add(errors.New("unused value"))
+		}
+	}
+	for _, b := range set.Bindings {
+		found := false
+		for _, u := range used {
+			if u.Binding == b {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ec.add(errors.New("unused interface binding"))
+		}
 	}
 }
 

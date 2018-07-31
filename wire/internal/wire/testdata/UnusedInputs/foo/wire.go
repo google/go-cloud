@@ -20,7 +20,14 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-func injectBaz() Baz {
-	wire.Build(provideFoo, provideBar, provideBaz)
+func injectBar() Bar {
+	wire.Build(
+		provideFoo,                            // needed as input for provideBar
+		provideBar,                            // needed for Bar
+		provideUnused,                         // not needed -> error
+		wire.Value("unused"),                  // not needed -> error
+		wire.NewSet(provideUnusedInSet),       // nothing in set is needed -> error
+		wire.Bind((*Fooer)(nil), (*Foo)(nil)), // binding to Fooer is not needed -> error
+	)
 	return 0
 }

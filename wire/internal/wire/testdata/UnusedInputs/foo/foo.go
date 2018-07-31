@@ -19,21 +19,36 @@ import (
 )
 
 func main() {
-	fmt.Println(injectBaz())
+	fmt.Println(injectBar())
 }
 
 type Foo int
 type Bar int
-type Baz int
+type Unused int
+type UnusedInSet int
 
-func provideFoo() Foo {
+type Fooer interface {
+	Foo() string
+}
+
+func (f *Foo) Foo() string {
+	return fmt.Sprintf("Hello World %d", f)
+}
+
+func provideFoo() *Foo {
+	f :=new (Foo)
+	*f = 1
+	return f
+}
+
+func provideBar(foo *Foo) Bar {
+	return Bar(*foo)
+}
+
+func provideUnused() Unused {
 	return 1
 }
 
-func provideBar() Bar {
-	return 2
-}
-
-func provideBaz(foo Foo) Baz {
-	return Baz(foo)
+func provideUnusedInSet() UnusedInSet {
+	return 1
 }
