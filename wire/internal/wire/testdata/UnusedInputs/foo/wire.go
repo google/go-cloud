@@ -21,6 +21,6 @@ import (
 )
 
 func injectBaz() Baz {
-	wire.Build(provideFoo, provideBar)
+	wire.Build(provideFoo, provideBar, provideBaz)
 	return 0
 }
