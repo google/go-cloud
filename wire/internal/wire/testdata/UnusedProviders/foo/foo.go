@@ -16,6 +16,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/google/go-cloud/wire"
 )
 
 func main() {
@@ -26,6 +28,13 @@ type Foo int
 type Bar int
 type Unused int
 type UnusedInSet int
+type OneOfTwo int
+type TwoOfTwo int
+
+var (
+	unusedSet        = wire.NewSet(provideUnusedInSet)
+	partiallyUsedSet = wire.NewSet(provideOneOfTwo, provideTwoOfTwo)
+)
 
 type Fooer interface {
 	Foo() string
@@ -41,8 +50,8 @@ func provideFoo() *Foo {
 	return f
 }
 
-func provideBar(foo *Foo) Bar {
-	return Bar(*foo)
+func provideBar(foo *Foo, one OneOfTwo) Bar {
+	return Bar(int(*foo) + int(one))
 }
 
 func provideUnused() Unused {
@@ -50,5 +59,13 @@ func provideUnused() Unused {
 }
 
 func provideUnusedInSet() UnusedInSet {
+	return 1
+}
+
+func provideOneOfTwo() OneOfTwo {
+	return 1
+}
+
+func provideTwoOfTwo() TwoOfTwo {
 	return 1
 }

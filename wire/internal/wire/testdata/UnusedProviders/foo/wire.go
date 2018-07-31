@@ -24,9 +24,10 @@ func injectBar() Bar {
 	wire.Build(
 		provideFoo,                            // needed as input for provideBar
 		provideBar,                            // needed for Bar
+		partiallyUsedSet,                      // 1/2 providers in the set is needed
 		provideUnused,                         // not needed -> error
 		wire.Value("unused"),                  // not needed -> error
-		wire.NewSet(provideUnusedInSet),       // nothing in set is needed -> error
+		unusedSet,                             // nothing in set is needed -> error
 		wire.Bind((*Fooer)(nil), (*Foo)(nil)), // binding to Fooer is not needed -> error
 	)
 	return 0
