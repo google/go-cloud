@@ -272,7 +272,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
 			}
 		}
 		if !found {
-			errs = append(errs, errors.New("unused value"))
+			errs = append(errs, fmt.Errorf("unused value of type %s", types.TypeString(v.Out, nil)))
 		}
 	}
 	for _, b := range set.Bindings {
@@ -284,7 +284,7 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
 			}
 		}
 		if !found {
-			errs = append(errs, errors.New("unused interface binding"))
+			errs = append(errs, fmt.Errorf("unused interface binding to type %s", types.TypeString(b.Iface, nil)))
 		}
 	}
 	return errs
