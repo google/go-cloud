@@ -248,7 +248,11 @@ func verifyArgsUsed(set *ProviderSet, used []*providerSetSrc) []error {
 			}
 		}
 		if !found {
-			errs = append(errs, errors.New("unused provider set"))
+			if imp.Name == "" {
+				errs = append(errs, errors.New("unused provider set"))
+			} else {
+				errs = append(errs, fmt.Errorf("unused provider set %q", imp.Name))
+			}
 		}
 	}
 	for _, p := range set.Providers {
