@@ -42,7 +42,7 @@ func init() {
 	flag.StringVar(&projectID, "project", "", "GCP project used to deploy and run tests")
 }
 
-func TestRequestlog(t *testing.T) {
+func TestRequestLog(t *testing.T) {
 	t.Parallel()
 	tok := testutil.URLSuffix(address + requestlogURL)
 	testutil.Retry(t, address+requestlogURL+tok, testutil.Get)

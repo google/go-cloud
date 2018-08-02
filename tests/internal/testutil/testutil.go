@@ -17,6 +17,8 @@
 package testutil
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -55,7 +57,12 @@ func Get(addr string) error {
 	return err
 }
 
-// URLSuffix append a human-readible suffix to the test URL.
-func URLSuffix(addr string) string {
-	return url.PathEscape(time.Now().Format(time.RFC3339))
+// URLSuffix generates a human-readible suffix to the test URL.
+func URLSuffix(addr string) (string, error) {
+	t := url.PathEscape(time.Now().Format(time.RFC3339))
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return t + "/" + hex.EncodeToString(b), nil
 }
