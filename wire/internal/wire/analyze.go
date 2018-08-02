@@ -429,12 +429,12 @@ func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) []error {
 func bindingConflictError(fset *token.FileSet, pos token.Pos, typ types.Type, prevSet *ProviderSet) error {
 	typString := types.TypeString(typ, nil)
 	var err error
-	if prevSet.Name == "" {
+	if prevSet.VarName == "" {
 		err = fmt.Errorf("multiple bindings for %s (previous binding at %v)",
 			typString, fset.Position(prevSet.Pos))
 	} else {
 		err = fmt.Errorf("multiple bindings for %s (previous binding in %q.%s)",
-			typString, prevSet.PkgPath, prevSet.Name)
+			typString, prevSet.PkgPath, prevSet.VarName)
 	}
 	return notePosition(fset.Position(pos), err)
 }
