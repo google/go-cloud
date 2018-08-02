@@ -72,7 +72,7 @@ func TestWire(t *testing.T) {
 	}
 
 	if *setup.Record {
-		t.Run("Generation", func(t *testing.T) {
+		t.Run("Generate", func(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(build.Default.GOROOT, "bin", "go")); err != nil {
 				t.Skip("go toolchain not available:", err)
 			}
