@@ -31,6 +31,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/google/go-cloud/internal/testing/setup"
 )
 
 func TestWire(t *testing.T) {
@@ -59,88 +61,106 @@ func TestWire(t *testing.T) {
 	}
 	wd := filepath.Join(magicGOPATH(), "src")
 
-	t.Run("Generate", func(t *testing.T) {
-		if _, err := os.Stat(filepath.Join(build.Default.GOROOT, "bin", "go")); err != nil {
-			t.Skip("go toolchain not available:", err)
-		}
-		for _, test := range tests {
-			test := test
-			t.Run(test.name, func(t *testing.T) {
-				t.Parallel()
+	if err := os.MkdirAll("golden", 0777); err != nil {
+		t.Fatalf("Failed to create golden dir for checked Wire output: %v", err)
+	}
 
-				// Run Wire from a fake build context.
-				bctx := test.buildContext()
-				gen, errs := Generate(bctx, wd, test.pkg)
-				if len(gen) > 0 {
-					defer t.Logf("wire_gen.go:\n%s", gen)
-				}
-				if len(errs) > 0 {
-					for _, e := range errs {
-						t.Log(e)
+	// goldenPath constructs the path to the golden output for the test
+	// with the given name.
+	goldenPath := func(name string) string {
+		return filepath.Join("golden", name) + ".go"
+	}
+
+	if *setup.Record {
+		t.Run("Generate", func(t *testing.T) {
+			if _, err := os.Stat(filepath.Join(build.Default.GOROOT, "bin", "go")); err != nil {
+				t.Skip("go toolchain not available:", err)
+			}
+			for _, test := range tests {
+				test := test
+				t.Run(test.name, func(t *testing.T) {
+					t.Parallel()
+
+					// Run Wire from a fake build context.
+					bctx := test.buildContext()
+					gen, errs := Generate(bctx, wd, test.pkg)
+					if len(gen) > 0 {
+						defer t.Logf("wire_gen.go:\n%s", gen)
 					}
-					if !test.wantError {
-						t.Fatal("Did not expect errors.")
-					}
-					for _, s := range test.wantErrorStrings {
-						if !errorListContains(errs, s) {
-							t.Errorf("Errors did not contain %q", s)
+					if len(errs) > 0 {
+						for _, e := range errs {
+							t.Log(e)
 						}
+						if !test.wantError {
+							t.Fatal("Did not expect errors.")
+						}
+						for _, s := range test.wantErrorStrings {
+							if !errorListContains(errs, s) {
+								t.Errorf("Errors did not contain %q", s)
+							}
+						}
+						return
 					}
-					return
-				}
-				if len(errs) == 0 && test.wantError {
-					t.Fatal("wirego succeeded; want error")
-				}
+					if len(errs) == 0 && test.wantError {
+						t.Fatal("wirego succeeded; want error")
+					}
 
-				// Find the absolute import path, since test.pkg may be a relative
-				// import path.
-				genPkg, err := bctx.Import(test.pkg, wd, build.FindOnly)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				// Run a `go build` with the generated output.
-				gopath, err := ioutil.TempDir("", "wire_test")
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer os.RemoveAll(gopath)
-				if err := test.materialize(gopath); err != nil {
-					t.Fatal(err)
-				}
-				if len(gen) > 0 {
-					genPath := filepath.Join(gopath, "src", filepath.FromSlash(genPkg.ImportPath), "wire_gen.go")
-					if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
+					// Find the absolute import path, since test.pkg may be a relative
+					// import path.
+					genPkg, err := bctx.Import(test.pkg, wd, build.FindOnly)
+					if err != nil {
 						t.Fatal(err)
 					}
-				}
-				testExePath := filepath.Join(gopath, "bin", "testprog")
-				realBuildCtx := &build.Context{
-					GOARCH:      bctx.GOARCH,
-					GOOS:        bctx.GOOS,
-					GOROOT:      bctx.GOROOT,
-					GOPATH:      gopath,
-					CgoEnabled:  bctx.CgoEnabled,
-					Compiler:    bctx.Compiler,
-					BuildTags:   bctx.BuildTags,
-					ReleaseTags: bctx.ReleaseTags,
-				}
-				if err := runGo(realBuildCtx, "build", "-o", testExePath, genPkg.ImportPath); err != nil {
-					t.Fatal("build:", err)
-				}
 
-				// Run the resulting program and compare its output to the expected
-				// output.
-				out, err := exec.Command(testExePath).Output()
-				if err != nil {
-					t.Error("run compiled program:", err)
-				}
-				if !bytes.Equal(out, test.wantOutput) {
-					t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
-				}
-			})
-		}
-	})
+					// Run a `go build` with the generated output.
+					gopath, err := ioutil.TempDir("", "wire_test")
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer os.RemoveAll(gopath)
+					if err := test.materialize(gopath); err != nil {
+						t.Fatal(err)
+					}
+					if len(gen) > 0 {
+						genPath := filepath.Join(gopath, "src", filepath.FromSlash(genPkg.ImportPath), "wire_gen.go")
+						if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
+							t.Fatal(err)
+						}
+					}
+					testExePath := filepath.Join(gopath, "bin", "testprog")
+					realBuildCtx := &build.Context{
+						GOARCH:      bctx.GOARCH,
+						GOOS:        bctx.GOOS,
+						GOROOT:      bctx.GOROOT,
+						GOPATH:      gopath,
+						CgoEnabled:  bctx.CgoEnabled,
+						Compiler:    bctx.Compiler,
+						BuildTags:   bctx.BuildTags,
+						ReleaseTags: bctx.ReleaseTags,
+					}
+					if err := runGo(realBuildCtx, "build", "-o", testExePath, genPkg.ImportPath); err != nil {
+						t.Fatal("build:", err)
+					}
+
+					// Run the resulting program and compare its output to the expected
+					// output.
+					out, err := exec.Command(testExePath).Output()
+					if err != nil {
+						t.Error("run compiled program:", err)
+					}
+					if !bytes.Equal(out, test.wantOutput) {
+						t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
+					}
+
+					// The result looks good. Save it to the golden dir.
+					gp := goldenPath(test.name)
+					if err := ioutil.WriteFile(gp, gen, 0666); err != nil {
+						t.Fatalf("Failed to write golden output %s: %v", gp, err)
+					}
+				})
+			}
+		})
+	}
 
 	t.Run("Determinism", func(t *testing.T) {
 		const runs = 2
@@ -151,11 +171,12 @@ func TestWire(t *testing.T) {
 			test := test
 			t.Run(test.name, func(t *testing.T) {
 				t.Parallel()
-				bctx := test.buildContext()
-				gold, errs := Generate(bctx, wd, test.pkg)
-				if len(errs) > 0 {
-					t.Fatal("wirego:", errs)
+				gp := goldenPath(test.name)
+				gold, err := ioutil.ReadFile(gp)
+				if err != nil {
+					t.Fatalf("Failed to read golden file: %v", err)
 				}
+				bctx := test.buildContext()
 				goldstr := string(gold)
 				for i := 0; i < runs-1; i++ {
 					out, errs := Generate(bctx, wd, test.pkg)
