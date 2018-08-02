@@ -61,14 +61,17 @@ func TestWire(t *testing.T) {
 	}
 	wd := filepath.Join(magicGOPATH(), "src")
 
-	if err := os.MkdirAll("golden", 0777); err != nil {
+	// The golden directory has a dot prefix so its contents won't be found
+	// by go test.
+	goldenDir := ".golden"
+	if err := os.MkdirAll(goldenDir, 0777); err != nil {
 		t.Fatalf("Failed to create golden dir for checked Wire output: %v", err)
 	}
 
 	// goldenPath constructs the path to the golden output for the test
 	// with the given name.
 	goldenPath := func(name string) string {
-		return filepath.Join("golden", name) + ".go"
+		return filepath.Join(goldenDir, name) + ".go"
 	}
 
 	if *setup.Record {
