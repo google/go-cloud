@@ -27,6 +27,7 @@ import (
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/replay"
+	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
@@ -239,7 +240,7 @@ func TestHTTPClientOpt(t *testing.T) {
 func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*gcp.HTTPClient, func(), error) {
 
 	mode := recorder.ModeRecording
-	if testing.Short() {
+	if !*setup.Record {
 		mode = recorder.ModeReplaying
 	}
 	r, done, err := replay.NewGCSRecorder(logf, mode, filepath)

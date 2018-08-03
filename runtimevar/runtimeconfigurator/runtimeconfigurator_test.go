@@ -27,9 +27,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/internal/testing/replay"
+	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/internal/testing/replay"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
@@ -255,9 +256,9 @@ func newConfigClient(ctx context.Context, logf func(string, ...interface{}), fil
 		return nil, nil, err
 	}
 
-	mode := recorder.ModeRecording
-	if testing.Short() {
-		mode = recorder.ModeReplaying
+	mode := recorder.ModeReplaying
+	if *setup.Record {
+		mode = recorder.ModeRecording
 	}
 
 	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
