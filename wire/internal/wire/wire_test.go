@@ -91,16 +91,16 @@ func TestWire(t *testing.T) {
 				t.Fatal("wirego succeeded; want error")
 			}
 
-			goldenDir := filepath.Join("testdata", test.name, ".golden")
-			if err := os.MkdirAll(goldenDir, 0777); err != nil {
-				t.Fatalf("Failed to make golden dir: %v", err)
-			}
-			goldenFile := filepath.Join(goldenDir, "wire_gen.go")
 			if *setup.Record {
 				// Record ==> Check wire output with go build, and save golden file if it looks good.
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
+				goldenDir := filepath.Join(testRoot, test.name, ".golden")
+				if err := os.MkdirAll(goldenDir, 0777); err != nil {
+					t.Fatalf("Failed to make golden dir: %v", err)
+				}
+				goldenFile := filepath.Join(goldenDir, "wire_gen.go")
 				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
 					t.Fatalf("failed to write golden file: %v", err)
 				}
@@ -109,10 +109,7 @@ func TestWire(t *testing.T) {
 				// generated result. This check is meant to
 				// detect non-deterministic behavior in the
 				// Generate function.
-				gold, err := ioutil.ReadFile(goldenFile)
-				if err != nil {
-					t.Fatalf("failed to read golden file: %v. If this is a new testcase, run with -record to generate the golden file.", err)
-				}
+				gold := test.goldenWireOutput
 				if !bytes.Equal(gen, gold) {
 					t.Fatalf("wire output differs from golden file:\n%s\nIf this change is expected, run with -record to update the golden file.", diff(string(gold), string(gen)))
 				}
@@ -284,10 +281,11 @@ func isIdent(s string) bool {
 }
 
 type testCase struct {
-	name       string
-	pkg        string
-	goFiles    map[string][]byte
-	wantOutput []byte
+	name             string
+	pkg              string
+	goFiles          map[string][]byte
+	wantOutput       []byte
+	goldenWireOutput []byte
 
 	wantError        bool
 	wantErrorStrings []string
@@ -298,12 +296,19 @@ type testCase struct {
 // The directory structure is:
 //
 //	root/
+//
 //		pkg        file containing the package name containing the inject function
 //		           (must also be package main)
+//
 //		out.txt    file containing the expected output, or starting with the
 //		           magic line "ERROR" if this test should cause generation to
 //		           fail (any subsequent lines are substrings that should
 //		           appear in the errors).
+//
+//		.golden/
+//			wire_gen.go	verified output of wire from a test run with
+//					-record
+//
 //		...        any Go files found recursively placed under GOPATH/src/...
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
@@ -315,9 +320,15 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
+	var wireGold []byte
 	wantErrorStrings, wantError := parseGoldenOutput(out)
 	if wantError {
 		out = nil
+	} else {
+		wireGold, err = ioutil.ReadFile(filepath.Join(root, ".golden", "wire_gen.go"))
+		if err != nil {
+			return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the golden file.", name, err)
+		}
 	}
 	goFiles := map[string][]byte{
 		"github.com/google/go-cloud/wire/wire.go": wireGoSrc,
@@ -347,6 +358,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		name:             name,
 		pkg:              string(bytes.TrimSpace(pkg)),
 		goFiles:          goFiles,
+		goldenWireOutput: wireGold,
 		wantOutput:       out,
 		wantError:        wantError,
 		wantErrorStrings: wantErrorStrings,
