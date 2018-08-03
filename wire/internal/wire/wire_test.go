@@ -97,11 +97,7 @@ func TestWire(t *testing.T) {
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
-				goldenDir := filepath.Join(testRoot, test.name, ".golden")
-				if err := os.MkdirAll(goldenDir, 0777); err != nil {
-					t.Fatalf("Failed to make golden dir: %v", err)
-				}
-				goldenFile := filepath.Join(goldenDir, "wire_gen.go")
+				goldenFile := filepath.Join(testRoot, test.name, ".golden", "wire_gen.go")
 				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
 					t.Fatalf("failed to write golden file: %v", err)
 				}
