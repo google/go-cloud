@@ -97,7 +97,7 @@ func TestWire(t *testing.T) {
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
-				goldenFile := filepath.Join(testRoot, test.name, ".golden", "wire_gen.go")
+				goldenFile := filepath.Join(testRoot, test.name, "want", "wire_gen.go")
 				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
 					t.Fatalf("failed to write golden file: %v", err)
 				}
@@ -298,7 +298,7 @@ type testCase struct {
 //
 //		...        any Go files found recursively placed under GOPATH/src/...
 //
-//		.golden/
+//		want/
 //
 //			out.txt    	file containing the expected output, or starting
 //					with the magic line "ERROR" if this test should
@@ -314,7 +314,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
-	out, err := ioutil.ReadFile(filepath.Join(root, ".golden", "out.txt"))
+	out, err := ioutil.ReadFile(filepath.Join(root, "want", "out.txt"))
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
@@ -323,7 +323,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if wantWireError {
 		out = nil
 	} else {
-		wireGold, err = ioutil.ReadFile(filepath.Join(root, ".golden", "wire_gen.go"))
+		wireGold, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
 		if err != nil {
 			return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the golden file.", name, err)
 		}
