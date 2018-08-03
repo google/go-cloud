@@ -44,12 +44,15 @@ func init() {
 
 func TestRequestLog(t *testing.T) {
 	t.Parallel()
-	tok := testutil.URLSuffix(address + requestlogURL)
-	testutil.Retry(t, address+requestlogURL+tok, testutil.Get)
-	testutil.Retry(t, tok, readLogEntries)
+	u, err := testutil.URLSuffix(requestlogURL)
+	if err != nil {
+		t.Fatal("cannot generate URL:", err)
+	}
+	testutil.Retry(t, address+u, testutil.Get)
+	testutil.Retry(t, u, readLogEntries)
 }
 
-func readLogEntries(tok string) error {
+func readLogEntries(u string) error {
 	ctx := context.Background()
 	logadminClient, err := logadmin.NewClient(ctx, projectID)
 	if err != nil {
@@ -58,23 +61,26 @@ func readLogEntries(tok string) error {
 
 	iter := logadminClient.Entries(context.Background(),
 		logadmin.ProjectIDs([]string{projectID}),
-		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = "%s%s"`, requestlogURL, tok)),
+		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = %q`, u)),
 	)
 	_, err = iter.Next()
 	if err == iterator.Done {
-		return fmt.Errorf("no entry found for request log that matches %s", tok)
+		return fmt.Errorf("no entry found for request log that matches %q", u)
 	}
 	return err
 }
 
 func TestTrace(t *testing.T) {
 	t.Parallel()
-	tok := testutil.URLSuffix(address + traceURL)
-	testutil.Retry(t, address+traceURL+tok, testutil.Get)
-	testutil.Retry(t, tok, readTrace)
+	u, err := testutil.URLSuffix(traceURL)
+	if err != nil {
+		t.Fatal("cannot generate URL:", err)
+	}
+	testutil.Retry(t, traceURL+u, testutil.Get)
+	testutil.Retry(t, u, readTrace)
 }
 
-func readTrace(tok string) error {
+func readTrace(u string) error {
 	ctx := context.Background()
 	traceClient, err := tracepb.NewClient(ctx)
 	if err != nil {
@@ -83,12 +89,12 @@ func readTrace(tok string) error {
 
 	req := &cloudtracepb.ListTracesRequest{
 		ProjectId: projectID,
-		Filter:    fmt.Sprintf("+root:%s%s", traceURL, tok),
+		Filter:    fmt.Sprintf("+root:%s", u),
 	}
 	it := traceClient.ListTraces(context.Background(), req)
 	_, err = it.Next()
 	if err == iterator.Done {
-		return fmt.Errorf("no trace found for %s", tok)
+		return fmt.Errorf("no trace found for %q", u)
 	}
 	return err
 }
