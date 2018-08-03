@@ -62,11 +62,12 @@ func TestWire(t *testing.T) {
 	}
 	wd := filepath.Join(magicGOPATH(), "src")
 
-	if _, err := os.Stat(filepath.Join(build.Default.GOROOT, "bin", "go")); err != nil {
-		t.Skip("go toolchain not available:", err)
+	if *setup.Record {
+		if _, err := os.Stat(filepath.Join(build.Default.GOROOT, "bin", "go")); err != nil {
+			t.Fatal("go toolchain not available:", err)
+		}
 	}
 	for _, test := range tests {
-		test := test
 		t.Run(test.name, func(t *testing.T) {
 			// Run Wire from a fake build context.
 			bctx := test.buildContext()
@@ -93,8 +94,10 @@ func TestWire(t *testing.T) {
 			}
 
 			if *setup.Record {
-				// Record ==> Check wire output with go build,
-				// and save golden file if it looks good.
+				// Record ==> Build the generated Wire code,
+				// check that the program's output matches the
+				// expected output, save wire output on
+				// success.
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
