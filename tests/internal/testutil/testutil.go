@@ -36,8 +36,8 @@ type Logger interface {
 	Logf(format string, args ...interface{})
 }
 
-// Retry keeps retrying hitting url using f with exponentially increased delay
-// until the delay passes maxBackoff.
+// Retry keeps calling f with exponentially increased waiting time between tries
+// until it no longer returns an error, or the delay passes maxBackoff.
 func Retry(logger Logger, s string, f func(string) error) error {
 	var err error
 	for d := startDelay; ; {
