@@ -97,9 +97,9 @@ func TestWire(t *testing.T) {
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
-				goldenFile := filepath.Join(testRoot, test.name, "want", "wire_gen.go")
-				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
-					t.Fatalf("failed to write golden file: %v", err)
+				wireGenFile := filepath.Join(testRoot, test.name, "want", "wire_gen.go")
+				if err := ioutil.WriteFile(wireGenFile, gen, 0666); err != nil {
+					t.Fatalf("failed to write wire_gen.go file: %v", err)
 				}
 			} else {
 				// Replay ==> Load golden file and compare to
@@ -108,7 +108,7 @@ func TestWire(t *testing.T) {
 				// Generate function.
 				gold := test.wantWireOutput
 				if !bytes.Equal(gen, gold) {
-					t.Fatalf("wire output differs from golden file:\n%s\nIf this change is expected, run with -record to update the golden file.", diff(string(gold), string(gen)))
+					t.Fatalf("wire output differs from golden file:\n%s\nIf this change is expected, run with -record to update the wire_gen.go file.", diff(string(gold), string(gen)))
 				}
 			}
 		})
@@ -314,18 +314,21 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
-	out, err := ioutil.ReadFile(filepath.Join(root, "want", "out.txt"))
-	if err != nil {
-		return nil, fmt.Errorf("load test case %s: %v", name, err)
-	}
-	var wireGold []byte
-	wantWireErrorStrings, wantWireError := parseGoldenOutput(out)
+	var wantProgramOutput []byte
+	var wantWireOutput []byte
+	wireErrb, err := ioutil.ReadFile(filepath.Join(root, "want", "wire_errs.txt"))
+	wantWireError := err == nil
+	var wantWireErrorStrings []string
 	if wantWireError {
-		out = nil
+		wantWireErrorStrings = strings.Split(strings.TrimSpace(string(wireErrb)), "\n")
 	} else {
-		wireGold, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
+		wantWireOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
 		if err != nil {
-			return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the golden file.", name, err)
+			return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the wire_gen.go file.", name, err)
+		}
+		wantProgramOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "program_out.txt"))
+		if err != nil {
+			return nil, fmt.Errorf("load test case %s: %v", name, err)
 		}
 	}
 	goFiles := map[string][]byte{
@@ -356,8 +359,8 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		name:                 name,
 		pkg:                  string(bytes.TrimSpace(pkg)),
 		goFiles:              goFiles,
-		wantWireOutput:       wireGold,
-		wantProgramOutput:    out,
+		wantWireOutput:       wantWireOutput,
+		wantProgramOutput:    wantProgramOutput,
 		wantWireError:        wantWireError,
 		wantWireErrorStrings: wantWireErrorStrings,
 	}, nil
@@ -608,19 +611,6 @@ func runDiff(a, b []byte) ([]byte, error) {
 	c := exec.Command("diff", "-u", fa.Name(), fb.Name())
 	out, err := c.Output()
 	return out, err
-}
-
-func parseGoldenOutput(out []byte) (errorStrings []string, wantWireError bool) {
-	const errorPrefix = "ERROR\n"
-	if !bytes.HasPrefix(out, []byte(errorPrefix)) {
-		return nil, false
-	}
-	// Skip past first line.
-	out = out[len(errorPrefix):]
-	// Remove any leading or trailing blank lines.
-	out = bytes.Trim(out, "\n")
-	// Split lines.
-	return strings.Split(string(out), "\n"), true
 }
 
 func errorListContains(errs []error, substr string) bool {
