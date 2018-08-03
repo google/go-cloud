@@ -589,42 +589,6 @@ func runGo(bctx *build.Context, args ...string) error {
 	return nil
 }
 
-func diff(want, got string) string {
-	d, err := runDiff([]byte(want), []byte(got))
-	if err == nil {
-		return string(d)
-	}
-	return "*** got:\n" + got + "\n\n*** want:\n" + want
-}
-
-func runDiff(a, b []byte) ([]byte, error) {
-	fa, err := ioutil.TempFile("", "wire_test_diff")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		os.Remove(fa.Name())
-		fa.Close()
-	}()
-	fb, err := ioutil.TempFile("", "wire_test_diff")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		os.Remove(fb.Name())
-		fb.Close()
-	}()
-	if _, err := fa.Write(a); err != nil {
-		return nil, err
-	}
-	if _, err := fb.Write(b); err != nil {
-		return nil, err
-	}
-	c := exec.Command("diff", "-u", fa.Name(), fb.Name())
-	out, err := c.Output()
-	return out, err
-}
-
 func errorListContains(errs []error, substr string) bool {
 	for _, e := range errs {
 		if strings.Contains(e.Error(), substr) {
