@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path"
 	"time"
 )
 
@@ -68,12 +67,12 @@ func Get(addr string) func() error {
 	}
 }
 
-// URLSuffix appends a human-readible suffix to the test URL.
-func URLSuffix(u string) (string, error) {
+// URLSuffix returns a human-readible suffix.
+func URLSuffix() (string, error) {
 	t := url.PathEscape(time.Now().Format(time.RFC3339))
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return path.Clean(fmt.Sprintf("%s/%s/%s", u, t, hex.EncodeToString(b))), nil
+	return t + "/" + hex.EncodeToString(b), nil
 }

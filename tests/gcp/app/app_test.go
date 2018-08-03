@@ -18,6 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"path"
 	"testing"
 
 	"cloud.google.com/go/logging/logadmin"
@@ -47,11 +48,12 @@ func TestRequestLog(t *testing.T) {
 	if address == "" || projectID == "" {
 		t.Skip("Both address and project need to be setup to run server tests.")
 	}
-	u, err := testutil.URLSuffix(requestlogURL)
+	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	if err := testutil.Retry(t, testutil.Get(address+u)); err != nil {
+	p := path.Clean(fmt.Sprintf("/%s/%s", requestlogURL, suf))
+	if err := testutil.Retry(t, testutil.Get(address+p)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -62,7 +64,7 @@ func TestRequestLog(t *testing.T) {
 	}
 	defer c.Close()
 
-	if err := testutil.Retry(t, readLogEntries(ctx, c, u)); err != nil {
+	if err := testutil.Retry(t, readLogEntries(ctx, c, p)); err != nil {
 		t.Error(err)
 	}
 }
@@ -86,11 +88,12 @@ func TestTrace(t *testing.T) {
 	if address == "" || projectID == "" {
 		t.Skip("Both address and project need to be setup to run server tests.")
 	}
-	u, err := testutil.URLSuffix(traceURL)
+	suf, err := testutil.URLSuffix()
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	if err := testutil.Retry(t, testutil.Get(address+u)); err != nil {
+	p := path.Clean(fmt.Sprintf("/%s/%s", traceURL, suf))
+	if err := testutil.Retry(t, testutil.Get(address+p)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +103,7 @@ func TestTrace(t *testing.T) {
 		t.Fatalf("error creating trace client: %v\n", err)
 	}
 	defer c.Close()
-	if err := testutil.Retry(t, readTrace(ctx, c, u)); err != nil {
+	if err := testutil.Retry(t, readTrace(ctx, c, p)); err != nil {
 		t.Error(err)
 	}
 }
