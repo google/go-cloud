@@ -293,20 +293,26 @@ type testCase struct {
 //
 //	root/
 //
-//		pkg        file containing the package name containing the inject function
-//		           (must also be package main)
+//		pkg
+//			file containing the package name containing the inject function
+//			(must also be package main)
 //
-//		...        any Go files found recursively placed under GOPATH/src/...
+//		...
+//			any Go files found recursively placed under GOPATH/src/...
 //
 //		want/
 //
-//			out.txt    	file containing the expected output, or starting
-//					with the magic line "ERROR" if this test should
-//					cause generation to fail (any subsequent lines
-//					are substrings that should appear in the errors).
+//			wire_errs.txt
+//					expected errors from the Wire Generate function,
+//					missing if no errors expected
 //
-//			wire_gen.go	verified output of wire from a test run with
-//					-record
+//			wire_gen.go
+//					verified output of wire from a test run with
+//					-record, missing if wire_errs.txt is present
+//
+//			program_out.txt
+//					expected output from the final compiled program,
+//					missing if wire_errs.txt is present
 //
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
