@@ -3,8 +3,11 @@
 Contribute Bot Webhook Listener is a microservice that listens for
 [GitHub webhook][] events and publishes them to a [Cloud Pub/Sub][] topic.
 
-[GitHub webhook]: https://developer.github.com/webhooks/
+You will need the [Go App Engine SDK][] to develop this server.
+
 [Cloud Pub/Sub]: https://cloud.google.com/pubsub/docs/publisher
+[GitHub webhook]: https://developer.github.com/webhooks/
+[Go App Engine SDK]: https://cloud.google.com/appengine/docs/standard/go/download
 
 ## Running Locally
 

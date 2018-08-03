@@ -36,6 +36,8 @@ func main() {
 	appengine.Main()
 }
 
+// handleDefault serves a static landing page for checking whether the
+// service is running.
 func handleDefault(w http.ResponseWriter, r *http.Request) {
 	const responseData = `<!DOCTYPE html>
 <title>Go Cloud Contribute Bot</title>
@@ -57,6 +59,8 @@ func handleDefault(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleWebhook serves the webhook endpoint called by GitHub.
+// See https://developer.github.com/webhooks/ for more details.
 func handleWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
@@ -64,17 +68,25 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := appengine.NewContext(r)
+	id := r.Header.Get("X-GitHub-Delivery")
 	payload, err := github.ValidatePayload(r, []byte(os.Getenv("CONTRIBUTEBOT_WEBHOOK_SECRET")))
 	if err != nil {
-		log.Errorf(ctx, "%v", err)
-		http.Error(w, "Could not connect to PubSub", http.StatusInternalServerError)
+		log.Errorf(ctx, "Validate %s: %v", id, err)
+		http.Error(w, "Payload signature did not match", http.StatusBadRequest)
 		return
 	}
+	if err := publishEvent(ctx, r.Header, payload); err != nil {
+		log.Errorf(ctx, "Publish %s: %v", id, err)
+		http.Error(w, "PubSub publish failed", http.StatusInternalServerError)
+		return
+	}
+}
+
+// publishEvent sends a payload to the Pub/Sub topic.
+func publishEvent(ctx context.Context, h http.Header, payload []byte) error {
 	client, err := newPubSubClient(ctx)
 	if err != nil {
-		log.Errorf(ctx, "%v", err)
-		http.Error(w, "Could not connect to PubSub", http.StatusInternalServerError)
-		return
+		return err
 	}
 	projectID := appengine.AppID(ctx)
 	topic := "projects/" + projectID + "/topics/contributebot-github-events"
@@ -83,19 +95,20 @@ func handleWebhook(w http.ResponseWriter, r *http.Request) {
 			{
 				Data: base64.URLEncoding.EncodeToString(payload),
 				Attributes: map[string]string{
-					"X-GitHub-Event":    r.Header.Get("X-GitHub-Event"),
-					"X-GitHub-Delivery": r.Header.Get("X-GitHub-Delivery"),
+					"X-GitHub-Event":    h.Get("X-GitHub-Event"),
+					"X-GitHub-Delivery": h.Get("X-GitHub-Delivery"),
 				},
 			},
 		},
 	})
 	if _, err := call.Context(ctx).Do(); err != nil {
-		log.Errorf(ctx, "PubSub publish: %v", err)
-		http.Error(w, "PubSub publish failed", http.StatusInternalServerError)
-		return
+		return err
 	}
+	return nil
 }
 
+// newPubSubClient constructs a Pub/Sub REST client authenticated with
+// the App Engine service account.
 func newPubSubClient(ctx context.Context) (*pubsub.Service, error) {
 	tok, expiry, err := appengine.AccessToken(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
