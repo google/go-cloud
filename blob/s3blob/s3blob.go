@@ -33,9 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-// OpenBucket returns an S3 Bucket. It handles creation of a client used to
-// communicate to S3. AWS config can be passed in through BucketOptions to
-// change the default configuration of the S3Bucket.
+// OpenBucket returns an S3 Bucket.
 func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
@@ -159,11 +157,6 @@ type bucket struct {
 	name     string
 	client   *s3.S3
 	uploader *s3manager.Uploader
-}
-
-// BucketOptions provides information settings during bucket initialization.
-type BucketOptions struct {
-	AWSConfig *aws.Config
 }
 
 // NewRangeReader returns a reader that reads part of an object, reading at most
