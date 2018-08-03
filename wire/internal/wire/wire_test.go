@@ -93,7 +93,8 @@ func TestWire(t *testing.T) {
 			}
 
 			if *setup.Record {
-				// Record ==> Check wire output with go build, and save golden file if it looks good.
+				// Record ==> Check wire output with go build,
+				// and save golden file if it looks good.
 				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
 					t.Fatalf("go build check failed: %v", err)
 				}
