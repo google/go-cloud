@@ -56,6 +56,7 @@ func TestWire(t *testing.T) {
 		test, err := loadTestCase(filepath.Join(testRoot, name), wireGo)
 		if err != nil {
 			t.Error(err)
+			continue
 		}
 		tests = append(tests, test)
 	}
@@ -77,17 +78,17 @@ func TestWire(t *testing.T) {
 				for _, e := range errs {
 					t.Log(e)
 				}
-				if !test.wantError {
+				if !test.wantWireError {
 					t.Fatal("Did not expect errors.")
 				}
-				for _, s := range test.wantErrorStrings {
+				for _, s := range test.wantWireErrorStrings {
 					if !errorListContains(errs, s) {
 						t.Errorf("Errors did not contain %q", s)
 					}
 				}
 				return
 			}
-			if len(errs) == 0 && test.wantError {
+			if len(errs) == 0 && test.wantWireError {
 				t.Fatal("wirego succeeded; want error")
 			}
 
@@ -109,7 +110,7 @@ func TestWire(t *testing.T) {
 				// generated result. This check is meant to
 				// detect non-deterministic behavior in the
 				// Generate function.
-				gold := test.goldenWireOutput
+				gold := test.wantWireOutput
 				if !bytes.Equal(gen, gold) {
 					t.Fatalf("wire output differs from golden file:\n%s\nIf this change is expected, run with -record to update the golden file.", diff(string(gold), string(gen)))
 				}
@@ -162,8 +163,8 @@ func goBuildCheck(test *testCase, wd string, bctx *build.Context, gen []byte) er
 	if err != nil {
 		return fmt.Errorf("run compiled program: %v", err)
 	}
-	if !bytes.Equal(out, test.wantOutput) {
-		return fmt.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
+	if !bytes.Equal(out, test.wantProgramOutput) {
+		return fmt.Errorf("compiled program output = %q; want %q", out, test.wantProgramOutput)
 	}
 	return nil
 }
@@ -281,14 +282,13 @@ func isIdent(s string) bool {
 }
 
 type testCase struct {
-	name             string
-	pkg              string
-	goFiles          map[string][]byte
-	wantOutput       []byte
-	goldenWireOutput []byte
-
-	wantError        bool
-	wantErrorStrings []string
+	name                 string
+	pkg                  string
+	goFiles              map[string][]byte
+	wantProgramOutput    []byte
+	wantWireOutput       []byte
+	wantWireError        bool
+	wantWireErrorStrings []string
 }
 
 // loadTestCase reads a test case from a directory.
@@ -300,29 +300,31 @@ type testCase struct {
 //		pkg        file containing the package name containing the inject function
 //		           (must also be package main)
 //
-//		out.txt    file containing the expected output, or starting with the
-//		           magic line "ERROR" if this test should cause generation to
-//		           fail (any subsequent lines are substrings that should
-//		           appear in the errors).
+//		...        any Go files found recursively placed under GOPATH/src/...
 //
 //		.golden/
+//
+//			out.txt    	file containing the expected output, or starting
+//					with the magic line "ERROR" if this test should
+//					cause generation to fail (any subsequent lines
+//					are substrings that should appear in the errors).
+//
 //			wire_gen.go	verified output of wire from a test run with
 //					-record
 //
-//		...        any Go files found recursively placed under GOPATH/src/...
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
 	pkg, err := ioutil.ReadFile(filepath.Join(root, "pkg"))
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
-	out, err := ioutil.ReadFile(filepath.Join(root, "out.txt"))
+	out, err := ioutil.ReadFile(filepath.Join(root, ".golden", "out.txt"))
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	var wireGold []byte
-	wantErrorStrings, wantError := parseGoldenOutput(out)
-	if wantError {
+	wantWireErrorStrings, wantWireError := parseGoldenOutput(out)
+	if wantWireError {
 		out = nil
 	} else {
 		wireGold, err = ioutil.ReadFile(filepath.Join(root, ".golden", "wire_gen.go"))
@@ -355,13 +357,13 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	return &testCase{
-		name:             name,
-		pkg:              string(bytes.TrimSpace(pkg)),
-		goFiles:          goFiles,
-		goldenWireOutput: wireGold,
-		wantOutput:       out,
-		wantError:        wantError,
-		wantErrorStrings: wantErrorStrings,
+		name:                 name,
+		pkg:                  string(bytes.TrimSpace(pkg)),
+		goFiles:              goFiles,
+		wantWireOutput:       wireGold,
+		wantProgramOutput:    out,
+		wantWireError:        wantWireError,
+		wantWireErrorStrings: wantWireErrorStrings,
 	}, nil
 }
 
@@ -612,7 +614,7 @@ func runDiff(a, b []byte) ([]byte, error) {
 	return out, err
 }
 
-func parseGoldenOutput(out []byte) (errorStrings []string, wantError bool) {
+func parseGoldenOutput(out []byte) (errorStrings []string, wantWireError bool) {
 	const errorPrefix = "ERROR\n"
 	if !bytes.HasPrefix(out, []byte(errorPrefix)) {
 		return nil, false
