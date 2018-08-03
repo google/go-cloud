@@ -98,45 +98,50 @@ func TestWire(t *testing.T) {
 			goldenFile := filepath.Join(goldenDir, "wire_gen.go")
 			if *setup.Record {
 				// Record ==> Check wire output with go build, and save golden file if it looks good.
-				goBuildCheck(t, test, wd, bctx, gen)
+				if err := goBuildCheck(test, wd, bctx, gen); err != nil {
+					t.Fatalf("go build check failed: %v", err)
+				}
 				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
-					t.Fatalf("Failed to write golden file: %v", err)
+					t.Fatalf("failed to write golden file: %v", err)
 				}
 			} else {
-				// Replay ==> Load golden file and compare to generated result.
+				// Replay ==> Load golden file and compare to
+				// generated result. This check is meant to
+				// detect non-deterministic behavior in the
+				// Generate function.
 				gold, err := ioutil.ReadFile(goldenFile)
 				if err != nil {
-					t.Fatalf("Failed to read golden file: %v", err)
+					t.Fatalf("failed to read golden file: %v. If this is a new testcase, run with -record to generate the golden file.", err)
 				}
 				if !bytes.Equal(gen, gold) {
-					t.Fatalf("wire output differs from golden file:\n%s", diff(string(gold), string(gen)))
+					t.Fatalf("wire output differs from golden file:\n%s\nIf this change is expected, run with -record to update the golden file.", diff(string(gold), string(gen)))
 				}
 			}
 		})
 	}
 }
 
-func goBuildCheck(t *testing.T, test *testCase, wd string, bctx *build.Context, gen []byte) {
+func goBuildCheck(test *testCase, wd string, bctx *build.Context, gen []byte) error {
 	// Find the absolute import path, since test.pkg may be a relative
 	// import path.
 	genPkg, err := bctx.Import(test.pkg, wd, build.FindOnly)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	// Run a `go build` with the generated output.
 	gopath, err := ioutil.TempDir("", "wire_test")
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	defer os.RemoveAll(gopath)
 	if err := test.materialize(gopath); err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if len(gen) > 0 {
 		genPath := filepath.Join(gopath, "src", filepath.FromSlash(genPkg.ImportPath), "wire_gen.go")
 		if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
-			t.Fatal(err)
+			return err
 		}
 	}
 	testExePath := filepath.Join(gopath, "bin", "testprog")
@@ -151,18 +156,19 @@ func goBuildCheck(t *testing.T, test *testCase, wd string, bctx *build.Context, 
 		ReleaseTags: bctx.ReleaseTags,
 	}
 	if err := runGo(realBuildCtx, "build", "-o", testExePath, genPkg.ImportPath); err != nil {
-		t.Fatal("build:", err)
+		return fmt.Errorf("build: %v", err)
 	}
 
 	// Run the resulting program and compare its output to the expected
 	// output.
 	out, err := exec.Command(testExePath).Output()
 	if err != nil {
-		t.Error("run compiled program:", err)
+		return fmt.Errorf("run compiled program: %v", err)
 	}
 	if !bytes.Equal(out, test.wantOutput) {
-		t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
+		return fmt.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
 	}
+	return nil
 }
 
 func TestUnexport(t *testing.T) {
