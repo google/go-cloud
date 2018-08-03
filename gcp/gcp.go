@@ -68,10 +68,9 @@ func DefaultTransport() http.RoundTripper {
 // DefaultCredentials obtains the default GCP credentials with Cloud Platform
 // scope.
 func DefaultCredentials(ctx context.Context) (*google.Credentials, error) {
-	// TODO(light): don't assume that an error always means credentials not found.
 	adc, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	return adc, nil
 }
