@@ -33,17 +33,22 @@ const (
 )
 
 var (
-	address   string
-	projectID string
+	address        string
+	projectID      string
+	logadminClient *logadmin.Client
+	traceClient    *tracepb.Client
 )
 
 func init() {
-	flag.StringVar(&address, "address", "http://localhost:8080", "address to hit")
+	flag.StringVar(&address, "address", "", "address to hit")
 	flag.StringVar(&projectID, "project", "", "GCP project used to deploy and run tests")
 }
 
 func TestRequestLog(t *testing.T) {
 	t.Parallel()
+	if address == "" || projectID == "" {
+		t.Skip("Both address and project need to be setup to run server tests.")
+	}
 	u, err := testutil.URLSuffix(requestlogURL)
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
@@ -51,23 +56,25 @@ func TestRequestLog(t *testing.T) {
 	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := context.Background()
+	logadminClient, err = logadmin.NewClient(ctx, projectID)
+	if err != nil {
+		t.Fatalf("error creating logadmin client: %v", err)
+	}
+	defer logadminClient.Close()
+
 	if err := testutil.Retry(t, u, readLogEntries); err != nil {
 		t.Error(err)
 	}
 }
 
 func readLogEntries(u string) error {
-	ctx := context.Background()
-	logadminClient, err := logadmin.NewClient(ctx, projectID)
-	if err != nil {
-		return fmt.Errorf("error creating logadmin client: %v", err)
-	}
-
 	iter := logadminClient.Entries(context.Background(),
 		logadmin.ProjectIDs([]string{projectID}),
 		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = %q`, u)),
 	)
-	_, err = iter.Next()
+	_, err := iter.Next()
 	if err == iterator.Done {
 		return fmt.Errorf("no entry found for request log that matches %q", u)
 	}
@@ -76,6 +83,9 @@ func readLogEntries(u string) error {
 
 func TestTrace(t *testing.T) {
 	t.Parallel()
+	if address == "" || projectID == "" {
+		t.Skip("Both address and project need to be setup to run server tests.")
+	}
 	u, err := testutil.URLSuffix(traceURL)
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
@@ -83,24 +93,25 @@ func TestTrace(t *testing.T) {
 	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
 		t.Fatal(err)
 	}
+
+	ctx := context.Background()
+	traceClient, err = tracepb.NewClient(ctx)
+	if err != nil {
+		t.Fatalf("error creating trace client: %v\n", err)
+	}
+	defer traceClient.Close()
 	if err := testutil.Retry(t, u, readTrace); err != nil {
 		t.Error(err)
 	}
 }
 
 func readTrace(u string) error {
-	ctx := context.Background()
-	traceClient, err := tracepb.NewClient(ctx)
-	if err != nil {
-		return fmt.Errorf("error creating trace client: %v\n", err)
-	}
-
 	req := &cloudtracepb.ListTracesRequest{
 		ProjectId: projectID,
 		Filter:    fmt.Sprintf("+root:%s", u),
 	}
 	it := traceClient.ListTraces(context.Background(), req)
-	_, err = it.Next()
+	_, err := it.Next()
 	if err == iterator.Done {
 		return fmt.Errorf("no trace found for %q", u)
 	}
