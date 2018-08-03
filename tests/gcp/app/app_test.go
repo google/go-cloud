@@ -48,8 +48,12 @@ func TestRequestLog(t *testing.T) {
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	testutil.Retry(t, address+u, testutil.Get)
-	testutil.Retry(t, u, readLogEntries)
+	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
+		t.Fatal(err)
+	}
+	if err := testutil.Retry(t, u, readLogEntries); err != nil {
+		t.Error(err)
+	}
 }
 
 func readLogEntries(u string) error {
@@ -76,8 +80,12 @@ func TestTrace(t *testing.T) {
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	testutil.Retry(t, traceURL+u, testutil.Get)
-	testutil.Retry(t, u, readTrace)
+	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
+		t.Fatal(err)
+	}
+	if err := testutil.Retry(t, u, readTrace); err != nil {
+		t.Error(err)
+	}
 }
 
 func readTrace(u string) error {

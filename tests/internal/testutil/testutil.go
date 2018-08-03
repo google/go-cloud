@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"testing"
 	"time"
 )
 
@@ -32,17 +31,26 @@ const (
 	maxBackoff = time.Minute
 )
 
+// Logger writes logs (normally error messages) during retries.
+type Logger interface {
+	Logf(format string, args ...interface{})
+}
+
 // Retry keeps retrying hitting url using f with exponentially increased delay
 // until the delay passes maxBackoff.
-func Retry(t *testing.T, s string, f func(string) error) {
+func Retry(logger Logger, s string, f func(string) error) error {
 	var err error
-	for d := startDelay; d <= maxBackoff; d *= 2 {
+	for d := startDelay; ; {
 		time.Sleep(d)
 		if err = f(s); err == nil {
-			return
+			return nil
 		}
+		if d = d * 2; d > maxBackoff {
+			break
+		}
+		logger.Logf("request failed: %v, retrying in %v", err, d)
 	}
-	t.Fatalf("maximum retries reached: %v", err)
+	return fmt.Errorf("maximum retries reached: %v", err)
 }
 
 // Get sends a GET request to the address. It returns error for any non 200
