@@ -50,6 +50,11 @@ resource "google_project_iam_member" "server_trace" {
   member = "serviceAccount:${google_service_account.server.email}"
 }
 
+locals {
+  sql_instance = "go-guestbook-${random_id.sql_instance.hex}"
+  bucket_name  = "go-guestbook-${random_id.bucket_name.hex}"
+}
+
 # Cloud SQL
 
 resource "google_project_service" "sql" {
@@ -62,8 +67,17 @@ resource "google_project_service" "sqladmin" {
   disable_on_destroy = false
 }
 
+resource "random_id" "sql_instance" {
+  keepers = {
+    project = "${var.project}"
+    region  = "${var.region}"
+  }
+
+  byte_length = 16
+}
+
 resource "google_sql_database_instance" "guestbook" {
-  name             = "${var.db_instance}"
+  name             = "${local.sql_instance}"
   database_version = "MYSQL_5_6"
   region           = "${var.region}"
   project          = "${var.project}"
@@ -85,14 +99,14 @@ resource "google_sql_database" "guestbook" {
 
   provisioner "local-exec" {
     # TODO(light): Reuse credentials from Terraform.
-    command = "'${path.module}'/provision-db.sh '${google_sql_database_instance.guestbook.project}' '${google_service_account.db_access.email}' '${var.db_instance}' guestbook '${google_sql_user.root.password}' < '${path.module}'/../schema.sql"
+    command = "'${path.module}'/provision-db.sh '${google_sql_database_instance.guestbook.project}' '${google_service_account.db_access.email}' '${local.sql_instance}' guestbook '${google_sql_user.root.password}' < '${path.module}'/../schema.sql"
   }
 }
 
 resource "random_string" "db_password" {
   keepers = {
     project = "${var.project}"
-    db_name = "${var.db_instance}"
+    db_name = "${local.sql_instance}"
     region  = "${var.region}"
   }
 
@@ -164,10 +178,6 @@ resource "google_project_service" "storage" {
 resource "google_project_service" "storage_api" {
   service            = "storage-api.googleapis.com"
   disable_on_destroy = false
-}
-
-locals {
-  bucket_name = "go-guestbook-${random_id.bucket_name.hex}"
 }
 
 resource "random_id" "bucket_name" {
