@@ -67,7 +67,7 @@ func Get(addr string) func() error {
 	}
 }
 
-// URLSuffix returns a human-readible suffix.
+// URLSuffix returns a human-readable suffix.
 func URLSuffix() (string, error) {
 	t := url.PathEscape(time.Now().Format(time.RFC3339))
 	b := make([]byte, 8)
