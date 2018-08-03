@@ -332,9 +332,11 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	if wantWireError {
 		wantWireErrorStrings = strings.Split(strings.TrimSpace(string(wireErrb)), "\n")
 	} else {
-		wantWireOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
-		if err != nil {
-			return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the wire_gen.go file.", name, err)
+		if !*setup.Record {
+			wantWireOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
+			if err != nil {
+				return nil, fmt.Errorf("load test case %s: %v. If this is a new testcase, run with -record to generate the wire_gen.go file.", name, err)
+			}
 		}
 		wantProgramOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "program_out.txt"))
 		if err != nil {
