@@ -88,8 +88,8 @@ func TestWire(t *testing.T) {
 				}
 				return
 			}
-			if len(errs) == 0 && test.wantWireError {
-				t.Fatal("wirego succeeded; want error")
+			if test.wantWireError {
+				t.Fatal("wire succeeded; want error")
 			}
 
 			if *setup.Record {
