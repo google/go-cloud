@@ -37,10 +37,6 @@ cleanup1() {
 }
 trap cleanup1 EXIT
 
-# Perform local tasks first.
-log "Building driver..."
-( cd "$test_dir/test-driver" && vgo build -o "$tempdir/test-driver" ) || exit 1
-
 log "Provisioning GCP resources..."
 terraform init -input=false "$test_dir" || exit 1
 cleanup2() {
@@ -93,4 +89,4 @@ done
 
 # Run test driver.
 log "Running test:"
-"$tempdir/test-driver" --address "http://${endpoint}" --project "$project_id" || exit 1
+( cd "$test_dir/app" && vgo test -v -args --address "http://${endpoint}" --project "$project_id" ) || exit 1
