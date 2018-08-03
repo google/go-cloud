@@ -31,6 +31,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/google/go-cloud/internal/testing/setup"
 )
 
 func TestWire(t *testing.T) {
@@ -65,8 +67,6 @@ func TestWire(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
 			// Run Wire from a fake build context.
 			bctx := test.buildContext()
 			gen, errs := Generate(bctx, wd, test.pkg)
@@ -91,53 +91,77 @@ func TestWire(t *testing.T) {
 				t.Fatal("wirego succeeded; want error")
 			}
 
-			// Find the absolute import path, since test.pkg may be a relative
-			// import path.
-			genPkg, err := bctx.Import(test.pkg, wd, build.FindOnly)
-			if err != nil {
-				t.Fatal(err)
+			goldenDir := filepath.Join("testdata", test.name, ".golden")
+			if err := os.MkdirAll(goldenDir, 0777); err != nil {
+				t.Fatalf("Failed to make golden dir: %v", err)
 			}
-
-			// Run a `go build` with the generated output.
-			gopath, err := ioutil.TempDir("", "wire_test")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(gopath)
-			if err := test.materialize(gopath); err != nil {
-				t.Fatal(err)
-			}
-			if len(gen) > 0 {
-				genPath := filepath.Join(gopath, "src", filepath.FromSlash(genPkg.ImportPath), "wire_gen.go")
-				if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
-					t.Fatal(err)
+			goldenFile := filepath.Join(goldenDir, "wire_gen.go")
+			if *setup.Record {
+				// Record ==> Check wire output with go build, and save golden file if it looks good.
+				goBuildCheck(t, test, wd, bctx, gen)
+				if err := ioutil.WriteFile(goldenFile, gen, 0666); err != nil {
+					t.Fatalf("Failed to write golden file: %v", err)
+				}
+			} else {
+				// Replay ==> Load golden file and compare to generated result.
+				gold, err := ioutil.ReadFile(goldenFile)
+				if err != nil {
+					t.Fatalf("Failed to read golden file: %v", err)
+				}
+				if !bytes.Equal(gen, gold) {
+					t.Fatalf("wire output differs from golden file:\n%s", diff(string(gold), string(gen)))
 				}
 			}
-			testExePath := filepath.Join(gopath, "bin", "testprog")
-			realBuildCtx := &build.Context{
-				GOARCH:      bctx.GOARCH,
-				GOOS:        bctx.GOOS,
-				GOROOT:      bctx.GOROOT,
-				GOPATH:      gopath,
-				CgoEnabled:  bctx.CgoEnabled,
-				Compiler:    bctx.Compiler,
-				BuildTags:   bctx.BuildTags,
-				ReleaseTags: bctx.ReleaseTags,
-			}
-			if err := runGo(realBuildCtx, "build", "-o", testExePath, genPkg.ImportPath); err != nil {
-				t.Fatal("build:", err)
-			}
-
-			// Run the resulting program and compare its output to the expected
-			// output.
-			out, err := exec.Command(testExePath).Output()
-			if err != nil {
-				t.Error("run compiled program:", err)
-			}
-			if !bytes.Equal(out, test.wantOutput) {
-				t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
-			}
 		})
+	}
+}
+
+func goBuildCheck(t *testing.T, test *testCase, wd string, bctx *build.Context, gen []byte) {
+	// Find the absolute import path, since test.pkg may be a relative
+	// import path.
+	genPkg, err := bctx.Import(test.pkg, wd, build.FindOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Run a `go build` with the generated output.
+	gopath, err := ioutil.TempDir("", "wire_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(gopath)
+	if err := test.materialize(gopath); err != nil {
+		t.Fatal(err)
+	}
+	if len(gen) > 0 {
+		genPath := filepath.Join(gopath, "src", filepath.FromSlash(genPkg.ImportPath), "wire_gen.go")
+		if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
+			t.Fatal(err)
+		}
+	}
+	testExePath := filepath.Join(gopath, "bin", "testprog")
+	realBuildCtx := &build.Context{
+		GOARCH:      bctx.GOARCH,
+		GOOS:        bctx.GOOS,
+		GOROOT:      bctx.GOROOT,
+		GOPATH:      gopath,
+		CgoEnabled:  bctx.CgoEnabled,
+		Compiler:    bctx.Compiler,
+		BuildTags:   bctx.BuildTags,
+		ReleaseTags: bctx.ReleaseTags,
+	}
+	if err := runGo(realBuildCtx, "build", "-o", testExePath, genPkg.ImportPath); err != nil {
+		t.Fatal("build:", err)
+	}
+
+	// Run the resulting program and compare its output to the expected
+	// output.
+	out, err := exec.Command(testExePath).Output()
+	if err != nil {
+		t.Error("run compiled program:", err)
+	}
+	if !bytes.Equal(out, test.wantOutput) {
+		t.Errorf("compiled program output = %q; want %q", out, test.wantOutput)
 	}
 }
 
