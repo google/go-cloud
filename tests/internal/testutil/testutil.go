@@ -38,11 +38,11 @@ type Logger interface {
 
 // Retry keeps calling f with exponentially increased waiting time between tries
 // until it no longer returns an error, or the delay passes maxBackoff.
-func Retry(logger Logger, s string, f func(string) error) error {
+func Retry(logger Logger, f func() error) error {
 	var err error
 	for d := startDelay; ; {
 		time.Sleep(d)
-		if err = f(s); err == nil {
+		if err = f(); err == nil {
 			return nil
 		}
 		if d = d * 2; d > maxBackoff {
@@ -55,15 +55,17 @@ func Retry(logger Logger, s string, f func(string) error) error {
 
 // Get sends a GET request to the address. It returns error for any non 200
 // status.
-func Get(addr string) error {
-	resp, err := http.Get(addr)
-	if err != nil {
+func Get(addr string) func() error {
+	return func() error {
+		resp, err := http.Get(addr)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error response got: %s", resp.Status)
+		}
 		return err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error response got: %s", resp.Status)
-	}
-	return err
 }
 
 // URLSuffix appends a human-readible suffix to the test URL.

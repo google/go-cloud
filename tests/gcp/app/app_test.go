@@ -33,10 +33,8 @@ const (
 )
 
 var (
-	address        string
-	projectID      string
-	logadminClient *logadmin.Client
-	traceClient    *tracepb.Client
+	address   string
+	projectID string
 )
 
 func init() {
@@ -53,32 +51,34 @@ func TestRequestLog(t *testing.T) {
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
+	if err := testutil.Retry(t, testutil.Get(address+u)); err != nil {
 		t.Fatal(err)
 	}
 
 	ctx := context.Background()
-	logadminClient, err = logadmin.NewClient(ctx, projectID)
+	c, err := logadmin.NewClient(ctx, projectID)
 	if err != nil {
 		t.Fatalf("error creating logadmin client: %v", err)
 	}
-	defer logadminClient.Close()
+	defer c.Close()
 
-	if err := testutil.Retry(t, u, readLogEntries); err != nil {
+	if err := testutil.Retry(t, readLogEntries(ctx, c, u)); err != nil {
 		t.Error(err)
 	}
 }
 
-func readLogEntries(u string) error {
-	iter := logadminClient.Entries(context.Background(),
-		logadmin.ProjectIDs([]string{projectID}),
-		logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = %q`, u)),
-	)
-	_, err := iter.Next()
-	if err == iterator.Done {
-		return fmt.Errorf("no entry found for request log that matches %q", u)
+func readLogEntries(ctx context.Context, c *logadmin.Client, u string) func() error {
+	return func() error {
+		iter := c.Entries(context.Background(),
+			logadmin.ProjectIDs([]string{projectID}),
+			logadmin.Filter(fmt.Sprintf(`httpRequest.requestUrl = %q`, u)),
+		)
+		_, err := iter.Next()
+		if err == iterator.Done {
+			return fmt.Errorf("no entry found for request log that matches %q", u)
+		}
+		return err
 	}
-	return err
 }
 
 func TestTrace(t *testing.T) {
@@ -90,30 +90,32 @@ func TestTrace(t *testing.T) {
 	if err != nil {
 		t.Fatal("cannot generate URL:", err)
 	}
-	if err := testutil.Retry(t, address+u, testutil.Get); err != nil {
+	if err := testutil.Retry(t, testutil.Get(address+u)); err != nil {
 		t.Fatal(err)
 	}
 
 	ctx := context.Background()
-	traceClient, err = tracepb.NewClient(ctx)
+	c, err := tracepb.NewClient(ctx)
 	if err != nil {
 		t.Fatalf("error creating trace client: %v\n", err)
 	}
-	defer traceClient.Close()
-	if err := testutil.Retry(t, u, readTrace); err != nil {
+	defer c.Close()
+	if err := testutil.Retry(t, readTrace(ctx, c, u)); err != nil {
 		t.Error(err)
 	}
 }
 
-func readTrace(u string) error {
-	req := &cloudtracepb.ListTracesRequest{
-		ProjectId: projectID,
-		Filter:    fmt.Sprintf("+root:%s", u),
+func readTrace(ctx context.Context, c *tracepb.Client, u string) func() error {
+	return func() error {
+		req := &cloudtracepb.ListTracesRequest{
+			ProjectId: projectID,
+			Filter:    fmt.Sprintf("+root:%s", u),
+		}
+		it := c.ListTraces(context.Background(), req)
+		_, err := it.Next()
+		if err == iterator.Done {
+			return fmt.Errorf("no trace found for %q", u)
+		}
+		return err
 	}
-	it := traceClient.ListTraces(context.Background(), req)
-	_, err := it.Next()
-	if err == iterator.Done {
-		return fmt.Errorf("no trace found for %q", u)
-	}
-	return err
 }
