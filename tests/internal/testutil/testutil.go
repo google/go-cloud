@@ -48,7 +48,7 @@ func Retry(logger Logger, f func() error) error {
 		if d = d * 2; d > maxBackoff {
 			break
 		}
-		logger.Logf("request failed: %v, retrying in %v", err, d)
+		logger.Logf("%v, retrying in %v", err, d)
 	}
 	return fmt.Errorf("maximum retries reached: %v", err)
 }
