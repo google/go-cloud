@@ -1,0 +1,15 @@
+runtime: go
+api_version: go1
+
+env_variables:
+  # Uncomment this line and replace with the actual webhook secret.
+  # CONTRIBUTEBOT_WEBHOOK_SECRET: xyzzy
+
+handlers:
+- url: /.*
+  script: _go_app
+  secure: always
+
+skip_files:
+- \.md$
+- \.yaml\.in$
