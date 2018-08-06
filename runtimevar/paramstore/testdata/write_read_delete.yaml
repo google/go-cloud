@@ -2,64 +2,6 @@
 version: 1
 interactions:
 - request:
-    body: '{"Name":"test-good-param","Overwrite":true,"Type":"String","Value":"Jolly
-      snowman to test Unicode handling: ☃️"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "116"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210947Z
-      X-Amz-Target:
-      - AmazonSSM.PutParameter
-      X-Gocloud-Seq:
-      - "0"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{"Version":1}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:48 GMT
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: '{"Name":"test-good-param"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "26"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210948Z
-      X-Amz-Target:
-      - AmazonSSM.GetParameter
-      X-Gocloud-Seq:
-      - "1"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{"Parameter":{"Name":"test-good-param","Type":"String","Value":"Jolly snowman
-      to test Unicode handling: ☃️","Version":1}}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:48 GMT
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
     body: '{"Filters":[{"Key":"Name","Values":["test-good-param"]}]}'
     form: {}
     headers:
@@ -88,63 +30,32 @@ interactions:
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-good-param"}'
+    body: '{"Filters":[{"Key":"Name","Values":["test-good-size-value"]}]}'
     form: {}
     headers:
       Content-Length:
-      - "26"
+      - "62"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180717T210948Z
+      - 20180717T210949Z
       X-Amz-Target:
-      - AmazonSSM.DeleteParameter
+      - AmazonSSM.DescribeParameters
       X-Gocloud-Seq:
-      - "3"
+      - "8"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{}'
+    body: '{"Parameters":[{"LastModifiedDate":1.531861789716E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:48 GMT
+      - Tue, 17 Jul 2018 21:09:49 GMT
     status: 200 OK
     code: 200
-    duration: ""
-- request:
-    body: '{"Name":"test-bad-param-with-snowman-☃️","Overwrite":true,"Type":"String","Value":"snowman"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "96"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210948Z
-      X-Amz-Target:
-      - AmazonSSM.PutParameter
-      X-Gocloud-Seq:
-      - "4"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{"__type":"ValidationException","message":"Parameter name: can''t be prefixed
-      with \"ssm\" (case-insensitive). If formed as a path, it can consist of sub-paths
-      divided by slash symbol; each sub-path can be formed as a mix of letters, numbers
-      and the following 3 symbols .-_"}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:48 GMT
-    status: 400 Bad Request
-    code: 400
     duration: ""
 - request:
     body: '{"Name":"\n\t\tHodor. Hodor HODOR hodor, hodor hodor, hodor. Hodor hodor
@@ -183,226 +94,35 @@ interactions:
     code: 400
     duration: ""
 - request:
-    body: "{\"Name\":\"test-good-size-value\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"\uFEFF***The
-      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
-      Tragedie of Macbeth*********************\\r\\n\\r\\nThis is our 3rd edition
-      of most of these plays.  See the index.\\r\\n\\r\\n\\r\\nCopyright laws are
-      changing all over the world, be sure to check\\r\\nthe copyright laws for your
-      country before posting these files!!\\r\\n\\r\\nPlease take a look at the important
-      information in this header.\\r\\nWe encourage you to keep this file on your
-      own disk, keeping an\\r\\nelectronic path open for the next readers.  Do not
-      remove this.\\r\\n\\r\\n\\r\\n**Welcome To The World of Free Plain Vanilla Electronic
-      Texts**\\r\\n\\r\\n**Etexts Readable By Both Humans and By Computers, Since
-      1971**\\r\\n\\r\\n*These Etexts Prepared By Hundreds of Volunteers and Donations*\\r\\n\\r\\nInformation
-      on contacting Project Gutenberg to get Etexts, and\\r\\nfurther information
-      is included below.  We need your donations.\\r\\n\\r\\n\\r\\nThe Tragedie of
-      Macbeth\\r\\n\\r\\nby William Shakespeare\\r\\n\\r\\nJuly, 2000  [Etext #2264]\\r\\n\\r\\n\\r\\n***The
-      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
-      Tragedie of Macbeth*********************\\r\\n\\r\\n*****This file should be
-      named 2264.txt or 2264.zip******\\r\\n\\r\\nProject Gutenberg Etexts are usually
-      created from multiple editions,\\r\\nall of which are in the Public Domain in
-      the United States, unless a\\r\\ncopyright notice is included.  Therefore, we
-      usually do NOT keep any\\r\\nof these books in compliance with any particular
-      paper edition.\\r\\n\\r\\n\\r\\nWe are now trying to release all our books one
-      month in advance\\r\\nof the official release dates, leaving time for better
-      editing.\\r\\n\\r\\nPlease note:  neither this list nor its contents are final
-      till\\r\\nmidnight of the last day of the month of any such announcement.\\r\\nThe
-      official release date of all Project Gutenberg Etexts is at\\r\\nMidnight, Central
-      Time, of the last day of the stated month.  A\\r\\npreliminary version may often
-      be posted for suggestion, comment\\r\\nand editing by those who wish to do so.
-      \ To be sure you have an\\r\\nup to date first edition [xxxxx10x.xxx] please
-      check file sizes\\r\\nin the first week of the next month.  Since our ftp program
-      has\\r\\na bug in it that scrambles the date [tried to fix and failed] a\\r\\nlook
-      at the file size will have to do, but we will try to see a\\r\\nnew copy has
-      at least one byte more or less.\\r\\n\\r\\n\\r\\nInformation about Project Gutenberg
-      (one page)\\r\\n\\r\\nWe produce about two million dollars for each hour we
-      work.  The\\r\\ntime it takes us, a rather conservative estimate, is fifty hours\\r\\nto
-      get any etext selected, entered, proofread, edited, copyright\\r\\nsearched
-      and analyzed, the copyright letters written, etc.  This\\r\\nprojected audience
-      is one hundred million readers.  If our value\\r\\nper text is nominally estimated
-      at one dollar then we produce $2\\r\\nmillion dollars per hour this year as
-      we release thirty-six text\\r\\nfiles per month, or 432 more Etexts in 1999
-      for a total of 2000+\\r\\nIf these reach just 10% of the computerized population,
-      then the\\r\\ntotal should reach over 200 billion Etexts given away this year.\\r\\n\\r\\nThe
-      Goal of Project Gutenberg is to Give Away One Trillion Etext\\r\\nFiles by December
-      31, 2001.  [10,000 x 100,000,000 = 1 Trillion]\\r\\nThis is ten thousand titles
-      each to one hundred million readers,\\r\\nwhich is only ~5% of the present number
-      of computer users.\\r\\n\\r\\nAt our revised rates of production, we will reach
-      only one-third\\r\\nof that goal by the end of 2001, or about 3,333 Etexts unless
-      we\\r\\nmanage to get some real funding; currently our funding is mostly\\r\\nfrom
-      Michael Hart's salary at Carnegie-Mellon University, and an\\r\\nassortment
-      of sporadic gifts; this salary is only good for a few\\r\\nmore years, so we
-      are looking for something to replace it, as we\\r\\ndon't want Project Gutenberg
-      to be so dependent on one person.\\r\\n\\r\\nWe need your donations more than
-      ever!\\r\\n\\r\\n\\r\\nAll donations should be made to \\\"Project Gutenberg/CMU\\\":
-      and are\\r\\ntax deductible to the extent allowable by law.  (CMU = Carnegie-\\r\\nMellon
-      University).\\r\\n\\r\\nFor these and other matters, please mail to:\\r\\n\\r\\nProject
-      Gutenberg\\r\\nP. O. Box  2782\\r\\nChampaign, IL 61825\\r\\n\\r\\nWhen all
-      other email fails. . .try our Executive Director:\\r\\nMichael S. Hart <hart@pobox.com>\\r\"}"
+    body: '{"Name":"test-bad-param-with-snowman-☃️","Overwrite":true,"Type":"String","Value":"snowman"}'
     form: {}
     headers:
       Content-Length:
-      - "4370"
+      - "96"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
       X-Amz-Date:
-      - 20180717T210949Z
+      - 20180717T210948Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
       X-Gocloud-Seq:
-      - "6"
+      - "4"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Version":1}'
+    body: '{"__type":"ValidationException","message":"Parameter name: can''t be prefixed
+      with \"ssm\" (case-insensitive). If formed as a path, it can consist of sub-paths
+      divided by slash symbol; each sub-path can be formed as a mix of letters, numbers
+      and the following 3 symbols .-_"}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: '{"Name":"test-good-size-value"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "31"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210949Z
-      X-Amz-Target:
-      - AmazonSSM.GetParameter
-      X-Gocloud-Seq:
-      - "7"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: "{\"Parameter\":{\"Name\":\"test-good-size-value\",\"Type\":\"String\",\"Value\":\"\uFEFF***The
-      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
-      Tragedie of Macbeth*********************\\r\\n\\r\\nThis is our 3rd edition
-      of most of these plays.  See the index.\\r\\n\\r\\n\\r\\nCopyright laws are
-      changing all over the world, be sure to check\\r\\nthe copyright laws for your
-      country before posting these files!!\\r\\n\\r\\nPlease take a look at the important
-      information in this header.\\r\\nWe encourage you to keep this file on your
-      own disk, keeping an\\r\\nelectronic path open for the next readers.  Do not
-      remove this.\\r\\n\\r\\n\\r\\n**Welcome To The World of Free Plain Vanilla Electronic
-      Texts**\\r\\n\\r\\n**Etexts Readable By Both Humans and By Computers, Since
-      1971**\\r\\n\\r\\n*These Etexts Prepared By Hundreds of Volunteers and Donations*\\r\\n\\r\\nInformation
-      on contacting Project Gutenberg to get Etexts, and\\r\\nfurther information
-      is included below.  We need your donations.\\r\\n\\r\\n\\r\\nThe Tragedie of
-      Macbeth\\r\\n\\r\\nby William Shakespeare\\r\\n\\r\\nJuly, 2000  [Etext #2264]\\r\\n\\r\\n\\r\\n***The
-      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
-      Tragedie of Macbeth*********************\\r\\n\\r\\n*****This file should be
-      named 2264.txt or 2264.zip******\\r\\n\\r\\nProject Gutenberg Etexts are usually
-      created from multiple editions,\\r\\nall of which are in the Public Domain in
-      the United States, unless a\\r\\ncopyright notice is included.  Therefore, we
-      usually do NOT keep any\\r\\nof these books in compliance with any particular
-      paper edition.\\r\\n\\r\\n\\r\\nWe are now trying to release all our books one
-      month in advance\\r\\nof the official release dates, leaving time for better
-      editing.\\r\\n\\r\\nPlease note:  neither this list nor its contents are final
-      till\\r\\nmidnight of the last day of the month of any such announcement.\\r\\nThe
-      official release date of all Project Gutenberg Etexts is at\\r\\nMidnight, Central
-      Time, of the last day of the stated month.  A\\r\\npreliminary version may often
-      be posted for suggestion, comment\\r\\nand editing by those who wish to do so.
-      \ To be sure you have an\\r\\nup to date first edition [xxxxx10x.xxx] please
-      check file sizes\\r\\nin the first week of the next month.  Since our ftp program
-      has\\r\\na bug in it that scrambles the date [tried to fix and failed] a\\r\\nlook
-      at the file size will have to do, but we will try to see a\\r\\nnew copy has
-      at least one byte more or less.\\r\\n\\r\\n\\r\\nInformation about Project Gutenberg
-      (one page)\\r\\n\\r\\nWe produce about two million dollars for each hour we
-      work.  The\\r\\ntime it takes us, a rather conservative estimate, is fifty hours\\r\\nto
-      get any etext selected, entered, proofread, edited, copyright\\r\\nsearched
-      and analyzed, the copyright letters written, etc.  This\\r\\nprojected audience
-      is one hundred million readers.  If our value\\r\\nper text is nominally estimated
-      at one dollar then we produce $2\\r\\nmillion dollars per hour this year as
-      we release thirty-six text\\r\\nfiles per month, or 432 more Etexts in 1999
-      for a total of 2000+\\r\\nIf these reach just 10% of the computerized population,
-      then the\\r\\ntotal should reach over 200 billion Etexts given away this year.\\r\\n\\r\\nThe
-      Goal of Project Gutenberg is to Give Away One Trillion Etext\\r\\nFiles by December
-      31, 2001.  [10,000 x 100,000,000 = 1 Trillion]\\r\\nThis is ten thousand titles
-      each to one hundred million readers,\\r\\nwhich is only ~5% of the present number
-      of computer users.\\r\\n\\r\\nAt our revised rates of production, we will reach
-      only one-third\\r\\nof that goal by the end of 2001, or about 3,333 Etexts unless
-      we\\r\\nmanage to get some real funding; currently our funding is mostly\\r\\nfrom
-      Michael Hart's salary at Carnegie-Mellon University, and an\\r\\nassortment
-      of sporadic gifts; this salary is only good for a few\\r\\nmore years, so we
-      are looking for something to replace it, as we\\r\\ndon't want Project Gutenberg
-      to be so dependent on one person.\\r\\n\\r\\nWe need your donations more than
-      ever!\\r\\n\\r\\n\\r\\nAll donations should be made to \\\"Project Gutenberg/CMU\\\":
-      and are\\r\\ntax deductible to the extent allowable by law.  (CMU = Carnegie-\\r\\nMellon
-      University).\\r\\n\\r\\nFor these and other matters, please mail to:\\r\\n\\r\\nProject
-      Gutenberg\\r\\nP. O. Box  2782\\r\\nChampaign, IL 61825\\r\\n\\r\\nWhen all
-      other email fails. . .try our Executive Director:\\r\\nMichael S. Hart <hart@pobox.com>\\r\",\"Version\":1}}"
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: '{"Filters":[{"Key":"Name","Values":["test-good-size-value"]}]}'
-    form: {}
-    headers:
-      Content-Length:
-      - "62"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210949Z
-      X-Amz-Target:
-      - AmazonSSM.DescribeParameters
-      X-Gocloud-Seq:
-      - "8"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{"Parameters":[{"LastModifiedDate":1.531861789716E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: '{"Name":"test-good-size-value"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "31"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Date:
-      - 20180717T210950Z
-      X-Amz-Target:
-      - AmazonSSM.DeleteParameter
-      X-Gocloud-Seq:
-      - "9"
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
-    status: 200 OK
-    code: 200
+      - Tue, 17 Jul 2018 21:09:48 GMT
+    status: 400 Bad Request
+    code: 400
     duration: ""
 - request:
     body: "{\"Name\":\"test-bad-size-value\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"\uFEFF***The
@@ -3747,4 +3467,284 @@ interactions:
       - Tue, 17 Jul 2018 21:09:50 GMT
     status: 400 Bad Request
     code: 400
+    duration: ""
+- request:
+    body: '{"Name":"test-good-param","Overwrite":true,"Type":"String","Value":"Jolly
+      snowman to test Unicode handling: ☃️"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "116"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210947Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "0"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":1}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:48 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-good-param"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "26"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210948Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+      X-Gocloud-Seq:
+      - "1"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"Name":"test-good-param","Type":"String","Value":"Jolly snowman
+      to test Unicode handling: ☃️","Version":1}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:48 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-good-param"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "26"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210948Z
+      X-Amz-Target:
+      - AmazonSSM.DeleteParameter
+      X-Gocloud-Seq:
+      - "3"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:48 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: "{\"Name\":\"test-good-size-value\",\"Overwrite\":true,\"Type\":\"String\",\"Value\":\"\uFEFF***The
+      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
+      Tragedie of Macbeth*********************\\r\\n\\r\\nThis is our 3rd edition
+      of most of these plays.  See the index.\\r\\n\\r\\n\\r\\nCopyright laws are
+      changing all over the world, be sure to check\\r\\nthe copyright laws for your
+      country before posting these files!!\\r\\n\\r\\nPlease take a look at the important
+      information in this header.\\r\\nWe encourage you to keep this file on your
+      own disk, keeping an\\r\\nelectronic path open for the next readers.  Do not
+      remove this.\\r\\n\\r\\n\\r\\n**Welcome To The World of Free Plain Vanilla Electronic
+      Texts**\\r\\n\\r\\n**Etexts Readable By Both Humans and By Computers, Since
+      1971**\\r\\n\\r\\n*These Etexts Prepared By Hundreds of Volunteers and Donations*\\r\\n\\r\\nInformation
+      on contacting Project Gutenberg to get Etexts, and\\r\\nfurther information
+      is included below.  We need your donations.\\r\\n\\r\\n\\r\\nThe Tragedie of
+      Macbeth\\r\\n\\r\\nby William Shakespeare\\r\\n\\r\\nJuly, 2000  [Etext #2264]\\r\\n\\r\\n\\r\\n***The
+      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
+      Tragedie of Macbeth*********************\\r\\n\\r\\n*****This file should be
+      named 2264.txt or 2264.zip******\\r\\n\\r\\nProject Gutenberg Etexts are usually
+      created from multiple editions,\\r\\nall of which are in the Public Domain in
+      the United States, unless a\\r\\ncopyright notice is included.  Therefore, we
+      usually do NOT keep any\\r\\nof these books in compliance with any particular
+      paper edition.\\r\\n\\r\\n\\r\\nWe are now trying to release all our books one
+      month in advance\\r\\nof the official release dates, leaving time for better
+      editing.\\r\\n\\r\\nPlease note:  neither this list nor its contents are final
+      till\\r\\nmidnight of the last day of the month of any such announcement.\\r\\nThe
+      official release date of all Project Gutenberg Etexts is at\\r\\nMidnight, Central
+      Time, of the last day of the stated month.  A\\r\\npreliminary version may often
+      be posted for suggestion, comment\\r\\nand editing by those who wish to do so.
+      \ To be sure you have an\\r\\nup to date first edition [xxxxx10x.xxx] please
+      check file sizes\\r\\nin the first week of the next month.  Since our ftp program
+      has\\r\\na bug in it that scrambles the date [tried to fix and failed] a\\r\\nlook
+      at the file size will have to do, but we will try to see a\\r\\nnew copy has
+      at least one byte more or less.\\r\\n\\r\\n\\r\\nInformation about Project Gutenberg
+      (one page)\\r\\n\\r\\nWe produce about two million dollars for each hour we
+      work.  The\\r\\ntime it takes us, a rather conservative estimate, is fifty hours\\r\\nto
+      get any etext selected, entered, proofread, edited, copyright\\r\\nsearched
+      and analyzed, the copyright letters written, etc.  This\\r\\nprojected audience
+      is one hundred million readers.  If our value\\r\\nper text is nominally estimated
+      at one dollar then we produce $2\\r\\nmillion dollars per hour this year as
+      we release thirty-six text\\r\\nfiles per month, or 432 more Etexts in 1999
+      for a total of 2000+\\r\\nIf these reach just 10% of the computerized population,
+      then the\\r\\ntotal should reach over 200 billion Etexts given away this year.\\r\\n\\r\\nThe
+      Goal of Project Gutenberg is to Give Away One Trillion Etext\\r\\nFiles by December
+      31, 2001.  [10,000 x 100,000,000 = 1 Trillion]\\r\\nThis is ten thousand titles
+      each to one hundred million readers,\\r\\nwhich is only ~5% of the present number
+      of computer users.\\r\\n\\r\\nAt our revised rates of production, we will reach
+      only one-third\\r\\nof that goal by the end of 2001, or about 3,333 Etexts unless
+      we\\r\\nmanage to get some real funding; currently our funding is mostly\\r\\nfrom
+      Michael Hart's salary at Carnegie-Mellon University, and an\\r\\nassortment
+      of sporadic gifts; this salary is only good for a few\\r\\nmore years, so we
+      are looking for something to replace it, as we\\r\\ndon't want Project Gutenberg
+      to be so dependent on one person.\\r\\n\\r\\nWe need your donations more than
+      ever!\\r\\n\\r\\n\\r\\nAll donations should be made to \\\"Project Gutenberg/CMU\\\":
+      and are\\r\\ntax deductible to the extent allowable by law.  (CMU = Carnegie-\\r\\nMellon
+      University).\\r\\n\\r\\nFor these and other matters, please mail to:\\r\\n\\r\\nProject
+      Gutenberg\\r\\nP. O. Box  2782\\r\\nChampaign, IL 61825\\r\\n\\r\\nWhen all
+      other email fails. . .try our Executive Director:\\r\\nMichael S. Hart <hart@pobox.com>\\r\"}"
+    form: {}
+    headers:
+      Content-Length:
+      - "4370"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210949Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "6"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":1}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:49 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-good-size-value"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "31"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210949Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+      X-Gocloud-Seq:
+      - "7"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: "{\"Parameter\":{\"Name\":\"test-good-size-value\",\"Type\":\"String\",\"Value\":\"\uFEFF***The
+      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
+      Tragedie of Macbeth*********************\\r\\n\\r\\nThis is our 3rd edition
+      of most of these plays.  See the index.\\r\\n\\r\\n\\r\\nCopyright laws are
+      changing all over the world, be sure to check\\r\\nthe copyright laws for your
+      country before posting these files!!\\r\\n\\r\\nPlease take a look at the important
+      information in this header.\\r\\nWe encourage you to keep this file on your
+      own disk, keeping an\\r\\nelectronic path open for the next readers.  Do not
+      remove this.\\r\\n\\r\\n\\r\\n**Welcome To The World of Free Plain Vanilla Electronic
+      Texts**\\r\\n\\r\\n**Etexts Readable By Both Humans and By Computers, Since
+      1971**\\r\\n\\r\\n*These Etexts Prepared By Hundreds of Volunteers and Donations*\\r\\n\\r\\nInformation
+      on contacting Project Gutenberg to get Etexts, and\\r\\nfurther information
+      is included below.  We need your donations.\\r\\n\\r\\n\\r\\nThe Tragedie of
+      Macbeth\\r\\n\\r\\nby William Shakespeare\\r\\n\\r\\nJuly, 2000  [Etext #2264]\\r\\n\\r\\n\\r\\n***The
+      Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
+      Tragedie of Macbeth*********************\\r\\n\\r\\n*****This file should be
+      named 2264.txt or 2264.zip******\\r\\n\\r\\nProject Gutenberg Etexts are usually
+      created from multiple editions,\\r\\nall of which are in the Public Domain in
+      the United States, unless a\\r\\ncopyright notice is included.  Therefore, we
+      usually do NOT keep any\\r\\nof these books in compliance with any particular
+      paper edition.\\r\\n\\r\\n\\r\\nWe are now trying to release all our books one
+      month in advance\\r\\nof the official release dates, leaving time for better
+      editing.\\r\\n\\r\\nPlease note:  neither this list nor its contents are final
+      till\\r\\nmidnight of the last day of the month of any such announcement.\\r\\nThe
+      official release date of all Project Gutenberg Etexts is at\\r\\nMidnight, Central
+      Time, of the last day of the stated month.  A\\r\\npreliminary version may often
+      be posted for suggestion, comment\\r\\nand editing by those who wish to do so.
+      \ To be sure you have an\\r\\nup to date first edition [xxxxx10x.xxx] please
+      check file sizes\\r\\nin the first week of the next month.  Since our ftp program
+      has\\r\\na bug in it that scrambles the date [tried to fix and failed] a\\r\\nlook
+      at the file size will have to do, but we will try to see a\\r\\nnew copy has
+      at least one byte more or less.\\r\\n\\r\\n\\r\\nInformation about Project Gutenberg
+      (one page)\\r\\n\\r\\nWe produce about two million dollars for each hour we
+      work.  The\\r\\ntime it takes us, a rather conservative estimate, is fifty hours\\r\\nto
+      get any etext selected, entered, proofread, edited, copyright\\r\\nsearched
+      and analyzed, the copyright letters written, etc.  This\\r\\nprojected audience
+      is one hundred million readers.  If our value\\r\\nper text is nominally estimated
+      at one dollar then we produce $2\\r\\nmillion dollars per hour this year as
+      we release thirty-six text\\r\\nfiles per month, or 432 more Etexts in 1999
+      for a total of 2000+\\r\\nIf these reach just 10% of the computerized population,
+      then the\\r\\ntotal should reach over 200 billion Etexts given away this year.\\r\\n\\r\\nThe
+      Goal of Project Gutenberg is to Give Away One Trillion Etext\\r\\nFiles by December
+      31, 2001.  [10,000 x 100,000,000 = 1 Trillion]\\r\\nThis is ten thousand titles
+      each to one hundred million readers,\\r\\nwhich is only ~5% of the present number
+      of computer users.\\r\\n\\r\\nAt our revised rates of production, we will reach
+      only one-third\\r\\nof that goal by the end of 2001, or about 3,333 Etexts unless
+      we\\r\\nmanage to get some real funding; currently our funding is mostly\\r\\nfrom
+      Michael Hart's salary at Carnegie-Mellon University, and an\\r\\nassortment
+      of sporadic gifts; this salary is only good for a few\\r\\nmore years, so we
+      are looking for something to replace it, as we\\r\\ndon't want Project Gutenberg
+      to be so dependent on one person.\\r\\n\\r\\nWe need your donations more than
+      ever!\\r\\n\\r\\n\\r\\nAll donations should be made to \\\"Project Gutenberg/CMU\\\":
+      and are\\r\\ntax deductible to the extent allowable by law.  (CMU = Carnegie-\\r\\nMellon
+      University).\\r\\n\\r\\nFor these and other matters, please mail to:\\r\\n\\r\\nProject
+      Gutenberg\\r\\nP. O. Box  2782\\r\\nChampaign, IL 61825\\r\\n\\r\\nWhen all
+      other email fails. . .try our Executive Director:\\r\\nMichael S. Hart <hart@pobox.com>\\r\",\"Version\":1}}"
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:49 GMT
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-good-size-value"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "31"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210950Z
+      X-Amz-Target:
+      - AmazonSSM.DeleteParameter
+      X-Gocloud-Seq:
+      - "9"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:49 GMT
+    status: 200 OK
+    code: 200
     duration: ""

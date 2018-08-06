@@ -36,12 +36,6 @@ const bucketPrefix = "go-cloud"
 
 var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
 
-// bucketName returns a name for a bucket with a hard-coded prefix that includes
-// the current time (so that subsequent runs of the test don't have the same bucket name).
-func bucketName(suffix string) string {
-	return fmt.Sprintf("%s-%s", bucketPrefix, suffix)
-}
-
 func TestNewBucketNaming(t *testing.T) {
 	tests := []struct {
 		name, bucketName string
@@ -90,17 +84,16 @@ func TestNewBucketNaming(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b := c.Bucket(bucketName(tc.bucketName))
+			b := c.Bucket(fmt.Sprintf("%s-%s", bucketPrefix, tc.bucketName))
 			err = b.Create(ctx, *projectID, nil)
-			if err != nil {
-				_ = b.Delete(ctx)
-			}
 
 			switch {
 			case err != nil && !tc.wantErr:
 				t.Errorf("got %q; want nil", err)
 			case err == nil && tc.wantErr:
 				t.Errorf("got nil error; want error")
+			case !tc.wantErr:
+				_ = b.Delete(ctx)
 			}
 		})
 	}
@@ -155,12 +148,8 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bkt := bucketName("test-obj-naming")
+	bkt := fmt.Sprintf("%s-%s", bucketPrefix, "test-obj-naming")
 	b := c.Bucket(bkt)
-	err = b.Delete(ctx)
-	if err != nil {
-		t.Fatalf("Failed to delete: %v", err)
-	}
 	defer func() { _ = b.Delete(ctx) }()
 	_ = b.Create(ctx, *projectID, nil)
 
@@ -250,12 +239,9 @@ func TestHTTPClientOpt(t *testing.T) {
 
 func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*gcp.HTTPClient, func(), error) {
 
-	mode := recorder.ModeReplaying
-	if *setup.Record {
-		mode = recorder.ModeRecording
-		if *projectID == "" {
-			return nil, nil, fmt.Errorf("--projectID must be specified for -record mode")
-		}
+	mode := recorder.ModeRecording
+	if !*setup.Record {
+		mode = recorder.ModeReplaying
 	}
 	r, done, err := replay.NewGCSRecorder(logf, mode, filepath)
 	if err != nil {

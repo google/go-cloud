@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -120,6 +121,7 @@ func scrubAWSHeaders(filepath string) error {
 		// Ignore an error if LastModifiedUser isn't deleted, it's not really important.
 		action.Response.Body, _ = sjson.Delete(action.Response.Body, "LastModifiedUser")
 	}
+	sortInteractions(c.Interactions)
 	c.Mu.Unlock()
 	return c.Save()
 }
@@ -269,6 +271,22 @@ func scrubGCS(filepath string) error {
 			}
 		}
 	}
+	sortInteractions(c.Interactions)
 	c.Mu.Unlock()
 	return c.Save()
+}
+
+// sortInteractions sorts interactions by Method, then URL, then Body.
+// The caller should hold cassette.Cassette.Mu.
+func sortInteractions(interactions []*cassette.Interaction) {
+	sort.Slice(interactions, func(i, j int) bool {
+		a, b := interactions[i].Request, interactions[j].Request
+		if a.Method != b.Method {
+			return a.Method < b.Method
+		}
+		if a.URL != b.URL {
+			return a.URL < b.URL
+		}
+		return a.Body < b.Body
+	})
 }
