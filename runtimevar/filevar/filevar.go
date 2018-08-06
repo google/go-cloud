@@ -159,7 +159,7 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 				continue
 			}
 			// Ignore if not one of the following operations.
-			if !(event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename) != 0) {
+			if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename) == 0 {
 				continue
 			}
 			sd := w.processFile()
