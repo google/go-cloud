@@ -114,7 +114,7 @@ func TestWire(t *testing.T) {
 				if !bytes.Equal(gen, test.wantWireOutput) {
 					gotS, wantS := string(gen), string(test.wantWireOutput)
 					diff := cmp.Diff(strings.Split(gotS, "\n"), strings.Split(wantS, "\n"))
-					t.Fatalf("wire output differs from golden file. If this change is expected, run with -record to update the wire_gen.go file.\n*** got:\n%s\n\n*** want:\n%s\n\n***diff:\n%s", gotS, wantS, diff)
+					t.Fatalf("wire output differs from golden file. If this change is expected, run with -record to update the wire_gen.go file.\n*** got:\n%s\n\n*** want:\n%s\n\n*** diff:\n%s", gotS, wantS, diff)
 				}
 			}
 		})
@@ -168,7 +168,7 @@ func goBuildCheck(test *testCase, wd string, bctx *build.Context, gen []byte) er
 	if !bytes.Equal(out, test.wantProgramOutput) {
 		gotS, wantS := string(out), string(test.wantProgramOutput)
 		diff := cmp.Diff(strings.Split(gotS, "\n"), strings.Split(wantS, "\n"))
-		return fmt.Errorf("compiled program output doesn't match:\n*** got:\n%s\n\n*** want:\n%s\n\n***diff:\n%s", gotS, wantS, diff)
+		return fmt.Errorf("compiled program output doesn't match:\n*** got:\n%s\n\n*** want:\n%s\n\n*** diff:\n%s", gotS, wantS, diff)
 	}
 	return nil
 }
