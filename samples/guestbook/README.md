@@ -79,7 +79,7 @@ terraform init
 # and desired zone.
 terraform apply
 
-./deploy.sh
+go run deploy.go
 ```
 
 The deploy script will display the URL of your running service.
