@@ -251,25 +251,24 @@ func TestWatchObservesChange(t *testing.T) {
 }
 
 func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	mode := recorder.ModeReplaying
 	if *setup.Record {
 		mode = recorder.ModeRecording
 	}
 
-	rOpts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
+	opts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
 	if err != nil {
 		return nil, nil, err
 	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}),
+	opts = append(opts, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	if mode == recorder.ModeRecording {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}))
 	}
-	opts = append(opts, rOpts...)
 	conn, err := grpc.DialContext(ctx, endPoint, opts...)
 	if err != nil {
 		return nil, nil, err
