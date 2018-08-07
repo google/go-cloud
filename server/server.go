@@ -51,7 +51,8 @@ type Options struct {
 	DefaultSamplingPolicy trace.Sampler
 }
 
-// New creates a new server. New(nil) is the same as new(Server).
+// New creates a new server. New(nil) is the same as new(Server). Note: A
+// configured Requestlogger will not log HealthChecks.
 func New(opts *Options) *Server {
 	srv := new(Server)
 	if opts != nil {
