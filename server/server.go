@@ -51,8 +51,7 @@ type Options struct {
 	DefaultSamplingPolicy trace.Sampler
 }
 
-// New creates a new server. New(nil) is the same as new(Server). Note: A
-// configured Requestlogger will not log HealthChecks.
+// New creates a new server. New(nil) is the same as new(Server).
 func New(opts *Options) *Server {
 	srv := new(Server)
 	if opts != nil {
@@ -80,6 +79,7 @@ func (srv *Server) init() {
 // ListenAndServe is a wrapper to use wherever http.ListenAndServe is used.
 // It wraps the passed-in http.Handler with a handler that handles tracing and
 // request logging. If the handler is nil, then http.DefaultServeMux will be used.
+// A configured Requestlogger will log all requests except HealthChecks.
 func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	srv.init()
 
