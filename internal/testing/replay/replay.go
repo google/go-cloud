@@ -121,7 +121,6 @@ func scrubAWSHeaders(filepath string) error {
 		// Ignore an error if LastModifiedUser isn't deleted, it's not really important.
 		action.Response.Body, _ = sjson.Delete(action.Response.Body, "LastModifiedUser")
 	}
-	sortInteractions(c.Interactions)
 	c.Mu.Unlock()
 	return c.Save()
 }
