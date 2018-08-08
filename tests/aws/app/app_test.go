@@ -43,7 +43,6 @@ const (
 
 var (
 	hostIP       string
-	serverAddr   string
 	awsRegion    string
 	gcpProjectID string
 	sshUser      string
