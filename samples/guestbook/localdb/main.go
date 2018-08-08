@@ -19,12 +19,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/go-pipe/pipe"
@@ -46,7 +44,7 @@ func main() {
 func runLocalDb(containerName, guestbookDir string) error {
 	image := "mysql:5.6"
 
-	// Start container
+	log.Printf("Starting container running MySQL")
 	dockerArgs := []string{"run", "--rm"}
 	if containerName != "" {
 		dockerArgs = append(dockerArgs, "--name", containerName)
@@ -64,21 +62,17 @@ func runLocalDb(containerName, guestbookDir string) error {
 		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
+	defer func() {
+		stop := exec.Command("docker", "stop", containerID)
+		if out, err := stop.CombinedOutput(); err != nil {
+			panic(fmt.Sprintf("failed to stop db container: %v: %s", err, out))
+		}
+		log.Printf("stopped %s", containerID)
+	}()
 
-	log.Printf("Started container %s, waiting for database to be healthy", containerID)
-	for {
-		c, err := net.Dial("tcp", "localhost:3306")
-		if err != nil {
-			log.Printf("Database does not appear to be up; trying again")
-			time.Sleep(time.Second)
-			continue
-		}
-		if err := c.Close(); err != nil {
-			return fmt.Errorf("closing connection to MySQL db: %v", err)
-		}
-		break
-	}
-	log.Printf("Database seems to be healthy")
+	nap := 10 * time.Second
+	log.Printf("Waiting %v for database to come up", nap)
+	time.Sleep(nap)
 
 	log.Printf("Initializing database schema and users")
 	schema, err := ioutil.ReadFile(filepath.Join(guestbookDir, "schema.sql"))
@@ -89,22 +83,31 @@ func runLocalDb(containerName, guestbookDir string) error {
 	if err != nil {
 		return fmt.Errorf("reading roles: %v", err)
 	}
-	mySQL := `mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -ppassword guestbook`
-	p := pipe.Line(
-		pipe.Read(strings.NewReader(string(schema)+string(roles))),
-		pipe.Exec("docker", "run", "--rm", "--interactive", "--link", containerID+":mysql", image, "sh", "-c", mySQL),
-	)
-	if err := pipe.Run(p); err != nil {
-		stop := exec.Command("docker", "stop", containerID)
-		if out, err := stop.CombinedOutput(); err != nil {
-			return fmt.Errorf("failed to seed database and failed to stop db container: %v: %s", err, out)
+	tooMany := 10
+	var i int
+	for i = 0; i < tooMany; i++ {
+		mySQL := `mysql -h"${MYSQL_PORT_3306_TCP_ADDR?}" -P"${MYSQL_PORT_3306_TCP_PORT?}" -uroot -ppassword guestbook`
+		p := pipe.Line(
+			pipe.Read(strings.NewReader(string(schema)+string(roles))),
+			pipe.Exec("docker", "run", "--rm", "--interactive", "--link", containerID+":mysql", image, "sh", "-c", mySQL),
+		)
+		if _, stderr, err := pipe.DividedOutput(p); err != nil {
+			log.Printf("Failed to seed database: %q; retrying", stderr)
+			time.Sleep(time.Second)
+			continue
 		}
-		return fmt.Errorf("failed to seed database; stopped %s", containerID)
+		break
+	}
+	if i == tooMany {
+		return fmt.Errorf("gave up after %d tries to seed database", i)
 	}
 
 	log.Printf("Database running at localhost:3306")
-	if err := syscall.Exec("docker", []string{"docker", "attach", containerID}, os.Environ()); err != nil {
-		return fmt.Errorf("failed to exec docker attach: %v", err)
+	attach := exec.Command("docker", "attach", containerID)
+	attach.Stdout = os.Stdout
+	attach.Stderr = os.Stderr
+	if err := attach.Run(); err != nil {
+		return fmt.Errorf("running %v: %q", attach.Args, err)
 	}
 
 	return nil
