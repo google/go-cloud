@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -55,21 +56,34 @@ func runLocalDb(containerName, guestbookDir string) error {
 		"--publish", "3306:3306",
 		image)
 	cmd := exec.Command("docker", dockerArgs...)
-	out, err := cmd.CombinedOutput()
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
 	log.Printf("Started container %s, waiting for healthy", containerID)
 
-	whileLoop := fmt.Sprintf(`while ! nc -z "$MYSQL_PORT_3306_TCP_ADDR:$MYSQL_PORT_3306_TCP_PORT"; do sleep 1; done`)
-	waitForHealth := exec.Command("docker", "run", "--rm", "--link", fmt.Sprintf("%s:mysql", containerID), netcatImage, "sh", "-c", whileLoop)
-	if out, err := waitForHealth.CombinedOutput(); err != nil {
+	var i int
+	tooMany := 30
+	for i = 0; i < tooMany; i++ {
+		checkHealth := exec.Command("docker", "run", "--rm", "--link", containerID+":mysql", netcatImage, "sh", "-c", `nc -z ${MYSQL_PORT_3306_TCP_ADDR?} ${MYSQL_PORT_3306_TCP_PORT?}`)
+		checkHealth.Stderr = os.Stderr
+		checkHealth.Stdout = os.Stdout
+		log.Printf("running %v", checkHealth.Args)
+		if err := checkHealth.Run(); err != nil {
+			log.Printf("Database does not appear to be up. Trying again.")
+			time.Sleep(time.Second)
+			continue
+		}
+		break
+	}
+	if i == tooMany {
 		stop := exec.Command("docker", "stop", containerID)
 		if stopOut, stopErr := stop.CombinedOutput(); err != nil {
 			return fmt.Errorf("Failed to stop container while handling error of database port not open: %v: %s", stopErr, stopOut)
 		}
-		return fmt.Errorf("database port not open; stopped %; details: %s", containerID, out)
+		return fmt.Errorf("database port not open; stopped %s", containerID)
 	}
 
 	// Initialize database schema and users
