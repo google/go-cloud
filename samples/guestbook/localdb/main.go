@@ -71,7 +71,6 @@ func runLocalDb(containerName, guestbookDir string) error {
 		if out, err := stop.CombinedOutput(); err != nil {
 			panic(fmt.Sprintf("failed to stop db container: %v: %s", err, out))
 		}
-		log.Printf("killing %s", containerID)
 	}
 	defer stopContainer()
 
