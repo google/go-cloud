@@ -247,7 +247,7 @@ func newGCSClient(ctx context.Context, t *testing.T) (*gcp.HTTPClient, func(), e
 	if *setup.Record {
 		mode = recorder.ModeRecording
 	}
-	r, done, err := replay.NewGCSRecorder(t.Logf, mode, t.Name())
+	r, done, err := replay.NewRecorder(t, replay.ProviderGCP, mode, t.Name())
 	if err != nil {
 		return nil, nil, err
 	}
