@@ -68,11 +68,12 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	mysql.RegisterDial(dialerName, client.Dial)
 
 	cfg := &mysql.Config{
-		Net:    dialerName,
-		Addr:   params.ProjectID + ":" + params.Region + ":" + params.Instance,
-		User:   params.User,
-		Passwd: params.Password,
-		DBName: params.Database,
+		AllowNativePasswords: true,
+		Net:                  dialerName,
+		Addr:                 params.ProjectID + ":" + params.Region + ":" + params.Instance,
+		User:                 params.User,
+		Passwd:               params.Password,
+		DBName:               params.Database,
 	}
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
 }
