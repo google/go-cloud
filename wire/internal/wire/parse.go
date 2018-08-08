@@ -29,6 +29,15 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
+// A providerSetSrc captures the source for a type provided by a ProviderSet.
+// Exactly one of the fields will be set.
+type providerSetSrc struct {
+	Provider *Provider
+	Binding  *IfaceBinding
+	Value    *Value
+	Import   *ProviderSet
+}
+
 // A ProviderSet describes a set of providers.  The zero value is an empty
 // ProviderSet.
 type ProviderSet struct {
@@ -37,9 +46,9 @@ type ProviderSet struct {
 	Pos token.Pos
 	// PkgPath is the import path of the package that declared this set.
 	PkgPath string
-	// Name is the variable name of the set, if it came from a package
+	// VarName is the variable name of the set, if it came from a package
 	// variable.
-	Name string
+	VarName string
 
 	Providers []*Provider
 	Bindings  []*IfaceBinding
@@ -49,6 +58,10 @@ type ProviderSet struct {
 	// providerMap maps from provided type to a *Provider or *Value.
 	// It includes all of the imported types.
 	providerMap *typeutil.Map
+
+	// srcMap maps from provided type to a *providerSetSrc capturing the
+	// Provider, Binding, Value, or Import that provided the type.
+	srcMap *typeutil.Map
 }
 
 // Outputs returns a new slice containing the set of possible types the
@@ -189,7 +202,7 @@ func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
 				if buildCall == nil {
 					continue
 				}
-				set, errs := oc.processNewSet(pkgInfo, buildCall)
+				set, errs := oc.processNewSet(pkgInfo, buildCall, "")
 				if len(errs) > 0 {
 					ec.add(notePositionAll(prog.Fset.Position(fn.Pos()), errs)...)
 					continue
@@ -380,7 +393,7 @@ func (oc *objectCache) get(obj types.Object) (val interface{}, errs []error) {
 				break
 			}
 		}
-		return oc.processExpr(oc.prog.Package(obj.Pkg().Path()), spec.Values[i])
+		return oc.processExpr(oc.prog.Package(obj.Pkg().Path()), spec.Values[i], obj.Name())
 	case *types.Func:
 		return processFuncProvider(oc.prog.Fset, obj)
 	default:
@@ -411,7 +424,7 @@ func (oc *objectCache) varDecl(obj *types.Var) *ast.ValueSpec {
 // processExpr converts an expression into a Wire structure. It may
 // return a *Provider, a structProviderPair, an *IfaceBinding, a
 // *ProviderSet, or a *Value.
-func (oc *objectCache) processExpr(pkg *loader.PackageInfo, expr ast.Expr) (interface{}, []error) {
+func (oc *objectCache) processExpr(pkg *loader.PackageInfo, expr ast.Expr, varName string) (interface{}, []error) {
 	exprPos := oc.prog.Fset.Position(expr.Pos())
 	expr = astutil.Unparen(expr)
 	if obj := qualifiedIdentObject(&pkg.Info, expr); obj != nil {
@@ -427,7 +440,7 @@ func (oc *objectCache) processExpr(pkg *loader.PackageInfo, expr ast.Expr) (inte
 		}
 		switch fnObj.Name() {
 		case "NewSet":
-			pset, errs := oc.processNewSet(pkg, call)
+			pset, errs := oc.processNewSet(pkg, call, varName)
 			return pset, notePositionAll(exprPos, errs)
 		case "Bind":
 			b, err := processBind(oc.prog.Fset, &pkg.Info, call)
@@ -463,16 +476,17 @@ type structProviderPair struct {
 	ptrProvider *Provider
 }
 
-func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr) (*ProviderSet, []error) {
+func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr, varName string) (*ProviderSet, []error) {
 	// Assumes that call.Fun is wire.NewSet or wire.Build.
 
 	pset := &ProviderSet{
 		Pos:     call.Pos(),
 		PkgPath: pkg.Pkg.Path(),
+		VarName: varName,
 	}
 	ec := new(errorCollector)
 	for _, arg := range call.Args {
-		item, errs := oc.processExpr(pkg, arg)
+		item, errs := oc.processExpr(pkg, arg, "")
 		if len(errs) > 0 {
 			ec.add(errs...)
 			continue
@@ -496,7 +510,7 @@ func (oc *objectCache) processNewSet(pkg *loader.PackageInfo, call *ast.CallExpr
 		return nil, ec.errors
 	}
 	var errs []error
-	pset.providerMap, errs = buildProviderMap(oc.prog.Fset, oc.hasher, pset)
+	pset.providerMap, pset.srcMap, errs = buildProviderMap(oc.prog.Fset, oc.hasher, pset)
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -702,19 +716,17 @@ func processValue(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*V
 	}
 	ok := true
 	ast.Inspect(call.Args[0], func(node ast.Node) bool {
-		switch node.(type) {
+		switch expr := node.(type) {
 		case nil, *ast.ArrayType, *ast.BasicLit, *ast.BinaryExpr, *ast.ChanType, *ast.CompositeLit, *ast.FuncType, *ast.Ident, *ast.IndexExpr, *ast.InterfaceType, *ast.KeyValueExpr, *ast.MapType, *ast.ParenExpr, *ast.SelectorExpr, *ast.SliceExpr, *ast.StarExpr, *ast.StructType, *ast.TypeAssertExpr:
 			// Good!
 		case *ast.UnaryExpr:
-			expr := node.(*ast.UnaryExpr)
 			if expr.Op == token.ARROW {
 				ok = false
 				return false
 			}
 		case *ast.CallExpr:
 			// Only acceptable if it's a type conversion.
-			call := node.(*ast.CallExpr)
-			if _, isFunc := info.TypeOf(call.Fun).(*types.Signature); isFunc {
+			if _, isFunc := info.TypeOf(expr.Fun).(*types.Signature); isFunc {
 				ok = false
 				return false
 			}

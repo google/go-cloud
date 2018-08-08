@@ -37,11 +37,6 @@ variable "db_access_service_account_name" {
   description = "The username part of the service account email that will be used for provisioning the database."
 }
 
-variable "db_instance" {
-  default     = "guestbook"
-  description = "The Cloud SQL instance name."
-}
-
 variable "cluster_name" {
   default     = "guestbook-cluster"
   description = "The GKE cluster name."
