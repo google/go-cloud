@@ -13,6 +13,16 @@ variable "app_binary" {
   description = "The path to the test app binary to be copied to EC2."
 }
 
+variable "gcp_project" {
+  type        = "string"
+  description = "The project ID of the GCP project used for Stackdriver logging."
+}
+
+variable "stackdriver_service_account" {
+  type        = "string"
+  description = "The username part of the service account email to access Stackdriver"
+}
+
 variable "aws_credentials_file" {
   type        = "string"
   description = "The path to the AWS credentials file."

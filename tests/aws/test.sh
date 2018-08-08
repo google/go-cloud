@@ -43,20 +43,19 @@ cleanup1() {
 }
 trap cleanup1 EXIT
 
-log "Building test driver..."
+log "Building test app..."
 ( cd "${test_dir}/app" && GOOS=linux GOARCH=amd64 vgo build -o "${tempdir}/app" ) || exit 1
-( cd "${test_dir}/test-driver" && vgo build -o "${tempdir}/test-driver" ) || exit 1
 
 log "Provisioning AWS resources..."
 terraform init -input=false "${test_dir}" || exit 1
 cleanup2() {
-    log "Tearing down GCP resources..."
-    terraform destroy -auto-approve -input=false -var app_binary="${tempdir}/app" "${test_dir}"
+    log "Tearing down AWS resources..."
+    terraform destroy -auto-approve -input=false -var app_binary="${tempdir}/app" -var gcp_project="${gcp_project_id}" "${test_dir}"
     cleanup1
 }
 trap cleanup2 EXIT
-terraform apply -auto-approve -input=false -var app_binary="${tempdir}/app" "${test_dir}" || exit 1
+terraform apply -auto-approve -input=false -var app_binary="${tempdir}/app" -var gcp_project="${gcp_project_id}" "${test_dir}" || exit 1
 
 log "Running test..."
 host_ip="$( terraform output -state=${test_dir}/terraform.tfstate host_ip )" || exit 1
-"${tempdir}/test-driver" --gcp-project "${gcp_project_id}" --aws-region "${region}" --host-ip "${host_ip}" --key-path "${ssh_key_path}" || exit 1
+( cd "${test_dir}/app" && vgo test -v -args --gcp-project "${gcp_project_id}" --aws-region "${region}" --host-ip "${host_ip}" --key-path "${ssh_key_path}" ) || exit 1
