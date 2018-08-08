@@ -67,18 +67,14 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	dialerName := fmt.Sprintf("github.com/google/go-cloud/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
 
-	cfg := makeConfig(dialerName, params)
+	cfg := &mysql.Config{
+		Net:    dialerName,
+		Addr:   params.ProjectID + ":" + params.Region + ":" + params.Instance,
+		User:   params.User,
+		Passwd: params.Password,
+		DBName: params.Database,
+	}
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
-}
-
-func makeConfig(dialerName string, params *Params) *mysql.Config {
-	cfg := mysql.NewConfig()
-	cfg.Net = dialerName
-	cfg.Addr = params.ProjectID + ":" + params.Region + ":" + params.Instance
-	cfg.User = params.User
-	cfg.Passwd = params.Password
-	cfg.DBName = params.Database
-	return cfg
 }
 
 var dialerCounter struct {
