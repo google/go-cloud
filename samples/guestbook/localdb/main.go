@@ -26,6 +26,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/go-pipe/pipe"
 )
 
 func main() {
@@ -87,20 +89,12 @@ func runLocalDb(containerName, guestbookDir string) error {
 	if err != nil {
 		return fmt.Errorf("reading roles: %v", err)
 	}
-	mySQL := `exec mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -ppassword guestbook`
-	dockerMySQL := exec.Command("docker", "run", "--rm", "--interactive", "--link", containerID+":mysql", image, "sh", "-c", mySQL)
-	dockerMySQL.Stderr = os.Stderr
-	inPipe, err := dockerMySQL.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("making stdin pipe to docker mysql command: %v", err)
-	}
-	if _, err := inPipe.Write(schema); err != nil {
-		return fmt.Errorf("sending schema to MySQL: %v", err)
-	}
-	if _, err := inPipe.Write(roles); err != nil {
-		return fmt.Errorf("sending roles to MySQL: %v", err)
-	}
-	if err := dockerMySQL.Run(); err != nil {
+	mySQL := `mysql -h"$MYSQL_PORT_3306_TCP_ADDR" -P"$MYSQL_PORT_3306_TCP_PORT" -uroot -ppassword guestbook`
+	p := pipe.Line(
+		pipe.Read(strings.NewReader(string(schema)+string(roles))),
+		pipe.Exec("docker", "run", "--rm", "--interactive", "--link", containerID+":mysql", image, "sh", "-c", mySQL),
+	)
+	if err := pipe.Run(p); err != nil {
 		stop := exec.Command("docker", "stop", containerID)
 		if out, err := stop.CombinedOutput(); err != nil {
 			return fmt.Errorf("failed to seed database and failed to stop db container: %v: %s", err, out)
