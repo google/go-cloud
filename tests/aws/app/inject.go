@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/google/go-cloud/aws/awscloud"
 	"github.com/google/go-cloud/server"
@@ -31,7 +30,7 @@ import (
 )
 
 func initialize(ctx context.Context, cfg *appConfig) (*server.Server, func(), error) {
-	wire.Build(appSet, awsSession, awscloud.Services, wire.Value(http.DefaultClient))
+	wire.Build(appSet, awsSession, awscloud.Services)
 	return nil, nil, nil
 }
 
@@ -43,11 +42,9 @@ var awsSession = wire.NewSet(
 )
 
 func awsOptions(cfg *appConfig) session.Options {
-	creds := credentials.NewSharedCredentials(cfg.credsFile, "")
 	return session.Options{
 		Config: aws.Config{
-			Credentials: creds,
-			Region:      aws.String(cfg.region),
+			Region: aws.String(cfg.region),
 		},
 	}
 }

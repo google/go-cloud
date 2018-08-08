@@ -148,11 +148,6 @@ resource "aws_instance" "app" {
   }
 
   provisioner "file" {
-    source      = "${var.aws_credentials_file}"
-    destination = "/home/admin/aws-creds"
-  }
-
-  provisioner "file" {
     source      = "${var.gcp_service_account_file}"
     destination = "/home/admin/gcp-adc.json"
   }

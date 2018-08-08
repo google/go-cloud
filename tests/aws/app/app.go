@@ -30,8 +30,7 @@ import (
 )
 
 type appConfig struct {
-	region    string
-	credsFile string
+	region string
 }
 
 var appSet = wire.NewSet(
@@ -44,7 +43,6 @@ var connection = &connectionChecker{connected: true}
 func main() {
 	cfg := new(appConfig)
 	flag.StringVar(&cfg.region, "region", "us-west-1", "AWS region for xray")
-	flag.StringVar(&cfg.credsFile, "creds-file", "aws-creds", "file to fetch AWS credentials")
 	srv, cleanup, err := initialize(context.Background(), cfg)
 	if err != nil {
 		log.Fatal(err)
