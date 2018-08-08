@@ -15,12 +15,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"time"
@@ -62,17 +65,33 @@ func runLocalDb(containerName, guestbookDir string) error {
 		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
-	defer func() {
-		stop := exec.Command("docker", "stop", containerID)
+	stopContainer := func() {
+		log.Printf("killing %s", containerID)
+		stop := exec.Command("docker", "kill", containerID)
 		if out, err := stop.CombinedOutput(); err != nil {
 			panic(fmt.Sprintf("failed to stop db container: %v: %s", err, out))
 		}
-		log.Printf("stopped %s", containerID)
+		log.Printf("killing %s", containerID)
+	}
+	defer stopContainer()
+
+	// Stop the container on Ctrl-C.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		<-c
+		cancel()
 	}()
 
 	nap := 10 * time.Second
 	log.Printf("Waiting %v for database to come up", nap)
-	time.Sleep(nap)
+	select {
+	case <-time.After(nap):
+		// ok
+	case <-ctx.Done():
+		return errors.New("interrupted while napping")
+	}
 
 	log.Printf("Initializing database schema and users")
 	schema, err := ioutil.ReadFile(filepath.Join(guestbookDir, "schema.sql"))
@@ -93,8 +112,12 @@ func runLocalDb(containerName, guestbookDir string) error {
 		)
 		if _, stderr, err := pipe.DividedOutput(p); err != nil {
 			log.Printf("Failed to seed database: %q; retrying", stderr)
-			time.Sleep(time.Second)
-			continue
+			select {
+			case <-time.After(time.Second):
+				continue
+			case <-ctx.Done():
+				return errors.New("interrupted while napping in between database seeding attempts")
+			}
 		}
 		break
 	}
@@ -103,7 +126,7 @@ func runLocalDb(containerName, guestbookDir string) error {
 	}
 
 	log.Printf("Database running at localhost:3306")
-	attach := exec.Command("docker", "attach", containerID)
+	attach := exec.CommandContext(ctx, "docker", "attach", containerID)
 	attach.Stdout = os.Stdout
 	attach.Stderr = os.Stderr
 	if err := attach.Run(); err != nil {
