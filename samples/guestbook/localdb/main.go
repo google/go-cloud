@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,7 +43,6 @@ func main() {
 
 func runLocalDb(containerName, guestbookDir string) error {
 	image := "mysql:5.6"
-	netcatImage := "alpine:3.7"
 
 	// Start container
 	dockerArgs := []string{"run", "--rm"}
@@ -62,31 +62,23 @@ func runLocalDb(containerName, guestbookDir string) error {
 		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
-	log.Printf("Started container %s, waiting for healthy", containerID)
 
-	var i int
-	tooMany := 30
-	for i = 0; i < tooMany; i++ {
-		checkHealth := exec.Command("docker", "run", "--rm", "--link", containerID+":mysql", netcatImage, "sh", "-c", `nc -z ${MYSQL_PORT_3306_TCP_ADDR?} ${MYSQL_PORT_3306_TCP_PORT?}`)
-		checkHealth.Stderr = os.Stderr
-		checkHealth.Stdout = os.Stdout
-		log.Printf("running %v", checkHealth.Args)
-		if err := checkHealth.Run(); err != nil {
-			log.Printf("Database does not appear to be up. Trying again.")
+	log.Printf("Started container %s, waiting for database to be healthy", containerID)
+	for {
+		c, err := net.Dial("tcp", "localhost:3306")
+		if err != nil {
+			log.Printf("Database does not appear to be up; trying again")
 			time.Sleep(time.Second)
 			continue
 		}
+		if err := c.Close(); err != nil {
+			return fmt.Errorf("closing connection to MySQL db: %v", err)
+		}
 		break
 	}
-	if i == tooMany {
-		stop := exec.Command("docker", "stop", containerID)
-		if stopOut, stopErr := stop.CombinedOutput(); err != nil {
-			return fmt.Errorf("Failed to stop container while handling error of database port not open: %v: %s", stopErr, stopOut)
-		}
-		return fmt.Errorf("database port not open; stopped %s", containerID)
-	}
+	log.Printf("Database seems to be healthy")
 
-	// Initialize database schema and users
+	log.Printf("Initializing database schema and users")
 	schema, err := ioutil.ReadFile(filepath.Join(guestbookDir, "schema.sql"))
 	if err != nil {
 		return fmt.Errorf("reading schema: %v", err)
