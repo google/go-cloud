@@ -59,6 +59,12 @@ type Writer struct {
 
 	// These fields exist only when w is not created in the first place when
 	// NewWriter is called.
+	//
+	// A ctx is stored in the Writer since we need to pass it into NewTypedWriter
+	// when we finished detecting the content type of the object and create the
+	// underlying driver.Writer. This step happens inside Write or Close and
+	// neither of them take a context.Context as an argument. The ctx must be set
+	// to nil after we have done passing it.
 	ctx    context.Context
 	bucket driver.Bucket
 	key    string
