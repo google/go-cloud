@@ -283,6 +283,39 @@ func TestReader(t *testing.T) {
 			t.Errorf("NewReader: got %#v, want not exist error", err)
 		}
 	})
+	t.Run("ModTime", func(t *testing.T) {
+		dir, err := ioutil.TempDir("", "fileblob")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(dir)
+		const wholeFile = "Hello, World!\n"
+
+		err = ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte(wholeFile), 0666)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		info, err := os.Stat(filepath.Join(dir, "foo.txt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := NewBucket(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ctx := context.Background()
+		f, err := b.NewRangeReader(ctx, "foo.txt", 0, 0)
+		if err != nil {
+			t.Fatal("NewRangeReader:", err)
+		}
+
+		if f.ModTime() != info.ModTime() {
+			t.Errorf("r.Attrs().ModTime expected %#v, got %#v", info.ModTime(), f.ModTime())
+		}
+	})
 	// TODO(light): For sake of conformance test completionism, this should also
 	// test range that goes past the end of the blob, but then we're just testing
 	// the OS for fileblob.
