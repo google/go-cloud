@@ -72,13 +72,15 @@ func TestMain(m *testing.M) {
 }
 
 func startApp() error {
-	key, err := publicKeyFile(sshKeyPath)
+	signer, err := signerFromFile(sshKeyPath)
 	if err != nil {
 		return fmt.Errorf("cannot get key from file: %v", err)
 	}
 	config := &ssh.ClientConfig{
 		User: sshUser,
-		Auth: []ssh.AuthMethod{key},
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			return nil
 		},
@@ -96,7 +98,7 @@ func startApp() error {
 	// This close the session channel and the TCP connection, but doesn't terminate
 	// the running app. session.Signal() does not terminate it either, see
 	// https://github.com/golang/go/issues/4115. This is OK for our use case since
-	// we tear it down after the test finishes.
+	// we tear down the instance after the test finishes.
 	defer func() {
 		session.Close()
 		c.Close()
@@ -104,16 +106,12 @@ func startApp() error {
 	return session.Start("/home/admin/app 2>&1 | logger")
 }
 
-func publicKeyFile(path string) (ssh.AuthMethod, error) {
+func signerFromFile(path string) (ssh.Signer, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	key, err := ssh.ParsePrivateKey(b)
-	if err != nil {
-		return nil, err
-	}
-	return ssh.PublicKeys(key), nil
+	return ssh.ParsePrivateKey(b)
 }
 
 func TestRequestLog(t *testing.T) {
@@ -134,25 +132,25 @@ func TestRequestLog(t *testing.T) {
 	}
 	defer c.Close()
 
-	if err := testutil.Retry(t, readLogEntries(ctx, c, p)); err != nil {
+	if err := testutil.Retry(t, func() error {
+		return readLogEntries(ctx, c, p)
+	}); err != nil {
 		t.Error(err)
 	}
 }
 
-func readLogEntries(ctx context.Context, c *logadmin.Client, u string) func() error {
-	return func() error {
-		iter := c.Entries(context.Background(),
-			logadmin.Filter(strconv.Quote(u)),
-		)
-		_, err := iter.Next()
-		if err == iterator.Done {
-			return fmt.Errorf("no entry found for request log that matches %q", u)
-		}
-		if err != nil {
-			return err
-		}
-		return nil
+func readLogEntries(ctx context.Context, c *logadmin.Client, u string) error {
+	iter := c.Entries(context.Background(),
+		logadmin.Filter(strconv.Quote(u)),
+	)
+	_, err := iter.Next()
+	if err == iterator.Done {
+		return fmt.Errorf("no entry found for request log that matches %q", u)
 	}
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func TestTrace(t *testing.T) {
@@ -174,44 +172,44 @@ func TestTrace(t *testing.T) {
 		log.Fatalf("error creating an AWS session: %v\n", err)
 	}
 	c := xray.New(sess)
-	if err := testutil.Retry(t, readTrace(c, p, startTime)); err != nil {
+	if err := testutil.Retry(t, func() error {
+		return readTrace(c, p, startTime)
+	}); err != nil {
 		t.Error(err)
 	}
 }
 
-func readTrace(c *xray.XRay, u string, startTime time.Time) func() error {
-	return func() error {
-		summaries, err := c.GetTraceSummaries(&xray.GetTraceSummariesInput{
-			StartTime: aws.Time(startTime),
-			EndTime:   aws.Time(time.Now()),
-		})
-		if err != nil {
-			return err
-		}
-		if len(summaries.TraceSummaries) == 0 {
-			return fmt.Errorf("no trace found for %s", u)
-		}
-
-		// The above call to get trace summaries cannot find the trace by filtering
-		// with the url, so we have to use the id to get individual traces and look
-		// into their segments (spans).
-		ids := make([]*string, len(summaries.TraceSummaries))
-		for i, ts := range summaries.TraceSummaries {
-			ids[i] = ts.Id
-		}
-		traces, err := c.BatchGetTraces(&xray.BatchGetTracesInput{
-			TraceIds: ids,
-		})
-		if err != nil {
-			return err
-		}
-		for _, tr := range traces.Traces {
-			for _, seg := range tr.Segments {
-				if seg.Document != nil && strings.Contains(*seg.Document, u) {
-					return nil
-				}
-			}
-		}
+func readTrace(c *xray.XRay, u string, startTime time.Time) error {
+	summaries, err := c.GetTraceSummaries(&xray.GetTraceSummariesInput{
+		StartTime: aws.Time(startTime),
+		EndTime:   aws.Time(time.Now()),
+	})
+	if err != nil {
+		return err
+	}
+	if len(summaries.TraceSummaries) == 0 {
 		return fmt.Errorf("no trace found for %s", u)
 	}
+
+	// The above call to get trace summaries cannot find the trace by filtering
+	// with the url, so we have to use the id to get individual traces and look
+	// into their segments (spans).
+	ids := make([]*string, len(summaries.TraceSummaries))
+	for i, ts := range summaries.TraceSummaries {
+		ids[i] = ts.Id
+	}
+	traces, err := c.BatchGetTraces(&xray.BatchGetTracesInput{
+		TraceIds: ids,
+	})
+	if err != nil {
+		return err
+	}
+	for _, tr := range traces.Traces {
+		for _, seg := range tr.Segments {
+			if seg.Document != nil && strings.Contains(*seg.Document, u) {
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("no trace found for %s", u)
 }
