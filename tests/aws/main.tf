@@ -54,6 +54,7 @@ resource "aws_security_group" "app" {
 }
 
 # GCP service account for accessing Stackdriver logging
+
 resource "google_service_account" "sd_project" {
   account_id   = "${var.stackdriver_service_account}"
   display_name = "Stackdriver project"

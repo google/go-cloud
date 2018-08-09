@@ -37,11 +37,6 @@ variable "stackdriver_service_account" {
   description = "The username part of the service account email to access Stackdriver"
 }
 
-variable "aws_credentials_file" {
-  type        = "string"
-  description = "The path to the AWS credentials file."
-}
-
 variable "gcp_service_account_file" {
   type        = "string"
   description = "The service account files used to get ADC"
