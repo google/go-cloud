@@ -132,11 +132,10 @@ https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
 ## Tests
 
-For portable APIs, the distinction between developer and operator is blurred for
-integration tests, which require developer-specific resources to be created and
-destroyed. We use [Terraform](http://terraform.io) to do so, and record the
-resource info and network interactions so that they can be replayed as fast and
-repeatable unit tests.
+Portable API integration tests require developer-specific resources to be
+created and destroyed. We use [Terraform](http://terraform.io) to do so, and
+record the resource info and network interactions so that they can be replayed
+as fast and repeatable unit tests.
 
 ### Replay Mode
 
@@ -160,24 +159,24 @@ this.
 
     -   For example, the tests for the AWS implementation of Blob requires a
         bucket to be provisioned.
-    -   TODO: Use Terraform scripts to provision the resources needed for a
-        given test.
+    -   TODO(issue #300): Use Terraform scripts to provision the resources
+        needed for a given test.
     -   For now, do this manually.
 
 2.  Run the test with `--record`.
 
-    -   TODO: The test will read the Terraform output file `output.tf` to find
-        its inputs.
+    -   TODO(issue #300): The test will read the Terraform output to find its
+        inputs.
     -   For now, pass the required resources via test-specific flags. In some
         cases, tests are
         [hardcoded to specific resource names](https://github.com/google/go-cloud/issues/286).
 
 3.  The test will save the network interactions for subsequent replays.
 
-    -   TODO: The test will save the `output.tf` file in order to replay using
-        the same inputs.
-    -   TODO: The replay files are lightly scrubbed; the `Authorization` HTTP
-        header is removed.
+    -   TODO(issue #300): The test will save the Terraform output to a file in
+        order to replay using the same inputs.
+    -   TODO(issue #301): The replay files are lightly scrubbed; the
+        `Authorization` HTTP header is removed.
     -   Commit the new replay files along with your code change. Expect to see
         lots of diff; see below for more discussion.
 
