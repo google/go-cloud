@@ -71,11 +71,13 @@ func TestMain(m *testing.M) {
 }
 
 func startApp() error {
+	key, err := publicKeyFile(sshKeyPath)
+	if err != nil {
+		return fmt.Errorf("cannot get key from file: %v", err)
+	}
 	config := &ssh.ClientConfig{
 		User: sshUser,
-		Auth: []ssh.AuthMethod{
-			publicKeyFile(sshKeyPath),
-		},
+		Auth: []ssh.AuthMethod{key},
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			return nil
 		},
@@ -85,25 +87,32 @@ func startApp() error {
 	if err != nil {
 		return fmt.Errorf("failed to dial %s:22: %v", hostIP, err)
 	}
-	defer c.Close()
 	session, err := c.NewSession()
 	if err != nil {
 		return fmt.Errorf("failed to create session: %v", err)
 	}
-	defer session.Close()
-	return session.Start("nohup /home/admin/app 2>&1 | logger &")
+
+	// This close the session channel and the TCP connection, but doesn't terminate
+	// the running app. session.Signal() does not terminate it either, see
+	// https://github.com/golang/go/issues/4115. This is OK for our use case since
+	// we tear it down after the test finishes.
+	defer func() {
+		session.Close()
+		c.Close()
+	}()
+	return session.Start("/home/admin/app 2>&1 | logger")
 }
 
-func publicKeyFile(path string) ssh.AuthMethod {
+func publicKeyFile(path string) (ssh.AuthMethod, error) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	key, err := ssh.ParsePrivateKey(b)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return ssh.PublicKeys(key)
+	return ssh.PublicKeys(key), nil
 }
 
 func TestRequestLog(t *testing.T) {
