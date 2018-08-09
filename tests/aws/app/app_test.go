@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -161,6 +162,7 @@ func TestTrace(t *testing.T) {
 		t.Fatal("cannot generate URL suffix:", err)
 	}
 	p := path.Clean(fmt.Sprintf("/%s/%s", traceURL, suf))
+	startTime := time.Now()
 	if err := testutil.Retry(t, testutil.Get("http://"+hostIP+":8080"+p)); err != nil {
 		t.Fatal(err)
 	}
@@ -172,27 +174,44 @@ func TestTrace(t *testing.T) {
 		log.Fatalf("error creating an AWS session: %v\n", err)
 	}
 	c := xray.New(sess)
-	if err := testutil.Retry(t, readTrace(c, p)); err != nil {
+	if err := testutil.Retry(t, readTrace(c, p, startTime)); err != nil {
 		t.Error(err)
 	}
 }
 
-func readTrace(c *xray.XRay, u string) func() error {
+func readTrace(c *xray.XRay, u string, startTime time.Time) func() error {
 	return func() error {
-		now := time.Now()
-		// This filter ideally should have a filter on the tok but the trace summary
-		// sent to X-Ray doesn't match the client library on this part ("name" vs
-		// "http.url").
-		out, err := c.GetTraceSummaries(&xray.GetTraceSummariesInput{
-			StartTime: aws.Time(now.Add(-time.Minute)),
-			EndTime:   aws.Time(now),
+		summaries, err := c.GetTraceSummaries(&xray.GetTraceSummariesInput{
+			StartTime: aws.Time(startTime),
+			EndTime:   aws.Time(time.Now()),
 		})
 		if err != nil {
 			return err
 		}
-		if len(out.TraceSummaries) == 0 {
+		if len(summaries.TraceSummaries) == 0 {
 			return fmt.Errorf("no trace found for %s", u)
 		}
-		return nil
+
+		// The above call to get trace summaries cannot find the trace by filtering
+		// with the url, so we have to use the id to get individual traces and look
+		// into their segments (spans).
+		ids := make([]*string, len(summaries.TraceSummaries))
+		for i, ts := range summaries.TraceSummaries {
+			ids[i] = ts.Id
+		}
+		traces, err := c.BatchGetTraces(&xray.BatchGetTracesInput{
+			TraceIds: ids,
+		})
+		if err != nil {
+			return err
+		}
+		for _, tr := range traces.Traces {
+			for _, seg := range tr.Segments {
+				if seg.Document != nil && strings.Contains(*seg.Document, u) {
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("no trace found for %s", u)
 	}
 }
