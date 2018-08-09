@@ -54,6 +54,7 @@ func (r *Reader) Size() int64 {
 }
 
 // ModTime returns the modification time of the blob object.
+// This is optional and will be time.Time zero value if unknown.
 func (r *Reader) ModTime() time.Time {
 	return r.r.Attrs().ModTime
 }

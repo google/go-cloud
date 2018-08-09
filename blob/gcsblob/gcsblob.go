@@ -68,18 +68,11 @@ func (r *reader) Attrs() *driver.ObjectAttrs {
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	attrs, err := obj.Attrs(ctx)
-	if err != nil {
-		if isErrNotExist(err) {
-			return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-		}
-		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
-	}
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if isErrNotExist(err) {
 		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
-	return &reader{Reader: r, modTime: attrs.Updated}, err
+	return &reader{Reader: r}, err
 }
 
 // NewTypedWriter returns Writer that writes to an object associated with key.
