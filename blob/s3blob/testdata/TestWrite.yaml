@@ -36,44 +36,6 @@ interactions:
     code: 200
     duration: ""
 - request:
-    body: Hello, HTML!
-    form: {}
-    headers:
-      Content-Length:
-      - "12"
-      Content-Md5:
-      - 4JjTxa2PUHPaEsgnRqdPJA==
-      Content-Type:
-      - text/html
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) S3Manager
-      X-Amz-Content-Sha256:
-      - dc84245fd67437c99c6698dba9b6f50cde26069c40575efdeb8103f83c7c56d6
-      X-Amz-Date:
-      - 20180717T205326Z
-      X-Gocloud-Seq:
-      - "1"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write/write_html
-    method: PUT
-  response:
-    body: ""
-    headers:
-      Content-Length:
-      - "0"
-      Date:
-      - Tue, 17 Jul 2018 20:53:27 GMT
-      Etag:
-      - '"e098d3c5ad8f5073da12c82746a74f24"'
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - /Fb9tHodUun7KXUXV0Nu3ePPzZvlBew0szGYANT3UGL0bZONOG9gwtrtAcL8uQ6DoxGMghg0Ppc=
-      X-Amz-Request-Id:
-      - E328EF5631AE4EC7
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
     body: ""
     form: {}
     headers:
@@ -84,108 +46,52 @@ interactions:
       X-Amz-Date:
       - 20180717T205326Z
       X-Gocloud-Seq:
-      - "2"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write/write_html
-    method: GET
-  response:
-    body: Hello, HTML!
-    headers:
-      Accept-Ranges:
-      - bytes
-      Content-Length:
-      - "12"
-      Content-Type:
-      - text/html
-      Date:
-      - Tue, 17 Jul 2018 20:53:27 GMT
-      Etag:
-      - '"e098d3c5ad8f5073da12c82746a74f24"'
-      Last-Modified:
-      - Tue, 17 Jul 2018 20:53:27 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - nBGLDGxqMueC8BVD0FCvojXtkCRACGavmg3KurrAMpiJA8MFxsAX4juf1Hcmlw2m63qgciVj5M8=
-      X-Amz-Request-Id:
-      - 36878623C91A9F6D
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Hello, JSON!
-    form: {}
-    headers:
-      Content-Length:
-      - "12"
-      Content-Md5:
-      - h3AZci0W6fTiRNOdmn81Cw==
-      Content-Type:
-      - application/json
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) S3Manager
-      X-Amz-Content-Sha256:
-      - 49968153c11ad3174ab70424297a4d3ca23c76ad124143cb1d6d5f4a67976608
-      X-Amz-Date:
-      - 20180717T205326Z
-      X-Gocloud-Seq:
-      - "3"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write/write_json
-    method: PUT
+      - "7"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write
+    method: DELETE
   response:
     body: ""
     headers:
-      Content-Length:
-      - "0"
       Date:
-      - Tue, 17 Jul 2018 20:53:27 GMT
-      Etag:
-      - '"877019722d16e9f4e244d39d9a7f350b"'
+      - Tue, 17 Jul 2018 20:53:28 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - USKebq7FEX2CO0CGpY2DaE6mTgR1xTDSa0CUpJ00qAn/DUeIZ87Icmn7y4T2hGFDoZMJQd1BEjQ=
+      - dJeRaHQ6zeL+SJ0EmFtOF+yNsQgEelPipbxEYtDLFg84VQadFYLkBZsWVUqi2QzqsGaJxEGwP/o=
       X-Amz-Request-Id:
-      - A6E07465F93D2417
-    status: 200 OK
-    code: 200
+      - C9DEE4A5AB9C2268
+    status: 204 No Content
+    code: 204
     duration: ""
 - request:
     body: ""
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) Waiter
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180717T205326Z
+      - 20180717T205327Z
       X-Gocloud-Seq:
-      - "4"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write/write_json
-    method: GET
+      - "8"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write
+    method: HEAD
   response:
-    body: Hello, JSON!
+    body: ""
     headers:
-      Accept-Ranges:
-      - bytes
-      Content-Length:
-      - "12"
       Content-Type:
-      - application/json
+      - application/xml
       Date:
-      - Tue, 17 Jul 2018 20:53:27 GMT
-      Etag:
-      - '"877019722d16e9f4e244d39d9a7f350b"'
-      Last-Modified:
-      - Tue, 17 Jul 2018 20:53:27 GMT
+      - Tue, 17 Jul 2018 20:53:26 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - uzPk4Gs8axY0NrrS979kNE1Bzxd2Q0bWyRrEoQBfcbIaNtlGq8C7B8bg3sYQszAUJi6fIP0LJtY=
+      - uCahNDPk/9M+1aQ5+GVT5ZCnT+VDuw/l2pMgl47wmGJhyS2xR+AamiZq4qnFfIGixmlmU6QQaoA=
       X-Amz-Request-Id:
-      - CDB2E1D5AEA38DCB
-    status: 200 OK
-    code: 200
+      - B6516A4F20B5C601
+    status: 404 Not Found
+    code: 404
     duration: ""
 - request:
     body: ""
@@ -256,62 +162,4 @@ interactions:
       - DA2ABAB060714FEB
     status: 200 OK
     code: 200
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
-      X-Amz-Content-Sha256:
-      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-      X-Amz-Date:
-      - 20180717T205326Z
-      X-Gocloud-Seq:
-      - "7"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write
-    method: DELETE
-  response:
-    body: ""
-    headers:
-      Date:
-      - Tue, 17 Jul 2018 20:53:28 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - dJeRaHQ6zeL+SJ0EmFtOF+yNsQgEelPipbxEYtDLFg84VQadFYLkBZsWVUqi2QzqsGaJxEGwP/o=
-      X-Amz-Request-Id:
-      - C9DEE4A5AB9C2268
-    status: 204 No Content
-    code: 204
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) Waiter
-      X-Amz-Content-Sha256:
-      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-      X-Amz-Date:
-      - 20180717T205327Z
-      X-Gocloud-Seq:
-      - "8"
-    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-write
-    method: HEAD
-  response:
-    body: ""
-    headers:
-      Content-Type:
-      - application/xml
-      Date:
-      - Tue, 17 Jul 2018 20:53:26 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - uCahNDPk/9M+1aQ5+GVT5ZCnT+VDuw/l2pMgl47wmGJhyS2xR+AamiZq4qnFfIGixmlmU6QQaoA=
-      X-Amz-Request-Id:
-      - B6516A4F20B5C601
-    status: 404 Not Found
-    code: 404
     duration: ""

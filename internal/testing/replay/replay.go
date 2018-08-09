@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -65,17 +64,18 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		}
 		r.Body = ioutil.NopCloser(&b)
 
+		// TODO(rvangent): See if we can get rid of these X-Gocloud-Seq headers.
 		seq, err := strconv.Atoi(i.Headers.Get("X-Gocloud-Seq"))
 		if err != nil {
 			logf(err.Error())
 			return false
 		}
 
-		logf("Targets: %v | %v == %v\n", r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
-		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
-		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
-		logf("Sequences: %v | %v == %v\n", seq, last, seq > last)
+		logf("%s: Targets: %v | %v == %v\n", path, r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
+		logf("%s: URLs: %v | %v == %v\n", path, r.URL.String(), i.URL, r.URL.String() == i.URL)
+		logf("%s: Methods: %v | %v == %v\n", path, r.Method, i.Method, r.Method == i.Method)
+		logf("%s: Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", path, b.String(), i.Body, b.String() == i.Body)
+		logf("%s: Sequences: %v | %v == %v\n", path, seq, last, seq > last)
 
 		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
 			r.URL.String() == i.URL &&
@@ -83,11 +83,11 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 			b.String() == i.Body &&
 			seq > last {
 			last = seq
-			logf("Returning header match")
+			logf("%s: returning header match for seq %d", path, seq)
 			return true
 		}
 
-		logf("No match, continuing...")
+		logf("%s: no match, continuing...", path)
 		return false
 	})
 	return r, func() {
@@ -270,22 +270,6 @@ func scrubGCS(filepath string) error {
 			}
 		}
 	}
-	sortInteractions(c.Interactions)
 	c.Mu.Unlock()
 	return c.Save()
-}
-
-// sortInteractions sorts interactions by Method, then URL, then Body.
-// The caller should hold cassette.Cassette.Mu.
-func sortInteractions(interactions []*cassette.Interaction) {
-	sort.Slice(interactions, func(i, j int) bool {
-		a, b := interactions[i].Request, interactions[j].Request
-		if a.Method != b.Method {
-			return a.Method < b.Method
-		}
-		if a.URL != b.URL {
-			return a.URL < b.URL
-		}
-		return a.Body < b.Body
-	})
 }

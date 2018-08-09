@@ -1,0 +1,45 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      Range:
+      - bytes=10-14
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180717T205324Z
+      X-Gocloud-Seq:
+      - "4"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-read/test_read
+    method: GET
+  response:
+    body: worth
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Range:
+      - bytes 10-14/23
+      Content-Type:
+      - binary/octet-stream
+      Date:
+      - Tue, 17 Jul 2018 20:53:25 GMT
+      Etag:
+      - '"e6e8d3ea274df5606478655df72a3d16"'
+      Last-Modified:
+      - Tue, 17 Jul 2018 20:53:25 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - tJvfoJkKcnWPQ11MQ6FwuXDIbW1T6LPGcq6N0Uug+objADhUkQtiuKVrX0bUihp/iL8EboupOWg=
+      X-Amz-Request-Id:
+      - 425C50F5CABA2EB3
+    status: 206 Partial Content
+    code: 206
+    duration: ""
