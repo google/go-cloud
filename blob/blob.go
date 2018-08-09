@@ -59,6 +59,12 @@ type Writer struct {
 
 	// These fields exist only when w is not created in the first place when
 	// NewWriter is called.
+	//
+	// A ctx is stored in the Writer since we need to pass it into NewTypedWriter
+	// when we finish detecting the content type of the object and create the
+	// underlying driver.Writer. This step happens inside Write or Close and
+	// neither of them take a context.Context as an argument. The ctx must be set
+	// to nil after we have passed it.
 	ctx    context.Context
 	bucket driver.Bucket
 	key    string
@@ -160,6 +166,9 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same key will be replaced. The object
 // is not guaranteed to be available until Close has been called.
+//
+// The call may store the ctx for later use in Write and/or Close. The ctx
+// must remain open until the returned Writer is closed.
 //
 // The caller must call Close on the returned Writer when done writing.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
