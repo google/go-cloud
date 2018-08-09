@@ -22,6 +22,7 @@ import (
 	"errors"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/google/go-cloud/blob/driver"
 )
@@ -52,7 +53,13 @@ func (r *Reader) Size() int64 {
 	return r.r.Attrs().Size
 }
 
-// Writer implements io.WriteCloser to write a blob. It must be closed after
+// ModTime returns the modification time of the blob object.
+// This is optional and will be time.Time zero value if unknown.
+func (r *Reader) ModTime() time.Time {
+	return r.r.Attrs().ModTime
+}
+
+// Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
 type Writer struct {
 	w driver.Writer
