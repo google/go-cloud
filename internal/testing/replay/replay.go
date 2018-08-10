@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -60,9 +59,18 @@ func NewRecorder(t *testing.T, provider Provider, mode recorder.Mode, filename s
 	}
 
 	// Use a custom matcher as the default matcher looks for URLs and methods;
-	// we inspect the bodies as well.
-	last := -1
+	// we inspect the bodies, some headers, and also prevent re-matches.
+	cur := 0
+	logged := false
+	used := map[int]bool{}
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
+		// If we've already used the request at this index, skip it.
+		if used[cur] {
+			cur++
+			return false
+		}
+
+		// Gather info about the request we're looking for, and scrub it.
 		var b bytes.Buffer
 		if r.Body != nil {
 			if _, err := b.ReadFrom(r.Body); err != nil {
@@ -73,6 +81,7 @@ func NewRecorder(t *testing.T, provider Provider, mode recorder.Mode, filename s
 		r.Body = ioutil.NopCloser(&b)
 		body := b.String()
 		url := r.URL.String()
+		target, iTarget := "", ""
 
 		// TODO(rvangent): Make this more consistent between providers.
 		switch provider {
@@ -80,32 +89,26 @@ func NewRecorder(t *testing.T, provider Provider, mode recorder.Mode, filename s
 			body = scrubGCSIDs(body)
 			url = scrubGCSURL(url)
 		case ProviderAWS:
+			target = r.Header.Get("X-Amz-Target")
+			iTarget = i.Headers.Get("X-Amz-Target")
 		default:
 			t.Fatalf("Unsupported Provider: %v", provider)
 		}
 
-		// TODO(rvangent): See if we can get rid of these X-Gocloud-Seq headers.
-		seq, _ := strconv.Atoi(i.Headers.Get("X-Gocloud-Seq"))
-
-		t.Logf("%s: Targets: %v | %v == %v\n", path, r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
-		t.Logf("%s: URLs: %v | %v == %v\n", path, url, i.URL, url == i.URL)
-		t.Logf("%s: Methods: %v | %v == %v\n", path, r.Method, i.Method, r.Method == i.Method)
-		t.Logf("%s: Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", path, body, i.Body, body == i.Body)
-		t.Logf("%s: Sequences: %v | %v == %v\n", path, seq, last, seq > last)
-
-		// TODO(rvangent): See if we need X-Amz-Target, and if so, only use it for
-		// ProviderGCP.
-		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
-			url == i.URL &&
-			r.Method == i.Method &&
-			body == i.Body &&
-			seq > last {
-			last = seq
-			t.Logf("%s: returning header match for seq %d", path, seq)
-			return true
+		// Log info about the request we're looking for.
+		if !logged {
+			t.Logf("%s: Looking for:\n  Method: %s\n  URL: %s\n  Target: %s\n  Body: %s", path, r.Method, url, target, body)
+			logged = true
 		}
 
-		t.Logf("%s: no match, continuing...", path)
+		if r.Method == i.Method && url == i.URL && target == iTarget && body == i.Body {
+			t.Logf("%s: found match at index %d", path, cur)
+			used[cur] = true
+			cur = 0
+			logged = false
+			return true
+		}
+		cur++
 		return false
 	})
 	return r, func() {
@@ -130,10 +133,7 @@ func NewRecorder(t *testing.T, provider Provider, mode recorder.Mode, filename s
 	}, nil
 }
 
-// scrubAWSHeaders removes *potentially* sensitive information from a cassette,
-// and adds sequencing to the requests to differentiate Amazon calls, as they
-// aren't timestamped.
-// Note that sequence numbers should only be used for otherwise identical matches.
+// scrubAWSHeaders removes *potentially* sensitive information from a cassette.
 func scrubAWSHeaders(filepath string) error {
 	c, err := cassette.Load(filepath)
 	if err != nil {
@@ -141,8 +141,7 @@ func scrubAWSHeaders(filepath string) error {
 	}
 
 	c.Mu.Lock()
-	for i, action := range c.Interactions {
-		action.Request.Headers.Set("X-Gocloud-Seq", strconv.Itoa(i))
+	for _, action := range c.Interactions {
 		action.Request.Headers.Del("Authorization")
 		action.Response.Headers.Del("X-Amzn-Requestid")
 		// Ignore an error if LastModifiedUser isn't deleted, it's not really important.
