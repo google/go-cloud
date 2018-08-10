@@ -24,7 +24,7 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 	if *Record {
 		mode = recorder.ModeRecording
 	}
-	r, done, err := replay.NewAWSRecorder(t.Logf, mode, t.Name())
+	r, done, err := replay.NewRecorder(t, replay.ProviderAWS, mode, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
