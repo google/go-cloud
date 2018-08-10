@@ -38,6 +38,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "usage: go run localdb.go [flags] container_name\n")
 		os.Exit(1)
 	}
+	log.SetPrefix("localdb: ")
 	if err := runLocalDb(flag.Arg(0), *guestbookDir); err != nil {
 		fmt.Fprintf(os.Stderr, "localdb: %v\n", err)
 		os.Exit(1)
