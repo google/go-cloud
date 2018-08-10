@@ -19,6 +19,7 @@ package gcsblob
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -50,12 +51,14 @@ type bucket struct {
 
 type reader struct {
 	*storage.Reader
+	modTime time.Time
 }
 
 func (r *reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
 		Size:        r.Size(),
 		ContentType: r.ContentType(),
+		ModTime:     r.modTime,
 	}
 }
 
