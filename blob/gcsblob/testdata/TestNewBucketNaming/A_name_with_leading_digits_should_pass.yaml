@@ -1,0 +1,90 @@
+---
+version: 1
+interactions:
+- request:
+    body: |
+      {"name":"go-cloud-8ucket_nam3"}
+    form: {}
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#bucket",
+       "id": "go-cloud-8ucket_nam3",
+       "projectNumber": "640193379878",
+       "name": "go-cloud-8ucket_nam3",
+       "timeCreated": "2018-07-17T22:41:22.690Z",
+       "updated": "2018-07-17T22:41:22.690Z",
+       "metageneration": "1",
+       "location": "US",
+       "storageClass": "STANDARD",
+       "etag": "CAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "378"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:22 GMT
+      Etag:
+      - CAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-8ucket_nam3?alt=json
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "0"
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 17 Jul 2018 22:41:23 GMT
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 204 No Content
+    code: 204
+    duration: ""

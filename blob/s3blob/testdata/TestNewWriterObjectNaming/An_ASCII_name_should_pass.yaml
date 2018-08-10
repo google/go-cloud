@@ -1,0 +1,41 @@
+---
+version: 1
+interactions:
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180717T205322Z
+      X-Gocloud-Seq:
+      - "1"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-obj-naming/object-name
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Tue, 17 Jul 2018 20:53:23 GMT
+      Etag:
+      - '"acbd18db4cc2f85cedef654fccc4a4d8"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - akbuBj1zY6N+Bz3EKztHg57brtEEJfdRSYF9Z/BCg/oSA+FGRSHe1WfnQNqOak5VFQqrG97G6fw=
+      X-Amz-Request-Id:
+      - 2A506E1226687CB0
+    status: 200 OK
+    code: 200
+    duration: ""

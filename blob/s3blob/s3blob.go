@@ -22,6 +22,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -54,6 +55,7 @@ type reader struct {
 	body        io.ReadCloser
 	size        int64
 	contentType string
+	modTime     time.Time
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -69,6 +71,7 @@ func (r *reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
 		Size:        r.size,
 		ContentType: r.contentType,
+		ModTime:     r.modTime,
 	}
 }
 
@@ -189,6 +192,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		body:        resp.Body,
 		contentType: aws.StringValue(resp.ContentType),
 		size:        aws.Int64Value(resp.ContentLength),
+		modTime:     aws.TimeValue(resp.LastModified),
 	}, nil
 }
 
@@ -208,6 +212,7 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 		body:        emptyBody,
 		contentType: aws.StringValue(resp.ContentType),
 		size:        aws.Int64Value(resp.ContentLength),
+		modTime:     aws.TimeValue(resp.LastModified),
 	}, nil
 }
 
