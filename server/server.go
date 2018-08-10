@@ -79,6 +79,7 @@ func (srv *Server) init() {
 // ListenAndServe is a wrapper to use wherever http.ListenAndServe is used.
 // It wraps the passed-in http.Handler with a handler that handles tracing and
 // request logging. If the handler is nil, then http.DefaultServeMux will be used.
+// A configured Requestlogger will log all requests except HealthChecks.
 func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	srv.init()
 

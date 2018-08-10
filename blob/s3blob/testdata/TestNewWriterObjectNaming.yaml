@@ -1,0 +1,95 @@
+---
+version: 1
+interactions:
+- request:
+    body: <CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LocationConstraint>us-east-2</LocationConstraint></CreateBucketConfiguration>
+    form: {}
+    headers:
+      Content-Length:
+      - "153"
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Content-Sha256:
+      - 70cae86320841ea73b0bdc759f99920c7caa405e61af2742575750c6586272c9
+      X-Amz-Date:
+      - 20180717T205321Z
+      X-Gocloud-Seq:
+      - "0"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-obj-naming
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Tue, 17 Jul 2018 20:53:22 GMT
+      Location:
+      - http://go-cloud.test-obj-naming.s3.amazonaws.com/
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Aphd23ActOKv8U0iobKJk061itqpmLh56Hy99DYctqzBvMlvG/T5kPimagQ/GgdDqotY7jDIx3g=
+      X-Amz-Request-Id:
+      - FA0D5D5ACE4F74D8
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180717T205323Z
+      X-Gocloud-Seq:
+      - "9"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-obj-naming
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Tue, 17 Jul 2018 20:53:24 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - crXJDBmW2lzyHnPLgVLv0WU55Tos15fJGT3n5XyFeyqSNOWeO/0jbeUYF4IRl+yUcXUEdG8a9uE=
+      X-Amz-Request-Id:
+      - 3E4BD833AA3E8284
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) Waiter
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180717T205324Z
+      X-Gocloud-Seq:
+      - "10"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-obj-naming
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 17 Jul 2018 20:53:23 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 6wfMvmvBDsCks3k1pfCH+Q9QRuuI83glG6cPK1TNy8rcpDSWmsUdDPR2acyVW0J7B45WzeMjezw=
+      X-Amz-Request-Id:
+      - 6814DD772B5E5DC7
+    status: 404 Not Found
+    code: 404
+    duration: ""

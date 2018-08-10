@@ -37,7 +37,6 @@ const (
 )
 
 // TestNewBucketNaming tests if buckets can be created with incorrect characters.
-// Note that this function doesn't hit AWS, so does not require the recorder.
 func TestNewBucketNaming(t *testing.T) {
 	tests := []struct {
 		name, bucketName string
@@ -73,15 +72,15 @@ func TestNewBucketNaming(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "test-naming")
-	defer done()
-	svc := s3.New(sess)
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+			svc := s3.New(sess)
+
 			bkt := fmt.Sprintf("%s.%s", bucketPrefix, tc.bucketName)
 			_, err := svc.CreateBucket(&s3.CreateBucketInput{
-				Bucket: &bkt,
+				Bucket:                    &bkt,
 				CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 			})
 
@@ -136,13 +135,13 @@ func TestNewWriterObjectNaming(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "test-obj-naming")
+	sess, done := setup.NewAWSSession(t, region)
 	defer done()
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-obj-naming")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
-		Bucket: &bkt,
+		Bucket:                    &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
 	defer forceDeleteBucket(svc, bkt)
@@ -153,6 +152,9 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+
 			b, err := s3blob.OpenBucket(ctx, sess, bkt)
 			if err != nil {
 				t.Fatal(err)
@@ -228,13 +230,13 @@ func TestRead(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "test-read")
+	sess, done := setup.NewAWSSession(t, region)
 	defer done()
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-read")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
-		Bucket: &bkt,
+		Bucket:                    &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
 	defer forceDeleteBucket(svc, bkt)
@@ -255,6 +257,9 @@ func TestRead(t *testing.T) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+
 			b, err := s3blob.OpenBucket(ctx, sess, bkt)
 			if err != nil {
 				t.Fatal(err)
@@ -303,13 +308,13 @@ func TestWrite(t *testing.T) {
 			wantSize:    12,
 		},
 	}
-	sess, done := setup.NewAWSSession(t, region, "test-write")
+	sess, done := setup.NewAWSSession(t, region)
 	defer done()
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-write")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
-		Bucket: &bkt,
+		Bucket:                    &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
 	defer forceDeleteBucket(svc, bkt)
@@ -319,13 +324,17 @@ func TestWrite(t *testing.T) {
 
 	ctx := context.Background()
 
-	b, err := s3blob.OpenBucket(ctx, sess, bkt)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+			svc := s3.New(sess)
+
+			b, err := s3blob.OpenBucket(ctx, sess, bkt)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			opts := &blob.WriterOptions{
 				ContentType: tc.contentType,
 			}
@@ -364,13 +373,13 @@ func TestWrite(t *testing.T) {
 }
 
 func TestCloseWithoutWrite(t *testing.T) {
-	sess, done := setup.NewAWSSession(t, region, "test-close-without-write")
+	sess, done := setup.NewAWSSession(t, region)
 	defer done()
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-close-without-write")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
-		Bucket: &bkt,
+		Bucket:                    &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
 	defer forceDeleteBucket(svc, bkt)
@@ -409,13 +418,13 @@ func TestCloseWithoutWrite(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	sess, done := setup.NewAWSSession(t, region, "test-delete")
+	sess, done := setup.NewAWSSession(t, region)
 	defer done()
 	svc := s3.New(sess)
 
 	bkt := fmt.Sprintf("%s.%s", bucketPrefix, "test-delete")
 	_, err := svc.CreateBucket(&s3.CreateBucketInput{
-		Bucket: &bkt,
+		Bucket:                    &bkt,
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{LocationConstraint: aws.String(region)},
 	})
 	defer forceDeleteBucket(svc, bkt)

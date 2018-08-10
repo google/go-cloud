@@ -1,0 +1,41 @@
+---
+version: 1
+interactions:
+- request:
+    body: foo
+    form: {}
+    headers:
+      Content-Length:
+      - "3"
+      Content-Md5:
+      - rL0Y20zC+Fzt72VPzMSk2A==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+      X-Amz-Date:
+      - 20180717T205322Z
+      X-Gocloud-Seq:
+      - "3"
+    url: https://s3.us-east-2.amazonaws.com/go-cloud.test-obj-naming/%F4%90%80%80
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>InvalidURI</Code><Message>Couldn't parse the specified URI.</Message><URI>/go-cloud.test-obj-naming/%F4%90%80%80</URI><RequestId>CC714E07D83D8207</RequestId><HostId>10H6RZ0qA8a9nEjrZuTV1hEMfEhevkF22XpCoh1/HkVaidokg0VxAAy3sTwXlIPSsnh3ZHzW4j8=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 17 Jul 2018 20:53:21 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 10H6RZ0qA8a9nEjrZuTV1hEMfEhevkF22XpCoh1/HkVaidokg0VxAAy3sTwXlIPSsnh3ZHzW4j8=
+      X-Amz-Request-Id:
+      - CC714E07D83D8207
+    status: 400 Bad Request
+    code: 400
+    duration: ""

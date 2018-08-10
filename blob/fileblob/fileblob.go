@@ -30,6 +30,7 @@ import (
 	slashpath "path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -98,8 +99,9 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	if length == 0 {
 		return reader{
-			size: info.Size(),
-			xa:   xa,
+			size:    info.Size(),
+			modTime: info.ModTime(),
+			xa:      xa,
 		}, nil
 	}
 	f, err := os.Open(path)
@@ -116,18 +118,20 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		r = io.LimitReader(r, length)
 	}
 	return reader{
-		r:    r,
-		c:    f,
-		size: info.Size(),
-		xa:   xa,
+		r:       r,
+		c:       f,
+		size:    info.Size(),
+		modTime: info.ModTime(),
+		xa:      xa,
 	}, nil
 }
 
 type reader struct {
-	r    io.Reader
-	c    io.Closer
-	size int64
-	xa   xattrs
+	r       io.Reader
+	c       io.Closer
+	size    int64
+	modTime time.Time
+	xa      xattrs
 }
 
 func (r reader) Read(p []byte) (int, error) {
@@ -148,6 +152,7 @@ func (r reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
 		Size:        r.size,
 		ContentType: r.xa.ContentType,
+		ModTime:     r.modTime,
 	}
 }
 

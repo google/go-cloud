@@ -1,0 +1,35 @@
+---
+version: 1
+interactions:
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=5b8e111b6048e50c59af9321333724ea478e68fc14397c7d81513a975276
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "2986"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 400 Bad Request
+    code: 400
+    duration: ""

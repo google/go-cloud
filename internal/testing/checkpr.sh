@@ -53,7 +53,7 @@ if has_files '^wire/'; then
 fi
 
 # Run linter and Wire checks.
-vgo mod -vendor || exit 1
+vgo mod vendor || exit 1
 mapfile -t lintdirs < <( find . -type d \
   ! -path "./.git*" \
   ! -path "./tests*" \
