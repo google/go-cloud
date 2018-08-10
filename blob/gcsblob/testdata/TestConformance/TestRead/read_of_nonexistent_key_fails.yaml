@@ -1,0 +1,57 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers: {}
+    url: https://storage.googleapis.com/go-cloud-my-test-bucket/key-does-not-exist
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
+      Content-Length:
+      - "204"
+      Content-Type:
+      - application/xml; charset=UTF-8
+      Date:
+      - Fri, 10 Aug 2018 19:32:33 GMT
+      Expires:
+      - Fri, 10 Aug 2018 19:32:33 GMT
+      Server:
+      - UploadServer
+      X-Google-Backends:
+      - /bns/hg/borg/hg/bns/cloud-storage/prod-cloud-storage-frontend.frontend/47,/bns/hg/borg/hg/bns/blobstore2/bitpusher/30.scotty,acsfoi18:443
+      X-Google-Dos-Service-Trace:
+      - main:apps-upload-cloud-storage-unified
+      X-Google-Gfe-Backend-Request-Info:
+      - eid=UehtW-auGcGTxgPJzoO4DQ
+      X-Google-Gfe-Cloud-Project-Number:
+      - "428919891662"
+      X-Google-Gfe-Request-Trace:
+      - acsfoi18:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/30.scotty,acsfoi18:443
+      X-Google-Gfe-Response-Code-Details-Trace:
+      - response_code_set_by_backend
+      X-Google-Gfe-Service-Trace:
+      - bitpusher-cloud-storage
+      X-Google-Netmon-Label:
+      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/30:caf3
+      X-Google-Service:
+      - bitpusher-cloud-storage
+      X-Google-Shellfish-Status:
+      - CA0gBEBJ
+      X-Guploader-Customer:
+      - cloud-storage
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2UroeUp3gKyISjLmGWmNgUiHAudQ4_NLyrzTu0jab4J3HF9_z4ValYxEDY8YRw02LRefvVeHQQ4NomHZLfJKjA1rLLlJLA
+    status: 404 Not Found
+    code: 404
+    duration: ""

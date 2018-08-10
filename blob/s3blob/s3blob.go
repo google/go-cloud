@@ -241,8 +241,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-// Delete deletes the object associated with key. It is a no-op if that object
-// does not exist.
+// Delete deletes the object associated with key.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.newMetadataReader(ctx, key); err != nil {
 		return err
@@ -270,7 +269,7 @@ func (e s3Error) Error() string {
 }
 
 func isErrNotExist(err error) awserr.Error {
-	if e, ok := err.(awserr.Error); ok && e.Code() == "NotFound" {
+	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
 		return e
 	}
 	return nil

@@ -1,0 +1,43 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      Range:
+      - bytes=10-14
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193212Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+    method: GET
+  response:
+    body: klmno
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Range:
+      - bytes 10-14/27
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Fri, 10 Aug 2018 19:32:13 GMT
+      Etag:
+      - '"3df96c5abe97f2967d38010870030a5f"'
+      Last-Modified:
+      - Fri, 10 Aug 2018 19:32:13 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - SJKomYTWybQkT1Tj/iuNT16Hw8wdKvhK2sqUwH42nhKebHg9zZwa5TGYUp9wSlVgHzYk9/Gu6K4=
+      X-Amz-Request-Id:
+      - E0399F2EFBA5B1DB
+    status: 206 Partial Content
+    code: 206
+    duration: ""
