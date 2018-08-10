@@ -128,7 +128,7 @@ func testRead(t *testing.T, makeBkt bucketMaker) {
 			t.Fatal(err)
 		}
 		defer func() {
-			b.Delete(ctx, key)
+			_ = b.Delete(ctx, key)
 		}()
 
 		for _, tc := range tests {
@@ -199,7 +199,7 @@ func testAttributes(t *testing.T, makeBkt bucketMaker) {
 			t.Fatal(err)
 		}
 		defer func() {
-			b.Delete(ctx, key)
+			_ = b.Delete(ctx, key)
 		}()
 
 		t.Run("ContentType", func(t *testing.T) {
@@ -273,7 +273,7 @@ func loadTestFile(t *testing.T, filename string) []byte {
 func testWrite(t *testing.T, makeBkt bucketMaker) {
 	const key = "blob-for-reading"
 	smallText := loadTestFile(t, "test-small.txt")
-	mediumHtml := loadTestFile(t, "test-medium.html")
+	mediumHTML := loadTestFile(t, "test-medium.html")
 	largeJpg := loadTestFile(t, "test-large.jpg")
 
 	tests := []struct {
@@ -302,13 +302,13 @@ func testWrite(t *testing.T, makeBkt bucketMaker) {
 		{
 			name:            "ContentType is discovered if not provided",
 			key:             key,
-			content:         mediumHtml,
+			content:         mediumHTML,
 			wantContentType: "text/html",
 		},
 		{
 			name:            "write with explicit ContentType overrides discovery",
 			key:             key,
-			content:         mediumHtml,
+			content:         mediumHTML,
 			contentType:     "application/json",
 			wantContentType: "application/json",
 		},
@@ -379,7 +379,7 @@ func testWrite(t *testing.T, makeBkt bucketMaker) {
 				if err != nil {
 					return
 				}
-				defer func() { b.Delete(ctx, tc.key) }()
+				defer func() { _ = b.Delete(ctx, tc.key) }()
 
 				// Read it back.
 				r, err := b.NewReader(ctx, tc.key)
