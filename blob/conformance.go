@@ -25,7 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -206,7 +205,7 @@ func testAttributes(t *testing.T, makeBkt bucketMaker) {
 		t.Run("ContentType", func(t *testing.T) {
 			r, err := b.NewRangeReader(ctx, key, 0, 0)
 			if err != nil {
-				t.Errorf("failed NewRangeReader: %v", err)
+				t.Fatalf("failed NewRangeReader: %v", err)
 			}
 			defer r.Close()
 			if r.ContentType() != contentType {
@@ -231,7 +230,7 @@ func testAttributes(t *testing.T, makeBkt bucketMaker) {
 		t.Run("ModTime", func(t *testing.T) {
 			r, err := b.NewRangeReader(ctx, key, 0, 0)
 			if err != nil {
-				t.Errorf("failed NewRangeReader: %v", err)
+				t.Fatalf("failed NewRangeReader: %v", err)
 			}
 			defer r.Close()
 			t1 := r.ModTime()
@@ -240,13 +239,10 @@ func testAttributes(t *testing.T, makeBkt bucketMaker) {
 				return
 			}
 			// Touch the file after a couple of seconds and make sure ModTime changes.
-			// The delay isn't needed in replay mode.
-			if *setup.Record {
-				time.Sleep(2 * time.Second)
-			}
+			time.Sleep(2 * time.Second)
 			w, err := b.NewWriter(ctx, key, nil)
 			if err != nil {
-				t.Errorf("failed NewWriter: %v", err)
+				t.Fatalf("failed NewWriter: %v", err)
 			}
 			if err = w.Close(); err != nil {
 				t.Errorf("failed NewWriter Close: %v", err)
@@ -432,7 +428,7 @@ func testDelete(t *testing.T, makeBkt bucketMaker) {
 			// Create the blob.
 			writer, err := b.NewWriter(ctx, key, nil)
 			if err != nil {
-				t.Errorf("failed to NewWriter: %v", err)
+				t.Fatalf("failed to NewWriter: %v", err)
 			}
 			_, err = io.WriteString(writer, "Hello world")
 			if err != nil {
