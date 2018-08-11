@@ -44,38 +44,23 @@ type key struct {
 	PrivateKeyID string `json:"private_key_id"`
 }
 
-type gcloud struct {
-	// project ID
-	project string
-}
-
-func (gcp *gcloud) cmd(args ...string) *exec.Cmd {
-	args = append([]string{"--quiet", "--project", gcp.project}, args...)
-	return exec.Command("gcloud", args...)
-}
-
 func provisionDb(projectID, serviceAccount, dbInstance, dbName, dbPassword string) error {
 	log.Printf("Downloading Docker images...")
 	mySQLImage := "mysql:5.6"
 	cloudSQLProxyImage := "gcr.io/cloudsql-docker/gce-proxy:1.11"
 	images := []string{mySQLImage, cloudSQLProxyImage}
 	for _, img := range images {
-		pull := exec.Command("docker", "pull", img)
-		pull.Stderr = os.Stderr
-		if err := pull.Run(); err != nil {
-			return fmt.Errorf("running %v: %v", pull.Args, err)
+		if _, err := run("docker", "pull", img); err != nil {
+			return err
 		}
 	}
 
 	log.Printf("Getting connection string from database metadata...")
 	gcp := &gcloud{projectID}
-	getConnString := gcp.cmd("sql", "instances", "describe", "--format", "value(connectionName)", dbInstance)
-	getConnString.Stderr = os.Stderr
-	connStrb, err := getConnString.Output()
+	dbConnStr, err := run(gcp.cmd("sql", "instances", "describe", "--format", "value(connectionName)", dbInstance)...)
 	if err != nil {
 		return fmt.Errorf("getting connection string: %v", err)
 	}
-	dbConnStr := strings.TrimSpace(string(connStrb))
 
 	// Create a temporary directory to hold the service account key.
 	// We resolve all symlinks to avoid Docker on Mac issues, see
@@ -91,9 +76,7 @@ func provisionDb(projectID, serviceAccount, dbInstance, dbName, dbPassword strin
 	log.Printf("Created %v", serviceAccountVoldir)
 
 	// Furnish a new service account key.
-	createKey := gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVoldir+"/key.json")
-	createKey.Stderr = os.Stderr
-	if err := createKey.Run(); err != nil {
+	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVoldir+"/key.json")...); err != nil {
 		return fmt.Errorf("creating new service account key: %v", err)
 	}
 	keyJSONb, err := ioutil.ReadFile(serviceAccountVoldir + "/key.json")
@@ -106,26 +89,19 @@ func provisionDb(projectID, serviceAccount, dbInstance, dbName, dbPassword strin
 	}
 	serviceAccountKeyID := k.PrivateKeyID
 	defer func() {
-		delKey := gcp.cmd("iam", "service-accounts", "keys", "delete", "--iam-account", serviceAccount, serviceAccountKeyID)
-		delKey.Stderr = os.Stderr
-		if err := delKey.Run(); err != nil {
+		if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "delete", "--iam-account", serviceAccount, serviceAccountKeyID)...); err != nil {
 			panic(fmt.Sprintf("deleting service account key: %v", err))
 		}
 	}()
 	log.Printf("Created service account key %s", serviceAccountKeyID)
 
 	log.Printf("Starting Cloud SQL proxy...")
-	startProxy := exec.Command("docker", "run", "--detach", "--rm", "--volume", serviceAccountVoldir+":/creds", "--publish", "3306", cloudSQLProxyImage, "/cloud_sql_proxy", "-instances", dbConnStr+"=tcp:0.0.0.0:3306", "-credential_file=/creds/key.json")
-	startProxy.Stderr = os.Stderr
-	proxyContainerIDb, err := startProxy.Output()
+	proxyContainerID, err := run("docker", "run", "--detach", "--rm", "--volume", serviceAccountVoldir+":/creds", "--publish", "3306", cloudSQLProxyImage, "/cloud_sql_proxy", "-instances", dbConnStr+"=tcp:0.0.0.0:3306", "-credential_file=/creds/key.json")
 	if err != nil {
-		return fmt.Errorf("running %v: %v", startProxy.Args, err)
+		return err
 	}
-	proxyContainerID := strings.TrimSpace(string(proxyContainerIDb))
 	defer func() {
-		kill := exec.Command("docker", "kill", proxyContainerID)
-		kill.Stderr = os.Stderr
-		if err := kill.Run(); err != nil {
+		if _, err := run("docker", "kill", proxyContainerID); err != nil {
 			panic(fmt.Sprintf("killing docker container for proxy: %v", err))
 		}
 	}()
@@ -140,4 +116,25 @@ func provisionDb(projectID, serviceAccount, dbInstance, dbName, dbPassword strin
 	}
 
 	return nil
+}
+
+func run(args ...string) (stdout string, err error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, "TF_IN_AUTOMATION=1")
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	stdoutb, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+	}
+	return strings.TrimSpace(string(stdoutb)), nil
+}
+
+type gcloud struct {
+	// project ID
+	project string
+}
+
+func (gcp *gcloud) cmd(args ...string) []string {
+	return append([]string{"gcloud", "--quiet", "--project", gcp.project}, args...)
 }

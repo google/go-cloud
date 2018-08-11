@@ -58,7 +58,6 @@ func test(testDir, projectID string) error {
 	}
 	defer func() {
 		log.Print("Tearing down GCP resources...")
-
 		if _, err := run("terraform", "destroy", "-auto-approve", "-var", "project="+projectID, testDir); err != nil {
 			panic(err)
 		}
