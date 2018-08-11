@@ -14,7 +14,6 @@
 
 // The provision_db program connects to an RDS database and initializes it with
 // SQL from stdin. It is intended to be invoked from Terraform.
-
 package main
 
 import (
