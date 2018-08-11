@@ -33,7 +33,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "usage: provision_db HOST SECURITY_GROUP DATABASE ROOT_PASSWORD\n")
 		os.Exit(64)
 	}
-	log.SetPrefix("provision_db: ")
+	log.SetPrefix("aws/provision_db: ")
 	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4]); err != nil {
 		log.Print(err)
 		os.Exit(64)
