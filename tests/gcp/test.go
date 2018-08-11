@@ -69,13 +69,16 @@ func test(testDir, projectID string) error {
 
 	log.Print("Making sure vgo image is built...")
 	vgoImage := fmt.Sprintf("gcr.io/%s/vgo", strings.Replace(projectID, ":", "/", -1))
-	_, err = run(gcp.cmd("container", "images", "describe", "--format=value(image_summary.digest)", vgoImage)...)
-	vgoImageExists := err == nil
-	if !vgoImageExists {
+	checkVgo := exec.Command(gcp.cmd("container", "images", "describe", "--format=value(image_summary.digest)", vgoImage)...)
+	out, err := checkVgo.CombinedOutput()
+	switch {
+	case strings.Contains(string(out), "is not a valid name"):
 		log.Print("Building vgo image...")
 		if _, err := run(gcp.cmd("container", "builds", "submit", "-t", vgoImage, filepath.Join(testDir, "..", "..", "internal", "vgo_docker"))...); err != nil {
 			return err
 		}
+	case err != nil:
+		return fmt.Errorf("running %v: %v", checkVgo.Args, err)
 	}
 
 	log.Print("Building app binary with vgo...")
