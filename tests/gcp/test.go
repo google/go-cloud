@@ -85,7 +85,7 @@ func test(testDir, projectID string) error {
 	log.Print("Building app binary with vgo...")
 	appImage := fmt.Sprintf("gcr.io/%s/gcp-test", strings.Replace(projectID, ":", "/", -1))
 	subs := "_IMAGE_NAME=" + appImage + ",_VGO_IMAGE_NAME=" + vgoImage
-	buildID, err := run(gcp.cmd("container", "builds", "submit", "--async", "--format='value(id)'", "--config", testDir+"app/cloudbuild.yaml", "--substitutions", subs, filepath.Join(testDir, "..", ".."))...)
+	buildID, err := run(gcp.cmd("container", "builds", "submit", "--async", "--format='value(id)'", "--config", filepath.Join(testDir, "app", "cloudbuild.yaml"), "--substitutions", subs, filepath.Join(testDir, "..", ".."))...)
 	if err != nil {
 		return err
 	}
