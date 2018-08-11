@@ -69,7 +69,8 @@ func test(testDir, projectID string) error {
 
 	log.Print("Making sure vgo image is built...")
 	vgoImage := fmt.Sprintf("gcr.io/%s/vgo", strings.Replace(projectID, ":", "/", -1))
-	checkVgo := exec.Command(gcp.cmd("container", "images", "describe", "--format=value(image_summary.digest)", vgoImage)...)
+	checkVgoArgs := gcp.cmd("container", "images", "describe", "--format=value(image_summary.digest)", vgoImage)
+	checkVgo := exec.Command(checkVgoArgs[0], checkVgoArgs[1:]...)
 	out, err := checkVgo.CombinedOutput()
 	switch {
 	case strings.Contains(string(out), "is not a valid name"):
