@@ -160,6 +160,7 @@ func run(args ...string) (stdout string, err error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(cmd.Env, "TF_IN_AUTOMATION=1")
+	cmd.Env = append(cmd.Env, os.Environ()...)
 	stdoutb, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
