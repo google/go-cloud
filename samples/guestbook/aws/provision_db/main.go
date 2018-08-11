@@ -26,11 +26,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
 	if len(os.Args) != 5 {
 		fmt.Fprintf(os.Stderr, "usage: provision_db HOST SECURITY_GROUP DATABASE ROOT_PASSWORD\n")
+		os.Exit(64)
 	}
 	log.SetPrefix("provision_db: ")
 	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4]); err != nil {
@@ -44,10 +46,8 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 
 	// Pull the necessary Docker images.
 	log.Print("Downloading Docker images...")
-	pull := exec.Command("docker", "pull", mySQLImage)
-	pull.Stderr = os.Stderr
-	if err := pull.Run(); err != nil {
-		return fmt.Errorf("running %v: %v", pull.Args, err)
+	if _, err := run("docker", "pull", mySQLImage); err != nil {
+		return err
 	}
 
 	// Create a temporary directory to hold the certificates.
@@ -79,17 +79,13 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 	}
 
 	log.Print("Adding a temporary ingress rule")
-	addRule := exec.Command("aws", "ec2", "authorize-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0")
-	addRule.Stderr = os.Stderr
-	if err := addRule.Run(); err != nil {
-		return fmt.Errorf("running %v: %v", addRule.Args, err)
+	if _, err := run("aws", "ec2", "authorize-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
+		return err
 	}
 	defer func() {
 		log.Print("Removing ingress rule...")
-		removeRule := exec.Command("aws", "ec2", "revoke-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0")
-		removeRule.Stderr = os.Stderr
-		if err := removeRule.Run(); err != nil {
-			panic(fmt.Sprintf("running %v: %v", removeRule.Args, err))
+		if _, err := run("aws", "ec2", "revoke-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
+			panic(err)
 		}
 	}()
 	log.Printf("Added ingress rule to %s for port 3306", securityGroupID)
@@ -107,5 +103,13 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 	return nil
 }
 
-/*
- */
+func run(args ...string) (stdout string, err error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	stdoutb, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+	}
+	return strings.TrimSpace(string(stdoutb)), nil
+}
