@@ -57,14 +57,12 @@ func deploy(guestbookDir, tfStatePath string) error {
 		MotdVarConfig    tfItem `json:"motd_var_config"`
 		MotdVarName      tfItem `json:"motd_var_name"`
 	}
-	getTfState := exec.Command("terraform", "output", "-state", tfStatePath, "-json")
-	getTfState.Stderr = os.Stderr
-	out, err := getTfState.Output()
+	tfStateb, err := runb("terraform", "output", "-state", tfStatePath, "-json")
 	if err != nil {
-		return fmt.Errorf("getting terraform state with %v: %v: %s", getTfState.Args, err, out)
+		return err
 	}
 	var tfState state
-	if err := json.Unmarshal(out, &tfState); err != nil {
+	if err := json.Unmarshal(tfStateb, &tfState); err != nil {
 		return fmt.Errorf("parsing terraform state JSON (%s): %v", out, err)
 	}
 	gcp := gcloud{project: tfState.Project.Value}
@@ -179,4 +177,20 @@ type gcloud struct {
 func (gcp *gcloud) cmd(args ...string) *exec.Cmd {
 	args = append([]string{"--quiet", "--project", gcp.project}, args...)
 	return exec.Command("gcloud", args...)
+}
+
+func run(args ...string) (stdout string, err error) {
+	stdoutb, err := runb(args...)
+	return strings.TrimSpace(string(stdoutb)), err
+}
+
+func runb(args ...string) (stdout []byte, err error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	stdoutb, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+	}
+
 }
