@@ -73,7 +73,7 @@ func test(testDir, projectID string) error {
 	vgoImageExists := err == nil
 	if !vgoImageExists {
 		log.Print("Building vgo image...")
-		if _, err := run("container", "builds", "submit", "-t", vgoImage, filepath.Join(testDir, "..", "..", "internal", "vgo_docker")); err != nil {
+		if _, err := run(gcp.cmd("container", "builds", "submit", "-t", vgoImage, filepath.Join(testDir, "..", "..", "internal", "vgo_docker"))...); err != nil {
 			return err
 		}
 	}
