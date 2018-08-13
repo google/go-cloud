@@ -28,18 +28,18 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// bucketMaker describes functions used to create a bucket for a test.
-// Multiple calls to bucketMaker during a test run must refer to the same
+// BucketMaker describes functions used to create a bucket for a test.
+// Multiple calls to BucketMaker during a test run must refer to the same
 // storage bucket.
 // Functions should return the bucket along with a "done" function to be called
 // when the test is complete.
 // If bucket creation fails, functions should t.Fatal to stop the test.
-type bucketMaker func(t *testing.T) (*Bucket, func())
+type BucketMaker func(t *testing.T) (*Bucket, func())
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
-func RunConformanceTests(t *testing.T, makeBkt bucketMaker) {
-	tests := []func(*testing.T, bucketMaker){
+func RunConformanceTests(t *testing.T, makeBkt BucketMaker) {
+	tests := []func(*testing.T, BucketMaker){
 		testRead,
 		testWrite,
 		testAttributes,
@@ -51,7 +51,7 @@ func RunConformanceTests(t *testing.T, makeBkt bucketMaker) {
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
-func testRead(t *testing.T, makeBkt bucketMaker) {
+func testRead(t *testing.T, makeBkt BucketMaker) {
 	const key = "blob-for-reading"
 	content := []byte("abcdefghijklmnopqurstuvwxyz")
 	contentSize := int64(len(content))
@@ -170,7 +170,7 @@ func testRead(t *testing.T, makeBkt bucketMaker) {
 }
 
 // testAttributes tests the behavior of attributes returned by Reader.
-func testAttributes(t *testing.T, makeBkt bucketMaker) {
+func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	const (
 		key         = "blob-for-attributes"
 		contentType = "text/plain"
@@ -270,7 +270,7 @@ func loadTestFile(t *testing.T, filename string) []byte {
 }
 
 // testWrite tests the functionality of NewWriter and Writer.
-func testWrite(t *testing.T, makeBkt bucketMaker) {
+func testWrite(t *testing.T, makeBkt BucketMaker) {
 	const key = "blob-for-reading"
 	smallText := loadTestFile(t, "test-small.txt")
 	mediumHTML := loadTestFile(t, "test-medium.html")
@@ -405,7 +405,7 @@ func testWrite(t *testing.T, makeBkt bucketMaker) {
 }
 
 // testDelete tests the functionality of Delete.
-func testDelete(t *testing.T, makeBkt bucketMaker) {
+func testDelete(t *testing.T, makeBkt BucketMaker) {
 	const key = "blob-for-deleting"
 
 	ctx := context.Background()
