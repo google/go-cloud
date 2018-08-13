@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/internal/testing/setup"
+	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -99,11 +99,11 @@ func TestWriteReadDelete(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "write_read_delete")
-	defer done()
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+
 			_, err := writeParam(sess, tc.paramName, tc.value)
 			switch {
 			case err != nil && !tc.wantWriteErr:
@@ -165,12 +165,12 @@ func TestInitialWatch(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "watch_initial")
-	defer done()
-
 	for _, tc := range tests {
 		const want = "foobar"
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+
 			if _, err := writeParam(sess, tc.param, want); err != nil {
 				t.Fatal(err)
 			}
@@ -219,7 +219,7 @@ func TestWatchObservesChange(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sess, done := setup.NewAWSSession(t, region, "watch_change")
+			sess, done := setup.NewAWSSession(t, region)
 			defer done()
 
 			if _, err := writeParam(sess, tc.param, tc.firstValue); err != nil {
@@ -284,11 +284,11 @@ func TestJSONDecode(t *testing.T) {
 		},
 	}
 
-	sess, done := setup.NewAWSSession(t, region, "decoder")
-	defer done()
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			sess, done := setup.NewAWSSession(t, region)
+			defer done()
+
 			if _, err := writeParam(sess, tc.param, tc.json); err != nil {
 				t.Fatal(err)
 			}

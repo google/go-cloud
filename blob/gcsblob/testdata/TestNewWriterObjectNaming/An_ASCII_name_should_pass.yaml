@@ -1,0 +1,58 @@
+---
+version: 1
+interactions:
+- request:
+    body: "\nContent-Type: application/json\r\n\r\n{\"bucket\":\"go-cloud-test-obj-naming\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"object-name\"}\n\nContent-Type: text/plain; charset=utf-8\r\n\r\nfoo\r\n\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=29c97802f4a3a38c3024a2f94ad891024897abbf39d86ff370fa6b7e0604
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.10.3 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-test-obj-naming/o?alt=json
+    method: POST
+  response:
+    body: |
+      {
+       "kind": "storage#object",
+       "id": "go-cloud-test-obj-naming/object-name/1531867283905376",
+       "name": "object-name",
+       "bucket": "go-cloud-test-obj-naming",
+       "metageneration": "1",
+       "contentType": "text/plain; charset=utf-8",
+       "timeCreated": "2018-07-17T22:41:23.905Z",
+       "updated": "2018-07-17T22:41:23.905Z",
+       "storageClass": "STANDARD",
+       "timeStorageClassUpdated": "2018-07-17T22:41:23.905Z",
+       "size": "3",
+       "crc32c": "z8SuHQ==",
+       "etag": "COC2s6qap9wCEAE="
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "3020"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 17 Jul 2018 22:41:24 GMT
+      Etag:
+      - COC2s6qap9wCEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+    status: 200 OK
+    code: 200
+    duration: ""

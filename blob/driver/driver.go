@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"io"
+	"time"
 )
 
 // ErrorKind is a code to indicate the kind of failure.
@@ -66,6 +67,8 @@ type ObjectAttrs struct {
 	Size int64
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
+	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
+	ModTime time.Time
 }
 
 // Bucket provides read, write and delete operations on objects within it on the

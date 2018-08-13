@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"testing"
 
 	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
@@ -33,60 +34,78 @@ import (
 	"google.golang.org/grpc"
 )
 
-// NewAWSRecorder returns a go-vcr.Recorder which reads or writes golden files from the given path.
-// The recorder uses a matching algorithm specialized to AWS HTTP API calls.
-// The done() function flushes the recorder and scrubs any sensitive data from the saved golden file.
-// The golden file is not written to disk if the done() function is not called.
-func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filename string) (r *recorder.Recorder, done func(), err error) {
-	path := filepath.Join("testdata", filename)
-	logf("Golden file is at %v", path)
+// Provider represents a cloud provider that we're going to record/replay
+// HTTP requests with.
+type Provider int
 
+const (
+	ProviderAWS Provider = iota
+	ProviderGCP
+)
+
+// NewRecorder returns a go-vcr.Recorder which reads or writes golden files from the given path.
+// The recorder uses matching and scrubbing algorithms specific to the provider.
+// The done() function flushes the recorder, scrubs the data, and saves it to the golden file.
+// The golden file is not written to disk if the done() function is not called.
+func NewRecorder(t *testing.T, provider Provider, mode recorder.Mode, filename string) (r *recorder.Recorder, done func(), err error) {
+	path := filepath.Join("testdata", filename)
 	if mode == recorder.ModeRecording {
-		logf("Recording into golden file")
+		t.Logf("Recording into golden file %s", path)
 	} else {
-		logf("Replaying from golden file")
+		t.Logf("Replaying from golden file %s", path)
 	}
 	r, err = recorder.NewAsMode(path, mode, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to record: %v", err)
 	}
 
-	// Use a custom matcher as the default matcher looks for URLs and methods,
-	// AWS inspects the bodies as well.
+	// Use a custom matcher as the default matcher looks for URLs and methods;
+	// we inspect the bodies as well.
 	last := -1
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
 		var b bytes.Buffer
 		if r.Body != nil {
 			if _, err := b.ReadFrom(r.Body); err != nil {
-				logf(err.Error())
+				t.Logf(err.Error())
 				return false
 			}
 		}
 		r.Body = ioutil.NopCloser(&b)
+		body := b.String()
+		url := r.URL.String()
 
-		seq, err := strconv.Atoi(i.Headers.Get("X-Gocloud-Seq"))
-		if err != nil {
-			logf(err.Error())
-			return false
+		// TODO(rvangent): Make this more consistent between providers.
+		switch provider {
+		case ProviderGCP:
+			body = scrubGCSIDs(body)
+			url = scrubGCSURL(url)
+		case ProviderAWS:
+		default:
+			t.Fatalf("Unsupported Provider: %v", provider)
 		}
 
-		logf("Targets: %v | %v == %v\n", r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
-		logf("URLs: %v | %v == %v\n", r.URL.String(), i.URL, r.URL.String() == i.URL)
-		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", b.String(), i.Body, b.String() == i.Body)
-		logf("Sequences: %v | %v == %v\n", seq, last, seq > last)
+		// TODO(rvangent): See if we can get rid of these X-Gocloud-Seq headers.
+		seq, _ := strconv.Atoi(i.Headers.Get("X-Gocloud-Seq"))
 
+		t.Logf("%s: Targets: %v | %v == %v\n", path, r.Header.Get("X-Amz-Target"), i.Headers.Get("X-Amz-Target"), r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target"))
+		t.Logf("%s: URLs: %v | %v == %v\n", path, url, i.URL, url == i.URL)
+		t.Logf("%s: Methods: %v | %v == %v\n", path, r.Method, i.Method, r.Method == i.Method)
+		t.Logf("%s: Bodies:\n%v\n~~~~~~~~~~~\n%v\n==%v\n", path, body, i.Body, body == i.Body)
+		t.Logf("%s: Sequences: %v | %v == %v\n", path, seq, last, seq > last)
+
+		// TODO(rvangent): See if we need X-Amz-Target, and if so, only use it for
+		// ProviderGCP.
 		if r.Header.Get("X-Amz-Target") == i.Headers.Get("X-Amz-Target") &&
-			r.URL.String() == i.URL &&
+			url == i.URL &&
 			r.Method == i.Method &&
-			b.String() == i.Body &&
+			body == i.Body &&
 			seq > last {
 			last = seq
-			logf("Returning header match")
+			t.Logf("%s: returning header match for seq %d", path, seq)
 			return true
 		}
 
-		logf("No match, continuing...")
+		t.Logf("%s: no match, continuing...", path)
 		return false
 	})
 	return r, func() {
@@ -96,8 +115,17 @@ func NewAWSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filen
 		if mode != recorder.ModeRecording {
 			return
 		}
-		if err := scrubAWSHeaders(path); err != nil {
-			fmt.Println(err)
+		switch provider {
+		case ProviderGCP:
+			if err := scrubGCS(path); err != nil {
+				fmt.Println(err)
+			}
+		case ProviderAWS:
+			if err := scrubAWSHeaders(path); err != nil {
+				fmt.Println(err)
+			}
+		default:
+			t.Fatalf("Unsupported Provider: %v", provider)
 		}
 	}, nil
 }
@@ -165,63 +193,6 @@ func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, fi
 	}
 
 	return opts, done, nil
-}
-
-func NewGCSRecorder(logf func(string, ...interface{}), mode recorder.Mode, filename string) (r *recorder.Recorder, done func(), err error) {
-	path := filepath.Join("testdata", filename)
-	logf("Golden file is at %v", path)
-
-	if mode == recorder.ModeRecording {
-		logf("Recording into golden file")
-	} else {
-		logf("Replaying from golden file")
-	}
-
-	r, err = recorder.NewAsMode(path, mode, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Use a custom matcher as the default matcher looks for URLs and methods.
-	// GCS inspects the bodies as well.
-	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
-		var b bytes.Buffer
-		if r.Body != nil {
-			if _, err := b.ReadFrom(r.Body); err != nil {
-				logf(err.Error())
-				return false
-			}
-		}
-		r.Body = ioutil.NopCloser(&b)
-		body := scrubGCSIDs(b.String()) //scrubGCSResponse(b.String())
-		url := scrubGCSURL(r.URL.String())
-
-		logf("URLs: %v | %v == %v\n", url, i.URL, url == i.URL)
-		logf("Methods: %v | %v == %v\n", r.Method, i.Method, r.Method == i.Method)
-		logf("Bodies:\n%v\n~~~~~~~~~~\n%v\n==%v\n", body, i.Body, body == i.Body)
-
-		if url == i.URL &&
-			r.Method == i.Method &&
-			body == i.Body {
-			logf("Returning header match")
-			return true
-		}
-
-		logf("No match, continuing...")
-		return false
-	})
-
-	return r, func() {
-		if err := r.Stop(); err != nil {
-			fmt.Println(err)
-		}
-		if mode != recorder.ModeRecording {
-			return
-		}
-		if err := scrubGCS(path); err != nil {
-			fmt.Println(err)
-		}
-	}, nil
 }
 
 func scrubGCSURL(url string) string {

@@ -1,0 +1,34 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"Name":"test-bad-param-with-snowman-☃️","Overwrite":true,"Type":"String","Value":"snowman"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "96"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      X-Amz-Date:
+      - 20180717T210948Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+      X-Gocloud-Seq:
+      - "4"
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"ValidationException","message":"Parameter name: can''t be prefixed
+      with \"ssm\" (case-insensitive). If formed as a path, it can consist of sub-paths
+      divided by slash symbol; each sub-path can be formed as a mix of letters, numbers
+      and the following 3 symbols .-_"}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Tue, 17 Jul 2018 21:09:48 GMT
+    status: 400 Bad Request
+    code: 400
+    duration: ""

@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,18 +72,17 @@ func TestNewBucketNaming(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	gcsC, done, err := newGCSClient(ctx, t.Logf, "test-naming")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer done()
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(&gcsC.Client))
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			gcsC, done, err := newGCSClient(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer done()
+			c, err := storage.NewClient(ctx, option.WithHTTPClient(&gcsC.Client))
+			if err != nil {
+				t.Fatal(err)
+			}
 			b := c.Bucket(fmt.Sprintf("%s-%s", bucketPrefix, tc.bucketName))
 			err = b.Create(ctx, *projectID, nil)
 
@@ -139,7 +138,7 @@ func TestNewWriterObjectNaming(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	gcsC, done, err := newGCSClient(ctx, t.Logf, "test-obj-naming")
+	gcsC, done, err := newGCSClient(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,6 +154,11 @@ func TestNewWriterObjectNaming(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			gcsC, done, err := newGCSClient(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer done()
 			b, err := OpenBucket(ctx, bkt, gcsC)
 			if err != nil {
 				t.Fatal(err)
@@ -237,13 +241,13 @@ func TestHTTPClientOpt(t *testing.T) {
 	}
 }
 
-func newGCSClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*gcp.HTTPClient, func(), error) {
+func newGCSClient(ctx context.Context, t *testing.T) (*gcp.HTTPClient, func(), error) {
 
-	mode := recorder.ModeRecording
-	if !*setup.Record {
-		mode = recorder.ModeReplaying
+	mode := recorder.ModeReplaying
+	if *setup.Record {
+		mode = recorder.ModeRecording
 	}
-	r, done, err := replay.NewGCSRecorder(logf, mode, filepath)
+	r, done, err := replay.NewRecorder(t, replay.ProviderGCP, mode, t.Name())
 	if err != nil {
 		return nil, nil, err
 	}

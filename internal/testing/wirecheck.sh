@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2018 Google LLC
+# Copyright 2018 The Go Cloud Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,6 +26,6 @@ if [[ $# -gt 0 ]]; then
 fi
 
 module="github.com/google/go-cloud"
-vgo mod -vendor || exit 1
+vgo mod vendor || exit 1
 mapfile -t all_pkgs < <( vgo list "$module/..." ) || exit 1
 wire check "${all_pkgs[@]}" || exit 1

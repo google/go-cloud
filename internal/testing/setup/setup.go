@@ -15,16 +15,16 @@ import (
 var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
 
 // NewAWSSession creates a new session for testing against AWS.
-// If the test is short, the session reads a replay file and runs the test as a replay,
+// If the test is in --record mode, the test will call out to AWS, and the
+// results are recorded in a replay file.
+// Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
-// If the test is not short, the test will call out to AWS, and the results recorded
-// as a new replay file.
-func NewAWSSession(t *testing.T, region, filename string) (sess *session.Session, done func()) {
+func NewAWSSession(t *testing.T, region string) (sess *session.Session, done func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
-	r, done, err := replay.NewAWSRecorder(t.Logf, mode, filename)
+	r, done, err := replay.NewRecorder(t, replay.ProviderAWS, mode, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}

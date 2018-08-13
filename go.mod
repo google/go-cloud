@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ require (
 	github.com/tidwall/match v0.0.0-20171002075945-1731857f09b1 // indirect
 	github.com/tidwall/sjson v1.0.0
 	go.opencensus.io v0.12.0
+	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d
 	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f // indirect
