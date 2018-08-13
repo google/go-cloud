@@ -63,7 +63,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	}
 	var tfState state
 	if err := json.Unmarshal(tfStateb, &tfState); err != nil {
-		return fmt.Errorf("parsing terraform state JSON (%s): %v", out, err)
+		return fmt.Errorf("parsing terraform state JSON (%s): %v", err)
 	}
 	gcp := gcloud{project: tfState.Project.Value}
 	tempDir, err := ioutil.TempDir("", "guestbook-k8s-")
@@ -190,7 +190,7 @@ func runb(args ...string) (stdout []byte, err error) {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	stdoutb, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("running %v: %v", cmd.Args, err)
+		return []byte(""), fmt.Errorf("running %v: %v", cmd.Args, err)
 	}
-
+	return stdoutb, nil
 }
