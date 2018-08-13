@@ -765,7 +765,6 @@ func processInterfaceValue(fset *token.FileSet, info *types.Info, call *ast.Call
 	if len(call.Args) != 2 {
 		return nil, notePosition(fset.Position(call.Pos()), errors.New("call to InterfaceValue takes exactly two arguments"))
 	}
-	ok := true
 	ifaceArgType := info.TypeOf(call.Args[0])
 	ifacePtr, ok := ifaceArgType.(*types.Pointer)
 	if !ok {
