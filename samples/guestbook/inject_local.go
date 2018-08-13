@@ -42,8 +42,8 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(
-		wire.Value(requestlog.Logger(nil)),
-		wire.Value(trace.Exporter(nil)),
+		wire.InterfaceValue(new(requestlog.Logger), requestlog.Logger(nil)),
+		wire.InterfaceValue(new(trace.Exporter), trace.Exporter(nil)),
 		server.Set,
 		applicationSet,
 		dialLocalSQL,
