@@ -248,6 +248,8 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		t1 := r.ModTime()
 		if t1.IsZero() {
 			// This provider doesn't support ModTime.
+			// TODO(issue #315): There should be a way to tell if the provider
+			// is supposed to return it.
 			return
 		}
 		// Touch the file after a couple of seconds and make sure ModTime changes.
