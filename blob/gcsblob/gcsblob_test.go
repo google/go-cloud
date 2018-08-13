@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/googleapi"
 )
@@ -44,7 +45,7 @@ func makeBucket(t *testing.T) (*blob.Bucket, func()) {
 	return b, done
 }
 func TestConformance(t *testing.T) {
-	blob.RunConformanceTests(t, makeBucket)
+	drivertest.RunConformanceTests(t, makeBucket)
 }
 
 // GCS-specific unit tests.

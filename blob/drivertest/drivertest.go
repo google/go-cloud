@@ -11,10 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// Package blob provides an easy way to interact with Blob objects within
-// a bucket. It utilizes standard io packages to handle reads and writes.
-package blob
+//
+// Package drivertest provides a conformance test for implementations of
+// driver.
+//
+// Example:
+//
+// makeBucket is of type BucketMaker. It creates a *blob.Bucket for
+// this provider implementation.
+// func makeBucket(t *testing.T) (*blob.Bucket, func()) {
+// ...
+// }
+// func TestConformance(t *testing.T) {
+//   drivertest.RunConformanceTests(t, makeBucket)
+// }
+package drivertest
 
 import (
 	"bytes"
@@ -25,6 +36,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -34,7 +46,7 @@ import (
 // Functions should return the bucket along with a "done" function to be called
 // when the test is complete.
 // If bucket creation fails, functions should t.Fatal to stop the test.
-type BucketMaker func(t *testing.T) (*Bucket, func())
+type BucketMaker func(t *testing.T) (*blob.Bucket, func())
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
@@ -184,7 +196,7 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		b, done := makeBkt(t)
 		defer done()
 
-		opts := &WriterOptions{
+		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
 		w, err := b.NewWriter(ctx, key, opts)
@@ -352,7 +364,7 @@ func testWrite(t *testing.T, makeBkt BucketMaker) {
 				defer done()
 
 				// Write the content.
-				opts := &WriterOptions{
+				opts := &blob.WriterOptions{
 					ContentType: tc.contentType,
 				}
 				w, err := b.NewWriter(ctx, tc.key, opts)
@@ -417,7 +429,7 @@ func testDelete(t *testing.T, makeBkt BucketMaker) {
 			err := b.Delete(ctx, "does-not-exist")
 			if err == nil {
 				t.Errorf("want error, got nil")
-			} else if !IsNotExist(err) {
+			} else if !blob.IsNotExist(err) {
 				t.Errorf("want IsNotExist error, got %v", err)
 			}
 		})
@@ -445,14 +457,14 @@ func testDelete(t *testing.T, makeBkt BucketMaker) {
 			_, err = b.NewReader(ctx, key)
 			if err == nil {
 				t.Errorf("read after delete want error, got nil")
-			} else if !IsNotExist(err) {
+			} else if !blob.IsNotExist(err) {
 				t.Errorf("read after delete want IsNotExist error, got %v", err)
 			}
 			// Subsequent delete also fails.
 			err = b.Delete(ctx, key)
 			if err == nil {
 				t.Errorf("delete after delete want error, got nil")
-			} else if !IsNotExist(err) {
+			} else if !blob.IsNotExist(err) {
 				t.Errorf("delete after delete want IsNotExist error, got %v", err)
 			}
 		})

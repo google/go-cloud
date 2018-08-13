@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/drivertest"
 )
 
 // makeBucket creates a *blob.Bucket and a function to close it after the test
@@ -38,7 +39,7 @@ func makeBucket(t *testing.T) (*blob.Bucket, func()) {
 	return b, func() {}
 }
 func TestConformance(t *testing.T) {
-	blob.RunConformanceTests(t, makeBucket)
+	drivertest.RunConformanceTests(t, makeBucket)
 }
 
 // File-specific unit tests.
