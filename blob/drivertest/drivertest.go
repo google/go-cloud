@@ -28,15 +28,12 @@
 //
 // Multiple calls to makeBucket during a RunConformanceTests run must refer to
 // the same storage bucket; i.e., a blob created using one *blob.Bucket must be
-// readable by a subsequent *blob.Bucket. This is required so that tests can,
-// for example, create a blob once and then run a series of tests over it; see
-// testRead below for an example.
+// readable by a subsequent *blob.Bucket. This is required so that tests can
+// create a blob once and then run a series of tests over it.
 //
-// Implementation note: A new *blob.BucketEach is created for each test and
-// sub-test so that provider implementations that use a record/replay strategy
-// get a separate golden file per test. For example, testRead will create a
-// replay file for the blob creation/deletion, and separate replay files for
-// each sub-test.
+// Implementation note: A new *blob.BucketEach is created for each sub-test
+// so that provider implementations that use a record/replay strategy get
+// a separate golden file per test.
 package drivertest
 
 import (
