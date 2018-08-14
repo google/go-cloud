@@ -196,7 +196,7 @@ func check(pkgs ...string) error {
 type outGroup struct {
 	name    string
 	inputs  *typeutil.Map // values are not important
-	outputs *typeutil.Map // values are *wire.Provider, *wire.Value, or *wire.InterfaceValue
+	outputs *typeutil.Map // values are *wire.Provider or *wire.Value
 }
 
 // gather flattens a provider set into outputs grouped by the inputs

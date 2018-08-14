@@ -748,7 +748,7 @@ func processValue(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*V
 	// Result type can't be an interface type; use wire.InterfaceValue for that.
 	argType := info.TypeOf(call.Args[0])
 	if _, isInterfaceType := argType.Underlying().(*types.Interface); isInterfaceType {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("argument to Value may not be an interface value (found %q); use InterfaceValue instead", argType))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("argument to Value may not be an interface value (found %s); use InterfaceValue instead", types.TypeString(argType, nil)))
 	}
 	return &Value{
 		Pos:  call.Args[0].Pos(),
@@ -780,7 +780,7 @@ func processInterfaceValue(fset *token.FileSet, info *types.Info, call *ast.Call
 		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(ifaceArgType, nil)))
 	}
 	return &Value{
-		Pos:  call.Args[0].Pos(),
+		Pos:  call.Args[1].Pos(),
 		Out:  iface,
 		expr: call.Args[1],
 		info: info,
