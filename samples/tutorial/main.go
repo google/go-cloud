@@ -15,9 +15,12 @@
 // Command upload saves files to blob storage on GCP and AWS.
 package main
 
-import (
+import (	
+	"os"
 	"context"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 )
@@ -26,12 +29,13 @@ func main() {
 	// Define our input.
 	cloud := flag.String("cloud", "", "Cloud storage to use")
 	bucketName := flag.String("bucket", "go-cloud-bucket", "Name of bucket")
+
 	flag.Parse()
 	if flag.NArg() != 1 {
 		log.Fatal("Failed to provide file to upload")
 	}
 	file := flag.Arg(0)
-
+	
 	ctx := context.Background()
 	// Open a connection to the bucket.
 	b, err := setupBucket(context.Background(), *cloud, *bucketName)
@@ -55,5 +59,19 @@ func main() {
 	}
 	if err = w.Close(); err != nil {
 		log.Fatalf("Failed to close: %s", err)
+	}
+
+	if *cloud == "azure" {
+		// Read the blob content
+
+		buf := make([]byte, 256)
+		r, _ := b.NewRangeReader(ctx, file, 100, 0)
+		
+		fmt.Println(r.ContentType())
+		fmt.Println(r.Size())		
+		io.CopyBuffer(os.Stdout, r, buf)
+
+		// Delete the blob
+		b.Delete(ctx, file);
 	}
 }

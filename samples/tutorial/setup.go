@@ -15,6 +15,7 @@
 package main
 
 import (
+	"os"
 	"context"
 	"fmt"
 
@@ -25,6 +26,12 @@ import (
 	"github.com/google/go-cloud/blob/gcsblob"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/gcp"
+
+	azureblob "../../blob/azureblob"
+
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // setupBucket creates a connection to a particular cloud provider's blob storage.
@@ -34,6 +41,8 @@ func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error
 		return setupAWS(ctx, bucket)
 	case "gcp":
 		return setupGCP(ctx, bucket)
+	case "azure":
+		return setupAzure(ctx, bucket)
 	default:
 		return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 	}
@@ -68,4 +77,61 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	}
 	s := session.Must(session.NewSession(c))
 	return s3blob.OpenBucket(ctx, s, bucket)
+}
+
+func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
+		
+	// Azure Authorization w/ Service Principal
+	clientID := os.Getenv("AZURE_CLIENT_ID")
+	tenantID := os.Getenv("AZURE_TENANT_ID")
+	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
+
+	// Azure Storage Account, Resource Group and SubscriptionId
+	subscriptionID := "YOUR SUBSCRIPTION GUID"
+	resourceGroupName := "YOUR RESOURCE GROUP NAME"
+	storageAccountName := "YOUR STORAGE ACCOUNT NAME (EX. myteststorage)"
+
+	environment := azure.PublicCloud
+
+	auth, err := getAuthorizationToken(clientID, clientSecret, tenantID, &environment)
+	if err != nil {
+		return nil, err
+	}
+
+	// minimum settings needed to write a Block Blob (https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)
+	storageParams := azureblob.AzureBlobSettings{
+		Authorizer:             auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
+		EnvironmentName:        environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
+		SubscriptionId:         subscriptionID,     // caller must specify their Azure SubscriptionID
+		ResourceGroupName:      resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
+		StorageAccountName:     storageAccountName, // caller must specify an already provisioned Azure Storage Account
+		StorageKey:             "",                 // to be fetched from storage account if empty or you can specify a SASToken
+		ContainerReferenceName: "profiles",         // this is just a name for the Azure Container logical folder
+		ContainerAccessType:    "blob",             // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+	}
+
+	return azureblob.OpenBucket(ctx, &storageParams, bucket)
+}
+
+func getAuthorizationToken(clientId string, clientSecret string, tenantId string, environment *azure.Environment) (*autorest.BearerAuthorizer, error) {
+
+	oauthConfig, err := adal.NewOAuthConfig(environment.ActiveDirectoryEndpoint, tenantId)
+	if err != nil {
+		return nil, err
+	}
+
+	if oauthConfig == nil {
+		return nil, fmt.Errorf("Unable to configure OAuthConfig for tenant %s", tenantId)
+	}
+
+	// see all other options to authorization
+	// adal.NewServicePrincipalToken**
+	spt, err := adal.NewServicePrincipalToken(*oauthConfig, clientId, clientSecret, environment.ResourceManagerEndpoint)
+
+	if err != nil {
+		return nil, err
+	}
+
+	auth := autorest.NewBearerAuthorizer(spt)
+	return auth, nil
 }
