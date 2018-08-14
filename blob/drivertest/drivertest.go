@@ -141,23 +141,23 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 
 	// Creates a blob for sub-tests below.
 	init := func(t *testing.T) (*blob.Bucket, func()) {
-	b, done := makeBkt(t)
-	w, err := b.NewWriter(ctx, key, nil)
-	if err != nil {
-		t.Fatal(err)
+		b, done := makeBkt(t)
+		w, err := b.NewWriter(ctx, key, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = w.Write(content)
+		if err == nil {
+			err = w.Close()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b, func() {
+			_ = b.Delete(ctx, key)
+			done()
+		}
 	}
-	_, err = w.Write(content)
-	if err == nil {
-		err = w.Close()
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b, func() {
-		_ = b.Delete(ctx, key)
-		done()
-	}
-}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
