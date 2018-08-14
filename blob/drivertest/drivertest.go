@@ -203,30 +203,31 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 
 	ctx := context.Background()
 
-	// Create a blob to be read by sub-tests below.
-	b, done := makeBkt(t)
-	defer done()
-
-	opts := &blob.WriterOptions{
-		ContentType: contentType,
+	// Function to create a blob for sub-tests below.
+	init := func(t *testing.T) (*blob.Bucket, func()) {
+		b, done := makeBkt(t)
+		opts := &blob.WriterOptions{
+			ContentType: contentType,
+		}
+		w, err := b.NewWriter(ctx, key, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = w.Write(content)
+		if err == nil {
+			err = w.Close()
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b, func() {
+			_ = b.Delete(ctx, key)
+			done()
+		}
 	}
-	w, err := b.NewWriter(ctx, key, opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = w.Write(content)
-	if err == nil {
-		err = w.Close()
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = b.Delete(ctx, key)
-	}()
 
 	t.Run("ContentType", func(t *testing.T) {
-		b, done := makeBkt(t)
+		b, done := init(t)
 		defer done()
 
 		r, err := b.NewRangeReader(ctx, key, 0, 0)
@@ -242,7 +243,7 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	// TODO(issue #303): Fails for GCS.
 	/*
 		t.Run("Size", func(t *testing.T) {
-			b, done := makeBkt(t)
+			b, done := init(t)
 			defer done()
 
 			r, err := b.NewRangeReader(ctx, key, 0, 0)
@@ -257,7 +258,7 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	*/
 
 	t.Run("ModTime", func(t *testing.T) {
-		b, done := makeBkt(t)
+		b, done := init(t)
 		defer done()
 
 		r, err := b.NewRangeReader(ctx, key, 0, 0)
