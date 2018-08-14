@@ -24,14 +24,13 @@ type bucket struct {
 }
 
 type AzureBlobSettings struct {
-	Authorizer             autorest.Authorizer
-	EnvironmentName        string
-	SubscriptionId         string
-	ResourceGroupName      string
-	StorageAccountName     string
-	StorageKey             string
-	ContainerReferenceName string
-	ContainerAccessType    string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+	Authorizer          autorest.Authorizer
+	EnvironmentName     string
+	SubscriptionId      string
+	ResourceGroupName   string
+	StorageAccountName  string
+	StorageKey          string
+	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
 }
 
 func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerName string) (*blob.Bucket, error) {
@@ -164,7 +163,7 @@ type writer struct {
 	contentType string
 
 	donec chan struct{}
-	err error
+	err   error
 }
 
 // NewTypedWriter returns a writer that writes to an object associated with key.
@@ -193,7 +192,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	theBlob.Properties.ContentType = contentType
 
 	w := &writer{
-		ctx: ctx,		
+		ctx:         ctx,
 		container:   theContainer,
 		blob:        theBlob,
 		key:         key,
@@ -225,7 +224,7 @@ func (w *writer) open() error {
 	go func() {
 		defer close(w.donec)
 
-		w.err = w.blob.CreateBlockBlobFromReader(w.r, nil)		
+		w.err = w.blob.CreateBlockBlobFromReader(w.r, nil)
 		if w.err == nil {
 			w.blob.SetProperties(nil)
 		} else {
@@ -275,10 +274,9 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-
 type azureError struct {
 	bucket, key, msg string
-	kind	driver.ErrorKind
+	kind             driver.ErrorKind
 }
 
 func (e azureError) BlobError() driver.ErrorKind {

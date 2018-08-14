@@ -15,9 +15,9 @@
 package main
 
 import (
-	"os"
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -80,7 +80,7 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 }
 
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
-		
+
 	// Azure Authorization w/ Service Principal
 	clientID := os.Getenv("AZURE_CLIENT_ID")
 	tenantID := os.Getenv("AZURE_TENANT_ID")
@@ -100,14 +100,13 @@ func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 
 	// minimum settings needed to write a Block Blob (https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)
 	storageParams := azureblob.AzureBlobSettings{
-		Authorizer:             auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
-		EnvironmentName:        environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
-		SubscriptionId:         subscriptionID,     // caller must specify their Azure SubscriptionID
-		ResourceGroupName:      resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
-		StorageAccountName:     storageAccountName, // caller must specify an already provisioned Azure Storage Account
-		StorageKey:             "",                 // to be fetched from storage account if empty or you can specify a SASToken
-		ContainerReferenceName: "profiles",         // this is just a name for the Azure Container logical folder
-		ContainerAccessType:    "blob",             // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+		Authorizer:          auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
+		EnvironmentName:     environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
+		SubscriptionId:      subscriptionID,     // caller must specify their Azure SubscriptionID
+		ResourceGroupName:   resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
+		StorageAccountName:  storageAccountName, // caller must specify an already provisioned Azure Storage Account
+		StorageKey:          "",                 // to be fetched from storage account if empty or you can specify a SASToken
+		ContainerAccessType: "blob",             // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
 	}
 
 	return azureblob.OpenBucket(ctx, &storageParams, bucket)
