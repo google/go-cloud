@@ -61,12 +61,14 @@ type BucketMaker func(t *testing.T) (*blob.Bucket, func())
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
-func RunConformanceTests(t *testing.T, makeBkt BucketMaker) {
+// pathToTestdata is a (possibly relative) path to a directory containing
+// blob/testdata/* (e.g., test-small.txt).
+func RunConformanceTests(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, makeBkt)
 	})
 	t.Run("TestWrite", func(t *testing.T) {
-		testWrite(t, makeBkt)
+		testWrite(t, makeBkt, pathToTestdata)
 	})
 	t.Run("TestAttributes", func(t *testing.T) {
 		testAttributes(t, makeBkt)
@@ -295,8 +297,9 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 }
 
 // loadTestFile loads a file from the blob/testdata/ directory.
-func loadTestFile(t *testing.T, filename string) []byte {
-	data, err := ioutil.ReadFile(filepath.Join("..", "testdata", filename))
+// TODO(rvangent): Consider using go-bindata to inline these as source code.
+func loadTestFile(t *testing.T, pathToTestdata, filename string) []byte {
+	data, err := ioutil.ReadFile(filepath.Join(pathToTestdata, filename))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,11 +307,11 @@ func loadTestFile(t *testing.T, filename string) []byte {
 }
 
 // testWrite tests the functionality of NewWriter and Writer.
-func testWrite(t *testing.T, makeBkt BucketMaker) {
+func testWrite(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
 	const key = "blob-for-reading"
-	smallText := loadTestFile(t, "test-small.txt")
-	mediumHTML := loadTestFile(t, "test-medium.html")
-	largeJpg := loadTestFile(t, "test-large.jpg")
+	smallText := loadTestFile(t, pathToTestdata, "test-small.txt")
+	mediumHTML := loadTestFile(t, pathToTestdata, "test-medium.html")
+	largeJpg := loadTestFile(t, pathToTestdata, "test-large.jpg")
 
 	tests := []struct {
 		name            string

@@ -39,7 +39,7 @@ func makeBucket(t *testing.T) (*blob.Bucket, func()) {
 	return b, func() {}
 }
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeBucket)
+	drivertest.RunConformanceTests(t, makeBucket, "../testdata")
 }
 
 // File-specific unit tests.
