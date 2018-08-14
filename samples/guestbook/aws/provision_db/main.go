@@ -69,7 +69,7 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 	}
 	defer resp.Body.Close()
 	caPath := filepath.Join(tempdir, "rds-ca.pem")
-	caFile, err := os.Open(caPath)
+	caFile, err := os.Create(caPath)
 	if err != nil {
 		return err
 	}
