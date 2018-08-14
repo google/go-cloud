@@ -15,14 +15,14 @@
 // Command upload saves files to blob storage on GCP and AWS.
 package main
 
-import (	
-	"os"
+import (
 	"context"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 		log.Fatal("Failed to provide file to upload")
 	}
 	file := flag.Arg(0)
-	
+
 	ctx := context.Background()
 	// Open a connection to the bucket.
 	b, err := setupBucket(context.Background(), *cloud, *bucketName)
@@ -65,13 +65,25 @@ func main() {
 		// Read the blob content
 
 		buf := make([]byte, 256)
-		r, _ := b.NewRangeReader(ctx, file, 100, 0)
-		
-		fmt.Println(r.ContentType())
-		fmt.Println(r.Size())		
-		io.CopyBuffer(os.Stdout, r, buf)
+		r, rdrErr := b.NewRangeReader(ctx, file, 100, 0)
+
+		if rdrErr == nil {
+			fmt.Println(r.ContentType())
+			fmt.Println(r.Size())
+			io.CopyBuffer(os.Stdout, r, buf)
+		}
 
 		// Delete the blob
-		b.Delete(ctx, file);
+		b.Delete(ctx, file)
 	}
+}
+
+// to help test Azure
+func init() {
+	os.Setenv("AZURE_CLIENT_ID", "")
+	os.Setenv("AZURE_TENANT_ID", "")
+	os.Setenv("AZURE_CLIENT_SECRET", "")
+	os.Setenv("SUBSCRIPTION_ID", "")
+	os.Setenv("RESOURCE_GROUP_NAME", "")
+	os.Setenv("STORAGE_ACCOUNT_NAME", "")
 }

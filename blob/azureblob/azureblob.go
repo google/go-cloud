@@ -197,34 +197,38 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		blob:        theBlob,
 		key:         key,
 		contentType: contentType,
+		donec:       make(chan struct{}),
 	}
 
 	return w, nil
 }
 
 func (w *writer) Write(p []byte) (int, error) {
-	w.open()
-
+	if w.w == nil {
+		if err := w.open(); err != nil {
+			return 0, err
+		}
+	}
 	select {
 	case <-w.donec:
 		return 0, w.err
 	default:
 	}
-
 	return w.w.Write(p)
 }
 
 func (w *writer) open() error {
-	if w.w == nil {
-		pr, pw := io.Pipe()
-		w.w = pw
-		w.r = pr
-	}
+
+	pr, pw := io.Pipe()
+	w.w = pw
+	w.r = pr
 
 	go func() {
-		defer close(w.donec)
 
+		defer close(w.donec)
+				
 		w.err = w.blob.CreateBlockBlobFromReader(w.r, nil)
+		
 		if w.err == nil {
 			w.blob.SetProperties(nil)
 		} else {
@@ -245,17 +249,16 @@ func (w *writer) Close() error {
 	} else if err := w.w.Close(); err != nil {
 		return err
 	}
-
-	go func() {
-		<-w.donec
-	}()
-
+	<-w.donec
 	return w.err
 }
 
 // touch creates an empty object in the bucket. It is called if user creates a
 // new writer but never calls write before closing it.
 func (w *writer) touch() {
+	if w.w != nil {
+		return
+	}
 	defer close(w.donec)
 	w.err = w.blob.CreateBlockBlob(nil)
 }

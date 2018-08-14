@@ -87,9 +87,9 @@ func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
 
 	// Azure Storage Account, Resource Group and SubscriptionId
-	subscriptionID := "YOUR SUBSCRIPTION GUID"
-	resourceGroupName := "YOUR RESOURCE GROUP NAME"
-	storageAccountName := "YOUR STORAGE ACCOUNT NAME (EX. myteststorage)"
+	subscriptionID := os.Getenv("SUBSCRIPTION_ID")
+	resourceGroupName := os.Getenv("RESOURCE_GROUP_NAME")
+	storageAccountName := os.Getenv("STORAGE_ACCOUNT_NAME")
 
 	environment := azure.PublicCloud
 
