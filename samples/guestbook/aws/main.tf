@@ -82,7 +82,7 @@ resource "aws_db_instance" "guestbook" {
 
   provisioner "local-exec" {
     # TODO(light): Reuse credentials from Terraform.
-    command = "cat '${path.module}'/../schema.sql '${path.module}'/../roles.sql | AWS_DEFAULT_REGION='${var.region}' 'go run ${path.module}'/provision_db/main.go '${aws_db_instance.guestbook.address}' '${aws_security_group.guestbook.id}' guestbook '${random_string.db_password.result}'"
+    command = "cat '${path.module}'/../schema.sql '${path.module}'/../roles.sql | AWS_DEFAULT_REGION='${var.region}' go run '${path.module}'/provision_db/main.go '${aws_db_instance.guestbook.address}' '${aws_security_group.guestbook.id}' guestbook '${random_string.db_password.result}'"
   }
 }
 
