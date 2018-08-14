@@ -215,6 +215,9 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	}()
 
 	t.Run("ContentType", func(t *testing.T) {
+		b, done := makeBkt(t)
+		defer done()
+
 		r, err := b.NewRangeReader(ctx, key, 0, 0)
 		if err != nil {
 			t.Fatalf("failed NewRangeReader: %v", err)
@@ -228,9 +231,12 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	// TODO(issue #303): Fails for GCS.
 	/*
 		t.Run("Size", func(t *testing.T) {
+			b, done := makeBkt(t)
+			defer done()
+
 			r, err := b.NewRangeReader(ctx, key, 0, 0)
 			if err != nil {
-				t.Errorf("failed NewRangeReader: %v", err)
+				t.Fatalf("failed NewRangeReader: %v", err)
 			}
 			defer r.Close()
 			if r.Size() != int64(len(content)) {
@@ -240,6 +246,9 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 	*/
 
 	t.Run("ModTime", func(t *testing.T) {
+		b, done := makeBkt(t)
+		defer done()
+
 		r, err := b.NewRangeReader(ctx, key, 0, 0)
 		if err != nil {
 			t.Fatalf("failed NewRangeReader: %v", err)
