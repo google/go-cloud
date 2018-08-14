@@ -30,54 +30,68 @@ type AzureBlobSettings struct {
 	ResourceGroupName   string
 	StorageAccountName  string
 	StorageKey          string
+	ConnectionString    string
 	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
 }
 
 func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerName string) (*blob.Bucket, error) {
 
-	if blobSettings.Authorizer == nil {
-		return nil, fmt.Errorf("AzureBlobSettings.Authorizer is not set")
-	}
-	if blobSettings.EnvironmentName == "" {
-		return nil, fmt.Errorf("AzureBlobSettings.EnvironmentName is not set")
-	}
-	if blobSettings.ResourceGroupName == "" {
-		return nil, fmt.Errorf("AzureBlobSettings.ResourceGroupName is not set")
-	}
-	if blobSettings.StorageAccountName == "" {
-		return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
-	}
-	if blobSettings.SubscriptionId == "" {
-		return nil, fmt.Errorf("AzureBlobSettings.SubscriptionId is not set")
-	}
+	var blobClient mainStorage.BlobStorageClient
 
-	fetchKey := blobSettings.StorageKey == ""
-	environment, err := azure.EnvironmentFromName(blobSettings.EnvironmentName)
-	if err != nil {
-		return nil, fmt.Errorf("Azure Environment %q is invalid", blobSettings.EnvironmentName)
-	}
+	// Use Connection String or Fetch Access Key from the Storage Account
+	if blobSettings.ConnectionString != "" {
+		storageClient, e := mainStorage.NewClientFromConnectionString(blobSettings.ConnectionString)
+		if e == nil {
+			blobClient = storageClient.GetBlobService()
+		}
+	} else {
 
-	accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionId)
-	accountClient.Authorizer = blobSettings.Authorizer
-	accountClient.Sender = autorest.CreateSender(WithRequestLogging())
+		if blobSettings.Authorizer == nil {
+			return nil, fmt.Errorf("AzureBlobSettings.Authorizer is not set")
+		}
+		if blobSettings.EnvironmentName == "" {
+			return nil, fmt.Errorf("AzureBlobSettings.EnvironmentName is not set")
+		}
+		if blobSettings.ResourceGroupName == "" {
+			return nil, fmt.Errorf("AzureBlobSettings.ResourceGroupName is not set")
+		}
+		if blobSettings.StorageAccountName == "" {
+			return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
+		}
+		if blobSettings.SubscriptionId == "" {
+			return nil, fmt.Errorf("AzureBlobSettings.SubscriptionId is not set")
+		}
 
-	if fetchKey {
+		environment, err := azure.EnvironmentFromName(blobSettings.EnvironmentName)
+		if err != nil {
+			return nil, fmt.Errorf("Azure Environment %q is invalid", blobSettings.EnvironmentName)
+		}
+
+		canFetchKey := (blobSettings.StorageKey == "" && blobSettings.Authorizer != nil)
+		if !canFetchKey {
+			return nil, fmt.Errorf("Cannot retrieve AccessKey for Account %q without Authorizer", blobSettings.StorageAccountName)
+		}
+
+		accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionId)
+		accountClient.Authorizer = blobSettings.Authorizer
+		accountClient.Sender = autorest.CreateSender(WithRequestLogging())
+
 		key, err := GetStorageAccountKey(&accountClient, blobSettings.ResourceGroupName, blobSettings.StorageAccountName)
 		if err != nil {
 			return nil, err
 		} else {
 			blobSettings.StorageKey = key
 		}
+
+		storageClient, err := mainStorage.NewClient(blobSettings.StorageAccountName, blobSettings.StorageKey, environment.StorageEndpointSuffix,
+			mainStorage.DefaultAPIVersion, true)
+
+		if err != nil {
+			return nil, fmt.Errorf("Error creating storage client for storage storeAccount %q: %s", blobSettings.StorageAccountName, err)
+		}
+
+		blobClient = storageClient.GetBlobService()
 	}
-
-	storageClient, err := mainStorage.NewClient(blobSettings.StorageAccountName, blobSettings.StorageKey, environment.StorageEndpointSuffix,
-		mainStorage.DefaultAPIVersion, true)
-
-	if err != nil {
-		return nil, fmt.Errorf("Error creating storage client for storage storeAccount %q: %s", blobSettings.StorageAccountName, err)
-	}
-
-	blobClient := storageClient.GetBlobService()
 
 	return blob.NewBucket(&bucket{
 		name:                containerName,
@@ -104,10 +118,10 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return &reader{body: empty}, err
 	}
 
-	theblob := theContainer.GetBlobReference(key)
-	theblob.GetProperties(nil)
+	theBlob := theContainer.GetBlobReference(key)
+	theBlob.GetProperties(nil)
 
-	if theblob == nil {
+	if theBlob == nil {
 		return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
 
@@ -116,7 +130,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		var ioReader io.ReadCloser
 		rangeEnd := length
 		if length < 0 {
-			rangeEnd = theblob.Properties.ContentLength
+			rangeEnd = theBlob.Properties.ContentLength
 		}
 
 		if length > 0 {
@@ -124,16 +138,16 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 
 		readRange := mainStorage.BlobRange{Start: uint64(offset), End: uint64(rangeEnd)}
-		ioReader, err = theblob.GetRange(&mainStorage.GetBlobRangeOptions{Range: &readRange})
+		ioReader, err = theBlob.GetRange(&mainStorage.GetBlobRangeOptions{Range: &readRange})
 
 		if err != nil {
 			return nil, err
 		} else {
-			return &reader{body: ioReader, contentType: theblob.Properties.ContentType, size: theblob.Properties.ContentLength}, nil
+			return &reader{body: ioReader, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil
 		}
 	} else {
 		empty := ioutil.NopCloser(strings.NewReader(""))
-		return &reader{body: empty, contentType: theblob.Properties.ContentType, size: theblob.Properties.ContentLength}, nil
+		return &reader{body: empty, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil
 	}
 }
 
@@ -226,9 +240,9 @@ func (w *writer) open() error {
 	go func() {
 
 		defer close(w.donec)
-				
+
 		w.err = w.blob.CreateBlockBlobFromReader(w.r, nil)
-		
+
 		if w.err == nil {
 			w.blob.SetProperties(nil)
 		} else {

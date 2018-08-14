@@ -42,7 +42,7 @@ func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error
 	case "gcp":
 		return setupGCP(ctx, bucket)
 	case "azure":
-		return setupAzure(ctx, bucket)
+		return setupAzureWithConnectionString(ctx, bucket)
 	default:
 		return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 	}
@@ -79,37 +79,53 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	return s3blob.OpenBucket(ctx, s, bucket)
 }
 
-func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
+func setupAzureWithServicePrincipal(ctx context.Context, bucket string) (*blob.Bucket, error) {
 
 	// Azure Authorization w/ Service Principal
 	clientID := os.Getenv("AZURE_CLIENT_ID")
 	tenantID := os.Getenv("AZURE_TENANT_ID")
 	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
-
+	
 	// Azure Storage Account, Resource Group and SubscriptionId
 	subscriptionID := os.Getenv("SUBSCRIPTION_ID")
 	resourceGroupName := os.Getenv("RESOURCE_GROUP_NAME")
 	storageAccountName := os.Getenv("STORAGE_ACCOUNT_NAME")
-
-	environment := azure.PublicCloud
-
+	
+	environment := azure.PublicCloud	
 	auth, err := getAuthorizationToken(clientID, clientSecret, tenantID, &environment)
 	if err != nil {
 		return nil, err
 	}
 
-	// minimum settings needed to write a Block Blob (https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs)
-	storageParams := azureblob.AzureBlobSettings{
+	settings := azureblob.AzureBlobSettings{
 		Authorizer:          auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
 		EnvironmentName:     environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
 		SubscriptionId:      subscriptionID,     // caller must specify their Azure SubscriptionID
 		ResourceGroupName:   resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
 		StorageAccountName:  storageAccountName, // caller must specify an already provisioned Azure Storage Account
-		StorageKey:          "",                 // to be fetched from storage account if empty or you can specify a SASToken
+		StorageKey:          "",                 // to be fetched from storage account if empty and no connectionString is set
 		ContainerAccessType: "blob",             // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+		ConnectionString:    "",                 // use connectionString/SASToken over Authorizer w/ StorageKey
 	}
 
-	return azureblob.OpenBucket(ctx, &storageParams, bucket)
+	return azureblob.OpenBucket(ctx, &settings, bucket)
+}
+
+func setupAzureWithConnectionString(ctx context.Context, bucket string) (*blob.Bucket, error) {	
+	
+	connectionString := ""	
+	settings := azureblob.AzureBlobSettings{
+		Authorizer:          nil,
+		EnvironmentName:     "",
+		SubscriptionId:      "",
+		ResourceGroupName:   "",
+		StorageAccountName:  "",
+		StorageKey:          "",
+		ContainerAccessType: "blob",
+		ConnectionString:    connectionString, // caller must supply the storage connection string or a SASToken
+	}
+
+	return azureblob.OpenBucket(ctx, &settings, bucket)
 }
 
 func getAuthorizationToken(clientId string, clientSecret string, tenantId string, environment *azure.Environment) (*autorest.BearerAuthorizer, error) {

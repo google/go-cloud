@@ -65,7 +65,7 @@ func main() {
 		// Read the blob content
 
 		buf := make([]byte, 256)
-		r, rdrErr := b.NewRangeReader(ctx, file, 100, 0)
+		r, rdrErr := b.NewRangeReader(ctx, file, 100, -1)
 
 		if rdrErr == nil {
 			fmt.Println(r.ContentType())
