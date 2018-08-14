@@ -1,0 +1,39 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180814T162617Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "12"
+      Content-Type:
+      - text/plain
+      Date:
+      - Tue, 14 Aug 2018 16:26:18 GMT
+      Etag:
+      - '"ed076287532e86365e841e92bfc50d8c"'
+      Last-Modified:
+      - Tue, 14 Aug 2018 16:26:18 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 7xZd1AiXSyJskdtG8jLdHrHBbYo8b9qghFxn+WbSWRBMVPPouZL04imusJ4ASFbFGZvAlsqdIXI=
+      X-Amz-Request-Id:
+      - 721CDB0B101793CA
+    status: 200 OK
+    code: 200
+    duration: ""
