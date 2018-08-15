@@ -585,6 +585,23 @@ func (test *testCase) materialize(gopath string) error {
 }
 
 // writeGoMod generates go.mod files for the test package and its dependency.
+// The file structure looks like:
+//
+//	gopath/src/
+//
+//		example.com/
+//
+//			go.mod
+//				replaces dependency with local copied one
+//
+//			... (Packages to be built and tested)
+//				any Go files copied recursively
+//
+//		github.com/google/go-cloud/
+//
+//			go.mod
+//
+//			... (Dependency files copied)
 func writeGoMod(gopath string) error {
 	importPath := "example.com"
 	depPath := "github.com/google/go-cloud"
