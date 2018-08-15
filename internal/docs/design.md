@@ -152,8 +152,11 @@ provisioned resources or network interactions. Replay tests verify that:
 
 ### Record Mode
 
-See https://github.com/google/go-cloud/issues/128 for active work on improving
-this.
+In `-record` mode, tests run as integration tests, making live requests to
+backend servers and recording the requests/responses for later use in replay
+mode.
+
+To use `-record`:
 
 1.  Provision resources.
 
