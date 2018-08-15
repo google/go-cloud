@@ -92,6 +92,12 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 		{
 			name:    "read of nonexistent key fails",
 			key:     "key-does-not-exist",
+			length: -1,
+			wantErr: true,
+		},
+		{
+			name:    "length 0 read of nonexistent key fails",
+			key:     "key-does-not-exist",
 			wantErr: true,
 		},
 		{
