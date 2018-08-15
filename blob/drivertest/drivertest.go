@@ -188,12 +188,9 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 			if !cmp.Equal(got[:tc.wantReadSize], tc.want) {
 				t.Errorf("got %q want %q", string(got), string(tc.want))
 			}
-			// TODO(issue #305): Fails for S3.
-			/*
-				if r.Size() != contentSize {
-					t.Errorf("got size %d want %d", r.Size(), contentSize)
-				}
-			*/
+			if r.Size() != contentSize {
+				t.Errorf("got size %d want %d", r.Size(), contentSize)
+			}
 			r.Close()
 		})
 	}
