@@ -24,7 +24,7 @@ import (
 )
 
 // bucketName records the bucket used for the last --record.
-// If you want to -use --record mode,
+// If you want to use --record mode,
 // 1. Create a bucket in your AWS project from the S3 management console.
 //    https://s3.console.aws.amazon.com/s3/home.
 // 2. Update this constant to your bucket name.
