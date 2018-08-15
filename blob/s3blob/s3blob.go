@@ -189,9 +189,12 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
+	// Default size to ContentLength, but that's incorrect for partial-length reads,
+	// where ContentLength refers to the size of the returned Body, not the entire
+	// size of the blob. ContentRange has the full size.
 	size := aws.Int64Value(resp.ContentLength)
 	if cr := aws.StringValue(resp.ContentRange); cr != "" {
-		// Sample: bytes 10-14/27
+		// Sample: bytes 10-14/27 (where 27 is the full size).
 		parts := strings.Split(cr, "/")
 		if len(parts) == 2 {
 			if i, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
