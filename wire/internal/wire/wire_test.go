@@ -150,9 +150,9 @@ func goBuildCheck(test *testCase, wd string, bctx *build.Context, gen []byte) er
 		if err := ioutil.WriteFile(genPath, gen, 0666); err != nil {
 			return err
 		}
-		if err := writeGoMod(gopath); err != nil {
-			return err
-		}
+	}
+	if err := writeGoMod(gopath); err != nil {
+		return err
 	}
 	testExePath := filepath.Join(gopath, "bin", "testprog")
 	realBuildCtx := &build.Context{
