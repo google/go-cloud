@@ -175,10 +175,8 @@ this.
 
     -   TODO(issue #300): The test will save the Terraform output to a file in
         order to replay using the same inputs.
-    -   TODO(issue #301): The replay files are lightly scrubbed; the
-        `Authorization` HTTP header is removed.
     -   Commit the new replay files along with your code change. Expect to see
-        lots of diff; see below for more discussion.
+        lots of diffs; see below for more discussion.
 
 ### Diffs in replay files
 
