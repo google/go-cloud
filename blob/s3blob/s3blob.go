@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"time"
 
@@ -188,10 +189,20 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
+	size := aws.Int64Value(resp.ContentLength)
+	if cr := aws.StringValue(resp.ContentRange); cr != "" {
+		// Sample: bytes 10-14/27
+		parts := strings.Split(cr, "/")
+		if len(parts) == 2 {
+			if i, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				size = i
+			}
+		}
+	}
 	return &reader{
 		body:        resp.Body,
 		contentType: aws.StringValue(resp.ContentType),
-		size:        aws.Int64Value(resp.ContentLength),
+		size:        size,
 		modTime:     aws.TimeValue(resp.LastModified),
 	}, nil
 }
