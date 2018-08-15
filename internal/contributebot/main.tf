@@ -94,6 +94,14 @@ data "google_iam_policy" "worker_subscription" {
       "serviceAccount:${google_service_account.worker.email}",
     ]
   }
+
+  binding {
+    role = "roles/pubsub.viewer"
+
+    members = [
+      "serviceAccount:${google_service_account.worker.email}",
+    ]
+  }
 }
 
 resource "google_pubsub_subscription_iam_policy" "worker" {
