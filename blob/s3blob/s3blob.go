@@ -189,6 +189,15 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
+	return &reader{
+		body:        resp.Body,
+		contentType: aws.StringValue(resp.ContentType),
+		size:        getSize(resp),
+		modTime:     aws.TimeValue(resp.LastModified),
+	}, nil
+}
+
+func getSize(resp *s3.GetObjectOutput) int64 {
 	// Default size to ContentLength, but that's incorrect for partial-length reads,
 	// where ContentLength refers to the size of the returned Body, not the entire
 	// size of the blob. ContentRange has the full size.
@@ -202,12 +211,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			}
 		}
 	}
-	return &reader{
-		body:        resp.Body,
-		contentType: aws.StringValue(resp.ContentType),
-		size:        size,
-		modTime:     aws.TimeValue(resp.LastModified),
-	}, nil
+	return size
 }
 
 func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Reader, error) {
