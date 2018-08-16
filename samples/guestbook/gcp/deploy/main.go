@@ -17,7 +17,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -138,22 +137,18 @@ func deploy(guestbookDir, tfStatePath string) error {
 	// Wait for endpoint then print it.
 	log.Printf("Waiting for load balancer...")
 	for {
-		getService := exec.Command("kubectl", "get", "service", "guestbook", "-o", "json")
-		var errBuf bytes.Buffer
-		getService.Stderr = &errBuf
-		out, err := getService.Output()
+		outb, err := runb("kubectl", "get", "service", "guestbook", "-o", "json")
 		if err != nil {
-			return fmt.Errorf("getting service info with %v: %v: %s", getService.Args, err, errBuf.String())
-			continue
+			return err
 		}
 		var t thing
-		if err := json.Unmarshal(out, &t); err != nil {
-			return fmt.Errorf("parsing JSON output of %v: %v", getService.Args, err)
+		if err := json.Unmarshal(outb, &t); err != nil {
+			return fmt.Errorf("parsing JSON output: %v", err)
 		}
 		i := t.Status.LoadBalancer.Ingress
 		if len(i) == 0 || i[0].IP == "" {
 			dt := time.Second
-			log.Printf("No ingress returned in %s. Trying again in %v", out, dt)
+			log.Printf("No ingress returned in %s. Trying again in %v", outb, dt)
 			time.Sleep(dt)
 			continue
 		}
