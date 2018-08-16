@@ -92,6 +92,12 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 		{
 			name:    "read of nonexistent key fails",
 			key:     "key-does-not-exist",
+			length: -1,
+			wantErr: true,
+		},
+		{
+			name:    "length 0 read of nonexistent key fails",
+			key:     "key-does-not-exist",
 			wantErr: true,
 		},
 		{
@@ -100,14 +106,6 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 			offset:  -1,
 			wantErr: true,
 		},
-		// TODO(issue #303): Fails for GCS.
-		/*
-			{
-				name: "read metadata",
-				key:  key,
-				want: make([]byte, 0),
-			},
-		*/
 		{
 			name:         "read from positive offset to end",
 			key:          key,
@@ -182,12 +180,9 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 			if !cmp.Equal(got[:tc.wantReadSize], tc.want) {
 				t.Errorf("got %q want %q", string(got), string(tc.want))
 			}
-			// TODO(issue #305): Fails for S3.
-			/*
-				if r.Size() != contentSize {
-					t.Errorf("got size %d want %d", r.Size(), contentSize)
-				}
-			*/
+			if r.Size() != contentSize {
+				t.Errorf("got size %d want %d", r.Size(), contentSize)
+			}
 			r.Close()
 		})
 	}
@@ -240,22 +235,19 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		}
 	})
 
-	// TODO(issue #303): Fails for GCS.
-	/*
-		t.Run("Size", func(t *testing.T) {
-			b, done := init(t)
-			defer done()
+	t.Run("Size", func(t *testing.T) {
+		b, done := init(t)
+		defer done()
 
-			r, err := b.NewRangeReader(ctx, key, 0, 0)
-			if err != nil {
-				t.Fatalf("failed NewRangeReader: %v", err)
-			}
-			defer r.Close()
-			if r.Size() != int64(len(content)) {
-				t.Errorf("got Size %d want %d", r.Size(), len(content))
-			}
-		})
-	*/
+		r, err := b.NewRangeReader(ctx, key, 0, 0)
+		if err != nil {
+			t.Fatalf("failed NewRangeReader: %v", err)
+		}
+		defer r.Close()
+		if r.Size() != int64(len(content)) {
+			t.Errorf("got Size %d want %d", r.Size(), len(content))
+		}
+	})
 
 	t.Run("ModTime", func(t *testing.T) {
 		b, done := init(t)

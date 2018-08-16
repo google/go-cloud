@@ -151,6 +151,15 @@ been created or synchronized (the content has changed):
     extensions**) to see if they include the license header. If they do not, add
     an annotation to the first line of the file that a license header is missing
     and fail the check.
+1.  If any new imports are added to go.mod, add an annotation to verify that the
+    license is one of the `notice`, `permissive`, or `unencumbered` licences
+    under the categories [defined by Google Open Source][thirdparty licenses].
+1.  If any commits in the pull request have a commit author that is not in the
+    [CONTRIBUTORS][] file, then add a line item to the status check output to
+    add the contributors to the file and fail the check.
+
+[thirdparty licenses]: https://opensource.google.com/docs/thirdparty/licenses/
+[CONTRIBUTORS]: https://github.com/google/go-cloud/blob/master/CONTRIBUTORS
 
 ## Redundancy and Reliability
 
