@@ -152,8 +152,11 @@ provisioned resources or network interactions. Replay tests verify that:
 
 ### Record Mode
 
-See https://github.com/google/go-cloud/issues/128 for active work on improving
-this.
+In `-record` mode, tests run as integration tests, making live requests to
+backend servers and recording the requests/responses for later use in replay
+mode.
+
+To use `-record`:
 
 1.  Provision resources.
 
@@ -175,10 +178,8 @@ this.
 
     -   TODO(issue #300): The test will save the Terraform output to a file in
         order to replay using the same inputs.
-    -   TODO(issue #301): The replay files are lightly scrubbed; the
-        `Authorization` HTTP header is removed.
     -   Commit the new replay files along with your code change. Expect to see
-        lots of diff; see below for more discussion.
+        lots of diffs; see below for more discussion.
 
 ### Diffs in replay files
 
