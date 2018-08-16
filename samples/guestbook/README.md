@@ -30,11 +30,11 @@ go generate && go build
 ## Running Locally
 
 You will need to run a local MySQL database server, set up a directory that
-simulates a bucket, and create a local message of the day. `localdb.sh` is a
-script that runs a temporary database using Docker:
+simulates a bucket, and create a local message of the day. `localdb/main.go` is a
+program that runs a temporary database using Docker:
 
 ```shell
-./localdb.sh
+go run localdb/main.go
 ```
 
 In another terminal, you can run:
