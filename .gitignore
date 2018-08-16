@@ -21,8 +21,9 @@
 vendor/
 
 # Populated config files
-internal/contributebot/webhook/app.yaml
-tests/gcp/app/gcp-test.yaml
+/internal/contributebot/k8s/*.yaml
+/internal/contributebot/webhook/app.yaml
+/tests/gcp/app/gcp-test.yaml
 
 # Cryptographic keys
 *.pem
