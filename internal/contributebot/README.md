@@ -57,3 +57,21 @@ To run Contribute Bot locally for testing:
 1.  Download a GitHub application secret key for your test application.
 1.  Run `contributebot`, setting the flags for your test GCP project and GitHub
     application.
+
+## Deploying
+
+```shell
+# Build Docker image.
+gcloud builds submit --config cloudbuild.yaml ../..
+
+# Edit k8s/contributebot.yaml and replace placeholders surrounded by double
+# curly braces (e.g. {{PROJECT_ID}}) with the appropriate values.
+cp k8s/contributebot.yaml.in k8s/contributebot.yaml
+vi k8s/contributebot.yaml
+
+# Apply to cluster.
+gcloud container clusters get-credentials \
+    --zone="$(terraform output cluster_zone)" \
+    "$(terraform output cluster_name)"
+kubectl apply -f k8s
+```

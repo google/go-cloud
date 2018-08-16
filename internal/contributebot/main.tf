@@ -35,6 +35,10 @@ resource "google_service_account" "worker" {
   display_name = "Contribute Bot Server"
 }
 
+resource "google_service_account_key" "worker" {
+  service_account_id = "${google_service_account.worker.name}"
+}
+
 # Stackdriver Tracing
 
 resource "google_project_service" "trace" {
@@ -108,4 +112,65 @@ resource "google_pubsub_subscription_iam_policy" "worker" {
   subscription = "${google_pubsub_subscription.worker.id}"
   project      = "${var.project}"
   policy_data  = "${data.google_iam_policy.worker_subscription.policy_data}"
+}
+
+# Kubernetes Engine
+
+resource "google_project_service" "container" {
+  service            = "container.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_container_cluster" "contributebot" {
+  name               = "${var.cluster_name}"
+  project            = "${var.project}"
+  zone               = "${var.zone}"
+  initial_node_count = 3
+
+  node_config {
+    machine_type = "n1-standard-1"
+    disk_size_gb = 10
+
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/compute",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+    ]
+  }
+
+  # Needed for Kubernetes provider below.
+  enable_legacy_abac = true
+
+  depends_on = ["google_project_service.container"]
+}
+
+provider "kubernetes" {
+  version = "~> 1.1"
+
+  host = "https://${google_container_cluster.contributebot.endpoint}"
+
+  client_certificate     = "${base64decode(google_container_cluster.contributebot.master_auth.0.client_certificate)}"
+  client_key             = "${base64decode(google_container_cluster.contributebot.master_auth.0.client_key)}"
+  cluster_ca_certificate = "${base64decode(google_container_cluster.contributebot.master_auth.0.cluster_ca_certificate)}"
+}
+
+resource "kubernetes_secret" "worker_service_account" {
+  metadata {
+    name = "worker-service-account"
+  }
+
+  data {
+    key.json = "${base64decode(google_service_account_key.worker.private_key)}"
+  }
+}
+
+resource "kubernetes_secret" "github_app_key" {
+  metadata {
+    name = "github-app-key"
+  }
+
+  data {
+    key.pem = "${var.github_app_key}"
+  }
 }

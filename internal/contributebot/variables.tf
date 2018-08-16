@@ -21,9 +21,19 @@ variable "project" {
   description = "Project to set up."
 }
 
+variable "zone" {
+  type        = "string"
+  description = "GCP zone to create the GKE cluster in, like 'us-central1-a'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+}
+
 variable "worker_service_account_name" {
   default     = "contributebot"
   description = "The username part of the service account email that will be used for the worker running inside the GKE cluster."
+}
+
+variable "cluster_name" {
+  default     = "contributebot-cluster"
+  description = "The GKE cluster name."
 }
 
 variable "github_app_key" {

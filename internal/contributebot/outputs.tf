@@ -31,3 +31,13 @@ output "worker_service_account" {
   value       = "${google_service_account.worker.email}"
   description = "The service account email that will be used for the worker running inside the GKE cluster."
 }
+
+output "cluster_name" {
+  value       = "${var.cluster_name}"
+  description = "GKE cluster name."
+}
+
+output "cluster_zone" {
+  value       = "${var.zone}"
+  description = "GCP zone that the GKE cluster is in."
+}
