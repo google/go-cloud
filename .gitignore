@@ -3,6 +3,10 @@
 *.dll
 *.so
 *.dylib
+/internal/contributebot/contributebot
+/samples/guestbook/guestbook
+/samples/guestbook/gcp/guestbook
+/samples/tutorial/tutorial
 
 # Test binary, build with `go test -c`
 *.test
@@ -14,7 +18,7 @@
 .glide/
 
 # Go vendor directory
-/vendor/
+vendor/
 
 # Populated config files
 internal/contributebot/webhook/app.yaml
@@ -28,11 +32,6 @@ tests/gcp/app/gcp-test.yaml
 *.tfstate.backup
 .terraform/
 terraform.tfvars
-
-# Build artifacts from samples
-/samples/guestbook/guestbook
-/samples/guestbook/gcp/guestbook
-/samples/tutorial/tutorial
 
 # OSX leaves these everywhere on SMB shares
 ._*
