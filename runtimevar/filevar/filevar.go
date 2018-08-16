@@ -118,7 +118,9 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	// avoid race conditions.
 	notifierErr := w.notifier.Add(w.file)
 	if notifierErr == nil {
-		defer w.notifier.Remove(w.file)
+		defer func() {
+			_ = w.notifier.Remove(w.file)
+		}()
 	}
 
 	for {
