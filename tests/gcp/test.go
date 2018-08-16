@@ -31,7 +31,7 @@ func main() {
 	testDir := flag.String("test_dir", ".", "tests/gcp directory")
 	flag.Parse()
 	if flag.NArg() != 1 {
-		fmt.Fprintf(os.Stderr, "usage: go run test.go PROJECT\n")
+		fmt.Fprintf(os.Stderr, "usage: %s gcp_project_id\n", filepath.Base(os.Args[0]))
 		os.Exit(64)
 	}
 	log.SetPrefix("tests/gcp/test: ")
