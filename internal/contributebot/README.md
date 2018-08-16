@@ -16,6 +16,8 @@ incoming events are bursty.
 
 ## Setup
 
+To set up your own instance of Contribute Bot for local testing or deployment:
+
 1.  [Create a new GCP project][].
 1.  Set your project using `gcloud config set project PROJECTID`, where
     `PROJECTID` is the project's ID.
@@ -47,6 +49,8 @@ incoming events are bursty.
 [variable file]: https://www.terraform.io/docs/configuration/variables.html#variable-files
 
 ## Developing
+
+To run Contribute Bot locally for testing:
 
 1.  Create a GitHub repository for testing.
 1.  Install the GitHub application on your test respository.

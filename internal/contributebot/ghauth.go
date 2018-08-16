@@ -32,6 +32,7 @@ import (
 )
 
 // gitHubAppAuth makes HTTP requests with GitHub application credentials.
+// It watches a private key file, which can be rotated.
 type gitHubAppAuth struct {
 	id   int64
 	base http.RoundTripper
@@ -45,7 +46,7 @@ type gitHubAppAuth struct {
 }
 
 func newGitHubAppAuth(id int64, privateKey *runtimevar.Variable, rt http.RoundTripper) *gitHubAppAuth {
-	done := make(chan struct{})
+	watchDone := make(chan struct{})
 	available := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	auth := &gitHubAppAuth{
@@ -53,10 +54,12 @@ func newGitHubAppAuth(id int64, privateKey *runtimevar.Variable, rt http.RoundTr
 		base:        rt,
 		available:   available,
 		cancelWatch: cancel,
-		watchDone:   done,
+		watchDone:   watchDone,
 	}
 	go func() {
-		defer close(done)
+		// Watch privateKey until Stop cancels the context.
+		// available is used to notify waitPublicKey.
+		defer close(watchDone)
 		auth.watch(ctx, available, privateKey)
 	}()
 	return auth
@@ -72,7 +75,8 @@ func (auth *gitHubAppAuth) Stop() {
 }
 
 // watch watches the private key variable until the context is cancelled.
-// The available channel is closed on the first successful Watch.
+// The available channel is closed on the first successful Watch or after the
+// context's cancellation, whichever comes first.
 func (auth *gitHubAppAuth) watch(ctx context.Context, available chan<- struct{}, v *runtimevar.Variable) {
 	first := true
 	for ctx.Err() == nil {
@@ -89,9 +93,16 @@ func (auth *gitHubAppAuth) watch(ctx context.Context, available chan<- struct{},
 			close(available)
 			first = false
 		}
+		log.Println("Using new GitHub private key")
+	}
+	// Stop waitPrivateKey from blocking indefinitely (it will catch the error).
+	if first {
+		close(available)
 	}
 }
 
+// CheckHealth returns an error before auth's private key is available.
+// It implements the health.Checker interface.
 func (auth *gitHubAppAuth) CheckHealth() error {
 	auth.mu.RLock()
 	ok := auth.privateKey != nil
@@ -111,6 +122,8 @@ func (auth *gitHubAppAuth) RoundTrip(req *http.Request) (*http.Response, error) 
 	}
 	forwarded := false
 	if req.Body != nil {
+		// As per http.RoundTripper interface, the RoundTrip method must always
+		// close the Body.
 		defer func() {
 			if forwarded {
 				return
@@ -234,6 +247,8 @@ func (auth *gitHubInstallAuth) RoundTrip(req *http.Request) (*http.Response, err
 	}
 	forwarded := false
 	if req.Body != nil {
+		// As per http.RoundTripper interface, the RoundTrip method must always
+		// close the Body.
 		defer func() {
 			if forwarded {
 				return
