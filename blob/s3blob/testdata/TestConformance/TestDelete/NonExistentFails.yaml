@@ -1,0 +1,31 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/does-not-exist
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Fri, 10 Aug 2018 19:32:17 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - pYIlKb72SdiDKjhMNI+8C1mOet+aY6BHo4y6nidtzUKvOYQ0z6BqMOliP77D+utykjN0ezd2yvM=
+      X-Amz-Request-Id:
+      - C2DCCDDFA28AADC2
+    status: 404 Not Found
+    code: 404
+    duration: ""

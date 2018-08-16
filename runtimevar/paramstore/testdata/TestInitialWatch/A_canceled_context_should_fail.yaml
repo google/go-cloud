@@ -10,13 +10,11 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210951Z
+      - 20180810T193158Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
-      X-Gocloud-Seq:
-      - "6"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -25,7 +23,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:51 GMT
+      - Fri, 10 Aug 2018 19:31:58 GMT
+      X-Amzn-Requestid:
+      - aafb10f4-83e0-49e1-9911-fc601a2eadb0
     status: 200 OK
     code: 200
     duration: ""
@@ -38,13 +38,11 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210951Z
+      - 20180810T193159Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
-      X-Gocloud-Seq:
-      - "7"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -53,7 +51,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:51 GMT
+      - Fri, 10 Aug 2018 19:31:58 GMT
+      X-Amzn-Requestid:
+      - 6cdb148e-ecc4-415b-8537-85314823e24f
     status: 200 OK
     code: 200
     duration: ""
