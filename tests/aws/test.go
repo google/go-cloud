@@ -29,7 +29,7 @@ func main() {
 	testDir := flag.String("test_dir", ".", "directory where the test will run")
 	flag.Parse()
 	if flag.NArg() != 2 {
-		fmt.Fprintf(os.Stderr, "usage: %s gcp_project_id ssh_key_path [region]\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "usage: %s gcp_project_id ssh_private_key_path [region]\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 	}
 	log.SetPrefix("tests/aws/test: ")
