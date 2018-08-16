@@ -1,6 +1,7 @@
 package azureblob
 
 import (
+	"net/url"
 	"context"
 	"fmt"
 	"io"
@@ -31,7 +32,8 @@ type AzureBlobSettings struct {
 	StorageAccountName  string
 	StorageKey          string
 	ConnectionString    string
-	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+	SASTokenValues		url.Values
+	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.	
 }
 
 func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerName string) (*blob.Bucket, error) {
@@ -39,10 +41,30 @@ func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerN
 	var blobClient mainStorage.BlobStorageClient
 
 	// Use Connection String or Fetch Access Key from the Storage Account
-	if blobSettings.ConnectionString != "" {
+	if blobSettings.ConnectionString != "" {		
 		storageClient, e := mainStorage.NewClientFromConnectionString(blobSettings.ConnectionString)
 		if e == nil {
 			blobClient = storageClient.GetBlobService()
+		} else {
+			return nil, e
+		}
+	} else if (blobSettings.StorageAccountName != "" && blobSettings.SASTokenValues != nil) {
+		if blobSettings.StorageAccountName == "" {
+			return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
+		}
+		environment, err := azure.EnvironmentFromName(blobSettings.EnvironmentName)
+		if err != nil {
+			return nil, fmt.Errorf("Azure Environment %q is invalid", blobSettings.EnvironmentName)
+		}
+
+		//sasToken := blobSettings.SASTokenValues.Encode()
+		//connString := "https://" + blobSettings.StorageAccountName +".blob.core.windows.net"
+		//storageClient, err := mainStorage.NewAccountSASClientFromEndpointToken(connString, sasToken)			
+
+		storageClient := mainStorage.NewAccountSASClient(blobSettings.StorageAccountName, blobSettings.SASTokenValues, environment)	
+		
+		if err == nil {
+			blobClient = storageClient.GetBlobService()	
 		}
 	} else {
 
@@ -75,6 +97,7 @@ func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerN
 		accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionId)
 		accountClient.Authorizer = blobSettings.Authorizer
 		accountClient.Sender = autorest.CreateSender(WithRequestLogging())
+		
 
 		key, err := GetStorageAccountKey(&accountClient, blobSettings.ResourceGroupName, blobSettings.StorageAccountName)
 		if err != nil {
@@ -85,6 +108,7 @@ func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerN
 
 		storageClient, err := mainStorage.NewClient(blobSettings.StorageAccountName, blobSettings.StorageKey, environment.StorageEndpointSuffix,
 			mainStorage.DefaultAPIVersion, true)
+			
 
 		if err != nil {
 			return nil, fmt.Errorf("Error creating storage client for storage storeAccount %q: %s", blobSettings.StorageAccountName, err)
