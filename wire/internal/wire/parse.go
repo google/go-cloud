@@ -116,7 +116,8 @@ type Provider struct {
 	// elements in Args.
 	Fields []string
 
-	// Out is the slice of types this provider produces.
+	// Out is the set of types this provider produces. It will always
+	// contain at least one type.
 	Out []types.Type
 
 	// HasCleanup reports whether the provider function returns a cleanup
