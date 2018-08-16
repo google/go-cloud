@@ -1,19 +1,18 @@
 package azureblob
 
 import (
-	"net/url"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/azure-sdk-for-go/profiles/latest/storage/mgmt/storage"
 	mainStorage "github.com/Azure/azure-sdk-for-go/storage"
-	
 )
 
 // helpers ported from https://github.com/terraform-providers/terraform-provider-azurerm/blob/master/azurerm/config.go
@@ -45,9 +44,7 @@ func WithRequestLogging() autorest.SendDecorator {
 	}
 }
 
-func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupName string, storageAccountName string) (string, error) {
-
-	// fetch the storage account keys
+func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupName string, storageAccountName string) (string, error) {	
 	accountKeys, err := accountClient.ListKeys(context.Background(), resourceGroupName, storageAccountName)
 
 	if err != nil {
@@ -57,7 +54,7 @@ func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupNa
 	if accountKeys.Response.StatusCode == http.StatusNotFound {
 		return "", fmt.Errorf("Keys not found")
 	}
-
+	
 	if accountKeys.Keys == nil {
 		return "", fmt.Errorf("Nil key returned for storage storeAccount %q", storageAccountName)
 	}
@@ -73,29 +70,30 @@ func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupNa
 	}
 
 	return *key, nil
-
 }
 
-func GenerateSasToken (settings *AzureBlobSettings, sasOptions *mainStorage.AccountSASTokenOptions) (url.Values, error) {
-
+func GenerateSasToken(settings *AzureBlobSettings, sasOptions *mainStorage.AccountSASTokenOptions) (url.Values, error) {
 	accountClient := storage.NewAccountsClient(settings.SubscriptionId)
-	accountClient.Authorizer =  settings.Authorizer	
+	accountClient.Authorizer = settings.Authorizer
 	environment, err := azure.EnvironmentFromName(settings.EnvironmentName)
-	
+
 	if err == nil {
 		key := settings.StorageKey
 		if key == "" {
 			key, err = GetStorageAccountKey(&accountClient, settings.ResourceGroupName, settings.StorageAccountName)			
-		}
-		
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		storageClient, _ := mainStorage.NewClient(settings.StorageAccountName, key, environment.StorageEndpointSuffix,
-			mainStorage.DefaultAPIVersion, true)	
-			
-		return storageClient.GetAccountSASToken(*sasOptions)
+		storageClient, err := mainStorage.NewClient(settings.StorageAccountName, key, environment.StorageEndpointSuffix,
+			mainStorage.DefaultAPIVersion, true)
+
+		if err == nil {
+			return storageClient.GetAccountSASToken(*sasOptions)
+		} else {
+			return nil, err
+		}
 	} else {
 		return nil, err
 	}
