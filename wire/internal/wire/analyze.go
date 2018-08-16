@@ -204,7 +204,7 @@ dfs:
 			})
 		case pv.IsValue():
 			v := pv.Value()
-			if !types.Identical(pv.ConcreteType(), curr.t) {
+			if !types.Identical(v.Out, curr.t) {
 				// Interface binding.  Don't create a call ourselves.
 				i := index.At(v.Out)
 				if i == nil {
