@@ -65,14 +65,13 @@ func runLocalDb(containerName, guestbookDir string) error {
 		return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
 	}
 	containerID := strings.TrimSpace(string(out))
-	stopContainer := func() {
+	defer func() {
 		log.Printf("killing %s", containerID)
 		stop := exec.Command("docker", "kill", containerID)
 		if out, err := stop.CombinedOutput(); err != nil {
 			panic(fmt.Sprintf("failed to stop db container: %v: %s", err, out))
 		}
-	}
-	defer stopContainer()
+	}()
 
 	// Stop the container on Ctrl-C.
 	ctx, cancel := context.WithCancel(context.Background())
