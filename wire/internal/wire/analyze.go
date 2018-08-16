@@ -204,7 +204,7 @@ dfs:
 			})
 		case pv.IsValue():
 			v := pv.Value()
-			if !types.Identical(pv.ConcreteType(), curr.t) {
+			if !types.Identical(v.Out, curr.t) {
 				// Interface binding.  Don't create a call ourselves.
 				i := index.At(v.Out)
 				if i == nil {
@@ -396,10 +396,7 @@ func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) []error {
 				// Leaf: input.
 				continue
 			}
-			pt, ok := x.(*ProvidedType)
-			if !ok {
-				panic("invalid provider map value")
-			}
+			pt := x.(*ProvidedType)
 			if pt.IsValue() {
 				// Leaf: values do not have dependencies.
 				continue
