@@ -35,8 +35,7 @@ func main() {
 	}
 	log.SetPrefix("aws/provision_db: ")
 	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4]); err != nil {
-		log.Print(err)
-		os.Exit(64)
+		log.Fatal(err)
 	}
 }
 
