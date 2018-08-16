@@ -20,3 +20,13 @@ variable "project" {
   type        = "string"
   description = "Project to set up."
 }
+
+variable "worker_service_account_name" {
+  default     = "contributebot"
+  description = "The username part of the service account email that will be used for the worker running inside the GKE cluster."
+}
+
+variable "github_app_key" {
+  default = ""
+  description = "PEM-encoded GitHub application private key. This defaults to empty for bootstrapping reasons."
+}
