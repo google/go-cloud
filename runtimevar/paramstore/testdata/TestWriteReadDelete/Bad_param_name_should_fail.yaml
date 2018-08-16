@@ -10,13 +10,11 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210948Z
+      - 20180810T193155Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
-      X-Gocloud-Seq:
-      - "4"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +26,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:48 GMT
+      - Fri, 10 Aug 2018 19:31:55 GMT
+      X-Amzn-Requestid:
+      - fd09d8f0-94b8-429b-8b5e-36a759464482
     status: 400 Bad Request
     code: 400
     duration: ""

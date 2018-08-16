@@ -1,0 +1,159 @@
+---
+version: 1
+interactions:
+- request:
+    body: Hello world
+    form: {}
+    headers:
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - PiWWCnnbxptnTNTsZ6csYg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Fri, 10 Aug 2018 19:32:19 GMT
+      Etag:
+      - '"3e25960a79dbc69b674cd4ec67a72c62"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - OR5ih+QILBxlnDWm5t6JQ+GFk72f9y8/akD7eRWkDWBxz+EVTajCzdGgIEx4x21reuBbD8QIhwM=
+      X-Amz-Request-Id:
+      - B7765CAD08868880
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Fri, 10 Aug 2018 19:32:19 GMT
+      Etag:
+      - '"3e25960a79dbc69b674cd4ec67a72c62"'
+      Last-Modified:
+      - Fri, 10 Aug 2018 19:32:19 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - TvcQpY+5AWaBOjUcdpv8iQiCBPNlZtjyekDF6aTc574FTWFCU2Oi5z3+6NPF6CiL65AvSEtD0AQ=
+      X-Amz-Request-Id:
+      - 1DE46FE809203F1E
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Fri, 10 Aug 2018 19:32:19 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - vlkuVutKQZHdxHVVIC/yzDolIIKEpsIBAybbp1dNI4JFjkYkG3DxH3+J+NZycRcZSLL3/gaVmeM=
+      X-Amz-Request-Id:
+      - D5721E574CA39BBE
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>E755CAE4BAF1A1C4</RequestId><HostId>o4j+L1tYA+8dPN3o5XapEhcnfs3p1jp7sQhxXHjQWd/5y0YV49Bm5HiYwYE+MkeD5WIhgP9ROu4=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Fri, 10 Aug 2018 19:32:18 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - o4j+L1tYA+8dPN3o5XapEhcnfs3p1jp7sQhxXHjQWd/5y0YV49Bm5HiYwYE+MkeD5WIhgP9ROu4=
+      X-Amz-Request-Id:
+      - E755CAE4BAF1A1C4
+    status: 404 Not Found
+    code: 404
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180810T193218Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Fri, 10 Aug 2018 19:32:18 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - HWfCG03U/gRpmQSnm2bzLo6YmuLKp1m7c3NRy15G/rf2yWJ1+2oywl4wvz4Rbc3hVg1yBZxG/fo=
+      X-Amz-Request-Id:
+      - 4A0E61600A2A261C
+    status: 404 Not Found
+    code: 404
+    duration: ""

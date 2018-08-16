@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"time"
 
@@ -191,9 +192,26 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	return &reader{
 		body:        resp.Body,
 		contentType: aws.StringValue(resp.ContentType),
-		size:        aws.Int64Value(resp.ContentLength),
+		size:        getSize(resp),
 		modTime:     aws.TimeValue(resp.LastModified),
 	}, nil
+}
+
+func getSize(resp *s3.GetObjectOutput) int64 {
+	// Default size to ContentLength, but that's incorrect for partial-length reads,
+	// where ContentLength refers to the size of the returned Body, not the entire
+	// size of the blob. ContentRange has the full size.
+	size := aws.Int64Value(resp.ContentLength)
+	if cr := aws.StringValue(resp.ContentRange); cr != "" {
+		// Sample: bytes 10-14/27 (where 27 is the full size).
+		parts := strings.Split(cr, "/")
+		if len(parts) == 2 {
+			if i, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				size = i
+			}
+		}
+	}
+	return size
 }
 
 func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Reader, error) {
@@ -241,8 +259,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-// Delete deletes the object associated with key. It is a no-op if that object
-// does not exist.
+// Delete deletes the object associated with key.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.newMetadataReader(ctx, key); err != nil {
 		return err
@@ -270,7 +287,7 @@ func (e s3Error) Error() string {
 }
 
 func isErrNotExist(err error) awserr.Error {
-	if e, ok := err.(awserr.Error); ok && e.Code() == "NotFound" {
+	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
 		return e
 	}
 	return nil

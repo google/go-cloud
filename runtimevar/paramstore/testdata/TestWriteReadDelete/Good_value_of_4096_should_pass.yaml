@@ -65,13 +65,11 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210949Z
+      - 20180810T193156Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
-      X-Gocloud-Seq:
-      - "6"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -80,7 +78,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
+      - Fri, 10 Aug 2018 19:31:55 GMT
+      X-Amzn-Requestid:
+      - 2c10f978-b4e9-40d9-8e1b-b737c2747942
     status: 200 OK
     code: 200
     duration: ""
@@ -93,17 +93,15 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210949Z
+      - 20180810T193156Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
-      X-Gocloud-Seq:
-      - "7"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: "{\"Parameter\":{\"Name\":\"test-good-size-value\",\"Type\":\"String\",\"Value\":\"\uFEFF***The
+    body: "{\"Parameter\":{\"ARN\":\"arn:aws:ssm:us-east-2:462380225722:parameter/test-good-size-value\",\"LastModifiedDate\":1.533929516723E9,\"Name\":\"test-good-size-value\",\"Type\":\"String\",\"Value\":\"\uFEFF***The
       Project Gutenberg's Etext of Shakespeare's First Folio***\\r\\n********************The
       Tragedie of Macbeth*********************\\r\\n\\r\\nThis is our 3rd edition
       of most of these plays.  See the index.\\r\\n\\r\\n\\r\\nCopyright laws are
@@ -163,7 +161,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
+      - Fri, 10 Aug 2018 19:31:55 GMT
+      X-Amzn-Requestid:
+      - 88774349-bc0b-4c30-a175-e0db0fdf5a92
     status: 200 OK
     code: 200
     duration: ""
@@ -176,22 +176,22 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210949Z
+      - 20180810T193156Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
-      X-Gocloud-Seq:
-      - "8"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.531861789716E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/cflewis","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.533929516723E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-good-size-value","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
+      - Fri, 10 Aug 2018 19:31:56 GMT
+      X-Amzn-Requestid:
+      - 66f3b0f6-b6e8-405b-8060-71527a61615e
     status: 200 OK
     code: 200
     duration: ""
@@ -204,13 +204,11 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.10.3; linux; amd64)
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180717T210950Z
+      - 20180810T193157Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
-      X-Gocloud-Seq:
-      - "9"
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -219,7 +217,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Tue, 17 Jul 2018 21:09:49 GMT
+      - Fri, 10 Aug 2018 19:31:56 GMT
+      X-Amzn-Requestid:
+      - 96296146-7e09-4bd0-aa55-1f976689216b
     status: 200 OK
     code: 200
     duration: ""
