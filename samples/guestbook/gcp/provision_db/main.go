@@ -35,8 +35,7 @@ func main() {
 	log.SetPrefix("gcp/provision_db: ")
 
 	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4], os.Args[5]); err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
