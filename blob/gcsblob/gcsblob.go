@@ -19,6 +19,9 @@ package gcsblob
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/google/go-cloud/blob"
@@ -49,16 +52,30 @@ type bucket struct {
 	client *storage.Client
 }
 
+var emptyBody = ioutil.NopCloser(strings.NewReader(""))
+
+// reader reads a GCS object. It implements io.ReadCloser.
 type reader struct {
-	*storage.Reader
-	modTime time.Time
+	body        io.ReadCloser
+	size        int64
+	contentType string
+	updated     time.Time
+}
+
+func (r *reader) Read(p []byte) (int, error) {
+	return r.body.Read(p)
+}
+
+// Close closes the reader itself. It must be called when done reading.
+func (r *reader) Close() error {
+	return r.body.Close()
 }
 
 func (r *reader) Attrs() *driver.ObjectAttrs {
 	return &driver.ObjectAttrs{
-		Size:        r.Size(),
-		ContentType: r.ContentType(),
-		ModTime:     r.modTime,
+		Size:        r.size,
+		ContentType: r.contentType,
+		ModTime:     r.updated,
 	}
 }
 
@@ -66,13 +83,39 @@ func (r *reader) Attrs() *driver.ObjectAttrs {
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	if offset < 0 {
+		return nil, fmt.Errorf("negative offset %d", offset)
+	}
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	r, err := obj.NewRangeReader(ctx, offset, length)
-	if isErrNotExist(err) {
-		return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+	if length == 0 {
+		attrs, err := obj.Attrs(ctx)
+		if err != nil {
+			if isErrNotExist(err) {
+				return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+			}
+			return nil, err
+		}
+		return &reader{
+			body: emptyBody,
+			size: attrs.Size,
+			contentType: attrs.ContentType,
+			updated: attrs.Updated,
+		}, nil
 	}
-	return &reader{Reader: r}, err
+	r, err := obj.NewRangeReader(ctx, offset, length)
+	if err != nil {
+		if isErrNotExist(err) {
+			return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+		}
+		return nil, err
+	}
+	return &reader{
+		body: r,
+		size: r.Size(),
+		contentType: r.ContentType(),
+		// TODO(https://github.com/GoogleCloudPlatform/google-cloud-go/issues/1091): No updated.
+	}, nil
 }
 
 // NewTypedWriter returns Writer that writes to an object associated with key.

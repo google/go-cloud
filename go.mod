@@ -25,7 +25,7 @@ require (
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/davecgh/go-spew v1.1.0 // indirect
-	github.com/dnaeon/go-vcr v0.0.0-20180504081357-f8a7e8b9c630
+	github.com/dnaeon/go-vcr v0.0.0-20180814043457-aafff18a5cc2
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ini/ini v1.37.0 // indirect
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
