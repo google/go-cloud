@@ -106,27 +106,98 @@ func (w *worker) receive(ctx context.Context) error {
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
-	const inProgressLabel = "in progress"
-	if e.GetAction() != "closed" {
+	// An issueRule is a rule about what to do for a given event.
+	// Rules are executed in random order to ensure there are no dependencies.
+	type issueRule struct {
+		// name is the rule's name for error messages.
+		name string
+
+		// condition reports true if the event is "interesting" to this rule,
+		// meaning that the worker should fetch the latest information about
+		// the issue and call the run function.
+		condition func(*github.IssuesEvent) bool
+
+		// run executes the rule. The issue data is retrieved before any
+		// rules are executed, so may be ever-so-slightly stale.
+		run func(context.Context, *github.Client, issueRuleData) error
+	}
+
+	rules := []issueRule{
+		// Remove "in progress" label from closed issues.
+		{
+			name: "remove in progress label from closed",
+			condition: func(e *github.IssuesEvent) bool {
+				return e.GetAction() == "closed" && hasLabel(e.GetIssue(), inProgressLabel)
+			},
+			run: removeInProgressLabel,
+		},
+	}
+
+	// Check conditions to see if issue data is needed.
+	// No need to consume API quota if events aren't relevant.
+	runs := make([]bool, len(rules))
+	runCount := 0
+	for i := range rules {
+		if rules[i].condition(e) {
+			runs[i] = true
+			runCount++
+		}
+	}
+	if runCount == 0 {
 		return nil
 	}
-	iss := e.GetIssue()
-	if !hasLabel(iss, inProgressLabel) {
-		return nil
-	}
+
+	// Retrieve the current issue state.
 	client := w.ghClient(e.GetInstallation().GetID())
 	owner := e.GetRepo().GetOwner().GetLogin()
 	repoName := e.GetRepo().GetName()
-	num := iss.GetNumber()
-	currIss, _, err := client.Issues.Get(ctx, owner, repoName, num)
+	num := e.GetIssue().GetNumber()
+	iss, _, err := client.Issues.Get(ctx, owner, repoName, num)
 	if err != nil {
 		return err
 	}
-	if currIss.GetState() == "closed" && hasLabel(iss, inProgressLabel) {
-		_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repoName, num, inProgressLabel)
-		if err != nil {
-			return err
+
+	// Execute relevant rules.
+	ok := true
+	data := issueRuleData{
+		issue: iss,
+		owner: owner,
+		repo:  repoName,
+	}
+	for i := range runs {
+		if !runs[i] {
+			continue
 		}
+		if err := rules[i].run(ctx, client, data); err != nil {
+			ok = false
+			log.Printf("Issue rule %q failed on %s/%s#%d: %v", rules[i].name, owner, repoName, num, err)
+		}
+	}
+	if !ok {
+		return fmt.Errorf("one or more rules failed for %s/%s#%d", owner, repoName, num)
+	}
+	log.Printf("Applied %d relevant rules on %s/%s#%d successfully", runCount, owner, repoName, num)
+	return nil
+}
+
+const inProgressLabel = "in progress"
+
+// issueRuleData is the information passed to an issue rule.
+type issueRuleData struct {
+	repo  string
+	owner string
+	issue *github.Issue
+}
+
+// removeInProgressLabel removes the "in progress" label from closed issues.
+func removeInProgressLabel(ctx context.Context, client *github.Client, data issueRuleData) error {
+	if data.issue.GetState() != "closed" || !hasLabel(data.issue, inProgressLabel) {
+		return nil
+	}
+	num := data.issue.GetNumber()
+	_, err := client.Issues.RemoveLabelForIssue(ctx, data.owner, data.repo, num, inProgressLabel)
+	if err != nil {
+		return err
 	}
 	return nil
 }
