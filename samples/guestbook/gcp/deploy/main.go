@@ -64,6 +64,10 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if err := json.Unmarshal(tfStateb, &tfState); err != nil {
 		return fmt.Errorf("parsing terraform state JSON: %v", err)
 	}
+	zone := tfState.ClusterZone.Value
+	if zone == "" {
+		return fmt.Errorf("empty or missing cluster_zone in %s", tfStatePath)
+	}
 	gcp := gcloud{project: tfState.Project.Value}
 	tempDir, err := ioutil.TempDir("", "guestbook-k8s-")
 	if err != nil {
@@ -116,7 +120,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 
 	// Run on Kubernetes.
 	log.Printf("Deploying to %s...", tfState.ClusterName.Value)
-	getCreds := gcp.cmd("container", "clusters", "get-credentials", "--zone", tfState.ClusterZone.Value, tfState.ClusterName.Value)
+	getCreds := gcp.cmd("container", "clusters", "get-credentials", "--zone", zone, tfState.ClusterName.Value)
 	getCreds.Stderr = os.Stderr
 	if err := getCreds.Run(); err != nil {
 		return fmt.Errorf("getting credentials with %v: %v", getCreds.Args, err)
