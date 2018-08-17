@@ -27,11 +27,11 @@ import (
 // bucketName records the bucket used for the last --record.
 // If you want to use --record mode,
 // 1. Create a bucket in your GCP project:
-//    https://pantheon.corp.google.com/storage/browser, then "Create Bucket".
+//    https://console.cloud.google.com/storage/browser, then "Create Bucket".
 // 2. Update this constant to your bucket name.
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 //    name from the Terraform output instead (saving a copy of it for replay).
-const bucketName = "go-cloud-my-test-bucket"
+const bucketName = "pledged-solved-practically"
 
 // makeBucket creates a *blob.Bucket and a function to close it after the test
 // is done. It fails the test if the creation fails.
