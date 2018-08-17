@@ -13,11 +13,12 @@
 // limitations under the License.
 
 // The provision_db program connects to a Cloud SQL database and initializes it
-// with SQL from stdin. It's intended to be invoked from Terraform.
+// with SQL from a file. It's intended to be invoked from Terraform.
 package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -27,14 +28,28 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 1+5 {
-		fmt.Fprintf(os.Stderr, "usage: provision_db PROJECT SERVICE_ACCOUNT INSTANCE DATABASE ROOT_PASSWORD\n")
+	log.SetFlags(0)
+	log.SetPrefix("gcp/provision_db: ")
+	flags := map[string]*string{
+		"project":         flag.String("project", "", "GCP project ID"),
+		"service_account": flag.String("service_account", "", "name of service account in GCP project"),
+		"instance":        flag.String("instance", "", "database instance name"),
+		"database":        flag.String("database", "", "name of database to initialize"),
+		"password":        flag.String("password", "", "root password for the database"),
+		"schema":          flag.String("schema", "", "path to .sql file defining the database schema"),
+	}
+	flag.Parse()
+	missing := false
+	for name, val := range flags {
+		if *val == "" {
+			log.Printf("Required flag -%s is not set.", name)
+			missing = true
+		}
+	}
+	if missing {
 		os.Exit(64)
 	}
-
-	log.SetPrefix("gcp/provision_db: ")
-
-	if err := provisionDB(os.Args[1], os.Args[2], os.Args[3], os.Args[4], os.Args[5]); err != nil {
+	if err := provisionDB(*flags["project"], *flags["service_account"], *flags["instance"], *flags["database"], *flags["password"], *flags["schema"]); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -43,9 +58,9 @@ type key struct {
 	PrivateKeyID string `json:"private_key_id"`
 }
 
-func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword string) error {
+func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, schemaPath string) error {
 	log.Printf("Downloading Docker images...")
-	mySQLImage := "mysql:5.6"
+	const mySQLImage = "mysql:5.6"
 	cloudSQLProxyImage := "gcr.io/cloudsql-docker/gce-proxy:1.11"
 	images := []string{mySQLImage, cloudSQLProxyImage}
 	for _, img := range images {
@@ -105,11 +120,16 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword strin
 		}
 	}()
 
-	log.Print("Connecting to database, expecting schema on stdin...")
+	log.Print("Sending schema to database...")
 	mySQLCmd := fmt.Sprintf(`mysql --wait -h"$PROXY_PORT_3306_TCP_ADDR" -P"$PROXY_PORT_3306_TCP_PORT" -uroot -p'%s' '%s'`, dbPassword, dbName)
 	connect := exec.Command("docker", "run", "--rm", "--interactive", "--link", proxyContainerID+":proxy", mySQLImage, "sh", "-c", mySQLCmd)
+	schema, err := os.Open(schemaPath)
+	if err != nil {
+		return err
+	}
+	defer schema.Close()
+	connect.Stdin = schema
 	connect.Stderr = os.Stderr
-	connect.Stdin = os.Stdin
 	if err := connect.Run(); err != nil {
 		return fmt.Errorf("running %v: %v", connect.Args, err)
 	}
