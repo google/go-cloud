@@ -98,7 +98,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVoldir+"/key.json")...); err != nil {
 		return fmt.Errorf("creating new service account key: %v", err)
 	}
-	keyJSONb, err := ioutil.ReadFile(serviceAccountVoldir + "/key.json")
+	keyJSONb, err := ioutil.ReadFile(filepath.Join(serviceAccountVoldir, "key.json"))
 	if err != nil {
 		return fmt.Errorf("reading key.json file: %v", err)
 	}
