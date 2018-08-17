@@ -17,40 +17,34 @@
 package drivertest
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cloud/runtimevar"
 )
 
-// Initter describes functions used to set up for tests. It returns a handle
-// that is passed to VariableMaker and VariableSetter during the test, and
-// a function to be called when the test is complete.
+// Harness descibes the functionality test harnesses must provide to run
+// conformance tests.
+type Harness interface {
+	// MakeVar creates a *runtimevar.Variable to watch the given variable.
+    MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
+    // CreateVariable creates the variable with the given contents in the provider.
+    CreateVariable(ctx context.Context, t *testing.T, name string, val []byte)
+    // UpdateVariable updates an existing variable to have the given contents in the provider.
+    UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte)
+    // DeleteVariable deletes an existing variable in the provider.
+    DeleteVariable(ctx context.Context, t *testing.T, name string)
+    // Close is called when the test is complete.
+    Close()
+}
+
+// HarnessMaker describes functions that construct a harness for running tests.
+// It is called exactly once per test; Harness.Close() will be called when the test is complete.
 // Functions should fail the test on error.
-type Initter func(t *testing.T) (interface{}, func())
-
-// VariableMaker describes functions used to create a runtimevar.Variable
-// for a test. It may be called more than once per test.
-// Functions should fail the test on errors.
-type VariableMaker func(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
-
-// Action is a type of action on a provider variable: Create, Update, Delete.
-type Action int
-
-const (
-	// CreateAction indicates the config variable doesn't exist and should be created.
-	CreateAction = Action(iota)
-	// UpdateAction indicates the config variable already exists and should be updated.
-	UpdateAction
-	// DeleteAction indicates the config variable exists and should be deleted.
-	DeleteAction
-)
-
-// VariableSetter describes functions used to create/update/delete a variable
-// in the provider. Functions should fail the test on errors.
-type VariableSetter func(t *testing.T, h interface{}, name string, action Action, val []byte)
+type HarnessMaker func(t *testing.T) Harness
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.
-func RunConformanceTests(t *testing.T, init Initter, makeVar VariableMaker, setter VariableSetter) {
+func RunConformanceTests(t *testing.T, makeHarness HarnessMaker) {
 	// TODO(rvangent): Implement conformance tests here.
 }

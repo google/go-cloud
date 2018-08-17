@@ -29,19 +29,24 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// initDir initializes the directory.
-func initDir(t *testing.T) (interface{}, func()) {
+type harness struct {
+	dir string
+	closer func()
+}
+
+func makeHarness(t *testing.T) drivertest.Harness {
 	dir, err := ioutil.TempDir("", "filevar_test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return dir, func() { _ = os.RemoveAll(dir) }
+	return &harness{
+		dir: dir,
+		closer: func() { _ = os.RemoveAll(dir) },
+	}
 }
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
-	dir := h.(string)
-	path := filepath.Join(dir, name)
+func (h *harness) MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	path := filepath.Join(h.dir, name)
 	v, err := NewVariable(path, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
@@ -49,26 +54,30 @@ func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.
 	return v
 }
 
-// setVariable takes action on the variable name in the provider.
-func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
-	dir := h.(string)
-	path := filepath.Join(dir, name)
-	switch action {
-	case drivertest.CreateAction, drivertest.UpdateAction:
-		if err := ioutil.WriteFile(path, val, 0666); err != nil {
-			t.Fatal(err)
-		}
-	case drivertest.DeleteAction:
-		if err := os.Remove(path); err != nil {
-			t.Fatal(err)
-		}
-	default:
-		t.Fatalf("Unknown action: %v", action)
+func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+	path := filepath.Join(h.dir, name)
+	if err := ioutil.WriteFile(path, val, 0666); err != nil {
+		t.Fatal(err)
 	}
 }
 
+func (h *harness) UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+	h.CreateVariable(ctx, t, name, val)
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, t *testing.T, name string) {
+	path := filepath.Join(h.dir, name)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, initDir, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, makeHarness)
 }
 
 // File-specific unit tests.

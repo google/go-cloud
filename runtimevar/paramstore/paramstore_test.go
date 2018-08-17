@@ -34,54 +34,55 @@ import (
 // TODO(issue #300): Use Terraform to get this.
 const region = "us-east-2"
 
-type testData struct {
+type harness struct {
 	client  *Client
 	session client.ConfigProvider
+	closer func()
 }
 
-// initClient initializes the client.
-func initClient(t *testing.T) (interface{}, func()) {
+func makeHarness(t *testing.T) drivertest.Harness {
 	sess, done := setup.NewAWSSession(t, region)
 	client := NewClient(context.Background(), sess)
-	return &testData{client: client, session: sess}, done
+	return &harness{client: client, session: sess, closer: done}
 }
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
-	td := h.(*testData)
-	ctx := context.Background()
-	v, err := td.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+func (h *harness) MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	v, err := h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-// setVariable takes action on the variable name in the provider.
-func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
-	td := h.(*testData)
-	svc := ssm.New(td.session)
-	switch action {
-	case drivertest.CreateAction, drivertest.UpdateAction:
-		if _, err := svc.PutParameter(&ssm.PutParameterInput{
-			Name:      aws.String(name),
-			Type:      aws.String("String"),
-			Value:     aws.String(string(val)),
-			Overwrite: aws.Bool(true),
-		}); err != nil {
-			t.Fatal(err)
-		}
-	case drivertest.DeleteAction:
-		if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)}); err != nil {
-			t.Fatal(err)
-		}
-	default:
-		t.Fatalf("Unknown action: %v", action)
+func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+	svc := ssm.New(h.session)
+	if _, err := svc.PutParameter(&ssm.PutParameterInput{
+		Name:      aws.String(name),
+		Type:      aws.String("String"),
+		Value:     aws.String(string(val)),
+		Overwrite: aws.Bool(true),
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
+func (h *harness) UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+	h.CreateVariable(ctx, t, name, val)
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, t *testing.T, name string) {
+	svc := ssm.New(h.session)
+	if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, initClient, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, makeHarness)
 }
 
 // paramstore-specific unit tests.

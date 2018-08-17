@@ -49,8 +49,12 @@ func resourceName(name string) ResourceName {
 	}
 }
 
-// initClient initializes the client.
-func initClient(t *testing.T) (interface{}, func()) {
+type harness struct {
+	client  *Client
+	closer func()
+}
+
+func makeHarness(t *testing.T) drivertest.Harness {
 	ctx := context.Background()
 	client, done := newConfigClient(ctx, t)
 	rn := resourceName("")
@@ -62,60 +66,62 @@ func initClient(t *testing.T) (interface{}, func()) {
 			Description: t.Name(),
 		},
 	})
-	return client, func() {
-		_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
-		done()
+	return &harness{
+		client: client,
+		closer: func() {
+			_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+			done()
+		},
 	}
 }
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
-	client := h.(*Client)
-	ctx := context.Background()
+func (h *harness) MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	rn := resourceName(name)
-	v, err := client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+	v, err := h.client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-// setVariable takes action on the variable name in the provider.
-func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
-	ctx := context.Background()
-	client := h.(*Client)
+func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
 	rn := resourceName(name)
-	switch action {
-	case drivertest.CreateAction:
-		if _, err := client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
-			Parent: rn.configPath(),
-			Variable: &pb.Variable{
-				Name:     rn.String(),
-				Contents: &pb.Variable_Value{Value: val},
-			},
-		}); err != nil {
-			t.Fatal(err)
-		}
-	case drivertest.UpdateAction:
-		if _, err := client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
-			Variable: &pb.Variable{
-				Name:     rn.String(),
-				Contents: &pb.Variable_Value{Value: val},
-			},
-		}); err != nil {
-			t.Fatal(err)
-		}
-	case drivertest.DeleteAction:
-		if _, err := client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()}); err != nil {
-			t.Fatal(err)
-		}
-	default:
-		t.Fatalf("Unknown action: %v", action)
+	if _, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: val},
+		},
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 
+func (h *harness) UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+	rn := resourceName(name)
+	if _, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: val},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, t *testing.T, name string) {
+	rn := resourceName(name)
+	if _, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, initClient, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, makeHarness)
 }
 
 // GCP-specific unit tests.
