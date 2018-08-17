@@ -181,7 +181,7 @@ type WatchOptions struct {
 // processFile reads the file.
 // * If nothing has changed, it returns nil.
 // * If something has changed, it updates the watcher's bytes, isDeleted,
-//   and updateTIme fields.
+//   and updateTime fields.
 func (w *watcher) processFile() (*driver.Variable, error) {
 	bytes, tm, err := readFile(w.file)
 	if os.IsNotExist(err) {
