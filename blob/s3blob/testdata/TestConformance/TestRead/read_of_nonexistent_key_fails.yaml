@@ -16,7 +16,7 @@ interactions:
       X-Amz-Content-Sha256:
       - 355c18667d5796dc2b15043b99f68331b6af560f4f9facb5c4719ba9d09147c6
       X-Amz-Date:
-      - 20180815T171528Z
+      - 20180817T000228Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Wed, 15 Aug 2018 17:15:29 GMT
+      - Fri, 17 Aug 2018 00:02:30 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - cS4Ha+7nbSdaoqv9eJcByPZhD6n/OhT8jDjl2nipfQmNxiL7iDdXPCkEYBH0dmL5eMTaLUJmQVA=
+      - NmxxLxsxPl9ZrQgaSsGiNxjuxYBxJHXZCmiCzeX+Zt7wH46ZKGYazCQ/gJidoKb/iJAm91ScV94=
       X-Amz-Request-Id:
-      - B59290F80E6AF418
+      - E49AFDE209DF62F6
     status: 200 OK
     code: 200
     duration: ""
@@ -46,24 +46,24 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180815T171528Z
+      - 20180817T000229Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/key-does-not-exist
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>key-does-not-exist</Key><RequestId>58B3C5641CB77EE9</RequestId><HostId>sSUgMYQ1Gj00vF4Yvh21WifPs5W3TivoCyC9SZYLg6UHCzxFE/enUU/C6VPP+82dv380BE6GtZY=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>key-does-not-exist</Key><RequestId>724E4B53EF1166B6</RequestId><HostId>UNoofWvhv07pP/hY8j1j/WOBZ06CcFUk0JiY1a29M5ENH+IT7xw0kCAznIFS4HMcgrxRa9Do3PI=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 15 Aug 2018 17:15:28 GMT
+      - Fri, 17 Aug 2018 00:02:29 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - sSUgMYQ1Gj00vF4Yvh21WifPs5W3TivoCyC9SZYLg6UHCzxFE/enUU/C6VPP+82dv380BE6GtZY=
+      - UNoofWvhv07pP/hY8j1j/WOBZ06CcFUk0JiY1a29M5ENH+IT7xw0kCAznIFS4HMcgrxRa9Do3PI=
       X-Amz-Request-Id:
-      - 58B3C5641CB77EE9
+      - 724E4B53EF1166B6
     status: 404 Not Found
     code: 404
     duration: ""
@@ -76,7 +76,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180815T171528Z
+      - 20180817T000229Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
     method: HEAD
   response:
@@ -89,17 +89,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Wed, 15 Aug 2018 17:15:29 GMT
+      - Fri, 17 Aug 2018 00:02:30 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Wed, 15 Aug 2018 17:15:29 GMT
+      - Fri, 17 Aug 2018 00:02:30 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 2I7mmm0CGyu6/JPJT80wXIRonzgPEslEozDmm4QHnBe6+Sl828bnfYVHHXxzHRgGZ7LVo3e3jCU=
+      - swDhqI12ut2EQteOclHX+nqBVp9fqZmc823Rg2q+JFVcjOJIycFHfAWSmQR393uHxkfvu/yQhUw=
       X-Amz-Request-Id:
-      - 1324FE67FC180402
+      - F1A0D197F2C11A2B
     status: 200 OK
     code: 200
     duration: ""
@@ -112,20 +112,20 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180815T171528Z
+      - 20180817T000229Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Wed, 15 Aug 2018 17:15:29 GMT
+      - Fri, 17 Aug 2018 00:02:30 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - rO+Txw/gvFLIsXuR4kaTXF1msVSjvwwfIc2mpSgT3TU+WLiKsEd8KGDG13oAeYjXITQ9zdZU5WE=
+      - z8xVbPU5EMkrZafV8FJhKd1chEgK+JwogADyCD1mqtpiSNu6dDW963UuHFKRPQeOHqj0ezIFGlk=
       X-Amz-Request-Id:
-      - 41312DBF4F74E8BC
+      - 0608B0058E9CD233
     status: 204 No Content
     code: 204
     duration: ""

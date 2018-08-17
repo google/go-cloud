@@ -92,7 +92,7 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 		{
 			name:    "read of nonexistent key fails",
 			key:     "key-does-not-exist",
-			length: -1,
+			length:  -1,
 			wantErr: true,
 		},
 		{
@@ -253,7 +253,7 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		b, done := init(t)
 		defer done()
 
-		r, err := b.NewRangeReader(ctx, key, 0, 0)
+		r, err := b.NewRangeReader(ctx, key, 0, 1)
 		if err != nil {
 			t.Fatalf("failed NewRangeReader: %v", err)
 		}
