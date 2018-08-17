@@ -88,9 +88,6 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	if err != nil {
 		return fmt.Errorf("evaluating any symlinks: %v", err)
 	}
-	if err := os.Chdir(serviceAccountVoldir); err != nil {
-		return fmt.Errorf("changing to temp dir: %v", err)
-	}
 	defer os.RemoveAll(serviceAccountVoldir)
 	log.Printf("Created %v", serviceAccountVoldir)
 
