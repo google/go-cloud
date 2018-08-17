@@ -16,7 +16,6 @@ package runtimeconfigurator
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -39,17 +38,22 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
+// This constant records the project used for the last --record.
+// If you want to use --record mode,
+// 1. Update this constant to your GCP project name (not number!).
+// 2. Ensure that the "Runtime Configuration API" is enabled for your project.
+// TODO(issue #300): Use Terraform to get this.
+const projectID = "google.com:rvangent-testing-prod"
+
 const (
 	// config is the runtimeconfig high-level config that variables sit under.
-	config      = "runtimeconfigurator_test"
+	config      = "go_cloud_runtimeconfigurator_test"
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
-var projectID = flag.String("project", "", "GCP project ID (string, not project number) to run tests against")
-
 func resourceName(name string) ResourceName {
 	return ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		Variable:  name,
 	}
@@ -137,7 +141,7 @@ func TestInitialStringWatch(t *testing.T) {
 	defer done()
 
 	rn := ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestStringWatch",
@@ -174,7 +178,7 @@ func TestInitialJSONWatch(t *testing.T) {
 	defer done()
 
 	rn := ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestJSONWatch",
@@ -216,7 +220,7 @@ func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 	defer done()
 
 	rn := ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestWatchCancel",
@@ -246,7 +250,7 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 	defer done()
 
 	rn := ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestWatchInbetweenCancel",
@@ -287,7 +291,7 @@ func TestWatchObservesChange(t *testing.T) {
 	defer done()
 
 	rn := ResourceName{
-		ProjectID: *projectID,
+		ProjectID: projectID,
 		Config:    config,
 		desc:      description,
 		Variable:  "TestWatchObserveChange",
