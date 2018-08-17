@@ -114,7 +114,7 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 		if err != nil {
 			t.Fatal(err)
 		}
-		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}))
+		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
 	}
 	conn, err := grpc.DialContext(ctx, endPoint, opts...)
 	if err != nil {
