@@ -45,6 +45,6 @@ type HarnessMaker func(t *testing.T) Harness
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.
-func RunConformanceTests(t *testing.T, makeHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	// TODO(rvangent): Implement conformance tests here.
 }

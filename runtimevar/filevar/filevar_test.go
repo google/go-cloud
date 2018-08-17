@@ -34,7 +34,7 @@ type harness struct {
 	closer func()
 }
 
-func makeHarness(t *testing.T) drivertest.Harness {
+func newHarness(t *testing.T) drivertest.Harness {
 	dir, err := ioutil.TempDir("", "filevar_test-")
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeHarness)
+	drivertest.RunConformanceTests(t, newHarness)
 }
 
 // File-specific unit tests.

@@ -40,7 +40,7 @@ type harness struct {
 	closer  func()
 }
 
-func makeHarness(t *testing.T) drivertest.Harness {
+func newHarness(t *testing.T) drivertest.Harness {
 	sess, done := setup.NewAWSSession(t, region)
 	client := NewClient(context.Background(), sess)
 	return &harness{client: client, session: sess, closer: done}
@@ -82,7 +82,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeHarness)
+	drivertest.RunConformanceTests(t, newHarness)
 }
 
 // paramstore-specific unit tests.

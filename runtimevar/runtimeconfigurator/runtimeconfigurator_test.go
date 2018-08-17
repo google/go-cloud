@@ -54,7 +54,7 @@ type harness struct {
 	closer func()
 }
 
-func makeHarness(t *testing.T) drivertest.Harness {
+func newHarness(t *testing.T) drivertest.Harness {
 	ctx := context.Background()
 	client, done := newConfigClient(ctx, t)
 	rn := resourceName("")
@@ -121,7 +121,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeHarness)
+	drivertest.RunConformanceTests(t, newHarness)
 }
 
 // GCP-specific unit tests.
