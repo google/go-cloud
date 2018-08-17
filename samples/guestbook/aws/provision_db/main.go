@@ -55,9 +55,6 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 	if err != nil {
 		return fmt.Errorf("creating temp dir for certs: %v", err)
 	}
-	if err := os.Chdir(tempdir); err != nil {
-		return fmt.Errorf("changing dir to temp dir: %v", err)
-	}
 	defer os.RemoveAll(tempdir)
 	resp, err := http.Get("https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem")
 	if err != nil {
