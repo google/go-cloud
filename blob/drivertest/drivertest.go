@@ -39,6 +39,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -92,7 +93,7 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 		{
 			name:    "read of nonexistent key fails",
 			key:     "key-does-not-exist",
-			length: -1,
+			length:  -1,
 			wantErr: true,
 		},
 		{
@@ -235,55 +236,64 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		}
 	})
 
-	t.Run("Size", func(t *testing.T) {
-		b, done := init(t)
-		defer done()
+	for _, rLen := range []int64{0, -1, 1} {
+		t.Run(fmt.Sprintf("ReadLength=%d", rLen), func(t *testing.T) {
 
-		r, err := b.NewRangeReader(ctx, key, 0, 0)
-		if err != nil {
-			t.Fatalf("failed NewRangeReader: %v", err)
-		}
-		defer r.Close()
-		if r.Size() != int64(len(content)) {
-			t.Errorf("got Size %d want %d", r.Size(), len(content))
-		}
-	})
+			t.Run("Size", func(t *testing.T) {
+				b, done := init(t)
+				defer done()
 
-	t.Run("ModTime", func(t *testing.T) {
-		b, done := init(t)
-		defer done()
+				r, err := b.NewRangeReader(ctx, key, 0, rLen)
+				if err != nil {
+					t.Fatalf("failed NewRangeReader: %v", err)
+				}
+				defer r.Close()
+				if r.Size() != int64(len(content)) {
+					t.Errorf("got Size %d want %d", r.Size(), len(content))
+				}
+			})
 
-		r, err := b.NewRangeReader(ctx, key, 0, 0)
-		if err != nil {
-			t.Fatalf("failed NewRangeReader: %v", err)
-		}
-		defer r.Close()
-		t1 := r.ModTime()
-		if t1.IsZero() {
-			// This provider doesn't support ModTime.
-			// TODO(issue #315): There should be a way to tell if the provider
-			// is supposed to return it.
-			return
-		}
-		// Touch the file after a couple of seconds and make sure ModTime changes.
-		time.Sleep(2 * time.Second)
-		w, err := b.NewWriter(ctx, key, nil)
-		if err != nil {
-			t.Fatalf("failed NewWriter: %v", err)
-		}
-		if err = w.Close(); err != nil {
-			t.Errorf("failed NewWriter Close: %v", err)
-		}
-		r2, err := b.NewRangeReader(ctx, key, 0, 0)
-		if err != nil {
-			t.Errorf("failed NewRangeReader#2: %v", err)
-		}
-		defer r2.Close()
-		t2 := r2.ModTime()
-		if !t2.After(t1) {
-			t.Errorf("ModTime %v is not after %v", t2, t1)
-		}
-	})
+			t.Run("ModTime", func(t *testing.T) {
+				b, done := init(t)
+				defer done()
+
+				r, err := b.NewRangeReader(ctx, key, 0, rLen)
+				if err != nil {
+					t.Fatalf("failed NewRangeReader: %v", err)
+				}
+				defer r.Close()
+				t1 := r.ModTime()
+				if t1.IsZero() {
+					// This provider doesn't support ModTime.
+					// TODO(issue #315): There should be a way to tell if the provider
+					// is supposed to return it.
+					return
+				}
+				// Touch the file after a couple of seconds and make sure ModTime changes.
+				time.Sleep(2 * time.Second)
+				w, err := b.NewWriter(ctx, key, nil)
+				if err != nil {
+					t.Fatalf("failed NewWriter: %v", err)
+				}
+				if _, err := w.Write(content); err != nil {
+					t.Fatalf("failed Write content: %v", err)
+				}
+				if err = w.Close(); err != nil {
+					t.Errorf("failed Close Writer: %v", err)
+				}
+				r2, err := b.NewRangeReader(ctx, key, 0, rLen)
+				if err != nil {
+					t.Errorf("failed NewRangeReader#2: %v", err)
+				}
+				defer r2.Close()
+				t2 := r2.ModTime()
+				if !t2.After(t1) {
+					t.Errorf("ModTime %v is not after %v", t2, t1)
+				}
+			})
+
+		})
+	}
 }
 
 // loadTestFile loads a file from the blob/testdata/ directory.
