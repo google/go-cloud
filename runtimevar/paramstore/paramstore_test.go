@@ -11,10 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-// These tests utilize a recorder to replay AWS endpoint hits from golden files.
-// Golden files are used if -short is passed to `go test`.
-// If -short is not passed, the recorder will make a call to AWS and save a new golden file.
 package paramstore
 
 import (
@@ -31,6 +27,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// This constant records the region used for the last --record.
+// If you want to use --record mode,
+// 1. Update this constant to your AWS region.
+// TODO(issue #300): Use Terraform to get this.
 const region = "us-east-2"
 
 // TestWriteReadDelete attempts to write, read and then delete parameters from Parameter Store.
