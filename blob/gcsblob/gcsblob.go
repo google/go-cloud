@@ -97,10 +97,10 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			return nil, err
 		}
 		return &reader{
-			body: emptyBody,
-			size: attrs.Size,
+			body:        emptyBody,
+			size:        attrs.Size,
 			contentType: attrs.ContentType,
-			updated: attrs.Updated,
+			updated:     attrs.Updated,
 		}, nil
 	}
 	r, err := obj.NewRangeReader(ctx, offset, length)
@@ -110,11 +110,13 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
+	// updated is set to zero value when non-nil error returned, no need to check or report.
+	updated, _ := r.LastModified()
 	return &reader{
-		body: r,
-		size: r.Size(),
+		body:        r,
+		size:        r.Size(),
 		contentType: r.ContentType(),
-		// TODO(https://github.com/GoogleCloudPlatform/google-cloud-go/issues/1091): No updated.
+		updated:     updated,
 	}, nil
 }
 
