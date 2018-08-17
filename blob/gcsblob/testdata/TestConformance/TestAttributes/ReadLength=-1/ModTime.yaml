@@ -2,13 +2,13 @@
 version: 1
 interactions:
 - request:
-    body: "--d2aded712e4cbcf7a4dc53646c5d591b6be4605ac01b211404f5cc745e88\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain\",\"name\":\"blob-for-attributes\"}\n\r\n--d2aded712e4cbcf7a4dc53646c5d591b6be4605ac01b211404f5cc745e88\r\nContent-Type:
-      text/plain\r\n\r\nHello World!\r\n--d2aded712e4cbcf7a4dc53646c5d591b6be4605ac01b211404f5cc745e88--\r\n"
+    body: "--12aff0ff458ca7b5271663854972e67bec927d543c0ad7a0a2dcb6807496\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain\",\"name\":\"blob-for-attributes\"}\n\r\n--12aff0ff458ca7b5271663854972e67bec927d543c0ad7a0a2dcb6807496\r\nContent-Type:
+      text/plain\r\n\r\nHello World!\r\n--12aff0ff458ca7b5271663854972e67bec927d543c0ad7a0a2dcb6807496--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=d2aded712e4cbcf7a4dc53646c5d591b6be4605ac01b211404f5cc745e88
+      - multipart/related; boundary=12aff0ff458ca7b5271663854972e67bec927d543c0ad7a0a2dcb6807496
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -19,84 +19,84 @@ interactions:
     body: |
       {
        "kind": "storage#object",
-       "id": "pledged-solved-practically/blob-for-attributes/1534524219444184",
+       "id": "pledged-solved-practically/blob-for-attributes/1534529136021376",
        "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes",
        "name": "blob-for-attributes",
        "bucket": "pledged-solved-practically",
-       "generation": "1534524219444184",
+       "generation": "1534529136021376",
        "metageneration": "1",
        "contentType": "text/plain",
-       "timeCreated": "2018-08-17T16:43:39.443Z",
-       "updated": "2018-08-17T16:43:39.443Z",
+       "timeCreated": "2018-08-17T18:05:36.019Z",
+       "updated": "2018-08-17T18:05:36.019Z",
        "storageClass": "REGIONAL",
-       "timeStorageClassUpdated": "2018-08-17T16:43:39.443Z",
+       "timeStorageClassUpdated": "2018-08-17T18:05:36.019Z",
        "size": "12",
        "md5Hash": "7Qdih1MuhjZehB6Sv8UNjA==",
-       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?generation=1534524219444184&alt=media",
+       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?generation=1534529136021376&alt=media",
        "acl": [
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524219444184/project-owners-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529136021376/project-owners-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-owners-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524219444184",
+         "generation": "1534529136021376",
          "entity": "project-owners-59487849370",
          "role": "OWNER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "owners"
          },
-         "etag": "CNiX/5fE9NwCEAE="
+         "etag": "CICfs8DW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524219444184/project-editors-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529136021376/project-editors-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-editors-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524219444184",
+         "generation": "1534529136021376",
          "entity": "project-editors-59487849370",
          "role": "OWNER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "editors"
          },
-         "etag": "CNiX/5fE9NwCEAE="
+         "etag": "CICfs8DW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524219444184/project-viewers-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529136021376/project-viewers-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-viewers-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524219444184",
+         "generation": "1534529136021376",
          "entity": "project-viewers-59487849370",
          "role": "READER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "viewers"
          },
-         "etag": "CNiX/5fE9NwCEAE="
+         "etag": "CICfs8DW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524219444184/user-shantuo@google.com",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529136021376/user-shantuo@google.com",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/user-shantuo@google.com",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524219444184",
+         "generation": "1534529136021376",
          "entity": "user-shantuo@google.com",
          "role": "OWNER",
          "email": "shantuo@google.com",
-         "etag": "CNiX/5fE9NwCEAE="
+         "etag": "CICfs8DW9NwCEAE="
         }
        ],
        "owner": {
         "entity": "user-shantuo@google.com"
        },
        "crc32c": "/mzx3A==",
-       "etag": "CNiX/5fE9NwCEAE="
+       "etag": "CICfs8DW9NwCEAE="
       }
     headers:
       Alt-Svc:
@@ -108,9 +108,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 17 Aug 2018 16:43:39 GMT
+      - Fri, 17 Aug 2018 18:05:36 GMT
       Etag:
-      - CNiX/5fE9NwCEAE=
+      - CICfs8DW9NwCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -121,32 +121,32 @@ interactions:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534524519000"
+      - "1534529435000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
       - "1039017688798"
       X-Google-Backends:
-      - hhlaxbay12:4139,/bns/hg/borg/hg/bns/blobstore2/bitpusher/47.scotty,acsfou15:443
+      - hilaxcax11:4376,/bns/hh/borg/hh/bns/blobstore2/bitpusher/2.scotty,acsfob5:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=O_t2W8avFKOSxgPbla_4AQ
+      - eid=bw53W9PuN6y3xgPw34X4Dg
       X-Google-Gfe-Cloud-Project-Number:
       - "59487849370"
       X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/47.scotty,acsfou15:443
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/2.scotty,acsfob5:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/47:caf3
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/2:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -156,7 +156,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2Uo-300ZdvvwCORPM01VxQehN-ApUg664w97JRm84wDOkmBRJST6xjPy9EZfMOM7WHXbQUth_z9-FzveEma_6bq9WpjVMg
+      - AEnB2Up9grPRSZ9EuxRI-6vf_gLjiAyME3E-L25O35WFAUtSqdEEiubwJ1OUlQYbTikL1R8muB4vUzLZ9-ouLR84ujnuErcfRg
     status: 200 OK
     code: 200
     duration: ""
@@ -180,17 +180,17 @@ interactions:
       Content-Type:
       - text/plain
       Date:
-      - Fri, 17 Aug 2018 16:43:39 GMT
+      - Fri, 17 Aug 2018 18:05:36 GMT
       Etag:
       - '"ed076287532e86365e841e92bfc50d8c"'
       Expires:
-      - Fri, 17 Aug 2018 16:43:39 GMT
+      - Fri, 17 Aug 2018 18:05:36 GMT
       Last-Modified:
-      - Fri, 17 Aug 2018 16:43:39 GMT
+      - Fri, 17 Aug 2018 18:05:36 GMT
       Server:
       - UploadServer
       X-Goog-Generation:
-      - "1534524219444184"
+      - "1534529136021376"
       X-Goog-Hash:
       - crc32c=/mzx3A==
       - md5=7Qdih1MuhjZehB6Sv8UNjA==
@@ -203,23 +203,23 @@ interactions:
       X-Goog-Stored-Content-Length:
       - "12"
       X-Google-Backends:
-      - /bns/hg/borg/hg/bns/cloud-storage/prod-cloud-storage-frontend.frontend/64,/bns/hg/borg/hg/bns/blobstore2/bitpusher/77.scotty,acsfog19:443
+      - /bns/hi/borg/hi/bns/cloud-storage/prod-cloud-storage-frontend.frontend/60,/bns/hi/borg/hi/bns/blobstore2/bitpusher/0.scotty,acsfoc17:443
       X-Google-Cache-Control:
       - no-cache, no-store, max-age=0, must-revalidate
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=O_t2W8PVHaeZxgOT849o
+      - eid=cA53W8qdBOqnxgPjlpS4CA
       X-Google-Gfe-Cloud-Project-Number:
       - "59487849370"
       X-Google-Gfe-Request-Trace:
-      - acsfog19:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/77.scotty,acsfog19:443
+      - acsfoc17:443,/bns/hi/borg/hi/bns/blobstore2/bitpusher/0.scotty,acsfoc17:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-cloud-storage
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/77:caf3
+      - /bns/hi/borg/hi/bns/blobstore2/bitpusher/0:caf3
       X-Google-Service:
       - bitpusher-cloud-storage
       X-Google-Shellfish-Status:
@@ -233,19 +233,268 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UpzMhxTzVHe5rKZRKuUPiXjzKynBVv5Um0C3B2Kf_nMBNyhfusiyst6HCJc5oiUIKw3rydbfZJ4ytNReBkrcZBo5HJ2Mw
+      - AEnB2Upru7K7SGMECXDU8FwnyXFD5f0hJleNCLM7BAPZDPjpeJBjCIzlK1U6JgRU2L3-Kd7WMKHcxzxv4s26fCiyFhj5q_8nsg
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: "--ec5545c5f813f4d678d43f32f3ddf53f1f0864b86a5f574db2717bf1e279\r\nContent-Type:
+    body: "--e26b80c8bc13287d493059fe1b021266920a5523aa34140213a80bcad1bd\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"name\":\"blob-for-attributes\"}\n\r\n--ec5545c5f813f4d678d43f32f3ddf53f1f0864b86a5f574db2717bf1e279\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nHello World!\r\n--ec5545c5f813f4d678d43f32f3ddf53f1f0864b86a5f574db2717bf1e279--\r\n"
+      charset=utf-8\",\"name\":\"blob-for-attributes\"}\n\r\n--e26b80c8bc13287d493059fe1b021266920a5523aa34140213a80bcad1bd\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nHello World!\r\n--e26b80c8bc13287d493059fe1b021266920a5523aa34140213a80bcad1bd--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=ec5545c5f813f4d678d43f32f3ddf53f1f0864b86a5f574db2717bf1e279
+      - multipart/related; boundary=e26b80c8bc13287d493059fe1b021266920a5523aa34140213a80bcad1bd
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/b8669ef1ce gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/pledged-solved-practically/o?alt=json&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: |
+      {
+       "error": {
+        "errors": [
+         {
+          "domain": "usageLimits",
+          "reason": "rateLimitExceeded",
+          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
+          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
+         }
+        ],
+        "code": 429,
+        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
+       }
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "13006"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 17 Aug 2018 18:05:38 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Google-Apiary-Auth-Expires:
+      - "1534529435000"
+      X-Google-Apiary-Auth-Scopes:
+      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
+        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
+      X-Google-Apiary-Auth-User:
+      - "1039017688798"
+      X-Google-Backends:
+      - hhlaxbah1:4005,/bns/hh/borg/hh/bns/blobstore2/bitpusher/25.scotty,acsfob5:443
+      X-Google-Dos-Service-Trace:
+      - main:apps-upload-cloud-storage-unified
+      X-Google-Gfe-Backend-Request-Info:
+      - eid=cg53W5niEsuwxgPZxbz4Dg
+      X-Google-Gfe-Request-Trace:
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/25.scotty,acsfob5:443
+      X-Google-Gfe-Response-Code-Details-Trace:
+      - response_code_set_by_backend
+      X-Google-Gfe-Service-Trace:
+      - bitpusher-gcs-apiary
+      X-Google-Netmon-Label:
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/25:caf3
+      X-Google-Service:
+      - bitpusher-gcs-apiary
+      X-Google-Session-Info:
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
+      X-Google-Shellfish-Status:
+      - CA0gBEBG
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2Ur9AmV9HqifuV0a4Mob72kwvdWOmqHe3ivokh1shpF2PkejRfduUx3odg3zV7H6nOBcp8Eg9d5szn13ygr1ZTHMAXtFvg
+    status: 429 Too Many Requests
+    code: 429
+    duration: ""
+- request:
+    body: "--06d36d059d0b30b8bc0284663b11a0d828aff5b5080693d6a7f20f30c33b\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"blob-for-attributes\"}\n\r\n--06d36d059d0b30b8bc0284663b11a0d828aff5b5080693d6a7f20f30c33b\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nHello World!\r\n--06d36d059d0b30b8bc0284663b11a0d828aff5b5080693d6a7f20f30c33b--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=06d36d059d0b30b8bc0284663b11a0d828aff5b5080693d6a7f20f30c33b
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/b8669ef1ce gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/pledged-solved-practically/o?alt=json&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: |
+      {
+       "error": {
+        "errors": [
+         {
+          "domain": "usageLimits",
+          "reason": "rateLimitExceeded",
+          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
+          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
+         }
+        ],
+        "code": 429,
+        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
+       }
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "13006"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 17 Aug 2018 18:05:38 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Google-Apiary-Auth-Expires:
+      - "1534529435000"
+      X-Google-Apiary-Auth-Scopes:
+      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
+        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
+      X-Google-Apiary-Auth-User:
+      - "1039017688798"
+      X-Google-Backends:
+      - hhlaxbbc3:4238,/bns/hh/borg/hh/bns/blobstore2/bitpusher/21.scotty,acsfob5:443
+      X-Google-Dos-Service-Trace:
+      - main:apps-upload-cloud-storage-unified
+      X-Google-Gfe-Backend-Request-Info:
+      - eid=cg53W9mvJ6S1xgONrYbAAw
+      X-Google-Gfe-Request-Trace:
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/21.scotty,acsfob5:443
+      X-Google-Gfe-Response-Code-Details-Trace:
+      - response_code_set_by_backend
+      X-Google-Gfe-Service-Trace:
+      - bitpusher-gcs-apiary
+      X-Google-Netmon-Label:
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/21:caf3
+      X-Google-Service:
+      - bitpusher-gcs-apiary
+      X-Google-Session-Info:
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
+      X-Google-Shellfish-Status:
+      - CA0gBEBG
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2Uqv-Y-F-DSQk4fsIE1FlHizZK-2oJYj0-0otYbDsyJ8Ej-edT_OMIhUlbx0MsN0Pk-_nkJ1VSb44G56RFNVnU8qiMiusQ
+    status: 429 Too Many Requests
+    code: 429
+    duration: ""
+- request:
+    body: "--2e8a7115f9d993dae4fcb9acad2d18a04c5ca73fa59d272fce11875ccea8\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"blob-for-attributes\"}\n\r\n--2e8a7115f9d993dae4fcb9acad2d18a04c5ca73fa59d272fce11875ccea8\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nHello World!\r\n--2e8a7115f9d993dae4fcb9acad2d18a04c5ca73fa59d272fce11875ccea8--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=2e8a7115f9d993dae4fcb9acad2d18a04c5ca73fa59d272fce11875ccea8
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/b8669ef1ce gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/pledged-solved-practically/o?alt=json&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: |
+      {
+       "error": {
+        "errors": [
+         {
+          "domain": "usageLimits",
+          "reason": "rateLimitExceeded",
+          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
+          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=null, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:217)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.InsertObject.handleRequestReceived(InsertObject.java:51)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.insert(ObjectsDelegator.java:95)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
+         }
+        ],
+        "code": 429,
+        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
+       }
+      }
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "13006"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 17 Aug 2018 18:05:40 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Google-Apiary-Auth-Expires:
+      - "1534529435000"
+      X-Google-Apiary-Auth-Scopes:
+      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
+        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
+      X-Google-Apiary-Auth-User:
+      - "1039017688798"
+      X-Google-Backends:
+      - hhlaxbay12:4139,/bns/hh/borg/hh/bns/blobstore2/bitpusher/0.scotty,acsfob5:443
+      X-Google-Dos-Service-Trace:
+      - main:apps-upload-cloud-storage-unified
+      X-Google-Gfe-Backend-Request-Info:
+      - eid=dA53W9j7JOK2xgO3s5uwDA
+      X-Google-Gfe-Request-Trace:
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/0.scotty,acsfob5:443
+      X-Google-Gfe-Response-Code-Details-Trace:
+      - response_code_set_by_backend
+      X-Google-Gfe-Service-Trace:
+      - bitpusher-gcs-apiary
+      X-Google-Netmon-Label:
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/0:caf3
+      X-Google-Service:
+      - bitpusher-gcs-apiary
+      X-Google-Session-Info:
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
+      X-Google-Shellfish-Status:
+      - CA0gBEBG
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2UoS8AoD_frn5L537LSV_g1qVF1b3AuH671jhYreZv_6q-5yXsMidjW8jERUXVUnAYGDijwGVvNHiVyzNCTkIjy2HqAdug
+    status: 429 Too Many Requests
+    code: 429
+    duration: ""
+- request:
+    body: "--8e4cc73e0aa32194c507e19c685fbd846a7a6caa4d9c73f4bedbe9d5b24e\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"blob-for-attributes\"}\n\r\n--8e4cc73e0aa32194c507e19c685fbd846a7a6caa4d9c73f4bedbe9d5b24e\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nHello World!\r\n--8e4cc73e0aa32194c507e19c685fbd846a7a6caa4d9c73f4bedbe9d5b24e--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=8e4cc73e0aa32194c507e19c685fbd846a7a6caa4d9c73f4bedbe9d5b24e
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -256,84 +505,84 @@ interactions:
     body: |
       {
        "kind": "storage#object",
-       "id": "pledged-solved-practically/blob-for-attributes/1534524221830586",
+       "id": "pledged-solved-practically/blob-for-attributes/1534529144296709",
        "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes",
        "name": "blob-for-attributes",
        "bucket": "pledged-solved-practically",
-       "generation": "1534524221830586",
+       "generation": "1534529144296709",
        "metageneration": "1",
        "contentType": "text/plain; charset=utf-8",
-       "timeCreated": "2018-08-17T16:43:41.830Z",
-       "updated": "2018-08-17T16:43:41.830Z",
+       "timeCreated": "2018-08-17T18:05:44.296Z",
+       "updated": "2018-08-17T18:05:44.296Z",
        "storageClass": "REGIONAL",
-       "timeStorageClassUpdated": "2018-08-17T16:43:41.830Z",
+       "timeStorageClassUpdated": "2018-08-17T18:05:44.296Z",
        "size": "12",
        "md5Hash": "7Qdih1MuhjZehB6Sv8UNjA==",
-       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?generation=1534524221830586&alt=media",
+       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?generation=1534529144296709&alt=media",
        "acl": [
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524221830586/project-owners-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529144296709/project-owners-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-owners-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524221830586",
+         "generation": "1534529144296709",
          "entity": "project-owners-59487849370",
          "role": "OWNER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "owners"
          },
-         "etag": "CLrrkJnE9NwCEAE="
+         "etag": "CIWqrMTW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524221830586/project-editors-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529144296709/project-editors-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-editors-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524221830586",
+         "generation": "1534529144296709",
          "entity": "project-editors-59487849370",
          "role": "OWNER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "editors"
          },
-         "etag": "CLrrkJnE9NwCEAE="
+         "etag": "CIWqrMTW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524221830586/project-viewers-59487849370",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529144296709/project-viewers-59487849370",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/project-viewers-59487849370",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524221830586",
+         "generation": "1534529144296709",
          "entity": "project-viewers-59487849370",
          "role": "READER",
          "projectTeam": {
           "projectNumber": "59487849370",
           "team": "viewers"
          },
-         "etag": "CLrrkJnE9NwCEAE="
+         "etag": "CIWqrMTW9NwCEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-attributes/1534524221830586/user-shantuo@google.com",
+         "id": "pledged-solved-practically/blob-for-attributes/1534529144296709/user-shantuo@google.com",
          "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes/acl/user-shantuo@google.com",
          "bucket": "pledged-solved-practically",
          "object": "blob-for-attributes",
-         "generation": "1534524221830586",
+         "generation": "1534529144296709",
          "entity": "user-shantuo@google.com",
          "role": "OWNER",
          "email": "shantuo@google.com",
-         "etag": "CLrrkJnE9NwCEAE="
+         "etag": "CIWqrMTW9NwCEAE="
         }
        ],
        "owner": {
         "entity": "user-shantuo@google.com"
        },
        "crc32c": "/mzx3A==",
-       "etag": "CLrrkJnE9NwCEAE="
+       "etag": "CIWqrMTW9NwCEAE="
       }
     headers:
       Alt-Svc:
@@ -345,9 +594,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 17 Aug 2018 16:43:41 GMT
+      - Fri, 17 Aug 2018 18:05:44 GMT
       Etag:
-      - CLrrkJnE9NwCEAE=
+      - CIWqrMTW9NwCEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -358,32 +607,32 @@ interactions:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534524521000"
+      - "1534529435000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
       - "1039017688798"
       X-Google-Backends:
-      - hglaxaav3:4476,/bns/hg/borg/hg/bns/blobstore2/bitpusher/71.scotty,acsfou15:443
+      - hhlaxbbi7:4185,/bns/hh/borg/hh/bns/blobstore2/bitpusher/30.scotty,acsfob5:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=Pft2W86ILeGSxgPFqZ2gAw
+      - eid=eA53W--vDum0xgORzL_wAw
       X-Google-Gfe-Cloud-Project-Number:
       - "59487849370"
       X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/71.scotty,acsfou15:443
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/30.scotty,acsfob5:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/71:caf3
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/30:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -393,7 +642,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UqWZZHvv0bwN2ISHM-suY7l7eoWtnyTErNst5cktdFLjzmHDB7pZrHEx61r0Dv7NB_D1eMTonHh6DmvM4vI0sWgfCwx_g
+      - AEnB2UpJ7Y5iG9VFSprAK2H9_HoYvsI3wE_O3K3hJtiMrArPM-Xzgh-0rx5pgz05CSnY8lAWqaJMYWASJ92TPHt-9v4MOVN0qQ
     status: 200 OK
     code: 200
     duration: ""
@@ -417,17 +666,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Fri, 17 Aug 2018 16:43:41 GMT
+      - Fri, 17 Aug 2018 18:05:44 GMT
       Etag:
       - '"ed076287532e86365e841e92bfc50d8c"'
       Expires:
-      - Fri, 17 Aug 2018 16:43:41 GMT
+      - Fri, 17 Aug 2018 18:05:44 GMT
       Last-Modified:
-      - Fri, 17 Aug 2018 16:43:41 GMT
+      - Fri, 17 Aug 2018 18:05:44 GMT
       Server:
       - UploadServer
       X-Goog-Generation:
-      - "1534524221830586"
+      - "1534529144296709"
       X-Goog-Hash:
       - crc32c=/mzx3A==
       - md5=7Qdih1MuhjZehB6Sv8UNjA==
@@ -440,23 +689,23 @@ interactions:
       X-Goog-Stored-Content-Length:
       - "12"
       X-Google-Backends:
-      - /bns/hg/borg/hg/bns/cloud-storage/prod-cloud-storage-frontend.frontend/62,/bns/hg/borg/hg/bns/blobstore2/bitpusher/83.scotty,acsfog19:443
+      - /bns/hi/borg/hi/bns/cloud-storage/prod-cloud-storage-frontend.frontend/1,/bns/hi/borg/hi/bns/blobstore2/bitpusher/13.scotty,acsfoc17:443
       X-Google-Cache-Control:
       - no-cache, no-store, max-age=0, must-revalidate
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=Pft2W4i4NeGWxgPD0oWABA
+      - eid=eA53W7vnFOSgxgPP8r_IDA
       X-Google-Gfe-Cloud-Project-Number:
       - "59487849370"
       X-Google-Gfe-Request-Trace:
-      - acsfog19:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/83.scotty,acsfog19:443
+      - acsfoc17:443,/bns/hi/borg/hi/bns/blobstore2/bitpusher/13.scotty,acsfoc17:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-cloud-storage
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/83:caf3
+      - /bns/hi/borg/hi/bns/blobstore2/bitpusher/13:caf3
       X-Google-Service:
       - bitpusher-cloud-storage
       X-Google-Shellfish-Status:
@@ -470,255 +719,9 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2Uo_NdWXvTmm7W_dwW_kWSpXxrs22FzGqiURSrFEJs6XDJV4UrTr66Q-ppKcEhK1d60mygeDo3uNwWW8um6sP6ABT6zBGQ
+      - AEnB2UqluHAwQ_k-Fz0KSYefTiTMy9iVCix8xPnj0iKl1FSimtZkLzPW7b0kv6v69eBuhLeNS5PDeBSsW9KoDVC6oqE4XieBzA
     status: 200 OK
     code: 200
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - google-api-go-client/0.5
-      X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?alt=json
-    method: DELETE
-  response:
-    body: |
-      {
-       "error": {
-        "errors": [
-         {
-          "domain": "usageLimits",
-          "reason": "rateLimitExceeded",
-          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
-          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
-         }
-        ],
-        "code": 429,
-        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
-       }
-      }
-    headers:
-      Alt-Svc:
-      - quic=":443"; ma=2592000; v="44,43,39,35"
-      Cache-Control:
-      - private, max-age=0
-      Content-Length:
-      - "13044"
-      Content-Type:
-      - application/json; charset=UTF-8
-      Date:
-      - Fri, 17 Aug 2018 16:43:42 GMT
-      Expires:
-      - Fri, 17 Aug 2018 16:43:42 GMT
-      Server:
-      - UploadServer
-      Vary:
-      - Origin
-      - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1534524521000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "1039017688798"
-      X-Google-Backends:
-      - hilaxcag4:4442,/bns/hg/borg/hg/bns/blobstore2/bitpusher/78.scotty,acsfou15:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=Pvt2W4yjBouTxgO565TACA
-      X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/78.scotty,acsfou15:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/78:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
-      X-Guploader-Customer:
-      - apiary_cloudstorage_metadata
-      X-Guploader-Request-Result:
-      - agent_rejected
-      X-Guploader-Upload-Result:
-      - agent_rejected
-      X-Guploader-Uploadid:
-      - AEnB2UqRsCgw6tJS5WcsxHenKEGyeefL3BCiEXlJ_Hmrh7Ja39R85JykPbjsNhbCfqfGfX0C7CqHZdT1UmpvEGJMJiteuKQUpQ
-    status: 429 Too Many Requests
-    code: 429
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - google-api-go-client/0.5
-      X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?alt=json
-    method: DELETE
-  response:
-    body: |
-      {
-       "error": {
-        "errors": [
-         {
-          "domain": "usageLimits",
-          "reason": "rateLimitExceeded",
-          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
-          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
-         }
-        ],
-        "code": 429,
-        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
-       }
-      }
-    headers:
-      Alt-Svc:
-      - quic=":443"; ma=2592000; v="44,43,39,35"
-      Cache-Control:
-      - private, max-age=0
-      Content-Length:
-      - "13044"
-      Content-Type:
-      - application/json; charset=UTF-8
-      Date:
-      - Fri, 17 Aug 2018 16:43:42 GMT
-      Expires:
-      - Fri, 17 Aug 2018 16:43:42 GMT
-      Server:
-      - UploadServer
-      Vary:
-      - Origin
-      - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1534524521000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "1039017688798"
-      X-Google-Backends:
-      - hglaxaba3:4439,/bns/hg/borg/hg/bns/blobstore2/bitpusher/34.scotty,acsfou15:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=Pvt2W561GOKQxgOz0buoDw
-      X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/34.scotty,acsfou15:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/34:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
-      X-Guploader-Customer:
-      - apiary_cloudstorage_metadata
-      X-Guploader-Request-Result:
-      - agent_rejected
-      X-Guploader-Upload-Result:
-      - agent_rejected
-      X-Guploader-Uploadid:
-      - AEnB2UrfE06ahghzJiGkfIMSxwswMWwqzmK-8XriZbAPMbKZoPx5QlzZEqlV9lHw7ldWL_mmIS5i8CJ7tG3czfy3o0BLWqSmeg
-    status: 429 Too Many Requests
-    code: 429
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - google-api-go-client/0.5
-      X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-attributes?alt=json
-    method: DELETE
-  response:
-    body: |
-      {
-       "error": {
-        "errors": [
-         {
-          "domain": "usageLimits",
-          "reason": "rateLimitExceeded",
-          "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.",
-          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=TOO_MANY_REQUESTS, category=QUOTA_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=usageLimits, extendedHelp=null, httpHeaders={}, httpStatus=tooManyRequests, internalReason=Reason{arguments={}, cause=null, code=cloud.bigstore.api.BigstoreErrorDomain.CLIENT_QUOTA_EXCEEDED, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=CLIENT_QUOTA_EXCEEDED, errorProtoDomain=cloud.bigstore.api.BigstoreErrorDomain, filteredMessage=null, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., unnamedArguments=[]}, location=entity.resource_id.name, message=The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests., reason=rateLimitExceeded, rpcCode=429} The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests.: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::ENTITY_UPDATE_RATE_TOO_HIGH: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: Changing object pledged-solved-practically/blob-for-attributes too quickly, please slow down\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
-         }
-        ],
-        "code": 429,
-        "message": "The total number of changes to the object pledged-solved-practically/blob-for-attributes exceeds the rate limit. Please reduce the rate of create, update, and delete requests."
-       }
-      }
-    headers:
-      Alt-Svc:
-      - quic=":443"; ma=2592000; v="44,43,39,35"
-      Cache-Control:
-      - private, max-age=0
-      Content-Length:
-      - "13044"
-      Content-Type:
-      - application/json; charset=UTF-8
-      Date:
-      - Fri, 17 Aug 2018 16:43:44 GMT
-      Expires:
-      - Fri, 17 Aug 2018 16:43:44 GMT
-      Server:
-      - UploadServer
-      Vary:
-      - Origin
-      - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1534524521000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "1039017688798"
-      X-Google-Backends:
-      - hilaxcbk4:4110,/bns/hg/borg/hg/bns/blobstore2/bitpusher/18.scotty,acsfou15:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=QPt2W-rPE-iQxgO487kw
-      X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/18.scotty,acsfou15:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/18:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
-      X-Guploader-Customer:
-      - apiary_cloudstorage_metadata
-      X-Guploader-Request-Result:
-      - agent_rejected
-      X-Guploader-Upload-Result:
-      - agent_rejected
-      X-Guploader-Uploadid:
-      - AEnB2UoMoMd90_Emiim669Ir2mQN6N96Qjx2_X2-0jf4-0z4xYxwHGhjv5U7BbOnFocfWidFBGvWnMOHBR4wQRU3KawLLqLInA
-    status: 429 Too Many Requests
-    code: 429
     duration: ""
 - request:
     body: ""
@@ -742,7 +745,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 17 Aug 2018 16:43:47 GMT
+      - Fri, 17 Aug 2018 18:05:44 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -753,30 +756,30 @@ interactions:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534524521000"
+      - "1534529435000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
       - "1039017688798"
       X-Google-Backends:
-      - hglaxaac1:4104,/bns/hg/borg/hg/bns/blobstore2/bitpusher/48.scotty,acsfou15:443
+      - hilaxcaq3:4497,/bns/hh/borg/hh/bns/blobstore2/bitpusher/23.scotty,acsfob5:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=Q_t2W_WdNayZxgOwm6T4AQ
+      - eid=eA53W92vJIK5xgPLmKv4Ag
       X-Google-Gfe-Request-Trace:
-      - acsfou15:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/48.scotty,acsfou15:443
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/23.scotty,acsfob5:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/48:caf3
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/23:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCWUNEdnRrMWhfbHg5ZGJWYkloTDgyclJMU2dQYkN2ek5UbG5WdXl6V1FaTGg2UVRueEg1c0JJNzBCMkZudm94cGo3Y2RHeE0zRV9EQk1HLUJzYktCMF9HanJXN0xWbmMtb3IxcWRrcmI5YVBhNmpheVZucVVlRDVkN0kwBDoNMS84TzV1MVo3ODNhfg
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCVi0wT2k4Qno5ZmVZY3RWVkQyTElwTy1OU3NPb3h5aGlTMXpnUVc4dVl3UkZwd1VsZkFfaDZMOGt5RUNIVW9FeTcxUE9RM3hvQUktTmJlYS1yZ1J2MndFT3A0N1d4djNUcGkweU9yNjFnUW5lWHdPU2tEYk5QNGlEY2swBDoNMS84TzV1MVo3ODNhfg
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -786,7 +789,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UpjI1yMgj2-8lnd0WMx3uNHIKtUsFIP2VnOJ4wYo7lj7Q3_4dmWCnkNgQtBPZ95tKss2rcxsE5apkznCNEKCA00wwlphg
+      - AEnB2Uq31R6Ij-mWGZBANZ26nf_NN-utWEwrhT8cCxN5gL1TF_l1sS_21Mz7LQqWspt_Q4-1e0TW0_us_3ydO1cjLOrOr51D3w
     status: 204 No Content
     code: 204
     duration: ""
