@@ -17,6 +17,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,17 +30,32 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 5 {
-		fmt.Fprintf(os.Stderr, "usage: provision_db HOST SECURITY_GROUP DATABASE ROOT_PASSWORD\n")
+	log.SetFlags(0)
+	log.SetPrefix("aws/provision_db: ")
+	flags := map[string]*string{
+		"host":           flag.String("host", "", "hostname of database"),
+		"security_group": flag.String("security_group", "", "database security group"),
+		"database":       flag.String("database", "", "name of database to provision"),
+		"password":       flag.String("password", "", "root password on database"),
+		"schema":         flag.String("schema", "", "path to .sql file defining the database schema"),
+	}
+	flag.Parse()
+	missing := false
+	for name, val := range flags {
+		if *val == "" {
+			log.Printf("Required flag -%s not set.", name)
+			missing = true
+		}
+	}
+	if missing {
 		os.Exit(64)
 	}
-	log.SetPrefix("aws/provision_db: ")
-	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4]); err != nil {
+	if err := provisionDb(*flags["host"], *flags["security_group"], *flags["database"], *flags["password"], *flags["schema"]); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
+func provisionDb(dbHost, securityGroupID, dbName, dbPassword, schemaPath string) error {
 	const mySQLImage = "mysql:5.6"
 
 	// Pull the necessary Docker images.
@@ -85,11 +101,16 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
 	}()
 	log.Printf("Added ingress rule to %s for port 3306", securityGroupID)
 
-	// Send schema (input comes from stdin).
-	log.Print("Connecting to database, expecting schema on stdin...")
+	// Send schema.
+	log.Print("Sending schema to database...")
+	schema, err := os.Open(schemaPath)
+	if err != nil {
+		return err
+	}
+	defer schema.Close()
 	mySQLCmd := fmt.Sprintf(`mysql -h'%s' -uroot -p'%s' --ssl-ca=/ca/rds-ca.pem '%s'`, dbHost, dbPassword, dbName)
 	connect := exec.Command("docker", "run", "--rm", "--interactive", "--volume", tempdir+":/ca", mySQLImage, "sh", "-c", mySQLCmd)
-	connect.Stdin = os.Stdin
+	connect.Stdin = schema
 	connect.Stderr = os.Stderr
 	if err := connect.Run(); err != nil {
 		return fmt.Errorf("running %v: %v", connect.Args, err)
