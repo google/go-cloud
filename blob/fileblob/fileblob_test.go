@@ -36,7 +36,7 @@ func makeBucket(t *testing.T) (*blob.Bucket, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return b, func() {}
+	return b, func() { _ = os.RemoveAll(dir) }
 }
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, makeBucket, "../testdata")
