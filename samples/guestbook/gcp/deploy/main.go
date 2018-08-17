@@ -114,8 +114,8 @@ func deploy(guestbookDir, tfStatePath string) error {
 		return fmt.Errorf("building guestbook app by running %v: %v", build.Args, err)
 	}
 	cbs := gcp.cmd("container", "builds", "submit", "-t", imageName, filepath.Join(guestbookDir, "gcp"))
-	if out, err := cbs.CombinedOutput(); err != nil {
-		return fmt.Errorf("building container image with %v: %v: %s", cbs.Args, err, out)
+	if err := cbs.Run(); err != nil {
+		return fmt.Errorf("building container image with %v: %v", cbs.Args, err)
 	}
 
 	// Run on Kubernetes.
@@ -133,8 +133,8 @@ func deploy(guestbookDir, tfStatePath string) error {
 	}
 	for _, kcmd := range kubeCmds {
 		cmd := exec.Command(kcmd[0], kcmd[1:]...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("running %v: %v: %s", cmd.Args, err, out)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("running %v: %v", cmd.Args, err)
 		}
 	}
 
@@ -175,7 +175,10 @@ type gcloud struct {
 
 func (gcp *gcloud) cmd(args ...string) *exec.Cmd {
 	args = append([]string{"--quiet", "--project", gcp.project}, args...)
-	return exec.Command("gcloud", args...)
+	cmd := exec.Command("gcloud", args...)
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	cmd.Stderr = os.Stderr
+	return cmd
 }
 
 func run(args ...string) (stdout string, err error) {
