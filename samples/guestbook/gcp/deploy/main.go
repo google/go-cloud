@@ -68,7 +68,6 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if zone == "" {
 		return fmt.Errorf("empty or missing cluster_zone in %s", tfStatePath)
 	}
-	gcp := gcloud{project: tfState.Project.Value}
 	tempDir, err := ioutil.TempDir("", "guestbook-k8s-")
 	if err != nil {
 		return fmt.Errorf("making temp dir: %v", err)
@@ -113,6 +112,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if err := build.Run(); err != nil {
 		return fmt.Errorf("building guestbook app by running %v: %v", build.Args, err)
 	}
+	gcp := gcloud{project: tfState.Project.Value}
 	cbs := gcp.cmd("container", "builds", "submit", "-t", imageName, filepath.Join(guestbookDir, "gcp"))
 	if err := cbs.Run(); err != nil {
 		return fmt.Errorf("building container image with %v: %v", cbs.Args, err)
