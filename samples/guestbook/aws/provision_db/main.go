@@ -40,7 +40,7 @@ func main() {
 }
 
 func provisionDb(dbHost, securityGroupID, dbName, dbPassword string) error {
-	mySQLImage := "mysql:5.6"
+	const mySQLImage = "mysql:5.6"
 
 	// Pull the necessary Docker images.
 	log.Print("Downloading Docker images...")
