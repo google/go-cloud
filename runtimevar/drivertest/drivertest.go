@@ -27,15 +27,15 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeVar creates a *runtimevar.Variable to watch the given variable.
-    MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
-    // CreateVariable creates the variable with the given contents in the provider.
-    CreateVariable(ctx context.Context, t *testing.T, name string, val []byte)
-    // UpdateVariable updates an existing variable to have the given contents in the provider.
-    UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte)
-    // DeleteVariable deletes an existing variable in the provider.
-    DeleteVariable(ctx context.Context, t *testing.T, name string)
-    // Close is called when the test is complete.
-    Close()
+	MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
+	// CreateVariable creates the variable with the given contents in the provider.
+	CreateVariable(ctx context.Context, t *testing.T, name string, val []byte)
+	// UpdateVariable updates an existing variable to have the given contents in the provider.
+	UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte)
+	// DeleteVariable deletes an existing variable in the provider.
+	DeleteVariable(ctx context.Context, t *testing.T, name string)
+	// Close is called when the test is complete.
+	Close()
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.

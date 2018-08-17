@@ -30,7 +30,7 @@ import (
 )
 
 type harness struct {
-	dir string
+	dir    string
 	closer func()
 }
 
@@ -40,7 +40,7 @@ func makeHarness(t *testing.T) drivertest.Harness {
 		t.Fatal(err)
 	}
 	return &harness{
-		dir: dir,
+		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
 	}
 }

@@ -37,7 +37,7 @@ const region = "us-east-2"
 type harness struct {
 	client  *Client
 	session client.ConfigProvider
-	closer func()
+	closer  func()
 }
 
 func makeHarness(t *testing.T) drivertest.Harness {

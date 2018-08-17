@@ -50,7 +50,7 @@ func resourceName(name string) ResourceName {
 }
 
 type harness struct {
-	client  *Client
+	client *Client
 	closer func()
 }
 
