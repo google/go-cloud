@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/drivertest"
+	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/googleapi"
 )
@@ -33,19 +34,30 @@ import (
 //    name from the Terraform output instead (saving a copy of it for replay).
 const bucketName = "pledged-solved-practically"
 
-// makeBucket creates a *blob.Bucket and a function to close it after the test
-// is done. It fails the test if the creation fails.
-func makeBucket(t *testing.T) (*blob.Bucket, func()) {
-	ctx := context.Background()
+type harness struct {
+	client *gcp.HTTPClient
+	closer func()
+}
+
+func newHarness(ctx context.Context, t *testing.T) drivertest.Harness {
 	client, done := setup.NewGCPClient(ctx, t)
-	b, err := OpenBucket(ctx, bucketName, client)
+	return &harness{client: client, closer: done}
+}
+
+func (h *harness) MakeBucket(ctx context.Context, t *testing.T) *blob.Bucket {
+	b, err := OpenBucket(ctx, bucketName, h.client)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return b, done
+	return b
 }
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeBucket, "../testdata")
+	drivertest.RunConformanceTests(t, newHarness, "../testdata")
 }
 
 // GCS-specific unit tests.
