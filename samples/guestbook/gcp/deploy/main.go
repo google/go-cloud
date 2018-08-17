@@ -191,7 +191,7 @@ func runb(args ...string) (stdout []byte, err error) {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	stdoutb, err := cmd.Output()
 	if err != nil {
-		return []byte(""), fmt.Errorf("running %v: %v", cmd.Args, err)
+		return nil, fmt.Errorf("running %v: %v", cmd.Args, err)
 	}
 	return stdoutb, nil
 }
