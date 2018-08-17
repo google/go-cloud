@@ -99,7 +99,7 @@ resource "google_sql_database" "guestbook" {
 
   provisioner "local-exec" {
     # TODO(light): Reuse credentials from Terraform.
-    command = "go run '${path.module}'/provision_db/main.go '${google_sql_database_instance.guestbook.project}' '${google_service_account.db_access.email}' '${local.sql_instance}' guestbook '${google_sql_user.root.password}' < '${path.module}'/../schema.sql"
+    command = "go run '${path.module}'/provision_db/main.go -project='${google_sql_database_instance.guestbook.project}' -service_account='${google_service_account.db_access.email}' -instance='${local.sql_instance}' -database=guestbook -password='${google_sql_user.root.password}' -schema='${path.module}'/../schema.sql"
   }
 }
 
