@@ -145,11 +145,11 @@ func deploy(guestbookDir, tfStatePath string) error {
 		if err != nil {
 			return err
 		}
-		var t thing
-		if err := json.Unmarshal(outb, &t); err != nil {
+		var s service
+		if err := json.Unmarshal(outb, &s); err != nil {
 			return fmt.Errorf("parsing JSON output: %v", err)
 		}
-		i := t.Status.LoadBalancer.Ingress
+		i := s.Status.LoadBalancer.Ingress
 		if len(i) == 0 || i[0].IP == "" {
 			dt := time.Second
 			log.Printf("No ingress returned in %s. Trying again in %v", outb, dt)
@@ -163,10 +163,10 @@ func deploy(guestbookDir, tfStatePath string) error {
 	return nil
 }
 
-type thing struct{ Status *s }
-type s struct{ LoadBalancer lb }
-type lb struct{ Ingress []ing }
-type ing struct{ IP string }
+type service struct{ Status *status }
+type status struct{ LoadBalancer loadBalancer }
+type loadBalancer struct{ Ingress []ingress }
+type ingress struct{ IP string }
 
 type gcloud struct {
 	// project ID
