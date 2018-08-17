@@ -106,7 +106,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	serviceAccountKeyID := k.PrivateKeyID
 	defer func() {
 		if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "delete", "--iam-account", serviceAccount, serviceAccountKeyID)...); err != nil {
-			panic(fmt.Sprintf("deleting service account key: %v", err))
+			log.Printf("deleting service account key: %v", err)
 		}
 	}()
 	log.Printf("Created service account key %s", serviceAccountKeyID)
