@@ -112,7 +112,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 	if err := build.Run(); err != nil {
 		return fmt.Errorf("building guestbook app by running %v: %v", build.Args, err)
 	}
-	gcp := gcloud{project: tfState.Project.Value}
+	gcp := gcloud{projectID: tfState.Project.Value}
 	cbs := gcp.cmd("container", "builds", "submit", "-t", imageName, filepath.Join(guestbookDir, "gcp"))
 	if err := cbs.Run(); err != nil {
 		return fmt.Errorf("building container image with %v: %v", cbs.Args, err)
@@ -169,12 +169,11 @@ type loadBalancer struct{ Ingress []ingress }
 type ingress struct{ IP string }
 
 type gcloud struct {
-	// project ID
-	project string
+	projectID string
 }
 
 func (gcp *gcloud) cmd(args ...string) *exec.Cmd {
-	args = append([]string{"--quiet", "--project", gcp.project}, args...)
+	args = append([]string{"--quiet", "--project", gcp.projectID}, args...)
 	cmd := exec.Command("gcloud", args...)
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Stderr = os.Stderr
