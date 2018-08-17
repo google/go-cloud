@@ -80,22 +80,22 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	// Create a temporary directory to hold the service account key.
 	// We resolve all symlinks to avoid Docker on Mac issues, see
 	// https://github.com/google/go-cloud/issues/110.
-	serviceAccountVoldir, err := ioutil.TempDir("", "guestbook-service-acct")
+	serviceAccountVolDir, err := ioutil.TempDir("", "guestbook-service-acct")
 	if err != nil {
 		return fmt.Errorf("creating temp dir to hold service account key: %v", err)
 	}
-	serviceAccountVoldir, err = filepath.EvalSymlinks(serviceAccountVoldir)
+	serviceAccountVolDir, err = filepath.EvalSymlinks(serviceAccountVolDir)
 	if err != nil {
 		return fmt.Errorf("evaluating any symlinks: %v", err)
 	}
-	defer os.RemoveAll(serviceAccountVoldir)
-	log.Printf("Created %v", serviceAccountVoldir)
+	defer os.RemoveAll(serviceAccountVolDir)
+	log.Printf("Created %v", serviceAccountVolDir)
 
 	// Furnish a new service account key.
-	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVoldir+"/key.json")...); err != nil {
+	if _, err := run(gcp.cmd("iam", "service-accounts", "keys", "create", "--iam-account="+serviceAccount, serviceAccountVolDir+"/key.json")...); err != nil {
 		return fmt.Errorf("creating new service account key: %v", err)
 	}
-	keyJSONb, err := ioutil.ReadFile(filepath.Join(serviceAccountVoldir, "key.json"))
+	keyJSONb, err := ioutil.ReadFile(filepath.Join(serviceAccountVolDir, "key.json"))
 	if err != nil {
 		return fmt.Errorf("reading key.json file: %v", err)
 	}
@@ -112,7 +112,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	log.Printf("Created service account key %s", serviceAccountKeyID)
 
 	log.Printf("Starting Cloud SQL proxy...")
-	proxyContainerID, err := run("docker", "run", "--detach", "--rm", "--volume", serviceAccountVoldir+":/creds", "--publish", "3306", cloudSQLProxyImage, "/cloud_sql_proxy", "-instances", dbConnStr+"=tcp:0.0.0.0:3306", "-credential_file=/creds/key.json")
+	proxyContainerID, err := run("docker", "run", "--detach", "--rm", "--volume", serviceAccountVolDir+":/creds", "--publish", "3306", cloudSQLProxyImage, "/cloud_sql_proxy", "-instances", dbConnStr+"=tcp:0.0.0.0:3306", "-credential_file=/creds/key.json")
 	if err != nil {
 		return err
 	}
