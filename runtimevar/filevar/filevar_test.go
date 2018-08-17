@@ -29,17 +29,24 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
+// initDir initializes the directory.
+func initDir(t *testing.T) (interface{}, func()) {
 	dir, err := ioutil.TempDir("", "filevar_test-")
 	if err != nil {
 		t.Fatal(err)
 	}
-	v, err := NewVariable(name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+	return dir, func() { _ = os.RemoveAll(dir) }
+}
+
+// makeVariable creates a *runtimevar.Variable.
+func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	dir := h.(string)
+	path := filepath.Join(dir, name)
+	v, err := NewVariable(path, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return v, dir, func() { _ = os.RemoveAll(dir) }
+	return v
 }
 
 // setVariable takes action on the variable name in the provider.
@@ -61,7 +68,7 @@ func setVariable(t *testing.T, h interface{}, name string, action drivertest.Act
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, initDir, makeVariable, setVariable)
 }
 
 // File-specific unit tests.

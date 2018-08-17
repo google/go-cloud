@@ -34,22 +34,33 @@ import (
 // TODO(issue #300): Use Terraform to get this.
 const region = "us-east-2"
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
+type testData struct {
+	client  *Client
+	session client.ConfigProvider
+}
+
+// initClient initializes the client.
+func initClient(t *testing.T) (interface{}, func()) {
 	sess, done := setup.NewAWSSession(t, region)
+	client := NewClient(context.Background(), sess)
+	return &testData{client: client, session: sess}, done
+}
+
+// makeVariable creates a *runtimevar.Variable.
+func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	td := h.(*testData)
 	ctx := context.Background()
-	client := NewClient(ctx, sess)
-	v, err := client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+	v, err := td.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return v, sess, done
+	return v
 }
 
 // setVariable takes action on the variable name in the provider.
 func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
-	sess := h.(client.ConfigProvider)
-	svc := ssm.New(sess)
+	td := h.(*testData)
+	svc := ssm.New(td.session)
 	switch action {
 	case drivertest.CreateAction, drivertest.UpdateAction:
 		if _, err := svc.PutParameter(&ssm.PutParameterInput{
@@ -70,7 +81,7 @@ func setVariable(t *testing.T, h interface{}, name string, action drivertest.Act
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, initClient, makeVariable, setVariable)
 }
 
 // paramstore-specific unit tests.

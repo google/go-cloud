@@ -49,29 +49,35 @@ func resourceName(name string) ResourceName {
 	}
 }
 
-// makeVariable creates a *runtimevar.Variable.
-func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
+// initClient initializes the client.
+func initClient(t *testing.T) (interface{}, func()) {
 	ctx := context.Background()
 	client, done := newConfigClient(ctx, t)
-	rn := resourceName(name)
-	_, err := client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
+	rn := resourceName("")
+	// Ignore errors if the config already exists.
+	_, _ = client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
 		Parent: "projects/" + rn.ProjectID,
 		Config: &pb.RuntimeConfig{
 			Name:        rn.configPath(),
 			Description: t.Name(),
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
+	return client, func() {
+		_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+		done()
 	}
+}
+
+// makeVariable creates a *runtimevar.Variable.
+func makeVariable(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	client := h.(*Client)
+	ctx := context.Background()
+	rn := resourceName(name)
 	v, err := client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return v, client, func() {
-		_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
-		done()
-	}
+	return v
 }
 
 // setVariable takes action on the variable name in the provider.
@@ -109,7 +115,7 @@ func setVariable(t *testing.T, h interface{}, name string, action drivertest.Act
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeVariable, setVariable)
+	drivertest.RunConformanceTests(t, initClient, makeVariable, setVariable)
 }
 
 // GCP-specific unit tests.

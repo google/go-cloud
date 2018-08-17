@@ -14,28 +14,6 @@
 //
 // Package drivertest provides a conformance test for implementations of
 // runtimevar.
-//
-// Example:
-//
-// // makeVariable is of type VariableMaker. It creates a *runtimevar.Variable
-// // for this provider implementation.
-// func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
-// ...
-// }
-//
-// // setVariable is of type VariableSetter. It performs action on the variable
-// // in the provider.
-// func setVariable(t *testing.T, h interface{}, name string, action Action, val []byte) {
-// ...
-// }
-//
-// func TestConformance(t *testing.T) {
-//   drivertest.RunConformanceTests(t, makeVariable, setVariable)
-// }
-//
-// Implementation note: A new *runtimevar.Variable is created for each sub-test
-// so that provider implementations that use a record/replay strategy get
-// a separate golden file per test.
 package drivertest
 
 import (
@@ -44,20 +22,26 @@ import (
 	"github.com/google/go-cloud/runtimevar"
 )
 
-// VariableMaker describes functions used to create a runtimevar.Variable
-// for a test.
-// Functions should return the Variable along with an optional handle, which
-// will be passed to VariableSetter.
-// Functions should fail the test on errors.
-// See the package comments for more details on required semantics.
-type VariableMaker func(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func())
+// Initter describes functions used to set up for tests. It returns a handle
+// that is passed to VariableMaker and VariableSetter during the test, and
+// a function to be called when the test is complete.
+// Functions should fail the test on error.
+type Initter func(t *testing.T) (interface{}, func())
 
-// Action is a type of action on a variable: Create, Update, Delete.
+// VariableMaker describes functions used to create a runtimevar.Variable
+// for a test. It may be called more than once per test.
+// Functions should fail the test on errors.
+type VariableMaker func(t *testing.T, h interface{}, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
+
+// Action is a type of action on a provider variable: Create, Update, Delete.
 type Action int
 
 const (
+	// CreateAction indicates the config variable doesn't exist and should be created.
 	CreateAction = Action(iota)
+	// UpdateAction indicates the config variable already exists and should be updated.
 	UpdateAction
+	// DeleteAction indicates the config variable exists and should be deleted.
 	DeleteAction
 )
 
@@ -67,6 +51,6 @@ type VariableSetter func(t *testing.T, h interface{}, name string, action Action
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.
-func RunConformanceTests(t *testing.T, makeVar VariableMaker, setter VariableSetter) {
+func RunConformanceTests(t *testing.T, init Initter, makeVar VariableMaker, setter VariableSetter) {
 	// TODO(rvangent): Implement conformance tests here.
 }
