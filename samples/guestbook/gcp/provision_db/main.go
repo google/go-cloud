@@ -34,7 +34,7 @@ func main() {
 
 	log.SetPrefix("gcp/provision_db: ")
 
-	if err := provisionDb(os.Args[1], os.Args[2], os.Args[3], os.Args[4], os.Args[5]); err != nil {
+	if err := provisionDB(os.Args[1], os.Args[2], os.Args[3], os.Args[4], os.Args[5]); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -43,7 +43,7 @@ type key struct {
 	PrivateKeyID string `json:"private_key_id"`
 }
 
-func provisionDb(projectID, serviceAccount, dbInstance, dbName, dbPassword string) error {
+func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword string) error {
 	log.Printf("Downloading Docker images...")
 	mySQLImage := "mysql:5.6"
 	cloudSQLProxyImage := "gcr.io/cloudsql-docker/gce-proxy:1.11"

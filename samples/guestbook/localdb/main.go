@@ -39,12 +39,12 @@ func main() {
 		os.Exit(1)
 	}
 	log.SetPrefix("localdb: ")
-	if err := runLocalDb(flag.Arg(0), *guestbookDir); err != nil {
+	if err := runLocalDB(flag.Arg(0), *guestbookDir); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func runLocalDb(containerName, guestbookDir string) error {
+func runLocalDB(containerName, guestbookDir string) error {
 	image := "mysql:5.6"
 
 	log.Printf("Starting container running MySQL")
