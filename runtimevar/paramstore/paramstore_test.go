@@ -28,10 +28,53 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/drivertest"
 	"github.com/google/go-cmp/cmp"
 )
 
 const region = "us-east-2"
+
+// makeVariable creates a *runtimevar.Variable.
+func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
+	sess, done := setup.NewAWSSession(t, region)
+	ctx := context.Background()
+	client := NewClient(ctx, sess)
+	v, err := client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v, sess, done
+}
+
+// setVariable takes action on the variable name in the provider.
+func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
+	sess := h.(client.ConfigProvider)
+	svc := ssm.New(sess)
+	switch action {
+	case drivertest.CreateAction, drivertest.UpdateAction:
+		if _, err := svc.PutParameter(&ssm.PutParameterInput{
+			Name:      aws.String(name),
+			Type:      aws.String("String"),
+			Value:     aws.String(string(val)),
+			Overwrite: aws.Bool(true),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	case drivertest.DeleteAction:
+		if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)}); err != nil {
+			t.Fatal(err)
+		}
+	default:
+		t.Fatalf("Unknown action: %v", action)
+	}
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, makeVariable, setVariable)
+}
+
+// paramstore-specific unit tests.
+// TODO(rvangent): Delete most of these as they are moved into drivertest.
 
 // TestWriteReadDelete attempts to write, read and then delete parameters from Parameter Store.
 // This test can't be broken up into separate Test(Write|Read|Delete) tests

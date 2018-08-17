@@ -25,8 +25,47 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/drivertest"
 	"github.com/google/go-cmp/cmp"
 )
+
+// makeVariable creates a *runtimevar.Variable.
+func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
+	dir, err := ioutil.TempDir("", "filevar_test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := NewVariable(name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v, dir, func() { _ = os.RemoveAll(dir) }
+}
+
+// setVariable takes action on the variable name in the provider.
+func setVariable(t *testing.T, h interface{}, name string, action drivertest.Action, val []byte) {
+	dir := h.(string)
+	path := filepath.Join(dir, name)
+	switch action {
+	case drivertest.CreateAction, drivertest.UpdateAction:
+		if err := ioutil.WriteFile(path, val, 0666); err != nil {
+			t.Fatal(err)
+		}
+	case drivertest.DeleteAction:
+		if err := os.Remove(path); err != nil {
+			t.Fatal(err)
+		}
+	default:
+		t.Fatalf("Unknown action: %v", action)
+	}
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, makeVariable, setVariable)
+}
+
+// File-specific unit tests.
+// TODO(rvangent): Delete most of these as they are moved into drivertest.
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
