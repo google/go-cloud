@@ -17,8 +17,8 @@
 //
 // Example:
 //
-// makeBucket is of type BucketMaker. It creates a *blob.Bucket for
-// this provider implementation.
+// // makeBucket is of type BucketMaker. It creates a *blob.Bucket for
+// // this provider implementation.
 // func makeBucket(t *testing.T) (*blob.Bucket, func()) {
 // ...
 // }
@@ -31,7 +31,7 @@
 // readable by a subsequent *blob.Bucket. This is required so that tests can
 // create a blob once and then run a series of tests over it.
 //
-// Implementation note: A new *blob.BucketEach is created for each sub-test
+// Implementation note: A new *blob.Bucket is created for each sub-test
 // so that provider implementations that use a record/replay strategy get
 // a separate golden file per test.
 package drivertest
