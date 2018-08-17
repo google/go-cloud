@@ -16,7 +16,7 @@ interactions:
       X-Amz-Content-Sha256:
       - 64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c
       X-Amz-Date:
-      - 20180817T000237Z
+      - 20180817T164431Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 17 Aug 2018 00:02:38 GMT
+      - Fri, 17 Aug 2018 16:44:32 GMT
       Etag:
       - '"3e25960a79dbc69b674cd4ec67a72c62"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - Nszn1ys1nfsjwUfWDmcwlIYtmXZhqN7lJ5ZBmo6XwsPI/5+wlsfbjBowPtakKXE+r2owtQhk76M=
+      - xB/jujkl7UtYTD/S0zalnMwwvEcySn86bYwGH8CGCRdCWZuulpoIPHeOqNmLOQ+68HrvOaJg3hc=
       X-Amz-Request-Id:
-      - 6A6CEF9E2E8788D1
+      - A9639640ABD92338
     status: 200 OK
     code: 200
     duration: ""
@@ -46,7 +46,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T000237Z
+      - 20180817T164431Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
     method: HEAD
   response:
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Fri, 17 Aug 2018 00:02:38 GMT
+      - Fri, 17 Aug 2018 16:44:32 GMT
       Etag:
       - '"3e25960a79dbc69b674cd4ec67a72c62"'
       Last-Modified:
-      - Fri, 17 Aug 2018 00:02:38 GMT
+      - Fri, 17 Aug 2018 16:44:32 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - m+DDT0FZn8Rg9+BYztPZow2tZdL4Bw7A3u8jJpB1TuvncqGkltC4n0GUlaG65MXJ5EKRd6L4MXw=
+      - dgoZlLTSB1++GV35+RmsJFNy+GVjBgCqtem8GyefV32EQMW9vTbnTD7gMrNBmOi2wrS/yNGfKH8=
       X-Amz-Request-Id:
-      - 1E85ECE73A2B23EF
+      - 3A45D2E0A5549F3D
     status: 200 OK
     code: 200
     duration: ""
@@ -82,20 +82,20 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T000237Z
+      - 20180817T164431Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Fri, 17 Aug 2018 00:02:38 GMT
+      - Fri, 17 Aug 2018 16:44:32 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - rwWfAYHKOgUTYPnyTqrs1EafGJ0JSFEXhOZTIBCbK2fwL7nomdVruRe0I/xvJw6VXT8lUGi0bKk=
+      - Kn9fEUs0OPdjp3/Af/jpMQgAtkGKRrxtlsob1B+og4YxkeGgAeZ12n7iHQIIGfCOHipc8oYFAZM=
       X-Amz-Request-Id:
-      - 88E1B2EC6C2A25C3
+      - 054D09723F4BB322
     status: 204 No Content
     code: 204
     duration: ""
@@ -108,24 +108,24 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T000238Z
+      - 20180817T164431Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>91B4FBE2C441868F</RequestId><HostId>3eajlQHOaJpUVvq25zf38fvv7VzW9mMy0v5GQgnzWoxENBMjTlGwIlLPMXMLujLNit/HqheehUk=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>DC998718CF51127A</RequestId><HostId>XaXBx9rsNayiMfxvMopqI7ukkQdV74pqBoMpGELjETb/SnPBlpTqc2H97FFrU9k0vWNcDFNIRbs=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Fri, 17 Aug 2018 00:02:37 GMT
+      - Fri, 17 Aug 2018 16:44:31 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 3eajlQHOaJpUVvq25zf38fvv7VzW9mMy0v5GQgnzWoxENBMjTlGwIlLPMXMLujLNit/HqheehUk=
+      - XaXBx9rsNayiMfxvMopqI7ukkQdV74pqBoMpGELjETb/SnPBlpTqc2H97FFrU9k0vWNcDFNIRbs=
       X-Amz-Request-Id:
-      - 91B4FBE2C441868F
+      - DC998718CF51127A
     status: 404 Not Found
     code: 404
     duration: ""
@@ -138,7 +138,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T000238Z
+      - 20180817T164431Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-deleting
     method: HEAD
   response:
@@ -147,13 +147,13 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Fri, 17 Aug 2018 00:02:37 GMT
+      - Fri, 17 Aug 2018 16:44:31 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - DFkS0ixWHduOg5lcYNfm5Tg1m5+t/qj6NI1RR4TLVOV4MOP+LuTb7w2UG9AgRI62cy8lWyokh3k=
+      - x+3FibtXRHJaXJR0ULuaSrzICCudouPZTJHVsXcQrrbKqmwACTSvgShJWZOiNTg5zVPM+UoGZ+E=
       X-Amz-Request-Id:
-      - EF5581924C0B830C
+      - 524BD178BED5648F
     status: 404 Not Found
     code: 404
     duration: ""

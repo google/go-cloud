@@ -31,7 +31,7 @@ import (
 // 2. Update this constant to your bucket name.
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 //    name from the Terraform output instead (saving a copy of it for replay).
-const bucketName = "go-cloud-my-test-bucket"
+const bucketName = "pledged-solved-practically"
 
 // makeBucket creates a *blob.Bucket and a function to close it after the test
 // is done. It fails the test if the creation fails.

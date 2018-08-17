@@ -16,7 +16,7 @@ interactions:
       X-Amz-Content-Sha256:
       - 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
       X-Amz-Date:
-      - 20180817T164422Z
+      - 20180817T164428Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
     method: PUT
   response:
@@ -25,17 +25,57 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 17 Aug 2018 16:44:23 GMT
+      - Fri, 17 Aug 2018 16:44:29 GMT
       Etag:
       - '"ed076287532e86365e841e92bfc50d8c"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - +2IajhtoZ9oxewdbu+CCYbd7wuM9DrtNGwVlPWaSjjpZZuuwgoaBr9jHQMx00bG4BKJz6jblPxs=
+      - oqBUkwW8xcjtmQQih0HgxtOcpfj+V1ZKSEPxchCI1in8V6ap0U6EaIjJUDUd0eaNp4DsPPO8lPw=
       X-Amz-Request-Id:
-      - FFFEA0C6669C7FF8
+      - 15A24366E1FF0BD3
     status: 200 OK
     code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      Range:
+      - bytes=0-0
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180817T164428Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
+    method: GET
+  response:
+    body: H
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "1"
+      Content-Range:
+      - bytes 0-0/12
+      Content-Type:
+      - text/plain
+      Date:
+      - Fri, 17 Aug 2018 16:44:29 GMT
+      Etag:
+      - '"ed076287532e86365e841e92bfc50d8c"'
+      Last-Modified:
+      - Fri, 17 Aug 2018 16:44:29 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 6n/IXxwyjqlCXBLRr6AzPBeonJz46shj8ZY36HU5OhSWsUcMIFkb1FTBAYJOVJtIcTYqULwcawc=
+      X-Amz-Request-Id:
+      - 7FC5E749145148F3
+    status: 206 Partial Content
+    code: 206
     duration: ""
 - request:
     body: ""
@@ -46,7 +86,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T164422Z
+      - 20180817T164428Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
     method: HEAD
   response:
@@ -59,17 +99,17 @@ interactions:
       Content-Type:
       - text/plain
       Date:
-      - Fri, 17 Aug 2018 16:44:23 GMT
+      - Fri, 17 Aug 2018 16:44:29 GMT
       Etag:
       - '"ed076287532e86365e841e92bfc50d8c"'
       Last-Modified:
-      - Fri, 17 Aug 2018 16:44:23 GMT
+      - Fri, 17 Aug 2018 16:44:29 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - +MigFZOeeA/shib+TiIO+0XodmaiHqQPxfDV5Kkztk73jSFyHXpBMXBMND8uhA40guo21JuXjjc=
+      - UbzuCI95SCiEUwLgZFRIwjr6AQsbguXeYm9MzMRUCLCQ5kKpEfkWbYHsFnR8JXI4yVa18ONu+BA=
       X-Amz-Request-Id:
-      - 4B424E3E84CEA9DB
+      - 61D23C34A34049D9
     status: 200 OK
     code: 200
     duration: ""
@@ -82,56 +122,20 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T164422Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
-    method: HEAD
-  response:
-    body: ""
-    headers:
-      Accept-Ranges:
-      - bytes
-      Content-Length:
-      - "12"
-      Content-Type:
-      - text/plain
-      Date:
-      - Fri, 17 Aug 2018 16:44:23 GMT
-      Etag:
-      - '"ed076287532e86365e841e92bfc50d8c"'
-      Last-Modified:
-      - Fri, 17 Aug 2018 16:44:23 GMT
-      Server:
-      - AmazonS3
-      X-Amz-Id-2:
-      - YzmDQeS4Oe+iofcjfpKAbMjWFn0n+X4L7wdWQ8hJOi+Hf03n+kl9vwkehDDSFMtMzMcWjIfFKE8=
-      X-Amz-Request-Id:
-      - 24DAE7792B830132
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
-      X-Amz-Content-Sha256:
-      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-      X-Amz-Date:
-      - 20180817T164422Z
+      - 20180817T164428Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-attributes
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Fri, 17 Aug 2018 16:44:23 GMT
+      - Fri, 17 Aug 2018 16:44:29 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - TsUhlDC9kGWpDf48hdBWPcKr2IDV4GGDrjrehOYtx+W379iA5TFZcRMqq+hbpZ1MC95qmj6w0KY=
+      - Xn+MG5Ef7bf19/krgCZs+u3dmsw4ePeYMg3e+o+d3b7uYvoOO47+8n+9ax+xosjG9Udb4VxLo6s=
       X-Amz-Request-Id:
-      - 133FBC23F18ABBD0
+      - EF139D1A75BA2B07
     status: 204 No Content
     code: 204
     duration: ""
