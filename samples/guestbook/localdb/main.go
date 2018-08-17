@@ -77,6 +77,7 @@ func runLocalDB(containerName, guestbookDir string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		c := make(chan os.Signal, 1)
+		// TODO(ijt): Handle SIGTERM.
 		signal.Notify(c, os.Interrupt)
 		<-c
 		cancel()
