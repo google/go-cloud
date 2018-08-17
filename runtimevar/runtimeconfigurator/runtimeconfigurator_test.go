@@ -52,12 +52,9 @@ func resourceName(name string) ResourceName {
 // makeVariable creates a *runtimevar.Variable.
 func makeVariable(t *testing.T, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, interface{}, func()) {
 	ctx := context.Background()
-	client, done, err := newConfigClient(ctx, t.Logf, t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t)
 	rn := resourceName(name)
-	_, err = client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
+	_, err := client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
 		Parent: "projects/" + rn.ProjectID,
 		Config: &pb.RuntimeConfig{
 			Name:        rn.configPath(),
@@ -124,7 +121,7 @@ var _ driver.Watcher = &watcher{}
 func TestInitialStringWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "initial-string-watch.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -158,7 +155,7 @@ func TestInitialStringWatch(t *testing.T) {
 func TestInitialJSONWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "initial-json-watch.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -197,7 +194,7 @@ func TestInitialJSONWatch(t *testing.T) {
 func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-cancel.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -224,7 +221,7 @@ func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-inbetween-cancel.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -262,7 +259,7 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 func TestWatchObservesChange(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-observes-change.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -307,7 +304,7 @@ func TestWatchObservesChange(t *testing.T) {
 	}
 }
 
-func newConfigClient(ctx context.Context, t *testing.T, filepath string) (*Client, func()) {
+func newConfigClient(ctx context.Context, t *testing.T) (*Client, func()) {
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
 	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done
 }
