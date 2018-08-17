@@ -38,7 +38,7 @@ import (
 )
 
 var (
-	environment = azure.PublicCloud	
+	environment = azure.PublicCloud
 )
 
 // setupBucket creates a connection to a particular cloud provider's blob storage.
@@ -102,10 +102,10 @@ func setupAzureWithServicePrincipal(ctx context.Context, bucket string) (*blob.B
 		return nil, err
 	}
 
-	settings := azureblob.AzureBlobSettings{
-		Authorizer:          auth,         // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
+	settings := azureblob.Settings{
+		Authorizer:          auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
 		EnvironmentName:     environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
-		SubscriptionId:      subscriptionID,     // caller must specify their Azure SubscriptionID
+		SubscriptionID:      subscriptionID,     // caller must specify their Azure SubscriptionID
 		ResourceGroupName:   resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
 		StorageAccountName:  storageAccountName, // caller must specify an already provisioned Azure Storage Account
 		StorageKey:          "",                 // to be fetched from storage account if empty and no connectionString is set
@@ -124,23 +124,20 @@ func setupAzureWithGeneratedSASToken(ctx context.Context, bucket string) (*blob.
 	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
 
 	// Azure Storage Account, Resource Group and SubscriptionId
-	subscriptionID := os.Getenv("SUBSCRIPTION_ID")	
-	resourceGroupName := os.Getenv("RESOURCE_GROUP_NAME")	
+	subscriptionID := os.Getenv("SUBSCRIPTION_ID")
+	resourceGroupName := os.Getenv("RESOURCE_GROUP_NAME")
 	storageAccountName := os.Getenv("STORAGE_ACCOUNT_NAME")
 
 	auth, _ := getAuthorizationToken(clientID, clientSecret, tenantID, &environment)
 
-	settings := azureblob.AzureBlobSettings{
+	settings := azureblob.Settings{
 		Authorizer:          auth,               // caller must specify *autorest.BearerAuthorizer using their preferred authorization options
 		EnvironmentName:     environment.Name,   // caller must specify the target Azure Environment (https://github.com/Azure/go-autorest/blob/master/autorest/azure/environments.go)
-		SubscriptionId:      subscriptionID,     // caller must specify their Azure SubscriptionID
+		SubscriptionID:      subscriptionID,     // caller must specify their Azure SubscriptionID
 		ResourceGroupName:   resourceGroupName,  // caller must specify an already provisioned Azure Resource Group
-		StorageAccountName:  storageAccountName, // caller must specify an already provisioned Azure Storage Account
-		StorageKey:          "",                 // to be fetched from storage account if empty and no connectionString is set
-		ContainerAccessType: "",                 // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
-		ConnectionString:    "",                 // use connectionString/SASToken over Authorizer w/ StorageKey
+		StorageAccountName:  storageAccountName, // caller must specify an already provisioned Azure Storage Account		
 	}
-	
+
 	accountSASOptions := mainStorage.AccountSASTokenOptions{
 		Services: mainStorage.Services{
 			Blob: true,
@@ -166,22 +163,17 @@ func setupAzureWithGeneratedSASToken(ctx context.Context, bucket string) (*blob.
 
 	tokenVals, err := azureblob.GenerateSasToken(&settings, &accountSASOptions)
 	if err == nil {
-		return azureblob.OpenBucket(ctx, &azureblob.AzureBlobSettings{SASTokenValues: tokenVals, StorageAccountName: storageAccountName, EnvironmentName: environment.Name}, bucket)
-	} else {
-		return nil, err
-	}
+		return azureblob.OpenBucket(ctx, &azureblob.Settings{SASTokenValues: tokenVals, StorageAccountName: storageAccountName, EnvironmentName: environment.Name}, bucket)
+	} 
+
+	return nil, err	
 }
 
 func setupAzureWithConnectionString(ctx context.Context, bucket string) (*blob.Bucket, error) {
 
 	connectionString := "ENTER YOUR AZURE STORAGE CONNECTION STRING"
-	settings := azureblob.AzureBlobSettings{
+	settings := azureblob.Settings{
 		Authorizer:          nil,
-		EnvironmentName:     "",
-		SubscriptionId:      "",
-		ResourceGroupName:   "",
-		StorageAccountName:  "",
-		StorageKey:          "",
 		ContainerAccessType: "blob",
 		ConnectionString:    connectionString, // caller must supply the storage connection string or a SASToken
 	}
@@ -189,18 +181,18 @@ func setupAzureWithConnectionString(ctx context.Context, bucket string) (*blob.B
 	return azureblob.OpenBucket(ctx, &settings, bucket)
 }
 
-func getAuthorizationToken(clientId string, clientSecret string, tenantId string, environment *azure.Environment) (*autorest.BearerAuthorizer, error) {
+func getAuthorizationToken(clientID string, clientSecret string, tenantID string, environment *azure.Environment) (*autorest.BearerAuthorizer, error) {
 
-	oauthConfig, err := adal.NewOAuthConfig(environment.ActiveDirectoryEndpoint, tenantId)
+	oauthConfig, err := adal.NewOAuthConfig(environment.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
 	if oauthConfig == nil {
-		return nil, fmt.Errorf("Unable to configure OAuthConfig for tenant %s", tenantId)
+		return nil, fmt.Errorf("Unable to configure OAuthConfig for tenant %s", tenantID)
 	}
 
-	spt, err := adal.NewServicePrincipalToken(*oauthConfig, clientId, clientSecret, environment.ResourceManagerEndpoint)
+	spt, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, environment.ResourceManagerEndpoint)
 
 	if err != nil {
 		return nil, err
@@ -210,8 +202,8 @@ func getAuthorizationToken(clientId string, clientSecret string, tenantId string
 	return auth, nil
 }
 
-func getAuthorizationTokenFromDeviceFlow(clientId string, tenantId string, environment *azure.Environment) (autorest.Authorizer, error) {
-	deviceFlowConfig := auth.NewDeviceFlowConfig(clientId, tenantId)
+func getAuthorizationTokenFromDeviceFlow(clientID string, tenantID string, environment *azure.Environment) (autorest.Authorizer, error) {
+	deviceFlowConfig := auth.NewDeviceFlowConfig(clientID, tenantID)
 	deviceFlowConfig.Resource = environment.ResourceManagerEndpoint
 	return deviceFlowConfig.Authorizer()
 }

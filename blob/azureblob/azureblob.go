@@ -24,10 +24,11 @@ type bucket struct {
 	client              *mainStorage.BlobStorageClient
 }
 
-type AzureBlobSettings struct {
+// Settings for Azure Storage Account and Resource Group
+type Settings struct {
 	Authorizer          autorest.Authorizer
 	EnvironmentName     string
-	SubscriptionId      string
+	SubscriptionID      string
 	ResourceGroupName   string
 	StorageAccountName  string
 	StorageKey          string
@@ -36,7 +37,8 @@ type AzureBlobSettings struct {
 	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
 }
 
-func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerName string) (*blob.Bucket, error) {
+// OpenBucket Open a new Azure Storage Container Bucket
+func OpenBucket(ctx context.Context, blobSettings *Settings, containerName string) (*blob.Bucket, error) {
 
 	var blobClient mainStorage.BlobStorageClient
 
@@ -73,7 +75,7 @@ func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerN
 		if blobSettings.StorageAccountName == "" {
 			return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
 		}
-		if blobSettings.SubscriptionId == "" {
+		if blobSettings.SubscriptionID == "" {
 			return nil, fmt.Errorf("AzureBlobSettings.SubscriptionId is not set")
 		}
 
@@ -87,24 +89,24 @@ func OpenBucket(ctx context.Context, blobSettings *AzureBlobSettings, containerN
 			return nil, fmt.Errorf("Cannot retrieve AccessKey for Account %q without Authorizer", blobSettings.StorageAccountName)
 		}
 
-		accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionId)
+		accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionID)
 		accountClient.Authorizer = blobSettings.Authorizer
 		accountClient.Sender = autorest.CreateSender(WithRequestLogging())
 
 		key, err := GetStorageAccountKey(&accountClient, blobSettings.ResourceGroupName, blobSettings.StorageAccountName)
 		if err != nil {
 			return nil, err
-		} else {
-			blobSettings.StorageKey = key
-		}
-
+		} 		
+		
+		blobSettings.StorageKey = key
+		
 		storageClient, err := mainStorage.NewClient(blobSettings.StorageAccountName, blobSettings.StorageKey, environment.StorageEndpointSuffix,
 			mainStorage.DefaultAPIVersion, true)
 
 		if err != nil {
 			return nil, fmt.Errorf("Error creating storage client for storage storeAccount %q: %s", blobSettings.StorageAccountName, err)
 		}
-
+		
 		blobClient = storageClient.GetBlobService()
 	}
 
@@ -154,16 +156,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 
 		readRange := mainStorage.BlobRange{Start: uint64(offset), End: uint64(rangeEnd)}
 		ioReader, err = theBlob.GetRange(&mainStorage.GetBlobRangeOptions{Range: &readRange})
-
 		if err != nil {
 			return nil, err
-		} else {
-			return &reader{body: ioReader, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil
-		}
-	} else {
-		empty := ioutil.NopCloser(strings.NewReader(""))
-		return &reader{body: empty, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil
+		} 		
+		return &reader{body: ioReader, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil		
 	}
+	 
+	empty := ioutil.NopCloser(strings.NewReader(""))
+	return &reader{body: empty, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil	
 }
 
 func (r *reader) Read(p []byte) (int, error) {

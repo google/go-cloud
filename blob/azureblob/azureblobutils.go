@@ -15,7 +15,7 @@ import (
 	mainStorage "github.com/Azure/azure-sdk-for-go/storage"
 )
 
-// helpers ported from https://github.com/terraform-providers/terraform-provider-azurerm/blob/master/azurerm/config.go
+// WithRequestLogging helpers ported from https://github.com/terraform-providers/terraform-provider-azurerm/blob/master/azurerm/config.go
 func WithRequestLogging() autorest.SendDecorator {
 	return func(s autorest.Sender) autorest.Sender {
 		return autorest.SenderFunc(func(r *http.Request) (*http.Response, error) {
@@ -44,7 +44,8 @@ func WithRequestLogging() autorest.SendDecorator {
 	}
 }
 
-func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupName string, storageAccountName string) (string, error) {	
+// GetStorageAccountKey Gets the primary Storage Account Access Key
+func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupName string, storageAccountName string) (string, error) {
 	accountKeys, err := accountClient.ListKeys(context.Background(), resourceGroupName, storageAccountName)
 
 	if err != nil {
@@ -54,7 +55,7 @@ func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupNa
 	if accountKeys.Response.StatusCode == http.StatusNotFound {
 		return "", fmt.Errorf("Keys not found")
 	}
-	
+
 	if accountKeys.Keys == nil {
 		return "", fmt.Errorf("Nil key returned for storage storeAccount %q", storageAccountName)
 	}
@@ -72,15 +73,16 @@ func GetStorageAccountKey(accountClient *storage.AccountsClient, resourceGroupNa
 	return *key, nil
 }
 
-func GenerateSasToken(settings *AzureBlobSettings, sasOptions *mainStorage.AccountSASTokenOptions) (url.Values, error) {
-	accountClient := storage.NewAccountsClient(settings.SubscriptionId)
+// GenerateSasToken Generate SASToken for a Storage Account based on the sasOptions
+func GenerateSasToken(settings *Settings, sasOptions *mainStorage.AccountSASTokenOptions) (url.Values, error) {
+	accountClient := storage.NewAccountsClient(settings.SubscriptionID)
 	accountClient.Authorizer = settings.Authorizer
 	environment, err := azure.EnvironmentFromName(settings.EnvironmentName)
 
 	if err == nil {
 		key := settings.StorageKey
 		if key == "" {
-			key, err = GetStorageAccountKey(&accountClient, settings.ResourceGroupName, settings.StorageAccountName)			
+			key, err = GetStorageAccountKey(&accountClient, settings.ResourceGroupName, settings.StorageAccountName)
 			if err != nil {
 				return nil, err
 			}
@@ -91,10 +93,10 @@ func GenerateSasToken(settings *AzureBlobSettings, sasOptions *mainStorage.Accou
 
 		if err == nil {
 			return storageClient.GetAccountSASToken(*sasOptions)
-		} else {
-			return nil, err
 		}
-	} else {
+
 		return nil, err
 	}
+
+	return nil, err
 }
