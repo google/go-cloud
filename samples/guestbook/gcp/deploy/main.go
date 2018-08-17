@@ -30,13 +30,13 @@ import (
 )
 
 func main() {
+	log.SetFlags(0)
+	log.SetPrefix("gcp/deploy: ")
 	guestbookDir := flag.String("guestbook_dir", "..", "directory containing the guestbook example")
 	tfStatePath := flag.String("tfstate", "terraform.tfstate", "path to terraform state file")
 	flag.Parse()
-	log.SetPrefix("gcp/deploy: ")
 	if err := deploy(*guestbookDir, *tfStatePath); err != nil {
-		fmt.Fprintln(os.Stderr, "deploy:", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
