@@ -100,7 +100,7 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword, schemaPath string)
 	defer func() {
 		log.Print("Removing ingress rule...")
 		if _, err := run("aws", "ec2", "revoke-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
-			log.Printf(err)
+			log.Print(err)
 		}
 	}()
 	log.Printf("Added ingress rule to %s for port 3306", securityGroupID)
