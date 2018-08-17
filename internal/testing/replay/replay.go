@@ -28,7 +28,6 @@ import (
 	"cloud.google.com/go/rpcreplay"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
 )
 
@@ -141,42 +140,32 @@ func scrubRecording(filepath string) error {
 // NewGCPDialOptions return grpc.DialOptions that are to be appended to a GRPC dial request.
 // These options allow a recorder/replayer to intercept RPCs and save RPCs to the file at filename,
 // or read the RPCs from the file and return them.
-func NewGCPDialOptions(logf func(string, ...interface{}), mode recorder.Mode, filename string, scrubber func(func(string, ...interface{}), string, proto.Message) error) (opts []grpc.DialOption, done func(), err error) {
+func NewGCPDialOptions(t *testing.T, mode recorder.Mode, filename string) (opts []grpc.DialOption, done func()) {
 	path := filepath.Join("testdata", filename)
-	logf("Golden file is at %v", path)
-
 	if mode == recorder.ModeRecording {
-		logf("Recording into golden file")
+		t.Logf("Recording into golden file %s", path)
 		r, err := rpcreplay.NewRecorder(path, nil)
 		if err != nil {
-			return nil, nil, err
-		}
-		r.BeforeFunc = func(s string, m proto.Message) error {
-			return scrubber(logf, s, m)
+			t.Fatal(err)
 		}
 		opts = r.DialOptions()
 		done = func() {
 			if err := r.Close(); err != nil {
-				logf("unable to close recorder: %v", err)
+				t.Errorf("unable to close recorder: %v", err)
 			}
 		}
-		return opts, done, nil
+		return opts, done
 	}
-
-	logf("Replaying from golden file")
+	t.Logf("Replaying from golden file %s", path)
 	r, err := rpcreplay.NewReplayer(path)
 	if err != nil {
-		return nil, nil, err
-	}
-	r.BeforeFunc = func(s string, m proto.Message) error {
-		return scrubber(logf, s, m)
+		t.Fatal(err)
 	}
 	opts = r.DialOptions()
 	done = func() {
 		if err := r.Close(); err != nil {
-			logf("unable to close replayer: %v", err)
+			t.Errorf("unable to close recorder: %v", err)
 		}
 	}
-
-	return opts, done, nil
+	return opts, done
 }

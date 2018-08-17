@@ -17,24 +17,14 @@ package runtimeconfigurator
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/dnaeon/go-vcr/recorder"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/replay"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 // This constant records the project used for the last --record.
@@ -56,10 +46,7 @@ var _ driver.Watcher = &watcher{}
 func TestInitialStringWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, t.Logf, "initial-string-watch.replay")
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t, "initial-string-watch.replay")
 	defer done()
 
 	rn := ResourceName{
@@ -70,7 +57,7 @@ func TestInitialStringWatch(t *testing.T) {
 	}
 
 	want := "facepalm: 🤦"
-	_, done, err = createStringVariable(ctx, client.client, rn, want)
+	_, done, err := createStringVariable(ctx, client.client, rn, want)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,10 +80,7 @@ func TestInitialStringWatch(t *testing.T) {
 func TestInitialJSONWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, t.Logf, "initial-json-watch.replay")
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t, "initial-json-watch.replay")
 	defer done()
 
 	rn := ResourceName{
@@ -112,7 +96,7 @@ func TestInitialJSONWatch(t *testing.T) {
 	}
 	var jsonDataPtr *home
 	want := &home{"Batman", "Gotham"}
-	_, done, err = createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
+	_, done, err := createByteVariable(ctx, client.client, rn, []byte(`{"Person": "Batman", "Home": "Gotham"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,10 +119,7 @@ func TestInitialJSONWatch(t *testing.T) {
 func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, t.Logf, "watch-cancel.replay")
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t, "watch-cancel.replay")
 	defer done()
 
 	rn := ResourceName{
@@ -165,10 +146,7 @@ func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, t.Logf, "watch-inbetween-cancel.replay")
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t, "watch-inbetween-cancel.replay")
 	defer done()
 
 	rn := ResourceName{
@@ -178,7 +156,7 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 		Variable:  "TestWatchInbetweenCancel",
 	}
 
-	_, done, err = createStringVariable(ctx, client.client, rn, "getting canceled")
+	_, done, err := createStringVariable(ctx, client.client, rn, "getting canceled")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,10 +184,7 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 func TestWatchObservesChange(t *testing.T) {
 	ctx := context.Background()
 
-	client, done, err := newConfigClient(ctx, t.Logf, "watch-observes-change.replay")
-	if err != nil {
-		t.Fatal(err)
-	}
+	client, done := newConfigClient(ctx, t, "watch-observes-change.replay")
 	defer done()
 
 	rn := ResourceName{
@@ -220,7 +195,7 @@ func TestWatchObservesChange(t *testing.T) {
 	}
 
 	want := "cash 💰 change"
-	_, done, err = createStringVariable(ctx, client.client, rn, want)
+	_, done, err := createStringVariable(ctx, client.client, rn, want)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,31 +229,9 @@ func TestWatchObservesChange(t *testing.T) {
 	}
 }
 
-func newConfigClient(ctx context.Context, logf func(string, ...interface{}), filepath string) (*Client, func(), error) {
-
-	mode := recorder.ModeReplaying
-	if *setup.Record {
-		mode = recorder.ModeRecording
-	}
-
-	opts, done, err := replay.NewGCPDialOptions(logf, mode, filepath, scrubber)
-	if err != nil {
-		return nil, nil, err
-	}
-	opts = append(opts, grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")))
-	if mode == recorder.ModeRecording {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			return nil, nil, err
-		}
-		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{gcp.CredentialsTokenSource(creds)}))
-	}
-	conn, err := grpc.DialContext(ctx, endPoint, opts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done, nil
+func newConfigClient(ctx context.Context, t *testing.T, filepath string) (*Client, func()) {
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
+	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done
 }
 
 // createConfig creates a fresh config. It will always overwrite any previous configuration,
@@ -344,118 +297,4 @@ func updateVariable(ctx context.Context, client pb.RuntimeConfigManagerClient, r
 			Contents: &pb.Variable_Text{Text: str},
 		},
 	})
-}
-
-type fakeProto struct{}
-
-func (p *fakeProto) Reset()         {}
-func (p *fakeProto) String() string { return "fake" }
-func (p *fakeProto) ProtoMessage()  {}
-
-func TestScrubber(t *testing.T) {
-	var tests = []struct {
-		name      string
-		msg, want proto.Message
-		wantErr   bool
-	}{
-		{
-			name: "Messages that match the regexp should have project IDs redacted",
-			msg: &pb.DeleteConfigRequest{
-				Name: "projects/project_id/name",
-			},
-			want: &pb.DeleteConfigRequest{
-				Name: "projects/REDACTED/name",
-			},
-		},
-		{
-			name: "Messages that have nested strings where project IDs can be found should all be redacted",
-			msg: &pb.CreateConfigRequest{
-				Parent: "/projects/project_id/parent",
-				Config: &pb.RuntimeConfig{
-					Name: "projects/project_id/config/name",
-				},
-			},
-			want: &pb.CreateConfigRequest{
-				Parent: "/projects/REDACTED/parent",
-				Config: &pb.RuntimeConfig{
-					Name: "projects/REDACTED/config/name",
-				},
-			},
-		},
-		{
-			name: "Messages that don't match the regexp should be returned unchanged",
-			msg: &pb.DeleteConfigRequest{
-				Name: "project_id/name",
-			},
-			want: &pb.DeleteConfigRequest{
-				Name: "project_id/name",
-			},
-		},
-		{
-			name: "Empty messages should be returned unchanged",
-			msg:  &empty.Empty{},
-			want: &empty.Empty{},
-		},
-		{
-			name:    "Unknown messages should return an error",
-			msg:     &fakeProto{},
-			wantErr: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := proto.Clone(tc.msg)
-			err := scrubber(t.Logf, "", got)
-
-			switch {
-			case err != nil && !tc.wantErr:
-				t.Fatal(err)
-			case err == nil && tc.wantErr:
-				t.Errorf("want error; got nil")
-			case err != nil && tc.wantErr:
-				// Got error as expected, test passed.
-				return
-			case !cmp.Equal(got, tc.want):
-				t.Errorf("got %s; want %s", got, tc.want)
-			}
-		})
-	}
-}
-
-func scrubber(logf func(string, ...interface{}), _ string, msg proto.Message) error {
-	// Example matches:
-	// projects/foobar
-	// /projects/foobar/baz
-	re := regexp.MustCompile(`(?U)(\/?projects\/)(.*)(\/|$)`)
-	// Without the curly braces, Go interprets the group as named $1REDACTED which
-	// doesn't match anything.
-	replacePattern := "${1}REDACTED${3}"
-	logf("Proto begins as %s", msg)
-
-	switch m := msg.(type) {
-	case *pb.DeleteConfigRequest:
-		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-	case *pb.CreateConfigRequest:
-		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
-		m.Config.Name = re.ReplaceAllString(m.GetConfig().GetName(), replacePattern)
-	case *pb.CreateVariableRequest:
-		m.Parent = re.ReplaceAllString(m.GetParent(), replacePattern)
-		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
-	case *pb.UpdateVariableRequest:
-		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-		m.Variable.Name = re.ReplaceAllString(m.GetVariable().GetName(), replacePattern)
-	case *pb.GetVariableRequest:
-		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-	case *pb.RuntimeConfig:
-		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-	case *pb.Variable:
-		m.Name = re.ReplaceAllString(m.GetName(), replacePattern)
-	case *empty.Empty:
-	default:
-		return fmt.Errorf("unknown proto type, can't scrub: %v", reflect.TypeOf(msg))
-	}
-
-	logf("Proto ends as %s", msg)
-	return nil
 }
