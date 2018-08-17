@@ -24,6 +24,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -82,6 +83,10 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	serviceAccountVoldir, err := ioutil.TempDir("", "guestbook-service-acct")
 	if err != nil {
 		return fmt.Errorf("creating temp dir to hold service account key: %v", err)
+	}
+	serviceAccountVoldir, err = filepath.EvalSymlinks(serviceAccountVoldir)
+	if err != nil {
+		return fmt.Errorf("evaluating any symlinks: %v", err)
 	}
 	if err := os.Chdir(serviceAccountVoldir); err != nil {
 		return fmt.Errorf("changing to temp dir: %v", err)

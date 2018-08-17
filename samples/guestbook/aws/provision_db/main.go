@@ -72,6 +72,10 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword, schemaPath string)
 		return fmt.Errorf("creating temp dir for certs: %v", err)
 	}
 	defer os.RemoveAll(tempdir)
+	tempdir, err = filepath.EvalSymlinks(tempdir)
+	if err != nil {
+		return fmt.Errorf("evaluating any symlinks: %v", err)
+	}
 	resp, err := http.Get("https://s3.amazonaws.com/rds-downloads/rds-ca-2015-root.pem")
 	if err != nil {
 		return fmt.Errorf("fetching pem file: %v", err)
