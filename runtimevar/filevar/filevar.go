@@ -111,20 +111,27 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 		// Continue.
 	}
 
-	// Detect if there has been a changed first. If there are no changes, then proceed to add a
-	// fsnotify watcher.
-	wait := true
-	for wait {
-		sd := w.processFile()
-		switch sd.state {
-		case errorState:
-			return zeroVar, sd.err
+	// Start watching over the file and wait for events/errors.
+	// We'll get a notifierErr if the file doesn't currently exist.
+	// Also, note that we may never use the notifier if there's already
+	// a change to the file. We must create it now before checking to
+	// avoid race conditions.
+	notifierErr := w.notifier.Add(w.file)
+	if notifierErr == nil {
+		defer func() {
+			_ = w.notifier.Remove(w.file)
+		}()
+	}
 
-		case hasChangedState:
-			return *sd.variable, nil
+	for {
+		if v, err := w.processFile(); err != nil {
+			return zeroVar, err
+		} else if v != nil {
+			return *v, nil
+		}
 
-		case stillDeletedState:
-			// Last known state is deleted, need to wait for file to show up before adding a watch.
+		if w.isDeleted {
+			// Last known state is deleted, need to wait for file to show up.
 			t := time.NewTimer(w.waitTime)
 			select {
 			case <-t.C:
@@ -132,47 +139,32 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 				t.Stop()
 				return zeroVar, ctx.Err()
 			}
-
-		case noChangeState:
-			wait = false
+			continue
 		}
-	}
-
-	// Start watching over the file and wait for events/errors.
-	if err := w.notifier.Add(w.file); err != nil {
-		if os.IsNotExist(err) {
-			// File got deleted in between initial check above and adding a watch.
-			w.isDeleted = true
-			w.updateTime = time.Now().UTC()
+		// If file wasn't deleted, no reason for notifier to have failed.
+		if notifierErr != nil {
+			return zeroVar, notifierErr
 		}
-		return zeroVar, err
-	}
-	defer w.notifier.Remove(w.file)
+		// Wait for notifier to tell us something relevant changed.
+		wait := true
+		for wait {
+			select {
+			case <-ctx.Done():
+				return zeroVar, ctx.Err()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return zeroVar, ctx.Err()
+			case event := <-w.notifier.Events:
+				if event.Name != w.file {
+					continue
+				}
+				// Ignore if not one of the following operations.
+				if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename) == 0 {
+					continue
+				}
+				wait = false
 
-		case event := <-w.notifier.Events:
-			if event.Name != w.file {
-				continue
+			case err := <-w.notifier.Errors:
+				return zeroVar, err
 			}
-			// Ignore if not one of the following operations.
-			if event.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Remove|fsnotify.Rename) == 0 {
-				continue
-			}
-			sd := w.processFile()
-			switch sd.state {
-			case errorState:
-				return zeroVar, sd.err
-			case hasChangedState:
-				return *sd.variable, nil
-			}
-			// No changes, continue waiting.
-
-		case err := <-w.notifier.Errors:
-			return zeroVar, err
 		}
 	}
 }
@@ -186,44 +178,24 @@ type WatchOptions struct {
 	WaitTime time.Duration
 }
 
-// watchState defines the different states during a watch for the Watch call to process.
-type watchState int
-
-const (
-	noChangeState     watchState = iota
-	hasChangedState              // Content has changed or file has been recovered from previous deletion.
-	errorState                   // An error occurred either in processing or file has just been deleted.
-	stillDeletedState            // File was previously marked deleted and is still deleted.
-)
-
-// stateData contains a watchState and corresponding data for it.
-type stateData struct {
-	state    watchState
-	variable *driver.Variable // driver.Config object for hasChangedState.
-	err      error            // Error object for hasErrorState.
-}
-
-// processFile reads the file and determines the watchState. Depending on the watchState, it may
-// update the watcher's fields bytes, isDeleted and updateTime.
-func (w *watcher) processFile() stateData {
+// processFile reads the file.
+// * If nothing has changed, it returns nil.
+// * If something has changed, it updates the watcher's bytes, isDeleted,
+//   and updateTime fields.
+func (w *watcher) processFile() (*driver.Variable, error) {
 	bytes, tm, err := readFile(w.file)
 	if os.IsNotExist(err) {
-		// File is deleted.
 		if w.isDeleted {
-			return stateData{state: stillDeletedState}
+			// File is still deleted, no change.
+			return nil, nil
 		}
+		// File is newly deleted.
 		w.isDeleted = true
 		w.updateTime = time.Now().UTC()
-		return stateData{
-			state: errorState,
-			err:   err,
-		}
+		return nil, err
 	}
 	if err != nil {
-		return stateData{
-			state: errorState,
-			err:   err,
-		}
+		return nil, err
 	}
 	// Change happens if it was previously deleted or content has changed.
 	if w.isDeleted || bytesNotEqual(w.bytes, bytes) {
@@ -231,22 +203,10 @@ func (w *watcher) processFile() stateData {
 		w.updateTime = tm
 		w.isDeleted = false
 		val, err := w.decoder.Decode(bytes)
-		if err != nil {
-			return stateData{
-				state: errorState,
-				err:   err,
-			}
-		}
-		return stateData{
-			state: hasChangedState,
-			variable: &driver.Variable{
-				Value:      val,
-				UpdateTime: tm,
-			},
-		}
+		return &driver.Variable{Value: val, UpdateTime: tm}, err
 	}
 	// No updates, no error.
-	return stateData{state: noChangeState}
+	return nil, nil
 }
 
 func readFile(file string) ([]byte, time.Time, error) {
