@@ -14,10 +14,8 @@
 
 module github.com/google/go-cloud
 
-replace cloud.google.com/go => cloud.google.com/go v0.0.0-20180608230132-da2b80561ef3
-
 require (
-	cloud.google.com/go v0.25.0
+	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/Jeffail/gabs v0.0.0-20180420203615-7a0fed31069a // indirect

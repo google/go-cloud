@@ -189,12 +189,7 @@ func TestReturnsUpdatedSnapshotConcurrently(t *testing.T) {
 
 	const content = `{"hello": "cloud"}`
 	// Update the file in a separate goroutine.
-	written := make(chan struct{})
-	defer func() {
-		<-written
-	}()
 	go func() {
-		defer close(written)
 		if err := f.write(content); err != nil {
 			t.Error("Writing:", err)
 		}
@@ -265,10 +260,7 @@ func TestDeletedAndResetConcurrently(t *testing.T) {
 	}
 
 	// Delete the file in a separate goroutine.
-	deleted := make(chan struct{})
-	defer func() { <-deleted }()
 	go func() {
-		defer close(deleted)
 		if err := f.delete(); err != nil {
 			t.Error("Deleting file:", err)
 		}
