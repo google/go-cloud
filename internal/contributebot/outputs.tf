@@ -33,7 +33,7 @@ output "worker_service_account" {
 }
 
 output "cluster_name" {
-  value       = "${var.cluster_name}"
+  value       = "${google_container_cluster.contributebot.name}"
   description = "GKE cluster name."
 }
 
