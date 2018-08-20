@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cloud/internal/testing/setup"
 )
 
-// bucketName records the bucket used for the last --record.
+// These constants record the region & bucket used for the last --record.
 // If you want to use --record mode,
 // 1. Create a bucket in your AWS project from the S3 management console.
 //    https://s3.console.aws.amazon.com/s3/home.

@@ -8,11 +8,15 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/replay"
+
+	"google.golang.org/grpc"
+	grpccreds "google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
 var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
@@ -33,7 +37,6 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 	r, done, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
-		return nil, nil
 	}
 
 	client := &http.Client{
@@ -41,9 +44,9 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 	}
 
 	// Provide fake creds if running in replay mode.
-	var creds *credentials.Credentials
+	var creds *awscreds.Credentials
 	if !*Record {
-		creds = credentials.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
+		creds = awscreds.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
 
 	sess, err = session.NewSession(&aws.Config{
@@ -76,22 +79,46 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, do
 	r, done, err := replay.NewRecorder(t, mode, gcpMatcher, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
-		return nil, nil
 	}
 
 	if *Record {
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
 			t.Fatalf("failed to get default credentials: %v", err)
-			return nil, nil
 		}
 		client, err = gcp.NewHTTPClient(r, gcp.CredentialsTokenSource(creds))
 		if err != nil {
 			t.Fatal(err)
-			return nil, nil
 		}
 	} else {
 		client = &gcp.HTTPClient{Client: http.Client{Transport: r}}
 	}
 	return client, done
+}
+
+// NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
+// If the test is in --record mode, the client will call out to GCP, and the
+// results are recorded in a replay file.
+// Otherwise, the session reads a replay file and runs the test as a replay,
+// which never makes an outgoing RPC and uses fake credentials.
+func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.ClientConn, func()) {
+	mode := recorder.ModeReplaying
+	if *Record {
+		mode = recorder.ModeRecording
+	}
+
+	opts, done := replay.NewGCPDialOptions(t, mode, t.Name()+".replay")
+	opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
+	if mode == recorder.ModeRecording {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
+	}
+	conn, err := grpc.DialContext(ctx, endPoint, opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return conn, done
 }

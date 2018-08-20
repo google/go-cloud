@@ -21,3 +21,23 @@ output "github_events_topic" {
   value       = "projects/${var.project}/topics/${google_pubsub_topic.github_events.name}"
   description = "The fully qualified name of the topic."
 }
+
+output "github_events_worker_subscription" {
+  value       = "${google_pubsub_subscription.worker.path}"
+  description = "The fully qualified name of the event worker's subscription."
+}
+
+output "worker_service_account" {
+  value       = "${google_service_account.worker.email}"
+  description = "The service account email that will be used for the worker running inside the GKE cluster."
+}
+
+output "cluster_name" {
+  value       = "${var.cluster_name}"
+  description = "GKE cluster name."
+}
+
+output "cluster_zone" {
+  value       = "${var.zone}"
+  description = "GCP zone that the GKE cluster is in."
+}

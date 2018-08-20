@@ -2,19 +2,19 @@
 version: 1
 interactions:
 - request:
-    body: "--e40e8acfb1003a695c809555894a764886c83081aca938bd9bf0d4128727\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"go-cloud-my-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\"}\n\r\n--e40e8acfb1003a695c809555894a764886c83081aca938bd9bf0d4128727\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\n\r\n--e40e8acfb1003a695c809555894a764886c83081aca938bd9bf0d4128727--\r\n"
+    body: "--cd6cf5be8e6a5802d18c4b1cc75e055de7b0a3bf55e3bcd11c37e22b6f41\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
+      charset=utf-8\"}\n\r\n--cd6cf5be8e6a5802d18c4b1cc75e055de7b0a3bf55e3bcd11c37e22b6f41\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\n\r\n--cd6cf5be8e6a5802d18c4b1cc75e055de7b0a3bf55e3bcd11c37e22b6f41--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=e40e8acfb1003a695c809555894a764886c83081aca938bd9bf0d4128727
+      - multipart/related; boundary=cd6cf5be8e6a5802d18c4b1cc75e055de7b0a3bf55e3bcd11c37e22b6f41
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
       - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-my-test-bucket/o?alt=json&projection=full&uploadType=multipart
+    url: https://www.googleapis.com/upload/storage/v1/b/pledged-solved-practically/o?alt=json&projection=full&uploadType=multipart
     method: POST
   response:
     body: |
@@ -40,37 +40,37 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 10 Aug 2018 19:32:34 GMT
+      - Fri, 17 Aug 2018 18:05:22 GMT
       Server:
       - UploadServer
       Vary:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1533929854000"
+      - "1534529422000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
-      - "375184955034"
+      - "1039017688798"
       X-Google-Backends:
-      - hhlaxbas12:4031,/bns/hg/borg/hg/bns/blobstore2/bitpusher/6.scotty,acsfoi7:443
+      - hhlaxbax4:4020,/bns/hh/borg/hh/bns/blobstore2/bitpusher/15.scotty,acsfob5:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=UuhtW5LcC-GYxgP8lKbIDQ
+      - eid=Yg53W6a5D6S4xgOE6arQDA
       X-Google-Gfe-Request-Trace:
-      - acsfoi7:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/6.scotty,acsfoi7:443
+      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/15.scotty,acsfob5:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/6:caf3
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/15:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CJqtkNb1ChoCGAYoATpJChJjbG91ZC1zdG9yYWdlLXJvc3kSCGJpZ3N0b3JlGM7N-Oy9DCIVMTA0NTc2NDE0MDQ5NTQxMzEwMjkyMJCWAjDgKzDhKzDjK0qfARKCAXlhMjkuYy5FbHIxQldoN05aeVFDdjZxZHg3aFAwVkRxb2pSVEpQY0QxcDEydzRKXzQyVTl5LWhpa2xCU3RWaE00X1FnQUxrRi1Pd2lqSmpBOWtPZzBDMlpMS0s3WlpPcm5DVTEwTU5pSU5lMDEzUlgzemRBQm4tRDNxZUl5azZadUkwBDoWTk9UX0FfUEVSU0lTVEVOVF9UT0tFTg
+      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCUk1STlhBVU9xellLeGQwalpuVG9qanY4QzZ0TnQ4dmQ1Wl9jME9tZXpJRXpGVDdRVGV4WjFDUjNrcGpJYzB2Z1BzbWpCd2NrQ1lYaEVpcEVRZjVJQ2JHVTVkemxiNFlRaGI3cmwtNnNOZ1ZETU1mZWtoNi04QnVfVUEwBDoNMS84TzV1MVo3ODNhfg
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -80,7 +80,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UpW-rjlG4iDitHKp6kZ1d6_vOWwYjNPPgpOXBYnj_h7adWcBGII_LAaB4DIyUcRxKYw5i1dhqbgvhLGgI_BbcREi3j4JA
+      - AEnB2Upa-3xwuJK_F-WAuhVUJw5Kd21TF9KHvmXn8PmmYLqc7EtyRPK_fslsoC0Q2QzO5A9AcyEahiKq9Rx2_cc_7KRTn4c3xQ
     status: 400 Bad Request
     code: 400
     duration: ""
