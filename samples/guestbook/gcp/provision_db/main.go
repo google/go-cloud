@@ -118,7 +118,7 @@ func provisionDB(projectID, serviceAccount, dbInstance, dbName, dbPassword, sche
 	}
 	defer func() {
 		if _, err := run("docker", "kill", proxyContainerID); err != nil {
-			panic(fmt.Sprintf("killing docker container for proxy: %v", err))
+			log.Printf("failed to kill docker container for proxy: %v", err)
 		}
 	}()
 
