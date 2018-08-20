@@ -32,25 +32,23 @@ import (
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("aws/provision_db: ")
-	flags := map[string]*string{
-		"host":           flag.String("host", "", "hostname of database"),
-		"security_group": flag.String("security_group", "", "database security group"),
-		"database":       flag.String("database", "", "name of database to provision"),
-		"password":       flag.String("password", "", "root password on database"),
-		"schema":         flag.String("schema", "", "path to .sql file defining the database schema"),
-	}
+	host := flag.String("host", "", "hostname of database")
+	securityGroup := flag.String("security_group", "", "database security group")
+	database := flag.String("database", "", "name of database to provision")
+	password := flag.String("password", "", "root password on database")
+	schema := flag.String("schema", "", "path to .sql file defining the database schema")
 	flag.Parse()
 	missing := false
-	for name, val := range flags {
-		if *val == "" {
-			log.Printf("Required flag -%s not set.", name)
+	flag.VisitAll(func(f *flag.Flag) {
+		if f.Value.String() == "" {
+			log.Printf("Required flag -%s not set.", f.Name)
 			missing = true
 		}
-	}
+	})
 	if missing {
 		os.Exit(64)
 	}
-	if err := provisionDb(*flags["host"], *flags["security_group"], *flags["database"], *flags["password"], *flags["schema"]); err != nil {
+	if err := provisionDb(*host, *securityGroup, *database, *password, *schema); err != nil {
 		log.Fatal(err)
 	}
 }
