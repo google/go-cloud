@@ -34,6 +34,7 @@ simulates a bucket, and create a local message of the day. `localdb/main.go` is 
 program that runs a temporary database using Docker:
 
 ```shell
+go get ./localdb/... # Get package dependencies.
 go run localdb/main.go
 ```
 
