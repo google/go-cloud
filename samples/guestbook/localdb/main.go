@@ -39,6 +39,7 @@ func main() {
 		os.Exit(1)
 	}
 	log.SetPrefix("localdb: ")
+	log.SetFlags(0)
 	if err := runLocalDB(flag.Arg(0), *guestbookDir); err != nil {
 		log.Fatal(err)
 	}
