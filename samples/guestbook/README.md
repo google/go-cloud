@@ -30,11 +30,12 @@ go generate && go build
 ## Running Locally
 
 You will need to run a local MySQL database server, set up a directory that
-simulates a bucket, and create a local message of the day. `localdb.sh` is a
-script that runs a temporary database using Docker:
+simulates a bucket, and create a local message of the day. `localdb/main.go` is a
+program that runs a temporary database using Docker:
 
 ```shell
-./localdb.sh
+go get ./localdb/... # Get package dependencies.
+go run localdb/main.go
 ```
 
 In another terminal, you can run:
@@ -79,7 +80,7 @@ terraform init
 # and desired zone.
 terraform apply
 
-./deploy.sh
+go run deploy/main.go
 ```
 
 The deploy script will display the URL of your running service.
