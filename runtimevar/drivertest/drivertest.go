@@ -28,13 +28,13 @@ import (
 // All functions should fail the test on error.
 type Harness interface {
 	// MakeVar creates a *runtimevar.Variable to watch the given variable.
-	MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) *runtimevar.Variable
+	MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error)
 	// CreateVariable creates the variable with the given contents in the provider.
-	CreateVariable(ctx context.Context, name string, val []byte)
+	CreateVariable(ctx context.Context, name string, val []byte) error
 	// UpdateVariable updates an existing variable to have the given contents in the provider.
-	UpdateVariable(ctx context.Context, name string, val []byte)
+	UpdateVariable(ctx context.Context, name string, val []byte) error
 	// DeleteVariable deletes an existing variable in the provider.
-	DeleteVariable(ctx context.Context, name string)
+	DeleteVariable(ctx context.Context, name string) error
 	// Close is called when the test is complete.
 	Close()
 }
@@ -43,7 +43,7 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 // Functions should fail the test on error, and save t in Harness to allow
 // failing the test on errors in subsequent functions like MakeVar.
-type HarnessMaker func(t *testing.T) Harness
+type HarnessMaker func(t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.

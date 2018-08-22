@@ -35,47 +35,40 @@ import (
 const region = "us-east-2"
 
 type harness struct {
-	t       *testing.T
 	client  *Client
 	session client.ConfigProvider
 	closer  func()
 }
 
-func newHarness(t *testing.T) drivertest.Harness {
+func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, done := setup.NewAWSSession(t, region)
 	client := NewClient(context.Background(), sess)
-	return &harness{t: t, client: client, session: sess, closer: done}
+	return &harness{client: client, session: sess, closer: done}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
-	v, err := h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	return v
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+	return h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 }
 
-func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) {
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	svc := ssm.New(h.session)
-	if _, err := svc.PutParameter(&ssm.PutParameterInput{
+	_, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:      aws.String(name),
 		Type:      aws.String("String"),
 		Value:     aws.String(string(val)),
 		Overwrite: aws.Bool(true),
-	}); err != nil {
-		h.t.Fatal(err)
-	}
+	})
+	return err
 }
 
-func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) {
-	h.CreateVariable(ctx, name, val)
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
+	return h.CreateVariable(ctx, name, val)
 }
 
-func (h *harness) DeleteVariable(ctx context.Context, name string) {
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	svc := ssm.New(h.session)
-	if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)}); err != nil {
-		h.t.Fatal(err)
-	}
+	_, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)})
+	return err
 }
 
 func (h *harness) Close() {

@@ -50,12 +50,11 @@ func resourceName(name string) ResourceName {
 }
 
 type harness struct {
-	t      *testing.T
 	client *Client
 	closer func()
 }
 
-func newHarness(t *testing.T) drivertest.Harness {
+func newHarness(t *testing.T) (drivertest.Harness, error) {
 	ctx := context.Background()
 	client, done := newConfigClient(ctx, t)
 	rn := resourceName("")
@@ -68,54 +67,46 @@ func newHarness(t *testing.T) drivertest.Harness {
 		},
 	})
 	return &harness{
-		t:      t,
 		client: client,
 		closer: func() {
 			_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
 			done()
 		},
-	}
+	}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
 	rn := resourceName(name)
-	v, err := h.client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	return v
+	return h.client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 }
 
-func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) {
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	if _, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
+	_, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
 		Parent: rn.configPath(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
 			Contents: &pb.Variable_Value{Value: val},
 		},
-	}); err != nil {
-		h.t.Fatal(err)
-	}
+	})
+	return err
 }
 
-func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) {
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	if _, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+	_, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
 		Variable: &pb.Variable{
 			Name:     rn.String(),
 			Contents: &pb.Variable_Value{Value: val},
 		},
-	}); err != nil {
-		h.t.Fatal(err)
-	}
+	})
+	return err
 }
 
-func (h *harness) DeleteVariable(ctx context.Context, name string) {
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	rn := resourceName(name)
-	if _, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()}); err != nil {
-		h.t.Fatal(err)
-	}
+	_, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
+	return err
 }
 
 func (h *harness) Close() {
