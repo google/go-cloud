@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 // Package drivertest provides a conformance test for implementations of
 // driver.
 package drivertest
@@ -34,6 +34,10 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeBucket creates a *blob.Bucket to test.
+	// Multiple calls to MakeBucket during a test run must refer to	the
+	// same storage bucket; i.e., a blob created using one *blob.Bucket must
+	// be readable by a subsequent *blob.Bucket.
+	// Implementations should fail the test on failure.
 	MakeBucket(ctx context.Context, t *testing.T) *blob.Bucket
 	Close()
 }
