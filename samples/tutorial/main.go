@@ -74,7 +74,10 @@ func main() {
 		}
 
 		// Delete the blob
-		b.Delete(ctx, file)
+		err := b.Delete(ctx, file)
+		if  err != nil {
+			log.Fatalf("Failed to delete: %s", err)
+		}
 	}
 }
 

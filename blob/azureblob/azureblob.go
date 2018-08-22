@@ -1,169 +1,210 @@
 package azureblob
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
 	"strings"
+	"time"
 
+	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
-
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
-
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2017-10-01/storage"
-	mainStorage "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 type bucket struct {
-	name                string
-	containerAccessType string
-	client              *mainStorage.BlobStorageClient
+	name             string
+	PublicAccessType azblob.PublicAccessType
+	urls             serviceUrls
+	containerExists  bool
+}
+type serviceUrls struct {
+	serviceURL   *azblob.ServiceURL
+	containerURL *azblob.ContainerURL
 }
 
-// Settings for Azure Storage Account and Resource Group
+//Settings for Storage Account connections
 type Settings struct {
-	Authorizer          autorest.Authorizer
-	EnvironmentName     string
-	SubscriptionID      string
-	ResourceGroupName   string
-	StorageAccountName  string
-	StorageKey          string
-	ConnectionString    string
-	SASTokenValues      url.Values
-	ContainerAccessType string // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+	AccountName      string
+	AccountKey       string
+	PublicAccessType azblob.PublicAccessType
+	SASToken         string
+	// SASTokens can be scoped on a Blob only, in this case attempting to create or read container metadata will result in an AuthorizationFailure exception. To bypass this, set value to false.
+	// Setting value to false assumes the container exists
+	ContainerExists bool
 }
 
-// OpenBucket Open a new Azure Storage Container Bucket
-func OpenBucket(ctx context.Context, blobSettings *Settings, containerName string) (*blob.Bucket, error) {
+// See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
+const (
+	// PublicAccessBlob
+	PublicAccessBlob azblob.PublicAccessType = azblob.PublicAccessBlob
+	// PublicAccessContainer
+	PublicAccessContainer azblob.PublicAccessType = azblob.PublicAccessContainer
+	// PublicAccessNone represents an empty PublicAccessType.
+	PublicAccessNone azblob.PublicAccessType = azblob.PublicAccessNone
+)
 
-	var blobClient mainStorage.BlobStorageClient
-
-	// Use Connection String or Fetch Access Key from the Storage Account
-	if blobSettings.ConnectionString != "" {
-		storageClient, e := mainStorage.NewClientFromConnectionString(blobSettings.ConnectionString)
-		if e == nil {
-			blobClient = storageClient.GetBlobService()
-		} else {
-			return nil, e
-		}
-	} else if blobSettings.StorageAccountName != "" && blobSettings.SASTokenValues != nil {
-		if blobSettings.StorageAccountName == "" {
-			return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
-		}
-		environment, err := azure.EnvironmentFromName(blobSettings.EnvironmentName)
-		if err != nil {
-			return nil, fmt.Errorf("Azure Environment %q is invalid", blobSettings.EnvironmentName)
-		}
-
-		storageClient := mainStorage.NewAccountSASClient(blobSettings.StorageAccountName, blobSettings.SASTokenValues, environment)
-		blobClient = storageClient.GetBlobService()
+//OpenBucket returns a new Azure Blob Bucket
+func OpenBucket(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
+	if settings.SASToken != "" {
+		return initBucketWithSASToken(ctx, settings, containerName)
 	} else {
 
-		if blobSettings.Authorizer == nil {
-			return nil, fmt.Errorf("AzureBlobSettings.Authorizer is not set")
-		}
-		if blobSettings.EnvironmentName == "" {
-			return nil, fmt.Errorf("AzureBlobSettings.EnvironmentName is not set")
-		}
-		if blobSettings.ResourceGroupName == "" {
-			return nil, fmt.Errorf("AzureBlobSettings.ResourceGroupName is not set")
-		}
-		if blobSettings.StorageAccountName == "" {
-			return nil, fmt.Errorf("AzureBlobSettings.StorageAccountName is not set")
-		}
-		if blobSettings.SubscriptionID == "" {
-			return nil, fmt.Errorf("AzureBlobSettings.SubscriptionId is not set")
-		}
+		return initBucketWithAccountKey(ctx, settings, containerName)
+	}
+}
 
-		environment, err := azure.EnvironmentFromName(blobSettings.EnvironmentName)
-		if err != nil {
-			return nil, fmt.Errorf("Azure Environment %q is invalid", blobSettings.EnvironmentName)
-		}
-
-		canFetchKey := (blobSettings.StorageKey == "" && blobSettings.Authorizer != nil)
-		if !canFetchKey {
-			return nil, fmt.Errorf("Cannot retrieve AccessKey for Account %q without Authorizer", blobSettings.StorageAccountName)
-		}
-
-		accountClient := storage.NewAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, blobSettings.SubscriptionID)
-		accountClient.Authorizer = blobSettings.Authorizer
-		accountClient.Sender = autorest.CreateSender(WithRequestLogging())
-
-		key, err := GetStorageAccountKey(&accountClient, blobSettings.ResourceGroupName, blobSettings.StorageAccountName)
-		if err != nil {
-			return nil, err
-		} 		
-		
-		blobSettings.StorageKey = key
-		
-		storageClient, err := mainStorage.NewClient(blobSettings.StorageAccountName, blobSettings.StorageKey, environment.StorageEndpointSuffix,
-			mainStorage.DefaultAPIVersion, true)
-
-		if err != nil {
-			return nil, fmt.Errorf("Error creating storage client for storage storeAccount %q: %s", blobSettings.StorageAccountName, err)
-		}
-		
-		blobClient = storageClient.GetBlobService()
+func initBucketWithSASToken(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
+	if settings.AccountName == "" {
+		return nil, fmt.Errorf("Settings.AccountName is not set")
 	}
 
+	if settings.SASToken == "" {
+		return nil, fmt.Errorf("Settings.SASToken is not set")
+	}
+
+	credentials := azblob.NewAnonymousCredential()
+	p := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+
+	u := makeBlobStorageURL(settings.AccountName)
+	u.RawQuery = settings.SASToken
+
+	serviceURL := azblob.NewServiceURL(*u, p)
+	containerURL := serviceURL.NewContainerURL(containerName)
+
 	return blob.NewBucket(&bucket{
-		name:                containerName,
-		containerAccessType: blobSettings.ContainerAccessType,
-		client:              &blobClient,
+		name:             containerName,
+		PublicAccessType: settings.PublicAccessType,
+		containerExists:  settings.ContainerExists,
+		urls: serviceUrls{
+			serviceURL:   &serviceURL,
+			containerURL: &containerURL,
+		},
 	}), nil
+}
+
+func initBucketWithAccountKey(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
+	if settings.AccountName == "" {
+		return nil, fmt.Errorf("Settings.AccountName is not set")
+	}
+
+	if settings.AccountKey == "" {
+		return nil, fmt.Errorf("Settings.AccountKey is not set")
+	}
+
+	credentials := azblob.NewSharedKeyCredential(settings.AccountName, settings.AccountKey)
+	p := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+	u := makeBlobStorageURL(settings.AccountName)
+
+	serviceURL := azblob.NewServiceURL(*u, p)
+	containerURL := serviceURL.NewContainerURL(containerName)
+
+	return blob.NewBucket(&bucket{
+		name:             containerName,
+		PublicAccessType: settings.PublicAccessType,
+		containerExists:  settings.ContainerExists,
+		urls: serviceUrls{
+			serviceURL:   &serviceURL,
+			containerURL: &containerURL,
+		},
+	}), nil
+}
+
+func makeBlobStorageURL(accountName string) *url.URL {
+	endpoint := fmt.Sprintf("https://%s.blob.core.windows.net", accountName)
+	u, _ := url.Parse(endpoint)
+	return u
+}
+
+func (b *bucket) Delete(ctx context.Context, key string) error {
+	// check if the container exists
+	_, err := b.urls.containerURL.GetProperties(ctx, azblob.LeaseAccessConditions{})
+	if err != nil {
+		if serr, ok := err.(azblob.StorageError); ok {
+			switch serr.ServiceCode() {
+			case azblob.ServiceCodeContainerNotFound:
+			case azblob.ServiceCodeContainerBeingDeleted:
+				return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+
+			case azblob.ServiceCodeAuthenticationFailed:
+			case "AuthorizationFailure":
+				// SASToken could be scoped to the blob only
+				if !b.containerExists {
+					return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
+				}
+			default:
+				return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+			}
+		}
+	}
+
+	blobURL := b.urls.containerURL.NewBlockBlobURL(key)
+	_, err = blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+	return err
 }
 
 type reader struct {
 	body        io.ReadCloser
 	size        int64
 	contentType string
+	modTime     time.Time
 }
 
 // NewRangeReader returns a reader that reads part of an object, reading at most
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	theContainer := b.client.GetContainerReference(b.name)
+	// check if the container exists
+	_, err := b.urls.containerURL.GetProperties(ctx, azblob.LeaseAccessConditions{})
+	if err != nil {
+		if serr, ok := err.(azblob.StorageError); ok {
+			switch serr.ServiceCode() {
+			case azblob.ServiceCodeContainerNotFound:
+				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 
-	exists, err := theContainer.Exists()
-	if !exists {
-		empty := ioutil.NopCloser(strings.NewReader(""))
-		return &reader{body: empty}, err
+			case azblob.ServiceCodeAuthenticationFailed:
+			case "AuthorizationFailure":
+				// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
+				if !b.containerExists {
+					// Assume container exist, blob operations will succeed/fail based on SASToken scope
+					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
+				}
+
+				break
+
+			default:
+				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+			}
+		}
 	}
 
-	theBlob := theContainer.GetBlobReference(key)
-	theBlob.GetProperties(nil)
+	// make url reference to the blob
+	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
+	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
-	if theBlob == nil {
-		return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+	// determine content end for reader
+	end := length
+	if err == nil {
+		if end < 0 {
+			end = blobPropertiesResponse.ContentLength()
+		}
 	}
 
-	if length != 0 {
-
-		var ioReader io.ReadCloser
-		rangeEnd := length
-		if length < 0 {
-			rangeEnd = theBlob.Properties.ContentLength
-		}
-
-		if length > 0 {
-			rangeEnd = offset + length
-		}
-
-		readRange := mainStorage.BlobRange{Start: uint64(offset), End: uint64(rangeEnd)}
-		ioReader, err = theBlob.GetRange(&mainStorage.GetBlobRangeOptions{Range: &readRange})
+	// return content reader
+	if end > 0 {
+		blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
 		if err != nil {
 			return nil, err
-		} 		
-		return &reader{body: ioReader, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil		
+		}
+		return &reader{body: blobDownloadResponse.Response().Body, contentType: blobPropertiesResponse.ContentType(), size: blobPropertiesResponse.ContentLength(), modTime: blobPropertiesResponse.LastModified()}, nil
 	}
-	 
-	empty := ioutil.NopCloser(strings.NewReader(""))
-	return &reader{body: empty, contentType: theBlob.Properties.ContentType, size: theBlob.Properties.ContentLength}, nil	
+
+	// return metadata reader
+	emptyReader := ioutil.NopCloser(strings.NewReader(""))
+	return &reader{body: emptyReader, contentType: blobPropertiesResponse.ContentType(), size: blobPropertiesResponse.ContentLength(), modTime: blobPropertiesResponse.LastModified()}, nil
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -185,8 +226,7 @@ type writer struct {
 	w *io.PipeWriter
 	r *io.PipeReader
 
-	container *mainStorage.Container
-	blob      *mainStorage.Blob
+	urls *serviceUrls
 
 	key         string
 	contentType string
@@ -209,24 +249,37 @@ type writer struct {
 // Delete deletes the object associated with key. It is a no-op if that object
 // does not exist.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
 
-	theContainer := b.client.GetContainerReference(b.name)
-	_, err := theContainer.CreateIfNotExists(&mainStorage.CreateContainerOptions{Access: mainStorage.ContainerAccessType(b.containerAccessType)})
-
-	if err != nil {
-		return nil, err
+	if !b.containerExists {
+		_, err := containerURL.Create(ctx, nil, b.PublicAccessType)
+		if err != nil {
+			if serr, ok := err.(azblob.StorageError); ok {
+				switch serr.ServiceCode() {
+				case azblob.ServiceCodeContainerAlreadyExists:
+					// Can be thrown if container already exist, ignore and continue
+					break
+				case azblob.ServiceCodeAuthenticationFailed:
+				case "AuthorizationFailure":
+					// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
+					// Assume container exist, blob operations will succeed/fail based on SASToken scope
+					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
+				default:
+					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+				}
+			}
+		}
 	}
-
-	theBlob := theContainer.GetBlobReference(key)
-	theBlob.Properties.ContentType = contentType
 
 	w := &writer{
 		ctx:         ctx,
-		container:   theContainer,
-		blob:        theBlob,
 		key:         key,
 		contentType: contentType,
-		donec:       make(chan struct{}),
+		urls: &serviceUrls{
+			serviceURL:   b.urls.serviceURL,
+			containerURL: &containerURL,
+		},
+		donec: make(chan struct{}),
 	}
 
 	return w, nil
@@ -247,21 +300,23 @@ func (w *writer) Write(p []byte) (int, error) {
 }
 
 func (w *writer) open() error {
-
 	pr, pw := io.Pipe()
 	w.w = pw
 	w.r = pr
 
 	go func() {
-
 		defer close(w.donec)
-
-		w.err = w.blob.CreateBlockBlobFromReader(w.r, nil)
-
-		if w.err == nil {
-			w.blob.SetProperties(nil)
-		} else {
+		var buf []byte
+		buf, w.err = ioutil.ReadAll(w.r)
+		if w.err != nil {
 			w.r.CloseWithError(w.err)
+		} else {
+			blockBlobURL := w.urls.containerURL.NewBlockBlobURL(w.key)
+			_, w.err = blockBlobURL.Upload(w.ctx, bytes.NewReader(buf), azblob.BlobHTTPHeaders{}, nil, azblob.BlobAccessConditions{})
+
+			if w.err != nil {
+				w.r.CloseWithError(w.err)
+			}
 		}
 	}()
 
@@ -272,38 +327,11 @@ func (w *writer) open() error {
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {
-
-	if w.w == nil {
-		w.touch()
-	} else if err := w.w.Close(); err != nil {
+	if err := w.w.Close(); err != nil {
 		return err
 	}
 	<-w.donec
 	return w.err
-}
-
-// touch creates an empty object in the bucket. It is called if user creates a
-// new writer but never calls write before closing it.
-func (w *writer) touch() {
-	if w.w != nil {
-		return
-	}
-	defer close(w.donec)
-	w.err = w.blob.CreateBlockBlob(nil)
-}
-
-// this deletes a file within a container
-func (b *bucket) Delete(ctx context.Context, key string) error {
-	theContainer := b.client.GetContainerReference(b.name)
-	exists, _ := theContainer.Exists()
-
-	if exists {
-		theBlob := theContainer.GetBlobReference(key)
-		_, err := theBlob.DeleteIfExists(nil)
-		return err
-	}
-
-	return nil
 }
 
 type azureError struct {
