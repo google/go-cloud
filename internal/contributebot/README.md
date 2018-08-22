@@ -23,7 +23,7 @@ To set up your own instance of Contribute Bot for local testing or deployment:
     `PROJECTID` is the project's ID.
 1.  Enable App Engine with `gcloud app create`.
 1.  Copy the `prod` directory to a directory called `dev`.
-1.  In `dev/main.tf`, Remove the `backend "gcs"` block and change the project
+1.  In `dev/main.tf`, remove the `backend "gcs"` block and change the project
     IDs to your new GCP project.
 1.  Run `terraform init` from the new `dev` directory.
 1.  Run `terraform apply` to set up the infrastructure.
