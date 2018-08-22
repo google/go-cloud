@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 		return
 	}
 	if err := startApp(); err != nil {
-		log.Fatal("startApp:", err)
+		log.Fatal("startApp: ", err)
 	}
 	os.Exit(m.Run())
 }
@@ -74,7 +74,7 @@ func TestMain(m *testing.M) {
 func startApp() error {
 	signer, err := signerFromFile(sshKeyPath)
 	if err != nil {
-		return fmt.Errorf("cannot get key from file: %v", err)
+		return fmt.Errorf("cannot get key from file %s: %v", sshKeyPath, err)
 	}
 	config := &ssh.ClientConfig{
 		User: sshUser,
