@@ -63,3 +63,23 @@ GitHub notifications can be noisy, and it is unfortunately easy for things to be
 
 Once your PR is approved (hooray!) the reviewer will squash your commits into a single commit, and then merge the commit onto the Go Cloud master branch. Thank you!
 
+### Squashing
+
+(This section is for project members.)
+
+When you are squashing-and-merging a pull request into master, please edit the
+commit message to fit in with the project conventions. In particular:
+
+-   Ensure that the first line summary starts with the primary package affected,
+    followed by a colon, followed by a short summary of the change, like
+    "blob/gcsblob: made more blobby (#123)".
+-   If the change is addressing an issue, make the commit message ends with a
+    block of "Updates #123" and/or "Fixes #456", one issue number per line.
+-   Don't include the automatically added code-review commit lines like "Fixed
+    some stuff" or "Addressed feedback".
+
+[#317][] and [#318][] are tracking improvements to Contribute Bot to
+automatically warn for some of these problems.
+
+[#317]: https://github.com/google/go-cloud/issues/317
+[#318]: https://github.com/google/go-cloud/issues/318
