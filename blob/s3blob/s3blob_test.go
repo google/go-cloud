@@ -37,22 +37,17 @@ const (
 )
 
 type harness struct {
-	t       *testing.T
 	session *session.Session
 	closer  func()
 }
 
-func newHarness(ctx context.Context, t *testing.T) drivertest.Harness {
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, done := setup.NewAWSSession(t, region)
-	return &harness{t: t, session: sess, closer: done}
+	return &harness{session: sess, closer: done}, nil
 }
 
-func (h *harness) MakeBucket(ctx context.Context) *blob.Bucket {
-	b, err := OpenBucket(ctx, h.session, bucketName)
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	return b
+func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
+	return OpenBucket(ctx, h.session, bucketName)
 }
 
 func (h *harness) Close() {

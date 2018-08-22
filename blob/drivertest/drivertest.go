@@ -32,21 +32,18 @@ import (
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
-// Implementations should fail the test on any failure.
 type Harness interface {
 	// MakeBucket creates a *blob.Bucket to test.
 	// Multiple calls to MakeBucket during a test run must refer to	the
 	// same storage bucket; i.e., a blob created using one *blob.Bucket must
 	// be readable by a subsequent *blob.Bucket.
-	MakeBucket(ctx context.Context) *blob.Bucket
+	MakeBucket(ctx context.Context) (*blob.Bucket, error)
 	Close()
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
-// Functions should fail the test on error, and save t so that they can
-// fail the test for failures in subsequent function calls like MakeBucket.
-type HarnessMaker func(ctx context.Context, t *testing.T) Harness
+type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
@@ -128,9 +125,15 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 
 	// Creates a blob for sub-tests below.
 	init := func(t *testing.T) (*blob.Bucket, func()) {
-		h := newHarness(ctx, t)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		b := h.MakeBucket(ctx)
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 		w, err := b.NewWriter(ctx, key, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -194,9 +197,14 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 
 	// Creates a blob for sub-tests below.
 	init := func(t *testing.T) (*blob.Bucket, func()) {
-		h := newHarness(ctx, t)
-
-		b := h.MakeBucket(ctx)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
@@ -378,9 +386,15 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			h := newHarness(ctx, t)
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer h.Close()
-			b := h.MakeBucket(ctx)
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Write the content.
 			opts := &blob.WriterOptions{
@@ -440,11 +454,17 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 
 	ctx := context.Background()
 	t.Run("NonExistentFails", func(t *testing.T) {
-		h := newHarness(ctx, t)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer h.Close()
-		b := h.MakeBucket(ctx)
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-		err := b.Delete(ctx, "does-not-exist")
+		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
 			t.Errorf("want error, got nil")
 		} else if !blob.IsNotExist(err) {
@@ -453,9 +473,15 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	})
 
 	t.Run("Works", func(t *testing.T) {
-		h := newHarness(ctx, t)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer h.Close()
-		b := h.MakeBucket(ctx)
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		// Create the blob.
 		writer, err := b.NewWriter(ctx, key, nil)

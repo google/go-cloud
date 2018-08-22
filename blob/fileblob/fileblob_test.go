@@ -27,29 +27,23 @@ import (
 )
 
 type harness struct {
-	t      *testing.T
 	dir    string
 	closer func()
 }
 
-func newHarness(ctx context.Context, t *testing.T) drivertest.Harness {
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	dir := path.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
 	return &harness{
-		t:      t,
 		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
-	}
+	}, nil
 }
 
-func (h *harness) MakeBucket(ctx context.Context) *blob.Bucket {
-	b, err := NewBucket(h.dir)
-	if err != nil {
-		h.t.Fatal(err)
-	}
-	return b
+func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
+	return NewBucket(h.dir)
 }
 
 func (h *harness) Close() {
