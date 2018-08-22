@@ -129,10 +129,19 @@ func scrubRecording(filepath string) error {
 		return err
 	}
 
+	keep := make([]*cassette.Interaction, 0, len(c.Interactions))
 	c.Mu.Lock()
 	for _, action := range c.Interactions {
+		if action.Response.Code == 429 {
+			// Too Many Requests, client will retry; it's safe
+			// to drop these for the replay.
+			continue
+		}
 		action.Request.Headers.Del("Authorization")
+		action.Response.Duration = ""
+		keep = append(keep, action)
 	}
+	c.Interactions = keep
 	c.Mu.Unlock()
 	return c.Save()
 }
