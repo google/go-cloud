@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/drivertest"
 	"github.com/google/go-cmp/cmp"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 )
@@ -40,13 +41,92 @@ const (
 	description = "Config for test variables created by runtimeconfigurator_test.go"
 )
 
+func resourceName(name string) ResourceName {
+	return ResourceName{
+		ProjectID: projectID,
+		Config:    config,
+		Variable:  name,
+	}
+}
+
+type harness struct {
+	client *Client
+	closer func()
+}
+
+func newHarness(t *testing.T) (drivertest.Harness, error) {
+	ctx := context.Background()
+	client, done := newConfigClient(ctx, t)
+	rn := resourceName("")
+	// Ignore errors if the config already exists.
+	_, _ = client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
+		Parent: "projects/" + rn.ProjectID,
+		Config: &pb.RuntimeConfig{
+			Name:        rn.configPath(),
+			Description: t.Name(),
+		},
+	})
+	return &harness{
+		client: client,
+		closer: func() {
+			_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+			done()
+		},
+	}, nil
+}
+
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+	rn := resourceName(name)
+	return h.client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+}
+
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
+	rn := resourceName(name)
+	_, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
+		Parent: rn.configPath(),
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: val},
+		},
+	})
+	return err
+}
+
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
+	rn := resourceName(name)
+	_, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+		Variable: &pb.Variable{
+			Name:     rn.String(),
+			Contents: &pb.Variable_Value{Value: val},
+		},
+	})
+	return err
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
+	rn := resourceName(name)
+	_, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
+	return err
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// GCP-specific unit tests.
+// TODO(rvangent): Delete most of these as they are moved into drivertest.
+
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
 
 func TestInitialStringWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "initial-string-watch.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -80,7 +160,7 @@ func TestInitialStringWatch(t *testing.T) {
 func TestInitialJSONWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "initial-json-watch.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -119,7 +199,7 @@ func TestInitialJSONWatch(t *testing.T) {
 func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-cancel.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -146,7 +226,7 @@ func TestContextCanceledBeforeFirstWatch(t *testing.T) {
 func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-inbetween-cancel.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -184,7 +264,7 @@ func TestContextCanceledInbetweenWatchCalls(t *testing.T) {
 func TestWatchObservesChange(t *testing.T) {
 	ctx := context.Background()
 
-	client, done := newConfigClient(ctx, t, "watch-observes-change.replay")
+	client, done := newConfigClient(ctx, t)
 	defer done()
 
 	rn := ResourceName{
@@ -229,7 +309,7 @@ func TestWatchObservesChange(t *testing.T) {
 	}
 }
 
-func newConfigClient(ctx context.Context, t *testing.T, filepath string) (*Client, func()) {
+func newConfigClient(ctx context.Context, t *testing.T) (*Client, func()) {
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
 	return NewClient(pb.NewRuntimeConfigManagerClient(conn)), done
 }
