@@ -30,6 +30,7 @@ import (
 )
 
 type harness struct {
+	t      *testing.T
 	dir    string
 	closer func()
 }
@@ -40,35 +41,36 @@ func newHarness(t *testing.T) drivertest.Harness {
 		t.Fatal(err)
 	}
 	return &harness{
+		t:      t,
 		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
 	}
 }
 
-func (h *harness) MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	path := filepath.Join(h.dir, name)
 	v, err := NewVariable(path, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 	return v
 }
 
-func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) {
 	path := filepath.Join(h.dir, name)
 	if err := ioutil.WriteFile(path, val, 0666); err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 }
 
-func (h *harness) UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
-	h.CreateVariable(ctx, t, name, val)
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) {
+	h.CreateVariable(ctx, name, val)
 }
 
-func (h *harness) DeleteVariable(ctx context.Context, t *testing.T, name string) {
+func (h *harness) DeleteVariable(ctx context.Context, name string) {
 	path := filepath.Join(h.dir, name)
 	if err := os.Remove(path); err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 }
 

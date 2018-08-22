@@ -35,6 +35,7 @@ import (
 const region = "us-east-2"
 
 type harness struct {
+	t       *testing.T
 	client  *Client
 	session client.ConfigProvider
 	closer  func()
@@ -43,18 +44,18 @@ type harness struct {
 func newHarness(t *testing.T) drivertest.Harness {
 	sess, done := setup.NewAWSSession(t, region)
 	client := NewClient(context.Background(), sess)
-	return &harness{client: client, session: sess, closer: done}
+	return &harness{t: t, client: client, session: sess, closer: done}
 }
 
-func (h *harness) MakeVar(ctx context.Context, t *testing.T, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	v, err := h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
 	if err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 	return v
 }
 
-func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) {
 	svc := ssm.New(h.session)
 	if _, err := svc.PutParameter(&ssm.PutParameterInput{
 		Name:      aws.String(name),
@@ -62,18 +63,18 @@ func (h *harness) CreateVariable(ctx context.Context, t *testing.T, name string,
 		Value:     aws.String(string(val)),
 		Overwrite: aws.Bool(true),
 	}); err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 }
 
-func (h *harness) UpdateVariable(ctx context.Context, t *testing.T, name string, val []byte) {
-	h.CreateVariable(ctx, t, name, val)
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) {
+	h.CreateVariable(ctx, name, val)
 }
 
-func (h *harness) DeleteVariable(ctx context.Context, t *testing.T, name string) {
+func (h *harness) DeleteVariable(ctx context.Context, name string) {
 	svc := ssm.New(h.session)
 	if _, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)}); err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 }
 
