@@ -2,17 +2,18 @@
 version: 1
 interactions:
 - request:
-    body: '{"Name":"test-watch-observes-change","Overwrite":true,"Type":"String","Value":"foo"}'
+    body: '{"Name":"test-config-variable","Overwrite":true,"Type":"String","Value":"hello
+      world"}'
     form: {}
     headers:
       Content-Length:
-      - "84"
+      - "86"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234135Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -23,80 +24,111 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:35 GMT
       X-Amzn-Requestid:
-      - ebf13a98-7166-4fe8-bb38-4d4c9bf675ce
+      - 56ab2fc3-ca6d-4d64-9166-e1514f606743
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-watch-observes-change"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "37"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234136Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-watch-observes-change","LastModifiedDate":1.533929519341E9,"Name":"test-watch-observes-change","Type":"String","Value":"foo","Version":1}}'
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.534981296419E9,"Name":"test-config-variable","Type":"String","Value":"hello
+      world","Version":1}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:35 GMT
       X-Amzn-Requestid:
-      - 4348924e-345a-42b6-ac29-ae0d4cebedb9
+      - 08e3e449-381a-4c02-915d-82f1604b5f65
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Filters":[{"Key":"Name","Values":["test-watch-observes-change"]}]}'
+    body: '{"Filters":[{"Key":"Name","Values":["test-config-variable"]}]}'
     form: {}
     headers:
       Content-Length:
-      - "68"
+      - "62"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234136Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.533929519341E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-watch-observes-change","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.534981296419E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-config-variable","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:36 GMT
       X-Amzn-Requestid:
-      - f52e111e-5fc0-42ff-805f-412da0f16fa1
+      - bf3bc1fe-ef35-47c6-856e-bec2d5f40246
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-watch-observes-change","Overwrite":true,"Type":"String","Value":"bar"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "84"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234136Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.534981296419E9,"Name":"test-config-variable","Type":"String","Value":"hello
+      world","Version":1}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Wed, 22 Aug 2018 23:41:36 GMT
+      X-Amzn-Requestid:
+      - a65d91b3-c80d-458b-8e4a-314537fc4881
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-config-variable","Overwrite":true,"Type":"String","Value":"goodbye
+      world"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "88"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Date:
+      - 20180822T234136Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -107,80 +139,81 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:36 GMT
       X-Amzn-Requestid:
-      - 44f44bb7-73dd-4839-9c7c-c125a770f188
+      - c97bb9e5-c17f-429f-9fbb-b079af814b33
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-watch-observes-change"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "37"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234137Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-watch-observes-change","LastModifiedDate":1.533929519714E9,"Name":"test-watch-observes-change","Type":"String","Value":"bar","Version":2}}'
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.534981296832E9,"Name":"test-config-variable","Type":"String","Value":"goodbye
+      world","Version":2}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:36 GMT
       X-Amzn-Requestid:
-      - 81d1b03a-263f-4465-b75c-c5d330161eaa
+      - decf0f64-58b5-444a-83ae-a35234861e37
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Filters":[{"Key":"Name","Values":["test-watch-observes-change"]}]}'
+    body: '{"Filters":[{"Key":"Name","Values":["test-config-variable"]}]}'
     form: {}
     headers:
       Content-Length:
-      - "68"
+      - "62"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193159Z
+      - 20180822T234137Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.533929519714E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-watch-observes-change","Policies":[],"Type":"String","Version":2}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.534981296832E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-config-variable","Policies":[],"Type":"String","Version":2}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:37 GMT
       X-Amzn-Requestid:
-      - eade75bf-e330-4348-9d03-e5c383d030c8
+      - 1e32f54a-8c50-4553-9ab7-f93e2ff122f9
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-watch-observes-change"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "37"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193200Z
+      - 20180822T234137Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -191,9 +224,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:59 GMT
+      - Wed, 22 Aug 2018 23:41:37 GMT
       X-Amzn-Requestid:
-      - 5617a5e7-c799-4ca6-b956-a026e76d3e5c
+      - 01a88f38-155d-4469-b2e5-854bee6463d6
     status: 200 OK
     code: 200
     duration: ""

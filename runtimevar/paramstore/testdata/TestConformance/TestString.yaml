@@ -2,18 +2,18 @@
 version: 1
 interactions:
 - request:
-    body: '{"Name":"test-good-param","Overwrite":true,"Type":"String","Value":"Jolly
-      snowman to test Unicode handling: ☃️"}'
+    body: '{"Name":"test-config-variable","Overwrite":true,"Type":"String","Value":"hello
+      world"}'
     form: {}
     headers:
       Content-Length:
-      - "116"
+      - "86"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193155Z
+      - 20180822T232835Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -24,81 +24,81 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:54 GMT
+      - Wed, 22 Aug 2018 23:28:34 GMT
       X-Amzn-Requestid:
-      - 6d418c9c-c0a2-446d-9ff9-a162c971f9ab
+      - 96339618-7431-4937-9fc8-326781e2508d
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-good-param"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "26"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193155Z
+      - 20180822T232835Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-good-param","LastModifiedDate":1.533929515532E9,"Name":"test-good-param","Type":"String","Value":"Jolly
-      snowman to test Unicode handling: ☃️","Version":1}}'
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.534980515255E9,"Name":"test-config-variable","Type":"String","Value":"hello
+      world","Version":1}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:55 GMT
+      - Wed, 22 Aug 2018 23:28:34 GMT
       X-Amzn-Requestid:
-      - 9dc16adb-415c-471b-a392-7ab625d1b816
+      - cda52f45-2062-44ef-8fa0-5d9496d819d5
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Filters":[{"Key":"Name","Values":["test-good-param"]}]}'
+    body: '{"Filters":[{"Key":"Name","Values":["test-config-variable"]}]}'
     form: {}
     headers:
       Content-Length:
-      - "57"
+      - "62"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193155Z
+      - 20180822T232835Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.533929515532E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-good-param","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.534980515255E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-config-variable","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:55 GMT
+      - Wed, 22 Aug 2018 23:28:34 GMT
       X-Amzn-Requestid:
-      - 40e338e8-0630-4a8e-b1e0-29e176042f03
+      - cf1c11eb-2e41-4401-9d97-4c4b114c2f45
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-good-param"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
-      - "26"
+      - "31"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193155Z
+      - 20180822T232835Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -109,9 +109,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:31:55 GMT
+      - Wed, 22 Aug 2018 23:28:34 GMT
       X-Amzn-Requestid:
-      - 620001f9-789a-4624-ba3d-fbec44449013
+      - 4711aa9f-e7b4-441e-acb2-16b5f2748f8e
     status: 200 OK
     code: 200
     duration: ""
