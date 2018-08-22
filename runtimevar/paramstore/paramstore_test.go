@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/drivertest"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -32,6 +33,54 @@ import (
 // 1. Update this constant to your AWS region.
 // TODO(issue #300): Use Terraform to get this.
 const region = "us-east-2"
+
+type harness struct {
+	client  *Client
+	session client.ConfigProvider
+	closer  func()
+}
+
+func newHarness(t *testing.T) (drivertest.Harness, error) {
+	sess, done := setup.NewAWSSession(t, region)
+	client := NewClient(context.Background(), sess)
+	return &harness{client: client, session: sess, closer: done}, nil
+}
+
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+	return h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+}
+
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
+	svc := ssm.New(h.session)
+	_, err := svc.PutParameter(&ssm.PutParameterInput{
+		Name:      aws.String(name),
+		Type:      aws.String("String"),
+		Value:     aws.String(string(val)),
+		Overwrite: aws.Bool(true),
+	})
+	return err
+}
+
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
+	return h.CreateVariable(ctx, name, val)
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
+	svc := ssm.New(h.session)
+	_, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)})
+	return err
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// paramstore-specific unit tests.
+// TODO(rvangent): Delete most of these as they are moved into drivertest.
 
 // TestWriteReadDelete attempts to write, read and then delete parameters from Parameter Store.
 // This test can't be broken up into separate Test(Write|Read|Delete) tests
