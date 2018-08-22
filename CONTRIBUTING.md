@@ -73,7 +73,7 @@ commit message to fit in with the project conventions. In particular:
 -   Ensure that the first line summary starts with the primary package affected,
     followed by a colon, followed by a short summary of the change, like
     "blob/gcsblob: made more blobby (#123)".
--   If the change is addressing an issue, make the commit message ends with a
+-   If the change is addressing an issue, make the commit message end with a
     block of "Updates #123" and/or "Fixes #456", one issue number per line.
 -   Don't include the automatically added code-review commit lines like "Fixed
     some stuff" or "Addressed feedback".
