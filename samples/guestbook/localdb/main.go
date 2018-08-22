@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-pipe/pipe"
+	pipe "gopkg.in/pipe.v2"
 )
 
 func main() {
