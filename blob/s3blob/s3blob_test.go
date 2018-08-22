@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
@@ -35,17 +36,24 @@ const (
 	region     = "us-east-2"
 )
 
-// makeBucket creates a *blob.Bucket and a function to close it after the test
-// is done. It fails the test if the creation fails.
-func makeBucket(t *testing.T) (*blob.Bucket, func()) {
-	ctx := context.Background()
-	sess, done := setup.NewAWSSession(t, region)
-	b, err := OpenBucket(ctx, sess, bucketName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b, done
+type harness struct {
+	session *session.Session
+	closer  func()
 }
+
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	sess, done := setup.NewAWSSession(t, region)
+	return &harness{session: sess, closer: done}, nil
+}
+
+func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
+	return OpenBucket(ctx, h.session, bucketName)
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeBucket, "../testdata")
+	drivertest.RunConformanceTests(t, newHarness, "../testdata")
 }

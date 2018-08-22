@@ -25,8 +25,55 @@ import (
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"github.com/google/go-cloud/runtimevar/drivertest"
 	"github.com/google/go-cmp/cmp"
 )
+
+type harness struct {
+	dir    string
+	closer func()
+}
+
+func newHarness(t *testing.T) (drivertest.Harness, error) {
+	dir, err := ioutil.TempDir("", "filevar_test-")
+	if err != nil {
+		return nil, err
+	}
+	return &harness{
+		dir:    dir,
+		closer: func() { _ = os.RemoveAll(dir) },
+	}, nil
+}
+
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+	path := filepath.Join(h.dir, name)
+	return NewVariable(path, decoder, &WatchOptions{WaitTime: 5 * time.Millisecond})
+}
+
+func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
+	path := filepath.Join(h.dir, name)
+	return ioutil.WriteFile(path, val, 0666)
+}
+
+func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
+	return h.CreateVariable(ctx, name, val)
+}
+
+func (h *harness) DeleteVariable(ctx context.Context, name string) error {
+	path := filepath.Join(h.dir, name)
+	return os.Remove(path)
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// File-specific unit tests.
+// TODO(rvangent): Delete most of these as they are moved into drivertest.
 
 // Ensure that watcher implements driver.Watcher.
 var _ driver.Watcher = &watcher{}
