@@ -27,6 +27,7 @@ import (
 )
 
 type harness struct {
+	t      *testing.T
 	dir    string
 	closer func()
 }
@@ -36,13 +37,17 @@ func newHarness(ctx context.Context, t *testing.T) drivertest.Harness {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	return &harness{dir: dir, closer: func() { _ = os.RemoveAll(dir) }}
+	return &harness{
+		t:      t,
+		dir:    dir,
+		closer: func() { _ = os.RemoveAll(dir) },
+	}
 }
 
-func (h *harness) MakeBucket(ctx context.Context, t *testing.T) *blob.Bucket {
+func (h *harness) MakeBucket(ctx context.Context) *blob.Bucket {
 	b, err := NewBucket(h.dir)
 	if err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 	return b
 }

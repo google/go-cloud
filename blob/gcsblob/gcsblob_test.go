@@ -35,19 +35,20 @@ import (
 const bucketName = "pledged-solved-practically"
 
 type harness struct {
+	t      *testing.T
 	client *gcp.HTTPClient
 	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) drivertest.Harness {
 	client, done := setup.NewGCPClient(ctx, t)
-	return &harness{client: client, closer: done}
+	return &harness{t: t, client: client, closer: done}
 }
 
-func (h *harness) MakeBucket(ctx context.Context, t *testing.T) *blob.Bucket {
+func (h *harness) MakeBucket(ctx context.Context) *blob.Bucket {
 	b, err := OpenBucket(ctx, bucketName, h.client)
 	if err != nil {
-		t.Fatal(err)
+		h.t.Fatal(err)
 	}
 	return b
 }
