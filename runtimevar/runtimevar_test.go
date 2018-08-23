@@ -18,77 +18,15 @@ package runtimevar_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
-
-// fakeWatcher is a fake implementation of driver.Watcher meant only for exercising the
-// generic APIs via tests.
-type fakeWatcher struct {
-	dc driver.Variable
-}
-
-func (fw *fakeWatcher) Close() error {
-	return nil
-}
-
-func (fw *fakeWatcher) WatchVariable(context.Context) (driver.Variable, error) {
-	return fw.dc, nil
-}
-
-// Ensure that fakeWatcher implements driver.Watcher
-var _ driver.Watcher = &fakeWatcher{}
-
-func TestVariable(t *testing.T) {
-	ctx := context.Background()
-
-	dc1 := driver.Variable{
-		Value:      42,
-		UpdateTime: time.Now(),
-	}
-	fw := &fakeWatcher{dc1}
-	cfg := runtimevar.New(fw)
-
-	// Watch should return the initial variable.
-	snap1, err := cfg.Watch(ctx)
-	if err != nil {
-		t.Fatalf("Variable.Watch returns error %v", err)
-	}
-	if got := snap1.Value.(int); got != dc1.Value {
-		t.Errorf("Snapshot.Value got %v, want %v", got, dc1.Value)
-	}
-	if got := snap1.UpdateTime; got != dc1.UpdateTime {
-		t.Errorf("Snapshot.UpdateTime got %v, want %v", got, dc1.UpdateTime)
-	}
-
-	// Update the watcher's return value for Watch.
-	dc2 := driver.Variable{
-		Value:      8080,
-		UpdateTime: time.Now(),
-	}
-	fw.dc = dc2
-
-	// Retrieve next value.
-	snap2, err := cfg.Watch(ctx)
-	if err != nil {
-		t.Fatalf("Variable.Watch returns error %v", err)
-	}
-	if got := snap2.Value.(int); got != dc2.Value {
-		t.Errorf("Snapshot.Value got %v, want %v", got, dc2.Value)
-	}
-	if got := snap2.UpdateTime; got != dc2.UpdateTime {
-		t.Errorf("Snapshot.UpdateTime got %v, want %v", got, dc2.UpdateTime)
-	}
-}
 
 func TestDecoder(t *testing.T) {
 	type Struct struct {
