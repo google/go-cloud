@@ -32,6 +32,7 @@ import (
 	"github.com/google/go-cloud/wire"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 )
@@ -81,7 +82,6 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // objects during the Watch call.
 // If WaitTime is not set the poller will check for updates to the variable every 30 seconds.
 func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
-
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -92,13 +92,11 @@ func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *ru
 	case waitTime < 0:
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
-
 	return runtimevar.New(&watcher{
-		client:      c.client,
-		waitTime:    waitTime,
-		lastRPCTime: time.Now().Add(-1 * waitTime), // Remove wait on first Watch call.
-		name:        name.String(),
-		decoder:     decoder,
+		client:   c.client,
+		waitTime: waitTime,
+		name:     name.String(),
+		decoder:  decoder,
 	}), nil
 }
 
@@ -106,9 +104,7 @@ func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *ru
 type ResourceName struct {
 	ProjectID string
 	Config    string
-	// desc is the description of the config.
-	desc     string
-	Variable string
+	Variable  string
 }
 
 func (r ResourceName) configPath() string {
@@ -136,11 +132,10 @@ type WatchOptions struct {
 type watcher struct {
 	client      pb.RuntimeConfigManagerClient
 	waitTime    time.Duration
-	lastRPCTime time.Time
 	name        string
 	decoder     *runtimevar.Decoder
-	bytes       []byte
-	updateTime  time.Time
+	lastBytes   []byte
+	lastErrCode codes.Code
 }
 
 // Close implements driver.Watcher.Close.  This is a no-op for this driver.
@@ -157,8 +152,14 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 	// Use GetVariables RPC and check for deltas based on the response.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
-	w.lastRPCTime = time.Now()
 	if err != nil {
+		errCode := grpc.Code(err)
+		if w.lastErrCode != codes.OK && errCode == w.lastErrCode {
+			// No change.
+			return nil, nil
+		}
+		w.lastBytes = nil
+		w.lastErrCode = errCode
 		return nil, err
 	}
 	updateTime, err := parseUpdateTime(vpb)
@@ -169,11 +170,12 @@ func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 	// Determine if there are any changes based on the bytes. If there are, update cache and
 	// return nil, else continue on.
 	bytes := bytesFromProto(vpb)
-	if !bytesNotEqual(w.bytes, bytes) {
+	if !bytesNotEqual(w.lastBytes, bytes) {
 		return nil, nil
 	}
-	w.bytes = bytes
-	w.updateTime = updateTime
+	w.lastBytes = bytes
+	w.lastErrCode = codes.OK
+
 	val, err := w.decoder.Decode(bytes)
 	if err != nil {
 		return nil, err

@@ -18,9 +18,11 @@ package drivertest
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cmp/cmp"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -48,5 +50,316 @@ type HarnessMaker func(t *testing.T) (Harness, error)
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
-	// TODO(rvangent): Implement conformance tests here.
+	t.Run("TestNonExistentVariable", func(t *testing.T) {
+		testNonExistentVariable(t, newHarness)
+	})
+	t.Run("TestWithCancelledContext", func(t *testing.T) {
+		testWithCancelledContext(t, newHarness)
+	})
+	t.Run("TestString", func(t *testing.T) {
+		testString(t, newHarness)
+	})
+	t.Run("TestJSON", func(t *testing.T) {
+		testJSON(t, newHarness)
+	})
+	t.Run("TestInvalidJSON", func(t *testing.T) {
+		testInvalidJSON(t, newHarness)
+	})
+	t.Run("TestUpdate", func(t *testing.T) {
+		testUpdate(t, newHarness)
+	})
+	t.Run("TestDelete", func(t *testing.T) {
+		testDelete(t, newHarness)
+	})
+}
+
+func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	v, err := h.MakeVar(ctx, "does-not-exist", runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got %v expected not-found error", got.Value)
+	}
+}
+
+func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name    = "test-config-variable"
+		content = "hello world"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	// Test initial watch fails if ctx is cancelled.
+	cancelledCtx, cancel := context.WithCancel(ctx)
+	cancel()
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(cancelledCtx)
+	if err == nil {
+		t.Errorf("got %v expected cancelled context error", got.Value)
+	}
+
+	// But works with a valid one.
+	got, err = v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Value.(string) != content {
+		t.Errorf("got %q want %q", got.Value, content)
+	}
+
+	// And fails again with cancelled.
+	got, err = v.Watch(cancelledCtx)
+	if err == nil {
+		t.Errorf("got %v expected cancelled context error", got.Value)
+	}
+}
+
+func testString(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name    = "test-config-variable"
+		content = "hello world"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The variable is decoded to a string and matches the expected content.
+	if gotS, ok := got.Value.(string); !ok {
+		t.Fatalf("got value of type %v expected string", reflect.TypeOf(got.Value))
+	} else if gotS != content {
+		t.Errorf("got %q want %q", got.Value, content)
+	}
+}
+
+// Message is used as a target for JSON decoding.
+type Message struct {
+	Name, Text string
+}
+
+func testJSON(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name        = "test-config-variable"
+		jsonContent = `[
+{"Name": "Ed", "Text": "Knock knock."},
+{"Name": "Sam", "Text": "Who's there?"}
+]`
+	)
+	want := []*Message{{Name: "Ed", Text: "Knock knock."}, {Name: "Sam", Text: "Who's there?"}}
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	if err := h.CreateVariable(ctx, name, []byte(jsonContent)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	var jsonData []*Message
+	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The variable is decoded to a []*Message and matches the expected content.
+	if gotSlice, ok := got.Value.([]*Message); !ok {
+		t.Fatalf("got value of type %v expected []*Message", reflect.TypeOf(got.Value))
+	} else if !cmp.Equal(gotSlice, want) {
+		t.Errorf("got %v want %v", gotSlice, want)
+	}
+}
+
+func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name    = "test-config-variable"
+		content = "not-json"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := h.DeleteVariable(ctx, name); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	var jsonData []*Message
+	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got %v wanted invalid-json error", got.Value)
+	}
+}
+
+func testUpdate(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name     = "test-config-variable"
+		content1 = "hello world"
+		content2 = "goodbye world"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	// Create the variable and verify Watch sees the value.
+	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = h.DeleteVariable(ctx, name) }()
+
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Value.(string) != content1 {
+		t.Errorf("got %q want %q", got.Value, content1)
+	}
+
+	// Update the variable and verify Watch sees the updated value.
+	if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
+		t.Fatal(err)
+	}
+	got, err = v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Value.(string) != content2 {
+		t.Errorf("got %q want %q", got.Value, content2)
+	}
+}
+
+func testDelete(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name     = "test-config-variable"
+		content1 = "hello world"
+		content2 = "goodbye world"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	// Create the variable and verify Watch sees the value.
+	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = h.DeleteVariable(ctx, name) }()
+
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Value.(string) != content1 {
+		t.Errorf("got %q want %q", got.Value, content1)
+	}
+	prev := got
+
+	// Delete the variable.
+	if err := h.DeleteVariable(ctx, name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Watch should return an error now.
+	if got, err = v.Watch(ctx); err == nil {
+		t.Fatalf("got %v, want error because variable is deleted", got.Value)
+	}
+
+	// Reset the variable with new content and verify via Watch.
+	if err := h.CreateVariable(ctx, name, []byte(content2)); err != nil {
+		t.Fatal(err)
+	}
+	got, err = v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Value.(string) != content2 {
+		t.Errorf("got %q want %q", got.Value, content2)
+	}
+	if got.UpdateTime.Before(prev.UpdateTime) {
+		t.Errorf("got UpdateTime %v < previous %v, want >=", got.UpdateTime, prev.UpdateTime)
+	}
 }

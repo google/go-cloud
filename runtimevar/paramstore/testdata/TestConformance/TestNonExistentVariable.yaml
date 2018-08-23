@@ -1,0 +1,31 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"Name":"does-not-exist"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "25"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      X-Amz-Date:
+      - 20180822T232833Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"ParameterNotFound"}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Wed, 22 Aug 2018 23:28:33 GMT
+      X-Amzn-Requestid:
+      - 265865e2-531c-470e-8dd5-8d1d3c4b9136
+    status: 400 Bad Request
+    code: 400
+    duration: ""
