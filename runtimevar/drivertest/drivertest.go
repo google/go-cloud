@@ -70,15 +70,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestUpdate", func(t *testing.T) {
 		testUpdate(t, newHarness)
 	})
-	// TODO(rvangent): Run the concurrent tests multiple times when not in record mode.
-	t.Run("TestConcurrentUpdate", func(t *testing.T) {
-		testConcurrentUpdate(t, newHarness)
-	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
-	})
-	t.Run("TestConcurrentDelete", func(t *testing.T) {
-		testConcurrentDelete(t, newHarness)
 	})
 }
 
@@ -311,55 +304,6 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testConcurrentUpdate(t *testing.T, newHarness HarnessMaker) {
-	const (
-		name     = "test-config-variable"
-		content1 = "hello world"
-		content2 = "goodbye world"
-	)
-
-	h, err := newHarness(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	ctx := context.Background()
-
-	// Create the variable and verify Watch sees the value.
-	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = h.DeleteVariable(ctx, name) }()
-
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := v.Watch(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Value.(string) != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
-	}
-
-	// Update in a separate goroutine.
-	go func() {
-		if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	// The following should block until there is a change.
-	got, err = v.Watch(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Value.(string) != content2 {
-		t.Errorf("got %q want %q; %s", got.Value, content2, probabilisticTestWarning)
-	}
-}
-
 func testDelete(t *testing.T, newHarness HarnessMaker) {
 	const (
 		name     = "test-config-variable"
@@ -413,72 +357,6 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	}
 	if got.Value.(string) != content2 {
 		t.Errorf("got %q want %q", got.Value, content2)
-	}
-	if got.UpdateTime.Before(prev.UpdateTime) {
-		t.Errorf("got UpdateTime %v < previous %v, want >=", got.UpdateTime, prev.UpdateTime)
-	}
-}
-
-func testConcurrentDelete(t *testing.T, newHarness HarnessMaker) {
-	const (
-		name     = "test-config-variable"
-		content1 = "hello world"
-		content2 = "goodbye world"
-	)
-
-	h, err := newHarness(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	ctx := context.Background()
-
-	// Create the variable and verify Watch sees the value.
-	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = h.DeleteVariable(ctx, name) }()
-
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := v.Watch(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Value.(string) != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
-	}
-	prev := got
-
-	// Delete in a separate goroutine.
-	go func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	// The following should block until the variable is deleted, and then
-	// return an error.
-	if got, err = v.Watch(ctx); err == nil {
-		t.Fatalf("got %v, want error because variable is deleted; %s", got.Value, probabilisticTestWarning)
-	}
-
-	// Reset the variable with new content and call Watch again.
-	go func() {
-		if err := h.CreateVariable(ctx, name, []byte(content2)); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	// The following should block until the variable is updated.
-	got, err = v.Watch(ctx)
-	if err != nil {
-		t.Fatalf("got err %v want %q; %s", err, content2, probabilisticTestWarning)
-	}
-	if got.Value.(string) != content2 {
-		t.Errorf("got %q want %q; %s", got.Value, content2, probabilisticTestWarning)
 	}
 	if got.UpdateTime.Before(prev.UpdateTime) {
 		t.Errorf("got UpdateTime %v < previous %v, want >=", got.UpdateTime, prev.UpdateTime)
