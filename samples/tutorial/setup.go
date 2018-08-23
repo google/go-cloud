@@ -115,8 +115,7 @@ func setupAzureWithSASToken(ctx context.Context, bucket string) (*blob.Bucket, e
 		AccountName:      os.Getenv("ACCOUNT_NAME"),
 		AccountKey:       "", // Not used when bootstrapping with SASToken
 		PublicAccessType: azureblob.PublicAccessContainer,
-		SASToken:         sasToken,
-		ContainerExists:  false,
+		SASToken:         sasToken,		
 	}
 	return azureblob.OpenBucket(ctx, &settings, bucket)
 }

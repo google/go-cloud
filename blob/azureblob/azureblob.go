@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
@@ -15,15 +16,21 @@ import (
 	"github.com/google/go-cloud/blob/driver"
 )
 
+var (
+	// MaxBlockSize is 100MB, used in writer.Write() to stage azure blockblob blocks 
+	// see https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs
+	MaxBlockSize = 100 * 1024 * 1024
+)
+
 type bucket struct {
 	name             string
 	PublicAccessType azblob.PublicAccessType
 	urls             serviceUrls
-	containerExists  bool
 }
 type serviceUrls struct {
 	serviceURL   *azblob.ServiceURL
 	containerURL *azblob.ContainerURL
+	blockBlobURL *azblob.BlockBlobURL
 }
 
 //Settings for Storage Account connections
@@ -32,9 +39,6 @@ type Settings struct {
 	AccountKey       string
 	PublicAccessType azblob.PublicAccessType
 	SASToken         string
-	// SASTokens can be scoped on a Blob only, in this case attempting to create or read container metadata will result in an AuthorizationFailure exception. To bypass this, set value to false.
-	// Setting value to false assumes the container exists
-	ContainerExists bool
 }
 
 // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
@@ -51,10 +55,9 @@ const (
 func OpenBucket(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
 	if settings.SASToken != "" {
 		return initBucketWithSASToken(ctx, settings, containerName)
-	} else {
-
-		return initBucketWithAccountKey(ctx, settings, containerName)
 	}
+	
+	return initBucketWithAccountKey(ctx, settings, containerName)	
 }
 
 func initBucketWithSASToken(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
@@ -78,7 +81,6 @@ func initBucketWithSASToken(ctx context.Context, settings *Settings, containerNa
 	return blob.NewBucket(&bucket{
 		name:             containerName,
 		PublicAccessType: settings.PublicAccessType,
-		containerExists:  settings.ContainerExists,
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
@@ -105,7 +107,6 @@ func initBucketWithAccountKey(ctx context.Context, settings *Settings, container
 	return blob.NewBucket(&bucket{
 		name:             containerName,
 		PublicAccessType: settings.PublicAccessType,
-		containerExists:  settings.ContainerExists,
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
@@ -120,29 +121,8 @@ func makeBlobStorageURL(accountName string) *url.URL {
 }
 
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	// check if the container exists
-	_, err := b.urls.containerURL.GetProperties(ctx, azblob.LeaseAccessConditions{})
-	if err != nil {
-		if serr, ok := err.(azblob.StorageError); ok {
-			switch serr.ServiceCode() {
-			case azblob.ServiceCodeContainerNotFound:
-			case azblob.ServiceCodeContainerBeingDeleted:
-				return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-
-			case azblob.ServiceCodeAuthenticationFailed:
-			case "AuthorizationFailure":
-				// SASToken could be scoped to the blob only
-				if !b.containerExists {
-					return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
-				}
-			default:
-				return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
-			}
-		}
-	}
-
 	blobURL := b.urls.containerURL.NewBlockBlobURL(key)
-	_, err = blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 	return err
 }
 
@@ -157,45 +137,31 @@ type reader struct {
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	// check if the container exists
-	_, err := b.urls.containerURL.GetProperties(ctx, azblob.LeaseAccessConditions{})
-	if err != nil {
-		if serr, ok := err.(azblob.StorageError); ok {
-			switch serr.ServiceCode() {
-			case azblob.ServiceCodeContainerNotFound:
-				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-
-			case azblob.ServiceCodeAuthenticationFailed:
-			case "AuthorizationFailure":
-				// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
-				if !b.containerExists {
-					// Assume container exist, blob operations will succeed/fail based on SASToken scope
-					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
-				}
-
-				break
-
-			default:
-				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
-			}
-		}
-	}
-
 	// make url reference to the blob
 	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+	if serr, ok := err.(azblob.StorageError); ok {
+		switch serr.ServiceCode() {
+		case azblob.ServiceCodeBlobNotFound:
+			return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+		default:
+			return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+		}
+	}
 
 	// determine content end for reader
 	end := length
-	if err == nil {
-		if end < 0 {
-			end = blobPropertiesResponse.ContentLength()
+	if end < 0 {
+		end = blobPropertiesResponse.ContentLength()
+
+		if offset > blobPropertiesResponse.ContentLength() {
+			offset = 0
 		}
 	}
 
 	// return content reader
 	if end > 0 {
-		blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
+		blobDownloadResponse, _ := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
 		if err != nil {
 			return nil, err
 		}
@@ -221,18 +187,12 @@ func (r *reader) Attrs() *driver.ObjectAttrs {
 }
 
 type writer struct {
-	ctx context.Context
-
-	w *io.PipeWriter
-	r *io.PipeReader
-
-	urls *serviceUrls
-
+	ctx         context.Context
+	urls        *serviceUrls
 	key         string
 	contentType string
-
-	donec chan struct{}
-	err   error
+	blockIDs    []string
+	mux         sync.Mutex
 }
 
 // NewTypedWriter returns a writer that writes to an object associated with key.
@@ -250,27 +210,30 @@ type writer struct {
 // does not exist.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
-
-	if !b.containerExists {
-		_, err := containerURL.Create(ctx, nil, b.PublicAccessType)
-		if err != nil {
-			if serr, ok := err.(azblob.StorageError); ok {
-				switch serr.ServiceCode() {
-				case azblob.ServiceCodeContainerAlreadyExists:
-					// Can be thrown if container already exist, ignore and continue
-					break
-				case azblob.ServiceCodeAuthenticationFailed:
-				case "AuthorizationFailure":
-					// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
-					// Assume container exist, blob operations will succeed/fail based on SASToken scope
-					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.Unauthorized}
-				default:
-					return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
-				}
+	// try to create the azure container
+	// if it already exists, continue..
+	// if authorization failure, assume SASToken scope is limited to the Blob and continue..
+	// fail all other exceptions
+	_, err := containerURL.Create(ctx, nil, b.PublicAccessType)
+	if err != nil {
+		if serr, ok := err.(azblob.StorageError); ok {
+			switch serr.ServiceCode() {
+			case azblob.ServiceCodeContainerAlreadyExists:
+				// Can be thrown if container already exist, ignore and continue
+				break
+			case azblob.ServiceCodeAuthenticationFailed:
+			case "AuthorizationFailure":
+				// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
+				// Assume container exist, blob operations will succeed/fail based on SASToken scope
+				break
+			default:
+				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
 			}
 		}
 	}
 
+	blockBlobURL := containerURL.NewBlockBlobURL(key)
+	var blockIDs []string
 	w := &writer{
 		ctx:         ctx,
 		key:         key,
@@ -278,60 +241,56 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		urls: &serviceUrls{
 			serviceURL:   b.urls.serviceURL,
 			containerURL: &containerURL,
+			blockBlobURL: &blockBlobURL,
 		},
-		donec: make(chan struct{}),
+		blockIDs: blockIDs,
 	}
 
 	return w, nil
 }
 
+// Write creates a stated block for incoming buffer (p)
+// Each call to Write will append to the blockId list for final commit
 func (w *writer) Write(p []byte) (int, error) {
-	if w.w == nil {
-		if err := w.open(); err != nil {
-			return 0, err
-		}
+	chunks := split(p, MaxBlockSize)
+	var wg sync.WaitGroup
+	wg.Add(len(chunks))
+
+	for _, chunk := range chunks {
+		var index = len(w.blockIDs) + 1
+		blockID := BlockIDIntToBase64(index)
+		w.blockIDs = append(w.blockIDs, blockID)
+
+		go func(c []byte, bid string) {
+			defer wg.Done()
+			w.urls.blockBlobURL.StageBlock(w.ctx, bid, bytes.NewReader(c), azblob.LeaseAccessConditions{})
+		}(chunk, blockID)
 	}
-	select {
-	case <-w.donec:
-		return 0, w.err
-	default:
-	}
-	return w.w.Write(p)
+	wg.Wait()
+
+	return len(p), nil
 }
 
-func (w *writer) open() error {
-	pr, pw := io.Pipe()
-	w.w = pw
-	w.r = pr
-
-	go func() {
-		defer close(w.donec)
-		var buf []byte
-		buf, w.err = ioutil.ReadAll(w.r)
-		if w.err != nil {
-			w.r.CloseWithError(w.err)
-		} else {
-			blockBlobURL := w.urls.containerURL.NewBlockBlobURL(w.key)
-			_, w.err = blockBlobURL.Upload(w.ctx, bytes.NewReader(buf), azblob.BlobHTTPHeaders{}, nil, azblob.BlobAccessConditions{})
-
-			if w.err != nil {
-				w.r.CloseWithError(w.err)
-			}
-		}
-	}()
-
-	return nil
+// credits to xlab/bytes_split.go
+func split(buf []byte, lim int) [][]byte {
+	var chunk []byte
+	chunks := make([][]byte, 0, len(buf)/lim+1)
+	for len(buf) >= lim {
+		chunk, buf = buf[:lim], buf[lim:]
+		chunks = append(chunks, chunk)
+	}
+	if len(buf) > 0 {
+		chunks = append(chunks, buf)
+	}
+	return chunks
 }
 
 // Close completes the writer and close it. Any error occuring during write will
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {
-	if err := w.w.Close(); err != nil {
-		return err
-	}
-	<-w.donec
-	return w.err
+	_, err := w.urls.blockBlobURL.CommitBlockList(w.ctx, w.blockIDs, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+	return err
 }
 
 type azureError struct {
