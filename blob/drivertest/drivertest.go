@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cmp/cmp"
@@ -272,8 +271,6 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 					// is supposed to return it.
 					return
 				}
-				// Touch the file after a couple of seconds and make sure ModTime changes.
-				time.Sleep(2 * time.Second)
 				w, err := b.NewWriter(ctx, key, nil)
 				if err != nil {
 					t.Fatalf("failed NewWriter: %v", err)
@@ -290,11 +287,10 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 				}
 				defer r2.Close()
 				t2 := r2.ModTime()
-				if !t2.After(t1) {
-					t.Errorf("ModTime %v is not after %v", t2, t1)
+				if t2.Before(t1) {
+					t.Errorf("ModTime %v is before %v", t2, t1)
 				}
 			})
-
 		})
 	}
 }
