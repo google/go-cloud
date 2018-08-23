@@ -25,8 +25,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const probabilisticTestWarning = "this test is probabilistic, so intermittement failures are indicative of a race condition in the driver"
-
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 // All functions should fail the test on error.
@@ -129,6 +127,9 @@ func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
 
 	// But works with a valid one.
 	got, err = v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got.Value.(string) != content {
 		t.Errorf("got %q want %q", got.Value, content)
 	}
