@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-provider "google" {
-  version = "~> 1.15"
-  project = "${var.project}"
-}
-
 locals {
   appengine_service_account = "${var.project}@appspot.gserviceaccount.com"
 }
@@ -30,7 +25,7 @@ resource "google_project_service" "cloudbuild" {
 # Service account for the event worker
 
 resource "google_service_account" "worker" {
-  account_id   = "${var.worker_service_account_name}"
+  account_id   = "contributebot"
   project      = "${var.project}"
   display_name = "Contribute Bot Server"
 }
@@ -122,7 +117,7 @@ resource "google_project_service" "container" {
 }
 
 resource "google_container_cluster" "contributebot" {
-  name               = "${var.cluster_name}"
+  name               = "contributebot-cluster"
   project            = "${var.project}"
   zone               = "${var.zone}"
   initial_node_count = 3
