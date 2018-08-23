@@ -113,7 +113,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 		return fmt.Errorf("building guestbook app by running %v: %v", build.Args, err)
 	}
 	gcp := gcloud{projectID: tfState.Project.Value}
-	cbs := gcp.cmd("container", "builds", "submit", "-t", imageName, filepath.Join(guestbookDir, "gcp"))
+	cbs := gcp.cmd("builds", "submit", "-t", imageName, filepath.Join(guestbookDir, "gcp"))
 	if err := cbs.Run(); err != nil {
 		return fmt.Errorf("building container image with %v: %v", cbs.Args, err)
 	}
