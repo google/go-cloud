@@ -8,7 +8,7 @@ package main
 // Injectors from wire.go:
 
 func InitializeEvent(phrase string) (Event, error) {
-	message := _wireMessageValue
+	message := NewMessage(phrase)
 	greeter := NewGreeter(message)
 	event, err := NewEvent(greeter)
 	if err != nil {
@@ -16,7 +16,3 @@ func InitializeEvent(phrase string) (Event, error) {
 	}
 	return event, nil
 }
-
-var (
-	_wireMessageValue = Message("Hi, there!")
-)

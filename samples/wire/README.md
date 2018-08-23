@@ -84,7 +84,7 @@ code and makes it easy to swap out one dependency with another. The idea of
 dependency injection isn't much more complicated than this.
 
 One downside to dependency injection is the need for so many initialization
-steps. Let's see how we can use Wire to make the process of initailizing our
+steps. Let's see how we can use Wire to make the process of initializing our
 components smoother.
 
 Let's start by changing our `main` function to look like this:
@@ -159,42 +159,42 @@ our initializer for `Event` to return an error and see what happens.
 
 ``` go
 func NewEvent(g Greeter) (Event, error) {
-    if g.Deranged {
-        return Event{}, errors.New("could not create event: event greeter is deranged")
+    if g.Grumpy {
+        return Event{}, errors.New("could not create event: event greeter is grumpy")
     }
     return Event{Greeter: g}, nil
 }
 ```
 
-We'll say that sometimes a `Greeter` might be deranged and so we cannot create
+We'll say that sometimes a `Greeter` might be grumpy and so we cannot create
 an `Event`. The `NewGreeter` initializer now looks like this:
 
 ``` go
 func NewGreeter(m Message) Greeter {
-    var deranged bool
+    var grumpy bool
     if time.Now().Unix()%2 == 0 {
-        deranged = true
+        grumpy = true
     }
-    return Greeter{Message: m, Deranged: deranged}
+    return Greeter{Message: m, Grumpy: grumpy}
 }
 ```
 
-We have added a `Deranged` struct field to `Greeter` and if the invocation time
+We have added a `Grumpy` struct field to `Greeter` and if the invocation time
 of the initializer is an even number of seconds since the epoch, we will create
-a deranged greeter instead of a friendly one.
+a grumpy greeter instead of a friendly one.
 
 The `Greet` method then becomes:
 
 ``` go
 func (g Greeter) Greet() Message {
-    if g.Deranged {
+    if g.Grumpy {
         return Message("Go away!")
     }
     return g.Message
 }
 ```
 
-Now you see how a deranged `Greeter` is no good for an `Event`. So `NewEvent`
+Now you see how a grumpy `Greeter` is no good for an `Event`. So `NewEvent`
 may fail. Our `main` must now take into account that `InitializeEvent` may in
 fact fail:
 
@@ -259,6 +259,20 @@ use.
 After we run `wire` again, we will see that the tool has generated an
 initializer which passes the `phrase` value as a `Message` into `Greeter`.
 Neat!
+
+``` go
+// wire_gen.go
+
+func InitializeEvent(phrase string) (Event, error) {
+    message := NewMessage(phrase)
+    greeter := NewGreeter(message)
+    event, err := NewEvent(greeter)
+    if err != nil {
+        return Event{}, err
+    }
+    return event, nil
+}
+```
 
 Let's summarize what we have done here. First, we wrote a number of components
 with corresponding initializers, or providers. Next, we created an injector
