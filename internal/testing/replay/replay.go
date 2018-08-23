@@ -132,7 +132,7 @@ func scrubRecording(filepath string) error {
 	keep := make([]*cassette.Interaction, 0, len(c.Interactions))
 	c.Mu.Lock()
 	for _, action := range c.Interactions {
-		if action.Response.Code == 429 {
+		if action.Response.Code == http.StatusTooManyRequests {
 			// Too Many Requests, client will retry; it's safe
 			// to drop these for the replay.
 			continue
