@@ -17,7 +17,6 @@ package paramstore
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -46,7 +45,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
-	return h.client.NewVariable(ctx, name, decoder, &WatchOptions{WaitTime: 50 * time.Millisecond})
+	return h.client.NewVariable(ctx, name, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
