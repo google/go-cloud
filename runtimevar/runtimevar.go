@@ -54,7 +54,7 @@ func New(w driver.Watcher) *Variable {
 // Watch blocks until there are variable changes, the Context's Done channel closes or an error
 // occurs.
 //
-// If the variable, the method returns a Snapshot object containing the
+// If the variable changes, the method returns a Snapshot object containing the
 // updated value.
 //
 // If method returns an error, the returned Snapshot object is a zero value and cannot be used.

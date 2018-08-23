@@ -2,18 +2,17 @@
 version: 1
 interactions:
 - request:
-    body: '{"Name":"test-bad-json-decode","Overwrite":true,"Type":"String","Value":"Silly
-      goose"}'
+    body: '{"Name":"test-config-variable","Overwrite":true,"Type":"String","Value":"not-json"}'
     form: {}
     headers:
       Content-Length:
-      - "86"
+      - "83"
       Content-Type:
       - application/x-amz-json-1.1
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193200Z
+      - 20180822T232836Z
       X-Amz-Target:
       - AmazonSSM.PutParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -24,14 +23,14 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:32:00 GMT
+      - Wed, 22 Aug 2018 23:28:35 GMT
       X-Amzn-Requestid:
-      - 03b84064-4e57-4bf7-b768-f395850bda76
+      - 5b0236f6-f84a-44c3-9ff5-e796eb79bf90
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-bad-json-decode"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
@@ -41,26 +40,25 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193200Z
+      - 20180822T232836Z
       X-Amz-Target:
       - AmazonSSM.GetParameter
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-bad-json-decode","LastModifiedDate":1.533929520889E9,"Name":"test-bad-json-decode","Type":"String","Value":"Silly
-      goose","Version":1}}'
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.534980516248E9,"Name":"test-config-variable","Type":"String","Value":"not-json","Version":1}}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:32:00 GMT
+      - Wed, 22 Aug 2018 23:28:35 GMT
       X-Amzn-Requestid:
-      - 0cceb081-3575-4d21-b96f-6704f238482f
+      - 2c80907a-28ed-4c03-9259-985fd0df03f7
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Filters":[{"Key":"Name","Values":["test-bad-json-decode"]}]}'
+    body: '{"Filters":[{"Key":"Name","Values":["test-config-variable"]}]}'
     form: {}
     headers:
       Content-Length:
@@ -70,25 +68,25 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193201Z
+      - 20180822T232836Z
       X-Amz-Target:
       - AmazonSSM.DescribeParameters
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Parameters":[{"LastModifiedDate":1.533929520889E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-bad-json-decode","Policies":[],"Type":"String","Version":1}]}'
+    body: '{"Parameters":[{"LastModifiedDate":1.534980516248E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-config-variable","Policies":[],"Type":"String","Version":1}]}'
     headers:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:32:00 GMT
+      - Wed, 22 Aug 2018 23:28:35 GMT
       X-Amzn-Requestid:
-      - 71f29af0-6359-4dcf-ac23-50c64777b5b8
+      - c19e74dc-d1d7-4f95-be1f-e36bff3dee12
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"Name":"test-bad-json-decode"}'
+    body: '{"Name":"test-config-variable"}'
     form: {}
     headers:
       Content-Length:
@@ -98,7 +96,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
       X-Amz-Date:
-      - 20180810T193201Z
+      - 20180822T232836Z
       X-Amz-Target:
       - AmazonSSM.DeleteParameter
     url: https://ssm.us-east-2.amazonaws.com/
@@ -109,9 +107,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.1
       Date:
-      - Fri, 10 Aug 2018 19:32:00 GMT
+      - Wed, 22 Aug 2018 23:28:35 GMT
       X-Amzn-Requestid:
-      - 59c13571-568e-4f02-90c3-b8af09f5553b
+      - e71fb204-82d4-430f-9da0-8af6c0c19761
     status: 200 OK
     code: 200
     duration: ""
