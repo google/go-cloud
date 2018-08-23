@@ -220,8 +220,10 @@ func InitializeEvent() (Event, error) {
 }
 ```
 
-With the setup complete, we are ready to invoke the `wire` command again. After
-running the command, our `wire_gen.go` file looks like this:
+With the setup complete, we are ready to invoke the `wire` command again. Note,
+that after running `wire` once to produce a `wire_gen.go` file, we may also use
+`go generate`. Having run the command, our `wire_gen.go` file looks like
+this:
 
 ``` go
 // wire_gen.go
@@ -254,7 +256,13 @@ func InitializeEvent(phrase string) (Event, error) {
 ```
 
 Now `InitializeEvent` allows callers to pass in the `phrase` for a `Greeter` to
-use.
+use. We also add a `phrase` argument to `NewMessage`:
+
+``` go
+func NewMessage(phrase string) Message {
+    return Message(phrase)
+}
+```
 
 After we run `wire` again, we will see that the tool has generated an
 initializer which passes the `phrase` value as a `Message` into `Greeter`.
@@ -281,13 +289,17 @@ Then, we filled in the injector function with a call to `wire.Build` supplying
 all necessary providers. Finally, we ran the `wire` command to generate code
 that wires up all the different initializers. When we added an argument to the
 injector and an error return value, running `wire` again made all the necessary
-updates to our generate code.
+updates to our generated code.
 
 The example here is small, but it demonstrates some of the power of Wire, and
 how it takes much of the pain out of initializing code using dependency
 injection. Furthermore, using Wire produced code that looks much like what we
 would otherwise write. There are no bespoke types that commit a user to Wire.
-Instead it's just generated code. We may do with it what we will.
+Instead it's just generated code. We may do with it what we will. Finally,
+another point worth considering is how easy it is to add new dependencies to
+our component initializtion. As long as we tell Wire how to provide (i.e.,
+initialize) a component, we may add that component anywhere in the dependency
+graph and Wire will handle the rest.
 
 In closing, it is worth mentioning that Wire supports a number of additional
 features not discussed here. Providers may be grouped in [provider sets][sets].
