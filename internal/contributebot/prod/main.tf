@@ -12,17 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "project" {
-  type        = "string"
-  description = "Project to set up."
+terraform {
+  backend "gcs" {
+    bucket = "go-cloud-contribute-bot-tfstate"
+  }
+
+  required_version = "~>0.11"
 }
 
-variable "zone" {
-  type        = "string"
-  description = "GCP zone to create the GKE cluster in, like 'us-central1-a'. See https://cloud.google.com/compute/docs/regions-zones/ for valid values."
+provider "google" {
+  version = "~> 1.15"
+  project = "go-cloud-contribute-bot"
 }
 
 variable "github_app_key" {
   default     = ""
   description = "PEM-encoded GitHub application private key. This defaults to empty for bootstrapping reasons."
+}
+
+module "contributebot" {
+  source         = ".."
+  project        = "go-cloud-contribute-bot"
+  zone           = "us-central1-c"
+  github_app_key = "${var.github_app_key}"
 }
