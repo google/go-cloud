@@ -1,14 +1,20 @@
 # Wire Tutorial
 
 Let's learn to use Wire by example. The [Wire README][readme] provides thorough
-documentation of the tool's usage. For readers eager to jump right in, the
-[guestbook sample][guestbook] uses Wire to initialize its components. Here we
-are going to build a small greeter CLI to understand how to use Wire. The
-finished product may be found in the same directory as this README.
+documentation of the tool's usage. For readers eager to see Wire applied to a
+cloud server, the [guestbook sample][guestbook] uses Wire to initialize its
+components. Here we are going to build a small greeter program to understand
+how to use Wire. The finished product may be found in the same directory as
+this README.
 
-As a first pass, let's say we will create three types: 1) an event, 2) a
-greeter to greet guests at the event, and 3) a message that the greeter will
-say to each guest. In this design, we have three `struct` types:
+## A First Pass of Building the Greeter Program
+
+Let's create a small program that simulates an event with a greeter greeting
+guests with a particular message.
+
+To start, we will create three types: 1) a message for a greeter, 2) a greeter
+who conveys that message, and 3) an event that starts with the greeter greeting
+guests. In this design, we have three `struct` types:
 
 ``` go
 type Message string
@@ -22,16 +28,29 @@ type Event struct {
 }
 ```
 
-The `Message` type just wraps a string. Our `Greeter` will need reference to
-it. So let's create an initializer for our `Greeter`.
+The `Message` type just wraps a string. For now, we will create a simple
+initializer that always returns a hard-coded message:
+
+```
+func NewMessage() Message {
+    return Message("Hi there!")
+}
+```
+
+Our `Greeter` will need reference to the `Message`. So let's create an
+initializer for our `Greeter` as well.
 
 ``` go
 func NewGreeter(m Message) Greeter {
     return Greeter{Message: m}
 }
+
+type Greeter struct {
+    Message Message // <- adding a Message field
+}
 ```
 
-In the intializer we assign a `Message` field to `Greeter`. Now, we can use the
+In the initializer we assign a `Message` field to `Greeter`. Now, we can use the
 `Message` when we create a `Greet` method on `Greeter`:
 
 ``` go
@@ -47,6 +66,10 @@ for it as well.
 func NewEvent(g Greeter) Event {
     return Event{Greeter: g}
 }
+
+type Event struct {
+    Greeter Greeter // <- adding a Greeter field
+}
 ```
 
 Then we add a method to start the `Event`:
@@ -61,8 +84,9 @@ func (e Event) Start() {
 The `Start` method holds the core of our small application: it tells the
 greeter to issue a greeting and then prints that message to the screen.
 
-Now that we have all the components of our application ready, let's wire them
-together in a `main` function:
+Now that we have all the components of our application ready, let's see what it
+takes to initialize all the components without using Wire. Our main function
+would look like this:
 
 ``` go
 func main() {
@@ -78,10 +102,12 @@ First we create a message, then we create a greeter with that message, and
 finally we create an event with that greeter. With all the initialization done,
 we're ready to start our event.
 
-In the design here, we are using dependency injection. We pass in whatever each
-component needs. This style of design lends itself to writing easily tested
-code and makes it easy to swap out one dependency with another. The idea of
-dependency injection isn't much more complicated than this.
+We are using the [dependency injection][di] design principle. In practice, that
+means we pass in whatever each component needs. This style of design lends
+itself to writing easily tested code and makes it easy to swap out one
+dependency with another.
+
+## Using Wire to Generate Code
 
 One downside to dependency injection is the need for so many initialization
 steps. Let's see how we can use Wire to make the process of initializing our
@@ -97,8 +123,8 @@ func main() {
 }
 ```
 
-Next, in a separate file called `wire.go` we'll define `InitializeEvent` and
-this is where things get interesting:
+Next, in a separate file called `wire.go` we will define `InitializeEvent`.
+This is where things get interesting:
 
 ``` go
 // wire.go
@@ -113,8 +139,11 @@ Rather than go through the trouble of initializing each component in turn and
 passing it into the next one, we instead have a single call to `wire.Build`
 passing in the initializers we want to use. In Wire, initializers are known as
 "providers," functions which provide a particular type. We add a zero value for
-`Event` as a return value to satisfy the compiler. This won't be included in
-our final binary so we add a build constraint to the top of the file:
+`Event` as a return value to satisfy the compiler. Note that even if we add
+values to `Event`, Wire will ignore them. In fact, the injector's purpose is to
+provide information about which providers to use to construct an `Event` and so
+we will exclude it from our final binary with a build constraint at the top of
+the file:
 
 ``` go
 //+build wireinject
@@ -123,7 +152,7 @@ our final binary so we add a build constraint to the top of the file:
 
 Note, a [build constraint][constraint] requires a blank, trailing line.
 
-In Wire parlance, `InitializeEvent` is an injector. Now that we have our
+In Wire parlance, `InitializeEvent` is an "injector." Now that we have our
 injector complete, we are ready to use the `wire` command line tool.
 
 Install the tool with:
@@ -152,7 +181,10 @@ func InitializeEvent() Event {
 
 It looks just like what we wrote above! Now this is a simple example with just
 three components, so writing the initializer by hand isn't too painful. Imagine
-how useful Wire is for components that are much more complex.
+how useful Wire is for components that are much more complex. When working with
+Wire, we will commit both `wire.go` and `wire_gen.go` to source control.
+
+## Making Changes with Wire
 
 To show a small part of how Wire handles more complex setups, let's refactor
 our initializer for `Event` to return an error and see what happens.
@@ -179,9 +211,9 @@ func NewGreeter(m Message) Greeter {
 }
 ```
 
-We have added a `Grumpy` struct field to `Greeter` and if the invocation time
-of the initializer is an even number of seconds since the epoch, we will create
-a grumpy greeter instead of a friendly one.
+We have added a `Grumpy` field to `Greeter` struct and if the invocation time
+of the initializer is an even number of seconds since the Unix epoch, we will
+create a grumpy greeter instead of a friendly one.
 
 The `Greet` method then becomes:
 
@@ -194,9 +226,9 @@ func (g Greeter) Greet() Message {
 }
 ```
 
-Now you see how a grumpy `Greeter` is no good for an `Event`. So `NewEvent`
-may fail. Our `main` must now take into account that `InitializeEvent` may in
-fact fail:
+Now you see how a grumpy `Greeter` is no good for an `Event`. So `NewEvent` may
+fail. Our `main` must now take into account that `InitializeEvent` may in fact
+fail:
 
 ``` go
 func main() {
@@ -243,10 +275,13 @@ Wire has detected that the `NewEvent` provider may fail and has done the right
 thing inside the generated code: it checks the error and returns early if one
 is present.
 
+## Changing the Injector Signature
+
 As another improvement, let's look at how Wire generates code based on the
 signature of the injector. Presently, we have hard-coded the message inside
 `NewMessage`. In practice, it's much nicer to allow callers to change that
-message however they see fit. So let's change `InitializeEvent` to look like this:
+message however they see fit. So let's change `InitializeEvent` to look like
+this:
 
 ``` go
 func InitializeEvent(phrase string) (Event, error) {
@@ -282,6 +317,69 @@ func InitializeEvent(phrase string) (Event, error) {
 }
 ```
 
+Wire inspects the arguments to the injector, sees that we added a string to the
+list of arguments (e.g., `phrase`), and likewise sees that among all the
+providers, `NewMessage` takes a string, and so it passes `phrase` into
+`NewMessage`.
+
+## Catching Mistakes with Helpful Errors
+
+Let's also look at what happens when Wire detects mistakes in our code and see
+how Wire's error messages help us correct any problems.
+
+For example, when writing our injector `InitializeEvent`, let's say we forget
+to add a provider for `Greeter`. Let's see what happens:
+
+``` go
+func InitializeEvent(phrase string) (Event, error) {
+    wire.Build(NewEvent, NewMessage) // woops! We to add a provider for Greeter
+    return Event{}, nil
+}
+```
+
+Running `wire`, we see the following:
+
+``` shell
+// wrapping the error across lines for readability
+$GOPATH/src/github.com/google/go-cloud/samples/wire/wire.go:24:1:
+inject InitializeEvent: no provider found for github.com/google/go-cloud/samples/wire.Greeter
+(required by provider of github.com/google/go-cloud/samples/wire.Event)
+wire: generate failed
+```
+
+Wire is telling us some useful information: it cannot find a provider for
+`Greeter`. Note that the error message prints out the full path to the
+`Greeter` type. It's also telling us the line number and injector name where
+the problem occurred: line 24 inside `InitializeEvent`. In addition, the error
+message tells us which provider needs a `Greeter`. It's the `Event` type. Once
+we pass in a provider of `Greeter`, the problem will be solved.
+
+Alternatively, what happens if we provide one too many providers to `wire.Build`?
+
+``` go
+func NewEventNumber() int  {
+    return 1
+}
+
+func InitializeEvent(phrase string) (Event, error) {
+     // woops! NewEventNumber is unused.
+    wire.Build(NewEvent, NewGreeter, NewMessage, NewEventNumber)
+    return Event{}, nil
+}
+```
+
+Wire helpfully tells us that we have an unused provider:
+
+``` shell
+/Users/enocom/go/src/github.com/google/go-cloud/samples/wire/wire.go:24:1:
+inject InitializeEvent: unused provider "NewEventNumber"
+wire: generate failed
+```
+
+Deleting the unused provider from the call to `wire.Build` resolves the error.
+
+## Conclusion
+
 Let's summarize what we have done here. First, we wrote a number of components
 with corresponding initializers, or providers. Next, we created an injector
 function, specifying which arguments it receives and which types it returns.
@@ -297,7 +395,7 @@ injection. Furthermore, using Wire produced code that looks much like what we
 would otherwise write. There are no bespoke types that commit a user to Wire.
 Instead it's just generated code. We may do with it what we will. Finally,
 another point worth considering is how easy it is to add new dependencies to
-our component initializtion. As long as we tell Wire how to provide (i.e.,
+our component initialization. As long as we tell Wire how to provide (i.e.,
 initialize) a component, we may add that component anywhere in the dependency
 graph and Wire will handle the rest.
 
@@ -307,11 +405,12 @@ There is support for [binding interfaces][interfaces], [binding
 values][values], as well as support for [cleanup functions][cleanup]. See the
 [Advanced Features][advanced] section for more.
 
-[readme]: https://github.com/google/go-cloud/blob/master/wire/README.md
-[guestbook]: https://github.com/google/go-cloud/tree/master/samples/guestbook
+[advanced]:   https://github.com/google/go-cloud/tree/master/wire#advanced-features
+[cleanup]:    https://github.com/google/go-cloud/tree/master/wire#cleanup-functions
 [constraint]: https://godoc.org/go/build#hdr-Build_Constraints
-[sets]: https://github.com/google/go-cloud/tree/master/wire#defining-providers
+[di]:         https://stackoverflow.com/questions/130794/what-is-dependency-injection
+[guestbook]:  https://github.com/google/go-cloud/tree/master/samples/guestbook
 [interfaces]: https://github.com/google/go-cloud/tree/master/wire#binding-interfaces
-[values]: https://github.com/google/go-cloud/tree/master/wire#binding-values
-[cleanup]: https://github.com/google/go-cloud/tree/master/wire#cleanup-functions
-[advanced]: https://github.com/google/go-cloud/tree/master/wire#advanced-features
+[readme]:     https://github.com/google/go-cloud/blob/master/wire/README.md
+[sets]:       https://github.com/google/go-cloud/tree/master/wire#defining-providers
+[values]:     https://github.com/google/go-cloud/tree/master/wire#binding-values
