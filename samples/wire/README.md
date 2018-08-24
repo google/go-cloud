@@ -31,7 +31,7 @@ type Event struct {
 The `Message` type just wraps a string. For now, we will create a simple
 initializer that always returns a hard-coded message:
 
-```
+``` go
 func NewMessage() Message {
     return Message("Hi there!")
 }
