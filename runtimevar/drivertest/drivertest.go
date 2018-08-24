@@ -20,6 +20,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cmp/cmp"
@@ -187,6 +188,19 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 		t.Fatalf("got value of type %v expected string", reflect.TypeOf(got.Value))
 	} else if gotS != content {
 		t.Errorf("got %q want %q", got.Value, content)
+	}
+
+	// A second watch should block forever since the value hasn't changed.
+	// A short wait here doesn't guarantee that this is working, but will catch
+	// most problems.
+	cancelCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cancel()
+	}()
+	got, err = v.Watch(cancelCtx)
+	if err == nil {
+		t.Errorf("got %v want cancelled ctx error", got)
 	}
 }
 
