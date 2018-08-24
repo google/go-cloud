@@ -340,7 +340,7 @@ func InitializeEvent(phrase string) (Event, error) {
 Running `wire`, we see the following:
 
 ``` shell
-// wrapping the error across lines for readability
+# wrapping the error across lines for readability
 $GOPATH/src/github.com/google/go-cloud/samples/wire/wire.go:24:1:
 inject InitializeEvent: no provider found for github.com/google/go-cloud/samples/wire.Greeter
 (required by provider of github.com/google/go-cloud/samples/wire.Event)
