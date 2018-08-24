@@ -17,7 +17,6 @@ package runtimeconfigurator
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
@@ -34,7 +33,7 @@ const projectID = "google.com:rvangent-testing-prod"
 
 const (
 	// config is the runtimeconfig high-level config that variables sit under.
-	config            = "go_cloud_runtimeconfigurator_test"
+	config = "go_cloud_runtimeconfigurator_test"
 )
 
 func resourceName(name string) ResourceName {
@@ -74,7 +73,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 
 func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
 	rn := resourceName(name)
-	return h.client.NewVariable(ctx, rn, decoder, &WatchOptions{WaitTime: 50 * time.Millisecond})
+	return h.client.NewVariable(ctx, rn, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
