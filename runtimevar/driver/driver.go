@@ -42,14 +42,13 @@ type Watcher interface {
 	// WatchVariable blocks until the variable changes, the Context's Done channel closes or an
 	// error occurs.
 	//
-	// If the variable has changed, then method should return a Variable object with the
+	// If the variable has changed, then WatchVariable must return a Variable object with the
 	// new value.
 	//
-	// It is recommended that an implementation should avoid returning the same error of the
-	// previous WatchVariable call if the implementation can detect such and treat as no changes had
-	// incurred instead.  A sample case is when the variable is deleted, WatchVariable should return an
-	// error upon initial detection.  A succeeding WatchVariable call may decide to block until
-	// the variable source is restored.
+	// Implementations should also avoid returning the same error repeatedly. In particular,
+	// when the variable is deleted, WatchVariable must return an error upon initial detection,
+	// but succeeding WatchVariable calls must block until the variable is restored, and not
+	// repeatedly return errors.
 	//
 	// To stop this function from blocking, caller can passed in Context object constructed via
 	// WithCancel and call the cancel function.

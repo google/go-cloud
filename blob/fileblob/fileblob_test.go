@@ -15,6 +15,7 @@
 package fileblob
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -25,21 +26,32 @@ import (
 	"github.com/google/go-cloud/blob/drivertest"
 )
 
-// makeBucket creates a *blob.Bucket and a function to close it after the test
-// is done. It fails the test if the creation fails.
-func makeBucket(t *testing.T) (*blob.Bucket, func()) {
+type harness struct {
+	dir    string
+	closer func()
+}
+
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	dir := path.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		t.Fatal(err)
+		return nil, err
 	}
-	b, err := NewBucket(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return b, func() { _ = os.RemoveAll(dir) }
+	return &harness{
+		dir:    dir,
+		closer: func() { _ = os.RemoveAll(dir) },
+	}, nil
 }
+
+func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
+	return NewBucket(h.dir)
+}
+
+func (h *harness) Close() {
+	h.closer()
+}
+
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, makeBucket, "../testdata")
+	drivertest.RunConformanceTests(t, newHarness, "../testdata")
 }
 
 // File-specific unit tests.

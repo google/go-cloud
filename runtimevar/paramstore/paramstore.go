@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-cloud/runtimevar/internal"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
@@ -87,6 +88,7 @@ type watcher struct {
 	// decoder is the decoder that unmarshals the value in the param.
 	decoder     *runtimevar.Decoder
 	lastVersion int64
+	lastErrCode string
 }
 
 // WatchVariable begins watching the given parameter and waiting for it to change.
@@ -106,8 +108,19 @@ func (w *watcher) Close() error {
 func (w *watcher) ping(_ context.Context) (*driver.Variable, error) {
 	p, err := readParam(w.sess, w.name, w.lastVersion)
 	if err != nil {
+		errCode := err.Error()
+		if awsErr, ok := err.(awserr.Error); ok {
+			errCode = awsErr.Code()
+		}
+		if w.lastErrCode != "" && errCode == w.lastErrCode {
+			// No change.
+			return nil, nil
+		}
+		w.lastErrCode = errCode
+		w.lastVersion = -1
 		return nil, err
 	}
+	w.lastErrCode = ""
 	// version is set to 0 by readParam if the version hasn't changed.
 	if p.version != 0 && w.lastVersion != p.version {
 		dec := w.decoder
@@ -137,8 +150,11 @@ func readParam(p client.ConfigProvider, name string, version int64) (param, erro
 	svc := ssm.New(p)
 
 	getResp, err := svc.GetParameter(&ssm.GetParameterInput{Name: aws.String(name)})
-	if err != nil || getResp.Parameter == nil {
-		return zeroParam, fmt.Errorf("unable to get %q parameter: %v", name, err)
+	if err != nil {
+		return zeroParam, err
+	}
+	if getResp.Parameter == nil {
+		return zeroParam, fmt.Errorf("unable to get %q parameter", name)
 	}
 	getP := getResp.Parameter
 	if *getP.Version == version {
@@ -151,7 +167,7 @@ func readParam(p client.ConfigProvider, name string, version int64) (param, erro
 		},
 	})
 	if err != nil {
-		return zeroParam, fmt.Errorf("unable to get metadata for %q: %v", name, err)
+		return zeroParam, err
 	}
 	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
 		return zeroParam, fmt.Errorf("unable to get single %q parameter", name)

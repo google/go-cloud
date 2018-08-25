@@ -22,13 +22,10 @@ To set up your own instance of Contribute Bot for local testing or deployment:
 1.  Set your project using `gcloud config set project PROJECTID`, where
     `PROJECTID` is the project's ID.
 1.  Enable App Engine with `gcloud app create`.
-1.  Create a bucket to store the [Terraform state][] using
-    `gsutil mb -c regional -l us-west2 gs://some-bucket`, replacing
-    `some-bucket` with a new unique name.
-1.  Run `terraform init -backend-config 'bucket=some-bucket'`, replacing
-    `some-bucket` with the same name you used in the last step,
-1.  Create a [variable file][] for the settings from `variables.tf`. Skip
-    `github_app_key` for now.
+1.  Copy the `prod` directory to a directory called `dev`.
+1.  In `dev/main.tf`, remove the `backend "gcs"` block and change the project
+    IDs to your new GCP project.
+1.  Run `terraform init` from the new `dev` directory.
 1.  Run `terraform apply` to set up the infrastructure.
 1.  [Deploy the webhook][], creating a random webhook secret.
 1.  [Create the GitHub application][], setting the webhook URL to
@@ -36,8 +33,8 @@ To set up your own instance of Contribute Bot for local testing or deployment:
     project ID. Make sure to give Read &amp; Write access to Issues, Pull
     Requests, Checks, and Read-only access to Repository metadata. Subscribe to
     pull request and issue events.
-1.  Download a GitHub application secret key and copy the contents into your
-    Terraform variable file for the `github_app_key` variable. (It's useful to
+1.  Download a GitHub application secret key and copy the contents into a new
+    Terraform [variable file][] for the `github_app_key` variable. (It's useful to
     use a ["here doc"][].)
 1.  Run `terraform apply` again to update the secret material.
 
@@ -45,7 +42,6 @@ To set up your own instance of Contribute Bot for local testing or deployment:
 [Create the GitHub application]: https://github.com/settings/apps/new
 [Deploy the webhook]: webhook/README.md
 ["here doc"]: https://www.terraform.io/docs/configuration/syntax.html
-[Terraform state]: https://www.terraform.io/docs/state/remote.html
 [variable file]: https://www.terraform.io/docs/configuration/variables.html#variable-files
 
 ## Developing

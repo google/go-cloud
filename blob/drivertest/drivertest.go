@@ -11,29 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 // Package drivertest provides a conformance test for implementations of
 // driver.
-//
-// Example:
-//
-// // makeBucket is of type BucketMaker. It creates a *blob.Bucket for
-// // this provider implementation.
-// func makeBucket(t *testing.T) (*blob.Bucket, func()) {
-// ...
-// }
-// func TestConformance(t *testing.T) {
-//   drivertest.RunConformanceTests(t, makeBucket)
-// }
-//
-// Multiple calls to makeBucket during a RunConformanceTests run must refer to
-// the same storage bucket; i.e., a blob created using one *blob.Bucket must be
-// readable by a subsequent *blob.Bucket. This is required so that tests can
-// create a blob once and then run a series of tests over it.
-//
-// Implementation note: A new *blob.Bucket is created for each sub-test
-// so that provider implementations that use a record/replay strategy get
-// a separate golden file per test.
 package drivertest
 
 import (
@@ -44,40 +24,47 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cmp/cmp"
 )
 
-// BucketMaker describes functions used to create a bucket for a test.
-// Functions should return the bucket along with a "done" function to be called
-// when the test is complete.
-// If bucket creation fails, functions should t.Fatal to stop the test.
-// See the package comments for more details on required semantics.
-type BucketMaker func(t *testing.T) (*blob.Bucket, func())
+// Harness descibes the functionality test harnesses must provide to run
+// conformance tests.
+type Harness interface {
+	// MakeBucket creates a *blob.Bucket to test.
+	// Multiple calls to MakeBucket during a test run must refer to	the
+	// same storage bucket; i.e., a blob created using one *blob.Bucket must
+	// be readable by a subsequent *blob.Bucket.
+	MakeBucket(ctx context.Context) (*blob.Bucket, error)
+	Close()
+}
+
+// HarnessMaker describes functions that construct a harness for running tests.
+// It is called exactly once per test; Harness.Close() will be called when the test is complete.
+type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
 // pathToTestdata is a (possibly relative) path to a directory containing
 // blob/testdata/* (e.g., test-small.txt).
-func RunConformanceTests(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 	t.Run("TestRead", func(t *testing.T) {
-		testRead(t, makeBkt)
+		testRead(t, newHarness)
 	})
 	t.Run("TestWrite", func(t *testing.T) {
-		testWrite(t, makeBkt, pathToTestdata)
+		testWrite(t, newHarness, pathToTestdata)
 	})
 	t.Run("TestAttributes", func(t *testing.T) {
-		testAttributes(t, makeBkt)
+		testAttributes(t, newHarness)
 	})
 	t.Run("TestDelete", func(t *testing.T) {
-		testDelete(t, makeBkt)
+		testDelete(t, newHarness)
 	})
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
-func testRead(t *testing.T, makeBkt BucketMaker) {
+func testRead(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-reading"
 	content := []byte("abcdefghijklmnopqurstuvwxyz")
 	contentSize := int64(len(content))
@@ -137,7 +124,15 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 
 	// Creates a blob for sub-tests below.
 	init := func(t *testing.T) (*blob.Bucket, func()) {
-		b, done := makeBkt(t)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 		w, err := b.NewWriter(ctx, key, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -151,7 +146,7 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 		}
 		return b, func() {
 			_ = b.Delete(ctx, key)
-			done()
+			h.Close()
 		}
 	}
 
@@ -190,7 +185,7 @@ func testRead(t *testing.T, makeBkt BucketMaker) {
 }
 
 // testAttributes tests the behavior of attributes returned by Reader.
-func testAttributes(t *testing.T, makeBkt BucketMaker) {
+func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
 		key         = "blob-for-attributes"
 		contentType = "text/plain"
@@ -201,7 +196,14 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 
 	// Creates a blob for sub-tests below.
 	init := func(t *testing.T) (*blob.Bucket, func()) {
-		b, done := makeBkt(t)
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
@@ -218,7 +220,7 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 		}
 		return b, func() {
 			_ = b.Delete(ctx, key)
-			done()
+			h.Close()
 		}
 	}
 
@@ -269,8 +271,6 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 					// is supposed to return it.
 					return
 				}
-				// Touch the file after a couple of seconds and make sure ModTime changes.
-				time.Sleep(2 * time.Second)
 				w, err := b.NewWriter(ctx, key, nil)
 				if err != nil {
 					t.Fatalf("failed NewWriter: %v", err)
@@ -287,11 +287,10 @@ func testAttributes(t *testing.T, makeBkt BucketMaker) {
 				}
 				defer r2.Close()
 				t2 := r2.ModTime()
-				if !t2.After(t1) {
-					t.Errorf("ModTime %v is not after %v", t2, t1)
+				if t2.Before(t1) {
+					t.Errorf("ModTime %v is before %v", t2, t1)
 				}
 			})
-
 		})
 	}
 }
@@ -307,7 +306,7 @@ func loadTestFile(t *testing.T, pathToTestdata, filename string) []byte {
 }
 
 // testWrite tests the functionality of NewWriter and Writer.
-func testWrite(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
+func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 	const key = "blob-for-reading"
 	smallText := loadTestFile(t, pathToTestdata, "test-small.txt")
 	mediumHTML := loadTestFile(t, pathToTestdata, "test-medium.html")
@@ -383,8 +382,15 @@ func testWrite(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
 	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, done := makeBkt(t)
-			defer done()
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			// Write the content.
 			opts := &blob.WriterOptions{
@@ -439,14 +445,22 @@ func testWrite(t *testing.T, makeBkt BucketMaker, pathToTestdata string) {
 }
 
 // testDelete tests the functionality of Delete.
-func testDelete(t *testing.T, makeBkt BucketMaker) {
+func testDelete(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-deleting"
 
 	ctx := context.Background()
 	t.Run("NonExistentFails", func(t *testing.T) {
-		b, done := makeBkt(t)
-		defer done()
-		err := b.Delete(ctx, "does-not-exist")
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
 			t.Errorf("want error, got nil")
 		} else if !blob.IsNotExist(err) {
@@ -455,8 +469,16 @@ func testDelete(t *testing.T, makeBkt BucketMaker) {
 	})
 
 	t.Run("Works", func(t *testing.T) {
-		b, done := makeBkt(t)
-		defer done()
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		// Create the blob.
 		writer, err := b.NewWriter(ctx, key, nil)
 		if err != nil {

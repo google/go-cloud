@@ -59,5 +59,6 @@ require (
 	google.golang.org/genproto v0.0.0-20180627194029-ff3583edef7d
 	google.golang.org/grpc v1.13.0
 	gopkg.in/ini.v1 v1.37.0 // indirect
+	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 	gopkg.in/yaml.v2 v2.2.1 // indirect
 )
