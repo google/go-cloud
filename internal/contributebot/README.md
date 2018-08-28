@@ -21,6 +21,8 @@ To set up your own instance of Contribute Bot for local testing or deployment:
 1.  [Create a new GCP project][].
 1.  Set your project using `gcloud config set project PROJECTID`, where
     `PROJECTID` is the project's ID.
+1.  Download default application credentials with `gcloud auth
+    application-default login`.
 1.  Enable App Engine with `gcloud app create`.
 1.  Copy the `prod` directory to a directory called `dev`.
 1.  In `dev/main.tf`, remove the `backend "gcs"` block and change the project
@@ -30,12 +32,24 @@ To set up your own instance of Contribute Bot for local testing or deployment:
 1.  [Deploy the webhook][], creating a random webhook secret.
 1.  [Create the GitHub application][], setting the webhook URL to
     `https://PROJECTID.appspot.com/webhook`, where `PROJECTID` is your GCP
-    project ID. Make sure to give Read &amp; Write access to Issues, Pull
-    Requests, Checks, and Read-only access to Repository metadata. Subscribe to
-    pull request and issue events.
+    project ID.
+    *  Set the `Webhook secret` to the random webhook secret you created above.
+    *  Make sure to give Read &amp; Write access to Issues, Pull
+    Requests, Checks, and Read-only access to Repository metadata.
+    *  Subscribe to pull request and issue events.
 1.  Download a GitHub application secret key and copy the contents into a new
-    Terraform [variable file][] for the `github_app_key` variable. (It's useful to
-    use a ["here doc"][].)
+    Terraform [variable file][] in the `dev` directory, setting the
+    `github_app_key` variable. It's useful to use a ["here doc"][]. Example:
+
+```bash
+contributebot/dev$ cat terraform.tfvars
+github_app_key = <<EOF
+-----BEGIN RSA PRIVATE KEY-----
+...
+-----END RSA PRIVATE KEY-----
+EOF
+```
+
 1.  Run `terraform apply` again to update the secret material.
 
 [Create a new GCP project]: https://console.cloud.google.com/projectcreate
@@ -49,10 +63,17 @@ To set up your own instance of Contribute Bot for local testing or deployment:
 To run Contribute Bot locally for testing:
 
 1.  Create a GitHub repository for testing.
-1.  Install the GitHub application on your test respository.
+1.  Install the GitHub application on your test repository
+    (`Settings > Developer Settings > Github Apps`, then `Edit` your app and
+    select `Install App`).
 1.  Download a GitHub application secret key for your test application.
 1.  Run `contributebot`, setting the flags for your test GCP project and GitHub
-    application.
+    application. You can find the App ID under `About` on the Github page for
+    your app. Example:
+
+```go
+go run . --project=your-project-name --github_app=42 --github_key=/foo.pem
+```
 
 ## Deploying
 
