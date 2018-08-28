@@ -23,6 +23,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
@@ -106,96 +107,136 @@ func (w *worker) receive(ctx context.Context) error {
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
-	// An issueRule is a rule about what to do for a given event.
-	// Rules are executed in random order to ensure there are no dependencies.
-	type issueRule struct {
-		// name is the rule's name for error messages.
-		name string
 
-		// condition reports true if the event is "interesting" to this rule,
-		// meaning that the worker should fetch the latest information about
-		// the issue and call the run function.
-		condition func(*github.IssuesEvent) bool
-
-		// run executes the rule. The issue data is retrieved before any
-		// rules are executed, so may be ever-so-slightly stale.
-		run func(context.Context, *github.Client, issueRuleData) error
-	}
-
-	rules := []issueRule{
-		// Remove "in progress" label from closed issues.
-		{
-			name: "remove in progress label from closed",
-			condition: func(e *github.IssuesEvent) bool {
-				return e.GetAction() == "closed" && hasLabel(e.GetIssue(), inProgressLabel)
-			},
-			run: removeInProgressLabel,
-		},
+	data := issueRuleData{
+		action:  e.GetAction(),
+		owner:   e.GetRepo().GetOwner().GetLogin(),
+		repo:    e.GetRepo().GetName(),
+		issue:   e.GetIssue(),
+		changes: e.GetChanges(),
 	}
 
 	// Check conditions to see if issue data is needed.
 	// No need to consume API quota if events aren't relevant.
-	runs := make([]bool, len(rules))
-	runCount := 0
-	for i := range rules {
-		if rules[i].condition(e) {
-			runs[i] = true
-			runCount++
+	var toRun []issueRule
+	for _, rule := range allIssueRules {
+		if rule.Condition(data) {
+			toRun = append(toRun, rule)
 		}
 	}
-	if runCount == 0 {
+	if len(toRun) == 0 {
+		log.Printf("No issue rules matched %v", data)
 		return nil
 	}
 
 	// Retrieve the current issue state.
 	client := w.ghClient(e.GetInstallation().GetID())
-	owner := e.GetRepo().GetOwner().GetLogin()
-	repoName := e.GetRepo().GetName()
-	num := e.GetIssue().GetNumber()
-	iss, _, err := client.Issues.Get(ctx, owner, repoName, num)
+	iss, _, err := client.Issues.Get(ctx, data.owner, data.repo, data.issue.GetNumber())
 	if err != nil {
 		return err
 	}
+	data.issue = iss
 
 	// Execute relevant rules.
 	ok := true
-	data := issueRuleData{
-		issue: iss,
-		owner: owner,
-		repo:  repoName,
-	}
-	for i := range runs {
-		if !runs[i] {
+	for _, r := range toRun {
+		// Recheck Condition with fresh issue data.
+		if !r.Condition(data) {
 			continue
 		}
-		if err := rules[i].run(ctx, client, data); err != nil {
+		if err := r.Run(ctx, client, data); err != nil {
 			ok = false
-			log.Printf("Issue rule %q failed on %s/%s#%d: %v", rules[i].name, owner, repoName, num, err)
+			log.Printf("  Issue rule %q failed on %v: %v", r.Name(), data, err)
+		} else {
+			log.Printf("  Issue rule %q succeeded on %v", r.Name(), data)
 		}
 	}
 	if !ok {
-		return fmt.Errorf("one or more rules failed for %s/%s#%d", owner, repoName, num)
+		return fmt.Errorf("one or more rules failed for %v", data)
 	}
-	log.Printf("Applied %d relevant rules on %s/%s#%d successfully", runCount, owner, repoName, num)
+	log.Printf("Applied %d relevant issue rule(s) on %v successfully", len(toRun), data)
 	return nil
 }
 
-const inProgressLabel = "in progress"
-
 // issueRuleData is the information passed to an issue rule.
 type issueRuleData struct {
-	repo  string
-	owner string
-	issue *github.Issue
+	action  string
+	repo    string
+	owner   string
+	issue   *github.Issue
+	changes *github.EditChange
 }
 
-// removeInProgressLabel removes the "in progress" label from closed issues.
-func removeInProgressLabel(ctx context.Context, client *github.Client, data issueRuleData) error {
-	if data.issue.GetState() != "closed" || !hasLabel(data.issue, inProgressLabel) {
-		return nil
-	}
+func (ird issueRuleData) String() string {
+	return fmt.Sprintf("[%s %s/%s#%d]", ird.action, ird.owner, ird.repo, ird.issue.GetNumber())
+}
+
+// issueRule defines a rule about what to do for a given event.
+type issueRule interface {
+	// Name returns the rule's name for error messages.
+	Name() string
+	// Condition reports true if the event is "interesting" to this rule,
+	// meaning that the worker should fetch the latest information about
+	// the issue and call the Run function.
+	Condition(issueRuleData) bool
+	// Run executes the rule. The issue data is retrieved before any
+	// rules are executed, so may be ever-so-slightly stale.
+	Run(context.Context, *github.Client, issueRuleData) error
+}
+
+var allIssueRules = []issueRule{
+	removeInProgressLabelFromClosedIssues{},
+	checkIssueTitleFormat{},
+}
+
+// Remove "in progress" label from closed issues.
+type removeInProgressLabelFromClosedIssues struct{}
+
+const inProgressLabel = "in progress"
+
+func (removeInProgressLabelFromClosedIssues) Name() string {
+	return "remove in progress label from closed"
+}
+func (removeInProgressLabelFromClosedIssues) Condition(data issueRuleData) bool {
+	return data.action == "closed" && hasLabel(data.issue, inProgressLabel)
+}
+func (removeInProgressLabelFromClosedIssues) Run(ctx context.Context, client *github.Client, data issueRuleData) error {
 	num := data.issue.GetNumber()
 	_, err := client.Issues.RemoveLabelForIssue(ctx, data.owner, data.repo, num, inProgressLabel)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Check format of issue titles.
+type checkIssueTitleFormat struct{}
+
+var issueTitleRegexp = regexp.MustCompile("^[a-z0-9/]+: .*$")
+
+const issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: \"blob/gcsblob: not blobby enough\"."
+
+func (checkIssueTitleFormat) Name() string {
+	return "check issue title format"
+}
+func (checkIssueTitleFormat) Condition(data issueRuleData) bool {
+	// Add a comment if the title doesn't match our regexp, and it's a new issue,
+	// or an issue whose title has just been modified.
+	if issueTitleRegexp.MatchString(data.issue.GetTitle()) {
+		return false
+	}
+	if data.action == "opened" {
+		return true
+	}
+	if data.action != "edited" {
+		return false
+	}
+	return data.changes != nil && data.changes.Title != nil && *data.changes.Title.From != data.issue.GetTitle()
+}
+func (checkIssueTitleFormat) Run(ctx context.Context, client *github.Client, data issueRuleData) error {
+	num := data.issue.GetNumber()
+	_, _, err := client.Issues.CreateComment(ctx, data.owner, data.repo, num, &github.IssueComment{
+		Body: github.String(issueTitleComment)})
 	if err != nil {
 		return err
 	}
