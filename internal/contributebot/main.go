@@ -214,7 +214,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 		changes: e.GetChanges(),
 	}
 
-	// Check conditions to see if issue data is needed.
+	// Check conditions to see if PR data is needed.
 	// No need to consume API quota if events aren't relevant.
 	var toRun []prRule
 	for _, rule := range allPullRequestRules {
@@ -223,11 +223,11 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 		}
 	}
 	if len(toRun) == 0 {
-		log.Printf("No issue rules matched %v", data)
+		log.Printf("No pull request rules matched %v", data)
 		return nil
 	}
 
-	// Retrieve the current issue state.
+	// Retrieve the current pull request state.
 	client := w.ghClient(e.GetInstallation().GetID())
 	pr, _, err := client.PullRequests.Get(ctx, data.owner, data.repo, data.pr.GetNumber())
 	if err != nil {
@@ -238,21 +238,21 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	// Execute relevant rules.
 	ok := true
 	for _, r := range toRun {
-		// Recheck Condition with fresh issue data.
+		// Recheck Condition with fresh pull request data.
 		if !r.Condition(data) {
 			continue
 		}
 		if err := r.Run(ctx, client, data); err != nil {
 			ok = false
-			log.Printf("  Issue rule %q failed on %v: %v", r.Name(), data, err)
+			log.Printf("  Pull request rule %q failed on %v: %v", r.Name(), data, err)
 		} else {
-			log.Printf("  Issue rule %q succeeded on %v", r.Name(), data)
+			log.Printf("  Pull request rule %q succeeded on %v", r.Name(), data)
 		}
 	}
 	if !ok {
 		return fmt.Errorf("one or more rules failed for %v", data)
 	}
-	log.Printf("Applied %d relevant PR rule(s) on %v successfully", len(toRun), data)
+	log.Printf("Applied %d relevant pull request rule(s) on %v successfully", len(toRun), data)
 	return nil
 }
 
@@ -275,9 +275,9 @@ type prRule interface {
 	Name() string
 	// Condition reports true if the event is "interesting" to this rule,
 	// meaning that the worker should fetch the latest information about
-	// the PR and call the Run function.
+	// the pull request and call the Run function.
 	Condition(prRuleData) bool
-	// Run executes the rule. The issue data is retrieved before any
+	// Run executes the rule. The pull request data is retrieved before any
 	// rules are executed, so may be ever-so-slightly stale.
 	Run(context.Context, *github.Client, prRuleData) error
 }
@@ -286,7 +286,7 @@ var allPullRequestRules = []prRule{
 	branchesInFork{},
 }
 
-// Check that PRs are created from forks.
+// Check that PRs are created from forks. If not, close the pull request.
 type branchesInFork struct{}
 
 const branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
