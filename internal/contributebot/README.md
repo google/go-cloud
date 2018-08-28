@@ -39,7 +39,9 @@ To set up your own instance of Contribute Bot for local testing or deployment:
     *  Subscribe to pull request and issue events.
 1.  Download a GitHub application secret key and copy the contents into a new
     Terraform [variable file][] in the `dev` directory, setting the
-    `github_app_key` variable. It's useful to use a ["here doc"][]. Example:
+    `github_app_key` variable. It's useful to use a ["here doc"][]. Then run
+    `terraform apply` again to update the secret material. Your variable file
+    should look something like this:
 
 ```bash
 contributebot/dev$ cat terraform.tfvars
@@ -49,8 +51,6 @@ github_app_key = <<EOF
 -----END RSA PRIVATE KEY-----
 EOF
 ```
-
-1.  Run `terraform apply` again to update the secret material.
 
 [Create a new GCP project]: https://console.cloud.google.com/projectcreate
 [Create the GitHub application]: https://github.com/settings/apps/new
