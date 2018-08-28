@@ -33,6 +33,7 @@
 package filevar
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -183,7 +184,7 @@ type WatchOptions struct {
 // * If something has changed, it updates the watcher's bytes, isDeleted,
 //   and updateTime fields.
 func (w *watcher) processFile() (*driver.Variable, error) {
-	bytes, tm, err := readFile(w.file)
+	b, tm, err := readFile(w.file)
 	if os.IsNotExist(err) {
 		if w.isDeleted {
 			// File is still deleted, no change.
@@ -198,11 +199,11 @@ func (w *watcher) processFile() (*driver.Variable, error) {
 		return nil, err
 	}
 	// Change happens if it was previously deleted or content has changed.
-	if w.isDeleted || bytesNotEqual(w.bytes, bytes) {
-		w.bytes = bytes
+	if w.isDeleted || !bytes.Equal(w.bytes, b) {
+		w.bytes = b
 		w.updateTime = tm
 		w.isDeleted = false
-		val, err := w.decoder.Decode(bytes)
+		val, err := w.decoder.Decode(b)
 		return &driver.Variable{Value: val, UpdateTime: tm}, err
 	}
 	// No updates, no error.
@@ -215,19 +216,6 @@ func readFile(file string) ([]byte, time.Time, error) {
 		return nil, time.Time{}, err
 	}
 	return b, time.Now().UTC(), nil
-}
-
-func bytesNotEqual(a []byte, b []byte) bool {
-	n := len(a)
-	if n != len(b) {
-		return true
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return true
-		}
-	}
-	return false
 }
 
 // Close closes the fsnotify.Watcher.

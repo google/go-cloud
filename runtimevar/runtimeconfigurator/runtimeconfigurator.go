@@ -20,6 +20,7 @@
 package runtimeconfigurator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -169,14 +170,14 @@ func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
 
 	// Determine if there are any changes based on the bytes. If there are, update cache and
 	// return nil, else continue on.
-	bytes := bytesFromProto(vpb)
-	if !bytesNotEqual(w.lastBytes, bytes) {
+	b := bytesFromProto(vpb)
+	if bytes.Equal(w.lastBytes, b) {
 		return nil, nil
 	}
-	w.lastBytes = bytes
+	w.lastBytes = b
 	w.lastErrCode = codes.OK
 
-	val, err := w.decoder.Decode(bytes)
+	val, err := w.decoder.Decode(b)
 	if err != nil {
 		return nil, err
 	}
@@ -192,19 +193,6 @@ func bytesFromProto(vpb *pb.Variable) []byte {
 		return vpb.GetValue()
 	}
 	return []byte(vpb.GetText())
-}
-
-func bytesNotEqual(a []byte, b []byte) bool {
-	n := len(a)
-	if n != len(b) {
-		return true
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return true
-		}
-	}
-	return false
 }
 
 func parseUpdateTime(vpb *pb.Variable) (time.Time, error) {
