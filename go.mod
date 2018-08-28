@@ -18,7 +18,6 @@ require (
 	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
-	github.com/Jeffail/gabs v0.0.0-20180420203615-7a0fed31069a // indirect
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
@@ -30,22 +29,18 @@ require (
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/protobuf v1.1.0
 	github.com/google/go-cmp v0.2.0
+	github.com/google/martian v2.0.0-beta.2+incompatible // indirect
 	github.com/googleapis/gax-go v1.0.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.1
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
-	github.com/mailru/easyjson v0.0.0-20180723221831-d5012789d665 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/pquerna/ffjson v0.0.0-20180717144149-af8b230fcd20 // indirect
 	github.com/smartystreets/assertions v0.0.0-20180301161246-7678a5452ebe // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
 	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd // indirect
 	github.com/stretchr/testify v1.2.1 // indirect
-	github.com/tidwall/gjson v1.1.2 // indirect
-	github.com/tidwall/match v0.0.0-20171002075945-1731857f09b1 // indirect
-	github.com/tidwall/sjson v1.0.0
 	go.opencensus.io v0.12.0
 	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d
