@@ -27,8 +27,15 @@ and being able to run that code on any cloud you want, avoiding all the ceremony
 of cloud-specific authorization, tracing, SDKs and all the other code required
 to make an application portable across cloud platforms.
 
+You can learn more about the project from our [announcement blog post][], or our
+talk at Next 2018:
+
+[![Video: Building Go Applications for the Open Cloud (Cloud Next '18)](https://img.youtube.com/vi/_2ZwhvIkgek/0.jpg)][video]
+
+[announcement blog post]: https://blog.golang.org/go-cloud
+[godoc]: https://godoc.org/github.com/google/go-cloud
 [travis]: https://travis-ci.com/google/go-cloud
-[godoc]: http://godoc.org/github.com/google/go-cloud
+[video]: https://www.youtube.com/watch?v=_2ZwhvIkgek
 
 ## Installation instructions
 
@@ -41,6 +48,7 @@ Go Cloud builds at the latest stable release of Go. Previous Go versions may
 compile but are not supported.
 
 ## Samples
+
 [`samples/tutorial`][tutorial] shows how to get started with the project by
 using blob storage.
 
@@ -94,6 +102,11 @@ See [the contributing guide](./CONTRIBUTING.md) for more details.
 [gcp]: http://cloud.google.com
 [aws]: http://aws.amazon.com
 
-## Code of Conduct
+## Community
 
-This project is covered by a [Code of Conduct](./CODE_OF_CONDUCT.md).
+You can contact us on the [go-cloud mailing list][].
+
+This project is covered by the Go [Code of Conduct][].
+
+[Code of Conduct]: ./CODE_OF_CONDUCT.md
+[go-cloud mailing list]: https://groups.google.com/forum/#!forum/go-cloud
