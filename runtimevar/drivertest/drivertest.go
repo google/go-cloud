@@ -25,9 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// Harness descibes the functionality test harnesses must provide to run
-// conformance tests.
-// All functions should fail the test on error.
+// Harness descibes the functionality test harnesses must provide to run conformance tests.
 type Harness interface {
 	// MakeVar creates a *runtimevar.Variable to watch the given variable.
 	MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error)
@@ -43,8 +41,6 @@ type Harness interface {
 
 // HarnessMaker describes functions that construct a harness for running tests.
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
-// Functions should fail the test on error, and save t in Harness to allow
-// failing the test on errors in subsequent functions like MakeVar.
 type HarnessMaker func(t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations
@@ -85,6 +81,11 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v expected not-found error", got.Value)
@@ -120,6 +121,11 @@ func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(cancelledCtx)
 	if err == nil {
 		t.Errorf("got %v expected cancelled context error", got.Value)
@@ -167,6 +173,11 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -215,6 +226,11 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -254,6 +270,11 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v wanted invalid-json error", got.Value)
@@ -284,6 +305,11 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -329,6 +355,11 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
 	got, err := v.Watch(ctx)
 	if err != nil {
 		t.Fatal(err)
