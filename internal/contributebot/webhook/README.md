@@ -23,6 +23,7 @@ dev_appserver.py .
 ```shell
 cp app.yaml.in app.yaml
 # Edit app.yaml to fill in configuration.
-# You may have to run `go get` if you're using go 1.11.
+# You may have to run `go get`.
+# If you're using go 1.11+, you may have to set `GO111MODULE=off`.
 gcloud app deploy .
 ```
