@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -165,6 +166,16 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 	if err != nil {
 		return Attributes{}, err
 	}
+	if len(a.Metadata) > 0 {
+		// Providers are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md := make(map[string]string, len(a.Metadata))
+		for k, v := range a.Metadata {
+			md[strings.ToLower(k)] = v
+		}
+		a.Metadata = md
+	}
 	return Attributes(a), nil
 }
 
@@ -238,6 +249,19 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
 			return &Writer{w: w}, err
 		}
+		if len(opt.Metadata) > 0 {
+			// Providers are inconsistent, but at least some treat keys
+			// as case-insensitive. To make the behavior consistent, we
+			// force-lowercase them when writing and reading.
+			md := make(map[string]string, len(opt.Metadata))
+			for k, v := range opt.Metadata {
+				if k == "" {
+					return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
+				}
+				md[strings.ToLower(k)] = v
+			}
+			dopt.Metadata = md
+		}
 	}
 	return &Writer{
 		ctx:    ctx,
@@ -273,6 +297,10 @@ type WriterOptions struct {
 	// then it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
+
+	// Metadata are key/value strings to be associated with the blob, or nil.
+	// Keys may not be empty, and are lowercased before being written.
+	Metadata map[string]string
 }
 
 type blobError struct {

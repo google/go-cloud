@@ -59,6 +59,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	t.Run("TestCanceledWrite", func(t *testing.T) {
 		testCanceledWrite(t, newHarness, pathToTestdata)
 	})
+	t.Run("TestMetadata", func(t *testing.T) {
+		testMetadata(t, newHarness)
+	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
@@ -460,6 +463,89 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			// so the blob shouldn't exist.
 			if _, err := b.NewReader(ctx, key); err == nil {
 				t.Error("wanted NewReturn to return an error when write was canceled")
+			}
+		})
+	}
+}
+
+// testMetadata tests writing and reading the key/value metadata for a blob.
+func testMetadata(t *testing.T, newHarness HarnessMaker) {
+	const key = "blob-for-metadata"
+	hello := []byte("hello")
+
+	tests := []struct {
+		name     string
+		metadata map[string]string
+		content  []byte
+		want     map[string]string
+		wantErr  bool
+	}{
+		{
+			name:     "empty",
+			content:  hello,
+			metadata: map[string]string{},
+			want:     nil,
+		},
+		{
+			name:     "empty key fails",
+			content:  hello,
+			metadata: map[string]string{"": "empty key value"},
+			wantErr:  true,
+		},
+		{
+			name:    "valid metadata",
+			content: hello,
+			metadata: map[string]string{
+				"key-a": "value-a",
+				"kEy-B": "value-b",
+				"key-c": "vAlUe-c",
+			},
+			want: map[string]string{
+				"key-a": "value-a",
+				"key-b": "value-b",
+				"key-c": "vAlUe-c",
+			},
+		},
+		{
+			name:     "valid metadata with empty body",
+			content:  nil,
+			metadata: map[string]string{"foo": "bar"},
+			want:     map[string]string{"foo": "bar"},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			opts := &blob.WriterOptions{
+				Metadata: tc.metadata,
+			}
+			err = b.WriteAll(ctx, key, hello, opts)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("got error %v want error %v", err, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer func() {
+				_ = b.Delete(ctx, key)
+			}()
+			a, err := b.Attributes(ctx, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(a.Metadata, tc.want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", a.Metadata, tc.want, diff)
 			}
 		})
 	}

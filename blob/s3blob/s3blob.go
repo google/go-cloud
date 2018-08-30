@@ -76,6 +76,7 @@ type writer struct {
 	ctx         context.Context
 	uploader    *s3manager.Uploader
 	contentType string
+	metadata    map[string]*string
 	donec       chan struct{} // closed when done writing
 	// The following fields will be written before donec closes:
 	err error
@@ -108,6 +109,7 @@ func (w *writer) open() error {
 			ContentType: aws.String(w.contentType),
 			Key:         aws.String(w.key),
 			Body:        pr,
+			Metadata:    w.metadata,
 		})
 		if err != nil {
 			w.err = err
@@ -143,6 +145,7 @@ func (w *writer) touch() {
 		ContentType: aws.String(w.contentType),
 		Key:         aws.String(w.key),
 		Body:        emptyBody,
+		Metadata:    w.metadata,
 	})
 }
 
@@ -166,8 +169,18 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		}
 		return driver.Attributes{}, err
 	}
+	var md map[string]string
+	if len(resp.Metadata) > 0 {
+		md = make(map[string]string, len(resp.Metadata))
+		for k, v := range resp.Metadata {
+			if v != nil {
+				md[k] = aws.StringValue(v)
+			}
+		}
+	}
 	return driver.Attributes{
 		ContentType: aws.StringValue(resp.ContentType),
+		Metadata:    md,
 		ModTime:     aws.TimeValue(resp.LastModified),
 		Size:        aws.Int64Value(resp.ContentLength),
 	}, nil
@@ -225,12 +238,20 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			u.PartSize = int64(opts.BufferSize)
 		}
 	})
+	var metadata map[string]*string
+	if opts != nil && len(opts.Metadata) > 0 {
+		metadata = make(map[string]*string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			metadata[k] = aws.String(v)
+		}
+	}
 	w := &writer{
 		bucket:      b.name,
 		ctx:         ctx,
 		key:         key,
 		uploader:    uploader,
 		contentType: contentType,
+		metadata:    metadata,
 		donec:       make(chan struct{}),
 	}
 	return w, nil
