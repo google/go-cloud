@@ -117,6 +117,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			Passwd:                  c.params.Password,
 			TLSConfig:               tlsConfigName,
 			AllowCleartextPasswords: true,
+			AllowNativePasswords:	 true,
 			DBName:                  c.params.Database,
 		}
 		c.dsn = cfg.FormatDSN()
