@@ -227,17 +227,19 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 		return nil
 	}
 
-	// Retrieve the current pull request state.
 	client := w.ghClient(e.GetInstallation().GetID())
-	pr, _, err := client.PullRequests.Get(ctx, data.owner, data.repo, data.pr.GetNumber())
-	if err != nil {
-		return err
-	}
-	data.pr = pr
 
 	// Execute relevant rules.
 	ok := true
 	for _, r := range toRun {
+		// Retrieve the current state after every rule,
+		// so that subsequent rules have the latest data.
+		pr, _, err := client.PullRequests.Get(ctx, data.owner, data.repo, data.pr.GetNumber())
+		if err != nil {
+			return err
+		}
+		data.pr = pr
+
 		// Recheck Condition with fresh pull request data.
 		if !r.Condition(data) {
 			continue
