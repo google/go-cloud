@@ -23,7 +23,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
@@ -188,7 +187,6 @@ type issueRule interface {
 
 var allIssueRules = []issueRule{
 	removeInProgressLabelFromClosedIssues{},
-	checkIssueTitleFormat{},
 }
 
 // Remove "in progress" label from closed issues.
@@ -205,40 +203,6 @@ func (removeInProgressLabelFromClosedIssues) Condition(data issueRuleData) bool 
 func (removeInProgressLabelFromClosedIssues) Run(ctx context.Context, client *github.Client, data issueRuleData) error {
 	num := data.issue.GetNumber()
 	_, err := client.Issues.RemoveLabelForIssue(ctx, data.owner, data.repo, num, inProgressLabel)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Check format of issue titles.
-type checkIssueTitleFormat struct{}
-
-var issueTitleRegexp = regexp.MustCompile("^[a-z0-9/]+: .*$")
-
-const issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
-
-func (checkIssueTitleFormat) Name() string {
-	return "check issue title format"
-}
-func (checkIssueTitleFormat) Condition(data issueRuleData) bool {
-	// Add a comment if the title doesn't match our regexp, and it's a new issue,
-	// or an issue whose title has just been modified.
-	if issueTitleRegexp.MatchString(data.issue.GetTitle()) {
-		return false
-	}
-	if data.action == "opened" {
-		return true
-	}
-	if data.action != "edited" {
-		return false
-	}
-	return data.changes != nil && data.changes.Title != nil && *data.changes.Title.From != data.issue.GetTitle()
-}
-func (checkIssueTitleFormat) Run(ctx context.Context, client *github.Client, data issueRuleData) error {
-	num := data.issue.GetNumber()
-	_, _, err := client.Issues.CreateComment(ctx, data.owner, data.repo, num, &github.IssueComment{
-		Body: github.String(issueTitleComment)})
 	if err != nil {
 		return err
 	}
