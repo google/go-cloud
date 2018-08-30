@@ -129,17 +129,19 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 		return nil
 	}
 
-	// Retrieve the current issue state.
 	client := w.ghClient(e.GetInstallation().GetID())
-	iss, _, err := client.Issues.Get(ctx, data.owner, data.repo, data.issue.GetNumber())
-	if err != nil {
-		return err
-	}
-	data.issue = iss
 
 	// Execute relevant rules.
 	ok := true
 	for _, r := range toRun {
+		// Retrieve the current issue state after every rule,
+		// so that subsequent rules have the latest issue data.
+		iss, _, err := client.Issues.Get(ctx, data.owner, data.repo, data.issue.GetNumber())
+		if err != nil {
+			return err
+		}
+		data.issue = iss
+
 		// Recheck Condition with fresh issue data.
 		if !r.Condition(data) {
 			continue
@@ -214,7 +216,7 @@ type checkIssueTitleFormat struct{}
 
 var issueTitleRegexp = regexp.MustCompile("^[a-z0-9/]+: .*$")
 
-const issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: \"blob/gcsblob: not blobby enough\"."
+const issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
 
 func (checkIssueTitleFormat) Name() string {
 	return "check issue title format"
