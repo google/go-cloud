@@ -52,11 +52,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
-	t.Run("TestWrite", func(t *testing.T) {
-		testWrite(t, newHarness, pathToTestdata)
-	})
 	t.Run("TestAttributes", func(t *testing.T) {
 		testAttributes(t, newHarness)
+	})
+	t.Run("TestWrite", func(t *testing.T) {
+		testWrite(t, newHarness, pathToTestdata)
 	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
@@ -224,22 +224,22 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		}
 	}
 
-	t.Run("ContentType", func(t *testing.T) {
-		b, done := init(t)
-		defer done()
+	for _, rLen := range []int64{0, -1} {
+		t.Run(fmt.Sprintf("ReadLength%d", rLen), func(t *testing.T) {
 
-		r, err := b.NewRangeReader(ctx, key, 0, 0)
-		if err != nil {
-			t.Fatalf("failed NewRangeReader: %v", err)
-		}
-		defer r.Close()
-		if r.ContentType() != contentType {
-			t.Errorf("got ContentType %q want %q", r.ContentType(), contentType)
-		}
-	})
+			t.Run("ContentType", func(t *testing.T) {
+				b, done := init(t)
+				defer done()
 
-	for _, rLen := range []int64{0, -1, 1} {
-		t.Run(fmt.Sprintf("ReadLength=%d", rLen), func(t *testing.T) {
+				r, err := b.NewRangeReader(ctx, key, 0, 0)
+				if err != nil {
+					t.Fatalf("failed NewRangeReader: %v", err)
+				}
+				defer r.Close()
+				if r.ContentType() != contentType {
+					t.Errorf("got ContentType %q want %q", r.ContentType(), contentType)
+				}
+			})
 
 			t.Run("Size", func(t *testing.T) {
 				b, done := init(t)
