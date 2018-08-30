@@ -19,6 +19,7 @@ before_install:
     fi
 
 install:
+  - "export GOPROXY=https://storage.googleapis.com/go-cloud-modules/"
   - "go get -u golang.org/x/vgo"
   - "go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
   - "vgo install ./wire/cmd/wire"
