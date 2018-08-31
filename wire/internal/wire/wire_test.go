@@ -244,28 +244,33 @@ func TestExport(t *testing.T) {
 
 func TestDisambiguate(t *testing.T) {
 	tests := []struct {
-		name     string
-		contains string
+		names    []string
+		want     string
 		collides map[string]bool
 	}{
-		{"foo", "foo", nil},
-		{"foo", "foo", map[string]bool{"foo": true}},
-		{"foo", "foo", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
-		{"foo1", "foo", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
-		{"foo\u0661", "foo", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
-		{"foo\u0661", "foo", map[string]bool{"foo": true, "foo1": true, "foo2": true, "foo\u0661": true}},
+		{[]string{"foo"}, "foo", nil},
+		{[]string{"foo"}, "foo2", map[string]bool{"foo": true}},
+		{[]string{"foo", "myFoo"}, "myFoo", map[string]bool{"foo": true}},
+		{[]string{"foo", "myFoo", "anotherFoo"}, "anotherFoo", map[string]bool{"foo": true, "myFoo": true}},
+		{[]string{"foo", "myFoo"}, "foo2", map[string]bool{"foo": true, "myFoo": true}},
+		{[]string{"foo"}, "foo3", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
+		{[]string{"foo1"}, "foo1_2", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
+		{[]string{"foo\u0661"}, "foo\u0661", map[string]bool{"foo": true, "foo1": true, "foo2": true}},
+		{[]string{"foo\u0661"}, "foo\u06612", map[string]bool{"foo": true, "foo1": true, "foo2": true, "foo\u0661": true}},
 	}
 	for _, test := range tests {
-		got := disambiguate(test.name, func(name string) bool { return test.collides[name] })
-		if !isIdent(got) {
-			t.Errorf("disambiguate(%q, %v) = %q; not an identifier", test.name, test.collides, got)
-		}
-		if !strings.Contains(got, test.contains) {
-			t.Errorf("disambiguate(%q, %v) = %q; wanted to contain %q", test.name, test.collides, got, test.contains)
-		}
-		if test.collides[got] {
-			t.Errorf("disambiguate(%q, %v) = %q; ", test.name, test.collides, got)
-		}
+		t.Run(fmt.Sprintf("disambiguate(%v, %v)", test.names, test.collides), func(t *testing.T) {
+			got := disambiguate(test.names, func(name string) bool { return test.collides[name] })
+			if !isIdent(got) {
+				t.Errorf("%q is not an identifier", got)
+			}
+			if got != test.want {
+				t.Errorf("got %q want %q", got, test.want)
+			}
+			if test.collides[got] {
+				t.Errorf("%q collides", got)
+			}
+		})
 	}
 }
 

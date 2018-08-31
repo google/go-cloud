@@ -234,7 +234,11 @@ func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *Prov
 			}
 			if g.values[c.valueExpr] == "" {
 				t := c.valueTypeInfo.TypeOf(c.valueExpr)
-				name := disambiguate("_wire"+export(typeVariableName(t))+"Value", g.nameInFileScope)
+				names := typeVariableName(t, "")
+				for i, name := range names {
+					names[i] = "_wire" + export(name) + "Value"
+				}
+				name := disambiguate(names, g.nameInFileScope)
 				g.values[c.valueExpr] = name
 				pendingVars = append(pendingVars, pendingVar{
 					name:     name,
@@ -251,12 +255,12 @@ func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *Prov
 	// Perform one pass to collect all imports, followed by the real pass.
 	injectPass(name, params, injectSig, calls, &injectorGen{
 		g:       g,
-		errVar:  disambiguate("err", g.nameInFileScope),
+		errVar:  disambiguate([]string{"err"}, g.nameInFileScope),
 		discard: true,
 	})
 	injectPass(name, params, injectSig, calls, &injectorGen{
 		g:       g,
-		errVar:  disambiguate("err", g.nameInFileScope),
+		errVar:  disambiguate([]string{"err"}, g.nameInFileScope),
 		discard: false,
 	})
 	if len(pendingVars) > 0 {
@@ -359,7 +363,7 @@ func (g *gen) rewritePkgRefs(info *types.Info, node ast.Node) ast.Node {
 		if pos := obj.Pos(); pos < start || end <= pos || !(g.nameInFileScope(objName) || inNewNames(objName)) {
 			return true
 		}
-		newName := disambiguate(objName, func(n string) bool {
+		newName := disambiguate([]string{objName}, func(n string) bool {
 			if g.nameInFileScope(n) || inNewNames(n) {
 				return true
 			}
@@ -417,7 +421,7 @@ func (g *gen) qualifyImport(path string) string {
 		return name
 	}
 	// TODO(light): Use parts of import path to disambiguate.
-	name := disambiguate(g.prog.Package(path).Pkg.Name(), func(n string) bool {
+	name := disambiguate([]string{g.prog.Package(path).Pkg.Name()}, func(n string) bool {
 		// Don't let an import take the "err" name. That's annoying.
 		return n == "err" || g.nameInFileScope(n)
 	})
@@ -470,14 +474,14 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 			ig.p(", ")
 		}
 		pi := params.At(i)
+		var argNames []string
 		a := pi.Name()
 		if a == "" || a == "_" {
-			a = unexport(typeVariableName(pi.Type()))
-			if a == "" {
-				a = "arg"
-			}
+			argNames = unexportSlice(typeVariableName(pi.Type(), "arg"))
+		} else {
+			argNames = []string{a}
 		}
-		ig.paramNames = append(ig.paramNames, disambiguate(a, ig.nameInInjector))
+		ig.paramNames = append(ig.paramNames, disambiguate(argNames, ig.nameInInjector))
 		ig.p("%s %s", ig.paramNames[i], types.TypeString(pi.Type(), ig.g.qualifyPkg))
 	}
 	outTypeString := types.TypeString(injectSig.out, ig.g.qualifyPkg)
@@ -493,11 +497,7 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 	}
 	for i := range calls {
 		c := &calls[i]
-		lname := unexport(typeVariableName(c.out))
-		if lname == "" {
-			lname = "v"
-		}
-		lname = disambiguate(lname, ig.nameInInjector)
+		lname := disambiguate(unexportSlice(typeVariableName(c.out, "v")), ig.nameInInjector)
 		ig.localNames = append(ig.localNames, lname)
 		switch c.kind {
 		case structProvider:
@@ -537,7 +537,7 @@ func (ig *injectorGen) funcProviderCall(lname string, c *call, injectSig outputS
 	ig.p("\t%s", lname)
 	prevCleanup := len(ig.cleanupNames)
 	if c.hasCleanup {
-		cname := disambiguate("cleanup", ig.nameInInjector)
+		cname := disambiguate([]string{"cleanup"}, ig.nameInInjector)
 		ig.cleanupNames = append(ig.cleanupNames, cname)
 		ig.p(", %s", cname)
 	}
@@ -661,22 +661,35 @@ func zeroValue(t types.Type, qf types.Qualifier) string {
 	}
 }
 
-// typeVariableName invents a variable name derived from the type name
-// or returns the empty string if one could not be found. There are no
-// guarantees about whether the name is exported or unexported: call
-// export() or unexport() to convert.
-func typeVariableName(t types.Type) string {
+// typeVariableName invents variable names derived from the type name,
+// or returns a slice with defaultName if one could not be found.
+// The first returned name is preferred; others may be used for
+// disambiguation.
+// There are no guarantees about whether the names are exported or unexported:
+// call export() or unexport() to convert.
+func typeVariableName(t types.Type, defaultName string) []string {
 	if p, ok := t.(*types.Pointer); ok {
 		t = p.Elem()
 	}
+	var names []string
 	switch t := t.(type) {
 	case *types.Basic:
-		return t.Name()
+		if t.Name() != "" {
+			names = append(names, t.Name())
+		}
 	case *types.Named:
-		// TODO(light): Include package name when appropriate.
-		return t.Obj().Name()
+		obj := t.Obj()
+		names = append(names, obj.Name())
+		// Provide an alternate name prefixed with the package name if possible.
+		// E.g., in case of collisions, we'll use "fooCfg" instead of "cfg2".
+		if pkg := obj.Pkg(); pkg != nil && pkg.Name() != "" {
+			names = append(names, fmt.Sprintf("%s%s", pkg.Name(), strings.Title(obj.Name())))
+		}
 	}
-	return ""
+	if len(names) == 0 {
+		names = append(names, defaultName)
+	}
+	return names
 }
 
 // unexport converts a name that is potentially exported to an unexported name.
@@ -712,6 +725,15 @@ func unexport(name string) string {
 	return sbuf.String()
 }
 
+// unexportSlice returns a slice of unexported names.
+func unexportSlice(names []string) []string {
+	retval := make([]string, len(names))
+	for i, name := range names {
+		retval[i] = unexport(name)
+	}
+	return retval
+}
+
 // export converts a name that is potentially unexported to an exported name.
 func export(name string) string {
 	if name == "" {
@@ -729,11 +751,14 @@ func export(name string) string {
 	return sbuf.String()
 }
 
-// disambiguate picks a unique name, preferring name if it is already unique.
-func disambiguate(name string, collides func(string) bool) string {
-	if !collides(name) {
-		return name
+// disambiguate picks a unique name, preferring a name in names if it is already unique.
+func disambiguate(names []string, collides func(string) bool) string {
+	for _, name := range names {
+		if !collides(name) {
+			return name
+		}
 	}
+	name := names[0]
 	buf := []byte(name)
 	if len(buf) > 0 && buf[len(buf)-1] >= '0' && buf[len(buf)-1] <= '9' {
 		buf = append(buf, '_')
