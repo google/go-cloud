@@ -81,7 +81,7 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
 // If WaitTime is not set the poller will check for updates to the variable every 30 seconds.
-func (c *Client) NewVariable(ctx context.Context, name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}

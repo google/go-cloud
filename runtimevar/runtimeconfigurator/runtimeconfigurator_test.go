@@ -73,7 +73,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 
 func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
 	rn := resourceName(name)
-	return h.client.NewVariable(ctx, rn, decoder, nil)
+	return h.client.NewVariable(rn, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
