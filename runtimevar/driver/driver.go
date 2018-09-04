@@ -39,7 +39,7 @@ type Variable struct {
 // dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
 // runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
-	// WatchVariable returns either:
+	// WatchVariable returns one of:
 	//
 	// 1. A new value for the variable in v, along with a provider-specific
 	//    version that will be passed to the next WatchVariable call. wait is
