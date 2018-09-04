@@ -6,9 +6,9 @@
 package main
 
 import (
-	bar "example.com/bar"
-	baz "example.com/baz"
-	foo "example.com/foo"
+	"example.com/bar"
+	"example.com/baz"
+	"example.com/foo"
 	"fmt"
 )
 

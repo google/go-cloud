@@ -173,7 +173,8 @@ func (g *gen) frame() []byte {
 		sort.Strings(imps)
 		for _, path := range imps {
 			// Omit the local package identifier if it matches the package name.
-			if g.imports[path] == path {
+			name := filepath.Base(g.prog.Package(path).Pkg.Name())
+			if g.imports[path] == name {
 				fmt.Fprintf(&buf, "\t%q\n", path)
 			} else {
 				fmt.Fprintf(&buf, "\t%s %q\n", g.imports[path], path)
