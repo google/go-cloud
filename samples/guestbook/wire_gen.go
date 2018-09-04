@@ -8,6 +8,8 @@ package main
 import (
 	context "context"
 	sql "database/sql"
+	http "net/http"
+
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	mysql "github.com/go-sql-driver/mysql"
@@ -27,7 +29,6 @@ import (
 	sdserver "github.com/google/go-cloud/server/sdserver"
 	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
-	http "net/http"
 )
 
 // Injectors from inject_aws.go:
@@ -73,7 +74,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 		return nil, nil, err
 	}
-	client2 := paramstore.NewClient(ctx, session2)
+	client2 := paramstore.NewClient(session2)
 	variable, err := awsMOTDVar(ctx, client2, flags)
 	if err != nil {
 		cleanup3()
@@ -213,7 +214,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 }
 
 func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client2.NewVariable(ctx, flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
+	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
 		WaitTime: flags.motdVarWaitTime,
 	})
 }
@@ -241,7 +242,7 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client2.NewVariable(ctx, name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
+	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
 		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {

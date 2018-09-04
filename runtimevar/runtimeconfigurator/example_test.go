@@ -62,7 +62,7 @@ func ExampleClient_NewVariable() {
 	}
 
 	// Create a variable object to watch for changes.
-	v, err := client.NewVariable(ctx, name, decoder, nil)
+	v, err := client.NewVariable(name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
