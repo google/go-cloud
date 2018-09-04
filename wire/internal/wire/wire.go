@@ -234,11 +234,8 @@ func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *Prov
 			}
 			if g.values[c.valueExpr] == "" {
 				t := c.valueTypeInfo.TypeOf(c.valueExpr)
-				names := typeVariableName(t, "")
-				for i, name := range names {
-					names[i] = "_wire" + export(name) + "Value"
-				}
-				name := disambiguate(names, g.nameInFileScope)
+
+				name := typeVariableName(t, "", func(name string) string { return "_wire" + export(name) + "Value" }, g.nameInFileScope)
 				g.values[c.valueExpr] = name
 				pendingVars = append(pendingVars, pendingVar{
 					name:     name,
@@ -255,12 +252,12 @@ func (g *gen) inject(pos token.Pos, name string, sig *types.Signature, set *Prov
 	// Perform one pass to collect all imports, followed by the real pass.
 	injectPass(name, params, injectSig, calls, &injectorGen{
 		g:       g,
-		errVar:  disambiguate([]string{"err"}, g.nameInFileScope),
+		errVar:  disambiguate("err", g.nameInFileScope),
 		discard: true,
 	})
 	injectPass(name, params, injectSig, calls, &injectorGen{
 		g:       g,
-		errVar:  disambiguate([]string{"err"}, g.nameInFileScope),
+		errVar:  disambiguate("err", g.nameInFileScope),
 		discard: false,
 	})
 	if len(pendingVars) > 0 {
@@ -363,7 +360,7 @@ func (g *gen) rewritePkgRefs(info *types.Info, node ast.Node) ast.Node {
 		if pos := obj.Pos(); pos < start || end <= pos || !(g.nameInFileScope(objName) || inNewNames(objName)) {
 			return true
 		}
-		newName := disambiguate([]string{objName}, func(n string) bool {
+		newName := disambiguate(objName, func(n string) bool {
 			if g.nameInFileScope(n) || inNewNames(n) {
 				return true
 			}
@@ -421,7 +418,7 @@ func (g *gen) qualifyImport(path string) string {
 		return name
 	}
 	// TODO(light): Use parts of import path to disambiguate.
-	name := disambiguate([]string{g.prog.Package(path).Pkg.Name()}, func(n string) bool {
+	name := disambiguate(g.prog.Package(path).Pkg.Name(), func(n string) bool {
 		// Don't let an import take the "err" name. That's annoying.
 		return n == "err" || g.nameInFileScope(n)
 	})
@@ -474,14 +471,13 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 			ig.p(", ")
 		}
 		pi := params.At(i)
-		var argNames []string
 		a := pi.Name()
 		if a == "" || a == "_" {
-			argNames = unexportSlice(typeVariableName(pi.Type(), "arg"))
+			a = typeVariableName(pi.Type(), "arg", unexport, ig.nameInInjector)
 		} else {
-			argNames = []string{a}
+			a = disambiguate(a, ig.nameInInjector)
 		}
-		ig.paramNames = append(ig.paramNames, disambiguate(argNames, ig.nameInInjector))
+		ig.paramNames = append(ig.paramNames, a)
 		ig.p("%s %s", ig.paramNames[i], types.TypeString(pi.Type(), ig.g.qualifyPkg))
 	}
 	outTypeString := types.TypeString(injectSig.out, ig.g.qualifyPkg)
@@ -497,7 +493,7 @@ func injectPass(name string, params *types.Tuple, injectSig outputSignature, cal
 	}
 	for i := range calls {
 		c := &calls[i]
-		lname := disambiguate(unexportSlice(typeVariableName(c.out, "v")), ig.nameInInjector)
+		lname := typeVariableName(c.out, "v", unexport, ig.nameInInjector)
 		ig.localNames = append(ig.localNames, lname)
 		switch c.kind {
 		case structProvider:
@@ -537,7 +533,7 @@ func (ig *injectorGen) funcProviderCall(lname string, c *call, injectSig outputS
 	ig.p("\t%s", lname)
 	prevCleanup := len(ig.cleanupNames)
 	if c.hasCleanup {
-		cname := disambiguate([]string{"cleanup"}, ig.nameInInjector)
+		cname := disambiguate("cleanup", ig.nameInInjector)
 		ig.cleanupNames = append(ig.cleanupNames, cname)
 		ig.p(", %s", cname)
 	}
@@ -661,13 +657,13 @@ func zeroValue(t types.Type, qf types.Qualifier) string {
 	}
 }
 
-// typeVariableName invents variable names derived from the type name,
-// or returns a slice with defaultName if one could not be found.
-// The first returned name is preferred; others may be used for
-// disambiguation.
-// There are no guarantees about whether the names are exported or unexported:
-// call export() or unexport() to convert.
-func typeVariableName(t types.Type, defaultName string) []string {
+// typeVariableName invents disambiguated variable names derived from the
+// type name.
+// If a name can't be derived from the type, defaultName is used.
+// transform is used to transform the name after it is disambiguated; commonly
+//   used functions are export or unexport.
+// collides is used to see if a name is ambiguous.
+func typeVariableName(t types.Type, defaultName string, transform func(string) string, collides func(string) bool) string {
 	if p, ok := t.(*types.Pointer); ok {
 		t = p.Elem()
 	}
@@ -679,7 +675,9 @@ func typeVariableName(t types.Type, defaultName string) []string {
 		}
 	case *types.Named:
 		obj := t.Obj()
-		names = append(names, obj.Name())
+		if name := obj.Name(); name != "" {
+			names = append(names, name)
+		}
 		// Provide an alternate name prefixed with the package name if possible.
 		// E.g., in case of collisions, we'll use "fooCfg" instead of "cfg2".
 		if pkg := obj.Pkg(); pkg != nil && pkg.Name() != "" {
@@ -689,7 +687,20 @@ func typeVariableName(t types.Type, defaultName string) []string {
 	if len(names) == 0 {
 		names = append(names, defaultName)
 	}
-	return names
+
+	// Transform the names.
+	for i, name := range names {
+		names[i] = transform(name)
+	}
+
+	// See if there's an unambiguous name; if so, use it.
+	for _, name := range names {
+		if !collides(name) {
+			return name
+		}
+	}
+	// Otherwise, disambiguate the first name.
+	return disambiguate(names[0], collides)
 }
 
 // unexport converts a name that is potentially exported to an unexported name.
@@ -752,13 +763,10 @@ func export(name string) string {
 }
 
 // disambiguate picks a unique name, preferring a name in names if it is already unique.
-func disambiguate(names []string, collides func(string) bool) string {
-	for _, name := range names {
-		if !collides(name) {
-			return name
-		}
+func disambiguate(name string, collides func(string) bool) string {
+	if !collides(name) {
+		return name
 	}
-	name := names[0]
 	buf := []byte(name)
 	if len(buf) > 0 && buf[len(buf)-1] >= '0' && buf[len(buf)-1] <= '9' {
 		buf = append(buf, '_')
