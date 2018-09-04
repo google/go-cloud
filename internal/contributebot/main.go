@@ -88,7 +88,9 @@ func (w *worker) receive(ctx context.Context) error {
 		switch event := event.(type) {
 		case *github.IssuesEvent:
 			handleErr = w.receiveIssueEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.PullRequestEvent, *github.CheckSuiteEvent:
+		case *github.PullRequestEvent:
+			handleErr = w.receivePullRequestEvent(ctx, event)
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -196,6 +198,117 @@ func removeInProgressLabel(ctx context.Context, client *github.Client, data issu
 	}
 	num := data.issue.GetNumber()
 	_, err := client.Issues.RemoveLabelForIssue(ctx, data.owner, data.repo, num, inProgressLabel)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
+
+	data := prRuleData{
+		action:  e.GetAction(),
+		owner:   e.GetRepo().GetOwner().GetLogin(),
+		repo:    e.GetRepo().GetName(),
+		pr:      e.GetPullRequest(),
+		changes: e.GetChanges(),
+	}
+
+	// Check conditions to see if PR data is needed.
+	// No need to consume API quota if events aren't relevant.
+	var toRun []prRule
+	for _, rule := range allPullRequestRules {
+		if rule.Condition(data) {
+			toRun = append(toRun, rule)
+		}
+	}
+	if len(toRun) == 0 {
+		log.Printf("No pull request rules matched %v", data)
+		return nil
+	}
+
+	client := w.ghClient(e.GetInstallation().GetID())
+
+	// Execute relevant rules.
+	ok := true
+	for _, r := range toRun {
+		// Retrieve the current state after every rule,
+		// so that subsequent rules have the latest data.
+		pr, _, err := client.PullRequests.Get(ctx, data.owner, data.repo, data.pr.GetNumber())
+		if err != nil {
+			return err
+		}
+		data.pr = pr
+
+		// Recheck Condition with fresh pull request data.
+		if !r.Condition(data) {
+			continue
+		}
+		if err := r.Run(ctx, client, data); err != nil {
+			ok = false
+			log.Printf("  Pull request rule %q failed on %v: %v", r.Name(), data, err)
+		} else {
+			log.Printf("  Pull request rule %q succeeded on %v", r.Name(), data)
+		}
+	}
+	if !ok {
+		return fmt.Errorf("one or more rules failed for %v", data)
+	}
+	log.Printf("Applied %d relevant pull request rule(s) on %v successfully", len(toRun), data)
+	return nil
+}
+
+// prRuleData is the information passed to a pull request rule.
+type prRuleData struct {
+	action  string
+	repo    string
+	owner   string
+	pr      *github.PullRequest
+	changes *github.EditChange
+}
+
+func (prd prRuleData) String() string {
+	return fmt.Sprintf("[%s %s/%s#%d]", prd.action, prd.owner, prd.repo, prd.pr.GetNumber())
+}
+
+// prRule defines a rule about what to do for a given pull request event.
+type prRule interface {
+	// Name returns the rule's name for error messages.
+	Name() string
+	// Condition reports true if the event is "interesting" to this rule,
+	// meaning that the worker should fetch the latest information about
+	// the pull request and call the Run function.
+	Condition(prRuleData) bool
+	// Run executes the rule. The pull request data is retrieved before any
+	// rules are executed, so may be ever-so-slightly stale.
+	Run(context.Context, *github.Client, prRuleData) error
+}
+
+var allPullRequestRules = []prRule{
+	branchesInFork{},
+}
+
+// Check that PRs are created from forks. If not, close the pull request.
+type branchesInFork struct{}
+
+const branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+
+func (branchesInFork) Name() string {
+	return "branches from fork"
+}
+func (branchesInFork) Condition(data prRuleData) bool {
+	if data.action != "opened" {
+		return false
+	}
+	return data.pr.GetHead().GetRepo().GetName() == data.repo
+}
+
+func (branchesInFork) Run(ctx context.Context, client *github.Client, data prRuleData) error {
+	num := data.pr.GetNumber()
+	_, _, err := client.PullRequests.Edit(ctx, data.owner, data.repo, num, &github.PullRequest{
+		State: github.String("closed"),
+		Body:  github.String(branchesInForkCloseComment),
+	})
 	if err != nil {
 		return err
 	}
