@@ -9,7 +9,7 @@ import (
 	bar "example.com/bar"
 	baz "example.com/baz"
 	foo "example.com/foo"
-	fmt "fmt"
+	"fmt"
 )
 
 // Injectors from wire.go:
