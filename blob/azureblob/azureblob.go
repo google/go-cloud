@@ -16,12 +16,6 @@ import (
 	"github.com/google/go-cloud/blob/driver"
 )
 
-var (
-	// MaxBlockSize is 100MB, used in writer.Write() to stage azure blockblob blocks
-	// see https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs
-	MaxBlockSize = 100 * 1024 * 1024
-)
-
 type bucket struct {
 	name             string
 	PublicAccessType azblob.PublicAccessType
@@ -251,7 +245,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 // Write creates a stated block for incoming buffer (p)
 // Each call to Write will append to the blockId list for final commit
 func (w *writer) Write(p []byte) (int, error) {
-	chunks := split(p, MaxBlockSize)
+	chunks := split(p, azblob.BlockBlobMaxStageBlockBytes)
 	var wg sync.WaitGroup
 	wg.Add(len(chunks))
 
