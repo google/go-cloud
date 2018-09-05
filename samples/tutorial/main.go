@@ -83,10 +83,6 @@ func main() {
 
 // to help test Azure
 func init() {
-	os.Setenv("AZURE_CLIENT_ID", "")
-	os.Setenv("AZURE_TENANT_ID", "")
-	os.Setenv("AZURE_CLIENT_SECRET", "")
-	os.Setenv("SUBSCRIPTION_ID", "")
-	os.Setenv("RESOURCE_GROUP_NAME", "")
-	os.Setenv("STORAGE_ACCOUNT_NAME", "")
+	os.Setenv("ACCOUNT_NAME", "YOUR-STORAGE-ACCOUNT-NAME")
+	os.Setenv("ACCOUNT_KEY", "YOUR-STORAGE-ACCOUNT-KEY")
 }

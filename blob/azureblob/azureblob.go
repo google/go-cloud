@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	// MaxBlockSize is 100MB, used in writer.Write() to stage azure blockblob blocks 
+	// MaxBlockSize is 100MB, used in writer.Write() to stage azure blockblob blocks
 	// see https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs
 	MaxBlockSize = 100 * 1024 * 1024
 )
@@ -56,8 +56,8 @@ func OpenBucket(ctx context.Context, settings *Settings, containerName string) (
 	if settings.SASToken != "" {
 		return initBucketWithSASToken(ctx, settings, containerName)
 	}
-	
-	return initBucketWithAccountKey(ctx, settings, containerName)	
+
+	return initBucketWithAccountKey(ctx, settings, containerName)
 }
 
 func initBucketWithSASToken(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
@@ -220,12 +220,11 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			switch serr.ServiceCode() {
 			case azblob.ServiceCodeContainerAlreadyExists:
 				// Can be thrown if container already exist, ignore and continue
-				break
 			case azblob.ServiceCodeAuthenticationFailed:
+				fallthrough
 			case "AuthorizationFailure":
 				// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
 				// Assume container exist, blob operations will succeed/fail based on SASToken scope
-				break
 			default:
 				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
 			}
