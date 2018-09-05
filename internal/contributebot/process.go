@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	inProgressLabel = "in progress"
-	issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	inProgressLabel            = "in progress"
+	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
 )
 
 var (
@@ -89,7 +90,7 @@ func processIssueEvent(data *issueData) *issueEdits {
 // issueEdits captures all of the edits to be made to an issue.
 type issueEdits struct {
 	RemoveLabels []string
-	AddComments []string
+	AddComments  []string
 }
 
 func (i *issueEdits) String() string {
@@ -117,6 +118,86 @@ func (i *issueEdits) Execute(ctx context.Context, client *github.Client, owner, 
 	for _, comment := range i.AddComments {
 		_, _, err := client.Issues.CreateComment(ctx, owner, repo, num, &github.IssueComment{
 			Body: github.String(comment)})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// pullRequestData is information about a pull request event.
+// See the github documentation for more details about the fields:
+// https://godoc.org/github.com/google/go-github/github#PullRequestEvent
+type pullRequestData struct {
+	// Action that this event is for.
+	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened", "edited".
+	Action string
+	// Repo is the repository the pull request wants to commit to.
+	Repo string
+	// PullRequest the event is for.
+	PullRequest *github.PullRequest
+	// Change made as part of the event.
+	Change *github.EditChange
+}
+
+func (pr *pullRequestData) String() string {
+	return fmt.Sprintf("[%s #%d]", pr.Action, pr.PullRequest.GetNumber())
+}
+
+// processPullRequestEvent identifies actions that should be taken based on the
+// pull request event represented by data.
+func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
+	edits := &pullRequestEdits{}
+	log.Printf("Identifying actions for pull request: %v", data)
+	defer log.Printf("-> %v", edits)
+
+	// If the pull request is from a branch of the main repo, close it and request that it come from a fork instead.
+	if data.Action == "opened" && data.PullRequest.GetHead().GetRepo().GetName() == data.Repo {
+		edits.Close = true
+		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
+		// Short circuit since we're closing anyway.
+		return edits
+	}
+
+	return edits
+}
+
+// pullRequestEdits captures all of the edits to be made to an issue.
+type pullRequestEdits struct {
+	Close       bool
+	AddComments []string
+}
+
+func (i *pullRequestEdits) String() string {
+	var actions []string
+	if i.Close {
+		actions = append(actions, "close")
+	}
+	for _, comment := range i.AddComments {
+		actions = append(actions, fmt.Sprintf("add comment %q", comment))
+	}
+
+	if len(actions) == 0 {
+		return "[no changes]"
+	}
+	return strings.Join(actions, ", ")
+}
+
+// Execute applies all of the requested edits, aborting on error.
+func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, owner, repo string, num int) error {
+	for _, comment := range i.AddComments {
+		// Note: Use the Issues service since we're adding a top-level comment:
+		// https://developer.github.com/v3/guides/working-with-comments/.
+		_, _, err := client.Issues.CreateComment(ctx, owner, repo, num, &github.IssueComment{
+			Body: github.String(comment)})
+		if err != nil {
+			return err
+		}
+	}
+	if i.Close {
+		_, _, err := client.PullRequests.Edit(ctx, owner, repo, num, &github.PullRequest{
+			State: github.String("closed"),
+		})
 		if err != nil {
 			return err
 		}

@@ -88,7 +88,9 @@ func (w *worker) receive(ctx context.Context) error {
 		switch event := event.(type) {
 		case *github.IssuesEvent:
 			handleErr = w.receiveIssueEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.PullRequestEvent, *github.CheckSuiteEvent:
+		case *github.PullRequestEvent:
+			handleErr = w.receivePullRequestEvent(ctx, event)
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -129,6 +131,33 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	edits := processIssueEvent(data)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, owner, repo, issueNumber)
+}
+
+func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
+
+	// Pull out the interesting data from the event.
+	data := &pullRequestData{
+		Action:      e.GetAction(),
+		Repo:        e.GetRepo().GetName(),
+		PullRequest: e.GetPullRequest(),
+		Change:      e.GetChanges(),
+	}
+
+	// Refetch the pull request in case the event data is stale.
+	client := w.ghClient(e.GetInstallation().GetID())
+	owner := e.GetRepo().GetOwner().GetLogin()
+	repo := e.GetRepo().GetName()
+	prNumber := data.PullRequest.GetNumber()
+	pr, _, err := client.PullRequests.Get(ctx, owner, repo, prNumber)
+	if err != nil {
+		return err
+	}
+	data.PullRequest = pr
+
+	// Process the pull request, deciding what actions to take (if any).
+	edits := processPullRequestEvent(data)
+	// Execute the actions (if any).
+	return edits.Execute(ctx, client, owner, repo, prNumber)
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.
