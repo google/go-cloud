@@ -112,7 +112,7 @@ func publishEvent(ctx context.Context, h http.Header, payload []byte) error {
 func newPubSubClient(ctx context.Context) (*pubsub.Service, error) {
 	tok, expiry, err := appengine.AccessToken(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
-		return nil, fmt.Errorf("create pubsub client: %v")
+		return nil, fmt.Errorf("create pubsub client: %v", err)
 	}
 	hc := &http.Client{
 		Transport: &oauth2.Transport{
@@ -126,7 +126,7 @@ func newPubSubClient(ctx context.Context) (*pubsub.Service, error) {
 	}
 	srv, err := pubsub.New(hc)
 	if err != nil {
-		return nil, fmt.Errorf("create pubsub client: %v")
+		return nil, fmt.Errorf("create pubsub client: %v", err)
 	}
 	return srv, nil
 }
