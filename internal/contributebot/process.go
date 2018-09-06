@@ -44,14 +44,6 @@ func (i *issueData) String() string {
 	return fmt.Sprintf("[%s issue #%d]", i.Action, i.Issue.GetNumber())
 }
 
-// Action represents an action to be taken.
-type Action interface {
-	// Description returns a human-readable description of what the action will do.
-	Description() string
-	// Do executes the action.
-	Do(ctx context.Context, client *github.Client, owner, repo string, issueNumber int) error
-}
-
 // hasLabel returns true iff the issue has the given label.
 func hasLabel(iss *github.Issue, label string) bool {
 	for i := range iss.Labels {
