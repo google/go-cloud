@@ -40,12 +40,12 @@ type harness struct {
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, done := setup.NewAWSSession(t, region)
-	client := NewClient(context.Background(), sess)
+	client := NewClient(sess)
 	return &harness{client: client, session: sess, closer: done}, nil
 }
 
 func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
-	return h.client.NewVariable(ctx, name, decoder, nil)
+	return h.client.NewVariable(name, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
