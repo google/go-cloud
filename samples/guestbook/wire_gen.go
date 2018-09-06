@@ -8,10 +8,10 @@ package main
 import (
 	context "context"
 	sql "database/sql"
-	http "net/http"
-
+	fmt "fmt"
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
+	ocsql "github.com/basvanbeek/ocsql"
 	mysql "github.com/go-sql-driver/mysql"
 	blob "github.com/google/go-cloud/blob"
 	fileblob "github.com/google/go-cloud/blob/fileblob"
@@ -29,6 +29,7 @@ import (
 	sdserver "github.com/google/go-cloud/server/sdserver"
 	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
+	http "net/http"
 )
 
 // Injectors from inject_aws.go:
@@ -266,7 +267,11 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 		Passwd:               flags.dbPassword,
 		AllowNativePasswords: true,
 	}
-	return sql.Open("mysql", cfg.FormatDSN())
+	ocDriver, err := ocsql.Register("mysql", ocsql.WithAllTraceOptions())
+	if err != nil {
+		return nil, fmt.Errorf("wrapping mysql driver with Open Census: %v", err)
+	}
+	return sql.Open(ocDriver, cfg.FormatDSN())
 }
 
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {

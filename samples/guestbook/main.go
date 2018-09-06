@@ -37,6 +37,7 @@ import (
 	"github.com/google/go-cloud/server"
 	"github.com/google/go-cloud/wire"
 	"github.com/gorilla/mux"
+	"go.opencensus.io/exporter/jaeger"
 	"go.opencensus.io/trace"
 )
 
@@ -84,6 +85,9 @@ func main() {
 		}
 		app, cleanup, err = setupAWS(ctx, cf)
 	case "local":
+		if err := enableOpenCensusTracingAndExporting(); err != nil {
+			log.Fatalf("Failed to enable OpenCensus tracing and exporting: %v", err)
+		}
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
 		}
@@ -108,6 +112,24 @@ func main() {
 	// Listen and serve HTTP.
 	log.Printf("Running, connected to %q cloud", envFlag)
 	log.Fatal(app.srv.ListenAndServe(*addr, r))
+}
+
+func enableOpenCensusTracingAndExporting() error {
+	// For demo purposes, we'll always trace
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
+	opts := jaeger.Options{
+		AgentEndpoint: "localhost:6831",
+		Endpoint:      "http://localhost:14268",
+		ServiceName:   "go-cloud-guestbook",
+	}
+	je, err := jaeger.NewExporter(opts)
+	if err == nil {
+		// On success, register it as a trace exporter
+		trace.RegisterExporter(je)
+	}
+	log.Print("Stats can be viewed at http://localhost:16686")
+	return err
 }
 
 // applicationSet is the Wire provider set for the Guestbook application that
