@@ -86,7 +86,7 @@ func main() {
 		app, cleanup, err = setupAWS(ctx, cf)
 	case "local":
 		if err := enableOpenCensusTracingAndExporting(); err != nil {
-			log.Fatalf("Failed to enable OpenCensus tracing and exporting: %v", err)
+			log.Fatalf("Failed to enable OpenCensus tracing and exporting: %v. Did you run the command here: https://www.jaegertracing.io/docs/getting-started/?", err)
 		}
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
