@@ -16,6 +16,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"path"
 	"sync"
@@ -40,6 +41,7 @@ type Server struct {
 	te            trace.Exporter
 	sampler       trace.Sampler
 	once          sync.Once
+	server        *http.Server
 }
 
 // Options is the set of optional parameters.
@@ -99,7 +101,16 @@ func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	}
 	mux.Handle("/", h)
 
-	return http.ListenAndServe(addr, mux)
+	srv.server = &http.Server{Addr: addr, Handler: mux}
+	return srv.server.ListenAndServe()
+}
+
+// Shutdown gracefully shuts down the server without interrupting any active connections.
+func (srv *Server) Shutdown(ctx context.Context) error {
+	if srv.server == nil {
+		return nil
+	}
+	return srv.server.Shutdown(ctx)
 }
 
 // handler is a handler wrapper that handles tracing through OpenCensus for users.
