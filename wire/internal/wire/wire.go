@@ -657,12 +657,13 @@ func zeroValue(t types.Type, qf types.Qualifier) string {
 	}
 }
 
-// typeVariableName invents disambiguated variable names derived from the
-// type name.
-// If a name can't be derived from the type, defaultName is used.
-// transform is used to transform the name after it is disambiguated; commonly
-//   used functions are export or unexport.
-// collides is used to see if a name is ambiguous.
+// typeVariableName invents a disambiguated variable name derived from the type name.
+// If no name can be derived from the type, defaultName is used.
+// transform is used to transform the derived name(s) (including defaultName);
+// commonly used functions include export and unexport.
+// collides is used to see if a name is ambiguous. If any one of the derived
+// names is unambiguous, it used; otherwise, the first derived name is
+// disambiguated using disambiguate().
 func typeVariableName(t types.Type, defaultName string, transform func(string) string, collides func(string) bool) string {
 	if p, ok := t.(*types.Pointer); ok {
 		t = p.Elem()
@@ -684,11 +685,13 @@ func typeVariableName(t types.Type, defaultName string, transform func(string) s
 			names = append(names, fmt.Sprintf("%s%s", pkg.Name(), strings.Title(obj.Name())))
 		}
 	}
+
+	// If we were unable to derive a name, use defaultName.
 	if len(names) == 0 {
 		names = append(names, defaultName)
 	}
 
-	// Transform the names.
+	// Transform the name(s).
 	for i, name := range names {
 		names[i] = transform(name)
 	}
@@ -736,15 +739,6 @@ func unexport(name string) string {
 	return sbuf.String()
 }
 
-// unexportSlice returns a slice of unexported names.
-func unexportSlice(names []string) []string {
-	retval := make([]string, len(names))
-	for i, name := range names {
-		retval[i] = unexport(name)
-	}
-	return retval
-}
-
 // export converts a name that is potentially unexported to an exported name.
 func export(name string) string {
 	if name == "" {
@@ -762,7 +756,7 @@ func export(name string) string {
 	return sbuf.String()
 }
 
-// disambiguate picks a unique name, preferring a name in names if it is already unique.
+// disambiguate picks a unique name, preferring name if it is already unique.
 func disambiguate(name string, collides func(string) bool) string {
 	if !collides(name) {
 		return name
