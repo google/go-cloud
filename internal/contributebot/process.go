@@ -56,7 +56,6 @@ func hasLabel(iss *github.Issue, label string) bool {
 
 // processIssueEvent identifies actions that should be taken based on the issue
 // event represented by data.
-// Returned actions will be executed in order, aborting on error.
 func processIssueEvent(data *issueData) *issueEdits {
 	edits := &issueEdits{}
 	log.Printf("Identifying actions for issue: %v", data)
@@ -68,7 +67,7 @@ func processIssueEvent(data *issueData) *issueEdits {
 	return edits
 }
 
-// issueEdits capture all of the edits to be made to an issue.
+// issueEdits captures all of the edits to be made to an issue.
 type issueEdits struct {
 	RemoveLabels []string
 }
