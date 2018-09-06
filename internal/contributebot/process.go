@@ -59,11 +59,12 @@ func hasLabel(iss *github.Issue, label string) bool {
 func processIssueEvent(data *issueData) *issueEdits {
 	edits := &issueEdits{}
 	log.Printf("Identifying actions for issue: %v", data)
+	defer log.Printf("-> %v", edits)
 
 	if data.Action == "closed" && hasLabel(data.Issue, inProgressLabel) {
 		edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
 	}
-	log.Printf("-> %v", edits)
+
 	return edits
 }
 
