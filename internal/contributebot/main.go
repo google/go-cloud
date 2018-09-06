@@ -126,9 +126,9 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	data.Issue = iss
 
 	// Process the issue, deciding what actions to take (if any).
-	actions := processIssueEvent(data)
+	edits := processIssueEvent(data)
 	// Execute the actions (if any).
-	return executeActions(ctx, client, owner, repo, issueNumber, actions)
+	return edits.Execute(ctx, client, owner, repo, issueNumber)
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.

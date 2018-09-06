@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/go-github/github"
 )
@@ -64,40 +65,40 @@ func hasLabel(iss *github.Issue, label string) bool {
 // processIssueEvent identifies actions that should be taken based on the issue
 // event represented by data.
 // Returned actions will be executed in order, aborting on error.
-func processIssueEvent(data *issueData) []Action {
-	var actions []Action
+func processIssueEvent(data *issueData) *issueEdits {
+	edits := &issueEdits{}
 	log.Printf("Identifying actions for issue: %v", data)
 
 	if data.Action == "closed" && hasLabel(data.Issue, inProgressLabel) {
-		actions = append(actions, &removeIssueLabel{label: inProgressLabel})
+		edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
 	}
-	log.Printf("-> Identified %d action(s)", len(actions))
-	return actions
+	log.Printf("-> %v", edits)
+	return edits
 }
 
-// executeActions executes actions in order, aborting on error.
-func executeActions(ctx context.Context, client *github.Client, owner, repo string, num int, actions []Action) error {
-	for _, action := range actions {
-		log.Printf("  Taking action: %s", action.Description())
-		if err := action.Do(ctx, client, owner, repo, num); err != nil {
-			log.Printf("    failed: %v", err)
+// issueEdits capture all of the edits to be made to an issue.
+type issueEdits struct {
+	RemoveLabels []string
+}
+
+func (i *issueEdits) String() string {
+	var actions []string
+	for _, label := range i.RemoveLabels {
+		actions = append(actions, fmt.Sprintf("removing %q label", label))
+	}
+	if len(actions) == 0 {
+		return "[no changes]"
+	}
+	return strings.Join(actions, ", ")
+}
+
+// Execute applies all of the requested edits, aborting on error.
+func (i *issueEdits) Execute(ctx context.Context, client *github.Client, owner, repo string, num int) error {
+	for _, label := range i.RemoveLabels {
+		_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repo, num, label)
+		if err != nil {
 			return err
 		}
-		log.Printf("    success!")
 	}
 	return nil
-}
-
-// removeIssueLabel removes a label from an issue.
-type removeIssueLabel struct {
-	label string
-}
-
-func (a *removeIssueLabel) Description() string {
-	return fmt.Sprintf("remove %q label", a.label)
-}
-
-func (a *removeIssueLabel) Do(ctx context.Context, client *github.Client, owner, repo string, issueNumber int) error {
-	_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repo, issueNumber, a.label)
-	return err
 }

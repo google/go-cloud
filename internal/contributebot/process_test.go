@@ -15,9 +15,9 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/github"
 )
 
@@ -26,24 +26,28 @@ func TestProcessIssueEvent(t *testing.T) {
 		description string
 		action      string
 		labels      []string
-		want        []string
+		want        *issueEdits
 	}{
 		// Remove "in progress" label from closed issues.
 		{
 			description: "close with random label -> no change",
 			action:      "closed",
 			labels:      []string{"foo"},
+			want:        &issueEdits{},
 		},
 		{
 			description: "open with in progress label -> no change",
 			action:      "opened",
 			labels:      []string{"in progress"},
+			want:        &issueEdits{},
 		},
 		{
 			description: "close with in progress label -> remove it",
 			action:      "closed",
 			labels:      []string{"in progress"},
-			want:        []string{"remove \"in progress\" label"},
+			want: &issueEdits{
+				RemoveLabels: []string{"in progress"},
+			},
 		},
 	}
 
@@ -60,16 +64,9 @@ func TestProcessIssueEvent(t *testing.T) {
 				Action: tc.action,
 				Issue:  iss,
 			}
-			actions := processIssueEvent(data)
-			var got []string
-			if len(actions) > 0 {
-				got = make([]string, len(actions))
-				for i, action := range actions {
-					got[i] = action.Description()
-				}
-			}
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("got\n  %v\nwant\n  %v", got, tc.want)
+			got := processIssueEvent(data)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
 			}
 		})
 	}
