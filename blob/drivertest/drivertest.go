@@ -225,7 +225,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	for _, rLen := range []int64{0, -1} {
-		t.Run(fmt.Sprintf("ReadLength%d", rLen), func(t *testing.T) {
+		t.Run(fmt.Sprintf("ReadLength %d", rLen), func(t *testing.T) {
 
 			t.Run("ContentType", func(t *testing.T) {
 				b, done := init(t)
