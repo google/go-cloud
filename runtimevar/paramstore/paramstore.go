@@ -41,14 +41,14 @@ type Client struct {
 }
 
 // NewClient returns a constructed Client with the required values.
-func NewClient(ctx context.Context, p client.ConfigProvider) *Client {
+func NewClient(p client.ConfigProvider) *Client {
 	return &Client{sess: p}
 }
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
 // If WaitTime is not set the polling time is set to 30 seconds.
-func (c *Client) NewVariable(ctx context.Context, name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
