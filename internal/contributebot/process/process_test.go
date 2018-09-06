@@ -28,6 +28,7 @@ func TestIssue(t *testing.T) {
 		labels      []string
 		want        []string
 	}{
+		// Remove "in progress" label from closed issues.
 		{
 			description: "close with random label -> no change",
 			action:      "closed",

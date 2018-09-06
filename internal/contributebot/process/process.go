@@ -41,7 +41,7 @@ type IssueData struct {
 }
 
 func (i *IssueData) String() string {
-	return fmt.Sprintf("[%s #%d]", i.Action, i.Issue.GetNumber())
+	return fmt.Sprintf("[%s issue #%d]", i.Action, i.Issue.GetNumber())
 }
 
 // Action represents an action to be taken.
@@ -99,8 +99,5 @@ func (a *removeIssueLabel) Description() string {
 
 func (a *removeIssueLabel) Do(ctx context.Context, client *github.Client, owner, repo string, issueNumber int) error {
 	_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repo, issueNumber, a.label)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
