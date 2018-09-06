@@ -26,6 +26,6 @@ if [[ $# -gt 0 ]]; then
 fi
 
 module="github.com/google/go-cloud"
-vgo mod vendor || exit 1
-mapfile -t all_pkgs < <( vgo list "$module/..." ) || exit 1
+go mod vendor || exit 1
+mapfile -t all_pkgs < <( go list "$module/..." ) || exit 1
 wire check "${all_pkgs[@]}" || exit 1
