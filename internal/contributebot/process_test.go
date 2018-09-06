@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package process
+package main
 
 import (
 	"reflect"
@@ -21,7 +21,7 @@ import (
 	"github.com/google/go-github/github"
 )
 
-func TestIssue(t *testing.T) {
+func TestProcessIssueEvent(t *testing.T) {
 	tests := []struct {
 		description string
 		action      string
@@ -56,11 +56,11 @@ func TestIssue(t *testing.T) {
 			iss := &github.Issue{
 				Labels: lbls,
 			}
-			data := &IssueData{
+			data := &issueData{
 				Action: tc.action,
 				Issue:  iss,
 			}
-			actions := Issue(data)
+			actions := processIssueEvent(data)
 			var got []string
 			if len(actions) > 0 {
 				got = make([]string, len(actions))

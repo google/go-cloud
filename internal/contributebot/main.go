@@ -25,7 +25,6 @@ import (
 	"os"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/google/go-cloud/internal/contributebot/process"
 	"github.com/google/go-github/github"
 )
 
@@ -109,7 +108,7 @@ func (w *worker) receive(ctx context.Context) error {
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
 
 	// Pull out the interesting data from the event.
-	data := &process.IssueData{
+	data := &issueData{
 		Action: e.GetAction(),
 		Issue:  e.GetIssue(),
 		Change: e.GetChanges(),
@@ -127,9 +126,9 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	data.Issue = iss
 
 	// Process the issue, deciding what actions to take (if any).
-	actions := process.Issue(data)
+	actions := processIssueEvent(data)
 	// Execute the actions (if any).
-	return process.Actions(ctx, client, owner, repo, issueNumber, actions)
+	return executeActions(ctx, client, owner, repo, issueNumber, actions)
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.

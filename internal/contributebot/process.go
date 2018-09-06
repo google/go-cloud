@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package process maps Github events to actions, and implements the actions.
-package process
+package main
 
 import (
 	"context"
@@ -27,10 +26,10 @@ const (
 	inProgressLabel = "in progress"
 )
 
-// IssueData is information about an issue event.
+// issueData is information about an issue event.
 // See the github documentation for more details about the fields:
 // https://godoc.org/github.com/google/go-github/github#IssuesEvent
-type IssueData struct {
+type issueData struct {
 	// Action that this event is for.
 	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened", "edited".
 	Action string
@@ -40,7 +39,7 @@ type IssueData struct {
 	Change *github.EditChange
 }
 
-func (i *IssueData) String() string {
+func (i *issueData) String() string {
 	return fmt.Sprintf("[%s issue #%d]", i.Action, i.Issue.GetNumber())
 }
 
@@ -62,9 +61,10 @@ func hasLabel(iss *github.Issue, label string) bool {
 	return false
 }
 
-// Issue identifies actions that should be taken based on the event represented by data.
+// processIssueEvent identifies actions that should be taken based on the issue
+// event represented by data.
 // Returned actions will be executed in order, aborting on error.
-func Issue(data *IssueData) []Action {
+func processIssueEvent(data *issueData) []Action {
 	var actions []Action
 	log.Printf("Identifying actions for issue: %v", data)
 
@@ -75,8 +75,8 @@ func Issue(data *IssueData) []Action {
 	return actions
 }
 
-// Actions executes actions in order, aborting on error.
-func Actions(ctx context.Context, client *github.Client, owner, repo string, num int, actions []Action) error {
+// executeActions executes actions in order, aborting on error.
+func executeActions(ctx context.Context, client *github.Client, owner, repo string, num int, actions []Action) error {
 	for _, action := range actions {
 		log.Printf("  Taking action: %s", action.Description())
 		if err := action.Do(ctx, client, owner, repo, num); err != nil {
