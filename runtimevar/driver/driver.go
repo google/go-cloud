@@ -61,9 +61,9 @@ type Watcher interface {
 	// Version is provider-specific; for example, it could be an actual version
 	// number, it could be the variable value, or it could be raw bytes for the
 	// variable before decoding it.
-	// TODO(rvangent): Consider refactoring to encapsulate State (including
-	//                 prevVersion, prevErr), and "is the same as" checking)
-	//                 behind an interface.
+	// TODO(issue #412): Consider refactoring to encapsulate State (including
+	//                   prevVersion, prevErr), and "is the same as" checking)
+	//                   behind an interface.
 	WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (v *Variable, version interface{}, wait time.Duration, err error)
 
 	// Close cleans up any resources used by the Watcher object.

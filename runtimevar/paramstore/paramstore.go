@@ -88,7 +88,6 @@ type watcher struct {
 }
 
 func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-
 	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
 	// the "no change" signal with w.waitTime.
 	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
