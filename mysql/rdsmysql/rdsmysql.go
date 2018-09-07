@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/basvanbeek/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/wire"
 	"golang.org/x/net/context/ctxhttp"
@@ -117,7 +118,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 			Passwd:                  c.params.Password,
 			TLSConfig:               tlsConfigName,
 			AllowCleartextPasswords: true,
-			AllowNativePasswords:	 true,
+			AllowNativePasswords:    true,
 			DBName:                  c.params.Database,
 		}
 		c.dsn = cfg.FormatDSN()
@@ -132,7 +133,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return mysql.MySQLDriver{}
+	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
 }
 
 var tlsConfigCounter struct {

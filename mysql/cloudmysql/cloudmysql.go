@@ -24,6 +24,7 @@ import (
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
+	"github.com/basvanbeek/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/wire"
@@ -91,5 +92,5 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return mysql.MySQLDriver{}
+	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
 }

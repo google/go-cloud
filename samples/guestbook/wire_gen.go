@@ -8,8 +8,6 @@ package main
 import (
 	context "context"
 	sql "database/sql"
-	http "net/http"
-
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	mysql "github.com/go-sql-driver/mysql"
@@ -29,6 +27,7 @@ import (
 	sdserver "github.com/google/go-cloud/server/sdserver"
 	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
+	http "net/http"
 )
 
 // Injectors from inject_aws.go:
