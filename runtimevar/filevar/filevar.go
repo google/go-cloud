@@ -97,7 +97,7 @@ type watcher struct {
 
 func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
 
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
+	// checkSameErr checks to see if err is the same as prevErr, and if so, returns
 	// the "no change" signal with w.waitTime.
 	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
 		if prevErr != nil {
@@ -113,6 +113,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 	// Also, note that we may never use the notifier if there's already
 	// a change to the file. We must create it now before checking to
 	// avoid race conditions.
+	// TODO(rvangent): This could skipped if prevVersion and prevErr are both nil.
 	notifierErr := w.notifier.Add(w.file)
 	if notifierErr == nil {
 		defer func() {
