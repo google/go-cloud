@@ -22,9 +22,15 @@ import (
 )
 
 func TestProcessIssueEvent(t *testing.T) {
+	const (
+		defaultTitle = "foo: bar"
+	)
+
 	tests := []struct {
 		description string
 		action      string
+		title           string // defaults to defaultTitle
+		prevTitle string
 		labels      []string
 		want        *issueEdits
 	}{
@@ -49,6 +55,31 @@ func TestProcessIssueEvent(t *testing.T) {
 				RemoveLabels: []string{"in progress"},
 			},
 		},
+		// Check issue title looks like "foo: bar".
+		{
+			description: "open with invalid issue title -> add comment",
+			action:      "opened",
+			title:       "foo",
+			want: &issueEdits{
+				AddComments: []string{issueTitleComment},
+			},
+		},
+		{
+			description:     "edit on invalid issue title but title didn't change -> no change",
+			action:          "edited",
+			title:           "foo",
+			prevTitle: "foo",
+			want:        &issueEdits{},
+		},
+		{
+			description:     "edit to invalid issue title -> add comment",
+			action:          "edited",
+			title:           "prev",
+			prevTitle: "foo",
+			want: &issueEdits{
+				AddComments: []string{issueTitleComment},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -57,12 +88,27 @@ func TestProcessIssueEvent(t *testing.T) {
 			for i, label := range tc.labels {
 				lbls[i] = github.Label{Name: &label}
 			}
+			if tc.title == "" {
+				tc.title = defaultTitle
+			}
 			iss := &github.Issue{
 				Labels: lbls,
+				Title:  github.String(tc.title),
+			}
+			var chg *github.EditChange
+			if tc.action == "edited" {
+				chg = &github.EditChange{}
+				if tc.prevTitle != "" {
+					title := struct {
+						From *string `json:"from,omitempty"`
+					}{From: github.String(tc.prevTitle)}
+					chg.Title = &title
+				}
 			}
 			data := &issueData{
 				Action: tc.action,
 				Issue:  iss,
+				Change: chg,
 			}
 			got := processIssueEvent(data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
