@@ -19,9 +19,7 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
-	"github.com/basvanbeek/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/fileblob"
@@ -72,11 +70,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 		Passwd:               flags.dbPassword,
 		AllowNativePasswords: true,
 	}
-	ocDriver, err := ocsql.Register("mysql", ocsql.WithAllTraceOptions())
-	if err != nil {
-		return nil, fmt.Errorf("wrapping mysql driver with Open Census: %v", err)
-	}
-	return sql.Open(ocDriver, cfg.FormatDSN())
+	return sql.Open("mysql", cfg.FormatDSN())
 }
 
 // localRuntimeVar is a Wire provider function that returns the Message of the
