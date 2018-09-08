@@ -20,7 +20,6 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
-	github.com/basvanbeek/ocsql v0.0.0-20180627133915-d946a62502e3
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/dnaeon/go-vcr v0.0.0-20180814043457-aafff18a5cc2
@@ -37,6 +36,7 @@ require (
 	github.com/gorilla/mux v1.6.1
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
+	github.com/opencensus-integrations/ocsql v0.0.0-20180908125828-63b3e35325e2
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/smartystreets/assertions v0.0.0-20180301161246-7678a5452ebe // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
