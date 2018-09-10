@@ -68,7 +68,8 @@ Once your PR is approved (hooray!) the reviewer will squash your commits into a 
 (This section is for project members.)
 
 When you are squashing-and-merging a pull request into master, please edit the
-commit message to fit in with the project conventions. In particular:
+commit message to fit in with the [project conventions][commit messages]. In
+particular:
 
 -   Ensure that the first line summary starts with the primary package affected,
     followed by a colon, followed by a short summary of the change, like
@@ -83,3 +84,4 @@ automatically warn for some of these problems.
 
 [#317]: https://github.com/google/go-cloud/issues/317
 [#318]: https://github.com/google/go-cloud/issues/318
+[commit messages]: https://golang.org/doc/contribute.html#commit_messages
