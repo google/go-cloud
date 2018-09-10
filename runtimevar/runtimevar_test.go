@@ -32,19 +32,25 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// watchVariableCall encapsulates a fake response to a driver.Watcher.WatchVariable call.
-type watchVariableCall struct {
-	// version and err will be compared to prevVersion and prevErr
-	// respectively to determine whether to return all nil values.
-	v       *driver.Variable
-	version interface{}
-	err     error
+// state implements driver.State.
+type state struct {
+	val        string
+	updateTime time.Time
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
 }
 
 // fakeWatcher is a fake implementation of driver.Watcher.
 type fakeWatcher struct {
 	t     *testing.T
-	calls []*watchVariableCall
+	calls []*state
 }
 
 func (w *fakeWatcher) Close() error {
@@ -54,23 +60,27 @@ func (w *fakeWatcher) Close() error {
 	return nil
 }
 
-func (w *fakeWatcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-	w.t.Logf("fakewatcher.WatchVariable prevVersion %v prevErr %v", prevVersion, prevErr)
+func (w *fakeWatcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
+	w.t.Logf("fakewatcher.WatchVariable prev %v", prev)
 	if len(w.calls) == 0 {
 		w.t.Fatal("  --> unexpected call!")
 	}
 	c := w.calls[0]
 	w.calls = w.calls[1:]
-	if prevErr != nil && c.err != nil && c.err.Error() == prevErr.Error() {
-		w.t.Log("  --> same error")
-		return nil, nil, 0, nil
+	if c.err != nil {
+		if prev != nil && prev.(*state).err != nil && prev.(*state).err.Error() == c.err.Error() {
+			w.t.Log("  --> same error")
+			return nil, 0
+		}
+		w.t.Logf("  -> new error %v", c.err)
+		return c, 0
 	}
-	if prevVersion != nil && prevVersion == c.version {
-		w.t.Log("  --> same version")
-		return nil, nil, 0, nil
+	if prev != nil && prev.(*state).val == c.val {
+		w.t.Log("  --> same value")
+		return nil, 0
 	}
-	w.t.Logf("  --> returning val %v, version %v, err %v", c.v, c.version, c.err)
-	return c.v, c.version, 0, c.err
+	w.t.Logf("  --> returning %v", c)
+	return c, 0
 }
 
 // watchResp encapsulates the expected result of a Watch call.
@@ -81,16 +91,22 @@ type watchResp struct {
 
 func TestVariable(t *testing.T) {
 
-	fail1, fail2 := errors.New("fail1"), errors.New("fail2")
-	var1 := &driver.Variable{Value: 42, UpdateTime: time.Now()}
-	var2 := &driver.Variable{Value: 43, UpdateTime: time.Now().Add(1 * time.Minute)}
-	snap1 := runtimevar.Snapshot{Value: var1.Value, UpdateTime: var1.UpdateTime}
-	snap2 := runtimevar.Snapshot{Value: var2.Value, UpdateTime: var2.UpdateTime}
+	const (
+		v1 = "foo"
+		v2 = "bar"
+	)
+	var (
+		upd1         = time.Now()
+		upd2         = time.Now().Add(1 * time.Minute)
+		fail1, fail2 = errors.New("fail1"), errors.New("fail2")
+		snap1        = runtimevar.Snapshot{Value: v1, UpdateTime: upd1}
+		snap2        = runtimevar.Snapshot{Value: v2, UpdateTime: upd2}
+	)
 
 	tests := []struct {
 		name    string
 		doneCtx bool
-		calls   []*watchVariableCall
+		calls   []*state
 		// Watch will be called once for each entry in want.
 		want []*watchResp
 	}{
@@ -105,12 +121,12 @@ func TestVariable(t *testing.T) {
 		},
 		{
 			name: "Repeated errors don't return until it changes to a different error",
-			calls: []*watchVariableCall{
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail2},
+			calls: []*state{
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{err: fail2},
 			},
 			want: []*watchResp{
 				&watchResp{err: true},
@@ -119,12 +135,12 @@ func TestVariable(t *testing.T) {
 		},
 		{
 			name: "Repeated errors don't return until it changes to a value",
-			calls: []*watchVariableCall{
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{err: fail1},
-				&watchVariableCall{v: var1},
+			calls: []*state{
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{err: fail1},
+				&state{val: v1, updateTime: upd1},
 			},
 			want: []*watchResp{
 				&watchResp{err: true},
@@ -133,12 +149,12 @@ func TestVariable(t *testing.T) {
 		},
 		{
 			name: "Repeated values don't return until it changes to an error",
-			calls: []*watchVariableCall{
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{err: fail1},
+			calls: []*state{
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{err: fail1},
 			},
 			want: []*watchResp{
 				&watchResp{snap: snap1},
@@ -147,12 +163,12 @@ func TestVariable(t *testing.T) {
 		},
 		{
 			name: "Repeated values don't return until it changes to a different version",
-			calls: []*watchVariableCall{
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var1, version: 1},
-				&watchVariableCall{v: var2, version: 2},
+			calls: []*state{
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{val: v1, updateTime: upd1},
+				&state{val: v2, updateTime: upd2},
 			},
 			want: []*watchResp{
 				&watchResp{snap: snap1},

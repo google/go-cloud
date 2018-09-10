@@ -21,10 +21,12 @@ import (
 	"time"
 )
 
-// Variable contains a runtime variable and additional metadata about it.
-type Variable struct {
-	Value      interface{}
-	UpdateTime time.Time
+// State represents the current state of a variable.
+type State interface {
+	// Value returns the current variable value.
+	Value() (interface{}, error)
+	// UpdateTime returns the update time for the variable.
+	UpdateTime() time.Time
 }
 
 // Watcher watches for updates on a variable and returns an updated Variable object if
@@ -39,32 +41,25 @@ type Variable struct {
 // dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
 // runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
-	// WatchVariable returns one of:
-	//
-	// 1. A new value for the variable in v, along with a provider-specific
-	//    version that will be passed to the next WatchVariable call. wait is
-	//    ignored and err must be nil.
-	// 2. A new error. v, version, and wait are ignored.
-	// 3. A nil v and version and err, indicating that the value of the variable
-	//    or the error returned has not changed. WatchVariable will not be called
-	//    again for wait.
-	//
+	// WatchVariable returns the current State of the variable.
+	// If the State has not changed, it returns nil plus a wait time (which may
+	// be 0); WatchVariable will not be called again for wait.
+
 	// Implementations *may* block, but must return if ctx is Done. If the
 	// variable has changed, then implementations *must* eventually return it.
 	//
-	// For example, an implementation that can detect changes in the underlying
-	// variable could block until it detects a change (or until ctx is Done).
-	// A polling implementation could poll on every call to WatchVariable,
-	// returning nil v/version/err and a non-zero wait to set the poll interval
-	// if there's no change.
+	// A polling implementation should return (State, 0) for a new State,
+	// or (nil, <poll interval>) if State hasn't changed.
 	//
-	// Version is provider-specific; for example, it could be an actual version
-	// number, it could be the variable value, or it could be raw bytes for the
-	// variable before decoding it.
-	// TODO(issue #412): Consider refactoring to encapsulate State (including
-	//                   prevVersion, prevErr), and "is the same as" checking)
-	//                   behind an interface.
-	WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (v *Variable, version interface{}, wait time.Duration, err error)
+	// An implementation that can notice changes to the underlying variable
+	// should:
+	// 1. If prev != nil, subscribe to change notifications.
+	// 2. Fetch the current State.
+	// 3. If prev == nil or if the State has changed, return (State, 0).
+	// 4. Block until it detects a change or ctx is Done, then fetch and return
+	//    (State, 0).
+	// Note that the subscription in 1 must occur before 2 to avoid race conditions.
+	WatchVariable(ctx context.Context, prev State) (state State, wait time.Duration)
 
 	// Close cleans up any resources used by the Watcher object.
 	Close() error

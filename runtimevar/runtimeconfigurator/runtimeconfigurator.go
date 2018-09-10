@@ -127,15 +127,51 @@ type WatchOptions struct {
 	WaitTime time.Duration
 }
 
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	raw        []byte
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
+	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err.Error() == prev.err.Error() {
+		return nil
+	}
+	code, prevCode := grpc.Code(err), grpc.Code(prev.err)
+	if code != codes.OK && code == prevCode {
+		return nil
+	}
+	return s
+}
+
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
 // service.
 type watcher struct {
-	client      pb.RuntimeConfigManagerClient
-	waitTime    time.Duration
-	name        string
-	decoder     *runtimevar.Decoder
-	lastBytes   []byte
-	lastErrCode codes.Code
+	client   pb.RuntimeConfigManagerClient
+	waitTime time.Duration
+	name     string
+	decoder  *runtimevar.Decoder
 }
 
 // Close implements driver.Watcher.Close.  This is a no-op for this driver.
@@ -143,45 +179,29 @@ func (w *watcher) Close() error {
 	return nil
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
-	// the "no change" signal with w.waitTime.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			code, prevCode := grpc.Code(err), grpc.Code(prevErr)
-			if (code != codes.OK && code == prevCode) || err.Error() == prevErr.Error() {
-				return nil, nil, w.waitTime, nil
-			}
-		}
-		return nil, nil, 0, err
-	}
-
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	// Get the variable from the backend.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
 	updateTime, err := parseUpdateTime(vpb)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-
 	// See if it's the same raw bytes as before.
 	b := bytesFromProto(vpb)
-	if prevVersion != nil && bytes.Equal(prevVersion.([]byte), b) {
-		return nil, nil, w.waitTime, nil
+	if prev != nil && bytes.Equal(b, prev.(*state).raw) {
+		// No change!
+		return nil, w.waitTime
 	}
 
-	// New value! Decode it.
+	// Decode the value.
 	val, err := w.decoder.Decode(b)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-	return &driver.Variable{
-		Value:      val,
-		UpdateTime: updateTime,
-	}, b, 0, nil
+	return &state{val: val, updateTime: updateTime, raw: b}, 0
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {
