@@ -38,6 +38,10 @@ type Harness interface {
 	DeleteVariable(ctx context.Context, name string) error
 	// Close is called when the test is complete.
 	Close()
+	// Mutable returns true iff the driver supports UpdateVariable/DeleteVariable.
+	// If false, those functions should return errors, and the conformance tests
+	// will skip and/or ignore errors for tests that require them.
+	Mutable() bool
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -110,7 +114,7 @@ func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
+		if err := h.DeleteVariable(ctx, name); err != nil && h.Mutable() {
 			t.Fatal(err)
 		}
 	}()
@@ -165,7 +169,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
+		if err := h.DeleteVariable(ctx, name); err != nil && h.Mutable() {
 			t.Fatal(err)
 		}
 	}()
@@ -230,7 +234,7 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
+		if err := h.DeleteVariable(ctx, name); err != nil && h.Mutable() {
 			t.Fatal(err)
 		}
 	}()
@@ -274,7 +278,7 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
+		if err := h.DeleteVariable(ctx, name); err != nil && h.Mutable() {
 			t.Fatal(err)
 		}
 	}()
@@ -307,6 +311,9 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if !h.Mutable() {
+		return
+	}
 	ctx := context.Background()
 
 	// Create the variable and verify Watch sees the value.
@@ -357,6 +364,9 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if !h.Mutable() {
+		return
+	}
 	ctx := context.Background()
 
 	// Create the variable and verify Watch sees the value.
