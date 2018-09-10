@@ -20,6 +20,7 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
+	github.com/basvanbeek/ocsql v0.0.0-20180627133915-d946a62502e3
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/dnaeon/go-vcr v0.0.0-20180814043457-aafff18a5cc2
