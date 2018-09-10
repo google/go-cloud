@@ -193,7 +193,8 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// A second watch should block forever since the value hasn't changed.
 	// A short wait here doesn't guarantee that this is working, but will catch
 	// most problems.
-	tCtx, _ := context.WithTimeout(ctx, 10 * time.Millisecond)
+	tCtx, cancel := context.WithTimeout(ctx, 10 * time.Millisecond)
+	defer cancel()
 	got, err = v.Watch(tCtx)
 	if err == nil {
 		t.Errorf("got %v want error", got)
