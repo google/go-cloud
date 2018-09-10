@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -25,6 +26,11 @@ import (
 
 const (
 	inProgressLabel = "in progress"
+	issueTitleComment = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+)
+
+var (
+	issueTitleRegexp = regexp.MustCompile("^[a-z0-9/]+: .*$")
 )
 
 // issueData is information about an issue event.
@@ -54,6 +60,11 @@ func hasLabel(iss *github.Issue, label string) bool {
 	return false
 }
 
+// titleChanged returns true iff the title changed.
+func titleChanged(title string, edit *github.EditChange) bool {
+	return edit != nil && edit.Title != nil && edit.Title.From != nil && *edit.Title.From != title
+}
+
 // processIssueEvent identifies actions that should be taken based on the issue
 // event represented by data.
 func processIssueEvent(data *issueData) *issueEdits {
@@ -65,18 +76,29 @@ func processIssueEvent(data *issueData) *issueEdits {
 		edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
 	}
 
+	// Add a comment if the title doesn't match our regexp, and it's a new issue,
+	// or an issue whose title has just been modified.
+	if !issueTitleRegexp.MatchString(data.Issue.GetTitle()) &&
+		(data.Action == "opened" || (data.Action == "edited" && titleChanged(data.Issue.GetTitle(), data.Change))) {
+		edits.AddComments = append(edits.AddComments, issueTitleComment)
+	}
+
 	return edits
 }
 
 // issueEdits captures all of the edits to be made to an issue.
 type issueEdits struct {
 	RemoveLabels []string
+	AddComments []string
 }
 
 func (i *issueEdits) String() string {
 	var actions []string
 	for _, label := range i.RemoveLabels {
 		actions = append(actions, fmt.Sprintf("removing %q label", label))
+	}
+	for _, comment := range i.AddComments {
+		actions = append(actions, fmt.Sprintf("adding comment %q", comment))
 	}
 	if len(actions) == 0 {
 		return "[no changes]"
@@ -88,6 +110,13 @@ func (i *issueEdits) String() string {
 func (i *issueEdits) Execute(ctx context.Context, client *github.Client, owner, repo string, num int) error {
 	for _, label := range i.RemoveLabels {
 		_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repo, num, label)
+		if err != nil {
+			return err
+		}
+	}
+	for _, comment := range i.AddComments {
+		_, _, err := client.Issues.CreateComment(ctx, owner, repo, num, &github.IssueComment{
+			Body: github.String(comment)})
 		if err != nil {
 			return err
 		}
