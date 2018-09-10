@@ -29,8 +29,8 @@ func TestProcessIssueEvent(t *testing.T) {
 	tests := []struct {
 		description string
 		action      string
-		title           string // defaults to defaultTitle
-		prevTitle string
+		title       string
+		prevTitle   string
 		labels      []string
 		want        *issueEdits
 	}{
@@ -38,18 +38,21 @@ func TestProcessIssueEvent(t *testing.T) {
 		{
 			description: "close with random label -> no change",
 			action:      "closed",
+			title:       defaultTitle,
 			labels:      []string{"foo"},
 			want:        &issueEdits{},
 		},
 		{
 			description: "open with in progress label -> no change",
 			action:      "opened",
+			title:       defaultTitle,
 			labels:      []string{"in progress"},
 			want:        &issueEdits{},
 		},
 		{
 			description: "close with in progress label -> remove it",
 			action:      "closed",
+			title:       defaultTitle,
 			labels:      []string{"in progress"},
 			want: &issueEdits{
 				RemoveLabels: []string{"in progress"},
@@ -65,17 +68,17 @@ func TestProcessIssueEvent(t *testing.T) {
 			},
 		},
 		{
-			description:     "edit on invalid issue title but title didn't change -> no change",
-			action:          "edited",
-			title:           "foo",
-			prevTitle: "foo",
+			description: "edit on invalid issue title but title didn't change -> no change",
+			action:      "edited",
+			title:       "foo",
+			prevTitle:   "foo",
 			want:        &issueEdits{},
 		},
 		{
-			description:     "edit to invalid issue title -> add comment",
-			action:          "edited",
-			title:           "prev",
-			prevTitle: "foo",
+			description: "edit to invalid issue title -> add comment",
+			action:      "edited",
+			title:       "prev",
+			prevTitle:   "foo",
 			want: &issueEdits{
 				AddComments: []string{issueTitleComment},
 			},
@@ -87,9 +90,6 @@ func TestProcessIssueEvent(t *testing.T) {
 			lbls := make([]github.Label, len(tc.labels))
 			for i, label := range tc.labels {
 				lbls[i] = github.Label{Name: &label}
-			}
-			if tc.title == "" {
-				tc.title = defaultTitle
 			}
 			iss := &github.Issue{
 				Labels: lbls,
