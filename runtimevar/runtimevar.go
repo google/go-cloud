@@ -43,7 +43,9 @@ type Snapshot struct {
 
 // Variable provides the ability to read runtime variables with its blocking Watch method.
 type Variable struct {
-	watcher driver.Watcher
+	watcher     driver.Watcher
+	prevVersion interface{}
+	prevErr     error
 }
 
 // New constructs a Variable object given a driver.Watcher implementation.
@@ -51,8 +53,8 @@ func New(w driver.Watcher) *Variable {
 	return &Variable{watcher: w}
 }
 
-// Watch blocks until there are variable changes, the Context's Done channel closes or an error
-// occurs.
+// Watch blocks until there are variable changes, the Context's Done channel
+// closes or a new error occurs.
 //
 // If the variable changes, the method returns a Snapshot object containing the
 // updated value.
@@ -68,15 +70,41 @@ func New(w driver.Watcher) *Variable {
 // To stop this function from blocking, caller can passed in Context object constructed via
 // WithCancel and call the cancel function.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
-	variable, err := c.watcher.WatchVariable(ctx)
-	if err != nil {
-		// Mask underlying errors.
-		return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
+
+	// Check for ctx cancellation first before proceeding.
+	select {
+	case <-ctx.Done():
+		return Snapshot{}, ctx.Err()
+	default:
+		// Continue.
 	}
-	return Snapshot{
-		Value:      variable.Value,
-		UpdateTime: variable.UpdateTime,
-	}, nil
+
+	for {
+		v, version, wait, err := c.watcher.WatchVariable(ctx, c.prevVersion, c.prevErr)
+		if err != nil {
+			// A new error.
+			c.prevVersion = nil
+			c.prevErr = err
+			// Mask underlying errors.
+			return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
+		}
+		if v != nil {
+			// A new value.
+			c.prevVersion = version
+			c.prevErr = nil
+			return Snapshot{
+				Value:      v.Value,
+				UpdateTime: v.UpdateTime,
+			}, nil
+		}
+		// No change; wait before retrying.
+		t := time.NewTimer(wait)
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			return Snapshot{}, ctx.Err()
+		}
+	}
 }
 
 // Close cleans up any resources used by the Variable object.
