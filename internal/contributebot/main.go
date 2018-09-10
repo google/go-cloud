@@ -112,16 +112,15 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	// Pull out the interesting data from the event.
 	data := &issueData{
 		Action: e.GetAction(),
+		Owner:  e.GetRepo().GetOwner().GetLogin(),
+		Repo:   e.GetRepo().GetName(),
 		Issue:  e.GetIssue(),
 		Change: e.GetChanges(),
 	}
 
 	// Refetch the issue in case the event data is stale.
 	client := w.ghClient(e.GetInstallation().GetID())
-	owner := e.GetRepo().GetOwner().GetLogin()
-	repo := e.GetRepo().GetName()
-	issueNumber := data.Issue.GetNumber()
-	iss, _, err := client.Issues.Get(ctx, owner, repo, issueNumber)
+	iss, _, err := client.Issues.Get(ctx, data.Owner, data.Repo, data.Issue.GetNumber())
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	// Process the issue, deciding what actions to take (if any).
 	edits := processIssueEvent(data)
 	// Execute the actions (if any).
-	return edits.Execute(ctx, client, owner, repo, issueNumber)
+	return edits.Execute(ctx, client, data)
 }
 
 func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
@@ -138,6 +137,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	// Pull out the interesting data from the event.
 	data := &pullRequestData{
 		Action:      e.GetAction(),
+		Owner:       e.GetRepo().GetOwner().GetLogin(),
 		Repo:        e.GetRepo().GetName(),
 		PullRequest: e.GetPullRequest(),
 		Change:      e.GetChanges(),
@@ -145,10 +145,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 
 	// Refetch the pull request in case the event data is stale.
 	client := w.ghClient(e.GetInstallation().GetID())
-	owner := e.GetRepo().GetOwner().GetLogin()
-	repo := e.GetRepo().GetName()
-	prNumber := data.PullRequest.GetNumber()
-	pr, _, err := client.PullRequests.Get(ctx, owner, repo, prNumber)
+	pr, _, err := client.PullRequests.Get(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber())
 	if err != nil {
 		return err
 	}
@@ -157,7 +154,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	// Process the pull request, deciding what actions to take (if any).
 	edits := processPullRequestEvent(data)
 	// Execute the actions (if any).
-	return edits.Execute(ctx, client, owner, repo, prNumber)
+	return edits.Execute(ctx, client, data)
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.

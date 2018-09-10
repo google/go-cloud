@@ -45,6 +45,10 @@ type issueData struct {
 	Issue *github.Issue
 	// Change made as part of the event.
 	Change *github.EditChange
+	// Owner is the owner of the repository.
+	Owner string
+	// Repo is the main repository.
+	Repo string
 }
 
 func (i *issueData) String() string {
@@ -108,15 +112,15 @@ func (i *issueEdits) String() string {
 }
 
 // Execute applies all of the requested edits, aborting on error.
-func (i *issueEdits) Execute(ctx context.Context, client *github.Client, owner, repo string, num int) error {
+func (i *issueEdits) Execute(ctx context.Context, client *github.Client, data *issueData) error {
 	for _, label := range i.RemoveLabels {
-		_, err := client.Issues.RemoveLabelForIssue(ctx, owner, repo, num, label)
+		_, err := client.Issues.RemoveLabelForIssue(ctx, data.Owner, data.Repo, data.Issue.GetNumber(), label)
 		if err != nil {
 			return err
 		}
 	}
 	for _, comment := range i.AddComments {
-		_, _, err := client.Issues.CreateComment(ctx, owner, repo, num, &github.IssueComment{
+		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.Issue.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
 		if err != nil {
 			return err
@@ -134,6 +138,8 @@ type pullRequestData struct {
 	Action string
 	// Repo is the repository the pull request wants to commit to.
 	Repo string
+	// Owner is the owner of the repository.
+	Owner string
 	// PullRequest the event is for.
 	PullRequest *github.PullRequest
 	// Change made as part of the event.
@@ -184,18 +190,18 @@ func (i *pullRequestEdits) String() string {
 }
 
 // Execute applies all of the requested edits, aborting on error.
-func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, owner, repo string, num int) error {
+func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, data *pullRequestData) error {
 	for _, comment := range i.AddComments {
 		// Note: Use the Issues service since we're adding a top-level comment:
 		// https://developer.github.com/v3/guides/working-with-comments/.
-		_, _, err := client.Issues.CreateComment(ctx, owner, repo, num, &github.IssueComment{
+		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
 		if err != nil {
 			return err
 		}
 	}
 	if i.Close {
-		_, _, err := client.PullRequests.Edit(ctx, owner, repo, num, &github.PullRequest{
+		_, _, err := client.PullRequests.Edit(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.PullRequest{
 			State: github.String("closed"),
 		})
 		if err != nil {
