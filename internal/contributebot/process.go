@@ -41,14 +41,14 @@ type issueData struct {
 	// Action that this event is for.
 	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened", "edited".
 	Action string
+	// Repo is the repository the pull request wants to commit to.
+	Repo string
+	// Owner is the owner of the repository.
+	Owner string
 	// Issue the event is for.
 	Issue *github.Issue
 	// Change made as part of the event.
 	Change *github.EditChange
-	// Owner is the owner of the repository.
-	Owner string
-	// Repo is the main repository.
-	Repo string
 }
 
 func (i *issueData) String() string {
