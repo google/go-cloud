@@ -184,10 +184,8 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 		data.BannerSrc = "/blob/gophers.jpg"
 	}
 
-	dbCtx, dbSpan := trace.StartSpan(r.Context(), "sampleapp/MySQL.SELECT")
-	defer dbSpan.End()
 	const query = "SELECT content FROM (SELECT content, post_date FROM greetings ORDER BY post_date DESC LIMIT 100) AS recent_greetings ORDER BY post_date ASC;"
-	q, err := app.db.QueryContext(dbCtx, query)
+	q, err := app.db.QueryContext(r.Context(), query)
 	if err != nil {
 		log.Println("main page SQL error:", err)
 		http.Error(w, "could not load greetings", http.StatusInternalServerError)
@@ -203,7 +201,6 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Greetings = append(data.Greetings, g)
 	}
-	dbSpan.End()
 	if err := q.Err(); err != nil {
 		log.Println("main page SQL error:", err)
 		http.Error(w, "could not load greetings", http.StatusInternalServerError)
@@ -274,9 +271,7 @@ func (app *application) sign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	const sqlStmt = "INSERT INTO greetings (content) VALUES (?);"
-	dbCtx, dbSpan := trace.StartSpan(r.Context(), "sampleapp/MySQL.INSERT")
-	_, err := app.db.ExecContext(dbCtx, sqlStmt, content)
-	dbSpan.End()
+	_, err := app.db.ExecContext(r.Context(), sqlStmt, content)
 	if err != nil {
 		log.Println("sign SQL error:", err)
 		http.Error(w, "database error", http.StatusInternalServerError)
