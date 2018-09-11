@@ -56,7 +56,7 @@ type Params struct {
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts []ocsql.TraceOption) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -76,7 +76,10 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		Passwd:               params.Password,
 		DBName:               params.Database,
 	}
-	return sql.OpenDB(connector(cfg.FormatDSN())), nil
+	var c connector
+	c.dsn = cfg.FormatDSN()
+	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, traceOpts...)
+	return sql.OpenDB(c), nil
 }
 
 var dialerCounter struct {
@@ -84,13 +87,15 @@ var dialerCounter struct {
 	n  int
 }
 
-type connector string
+type connector struct {
+	dsn      string
+	dbDriver driver.Driver
+}
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
-	dsn := string(c)
-	return mysql.MySQLDriver{}.Open(dsn)
+	return c.Driver().Open(c.dsn)
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
+	return c.dbDriver
 }
