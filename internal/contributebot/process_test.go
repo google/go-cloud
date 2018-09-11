@@ -117,3 +117,55 @@ func TestProcessIssueEvent(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessPullRequestEvent(t *testing.T) {
+	const (
+		mainRepoName = "google/go-cloud"
+		forkRepoName = "user/go-cloud"
+	)
+
+	tests := []struct {
+		description string
+		action      string
+		branchRepo  string
+		want        *pullRequestEdits
+	}{
+		// If the pull request is from a branch of the main repo, close it.
+		{
+			description: "open with branch from fork -> no change",
+			action:      "opened",
+			branchRepo:  forkRepoName,
+			want:        &pullRequestEdits{},
+		},
+		{
+			description: "open with branch from main repo -> close",
+			action:      "opened",
+			branchRepo:  mainRepoName,
+			want: &pullRequestEdits{
+				Close:       true,
+				AddComments: []string{branchesInForkCloseComment},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			pr := &github.PullRequest{
+				Head: &github.PullRequestBranch{
+					Repo: &github.Repository{
+						Name: github.String(tc.branchRepo),
+					},
+				},
+			}
+			data := &pullRequestData{
+				Action:      tc.action,
+				Repo:        mainRepoName,
+				PullRequest: pr,
+			}
+			got := processPullRequestEvent(data)
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
