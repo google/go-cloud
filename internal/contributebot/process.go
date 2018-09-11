@@ -156,13 +156,19 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
 	log.Printf("Identifying actions for pull request: %v", data)
 	defer log.Printf("-> %v", edits)
+	pr := data.PullRequest
 
 	// If the pull request is from a branch of the main repo, close it and request that it come from a fork instead.
-	if data.Action == "opened" && data.PullRequest.GetHead().GetRepo().GetName() == data.Repo {
+	if data.Action == "opened" && pr.GetHead().GetRepo().GetName() == data.Repo {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
 		// Short circuit since we're closing anyway.
 		return edits
+	}
+
+	// If unassigned, assign to the first requested reviewer.
+	if pr.GetState() != "closed" && pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
+		edits.AssignTo = pr.RequestedReviewers[0].GetLogin()
 	}
 
 	return edits
@@ -171,6 +177,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 // pullRequestEdits captures all of the edits to be made to an issue.
 type pullRequestEdits struct {
 	Close       bool
+	AssignTo    string
 	AddComments []string
 }
 
@@ -178,6 +185,9 @@ func (i *pullRequestEdits) String() string {
 	var actions []string
 	if i.Close {
 		actions = append(actions, "close")
+	}
+	if i.AssignTo != "" {
+		actions = append(actions, fmt.Sprintf("assign to %s", i.AssignTo))
 	}
 	for _, comment := range i.AddComments {
 		actions = append(actions, fmt.Sprintf("add comment %q", comment))
@@ -196,6 +206,12 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 		// https://developer.github.com/v3/guides/working-with-comments/.
 		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
+		if err != nil {
+			return err
+		}
+	}
+	if i.AssignTo != "" {
+		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), []string{i.AssignTo})
 		if err != nil {
 			return err
 		}
