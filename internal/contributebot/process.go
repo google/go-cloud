@@ -168,7 +168,9 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 
 	// If unassigned, assign to the first requested reviewer.
 	if pr.GetState() != "closed" && pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
-		edits.AssignTo = pr.RequestedReviewers[0].GetLogin()
+		for _, r := range pr.RequestedReviewers {
+			edits.AssignTo = append(edits.AssignTo, r.GetLogin())
+		}
 	}
 
 	return edits
@@ -177,7 +179,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 // pullRequestEdits captures all of the edits to be made to an issue.
 type pullRequestEdits struct {
 	Close       bool
-	AssignTo    string
+	AssignTo    []string
 	AddComments []string
 }
 
@@ -186,8 +188,8 @@ func (i *pullRequestEdits) String() string {
 	if i.Close {
 		actions = append(actions, "close")
 	}
-	if i.AssignTo != "" {
-		actions = append(actions, fmt.Sprintf("assign to %s", i.AssignTo))
+	if len(i.AssignTo) > 0 {
+		actions = append(actions, fmt.Sprintf("assign to %s", strings.Join(i.AssignTo, " + ")))
 	}
 	for _, comment := range i.AddComments {
 		actions = append(actions, fmt.Sprintf("add comment %q", comment))
@@ -210,8 +212,8 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 			return err
 		}
 	}
-	if i.AssignTo != "" {
-		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), []string{i.AssignTo})
+	if len(i.AssignTo) > 0 {
+		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
 		if err != nil {
 			return err
 		}
