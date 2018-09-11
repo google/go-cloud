@@ -45,9 +45,9 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.1
-	github.com/gorilla/websocket v1.3.0 // indirect
+	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.4.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.5.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
@@ -66,7 +66,6 @@ require (
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	github.com/ugorji/go/codec v0.0.0-20180831062425-e253f1f20942 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
-	go.etcd.io/etcd v3.3.9+incompatible
 	go.opencensus.io v0.12.0
 	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
 	golang.org/x/net v0.0.0-20180702212446-ed29d75add3d

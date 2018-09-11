@@ -18,10 +18,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/embed"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/drivertest"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/embed"
 )
 
 var (

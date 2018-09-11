@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/coreos/etcd/clientv3"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
-	"go.etcd.io/etcd/clientv3"
 )
 
 // New constructs a runtimevar.Variable object that uses client to watch
