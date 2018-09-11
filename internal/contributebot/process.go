@@ -26,13 +26,13 @@ import (
 
 const (
 	inProgressLabel            = "in progress"
-	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
-	pullRequestTitleComment    = "Please edit the title of this pull request with the name of the affected package, followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
+	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	pullRequestTitleComment    = "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
 	branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
 )
 
 var (
-	issueTitleRegexp       = regexp.MustCompile("^[a-z0-9/]+: .*$")
+	issueTitleRegexp       = regexp.MustCompile("^[a-z0-9/-]+: .*$")
 	pullRequestTitleRegexp = issueTitleRegexp
 )
 
