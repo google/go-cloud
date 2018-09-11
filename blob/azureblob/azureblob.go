@@ -11,9 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-storage-blob-go/2018-03-28/azblob"
 )
 
 type bucket struct {
@@ -33,6 +35,7 @@ type Settings struct {
 	AccountKey       string
 	PublicAccessType azblob.PublicAccessType
 	SASToken         string
+	Pipeline         pipeline.Pipeline
 }
 
 // See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
@@ -64,7 +67,10 @@ func initBucketWithSASToken(ctx context.Context, settings *Settings, containerNa
 	}
 
 	credentials := azblob.NewAnonymousCredential()
-	p := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+	p := settings.Pipeline
+	if p == nil {
+		p = azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+	}
 
 	u := makeBlobStorageURL(settings.AccountName)
 	u.RawQuery = settings.SASToken
@@ -92,7 +98,10 @@ func initBucketWithAccountKey(ctx context.Context, settings *Settings, container
 	}
 
 	credentials := azblob.NewSharedKeyCredential(settings.AccountName, settings.AccountKey)
-	p := azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+	p := settings.Pipeline
+	if p == nil {
+		p = azblob.NewPipeline(credentials, azblob.PipelineOptions{})
+	}
 	u := makeBlobStorageURL(settings.AccountName)
 
 	serviceURL := azblob.NewServiceURL(*u, p)
@@ -115,8 +124,24 @@ func makeBlobStorageURL(accountName string) *url.URL {
 }
 
 func (b *bucket) Delete(ctx context.Context, key string) error {
+	if key == "" {
+		return fmt.Errorf("Invalid/Empty Key")
+	}
+
 	blobURL := b.urls.containerURL.NewBlockBlobURL(key)
 	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+
+	if serr, ok := err.(azblob.StorageError); ok {
+		switch serr.ServiceCode() {
+		case azblob.ServiceCodeBlobNotFound:
+			//	fallthrough
+			//case "BlobNotFound":
+			return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+		default:
+			return azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
+		}
+	}
+
 	return err
 }
 
@@ -131,6 +156,11 @@ type reader struct {
 // length bytes starting at the given offset. If length is 0, it will read only
 // the metadata. If length is negative, it will read till the end of the object.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+
+	if key == "" {
+		return nil, fmt.Errorf("Invalid/Empty Key")
+	}
+
 	// make url reference to the blob
 	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
@@ -139,6 +169,12 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		case azblob.ServiceCodeBlobNotFound:
 			return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 		default:
+			// test the http status code for 404/notfound
+			errorStatusCode := serr.Response().StatusCode
+			if errorStatusCode == 404 {
+				return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
+			}
+
 			return nil, azureError{bucket: b.name, key: key, msg: err.Error(), kind: driver.GenericError}
 		}
 	}
@@ -203,6 +239,11 @@ type writer struct {
 // Delete deletes the object associated with key. It is a no-op if that object
 // does not exist.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+
+	if key == "" {
+		return nil, fmt.Errorf("Invalid/Empty Key")
+	}
+
 	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
 	// try to create the azure container
 	// if it already exists, continue..
@@ -226,6 +267,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}
 
 	blockBlobURL := containerURL.NewBlockBlobURL(key)
+
 	var blockIDs []string
 	w := &writer{
 		ctx:         ctx,
@@ -283,6 +325,14 @@ func split(buf []byte, lim int) [][]byte {
 // create an empty file at the given key.
 func (w *writer) Close() error {
 	_, err := w.urls.blockBlobURL.CommitBlockList(w.ctx, w.blockIDs, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+
+	if err == nil && w.contentType != "" {
+		var basicHeaders = azblob.BlobHTTPHeaders{
+			ContentType: w.contentType,
+		}
+		w.urls.blockBlobURL.SetHTTPHeaders(w.ctx, basicHeaders, azblob.BlobAccessConditions{})
+	}
+
 	return err
 }
 

@@ -15,10 +15,12 @@
 module github.com/google/go-cloud
 
 require (
-	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
+	cloud.google.com/go v0.27.0
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
+	github.com/Azure/azure-pipeline-go v0.0.0-20180607212504-7571e8eb0876
+	github.com/Azure/azure-storage-blob-go v0.0.0-20180727221336-197d1c0aea1b
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
-	github.com/aws/aws-sdk-go v1.13.20
+	github.com/aws/aws-sdk-go v1.15.32
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
@@ -75,7 +77,7 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	golang.org/x/tools v0.0.0-20180314180217-d853e8088c62
-	google.golang.org/api v0.0.0-20180606215403-8e9de5a6de6d
+	google.golang.org/api v0.0.0-20180906000440-49a9310a9145
 	google.golang.org/appengine v1.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20180627194029-ff3583edef7d
 	google.golang.org/grpc v1.13.0
