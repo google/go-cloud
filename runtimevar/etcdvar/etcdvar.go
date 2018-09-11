@@ -31,51 +31,49 @@ import (
 // Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
 func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
-	return runtimevar.New(&impl{
+	return runtimevar.New(&watcher{
 		name:    name,
 		client:  cli,
 		decoder: decoder,
 	}), nil
 }
 
-// impl implements driver.Watcher.
-type impl struct {
+// watcher implements driver.Watcher.
+type watcher struct {
 	name    string
 	client  *clientv3.Client
 	decoder *runtimevar.Decoder
 }
 
-func (i *impl) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
+func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
 
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
+	// checkSameErr checks to see if err is the same as prevErr, and if so, returns
 	// the "no change" signal with w.waitTime.
 	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			if err.Error() == prevErr.Error() {
-				return nil, nil, 10 * time.Second, nil
-			}
+		if prevErr != nil && err.Error() == prevErr.Error() {
+			return nil, nil, 10 * time.Second, nil
 		}
 		return nil, nil, 0, err
 	}
 
 	// Create a watching channel in case the variable hasn't changed.
 	// We must create it now before the Get to avoid race conditions.
-	ch := i.client.Watch(ctx, i.name)
+	ch := w.client.Watch(ctx, w.name)
 
 	for {
-		resp, err := i.client.Get(ctx, i.name)
+		resp, err := w.client.Get(ctx, w.name)
 		if err != nil {
 			return checkSameErr(err)
 		}
 		if len(resp.Kvs) == 0 {
-			return checkSameErr(fmt.Errorf("%q not found", i.name))
+			return checkSameErr(fmt.Errorf("%q not found", w.name))
 		} else if len(resp.Kvs) > 1 {
-			return checkSameErr(fmt.Errorf("%q has multiple values", i.name))
+			return checkSameErr(fmt.Errorf("%q has multiple values", w.name))
 		}
 		kv := resp.Kvs[0]
 		if prevVersion == nil || kv.Version != prevVersion.(int64) {
 			// New Value
-			val, err := i.decoder.Decode(kv.Value)
+			val, err := w.decoder.Decode(kv.Value)
 			if err != nil {
 				return checkSameErr(err)
 			}
@@ -83,10 +81,10 @@ func (i *impl) WatchVariable(ctx context.Context, prevVersion interface{}, prevE
 		}
 
 		// Value hasn't changed. Wait for change events.
-		_ = <-ch
+		<-ch
 	}
 }
 
-func (i *impl) Close() error {
+func (w *watcher) Close() error {
 	return nil
 }
