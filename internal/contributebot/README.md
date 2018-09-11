@@ -86,9 +86,10 @@ gcloud builds submit --config cloudbuild.yaml ../..
 cp k8s/contributebot.yaml.in k8s/contributebot.yaml
 vi k8s/contributebot.yaml
 
-# Apply to cluster.
+# Apply to cluster. Replace project and zone with the actual values.
 gcloud container clusters get-credentials \
-    --zone="$(terraform output cluster_zone)" \
-    "$(terraform output cluster_name)"
+    --project=your-project-name \
+    --zone=us-central1-c \
+    contributebot-cluster
 kubectl apply -f k8s
 ```

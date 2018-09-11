@@ -20,6 +20,7 @@
 package runtimeconfigurator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -28,7 +29,6 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/runtimevar/internal"
 	"github.com/google/go-cloud/wire"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
@@ -143,47 +143,45 @@ func (w *watcher) Close() error {
 	return nil
 }
 
-// WatchVariable blocks until the variable changes, the Context's Done channel closes or an error occurs. It
-// implements the driver.Watcher.WatchVariable method.
-func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
-	return internal.Pinger(ctx, w.ping, w.waitTime)
-}
+func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
 
-func (w *watcher) ping(ctx context.Context) (*driver.Variable, error) {
-	// Use GetVariables RPC and check for deltas based on the response.
+	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
+	// the "no change" signal with w.waitTime.
+	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
+		if prevErr != nil {
+			code, prevCode := grpc.Code(err), grpc.Code(prevErr)
+			if (code != codes.OK && code == prevCode) || err.Error() == prevErr.Error() {
+				return nil, nil, w.waitTime, nil
+			}
+		}
+		return nil, nil, 0, err
+	}
+
+	// Get the variable from the backend.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
 	if err != nil {
-		errCode := grpc.Code(err)
-		if w.lastErrCode != codes.OK && errCode == w.lastErrCode {
-			// No change.
-			return nil, nil
-		}
-		w.lastBytes = nil
-		w.lastErrCode = errCode
-		return nil, err
+		return checkSameErr(err)
 	}
 	updateTime, err := parseUpdateTime(vpb)
 	if err != nil {
-		return nil, err
+		return checkSameErr(err)
 	}
 
-	// Determine if there are any changes based on the bytes. If there are, update cache and
-	// return nil, else continue on.
-	bytes := bytesFromProto(vpb)
-	if !bytesNotEqual(w.lastBytes, bytes) {
-		return nil, nil
+	// See if it's the same raw bytes as before.
+	b := bytesFromProto(vpb)
+	if prevVersion != nil && bytes.Equal(prevVersion.([]byte), b) {
+		return nil, nil, w.waitTime, nil
 	}
-	w.lastBytes = bytes
-	w.lastErrCode = codes.OK
 
-	val, err := w.decoder.Decode(bytes)
+	// New value! Decode it.
+	val, err := w.decoder.Decode(b)
 	if err != nil {
-		return nil, err
+		return checkSameErr(err)
 	}
 	return &driver.Variable{
 		Value:      val,
 		UpdateTime: updateTime,
-	}, nil
+	}, b, 0, nil
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {
@@ -192,19 +190,6 @@ func bytesFromProto(vpb *pb.Variable) []byte {
 		return vpb.GetValue()
 	}
 	return []byte(vpb.GetText())
-}
-
-func bytesNotEqual(a []byte, b []byte) bool {
-	n := len(a)
-	if n != len(b) {
-		return true
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return true
-		}
-	}
-	return false
 }
 
 func parseUpdateTime(vpb *pb.Variable) (time.Time, error) {
