@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/basvanbeek/ocsql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/health/sqlhealth"
@@ -75,9 +76,10 @@ func main() {
 	var app *application
 	var cleanup func()
 	var err error
+	traceOpt := ocsql.WithOptions(ocsql.TraceOptions{})
 	switch envFlag {
 	case "gcp":
-		app, cleanup, err = setupGCP(ctx, cf)
+		app, cleanup, err = setupGCP(ctx, cf, traceOpt)
 	case "aws":
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"

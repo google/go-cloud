@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 
+	"github.com/basvanbeek/ocsql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/gcsblob"
 	"github.com/google/go-cloud/gcp"
@@ -35,7 +36,7 @@ import (
 // into wire_gen.go when Wire is run.
 
 // setupGCP is a Wire injector function that sets up the application using GCP.
-func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupGCP(ctx context.Context, flags *cliFlags, traceOpt ocsql.TraceOption) (*application, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(

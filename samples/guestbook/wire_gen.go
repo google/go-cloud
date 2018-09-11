@@ -10,6 +10,7 @@ import (
 	sql "database/sql"
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
+	ocsql "github.com/basvanbeek/ocsql"
 	mysql "github.com/go-sql-driver/mysql"
 	blob "github.com/google/go-cloud/blob"
 	fileblob "github.com/google/go-cloud/blob/fileblob"
@@ -96,7 +97,7 @@ var (
 
 // Injectors from inject_gcp.go:
 
-func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupGCP(ctx context.Context, flags *cliFlags, traceOpt ocsql.TraceOption) (*application, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
 	roundTripper := gcp.DefaultTransport()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -114,7 +115,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, err := cloudmysql.Open(ctx, remoteCertSource, params, traceOpt)
 	if err != nil {
 		return nil, nil, err
 	}
