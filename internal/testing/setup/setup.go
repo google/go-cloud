@@ -165,7 +165,7 @@ func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
 	f := []pipeline.Factory{
 
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
-			Value: "headerTarget",
+			Value: "X-Az-Target",
 		}),
 		azblob.NewUniqueRequestIDPolicyFactory(),
 		azblob.NewRetryPolicyFactory(azblob.RetryOptions{
