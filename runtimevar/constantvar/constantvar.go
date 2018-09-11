@@ -18,6 +18,7 @@ package constantvar
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
@@ -27,30 +28,30 @@ import (
 // New constructs a runtimevar.Variable that returns value from Watch.
 // Subsequent calls to Watch will block.
 func New(value interface{}) *runtimevar.Variable {
-	return runtimevar.New(&impl{value: value, t: time.Now()})
+	return runtimevar.New(&watcher{value: value, t: time.Now()})
 }
 
 // NewError constructs a runtimevar.Variable that returns err from Watch.
 // Subsequent calls to Watch will block.
 func NewError(err error) *runtimevar.Variable {
-	return runtimevar.New(&impl{err: err})
+	return runtimevar.New(&watcher{err: err})
 }
 
 // impl implements driver.Watcher.
-type impl struct {
+type watcher struct {
 	value interface{}
 	err   error
 	t     time.Time
 }
 
-func (i *impl) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
+func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
 
 	// The first time this is called, return the constant value.
 	if prevVersion == nil && prevErr == nil {
-		return &driver.Variable{Value: i.value, UpdateTime: i.t}, true, 0, i.err
+		return &driver.Variable{Value: w.value, UpdateTime: w.t}, true, 0, w.err
 	}
 	// On subsequent calls, block ~forever as the value will never change.
-	return nil, nil, 999 * 24 * time.Hour, nil
+	return nil, nil, time.Duration(math.Inf(+1)), nil
 }
 
-func (i *impl) Close() error { return nil }
+func (_ *watcher) Close() error { return nil }
