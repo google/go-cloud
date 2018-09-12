@@ -28,9 +28,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/basvanbeek/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/wire"
+	"github.com/opencensus-integrations/ocsql"
 	"golang.org/x/net/context/ctxhttp"
 )
 

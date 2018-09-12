@@ -20,7 +20,6 @@ require (
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
-	github.com/basvanbeek/ocsql v0.0.0-20180627133915-d946a62502e3
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
@@ -52,6 +51,7 @@ require (
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/opencensus-integrations/ocsql v0.0.0-20180908125828-63b3e35325e2
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.8.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
