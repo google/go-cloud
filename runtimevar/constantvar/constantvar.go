@@ -37,7 +37,7 @@ func NewError(err error) *runtimevar.Variable {
 	return runtimevar.New(&watcher{err: err})
 }
 
-// impl implements driver.Watcher.
+// watcher implements driver.Watcher.
 type watcher struct {
 	value interface{}
 	err   error
