@@ -12,68 +12,56 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package paramstore
+package constantvar
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 )
 
-// This constant records the region used for the last --record.
-// If you want to use --record mode,
-// 1. Update this constant to your AWS region.
-// TODO(issue #300): Use Terraform to get this.
-const region = "us-east-2"
-
 type harness struct {
-	client  *Client
-	session client.ConfigProvider
-	closer  func()
+	// vars stores the variable value(s) that have been set using CreateVariable.
+	vars map[string][]byte
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	sess, done := setup.NewAWSSession(t, region)
-	client := NewClient(sess)
-	return &harness{client: client, session: sess, closer: done}, nil
+	return &harness{vars: map[string][]byte{}}, nil
 }
 
 func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
-	return h.client.NewVariable(name, decoder, nil)
+	rawVal, found := h.vars[name]
+	if !found {
+		// The variable isn't set. Create a Variable that always returns an error.
+		return NewError(errors.New("not found")), nil
+	}
+	val, err := decoder.Decode(rawVal)
+	if err != nil {
+		// The variable didn't decode.
+		return NewError(errors.New("not found")), nil
+	}
+	return New(val), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	svc := ssm.New(h.session)
-	_, err := svc.PutParameter(&ssm.PutParameterInput{
-		Name:      aws.String(name),
-		Type:      aws.String("String"),
-		Value:     aws.String(string(val)),
-		Overwrite: aws.Bool(true),
-	})
-	return err
+	h.vars[name] = val
+	return nil
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	return h.CreateVariable(ctx, name, val)
+	return errors.New("not supported")
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	svc := ssm.New(h.session)
-	_, err := svc.DeleteParameter(&ssm.DeleteParameterInput{Name: aws.String(name)})
-	return err
+	return errors.New("not supported")
 }
 
-func (h *harness) Close() {
-	h.closer()
-}
+func (h *harness) Close() {}
 
-func (h *harness) Mutable() bool { return true }
+func (h *harness) Mutable() bool { return false }
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
