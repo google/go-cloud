@@ -50,8 +50,8 @@ require (
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
-	github.com/opencensus-integrations/ocsql v0.0.0-20180908125828-63b3e35325e2
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/opencensus-integrations/ocsql v0.0.0-20180908125828-63b3e35325e2
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.8.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect

@@ -109,6 +109,8 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) Mutable() bool { return true }
+
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
 }

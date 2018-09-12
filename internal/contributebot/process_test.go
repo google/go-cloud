@@ -122,11 +122,16 @@ func TestProcessPullRequestEvent(t *testing.T) {
 	const (
 		mainRepoName = "google/go-cloud"
 		forkRepoName = "user/go-cloud"
+		defaultTitle = "foo: bar"
 	)
 
 	tests := []struct {
 		description string
 		action      string
+		state       string
+		reviewers   []string
+		title       string
+		prevTitle   string
 		branchRepo  string
 		want        *pullRequestEdits
 	}{
@@ -134,6 +139,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		{
 			description: "open with branch from fork -> no change",
 			action:      "opened",
+			title:       defaultTitle,
 			branchRepo:  forkRepoName,
 			want:        &pullRequestEdits{},
 		},
@@ -146,21 +152,87 @@ func TestProcessPullRequestEvent(t *testing.T) {
 				AddComments: []string{branchesInForkCloseComment},
 			},
 		},
+		// Assign to reviewers.
+		{
+			description: "open with no assignee and a reviewer -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo"},
+			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
+		},
+		{
+			description: "open with no assignee and multiple reviewers -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo", "bar"},
+			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
+		},
+		{
+			description: "closed with no assignee and a reviewer -> no change",
+			action:      "edited",
+			title:       defaultTitle,
+			state:       "closed",
+			reviewers:   []string{"foo"},
+			want:        &pullRequestEdits{},
+		},
+		// Check title looks like "foo: bar".
+		{
+			description: "open with invalid title -> add comment",
+			action:      "opened",
+			title:       "foo",
+			want: &pullRequestEdits{
+				AddComments: []string{pullRequestTitleComment},
+			},
+		},
+		{
+			description: "edit on invalid title but title didn't change -> no change",
+			action:      "edited",
+			title:       "foo",
+			prevTitle:   "foo",
+			want:        &pullRequestEdits{},
+		},
+		{
+			description: "edit to invalid title -> add comment",
+			action:      "edited",
+			title:       "prev",
+			prevTitle:   "foo",
+			want: &pullRequestEdits{
+				AddComments: []string{pullRequestTitleComment},
+			},
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
+			var reviewers []*github.User
+			for _, reviewer := range tc.reviewers {
+				reviewers = append(reviewers, &github.User{Login: github.String(reviewer)})
+			}
 			pr := &github.PullRequest{
 				Head: &github.PullRequestBranch{
 					Repo: &github.Repository{
 						Name: github.String(tc.branchRepo),
 					},
 				},
+				Title:              github.String(tc.title),
+				State:              github.String(tc.state),
+				RequestedReviewers: reviewers,
+			}
+			var chg *github.EditChange
+			if tc.action == "edited" {
+				chg = &github.EditChange{}
+				if tc.prevTitle != "" {
+					title := struct {
+						From *string `json:"from,omitempty"`
+					}{From: github.String(tc.prevTitle)}
+					chg.Title = &title
+				}
 			}
 			data := &pullRequestData{
 				Action:      tc.action,
 				Repo:        mainRepoName,
 				PullRequest: pr,
+				Change:      chg,
 			}
 			got := processPullRequestEvent(data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
