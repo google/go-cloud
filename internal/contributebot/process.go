@@ -168,6 +168,13 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 		return edits
 	}
 
+	// If unassigned, assign to the first requested reviewer.
+	if pr.GetState() != "closed" && pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
+		for _, r := range pr.RequestedReviewers {
+			edits.AssignTo = append(edits.AssignTo, r.GetLogin())
+		}
+	}
+
 	// Add a comment if the title doesn't match our regexp, and it's a new issue,
 	// or an issue whose title has just been modified.
 	if !pullRequestTitleRegexp.MatchString(pr.GetTitle()) &&
@@ -181,6 +188,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 // pullRequestEdits captures all of the edits to be made to an issue.
 type pullRequestEdits struct {
 	Close       bool
+	AssignTo    []string
 	AddComments []string
 }
 
@@ -188,6 +196,9 @@ func (i *pullRequestEdits) String() string {
 	var actions []string
 	if i.Close {
 		actions = append(actions, "close")
+	}
+	if len(i.AssignTo) > 0 {
+		actions = append(actions, fmt.Sprintf("assign to %s", strings.Join(i.AssignTo, " + ")))
 	}
 	for _, comment := range i.AddComments {
 		actions = append(actions, fmt.Sprintf("add comment %q", comment))
@@ -206,6 +217,12 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 		// https://developer.github.com/v3/guides/working-with-comments/.
 		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
+		if err != nil {
+			return err
+		}
+	}
+	if len(i.AssignTo) > 0 {
+		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
 		if err != nil {
 			return err
 		}

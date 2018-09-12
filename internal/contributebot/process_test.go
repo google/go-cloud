@@ -128,6 +128,8 @@ func TestProcessPullRequestEvent(t *testing.T) {
 	tests := []struct {
 		description string
 		action      string
+		state       string
+		reviewers   []string
 		title       string
 		prevTitle   string
 		branchRepo  string
@@ -149,6 +151,29 @@ func TestProcessPullRequestEvent(t *testing.T) {
 				Close:       true,
 				AddComments: []string{branchesInForkCloseComment},
 			},
+		},
+		// Assign to reviewers.
+		{
+			description: "open with no assignee and a reviewer -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo"},
+			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
+		},
+		{
+			description: "open with no assignee and multiple reviewers -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo", "bar"},
+			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
+		},
+		{
+			description: "closed with no assignee and a reviewer -> no change",
+			action:      "edited",
+			title:       defaultTitle,
+			state:       "closed",
+			reviewers:   []string{"foo"},
+			want:        &pullRequestEdits{},
 		},
 		// Check title looks like "foo: bar".
 		{
@@ -179,13 +204,19 @@ func TestProcessPullRequestEvent(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
+			var reviewers []*github.User
+			for _, reviewer := range tc.reviewers {
+				reviewers = append(reviewers, &github.User{Login: github.String(reviewer)})
+			}
 			pr := &github.PullRequest{
 				Head: &github.PullRequestBranch{
 					Repo: &github.Repository{
 						Name: github.String(tc.branchRepo),
 					},
 				},
-				Title: github.String(tc.title),
+				Title:              github.String(tc.title),
+				State:              github.String(tc.state),
+				RequestedReviewers: reviewers,
 			}
 			var chg *github.EditChange
 			if tc.action == "edited" {
