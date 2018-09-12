@@ -116,7 +116,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 	// We may never use the notifier if we read the file below and detect a
 	// change, but we must subscribe here to avoid race conditions.
 	var notifierErr error
-	if prevVersion != nil || prevErr != nil {
+	if prevVersion != nil {
 		notifierErr := w.notifier.Add(w.file)
 		if notifierErr == nil {
 			defer func() {
