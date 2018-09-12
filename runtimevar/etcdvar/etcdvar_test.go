@@ -74,6 +74,8 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	return err
 }
 
+func (h *harness) Mutable() bool { return true }
+
 func (h *harness) Close() {
 	h.client.Close()
 }

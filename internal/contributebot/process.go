@@ -26,12 +26,14 @@ import (
 
 const (
 	inProgressLabel            = "in progress"
-	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	pullRequestTitleComment    = "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
 	branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
 )
 
 var (
-	issueTitleRegexp = regexp.MustCompile("^[a-z0-9/]+: .*$")
+	issueTitleRegexp       = regexp.MustCompile("^[a-z0-9/-]+: .*$")
+	pullRequestTitleRegexp = issueTitleRegexp
 )
 
 // issueData is information about an issue event.
@@ -156,13 +158,28 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
 	log.Printf("Identifying actions for pull request: %v", data)
 	defer log.Printf("-> %v", edits)
+	pr := data.PullRequest
 
 	// If the pull request is from a branch of the main repo, close it and request that it come from a fork instead.
-	if data.Action == "opened" && data.PullRequest.GetHead().GetRepo().GetName() == data.Repo {
+	if data.Action == "opened" && pr.GetHead().GetRepo().GetName() == data.Repo {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
 		// Short circuit since we're closing anyway.
 		return edits
+	}
+
+	// If unassigned, assign to the first requested reviewer.
+	if pr.GetState() != "closed" && pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
+		for _, r := range pr.RequestedReviewers {
+			edits.AssignTo = append(edits.AssignTo, r.GetLogin())
+		}
+	}
+
+	// Add a comment if the title doesn't match our regexp, and it's a new issue,
+	// or an issue whose title has just been modified.
+	if !pullRequestTitleRegexp.MatchString(pr.GetTitle()) &&
+		(data.Action == "opened" || (data.Action == "edited" && titleChanged(pr.GetTitle(), data.Change))) {
+		edits.AddComments = append(edits.AddComments, pullRequestTitleComment)
 	}
 
 	return edits
@@ -171,6 +188,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 // pullRequestEdits captures all of the edits to be made to an issue.
 type pullRequestEdits struct {
 	Close       bool
+	AssignTo    []string
 	AddComments []string
 }
 
@@ -178,6 +196,9 @@ func (i *pullRequestEdits) String() string {
 	var actions []string
 	if i.Close {
 		actions = append(actions, "close")
+	}
+	if len(i.AssignTo) > 0 {
+		actions = append(actions, fmt.Sprintf("assign to %s", strings.Join(i.AssignTo, " + ")))
 	}
 	for _, comment := range i.AddComments {
 		actions = append(actions, fmt.Sprintf("add comment %q", comment))
@@ -196,6 +217,12 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 		// https://developer.github.com/v3/guides/working-with-comments/.
 		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
+		if err != nil {
+			return err
+		}
+	}
+	if len(i.AssignTo) > 0 {
+		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
 		if err != nil {
 			return err
 		}
