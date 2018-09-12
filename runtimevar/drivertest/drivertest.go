@@ -208,7 +208,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("got %v want error", got)
 	}
 	if tCtx.Err() == nil {
-		t.Error("want Watch to have blocked until context was Done")
+		t.Errorf("got err %v; want Watch to have blocked until context was Done", err)
 	}
 }
 
