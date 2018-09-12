@@ -1,11 +1,13 @@
-# Go Cloud proxy
+# Go Cloud module proxy
 
-The Travis build for Go Cloud uses a `GOPROXY` for dependencies, for efficiency
-and reliability, and to enforce that all of our dependencies meet our license
-requirements.
+The Travis build for Go Cloud uses a [Go module proxy][] for dependencies, for
+efficiency and reliability, and to enforce that all of our dependencies meet our
+license requirements.
 
 The proxy is set
 [here](https://github.com/google/go-cloud/blob/master/.travis.yml#L22).
+
+[Go module proxy]: https://research.swtch.com/vgo-module
 
 ## Updating the GCS bucket
 
@@ -19,10 +21,11 @@ dependency to the proxy:
 
 ```bash
 ./internal/proxy/makeproxy.sh proxy
+
 # -n: preview only
 # -r: recurse directories
 # -c: compare checksums not write times
-# -d: source directory; value should match what you passed to makeproxy.sh)
+# -d: source directory; value should match what you passed to makeproxy.sh
 $ gsutil rsync -n -r -c -d proxy gs://go-cloud-modules
 ...
 # If it looks good, repeat without the -n.
