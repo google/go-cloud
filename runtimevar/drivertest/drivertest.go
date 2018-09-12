@@ -38,6 +38,10 @@ type Harness interface {
 	DeleteVariable(ctx context.Context, name string) error
 	// Close is called when the test is complete.
 	Close()
+	// Mutable returns true iff the driver supports UpdateVariable/DeleteVariable.
+	// If false, those functions should return errors, and the conformance tests
+	// will skip and/or ignore errors for tests that require them.
+	Mutable() bool
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -109,11 +113,13 @@ func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	if h.Mutable() {
+		defer func() {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
 
 	// Test initial watch fails if ctx is cancelled.
 	cancelledCtx, cancel := context.WithCancel(ctx)
@@ -164,11 +170,13 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	if h.Mutable() {
+		defer func() {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
 
 	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
@@ -193,7 +201,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// A second watch should block forever since the value hasn't changed.
 	// A short wait here doesn't guarantee that this is working, but will catch
 	// most problems.
-	tCtx, cancel := context.WithTimeout(ctx, 10 * time.Millisecond)
+	tCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 	defer cancel()
 	got, err = v.Watch(tCtx)
 	if err == nil {
@@ -229,11 +237,13 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(jsonContent)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	if h.Mutable() {
+		defer func() {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
 
 	var jsonData []*Message
 	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
@@ -273,11 +283,13 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		if err := h.DeleteVariable(ctx, name); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	if h.Mutable() {
+		defer func() {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
 
 	var jsonData []*Message
 	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
@@ -307,6 +319,9 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if !h.Mutable() {
+		return
+	}
 	ctx := context.Background()
 
 	// Create the variable and verify Watch sees the value.
@@ -357,6 +372,9 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	if !h.Mutable() {
+		return
+	}
 	ctx := context.Background()
 
 	// Create the variable and verify Watch sees the value.
