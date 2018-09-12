@@ -214,9 +214,9 @@ func TestProcessPullRequestEvent(t *testing.T) {
 						Name: github.String(tc.branchRepo),
 					},
 				},
+				Title:              github.String(tc.title),
 				State:              github.String(tc.state),
 				RequestedReviewers: reviewers,
-				Title:              github.String(tc.title),
 			}
 			var chg *github.EditChange
 			if tc.action == "edited" {
