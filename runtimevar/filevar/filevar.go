@@ -148,7 +148,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 		for wait {
 			select {
 			case <-ctx.Done():
-				return checkSameErr(err)
+				return nil, nil, 0, ctx.Err()
 
 			case event := <-w.notifier.Events:
 				if event.Name != w.file {
