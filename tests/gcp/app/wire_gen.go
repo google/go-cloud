@@ -6,12 +6,12 @@
 package main
 
 import (
-	context "context"
-	gcp "github.com/google/go-cloud/gcp"
-	health "github.com/google/go-cloud/health"
-	server "github.com/google/go-cloud/server"
-	sdserver "github.com/google/go-cloud/server/sdserver"
-	trace "go.opencensus.io/trace"
+	"context"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/server/sdserver"
+	"go.opencensus.io/trace"
 )
 
 // Injectors from inject.go:
@@ -39,8 +39,8 @@ func initialize(ctx context.Context) (*server.Server, error) {
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options)
-	return server2, nil
+	serverServer := server.New(options)
+	return serverServer, nil
 }
 
 var (

@@ -6,19 +6,19 @@
 package main
 
 import (
-	pubsub "cloud.google.com/go/pubsub"
-	context "context"
-	rsa "crypto/rsa"
-	jwt "github.com/dgrijalva/jwt-go"
-	gcp "github.com/google/go-cloud/gcp"
-	health "github.com/google/go-cloud/health"
-	requestlog "github.com/google/go-cloud/requestlog"
-	runtimevar "github.com/google/go-cloud/runtimevar"
-	filevar "github.com/google/go-cloud/runtimevar/filevar"
-	server "github.com/google/go-cloud/server"
-	trace "go.opencensus.io/trace"
-	option "google.golang.org/api/option"
-	http "net/http"
+	"cloud.google.com/go/pubsub"
+	"context"
+	"crypto/rsa"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/filevar"
+	"github.com/google/go-cloud/server"
+	"go.opencensus.io/trace"
+	"google.golang.org/api/option"
+	"net/http"
 )
 
 // Injectors from setup.go:
@@ -36,17 +36,17 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 	}
 	subscription := subscriptionFromConfig(client, cfg)
 	roundTripper := _wireRoundTripperValue
-	gitHubAppAuth2, cleanup2, err := gitHubAppAuthFromConfig(roundTripper, cfg)
+	mainGitHubAppAuth, cleanup2, err := gitHubAppAuthFromConfig(roundTripper, cfg)
 	if err != nil {
 		cleanup()
 		return workerAndServer{}, nil, err
 	}
-	worker2 := &worker{
+	mainWorker := &worker{
 		sub:  subscription,
-		auth: gitHubAppAuth2,
+		auth: mainGitHubAppAuth,
 	}
 	logger := _wireLoggerValue
-	v := healthChecks(worker2)
+	v := healthChecks(mainWorker)
 	exporter := _wireExporterValue
 	sampler := trace.NeverSample()
 	options := &server.Options{
@@ -55,12 +55,12 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options)
-	workerAndServer2 := workerAndServer{
-		worker: worker2,
-		server: server2,
+	serverServer := server.New(options)
+	mainWorkerAndServer := workerAndServer{
+		worker: mainWorker,
+		server: serverServer,
 	}
-	return workerAndServer2, func() {
+	return mainWorkerAndServer, func() {
 		cleanup2()
 		cleanup()
 	}, nil
