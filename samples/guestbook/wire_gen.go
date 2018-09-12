@@ -6,28 +6,28 @@
 package main
 
 import (
-	context "context"
-	sql "database/sql"
-	client "github.com/aws/aws-sdk-go/aws/client"
-	session "github.com/aws/aws-sdk-go/aws/session"
-	mysql "github.com/go-sql-driver/mysql"
-	blob "github.com/google/go-cloud/blob"
-	fileblob "github.com/google/go-cloud/blob/fileblob"
-	gcsblob "github.com/google/go-cloud/blob/gcsblob"
-	s3blob "github.com/google/go-cloud/blob/s3blob"
-	gcp "github.com/google/go-cloud/gcp"
-	cloudmysql "github.com/google/go-cloud/mysql/cloudmysql"
-	rdsmysql "github.com/google/go-cloud/mysql/rdsmysql"
-	requestlog "github.com/google/go-cloud/requestlog"
-	runtimevar "github.com/google/go-cloud/runtimevar"
-	filevar "github.com/google/go-cloud/runtimevar/filevar"
-	paramstore "github.com/google/go-cloud/runtimevar/paramstore"
-	runtimeconfigurator "github.com/google/go-cloud/runtimevar/runtimeconfigurator"
-	server "github.com/google/go-cloud/server"
-	sdserver "github.com/google/go-cloud/server/sdserver"
-	xrayserver "github.com/google/go-cloud/server/xrayserver"
-	trace "go.opencensus.io/trace"
-	http "net/http"
+	"context"
+	"database/sql"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/go-sql-driver/mysql"
+	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/fileblob"
+	"github.com/google/go-cloud/blob/gcsblob"
+	"github.com/google/go-cloud/blob/s3blob"
+	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/mysql/cloudmysql"
+	"github.com/google/go-cloud/mysql/rdsmysql"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/filevar"
+	"github.com/google/go-cloud/runtimevar/paramstore"
+	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
+	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/server/sdserver"
+	"github.com/google/go-cloud/server/xrayserver"
+	"go.opencensus.io/trace"
+	"net/http"
 )
 
 // Injectors from inject_aws.go:
@@ -45,13 +45,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	v, cleanup2 := appHealthChecks(db)
 	options := _wireOptionsValue
-	session2, err := session.NewSessionWithOptions(options)
+	sessionSession, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	xRay := xrayserver.NewXRayClient(session2)
+	xRay := xrayserver.NewXRayClient(sessionSession)
 	exporter, cleanup3, err := xrayserver.NewExporter(xRay)
 	if err != nil {
 		cleanup2()
@@ -59,30 +59,30 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
-	options2 := &server.Options{
+	serverOptions := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options2)
-	bucket, err := awsBucket(ctx, session2, flags)
+	serverServer := server.New(serverOptions)
+	bucket, err := awsBucket(ctx, sessionSession, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	client2 := paramstore.NewClient(session2)
-	variable, err := awsMOTDVar(ctx, client2, flags)
+	paramstoreClient := paramstore.NewClient(sessionSession)
+	variable, err := awsMOTDVar(ctx, paramstoreClient, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	application2 := newApplication(server2, db, bucket, variable)
-	return application2, func() {
+	mainApplication := newApplication(serverServer, db, bucket, variable)
+	return mainApplication, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -131,7 +131,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options)
+	serverServer := server.New(options)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
@@ -149,8 +149,8 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 		return nil, nil, err
 	}
-	application2 := newApplication(server2, db, bucket, variable)
-	return application2, func() {
+	mainApplication := newApplication(serverServer, db, bucket, variable)
+	return mainApplication, func() {
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -174,7 +174,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options)
+	serverServer := server.New(options)
 	bucket, err := localBucket(flags)
 	if err != nil {
 		cleanup()
@@ -185,8 +185,8 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		cleanup()
 		return nil, nil, err
 	}
-	application2 := newApplication(server2, db, bucket, variable)
-	return application2, func() {
+	mainApplication := newApplication(serverServer, db, bucket, variable)
+	return mainApplication, func() {
 		cleanup2()
 		cleanup()
 	}, nil

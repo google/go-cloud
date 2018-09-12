@@ -6,16 +6,16 @@
 package main
 
 import (
-	context "context"
-	aws "github.com/aws/aws-sdk-go/aws"
-	client "github.com/aws/aws-sdk-go/aws/client"
-	credentials "github.com/aws/aws-sdk-go/aws/credentials"
-	session "github.com/aws/aws-sdk-go/aws/session"
-	health "github.com/google/go-cloud/health"
-	server "github.com/google/go-cloud/server"
-	xrayserver "github.com/google/go-cloud/server/xrayserver"
-	wire "github.com/google/go-cloud/wire"
-	trace "go.opencensus.io/trace"
+	"context"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/google/go-cloud/health"
+	"github.com/google/go-cloud/server"
+	"github.com/google/go-cloud/server/xrayserver"
+	"github.com/google/go-cloud/wire"
+	"go.opencensus.io/trace"
 )
 
 // Injectors from inject.go:
@@ -24,24 +24,24 @@ func initialize(ctx context.Context, cfg *appConfig) (*server.Server, func(), er
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v := _wireValue
 	options := awsOptions(cfg)
-	session2, err := session.NewSessionWithOptions(options)
+	sessionSession, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		return nil, nil, err
 	}
-	xRay := xrayserver.NewXRayClient(session2)
+	xRay := xrayserver.NewXRayClient(sessionSession)
 	exporter, cleanup, err := xrayserver.NewExporter(xRay)
 	if err != nil {
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
-	options2 := &server.Options{
+	serverOptions := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 	}
-	server2 := server.New(options2)
-	return server2, func() {
+	serverServer := server.New(serverOptions)
+	return serverServer, func() {
 		cleanup()
 	}, nil
 }
