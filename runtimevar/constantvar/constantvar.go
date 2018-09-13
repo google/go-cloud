@@ -18,7 +18,6 @@ package constantvar
 
 import (
 	"context"
-	"math"
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
@@ -59,7 +58,8 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		return w, 0
 	}
 	// On subsequent calls, block ~forever as the value will never change.
-	return nil, time.Duration(math.Inf(+1))
+	<-ctx.Done()
+	return nil, 0
 }
 
 func (_ *watcher) Close() error { return nil }

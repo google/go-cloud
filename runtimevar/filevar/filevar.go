@@ -123,7 +123,7 @@ func errorState(err error, prevS driver.State) driver.State {
 		// New error.
 		return s
 	}
-	if err.Error() == prev.err.Error() {
+	if err == prev.err {
 		return nil
 	}
 	if os.IsNotExist(err) && os.IsNotExist(prev.err) {

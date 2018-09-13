@@ -22,8 +22,10 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"google.golang.org/grpc/codes"
 )
 
 const errWait = 10 * time.Second
@@ -68,7 +70,17 @@ func errorState(err error, prevS driver.State) driver.State {
 		// New error.
 		return s
 	}
-	if err.Error() == prev.err.Error() {
+	if err == prev.err {
+		return nil
+	}
+	var code, prevCode codes.Code
+	if etcdErr, ok := err.(rpctypes.EtcdError); ok {
+		code = etcdErr.Code()
+	}
+	if etcdErr, ok := prev.err.(rpctypes.EtcdError); ok {
+		prevCode = etcdErr.Code()
+	}
+	if code != codes.OK && code == prevCode {
 		return nil
 	}
 	return s

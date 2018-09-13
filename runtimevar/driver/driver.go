@@ -44,7 +44,7 @@ type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil plus a wait time (which may
 	// be 0); WatchVariable will not be called again for wait.
-
+	//
 	// Implementations *may* block, but must return if ctx is Done. If the
 	// variable has changed, then implementations *must* eventually return it.
 	//

@@ -86,7 +86,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 			v, err := cur.Value()
 			if err != nil {
 				// Mask underlying errors.
-				return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
+				return Snapshot{}, fmt.Errorf("watch variable: %v", err)
 			}
 			return Snapshot{Value: v, UpdateTime: cur.UpdateTime()}, nil
 		}
