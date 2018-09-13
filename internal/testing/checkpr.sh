@@ -68,4 +68,4 @@ GO111MODULE=off golangci-lint run \
   --disable=unused \
   --build-tags=wireinject \
   "${lintdirs[@]}" || exit 1
-GO111MODULE=off internal/testing/wirecheck.sh || exit 1
+internal/testing/wirecheck.sh || exit 1
