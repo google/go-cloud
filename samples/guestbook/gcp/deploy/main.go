@@ -99,7 +99,7 @@ func deploy(guestbookDir, tfStatePath string) error {
 
 	// Build Guestbook Docker image.
 	log.Printf("Building %s...", imageName)
-	build := exec.Command("vgo", "build", "-o", "gcp/guestbook")
+	build := exec.Command("go", "build", "-o", "gcp/guestbook")
 	env := append(build.Env, "GOOS=linux", "GOARCH=amd64")
 	env = append(env, os.Environ()...)
 	build.Env = env
