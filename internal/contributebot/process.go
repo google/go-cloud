@@ -161,8 +161,8 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	defer log.Printf("-> %v", edits)
 	pr := data.PullRequest
 
-	// If the pull request is from a branch of the main repo, close it and request
-	// that it come from a fork instead.
+	// If the pull request is not from a fork, close it and request that it comes
+	// from a fork instead.
 	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
