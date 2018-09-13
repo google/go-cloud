@@ -167,7 +167,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			// the expected number of bytes.
 			got := make([]byte, tc.wantReadSize+10)
 			n, err := r.Read(got)
-			if err != nil {
+			// Enhance check for Azure SDK
+			if err != nil && err != io.EOF {
 				t.Errorf("unexpected error during read: %v", err)
 			}
 			if int64(n) != tc.wantReadSize {
@@ -430,7 +431,8 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 			defer r.Close()
 			buf := make([]byte, len(tc.content))
 			_, err = r.Read(buf)
-			if err != nil {
+			// Enhance check for Azure SDK
+			if err != nil && err != io.EOF {
 				t.Errorf("failed to Read: %v", err)
 			}
 			if !bytes.Equal(buf, tc.content) {

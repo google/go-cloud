@@ -18,14 +18,18 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 func main() {
 	// Define our input.
 	cloud := flag.String("cloud", "", "Cloud storage to use")
 	bucketName := flag.String("bucket", "go-cloud-bucket", "Name of bucket")
+
 	flag.Parse()
 	if flag.NArg() != 1 {
 		log.Fatal("Failed to provide file to upload")
@@ -56,4 +60,29 @@ func main() {
 	if err = w.Close(); err != nil {
 		log.Fatalf("Failed to close: %s", err)
 	}
+
+	if *cloud == "azure" {
+		// Read the blob content
+
+		buf := make([]byte, 256)
+		r, rdrErr := b.NewRangeReader(ctx, file, 100, -1)
+
+		if rdrErr == nil {
+			fmt.Println(r.ContentType())
+			fmt.Println(r.Size())
+			io.CopyBuffer(os.Stdout, r, buf)
+		}
+
+		// Delete the blob
+		err := b.Delete(ctx, file)
+		if  err != nil {
+			log.Fatalf("Failed to delete: %s", err)
+		}
+	}
+}
+
+// to help test Azure
+func init() {
+	os.Setenv("ACCOUNT_NAME", "YOUR-STORAGE-ACCOUNT-NAME")
+	os.Setenv("ACCOUNT_KEY", "YOUR-STORAGE-ACCOUNT-KEY")
 }
