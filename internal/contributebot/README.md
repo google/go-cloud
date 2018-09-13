@@ -77,20 +77,16 @@ go run . --project=your-project-name --github_app=42 --github_key=/foo.pem
 
 ## Deploying
 
+### To production
+
 To deploy an updated Contribute Bot to production, follow these steps.
 
 ```shell
 # Build Docker image.
 gcloud builds submit --config cloudbuild.yaml ../.. --project=go-cloud-contribute-bot
 
-# Edit k8s/contributebot.yaml and replace placeholders surrounded by double
-# curly braces (e.g. {{PROJECT_ID}}) with the appropriate values.
-# -- {{PROJECT_ID}} should be set to "go-cloud-contribute-bot"
-# -- {{BUILD_ID}} should be set to the ID from the output of the "gcloud builds"
-#    command above, something like "e892c5f0-a7d3-4a16-a782-eb621afc9695".
-# -- {{GITHUB_APP_ID}} should be set to 15206.
-cp k8s/contributebot.yaml.in k8s/contributebot.yaml
-vi k8s/contributebot.yaml
+# Edit k8s/contributebot.yaml and replace the image with the one
+# you just created.
 
 # Apply to cluster. Replace project and zone with the actual values.
 gcloud container clusters get-credentials \
@@ -98,4 +94,14 @@ gcloud container clusters get-credentials \
     --zone=us-central1-c \
     contributebot-cluster
 kubectl apply -f k8s
+
+# Send a PR with the updated .yaml file.
 ```
+
+### Somewhere else
+
+If you want to deploy to your own cluster, modify `k8s/contributebot.yaml` to
+replace `go-cloud-contribute-bot` with your own project ID, and `15206` with
+your own Github App ID. Run the commands above, using your own project ID
+in the command line arguments instead of `go-cloud-contribute-bot`.
+
