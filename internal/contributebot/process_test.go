@@ -120,9 +120,8 @@ func TestProcessIssueEvent(t *testing.T) {
 
 func TestProcessPullRequestEvent(t *testing.T) {
 	const (
-		mainRepoName = "google/go-cloud"
-		forkRepoName = "user/go-cloud"
-		defaultTitle = "foo: bar"
+		mainRepoOwner = "google"
+		defaultTitle  = "foo: bar"
 	)
 
 	tests := []struct {
@@ -132,7 +131,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		reviewers   []string
 		title       string
 		prevTitle   string
-		branchRepo  string
+		fork        bool
 		want        *pullRequestEdits
 	}{
 		// If the pull request is from a branch of the main repo, close it.
@@ -140,13 +139,13 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with branch from fork -> no change",
 			action:      "opened",
 			title:       defaultTitle,
-			branchRepo:  forkRepoName,
+			fork:        true,
 			want:        &pullRequestEdits{},
 		},
 		{
 			description: "open with branch from main repo -> close",
 			action:      "opened",
-			branchRepo:  mainRepoName,
+			fork:        false,
 			want: &pullRequestEdits{
 				Close:       true,
 				AddComments: []string{branchesInForkCloseComment},
@@ -158,6 +157,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo"},
+			fork:        true,
 			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
 		},
 		{
@@ -165,6 +165,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo", "bar"},
+			fork:        true,
 			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
 		},
 		{
@@ -173,6 +174,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			title:       defaultTitle,
 			state:       "closed",
 			reviewers:   []string{"foo"},
+			fork:        true,
 			want:        &pullRequestEdits{},
 		},
 		// Check title looks like "foo: bar".
@@ -180,6 +182,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with invalid title -> add comment",
 			action:      "opened",
 			title:       "foo",
+			fork:        true,
 			want: &pullRequestEdits{
 				AddComments: []string{pullRequestTitleComment},
 			},
@@ -189,6 +192,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "foo",
 			prevTitle:   "foo",
+			fork:        true,
 			want:        &pullRequestEdits{},
 		},
 		{
@@ -196,6 +200,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "prev",
 			prevTitle:   "foo",
+			fork:        true,
 			want: &pullRequestEdits{
 				AddComments: []string{pullRequestTitleComment},
 			},
@@ -211,7 +216,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			pr := &github.PullRequest{
 				Head: &github.PullRequestBranch{
 					Repo: &github.Repository{
-						Name: github.String(tc.branchRepo),
+						Fork: github.Bool(tc.fork),
 					},
 				},
 				Title:              github.String(tc.title),
@@ -230,7 +235,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			}
 			data := &pullRequestData{
 				Action:      tc.action,
-				Repo:        mainRepoName,
+				OwnerLogin:  mainRepoOwner,
 				PullRequest: pr,
 				Change:      chg,
 			}

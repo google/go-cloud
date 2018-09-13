@@ -137,7 +137,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	// Pull out the interesting data from the event.
 	data := &pullRequestData{
 		Action:      e.GetAction(),
-		Owner:       e.GetRepo().GetOwner().GetLogin(),
+		OwnerLogin:  e.GetRepo().GetOwner().GetLogin(),
 		Repo:        e.GetRepo().GetName(),
 		PullRequest: e.GetPullRequest(),
 		Change:      e.GetChanges(),
@@ -145,7 +145,7 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 
 	// Refetch the pull request in case the event data is stale.
 	client := w.ghClient(e.GetInstallation().GetID())
-	pr, _, err := client.PullRequests.Get(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber())
+	pr, _, err := client.PullRequests.Get(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber())
 	if err != nil {
 		return err
 	}
