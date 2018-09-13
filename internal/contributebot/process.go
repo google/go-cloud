@@ -133,15 +133,16 @@ func (i *issueEdits) Execute(ctx context.Context, client *github.Client, data *i
 
 // pullRequestData is information about a pull request event.
 // See the github documentation for more details about the fields:
-// https://godoc.org/github.com/google/go-github/github#PullRequestEvent
+// https://developer.github.com/v3/activity/events/types/#pullrequestevent
 type pullRequestData struct {
 	// Action that this event is for.
-	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled", "opened", "closed", "reopened", "edited".
+	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled",
+	// "opened", "closed", "reopened", "edited".
 	Action string
-	// Repo is the repository the pull request wants to commit to.
+	// OwnerLogin is the owner's name of the repository.
+	OwnerLogin string
+	// Repo is the name of the repository the pull request wants to commit to.
 	Repo string
-	// Owner is the owner of the repository.
-	Owner string
 	// PullRequest the event is for.
 	PullRequest *github.PullRequest
 	// Change made as part of the event.
@@ -160,8 +161,9 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	defer log.Printf("-> %v", edits)
 	pr := data.PullRequest
 
-	// If the pull request is from a branch of the main repo, close it and request that it come from a fork instead.
-	if data.Action == "opened" && pr.GetHead().GetRepo().GetName() == data.Repo {
+	// If the pull request is not from a fork, close it and request that it comes
+	// from a fork instead.
+	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
 		// Short circuit since we're closing anyway.
@@ -215,20 +217,20 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 	for _, comment := range i.AddComments {
 		// Note: Use the Issues service since we're adding a top-level comment:
 		// https://developer.github.com/v3/guides/working-with-comments/.
-		_, _, err := client.Issues.CreateComment(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
+		_, _, err := client.Issues.CreateComment(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber(), &github.IssueComment{
 			Body: github.String(comment)})
 		if err != nil {
 			return err
 		}
 	}
 	if len(i.AssignTo) > 0 {
-		_, _, err := client.Issues.AddAssignees(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
+		_, _, err := client.Issues.AddAssignees(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
 		if err != nil {
 			return err
 		}
 	}
 	if i.Close {
-		_, _, err := client.PullRequests.Edit(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber(), &github.PullRequest{
+		_, _, err := client.PullRequests.Edit(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber(), &github.PullRequest{
 			State: github.String("closed"),
 		})
 		if err != nil {
