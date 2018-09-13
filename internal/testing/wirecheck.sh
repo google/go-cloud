@@ -28,4 +28,6 @@ fi
 module="github.com/google/go-cloud"
 go mod vendor || exit 1
 mapfile -t all_pkgs < <( go list "$module/..." ) || exit 1
+# TODO(light): Find out why the GO111MODULE=off override is necessary
+# and then remove it.
 GO111MODULE=off wire check "${all_pkgs[@]}" || exit 1
