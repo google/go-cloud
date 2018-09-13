@@ -60,7 +60,7 @@ mapfile -t lintdirs < <( find . -type d \
   ! -path "./vendor*" \
   ! -path "./wire/internal/wire/testdata*" \
   ! -path "*_demo*" ) || exit 1
-golangci-lint run \
+GO111MODULE=off golangci-lint run \
   --new-from-rev="$mergebase" \
   --print-welcome=false \
   --disable=deadcode \
@@ -68,4 +68,4 @@ golangci-lint run \
   --disable=unused \
   --build-tags=wireinject \
   "${lintdirs[@]}" || exit 1
-internal/testing/wirecheck.sh || exit 1
+GO111MODULE=off internal/testing/wirecheck.sh || exit 1
