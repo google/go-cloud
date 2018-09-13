@@ -27,6 +27,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/wire"
+	"github.com/opencensus-integrations/ocsql"
 
 	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
@@ -91,5 +92,5 @@ func (c connector) Connect(context.Context) (driver.Conn, error) {
 }
 
 func (c connector) Driver() driver.Driver {
-	return mysql.MySQLDriver{}
+	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
 }

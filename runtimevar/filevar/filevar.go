@@ -33,6 +33,7 @@
 package filevar
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -88,27 +89,24 @@ func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (
 
 // watcher implements driver.Watcher for configurations stored in files.
 type watcher struct {
-	notifier   *fsnotify.Watcher
-	file       string
-	decoder    *runtimevar.Decoder
-	bytes      []byte
-	isDeleted  bool
-	waitTime   time.Duration
-	updateTime time.Time
+	notifier *fsnotify.Watcher
+	file     string
+	decoder  *runtimevar.Decoder
+	waitTime time.Duration
 }
 
-// WatchVariable blocks until the file changes, the Context's Done channel closes or an error occurs.  It
-// will return an error if the configuration file is deleted, however, if it has previously returned
-// an error due to missing configuration file, the next WatchVariable call will block until the file has
-// been recreated.
-func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
-	zeroVar := driver.Variable{}
-	// Check for Context cancellation first before proceeding.
-	select {
-	case <-ctx.Done():
-		return zeroVar, ctx.Err()
-	default:
-		// Continue.
+func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
+
+	// checkSameErr checks to see if err is the same as prevErr, and if so, returns
+	// the "no change" signal with w.waitTime.
+	// TODO(issue #412): Revisit as part of refactor to State interface.
+	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
+		if prevErr != nil {
+			if (os.IsNotExist(err) && os.IsNotExist(prevErr)) || err.Error() == prevErr.Error() {
+				return nil, nil, w.waitTime, nil
+			}
+		}
+		return nil, nil, 0, err
 	}
 
 	// Start watching over the file and wait for events/errors.
@@ -116,6 +114,7 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	// Also, note that we may never use the notifier if there's already
 	// a change to the file. We must create it now before checking to
 	// avoid race conditions.
+	// TODO(issue #412): This could skipped if prevVersion and prevErr are both nil.
 	notifierErr := w.notifier.Add(w.file)
 	if notifierErr == nil {
 		defer func() {
@@ -124,33 +123,32 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 	}
 
 	for {
-		if v, err := w.processFile(); err != nil {
-			return zeroVar, err
-		} else if v != nil {
-			return *v, nil
+		// Read the file.
+		b, err := ioutil.ReadFile(w.file)
+		if err != nil {
+			return checkSameErr(err)
 		}
 
-		if w.isDeleted {
-			// Last known state is deleted, need to wait for file to show up.
-			t := time.NewTimer(w.waitTime)
-			select {
-			case <-t.C:
-			case <-ctx.Done():
-				t.Stop()
-				return zeroVar, ctx.Err()
+		// Check to see if the value is new. If so, return it.
+		if prevVersion == nil || !bytes.Equal(prevVersion.([]byte), b) {
+			val, err := w.decoder.Decode(b)
+			if err != nil {
+				return checkSameErr(err)
 			}
-			continue
+			return &driver.Variable{Value: val, UpdateTime: time.Now()}, b, 0, nil
 		}
-		// If file wasn't deleted, no reason for notifier to have failed.
+
+		// No change in variable value. Block until notifier tells us something
+		// relevant changed. If notifierErr is non-nil, the file is probably
+		// deleted; we'll return the err above, waiting w.waitTime to check again.
 		if notifierErr != nil {
-			return zeroVar, notifierErr
+			return checkSameErr(notifierErr)
 		}
-		// Wait for notifier to tell us something relevant changed.
 		wait := true
 		for wait {
 			select {
 			case <-ctx.Done():
-				return zeroVar, ctx.Err()
+				return nil, nil, 0, ctx.Err()
 
 			case event := <-w.notifier.Events:
 				if event.Name != w.file {
@@ -163,7 +161,7 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 				wait = false
 
 			case err := <-w.notifier.Errors:
-				return zeroVar, err
+				return checkSameErr(err)
 			}
 		}
 	}
@@ -171,63 +169,10 @@ func (w *watcher) WatchVariable(ctx context.Context) (driver.Variable, error) {
 
 // WatchOptions allows the specification of various options to a watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of making an HTTP call and checking for
-	// updates by the Watch method. The smaller the value, the higher the frequency
-	// of making calls, which also means a faster rate of hitting the API quota.
-	// If this option is not set or set to 0, it uses a default value of 10 seconds.
+	// WaitTime controls the frequency of checking to see if a deleted file is
+	// recreated.
+	// Defaults to 10 seconds.
 	WaitTime time.Duration
-}
-
-// processFile reads the file.
-// * If nothing has changed, it returns nil.
-// * If something has changed, it updates the watcher's bytes, isDeleted,
-//   and updateTime fields.
-func (w *watcher) processFile() (*driver.Variable, error) {
-	bytes, tm, err := readFile(w.file)
-	if os.IsNotExist(err) {
-		if w.isDeleted {
-			// File is still deleted, no change.
-			return nil, nil
-		}
-		// File is newly deleted.
-		w.isDeleted = true
-		w.updateTime = time.Now().UTC()
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-	// Change happens if it was previously deleted or content has changed.
-	if w.isDeleted || bytesNotEqual(w.bytes, bytes) {
-		w.bytes = bytes
-		w.updateTime = tm
-		w.isDeleted = false
-		val, err := w.decoder.Decode(bytes)
-		return &driver.Variable{Value: val, UpdateTime: tm}, err
-	}
-	// No updates, no error.
-	return nil, nil
-}
-
-func readFile(file string) ([]byte, time.Time, error) {
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
-	return b, time.Now().UTC(), nil
-}
-
-func bytesNotEqual(a []byte, b []byte) bool {
-	n := len(a)
-	if n != len(b) {
-		return true
-	}
-	for i := 0; i < n; i++ {
-		if a[i] != b[i] {
-			return true
-		}
-	}
-	return false
 }
 
 // Close closes the fsnotify.Watcher.

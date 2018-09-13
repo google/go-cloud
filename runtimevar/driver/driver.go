@@ -39,20 +39,33 @@ type Variable struct {
 // dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
 // runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
-	// WatchVariable blocks until the variable changes, the Context's Done channel closes or an
-	// error occurs.
+	// WatchVariable returns one of:
 	//
-	// If the variable has changed, then WatchVariable must return a Variable object with the
-	// new value.
+	// 1. A new value for the variable in v, along with a provider-specific
+	//    version that will be passed to the next WatchVariable call. wait is
+	//    ignored and err must be nil.
+	// 2. A new error. v, version, and wait are ignored.
+	// 3. A nil v and version and err, indicating that the value of the variable
+	//    or the error returned has not changed. WatchVariable will not be called
+	//    again for wait.
 	//
-	// Implementations should also avoid returning the same error repeatedly. In particular,
-	// when the variable is deleted, WatchVariable must return an error upon initial detection,
-	// but succeeding WatchVariable calls must block until the variable is restored, and not
-	// repeatedly return errors.
+	// Implementations *may* block, but must return if ctx is Done. If the
+	// variable has changed, then implementations *must* eventually return it.
 	//
-	// To stop this function from blocking, caller can passed in Context object constructed via
-	// WithCancel and call the cancel function.
-	WatchVariable(context.Context) (Variable, error)
+	// For example, an implementation that can detect changes in the underlying
+	// variable could block until it detects a change (or until ctx is Done).
+	// A polling implementation could poll on every call to WatchVariable,
+	// returning nil v/version/err and a non-zero wait to set the poll interval
+	// if there's no change.
+	//
+	// Version is provider-specific; for example, it could be an actual version
+	// number, it could be the variable value, or it could be raw bytes for the
+	// variable before decoding it.
+	// TODO(issue #412): Consider refactoring to encapsulate State (including
+	//                   prevVersion, prevErr), and "is the same as" checking)
+	//                   behind an interface.
+	WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (v *Variable, version interface{}, wait time.Duration, err error)
+
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
 }

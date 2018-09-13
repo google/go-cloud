@@ -6,14 +6,14 @@
 package main
 
 import (
-	bar "example.com/bar"
+	"example.com/bar"
 )
 
 // Injectors from wire.go:
 
 func injectFooBar() FooBar {
 	foo := provideFoo()
-	bar2 := bar.ProvideBar()
-	fooBar := provideFooBar(foo, bar2)
+	barBar := bar.ProvideBar()
+	fooBar := provideFooBar(foo, barBar)
 	return fooBar
 }

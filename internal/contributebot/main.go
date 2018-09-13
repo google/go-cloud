@@ -88,7 +88,9 @@ func (w *worker) receive(ctx context.Context) error {
 		switch event := event.(type) {
 		case *github.IssuesEvent:
 			handleErr = w.receiveIssueEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.PullRequestEvent, *github.CheckSuiteEvent:
+		case *github.PullRequestEvent:
+			handleErr = w.receivePullRequestEvent(ctx, event)
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -106,100 +108,53 @@ func (w *worker) receive(ctx context.Context) error {
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
-	// An issueRule is a rule about what to do for a given event.
-	// Rules are executed in random order to ensure there are no dependencies.
-	type issueRule struct {
-		// name is the rule's name for error messages.
-		name string
 
-		// condition reports true if the event is "interesting" to this rule,
-		// meaning that the worker should fetch the latest information about
-		// the issue and call the run function.
-		condition func(*github.IssuesEvent) bool
-
-		// run executes the rule. The issue data is retrieved before any
-		// rules are executed, so may be ever-so-slightly stale.
-		run func(context.Context, *github.Client, issueRuleData) error
+	// Pull out the interesting data from the event.
+	data := &issueData{
+		Action: e.GetAction(),
+		Owner:  e.GetRepo().GetOwner().GetLogin(),
+		Repo:   e.GetRepo().GetName(),
+		Issue:  e.GetIssue(),
+		Change: e.GetChanges(),
 	}
 
-	rules := []issueRule{
-		// Remove "in progress" label from closed issues.
-		{
-			name: "remove in progress label from closed",
-			condition: func(e *github.IssuesEvent) bool {
-				return e.GetAction() == "closed" && hasLabel(e.GetIssue(), inProgressLabel)
-			},
-			run: removeInProgressLabel,
-		},
-	}
-
-	// Check conditions to see if issue data is needed.
-	// No need to consume API quota if events aren't relevant.
-	runs := make([]bool, len(rules))
-	runCount := 0
-	for i := range rules {
-		if rules[i].condition(e) {
-			runs[i] = true
-			runCount++
-		}
-	}
-	if runCount == 0 {
-		return nil
-	}
-
-	// Retrieve the current issue state.
+	// Refetch the issue in case the event data is stale.
 	client := w.ghClient(e.GetInstallation().GetID())
-	owner := e.GetRepo().GetOwner().GetLogin()
-	repoName := e.GetRepo().GetName()
-	num := e.GetIssue().GetNumber()
-	iss, _, err := client.Issues.Get(ctx, owner, repoName, num)
+	iss, _, err := client.Issues.Get(ctx, data.Owner, data.Repo, data.Issue.GetNumber())
 	if err != nil {
 		return err
 	}
+	data.Issue = iss
 
-	// Execute relevant rules.
-	ok := true
-	data := issueRuleData{
-		issue: iss,
-		owner: owner,
-		repo:  repoName,
-	}
-	for i := range runs {
-		if !runs[i] {
-			continue
-		}
-		if err := rules[i].run(ctx, client, data); err != nil {
-			ok = false
-			log.Printf("Issue rule %q failed on %s/%s#%d: %v", rules[i].name, owner, repoName, num, err)
-		}
-	}
-	if !ok {
-		return fmt.Errorf("one or more rules failed for %s/%s#%d", owner, repoName, num)
-	}
-	log.Printf("Applied %d relevant rules on %s/%s#%d successfully", runCount, owner, repoName, num)
-	return nil
+	// Process the issue, deciding what actions to take (if any).
+	edits := processIssueEvent(data)
+	// Execute the actions (if any).
+	return edits.Execute(ctx, client, data)
 }
 
-const inProgressLabel = "in progress"
+func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
 
-// issueRuleData is the information passed to an issue rule.
-type issueRuleData struct {
-	repo  string
-	owner string
-	issue *github.Issue
-}
-
-// removeInProgressLabel removes the "in progress" label from closed issues.
-func removeInProgressLabel(ctx context.Context, client *github.Client, data issueRuleData) error {
-	if data.issue.GetState() != "closed" || !hasLabel(data.issue, inProgressLabel) {
-		return nil
+	// Pull out the interesting data from the event.
+	data := &pullRequestData{
+		Action:      e.GetAction(),
+		Owner:       e.GetRepo().GetOwner().GetLogin(),
+		Repo:        e.GetRepo().GetName(),
+		PullRequest: e.GetPullRequest(),
+		Change:      e.GetChanges(),
 	}
-	num := data.issue.GetNumber()
-	_, err := client.Issues.RemoveLabelForIssue(ctx, data.owner, data.repo, num, inProgressLabel)
+
+	// Refetch the pull request in case the event data is stale.
+	client := w.ghClient(e.GetInstallation().GetID())
+	pr, _, err := client.PullRequests.Get(ctx, data.Owner, data.Repo, data.PullRequest.GetNumber())
 	if err != nil {
 		return err
 	}
-	return nil
+	data.PullRequest = pr
+
+	// Process the pull request, deciding what actions to take (if any).
+	edits := processPullRequestEvent(data)
+	// Execute the actions (if any).
+	return edits.Execute(ctx, client, data)
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.
@@ -207,15 +162,6 @@ func (w *worker) ghClient(installID int64) *github.Client {
 	c := github.NewClient(&http.Client{Transport: w.auth.forInstall(installID)})
 	c.UserAgent = userAgent
 	return c
-}
-
-func hasLabel(iss *github.Issue, label string) bool {
-	for i := range iss.Labels {
-		if iss.Labels[i].GetName() == label {
-			return true
-		}
-	}
-	return false
 }
 
 // ServeHTTP serves a page explaining that this port is only open for health checks.

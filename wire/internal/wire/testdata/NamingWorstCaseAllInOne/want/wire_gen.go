@@ -7,19 +7,19 @@ package main
 
 import (
 	context2 "context"
-	fmt "fmt"
-	os "os"
-	reflect "reflect"
+	"fmt"
+	"os"
+	"reflect"
 )
 
 // Injectors from foo.go:
 
 func inject(context3 context2.Context, err2 struct{}) (context, error) {
-	context4, err := Provide(context3)
+	mainContext, err := Provide(context3)
 	if err != nil {
 		return context{}, err
 	}
-	return context4, nil
+	return mainContext, nil
 }
 
 // foo.go:
