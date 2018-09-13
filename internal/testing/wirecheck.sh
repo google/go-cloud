@@ -26,6 +26,8 @@ if [[ $# -gt 0 ]]; then
 fi
 
 module="github.com/google/go-cloud"
-vgo mod vendor || exit 1
-mapfile -t all_pkgs < <( vgo list "$module/..." ) || exit 1
-wire check "${all_pkgs[@]}" || exit 1
+go mod vendor || exit 1
+mapfile -t all_pkgs < <( go list "$module/..." ) || exit 1
+# TODO(light): Find out why the GO111MODULE=off override is necessary
+# and then remove it.
+GO111MODULE=off wire check "${all_pkgs[@]}" || exit 1
