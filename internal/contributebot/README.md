@@ -85,7 +85,7 @@ To deploy an updated Contribute Bot to production, follow these steps.
 # Build Docker image.
 gcloud builds submit --config cloudbuild.yaml ../.. --project=go-cloud-contribute-bot
 
-# Edit k8s/contributebot.yaml and replace the image with the one
+# Edit prod/k8s/contributebot.yaml and replace the image with the one
 # you just created.
 
 # Apply to cluster. Replace project and zone with the actual values.
@@ -93,7 +93,7 @@ gcloud container clusters get-credentials \
     --project=go-cloud-contribute-bot \
     --zone=us-central1-c \
     contributebot-cluster
-kubectl apply -f k8s
+kubectl apply -f prod/k8s
 
 # Send a PR with the updated .yaml file.
 ```
