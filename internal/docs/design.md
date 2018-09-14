@@ -96,6 +96,17 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
+## Driver Naming Convention
+
+Inside this repository, we name packages that handle cloud services after the
+service name, not the providing cloud (`s3blob` instead of `awsblob`). While a
+cloud provider may provide a unique offering for a particular API, they may not
+always provide only one, so distinguishing them in this way keeps the API
+symbols stable over time.
+
+The exception to this rule is if the name is not unique across providers. The
+canonical example is `gcpkms` and `awskms`.
+
 ## Errors
 
 -   The callee is expected to return `error`s with messages that include
@@ -209,3 +220,20 @@ not to do this, for several reasons:
 Overall, massive diffs in the replay files are expected and fine. As part of a
 code change, you may want to check for things like the number of RPCs made to
 identify performance regressions.
+
+## Module Boundaries
+
+With the advent of [Go modules], there are mechanisms to release different parts
+of a repository on different schedules. This permits one API to be in alpha/beta
+(pre-1.0), whereas another API can be stable (1.0 or later).
+
+As of 2018-09-13, Go Cloud as a whole still is not stable enough to call any
+part 1.0 yet. Until this milestone is reached, all of the Go Cloud libraries
+will be placed under a single module. The exceptions are standalone tools like
+[Contribute Bot][] that are part of the project, but not part of the library.
+After 1.0 is released, it is expected that each interface in Go Cloud will be
+released as one module. Provider implementations will live in separate modules.
+The exact details remain to be determined.
+
+[Go modules]: https://github.com/golang/go/wiki/Modules
+[Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot
