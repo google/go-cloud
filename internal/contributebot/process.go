@@ -79,8 +79,11 @@ func processIssueEvent(data *issueData) *issueEdits {
 	log.Printf("Identifying actions for issue: %v", data)
 	defer log.Printf("-> %v", edits)
 
-	if data.Action == "closed" && hasLabel(data.Issue, inProgressLabel) {
-		edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
+	if data.Action == "closed" {
+		if hasLabel(data.Issue, inProgressLabel) {
+			edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
+		}
+		return edits
 	}
 
 	// Add a comment if the title doesn't match our regexp, and it's a new issue,
