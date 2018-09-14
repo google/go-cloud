@@ -54,9 +54,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestNonExistentVariable", func(t *testing.T) {
 		testNonExistentVariable(t, newHarness)
 	})
-	t.Run("TestWithCancelledContext", func(t *testing.T) {
-		testWithCancelledContext(t, newHarness)
-	})
 	t.Run("TestString", func(t *testing.T) {
 		testString(t, newHarness)
 	})
@@ -94,63 +91,6 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v expected not-found error", got.Value)
-	}
-}
-
-func testWithCancelledContext(t *testing.T, newHarness HarnessMaker) {
-	const (
-		name    = "test-config-variable"
-		content = "hello world"
-	)
-
-	h, err := newHarness(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	ctx := context.Background()
-
-	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
-		t.Fatal(err)
-	}
-	if h.Mutable() {
-		defer func() {
-			if err := h.DeleteVariable(ctx, name); err != nil {
-				t.Fatal(err)
-			}
-		}()
-	}
-
-	// Test initial watch fails if ctx is cancelled.
-	cancelledCtx, cancel := context.WithCancel(ctx)
-	cancel()
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := v.Close(); err != nil {
-			t.Error(err)
-		}
-	}()
-	got, err := v.Watch(cancelledCtx)
-	if err == nil {
-		t.Errorf("got %v expected cancelled context error", got.Value)
-	}
-
-	// But works with a valid one.
-	got, err = v.Watch(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Value.(string) != content {
-		t.Errorf("got %q want %q", got.Value, content)
-	}
-
-	// And fails again with cancelled.
-	got, err = v.Watch(cancelledCtx)
-	if err == nil {
-		t.Errorf("got %v expected cancelled context error", got.Value)
 	}
 }
 

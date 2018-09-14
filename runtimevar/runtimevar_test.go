@@ -89,20 +89,10 @@ func TestVariable(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		doneCtx bool
 		calls   []*watchVariableCall
 		// Watch will be called once for each entry in want.
 		want []*watchResp
 	}{
-		{
-			name:    "Done context returns error with no WatchVariable calls",
-			doneCtx: true,
-			calls:   nil,
-			want: []*watchResp{
-				&watchResp{err: true},
-				&watchResp{err: true},
-			},
-		},
 		{
 			name: "Repeated errors don't return until it changes to a different error",
 			calls: []*watchVariableCall{
@@ -161,10 +151,7 @@ func TestVariable(t *testing.T) {
 		},
 	}
 
-	goodCtx := context.Background()
-	doneCtx, cancel := context.WithCancel(goodCtx)
-	cancel()
-
+	ctx := context.Background()
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			w := &fakeWatcher{t: t, calls: tc.calls}
@@ -174,11 +161,6 @@ func TestVariable(t *testing.T) {
 					t.Error(err)
 				}
 			}()
-
-			ctx := goodCtx
-			if tc.doneCtx {
-				ctx = doneCtx
-			}
 			for i, want := range tc.want {
 				snap, err := v.Watch(ctx)
 				if (err != nil) != want.err {
