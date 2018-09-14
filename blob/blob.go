@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io/ioutil"
 	"mime"
 	"net/http"
 	"time"
@@ -145,6 +146,16 @@ func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
+// Read is a shortcut for creating a Reader via NewReader and reading the entire blob.
+func (b *Bucket) Read(ctx context.Context, key string) ([]byte, error) {
+	r, err := b.NewReader(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return ioutil.ReadAll(r)
+}
+
 // NewReader returns a Reader to read from an object, or an error when the object
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
@@ -166,6 +177,19 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
 	return &Reader{r: r}, newBlobError(err)
+}
+
+// Write is a shortcut for creating a Writer via NewWriter and writing p.
+func (b *Bucket) Write(ctx context.Context, key string, p []byte, opt *WriterOptions) error {
+	w, err := b.NewWriter(ctx, key, opt)
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(p); err != nil {
+		_ = w.Close()
+		return err
+	}
+	return w.Close()
 }
 
 // NewWriter returns a Writer that writes to an object associated with key.
