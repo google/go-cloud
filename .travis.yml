@@ -21,6 +21,7 @@ before_install:
 install:
   - "GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint"
   - "go install ./wire/cmd/wire"
+  - "df -k"
 
 script:
   # TRAVIS_PULL_REQUEST is set to "false" for branch builds, and the PR number
