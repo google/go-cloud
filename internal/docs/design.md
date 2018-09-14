@@ -231,9 +231,9 @@ As of 2018-09-13, Go Cloud as a whole still is not stable enough to call any
 part 1.0 yet. Until this milestone is reached, all of the Go Cloud libraries
 will be placed under a single module. The exceptions are standalone tools like
 [Contribute Bot][] that are part of the project, but not part of the library.
-After 1.0 is release, it is expected that the interfaces of Go Cloud will be
-released as one module and provider implementations will be in a separate
-module. The exact details remain to be determined.
+After 1.0 is released, it is expected that each interface in Go Cloud will be
+released as one module. Provider implementations will live in separate modules.
+The exact details remain to be determined.
 
 [Go modules]: https://github.com/golang/go/wiki/Modules
 [Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot
