@@ -79,8 +79,11 @@ func processIssueEvent(data *issueData) *issueEdits {
 	log.Printf("Identifying actions for issue: %v", data)
 	defer log.Printf("-> %v", edits)
 
-	if data.Action == "closed" && hasLabel(data.Issue, inProgressLabel) {
-		edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
+	if data.Action == "closed" {
+		if hasLabel(data.Issue, inProgressLabel) {
+			edits.RemoveLabels = append(edits.RemoveLabels, inProgressLabel)
+		}
+		return edits
 	}
 
 	// Add a comment if the title doesn't match our regexp, and it's a new issue,
@@ -161,6 +164,13 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	defer log.Printf("-> %v", edits)
 	pr := data.PullRequest
 
+	// Skip the process when the PR is closed, we check this here instead of when
+	// calling processPullRequest so that it is easier to add any process in future
+	// for closed PR's.
+	if pr.GetState() == "closed" {
+		return edits
+	}
+
 	// If the pull request is not from a fork, close it and request that it comes
 	// from a fork instead.
 	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
@@ -171,7 +181,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	}
 
 	// If unassigned, assign to the first requested reviewer.
-	if pr.GetState() != "closed" && pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
+	if pr.GetAssignee() == nil && len(pr.RequestedReviewers) > 0 {
 		for _, r := range pr.RequestedReviewers {
 			edits.AssignTo = append(edits.AssignTo, r.GetLogin())
 		}

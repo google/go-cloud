@@ -39,10 +39,10 @@ spec:
           secretName: worker-service-account
       containers:
       - name: contributebot
-        image: gcr.io/{{PROJECT_ID}}/contributebot:{{BUILD_ID}}
+        image: gcr.io/go-cloud-contribute-bot/contributebot:9805fad2-32d2-4e86-bb60-fac739419aff
         args:
-        - "-project={{PROJECT_ID}}"
-        - "-github_app={{GITHUB_APP_ID}}"
+        - "-project=go-cloud-contribute-bot"
+        - "-github_app=15206"
         - "-github_key=/var/secrets/github/key.pem"
         imagePullPolicy: IfNotPresent
         ports:

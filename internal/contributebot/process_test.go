@@ -34,6 +34,13 @@ func TestProcessIssueEvent(t *testing.T) {
 		labels      []string
 		want        *issueEdits
 	}{
+		// Closed issue should not be checked other than "in progress" label
+		{
+			description: "close with invalid title -> no change",
+			action:      "closed",
+			title:       "foo",
+			want:        &issueEdits{},
+		},
 		// Remove "in progress" label from closed issues.
 		{
 			description: "close with random label -> no change",
@@ -134,6 +141,14 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		fork        bool
 		want        *pullRequestEdits
 	}{
+		// Skip processing when the PR is closed.
+		{
+			description: "closed with invalid title -> no change",
+			title:       defaultTitle,
+			state:       "closed",
+			fork:        false,
+			want:        &pullRequestEdits{},
+		},
 		// If the pull request is from a branch of the main repo, close it.
 		{
 			description: "open with branch from fork -> no change",

@@ -69,15 +69,6 @@ func New(w driver.Watcher) *Variable {
 // To stop this function from blocking, caller can passed in Context object constructed via
 // WithCancel and call the cancel function.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
-
-	// Check for ctx cancellation first before proceeding.
-	select {
-	case <-ctx.Done():
-		return Snapshot{}, ctx.Err()
-	default:
-		// Continue.
-	}
-
 	for {
 		cur, wait := c.watcher.WatchVariable(ctx, c.prev)
 		if cur != nil {
