@@ -32,7 +32,7 @@ import (
 type Snapshot struct {
 	// Value is an object containing a runtime variable  The type of
 	// this object is set by the driver and it should always be the same type for the same Variable
-	// object. A driver implementation can provide the ability to variableure the object type and a
+	// object. A driver implementation can provide the ability to configure the object type and a
 	// decoding scheme where variables are stored as bytes in the backend service.  Clients
 	// should not mutate this object as it can be accessed by multiple goroutines.
 	Value interface{}
