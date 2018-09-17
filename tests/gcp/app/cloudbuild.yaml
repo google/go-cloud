@@ -13,11 +13,9 @@
 # limitations under the License.
 
 steps:
-- name: '$_VGO_IMAGE_NAME'
-  args: ['build']
-  dir: 'tests/gcp/app'
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', '$_IMAGE_NAME:$BUILD_ID', '.']
   dir: 'tests/gcp/app'
+
 images:
 - '$_IMAGE_NAME:$BUILD_ID'
