@@ -109,17 +109,20 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 		return nil, nil, 0, err
 	}
 
-	// Start watching over the file and wait for events/errors.
+	// If we've got a value already, we're going to return whatever we get, so
+	// there no need to set up a notifier. Otherwise, start watching the file
+	// for events/errors.
 	// We'll get a notifierErr if the file doesn't currently exist.
-	// Also, note that we may never use the notifier if there's already
-	// a change to the file. We must create it now before checking to
-	// avoid race conditions.
-	// TODO(issue #412): This could skipped if prevVersion and prevErr are both nil.
-	notifierErr := w.notifier.Add(w.file)
-	if notifierErr == nil {
-		defer func() {
-			_ = w.notifier.Remove(w.file)
-		}()
+	// We may never use the notifier if we read the file below and detect a
+	// change, but we must subscribe here to avoid race conditions.
+	var notifierErr error
+	if prevVersion != nil {
+		notifierErr := w.notifier.Add(w.file)
+		if notifierErr == nil {
+			defer func() {
+				_ = w.notifier.Remove(w.file)
+			}()
+		}
 	}
 
 	for {
