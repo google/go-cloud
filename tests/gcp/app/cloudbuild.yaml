@@ -13,6 +13,10 @@
 # limitations under the License.
 
 steps:
+- name: 'golang:1.11'
+  args: ['go', 'build']
+  dir: 'tests/gcp/app'
+
 - name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', '$_IMAGE_NAME:$BUILD_ID', '.']
   dir: 'tests/gcp/app'
