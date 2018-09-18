@@ -87,6 +87,22 @@ func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (
 	}), nil
 }
 
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	raw        []byte
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
 // watcher implements driver.Watcher for configurations stored in files.
 type watcher struct {
 	notifier *fsnotify.Watcher
@@ -95,29 +111,35 @@ type watcher struct {
 	waitTime time.Duration
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-
-	// checkSameErr checks to see if err is the same as prevErr, and if so, returns
-	// the "no change" signal with w.waitTime.
-	// TODO(issue #412): Revisit as part of refactor to State interface.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			if (os.IsNotExist(err) && os.IsNotExist(prevErr)) || err.Error() == prevErr.Error() {
-				return nil, nil, w.waitTime, nil
-			}
-		}
-		return nil, nil, 0, err
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
 	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err == prev.err {
+		return nil
+	}
+	if os.IsNotExist(err) && os.IsNotExist(prev.err) {
+		return nil
+	}
+	return s
+}
 
-	// If we've got a value already, we're going to return whatever we get, so
-	// there no need to set up a notifier. Otherwise, start watching the file
-	// for events/errors.
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
+	// Start watching over the file and wait for events/errors.
+	// We can skip this if prev == nil, as we'll always immediately
+	// return a value in that case.
 	// We'll get a notifierErr if the file doesn't currently exist.
-	// We may never use the notifier if we read the file below and detect a
-	// change, but we must subscribe here to avoid race conditions.
 	var notifierErr error
-	if prevVersion != nil {
-		notifierErr := w.notifier.Add(w.file)
+	if prev != nil {
+		notifierErr = w.notifier.Add(w.file)
 		if notifierErr == nil {
 			defer func() {
 				_ = w.notifier.Remove(w.file)
@@ -129,29 +151,30 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 		// Read the file.
 		b, err := ioutil.ReadFile(w.file)
 		if err != nil {
-			return checkSameErr(err)
+			// If the error hasn't changed, wait waitTime before trying again.
+			// E.g., if the file doesn't exist.
+			return errorState(err, prev), w.waitTime
 		}
 
-		// Check to see if the value is new. If so, return it.
-		if prevVersion == nil || !bytes.Equal(prevVersion.([]byte), b) {
+		// If it's a new value, decode and return it.
+		if prev == nil || !bytes.Equal(prev.(*state).raw, b) {
 			val, err := w.decoder.Decode(b)
 			if err != nil {
-				return checkSameErr(err)
+				return errorState(err, prev), w.waitTime
 			}
-			return &driver.Variable{Value: val, UpdateTime: time.Now()}, b, 0, nil
+			return &state{val: val, updateTime: time.Now(), raw: b}, 0
 		}
 
 		// No change in variable value. Block until notifier tells us something
-		// relevant changed. If notifierErr is non-nil, the file is probably
-		// deleted; we'll return the err above, waiting w.waitTime to check again.
+		// relevant changed.
 		if notifierErr != nil {
-			return checkSameErr(notifierErr)
+			return errorState(err, prev), w.waitTime
 		}
 		wait := true
 		for wait {
 			select {
 			case <-ctx.Done():
-				return nil, nil, 0, ctx.Err()
+				return &state{err: ctx.Err()}, 0
 
 			case event := <-w.notifier.Events:
 				if event.Name != w.file {
@@ -164,7 +187,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 				wait = false
 
 			case err := <-w.notifier.Errors:
-				return checkSameErr(err)
+				return errorState(err, prev), w.waitTime
 			}
 		}
 	}
