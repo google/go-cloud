@@ -40,12 +40,10 @@ func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
-	svc := s3.New(sess)
-	uploader := s3manager.NewUploader(sess)
 	return blob.NewBucket(&bucket{
-		name:     bucketName,
-		client:   svc,
-		uploader: uploader,
+		name:   bucketName,
+		sess:   sess,
+		client: s3.New(sess),
 	}), nil
 }
 
@@ -82,7 +80,6 @@ type writer struct {
 
 	bucket      string
 	key         string
-	bufferSize  int
 	ctx         context.Context
 	uploader    *s3manager.Uploader
 	contentType string
@@ -158,9 +155,9 @@ func (w *writer) touch() {
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
-	name     string
-	client   *s3.S3
-	uploader *s3manager.Uploader
+	name   string
+	sess   client.ConfigProvider
+	client *s3.S3
 }
 
 // NewRangeReader returns a reader that reads part of an object, reading at most
@@ -245,16 +242,18 @@ func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Read
 //
 // The caller must call Close on the returned writer when done writing.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
+		if opts != nil {
+			u.PartSize = int64(opts.BufferSize)
+		}
+	})
 	w := &writer{
 		bucket:      b.name,
 		ctx:         ctx,
 		key:         key,
-		uploader:    b.uploader,
+		uploader:    uploader,
 		contentType: contentType,
 		donec:       make(chan struct{}),
-	}
-	if opts != nil {
-		w.bufferSize = opts.BufferSize
 	}
 	return w, nil
 }
