@@ -58,7 +58,10 @@ func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, pr
 
 	// Create a watching channel in case the variable hasn't changed.
 	// We must create it now before the Get to avoid race conditions.
-	ch := w.client.Watch(ctx, w.name)
+	var ch clientv3.WatchChan
+	if prevVersion != nil {
+		ch = w.client.Watch(ctx, w.name)
+	}
 
 	for {
 		resp, err := w.client.Get(ctx, w.name)
