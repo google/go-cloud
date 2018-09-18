@@ -43,7 +43,7 @@ type State interface {
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil plus a wait time (which may
-	// be 0); WatchVariable will not be called again for wait.
+	// be 0); WatchVariable will not be called again for the wait time.
 	//
 	// Implementations *may* block, but must return if ctx is Done. If the
 	// variable has changed, then implementations *must* eventually return it.
@@ -51,8 +51,8 @@ type Watcher interface {
 	// A polling implementation should return (State, 0) for a new State,
 	// or (nil, <poll interval>) if State hasn't changed.
 	//
-	// An implementation that can notice changes to the underlying variable
-	// should:
+	// An implementation that receives notifications from an external source
+	// about changes to the underlying variable should:
 	// 1. If prev != nil, subscribe to change notifications.
 	// 2. Fetch the current State.
 	// 3. If prev == nil or if the State has changed, return (State, 0).

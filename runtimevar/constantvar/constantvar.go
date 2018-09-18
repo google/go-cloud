@@ -57,9 +57,10 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if prev == nil {
 		return w, 0
 	}
-	// On subsequent calls, block ~forever as the value will never change.
+	// On subsequent calls, block forever as the value will never change.
 	<-ctx.Done()
-	return nil, 0
+	w.err = ctx.Err()
+	return w, 0
 }
 
 func (_ *watcher) Close() error { return nil }
