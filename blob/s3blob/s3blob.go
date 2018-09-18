@@ -82,7 +82,6 @@ type writer struct {
 
 	bucket      string
 	key         string
-	bufferSize  int
 	ctx         context.Context
 	uploader    *s3manager.Uploader
 	contentType string
@@ -252,9 +251,6 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		uploader:    b.uploader,
 		contentType: contentType,
 		donec:       make(chan struct{}),
-	}
-	if opts != nil {
-		w.bufferSize = opts.BufferSize
 	}
 	return w, nil
 }
