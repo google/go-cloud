@@ -32,7 +32,7 @@ import (
 // 2. Update this constant to your bucket name.
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 //    name from the Terraform output instead (saving a copy of it for replay).
-const bucketName = "pledged-solved-practically"
+const bucketName = "go-cloud-blob-test-bucket"
 
 type harness struct {
 	client *gcp.HTTPClient
