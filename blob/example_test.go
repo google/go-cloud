@@ -137,6 +137,35 @@ func ExampleBucket_NewWriter() {
 	// Hello, World!
 }
 
+func ExampleBucket_ReadAll() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.NewBucket(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Write a blob using WriteAll.
+	ctx := context.Background()
+	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), nil); err != nil {
+		log.Fatal(err)
+	}
+
+	// Read it back using ReadAll.
+	b, err := bucket.ReadAll(ctx, "foo.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(b))
+
+	// Output:
+	// Go Cloud
+}
+
 func newTempDir() (string, func()) {
 	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {

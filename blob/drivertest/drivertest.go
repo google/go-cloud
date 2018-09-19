@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -133,15 +132,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		w, err := b.NewWriter(ctx, key, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = w.Write(content)
-		if err == nil {
-			err = w.Close()
-		}
-		if err != nil {
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -207,15 +198,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
-		w, err := b.NewWriter(ctx, key, opts)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = w.Write(content)
-		if err == nil {
-			err = w.Close()
-		}
-		if err != nil {
+		if err := b.WriteAll(ctx, key, content, opts); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -271,15 +254,8 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 					// is supposed to return it.
 					return
 				}
-				w, err := b.NewWriter(ctx, key, nil)
-				if err != nil {
-					t.Fatalf("failed NewWriter: %v", err)
-				}
-				if _, err := w.Write(content); err != nil {
-					t.Fatalf("failed Write content: %v", err)
-				}
-				if err = w.Close(); err != nil {
-					t.Errorf("failed Close Writer: %v", err)
+				if err := b.WriteAll(ctx, key, content, nil); err != nil {
+					t.Fatal(err)
 				}
 				r2, err := b.NewRangeReader(ctx, key, 0, rLen)
 				if err != nil {
@@ -423,15 +399,9 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 			defer func() { _ = b.Delete(ctx, tc.key) }()
 
 			// Read it back.
-			r, err := b.NewReader(ctx, tc.key)
+			buf, err := b.ReadAll(ctx, tc.key)
 			if err != nil {
-				t.Fatalf("failed to NewReader: %v", err)
-			}
-			defer r.Close()
-			buf := make([]byte, len(tc.content))
-			_, err = r.Read(buf)
-			if err != nil {
-				t.Errorf("failed to Read: %v", err)
+				t.Fatal(err)
 			}
 			if !bytes.Equal(buf, tc.content) {
 				if len(buf) < 100 && len(tc.content) < 100 {
@@ -480,16 +450,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		}
 
 		// Create the blob.
-		writer, err := b.NewWriter(ctx, key, nil)
-		if err != nil {
-			t.Fatalf("failed to NewWriter: %v", err)
-		}
-		_, err = io.WriteString(writer, "Hello world")
-		if err != nil {
-			t.Errorf("failed to write: %v", err)
-		}
-		if err := writer.Close(); err != nil {
-			t.Errorf("failed to close Writer: %v", err)
+		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
+			t.Fatal(err)
 		}
 		// Delete it.
 		if err := b.Delete(ctx, key); err != nil {
