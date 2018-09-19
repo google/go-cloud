@@ -141,6 +141,94 @@ canonical example is `gcpkms` and `awskms`.
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
+## Escape Hatches
+
+It is not feasible or desirable for APIs like [`blob.Bucket`] to encompass the
+full functionality of every provider. Rather, we intend to provide a subset of
+the most commonly used functionality. There will be cases where a developer
+wants to access provider-specific functionality, which might consist of:
+
+1.  **Top-level APIs**. For example, `blob` does not expose a `Copy`, but some
+    provider might.
+1.  **Data fields**. For example, **blob** exposes a few attributes like
+    ContentType and Size, but S3 and GCS both have many more.
+1.  **Options**. Different providers may support different options for
+    functionality.
+
+Escape hatches provide the user a way to escape the Go Cloud abstraction to
+access provider-specific functionality. They might be used as an interim
+solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
+choose not to support specific features, and the escape hatch will be permanent.
+As an example, both S3 and GCS blobs have the concept of ACLs, but it might be
+difficult to represent them in a generic way (although, we have not tried).
+
+Using an escape hatch implies that the resulting code is no longer portable; the
+escape hatched code will need to be ported in order to switch providers.
+Therefore, they should be avoided if possible.
+
+### Ways To Escape Hatch
+
+Users can always access the provider service directly, by constructing the
+top-level handle and making API calls bypassing Go Cloud.
+
+*   For top-level APIs, this may be fine, although it might require a bunch of
+    plumbing code to pass the provider service handle to where it is needed.
+*   For data objects, it implies dropping Go Cloud entirely; for example,
+    instead of using `blob.Reader` to read a blob, the user would have to use
+    the provider-specific method for reading.
+
+This approach exists today. Due to its shortcomings, we are designing a second
+approach. The proposal is to extend Go Cloud APIs, at the top-level (e.g.
+`blob.Bucket`) and in data objects, to expose provider-specific handles. For
+example:
+
+```
+// The existing blob.Reader exposes some blob attributes, but not everything
+// that every provider exposes.
+type Reader struct {
+    ...
+    Size() int64
+    ContentType() string
+    ...
+
+    // New field!
+    Sys interface{}
+}
+```
+
+The name `Sys` is modeled after
+[examples](https://golang.org/pkg/os/#ProcessState.Sys) in the `os` package.
+Using the `Sys` escape hatch to read an S3-specific attribute would look
+something like this:
+
+```
+if r, err := bucket.NewReader(ctx, "foo.txt"); err == nil {
+  acls := r.Sys.(*s3.GetObjectOutput).ACLs
+  ...
+}
+```
+
+Each provider implementation would document what type it returns for each of the
+escape hatch functions. `nil` is a valid return value for providers that don't
+support the escape hatch.
+
+We are also considering an alternative to `Sys` that would look something like
+this:
+
+```
+var s3obj s3.GetObjectOutput
+if r.As(&s3obj) {
+  acls := s3obj.ACLs
+  ...
+}
+```
+
+This alternative allows providers to map to multiple types.
+
+Design discussions regarding escape hatches are ongoing; we welcome input either
+on the [tracking issue](https://github.com/google/go-cloud/issues/470) or on the
+[mailing list](https://groups.google.com/forum/#!forum/go-cloud).
+
 ## Tests
 
 Portable API integration tests require developer-specific resources to be
