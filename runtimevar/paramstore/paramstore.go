@@ -76,6 +76,50 @@ type WatchOptions struct {
 	WaitTime time.Duration
 }
 
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	version    int64
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
+	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err == prev.err {
+		return nil
+	}
+	var code, prevCode string
+	if awsErr, ok := err.(awserr.Error); ok {
+		code = awsErr.Code()
+	}
+	if awsErr, ok := prev.err.(awserr.Error); ok {
+		prevCode = awsErr.Code()
+	}
+	if code != "" && code == prevCode {
+		return nil
+	}
+	return s
+}
+
 type watcher struct {
 	// sess is the AWS session to use to talk to AWS.
 	sess client.ConfigProvider
@@ -87,45 +131,27 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
-	// the "no change" signal with w.waitTime.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			var code, prevCode string
-			if awsErr, ok := err.(awserr.Error); ok {
-				code = awsErr.Code()
-			}
-			if awsErr, ok := prevErr.(awserr.Error); ok {
-				prevCode = awsErr.Code()
-			}
-			if (code != "" && code == prevCode) || err.Error() == prevErr.Error() {
-				return nil, nil, w.waitTime, nil
-			}
-		}
-		return nil, nil, 0, err
-	}
-
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	lastVersion := int64(-1)
-	if prevVersion != nil {
-		lastVersion = prevVersion.(int64)
+	if prev != nil {
+		lastVersion = prev.(*state).version
 	}
 	// Read the variable from the backend.
 	p, err := readParam(w.sess, w.name, lastVersion)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
 	if p == nil {
 		// Version hasn't changed.
-		return nil, nil, w.waitTime, nil
+		return nil, w.waitTime
 	}
 
 	// New value! Decode it.
 	val, err := w.decoder.Decode([]byte(p.value))
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-	return &driver.Variable{Value: val, UpdateTime: p.updateTime}, p.version, 0, nil
+	return &state{val: val, updateTime: p.updateTime, version: p.version}, 0
 }
 
 // Close is a no-op. Cancel the context passed to Watch if watching should end.

@@ -18,7 +18,6 @@ package constantvar
 
 import (
 	"context"
-	"math"
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
@@ -37,21 +36,31 @@ func NewError(err error) *runtimevar.Variable {
 	return runtimevar.New(&watcher{err: err})
 }
 
-// watcher implements driver.Watcher.
+// watcher implements driver.Watcher and driver.State.
 type watcher struct {
 	value interface{}
 	err   error
 	t     time.Time
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
+func (w *watcher) Value() (interface{}, error) {
+	return w.value, w.err
+}
+
+func (w *watcher) UpdateTime() time.Time {
+	return w.t
+}
+
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 
 	// The first time this is called, return the constant value.
-	if prevVersion == nil && prevErr == nil {
-		return &driver.Variable{Value: w.value, UpdateTime: w.t}, true, 0, w.err
+	if prev == nil {
+		return w, 0
 	}
-	// On subsequent calls, block ~forever as the value will never change.
-	return nil, nil, time.Duration(math.Inf(+1)), nil
+	// On subsequent calls, block forever as the value will never change.
+	<-ctx.Done()
+	w.err = ctx.Err()
+	return w, 0
 }
 
 func (_ *watcher) Close() error { return nil }

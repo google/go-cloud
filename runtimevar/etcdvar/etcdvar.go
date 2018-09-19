@@ -22,9 +22,13 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
+	"google.golang.org/grpc/codes"
 )
+
+const errWait = 10 * time.Second
 
 // New constructs a runtimevar.Variable object that uses client to watch
 // variables in etcd.
@@ -38,6 +42,50 @@ func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runti
 	}), nil
 }
 
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	version    int64
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
+	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err == prev.err {
+		return nil
+	}
+	var code, prevCode codes.Code
+	if etcdErr, ok := err.(rpctypes.EtcdError); ok {
+		code = etcdErr.Code()
+	}
+	if etcdErr, ok := prev.err.(rpctypes.EtcdError); ok {
+		prevCode = etcdErr.Code()
+	}
+	if code != codes.OK && code == prevCode {
+		return nil
+	}
+	return s
+}
+
 // watcher implements driver.Watcher.
 type watcher struct {
 	name    string
@@ -45,42 +93,33 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-
-	// checkSameErr checks to see if err is the same as prevErr, and if so, returns
-	// the "no change" signal with w.waitTime.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil && err.Error() == prevErr.Error() {
-			return nil, nil, 10 * time.Second, nil
-		}
-		return nil, nil, 0, err
-	}
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 
 	// Create a watching channel in case the variable hasn't changed.
 	// We must create it now before the Get to avoid race conditions.
 	var ch clientv3.WatchChan
-	if prevVersion != nil {
+	if prev != nil {
 		ch = w.client.Watch(ctx, w.name)
 	}
 
 	for {
 		resp, err := w.client.Get(ctx, w.name)
 		if err != nil {
-			return checkSameErr(err)
+			return errorState(err, prev), errWait
 		}
 		if len(resp.Kvs) == 0 {
-			return checkSameErr(fmt.Errorf("%q not found", w.name))
+			return errorState(fmt.Errorf("%q not found", w.name), prev), errWait
 		} else if len(resp.Kvs) > 1 {
-			return checkSameErr(fmt.Errorf("%q has multiple values", w.name))
+			return errorState(fmt.Errorf("%q has multiple values", w.name), prev), errWait
 		}
 		kv := resp.Kvs[0]
-		if prevVersion == nil || kv.Version != prevVersion.(int64) {
+		if prev == nil || kv.Version != prev.(*state).version {
 			// New Value
 			val, err := w.decoder.Decode(kv.Value)
 			if err != nil {
-				return checkSameErr(err)
+				return errorState(err, prev), errWait
 			}
-			return &driver.Variable{Value: val, UpdateTime: time.Now()}, kv.Version, 0, nil
+			return &state{val: val, updateTime: time.Now(), version: kv.Version}, 0
 		}
 
 		// Value hasn't changed. Wait for change events.
