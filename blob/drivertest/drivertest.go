@@ -132,7 +132,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := b.Write(ctx, key, content, nil); err != nil {
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -198,7 +198,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
-		if err := b.Write(ctx, key, content, opts); err != nil {
+		if err := b.WriteAll(ctx, key, content, opts); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -254,7 +254,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 					// is supposed to return it.
 					return
 				}
-				if err := b.Write(ctx, key, content, nil); err != nil {
+				if err := b.WriteAll(ctx, key, content, nil); err != nil {
 					t.Fatal(err)
 				}
 				r2, err := b.NewRangeReader(ctx, key, 0, rLen)
@@ -399,7 +399,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 			defer func() { _ = b.Delete(ctx, tc.key) }()
 
 			// Read it back.
-			buf, err := b.Read(ctx, tc.key)
+			buf, err := b.ReadAll(ctx, tc.key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -450,7 +450,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		}
 
 		// Create the blob.
-		if err := b.Write(ctx, key, []byte("Hello world"), nil); err != nil {
+		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
 			t.Fatal(err)
 		}
 		// Delete it.

@@ -146,8 +146,8 @@ func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
-// Read is a shortcut for creating a Reader via NewReader and reading the entire blob.
-func (b *Bucket) Read(ctx context.Context, key string) ([]byte, error) {
+// ReadAll is a shortcut for creating a Reader via NewReader and reading the entire blob.
+func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	r, err := b.NewReader(ctx, key)
 	if err != nil {
 		return nil, err
@@ -179,8 +179,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	return &Reader{r: r}, newBlobError(err)
 }
 
-// Write is a shortcut for creating a Writer via NewWriter and writing p.
-func (b *Bucket) Write(ctx context.Context, key string, p []byte, opt *WriterOptions) error {
+// WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
+func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *WriterOptions) error {
 	w, err := b.NewWriter(ctx, key, opt)
 	if err != nil {
 		return err
