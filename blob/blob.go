@@ -112,6 +112,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // Close flushes any buffered data and completes the Write. It is the user's
 // responsibility to call it after finishing the write and handle the error if returned.
+// Close will return an error if the ctx provided to create w is canceled.
 func (w *Writer) Close() error {
 	if w.w != nil {
 		return w.w.Close()
@@ -198,10 +199,12 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *Writer
 // Otherwise any previous object with the same key will be replaced. The object
 // is not guaranteed to be available until Close has been called.
 //
-// The call may store the ctx for later use in Write and/or Close. The ctx
-// must remain open until the returned Writer is closed.
+// The returned Writer will store the ctx for later use in Write and/or Close.
+// To abort a write, cancel the provided ctx; othewise it must remain open until
+// Close is called.
 //
-// The caller must call Close on the returned Writer when done writing.
+// The caller must call Close on the returned Writer, even if the write is
+// aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
 	var dopt *driver.WriterOptions
 	var w driver.Writer
