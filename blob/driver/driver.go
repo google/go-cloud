@@ -92,6 +92,9 @@ type Bucket interface {
 	// empty.
 	//
 	// The caller must call Close on the returned Writer when done writing.
+	//
+	// Implementations should abort an ongoing write if ctx is later canceled,
+	// and do any necessary cleanup in Close. Close should then return ctx.Err().
 	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does

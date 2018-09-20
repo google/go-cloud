@@ -176,6 +176,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType: contentType,
 	}
 	return &writer{
+		ctx:   ctx,
 		w:     f,
 		path:  path,
 		attrs: attrs,
@@ -183,6 +184,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 }
 
 type writer struct {
+	ctx   context.Context
 	w     io.WriteCloser
 	path  string
 	attrs xattrs
@@ -193,6 +195,11 @@ func (w writer) Write(p []byte) (n int, err error) {
 }
 
 func (w writer) Close() error {
+	// If the write was cancelled, delete the file.
+	if err := w.ctx.Err(); err != nil {
+		_ = os.Remove(w.path)
+		return err
+	}
 	if err := setAttrs(w.path, w.attrs); err != nil {
 		return fmt.Errorf("write blob attributes: %v", err)
 	}
