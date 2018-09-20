@@ -1,0 +1,63 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      Content-Type:
+      - application/octet-stream
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180920T182240Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write?uploads=
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Bucket>go-cloud-bucket</Bucket><Key>blob-for-canceled-write</Key><UploadId>ZDh3CCeNpn_5TJoPUCGEEQhZ0BzNWSgTIZenWr5onOkUYlMRsTD3WcaNDBAn9BSmrtw82ZDb0wd76xQ.wsp2fycNKCo1ljIa5uErH6.P.Xv2_SeauxdbyapTlt0c_Q3V</UploadId></InitiateMultipartUploadResult>
+    headers:
+      Date:
+      - Thu, 20 Sep 2018 18:22:42 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - xrPt5HHRPoWtSIxx9UMRWbfC+YlfolNL4Jv3LJ4SNUWgZJZK03nGm3sP70RIXwjN9soxJtbqEIQ=
+      X-Amz-Request-Id:
+      - 6AE92EDB4B4DB830
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20180920T182241Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>C7FF5F7EC9D3E545</RequestId><HostId>dBRuyZ4LcWxPEVyEU4s1NSF33tUW4Z7Ro2LNCkfCDvLl+ar/l8MkpVTjnwHXCu5t8PRC918WXso=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 20 Sep 2018 18:22:40 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - dBRuyZ4LcWxPEVyEU4s1NSF33tUW4Z7Ro2LNCkfCDvLl+ar/l8MkpVTjnwHXCu5t8PRC918WXso=
+      X-Amz-Request-Id:
+      - C7FF5F7EC9D3E545
+    status: 404 Not Found
+    code: 404
+    duration: ""
