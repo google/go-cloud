@@ -479,9 +479,11 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			}
 			// Cancel the context to abort the write.
 			cancel()
-			// Close should return context's Err().
-			if err := w.Close(); false && err != cancelCtx.Err() {
-				t.Errorf("got Close error %v want %v", err, cancelCtx.Err())
+			// Close should return some kind of canceled context error.
+			// We can't verify the kind of error cleanly, so we just verify there's
+			// an error.
+			if err := w.Close(); err == nil {
+				t.Errorf("got Close error %v want canceled ctx error", err)
 			}
 			// A Read of the same key should fail; the write was aborted
 			// so the blob shouldn't exist.
