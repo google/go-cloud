@@ -57,6 +57,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	t.Run("TestWrite", func(t *testing.T) {
 		testWrite(t, newHarness, pathToTestdata)
 	})
+	t.Run("TestCanceledWrite", func(t *testing.T) {
+		testCanceledWrite(t, newHarness, pathToTestdata)
+	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
@@ -409,6 +412,83 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 				} else {
 					t.Error("read didn't match write, content too large to display")
 				}
+			}
+		})
+	}
+}
+
+// testCanceledWrite tests the functionality of canceling an in-progress write.
+func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+	const key = "blob-for-canceled-write"
+	smallText := []byte("hello world")
+	chunkableContent := loadTestFile(t, pathToTestdata, "test-chunkable.tar")
+
+	tests := []struct {
+		description string
+		content     []byte
+		contentType string
+	}{
+		{
+			// The partial write will be buffered in the concrete type as part of
+			// ContentType detection, so the first call to the Driver will be Close.
+			description: "EmptyContentType",
+			content:     smallText,
+		},
+		{
+			// The partial write will be sent to the Driver, which may do its own
+			// internal buffering.
+			description: "NonEmptyContentType",
+			contentType: "text/plain",
+			content:     smallText,
+		},
+		{
+			// A write larger than the BufferSize we set below, so some providers
+			// make start uploading the first chunk before the cancel.
+			description: "ChunkedUpload",
+			content:     chunkableContent,
+		},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			cancelCtx, cancel := context.WithCancel(ctx)
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a writer with the context that we're going
+			// to cancel.
+			opts := &blob.WriterOptions{
+				ContentType: test.contentType,
+				BufferSize:  8 * 1024 * 1024,
+			}
+			w, err := b.NewWriter(cancelCtx, key, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Write a few bytes.
+			if _, err := w.Write(test.content[:len(test.content)-5]); err != nil {
+				t.Fatal(err)
+			}
+			// Cancel the context to abort the write.
+			cancel()
+			// Close should return some kind of canceled context error.
+			// We can't verify the kind of error cleanly, so we just verify there's
+			// an error.
+			if err := w.Close(); err == nil {
+				t.Errorf("got Close error %v want canceled ctx error", err)
+			}
+			// A Read of the same key should fail; the write was aborted
+			// so the blob shouldn't exist.
+			if _, err := b.NewReader(ctx, key); err == nil {
+				t.Error("wanted NewReturn to return an error when write was canceled")
 			}
 		})
 	}
