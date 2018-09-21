@@ -171,9 +171,11 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 }
 
 // NewRangeReader returns a Reader that reads part of an object, reading at
-// most length bytes starting at the given offset. If length is 0, it will read
-// only the metadata. If length is negative, it will read till the end of the
-// object. It returns an error if that object does not exist, which can be
+// most length bytes starting at the given offset. If length is negative, it
+// will read till the end of the object.
+// offset must be >= 0, and length cannot be 0; use Attributes to check for
+// existence.
+// It returns an error if that object does not exist, which can be
 // checked by calling IsNotExist.
 //
 // The caller must call Close on the returned Reader when done reading.

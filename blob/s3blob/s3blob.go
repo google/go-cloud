@@ -158,6 +158,7 @@ type bucket struct {
 	client *s3.S3
 }
 
+// Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
@@ -177,6 +178,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
+// NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
@@ -218,16 +220,7 @@ func getSize(resp *s3.GetObjectOutput) int64 {
 	return size
 }
 
-// NewTypedWriter returns a writer that writes to an object associated with key.
-//
-// A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced.
-// The object will not be available (and any previous object will remain)
-// until Close has been called.
-//
-// A WriterOptions can be given to change the default behavior of the writer.
-//
-// The caller must call Close on the returned writer when done writing.
+// NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
 		if opts != nil {
@@ -245,7 +238,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-// Delete deletes the object associated with key.
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.Attributes(ctx, key); err != nil {
 		return err

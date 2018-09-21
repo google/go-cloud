@@ -99,6 +99,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	return path, info, &xa, nil
 }
 
+// Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)
 	if err != nil {
@@ -111,6 +112,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
+// NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	path, info, xa, err := b.forKey(key)
 	if err != nil {
@@ -166,6 +168,7 @@ func (r reader) Size() int64 {
 	return r.size
 }
 
+// NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {
@@ -216,6 +219,7 @@ func (w writer) Close() error {
 	return w.w.Close()
 }
 
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	relpath, err := resolvePath(key)
 	if err != nil {

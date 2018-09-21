@@ -80,10 +80,10 @@ type Bucket interface {
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
-	// most length bytes starting at the given offset. If length is 0, it will read
-	// only the metadata. If length is negative, it will read till the end of the
-	// object. If the specified object does not exist, NewRangeReader must return
-	// an error whose BlobError method returns NotFound.
+	// most length bytes starting at the given offset. If length is negative, it
+	// will read till the end of the object. If the specified object does not
+	// exist, NewRangeReader must return an error whose BlobError method returns
+	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewTypedWriter returns Writer that writes to an object associated with key.

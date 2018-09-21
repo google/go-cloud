@@ -77,6 +77,7 @@ func (r *reader) Size() int64 {
 	return r.size
 }
 
+// Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
@@ -94,6 +95,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
+// NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
@@ -111,16 +113,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}, nil
 }
 
-// NewTypedWriter returns Writer that writes to an object associated with key.
-//
-// A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced.
-// The object will not be available (and any previous object will remain)
-// until Close has been called.
-//
-// A WriterOptions can be given to change the default behavior of the Writer.
-//
-// The caller must call Close on the returned Writer when done writing.
+// NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
@@ -132,8 +125,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-// Delete deletes the object associated with key. It is a no-op if that object
-// does not exist.
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
