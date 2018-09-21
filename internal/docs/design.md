@@ -155,7 +155,7 @@ wants to access provider-specific functionality, which might consist of:
 1.  **Options**. Different providers may support different options for
     functionality.
 
-Escape hatches provide the user a way to escape the Go Cloud abstraction to
+**Escape hatches** provide the user a way to escape the Go Cloud abstraction to
 access provider-specific functionality. They might be used as an interim
 solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
 choose not to support specific features, and the escape hatch will be permanent.
@@ -169,10 +169,11 @@ Therefore, they should be avoided if possible.
 ### Ways To Escape Hatch
 
 Users can always access the provider service directly, by constructing the
-top-level handle and making API calls bypassing Go Cloud.
+top-level handle and making API calls, bypassing Go Cloud.
 
-*   For top-level APIs, this may be fine, although it might require a bunch of
-    plumbing code to pass the provider service handle to where it is needed.
+*   For top-level operations, this may be fine, although it might require a
+    bunch of plumbing code to pass the provider service handle to where it is
+    needed.
 *   For data objects, it implies dropping Go Cloud entirely; for example,
     instead of using `blob.Reader` to read a blob, the user would have to use
     the provider-specific method for reading.
@@ -187,8 +188,8 @@ example:
 // that every provider exposes.
 type Reader struct {
     ...
-    Size() int64
-    ContentType() string
+    Size        int64
+    ContentType string
     ...
 
     // New field!
