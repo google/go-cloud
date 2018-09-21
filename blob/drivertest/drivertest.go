@@ -398,7 +398,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 	const key = "blob-for-canceled-write"
 	smallText := []byte("hello world")
-	chunkableContent := loadTestFile(t, pathToTestdata, "test-chunkable.tar")
+	//chunkableContent := loadTestFile(t, pathToTestdata, "test-chunkable.tar")
 
 	tests := []struct {
 		description string
@@ -418,12 +418,17 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			contentType: "text/plain",
 			content:     smallText,
 		},
-		{
-			// A write larger than the BufferSize we set below, so some providers
-			// make start uploading the first chunk before the cancel.
-			description: "ChunkedUpload",
-			content:     chunkableContent,
-		},
+		/*
+			TODO(#475): This test is flaky on Travis due to race conditions. Disable
+			it for now. Note: if the test is removed, also delete the line about
+			chunkableContent above, and remove test-chunkable.tar.
+			{
+				// A write larger than the BufferSize we set below, so some providers
+				// make start uploading the first chunk before the cancel.
+				description: "ChunkedUpload",
+				content:     chunkableContent,
+			},
+		*/
 	}
 
 	ctx := context.Background()
@@ -444,7 +449,10 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			// to cancel.
 			opts := &blob.WriterOptions{
 				ContentType: test.contentType,
-				BufferSize:  8 * 1024 * 1024,
+				// TODO(#475): Restore or remove depending on the ChunkedUpload test.
+				// This must be smaller than the size of the test-chunkable.tar file,
+				// and at least the minimum allowed buffer size across all providers.
+				// BufferSize:  8 * 1024 * 1024,
 			}
 			w, err := b.NewWriter(cancelCtx, key, opts)
 			if err != nil {
