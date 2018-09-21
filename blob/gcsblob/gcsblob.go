@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -57,9 +56,8 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 // reader reads a GCS object. It implements io.ReadCloser.
 type reader struct {
 	body        io.ReadCloser
-	size        int64
 	contentType string
-	updated     time.Time
+	size        int64
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -71,38 +69,34 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attrs() *driver.ObjectAttrs {
-	return &driver.ObjectAttrs{
-		Size:        r.size,
-		ContentType: r.contentType,
-		ModTime:     r.updated,
-	}
+func (r *reader) ContentType() string {
+	return r.contentType
 }
 
-// NewRangeReader returns a Reader that reads part of an object, reading at most
-// length bytes starting at the given offset. If length is 0, it will read only
-// the metadata. If length is negative, it will read till the end of the object.
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	if offset < 0 {
-		return nil, fmt.Errorf("negative offset %d", offset)
-	}
+func (r *reader) Size() int64 {
+	return r.size
+}
+
+func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	if length == 0 {
-		attrs, err := obj.Attrs(ctx)
-		if err != nil {
-			if isErrNotExist(err) {
-				return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-			}
-			return nil, err
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		if isErrNotExist(err) {
+			return driver.Attributes{}, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 		}
-		return &reader{
-			body:        emptyBody,
-			size:        attrs.Size,
-			contentType: attrs.ContentType,
-			updated:     attrs.Updated,
-		}, nil
+		return driver.Attributes{}, err
 	}
+	return driver.Attributes{
+		ContentType: attrs.ContentType,
+		ModTime:     attrs.Updated,
+		Size:        attrs.Size,
+	}, nil
+}
+
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	bkt := b.client.Bucket(b.name)
+	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if err != nil {
 		if isErrNotExist(err) {
@@ -110,13 +104,10 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
-	// updated is set to zero value when non-nil error returned, no need to check or report.
-	updated, _ := r.LastModified()
 	return &reader{
 		body:        r,
-		size:        r.Size(),
 		contentType: r.ContentType(),
-		updated:     updated,
+		size:        r.Size(),
 	}, nil
 }
 

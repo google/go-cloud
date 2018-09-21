@@ -42,10 +42,10 @@ type Error interface {
 type Reader interface {
 	io.ReadCloser
 
-	// Attrs returns the object's metadata. It may return a different pointer each
-	// time, but it must return the exact same values each time it is called. The
-	// caller must not modify any fields in the returned ObjectAttrs.
-	Attrs() *ObjectAttrs
+	// ContentType is the MIME type of the blob object. It must not be empty.
+	ContentType() string
+	// Size is the size of the object in bytes.
+	Size() int64
 }
 
 // Writer writes an object to the blob.
@@ -61,19 +61,24 @@ type WriterOptions struct {
 	BufferSize int
 }
 
-// ObjectAttrs contains metadata of an object.
-type ObjectAttrs struct {
-	// Size is the size of the object in bytes.
-	Size int64
+// Attributes contains attributes about a blob.
+type Attributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
 	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
 	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
+	// Attributes returns attributes for the blob. If the specified object does
+	// not exist, Attributes must return an error whose BlobError method returns
+	// NotFound.
+	Attributes(ctx context.Context, key string) (Attributes, error)
+
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is 0, it will read
 	// only the metadata. If length is negative, it will read till the end of the

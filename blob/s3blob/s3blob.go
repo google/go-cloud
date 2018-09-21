@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -54,7 +53,6 @@ type reader struct {
 	body        io.ReadCloser
 	size        int64
 	contentType string
-	modTime     time.Time
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -66,12 +64,12 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attrs() *driver.ObjectAttrs {
-	return &driver.ObjectAttrs{
-		Size:        r.size,
-		ContentType: r.contentType,
-		ModTime:     r.modTime,
-	}
+func (r *reader) ContentType() string {
+	return r.contentType
+}
+
+func (r *reader) Size() int64 {
+	return r.size
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -160,16 +158,26 @@ type bucket struct {
 	client *s3.S3
 }
 
-// NewRangeReader returns a reader that reads part of an object, reading at most
-// length bytes starting at the given offset. If length is 0, it will read only
-// the metadata. If length is negative, it will read till the end of the object.
+func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	in := &s3.HeadObjectInput{
+		Bucket: aws.String(b.name),
+		Key:    aws.String(key),
+	}
+	req, resp := b.client.HeadObjectRequest(in)
+	if err := req.Send(); err != nil {
+		if e := isErrNotExist(err); e != nil {
+			return driver.Attributes{}, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
+		}
+		return driver.Attributes{}, err
+	}
+	return driver.Attributes{
+		ContentType: aws.StringValue(resp.ContentType),
+		ModTime:     aws.TimeValue(resp.LastModified),
+		Size:        aws.Int64Value(resp.ContentLength),
+	}, nil
+}
+
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	if offset < 0 {
-		return nil, fmt.Errorf("negative offset %d", offset)
-	}
-	if length == 0 {
-		return b.newMetadataReader(ctx, key)
-	}
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -190,7 +198,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		body:        resp.Body,
 		contentType: aws.StringValue(resp.ContentType),
 		size:        getSize(resp),
-		modTime:     aws.TimeValue(resp.LastModified),
 	}, nil
 }
 
@@ -209,26 +216,6 @@ func getSize(resp *s3.GetObjectOutput) int64 {
 		}
 	}
 	return size
-}
-
-func (b *bucket) newMetadataReader(ctx context.Context, key string) (driver.Reader, error) {
-	in := &s3.HeadObjectInput{
-		Bucket: aws.String(b.name),
-		Key:    aws.String(key),
-	}
-	req, resp := b.client.HeadObjectRequest(in)
-	if err := req.Send(); err != nil {
-		if e := isErrNotExist(err); e != nil {
-			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
-		}
-		return nil, err
-	}
-	return &reader{
-		body:        emptyBody,
-		contentType: aws.StringValue(resp.ContentType),
-		size:        aws.Int64Value(resp.ContentLength),
-		modTime:     aws.TimeValue(resp.LastModified),
-	}, nil
 }
 
 // NewTypedWriter returns a writer that writes to an object associated with key.
@@ -260,14 +247,13 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 
 // Delete deletes the object associated with key.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	if _, err := b.newMetadataReader(ctx, key); err != nil {
+	if _, err := b.Attributes(ctx, key); err != nil {
 		return err
 	}
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-
 	req, _ := b.client.DeleteObjectRequest(input)
 	return req.Send()
 }

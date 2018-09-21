@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
-	"time"
 
 	"github.com/google/go-cloud/blob/driver"
 )
@@ -46,19 +45,16 @@ func (r *Reader) Close() error {
 
 // ContentType returns the MIME type of the blob object.
 func (r *Reader) ContentType() string {
-	return r.r.Attrs().ContentType
+	return r.r.ContentType()
 }
 
 // Size returns the content size of the blob object.
 func (r *Reader) Size() int64 {
-	return r.r.Attrs().Size
+	return r.r.Size()
 }
 
-// ModTime returns the modification time of the blob object.
-// This is optional and will be time.Time zero value if unknown.
-func (r *Reader) ModTime() time.Time {
-	return r.r.Attrs().ModTime
-}
+// Attributes holds blob attributes.
+type Attributes driver.Attributes
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
@@ -157,6 +153,15 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+// Attributes reads attributes for the given key.
+func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error) {
+	a, err := b.b.Attributes(ctx, key)
+	if err != nil {
+		return Attributes{}, err
+	}
+	return Attributes(a), nil
+}
+
 // NewReader returns a Reader to read from an object, or an error when the object
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
@@ -175,6 +180,9 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
+	}
+	if length == 0 {
+		return nil, errors.New("new blob range reader: length cannot be 0")
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
 	return &Reader{r: r}, newBlobError(err)

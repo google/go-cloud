@@ -19,7 +19,6 @@ package drivertest
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -86,8 +85,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			wantErr: true,
 		},
 		{
-			name:    "length 0 read of nonexistent key fails",
-			key:     "key-does-not-exist",
+			name:    "length 0 read fails",
+			key:     key,
 			wantErr: true,
 		},
 		{
@@ -178,7 +177,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-// testAttributes tests the behavior of attributes returned by Reader.
+// testAttributes tests Attributes.
 func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
 		key         = "blob-for-attributes"
@@ -210,67 +209,45 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		}
 	}
 
-	for _, rLen := range []int64{0, -1} {
-		t.Run(fmt.Sprintf("ReadLength %d", rLen), func(t *testing.T) {
+	b, done := init(t)
+	defer done()
 
-			t.Run("ContentType", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
+	a, err := b.Attributes(ctx, key)
+	if err != nil {
+		t.Fatalf("failed Attributes: %v", err)
+	}
+	// Also make a Reader so we can verify the subset of attributes
+	// that it exposes.
+	r, err := b.NewReader(ctx, key)
+	if err != nil {
+		t.Fatalf("failed Attributes: %v", err)
+	}
+	defer r.Close()
 
-				r, err := b.NewRangeReader(ctx, key, 0, 0)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				if r.ContentType() != contentType {
-					t.Errorf("got ContentType %q want %q", r.ContentType(), contentType)
-				}
-			})
+	if a.ContentType != contentType {
+		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
+	}
+	if r.ContentType() != contentType {
+		t.Errorf("got Reader.ContentType %q want %q", r.ContentType(), contentType)
+	}
+	if a.Size != int64(len(content)) {
+		t.Errorf("got Size %d want %d", a.Size, len(content))
+	}
+	if r.Size() != int64(len(content)) {
+		t.Errorf("got Reader.Size %d want %d", r.Size(), len(content))
+	}
 
-			t.Run("Size", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
-
-				r, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				if r.Size() != int64(len(content)) {
-					t.Errorf("got Size %d want %d", r.Size(), len(content))
-				}
-			})
-
-			t.Run("ModTime", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
-
-				r, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				t1 := r.ModTime()
-				if t1.IsZero() {
-					// This provider doesn't support ModTime.
-					// TODO(issue #315): There should be a way to tell if the provider
-					// is supposed to return it.
-					return
-				}
-				if err := b.WriteAll(ctx, key, content, nil); err != nil {
-					t.Fatal(err)
-				}
-				r2, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Errorf("failed NewRangeReader#2: %v", err)
-				}
-				defer r2.Close()
-				t2 := r2.ModTime()
-				if t2.Before(t1) {
-					t.Errorf("ModTime %v is before %v", t2, t1)
-				}
-			})
-		})
+	t1 := a.ModTime
+	if err := b.WriteAll(ctx, key, content, nil); err != nil {
+		t.Fatal(err)
+	}
+	a2, err := b.Attributes(ctx, key)
+	if err != nil {
+		t.Errorf("failed Attributes#2: %v", err)
+	}
+	t2 := a2.ModTime
+	if t2.Before(t1) {
+		t.Errorf("ModTime %v is before %v", t2, t1)
 	}
 }
 
