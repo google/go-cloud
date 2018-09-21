@@ -168,7 +168,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		// No change in variable value. Block until notifier tells us something
 		// relevant changed.
 		if notifierErr != nil {
-			return errorState(err, prev), w.waitTime
+			return errorState(notifierErr, prev), w.waitTime
 		}
 		wait := true
 		for wait {
