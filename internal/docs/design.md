@@ -31,7 +31,7 @@ Go Cloud uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
 implementation of that interface. This distinction prevents Go Cloud going down
 a path of complexity that makes application portability difficult. The
-[`blob.Bucket`] type is a prime example: the API does not provide a way of
+[`blob.Bucket`][] type is a prime example: the API does not provide a way of
 creating a new bucket. To properly and safely create such a bucket requires
 careful consideration, getting something like ACLs wrong could lead to a
 catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
@@ -140,6 +140,69 @@ canonical example is `gcpkms` and `awskms`.
 
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
+
+## Enforcing Portability
+
+Go Cloud APIs will end up exposing functionality that is not supported by all
+provider implementations. In addition, some functionality details will differ
+across providers. Some theoretical examples using [`blob.Bucket`][]:
+
+1.  **Top-level APIs**: There might be a provider implementation that supports
+    reads, but not writes or deletes.
+1.  **Data fields**. Some providers may support key/value metadata associated
+    with a blob, others may not.
+1.  **Naming rules**. Different providers may allow different name lengths, or
+    allow/disallow unicode characters.
+1.  **Semantic guarantees**. Different providers may have different consistency
+    guarantees; for example, S3 only provides eventually consistency while GCS
+    provides strong consistency.
+
+How can we maintain portability while these differences exist?
+
+### Guiding Principle
+
+Any incompatibilities between provider implementations should be visible to the
+user as soon as possible. From best to worst:
+
+1.  At compile time
+1.  At configuration/app startup time (e.g., when the concrete type is created)
+1.  At runtime (e.g., when the incompatible behavior is accessed), via a non-nil
+    error
+1.  At runtime, via panic
+
+### Approaches Considered
+
+1.  **Documentation**. We could try to document non-uniform or optional
+    functionality across providers. Optional fields or functionality would
+    return "not implemented" errors or zero values.
+1.  **Restrict functionality to the intersection**. We could explicitly only
+    support the intersection of all provider implementations. For example, if
+    not all providers allow unicode characters in names, then **blob** would not
+    allow it either.
+1.  **Enforced feature codes**: Go Cloud APIs could enumerate the ways in which
+    providers differ as a `FeatureCode` enum.
+    *   Provider implementations would declare which feature codes they support,
+        enforced by extensions to the existing conformance tests.
+    *   API users would declare which feature codes they need.
+    *   Mismatches between what a user requests and what the provider supports
+        would be enforced at initialization time.
+    *   As much as possible, the API (via the concrete type) would enforce that
+        the user is only exposed to optional functionality that they asked for.
+    *   For example, the default legal name for a blob might be ASCII only, with
+        a `FeatureUnicodeNames` feature code. Users that don't request this
+        feature code would only be able to use blobs with ASCII names, even if
+        the underlying provider supports unicode. If the user requested
+        `FeatureUnicodeNames`, and their provider supports it, they could then
+        use blobs with unicode; if their provider doesn't support it, they would
+        get an initialization-time error.
+
+```
+b, err := blob.NewBucket(d, blob.FeatureUnicodeNames)
+...
+```
+
+Design discussions regarding enforcing portability are ongoing; we welcome input
+on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 
 ## Tests
 
