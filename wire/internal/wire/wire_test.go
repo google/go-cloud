@@ -138,7 +138,7 @@ func goBuildCheck(test *testCase, wd string, bctx *build.Context, gen []byte) er
 	if err != nil {
 		return err
 	}
-	// defer os.RemoveAll(gopath)
+	defer os.RemoveAll(gopath)
 	if err := test.materialize(gopath); err != nil {
 		return err
 	}
