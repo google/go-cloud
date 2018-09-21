@@ -31,7 +31,7 @@ Go Cloud uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
 implementation of that interface. This distinction prevents Go Cloud going down
 a path of complexity that makes application portability difficult. The
-[`blob.Bucket`] type is a prime example: the API does not provide a way of
+[`blob.Bucket`][] type is a prime example: the API does not provide a way of
 creating a new bucket. To properly and safely create such a bucket requires
 careful consideration, getting something like ACLs wrong could lead to a
 catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
@@ -145,7 +145,7 @@ https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
 Go Cloud APIs will end up exposing functionality that is not supported by all
 provider implementations. In addition, some functionality details will differ
-across providers. Some theoretical examples using [`blob.Bucket`]:
+across providers. Some theoretical examples using [`blob.Bucket`][]:
 
 1.  **Top-level APIs**: There might be a provider implementation that supports
     reads, but not writes or deletes.
@@ -174,10 +174,10 @@ user as soon as possible. From best to worst:
 
 1.  **Documentation**. We could try to document non-uniform or optional
     functionality across providers. Optional fields or functionality would
-    return `not implemented` errors or zero values.
+    return "not implemented" errors or zero values.
 1.  **Restrict functionality to the intersection**. We could explicitly only
-    support the intersection of all provider implementations. For example, f not
-    all providers allow unicode characters in names, then **blob** would not
+    support the intersection of all provider implementations. For example, if
+    not all providers allow unicode characters in names, then **blob** would not
     allow it either.
 1.  **Enforced feature codes**: Go Cloud APIs could enumerate the ways in which
     providers differ as a `FeatureCode` enum.
