@@ -27,7 +27,10 @@ import (
 )
 
 const (
-	noWait = 1 * time.Microsecond
+	// shortWait is a very short delay.
+	shortWait = 1 * time.Microsecond
+	// defaultWait is a zero time.Duration that causes drivers to use
+	// their default wait.
 	defaultWait = time.Duration(0)
 )
 
@@ -86,7 +89,7 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	defer h.Close()
 	ctx := context.Background()
 
-	v, err := h.MakeVar(ctx, "does-not-exist", runtimevar.StringDecoder, noWait)
+	v, err := h.MakeVar(ctx, "does-not-exist", runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +129,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Use defaultWait here because we're going to test Watch not returning
-	// below. Using noWait here results in polling implementations spinning
+	// below. Using shortWait here results in polling implementations spinning
 	// and replay-based tests being flaky based on how many polls happen
 	// before the ctx times out.
 	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, defaultWait)
@@ -197,7 +200,7 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), noWait)
+	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +246,7 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), noWait)
+	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +284,7 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, noWait)
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +337,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, noWait)
+	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
