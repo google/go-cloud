@@ -472,7 +472,10 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			// to cancel.
 			opts := &blob.WriterOptions{
 				ContentType: test.contentType,
-				BufferSize:  8 * 1024 * 1024,
+				// TODO(#475): Restore or remove depending on the ChunkedUpload test.
+				// This must be smaller than the size of the test-chunkable.tar file,
+				// and at least the minimum allowed buffer size across all providers.
+				// BufferSize:  8 * 1024 * 1024,
 			}
 			w, err := b.NewWriter(cancelCtx, key, opts)
 			if err != nil {
