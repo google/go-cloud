@@ -131,6 +131,7 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
+// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	lastVersion := int64(-1)
 	if prev != nil {
@@ -154,7 +155,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	return &state{val: val, updateTime: p.updateTime, version: p.version}, 0
 }
 
-// Close is a no-op. Cancel the context passed to Watch if watching should end.
+// Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
 }

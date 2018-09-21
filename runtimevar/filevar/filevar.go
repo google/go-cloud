@@ -132,6 +132,7 @@ func errorState(err error, prevS driver.State) driver.State {
 	return s
 }
 
+// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	// Start watching over the file and wait for events/errors.
 	// We can skip this if prev == nil, as we'll always immediately
@@ -201,7 +202,7 @@ type WatchOptions struct {
 	WaitTime time.Duration
 }
 
-// Close closes the fsnotify.Watcher.
+// Close implements driver.WatchVariable.
 func (w *watcher) Close() error {
 	return w.notifier.Close()
 }
