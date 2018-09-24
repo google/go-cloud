@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package filevar provides a runtimevar driver implementation to read configurations and
-// ability to detect changes and get updates on local configuration files.
-//
-// User constructs a runtimevar.Variable object using NewConfig given a locally-accessible file.
+// Package filevar provides a runtimevar.Driver implementation that reads
+// variables from local files.
 //
 // User can update a configuration file using any commands (cp, mv) or tools/editors. This package
 // does not guarantee read consistency since it does not have control over the writes. It is highly
@@ -47,14 +45,12 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// defaultWait is the default amount of time for a watcher to reread the file.
-// Change the docstring for NewVariable if this time is modified.
-const defaultWait = 10 * time.Second
+// defaultWait is the default value for WatchOptions.WaitTime.
+const defaultWait = 30 * time.Second
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-// If WaitTime is not set the wait is set to 10 seconds.
 func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -195,9 +191,8 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 // WatchOptions allows the specification of various options to a watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of checking to see if a deleted file is
-	// recreated.
-	// Defaults to 10 seconds.
+	// WaitTime controls the frequency of retries after an error. For example,
+	// if the file does not exist. Defaults to 30 seconds.
 	WaitTime time.Duration
 }
 

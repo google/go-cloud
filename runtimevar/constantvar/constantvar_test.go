@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/drivertest"
@@ -32,7 +33,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{vars: map[string][]byte{}}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
 	rawVal, found := h.vars[name]
 	if !found {
 		// The variable isn't set. Create a Variable that always returns an error.

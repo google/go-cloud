@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore reads parameters to the AWS Systems Manager Parameter Store.
+// Package paramstore provides a runtimevar.Driver implementation
+// that reads variables from AWS Systems Manager Parameter Store.
+//
+// Construct a Client, then use NewVariable to construct any number of
+// runtimevar.Variable objects.
 package paramstore
 
 import (
@@ -29,9 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// defaultWait is the default amount of time for a watcher to make a new AWS
-// API call.
-// Change the docstring for NewVariable if this time is modified.
+// defaultWait is the default value for WatchOptions.WaitTime.
 const defaultWait = 30 * time.Second
 
 // Client stores long-lived variables for connecting to Parameter Store.
@@ -46,7 +48,6 @@ func NewClient(p client.ConfigProvider) *Client {
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
-// If WaitTime is not set the polling time is set to 30 seconds.
 func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -69,10 +70,7 @@ func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Wat
 
 // WatchOptions provide optional configurations to the Watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of making an HTTP call and checking for
-	// updates by the Watch method. The smaller the value, the higher the frequency
-	// of making calls, which also means a faster rate of hitting the API quota.
-	// If this option is not set or set to 0, it uses a default value.
+	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
 	WaitTime time.Duration
 }
 
@@ -151,7 +149,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if err != nil {
 		return errorState(err, prev), w.waitTime
 	}
-	return &state{val: val, updateTime: p.updateTime, version: p.version}, 0
+	return &state{val: val, updateTime: p.updateTime, version: p.version}, w.waitTime
 }
 
 // Close is a no-op. Cancel the context passed to Watch if watching should end.
