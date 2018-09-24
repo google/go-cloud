@@ -75,7 +75,11 @@ func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*as
 			if !ok {
 				continue
 			}
-			buildCall := isInjector(&pkgInfo.Info, fn)
+			buildCall, err := isInjector(&pkgInfo.Info, fn)
+			if err != nil {
+				ec.add(err)
+				continue
+			}
 			if buildCall == nil {
 				continue
 			}
@@ -113,7 +117,7 @@ func copyNonInjectorDecls(g *gen, files []*ast.File, info *types.Info) {
 		for _, decl := range f.Decls {
 			switch decl := decl.(type) {
 			case *ast.FuncDecl:
-				if isInjector(info, decl) != nil {
+				if buildCall, _ := isInjector(info, decl); buildCall != nil {
 					continue
 				}
 			case *ast.GenDecl:
