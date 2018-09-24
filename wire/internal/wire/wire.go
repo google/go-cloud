@@ -709,7 +709,7 @@ func typeVariableName(t types.Type, defaultName string, transform func(string) s
 
 	// See if there's an unambiguous name; if so, use it.
 	for _, name := range names {
-		if !collides(name) {
+		if !reservedKeyword[name] && !collides(name) {
 			return name
 		}
 	}
@@ -767,9 +767,20 @@ func export(name string) string {
 	return sbuf.String()
 }
 
+// reservedKeyword is a set of Go's reserved keywords:
+// https://golang.org/ref/spec#Keywords
+var reservedKeyword = map[string]bool{
+	"break": true, "default": true, "func": true, "interface": true, "select": true,
+	"case": true, "defer": true, "go": true, "map": true, "struct": true,
+	"chan": true, "else": true, "goto": true, "package": true, "switch": true,
+	"const": true, "fallthrough": true, "if": true, "range": true, "type": true,
+	"continue": true, "for": true, "import": true, "return": true, "var": true,
+}
+
 // disambiguate picks a unique name, preferring name if it is already unique.
+// It also disambiguates against Go's reserved keywords.
 func disambiguate(name string, collides func(string) bool) string {
-	if !collides(name) {
+	if !reservedKeyword[name] && !collides(name) {
 		return name
 	}
 	buf := []byte(name)
@@ -780,7 +791,7 @@ func disambiguate(name string, collides func(string) bool) string {
 	for n := 2; ; n++ {
 		buf = strconv.AppendInt(buf[:base], int64(n), 10)
 		sbuf := string(buf)
-		if !collides(sbuf) {
+		if !reservedKeyword[sbuf] && !collides(sbuf) {
 			return sbuf
 		}
 	}
