@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfigurator provides a runtimevar driver implementation to read configurations from
-// Cloud Runtime Configurator service and ability to detect changes and get updates.
+// Package runtimeconfigurator provides a runtimevar.Driver implementation
+// that reads variables from GCP Cloud Runtime Configurator.
 //
-// User constructs a Client that provides the gRPC connection, then use the client to construct any
-// number of runtimevar.Variable objects using NewConfig method.
+// Construct a Client, then use NewVariable to construct any number of
+// runtimevar.Variable objects.
 package runtimeconfigurator
 
 import (
@@ -47,8 +47,7 @@ var Set = wire.NewSet(
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
 	endPoint = "runtimeconfig.googleapis.com:443"
-	// defaultWait is the default value for WatchOptions.WaitTime if not set.
-	// Change the docstring for NewVariable if this time is modified.
+	// defaultWait is the default value for WatchOptions.WaitTime.
 	defaultWait = 30 * time.Second
 )
 
@@ -80,7 +79,6 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-// If WaitTime is not set the poller will check for updates to the variable every 30 seconds.
 func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -118,12 +116,7 @@ func (r ResourceName) String() string {
 
 // WatchOptions provide optional configurations to the Watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of RPC calls and checking for updates by the Watch method.
-	// A Watcher keeps track of the last time it made an RPC, when Watch is called, it waits for
-	// configured WaitTime from the last RPC before making another RPC. The smaller the value, the
-	// higher the frequency of making RPCs, which also means faster rate of hitting the API quota.
-	//
-	// If this option is not set or set to 0, it uses defaultWait value.
+	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
 	WaitTime time.Duration
 }
 
@@ -202,7 +195,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if err != nil {
 		return errorState(err, prev), w.waitTime
 	}
-	return &state{val: val, updateTime: updateTime, raw: b}, 0
+	return &state{val: val, updateTime: updateTime, raw: b}, w.waitTime
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {

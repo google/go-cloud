@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package constantvar provides a runtimevar driver implementation for variables
+// Package constantvar provides a runtimevar.Driver implementation for variables
 // that never change.
 package constantvar
 
