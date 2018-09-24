@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package etcdvar provides a runtimevar driver implementation to read
+// Package etcdvar provides a runtimevar.Driver implementation to read
 // variables from etcd.
 package etcdvar
 
@@ -28,17 +28,29 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-const errWait = 10 * time.Second
+// defaultWait is the default value for WatchOptions.WaitTime.
+const defaultWait = 30 * time.Second
 
 // New constructs a runtimevar.Variable object that uses client to watch
 // variables in etcd.
 // Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+	if opts == nil {
+		opts = &WatchOptions{}
+	}
+	waitTime := opts.WaitTime
+	switch {
+	case waitTime == 0:
+		waitTime = defaultWait
+	case waitTime < 0:
+		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
+	}
 	return runtimevar.New(&watcher{
 		name:    name,
 		client:  cli,
 		decoder: decoder,
+		wait:    waitTime,
 	}), nil
 }
 
@@ -91,6 +103,7 @@ type watcher struct {
 	name    string
 	client  *clientv3.Client
 	decoder *runtimevar.Decoder
+	wait    time.Duration
 }
 
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
@@ -105,19 +118,19 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	for {
 		resp, err := w.client.Get(ctx, w.name)
 		if err != nil {
-			return errorState(err, prev), errWait
+			return errorState(err, prev), w.wait
 		}
 		if len(resp.Kvs) == 0 {
-			return errorState(fmt.Errorf("%q not found", w.name), prev), errWait
+			return errorState(fmt.Errorf("%q not found", w.name), prev), w.wait
 		} else if len(resp.Kvs) > 1 {
-			return errorState(fmt.Errorf("%q has multiple values", w.name), prev), errWait
+			return errorState(fmt.Errorf("%q has multiple values", w.name), prev), w.wait
 		}
 		kv := resp.Kvs[0]
 		if prev == nil || kv.Version != prev.(*state).version {
 			// New Value
 			val, err := w.decoder.Decode(kv.Value)
 			if err != nil {
-				return errorState(err, prev), errWait
+				return errorState(err, prev), w.wait
 			}
 			return &state{val: val, updateTime: time.Now(), version: kv.Version}, 0
 		}
@@ -129,4 +142,10 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 func (w *watcher) Close() error {
 	return nil
+}
+
+// WatchOptions allows the specification of various options to a watcher.
+type WatchOptions struct {
+	// WaitTime controls the frequency of retries after an error. Defaults to 30 seconds.
+	WaitTime time.Duration
 }

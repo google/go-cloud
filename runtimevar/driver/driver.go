@@ -42,20 +42,25 @@ type State interface {
 // runtimevar.Decoder to facilitate the decoding logic.
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
-	// If the State has not changed, it returns nil plus a wait time (which may
-	// be 0); WatchVariable will not be called again for the wait time.
+	// If the State has not changed, it returns nil.
+	//
+	// If WatchVariable returns a wait time > 0, the concrete type uses
+	// it as a hint to not call WatchVariable again for the wait time.
 	//
 	// Implementations *may* block, but must return if ctx is Done. If the
-	// variable has changed, then implementations *must* eventually return it.
+	// variable has changed, then implementations *must* eventually return
+	// it.
 	//
-	// A polling implementation should return (State, 0) for a new State,
-	// or (nil, <poll interval>) if State hasn't changed.
+	// A polling implementation should return (State, <poll interval>) for
+	// a new State, or (nil, <poll interval>) if State hasn't changed.
 	//
 	// An implementation that receives notifications from an external source
 	// about changes to the underlying variable should:
 	// 1. If prev != nil, subscribe to change notifications.
 	// 2. Fetch the current State.
 	// 3. If prev == nil or if the State has changed, return (State, 0).
+	//    A non-zero wait should be returned if State holds an error, to avoid
+	//    spinning.
 	// 4. Block until it detects a change or ctx is Done, then fetch and return
 	//    (State, 0).
 	// Note that the subscription in 1 must occur before 2 to avoid race conditions.
