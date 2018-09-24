@@ -43,8 +43,9 @@ type Snapshot struct {
 
 // Variable provides the ability to read runtime variables with its blocking Watch method.
 type Variable struct {
-	watcher driver.Watcher
-	prev    driver.State
+	watcher  driver.Watcher
+	nextCall time.Time
+	prev     driver.State
 }
 
 // New constructs a Variable object given a driver.Watcher implementation.
@@ -70,24 +71,30 @@ func New(w driver.Watcher) *Variable {
 // WithCancel and call the cancel function.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	for {
-		cur, wait := c.watcher.WatchVariable(ctx, c.prev)
-		if cur != nil {
-			// Something new to return....
-			c.prev = cur
-			v, err := cur.Value()
-			if err != nil {
-				// Mask underlying errors.
-				return Snapshot{}, fmt.Errorf("watch variable: %v", err)
+		wait := c.nextCall.Sub(time.Now())
+		if wait > 0 {
+			select {
+			case <-ctx.Done():
+				return Snapshot{}, ctx.Err()
+			case <-time.After(wait):
+				// Continue.
 			}
-			return Snapshot{Value: v, UpdateTime: cur.UpdateTime()}, nil
 		}
-		// No change; wait before retrying.
-		t := time.NewTimer(wait)
-		select {
-		case <-t.C:
-		case <-ctx.Done():
-			return Snapshot{}, ctx.Err()
+
+		cur, wait := c.watcher.WatchVariable(ctx, c.prev)
+		c.nextCall = time.Now().Add(wait)
+		if cur == nil {
+			// No change.
+			continue
 		}
+		// Something new to return!
+		c.prev = cur
+		v, err := cur.Value()
+		if err != nil {
+			// Mask underlying errors.
+			return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
+		}
+		return Snapshot{Value: v, UpdateTime: cur.UpdateTime()}, nil
 	}
 }
 
