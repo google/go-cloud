@@ -69,18 +69,24 @@ func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (
 		return nil, err
 	}
 
-	// Construct a fsnotify.Watcher but do not start watching yet. Make this call right before
-	// returning a watcher to avoid having to close the fsnotify Watcher if there are more errors.
+	// Construct a fsnotify.Watcher.
 	notifier, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
-	return runtimevar.New(&watcher{
-		notifier: notifier,
-		file:     file,
-		decoder:  decoder,
-		waitTime: waitTime,
-	}), nil
+
+	// Create a ctx for the background goroutine that does all of the reading.
+	// The cancel function will be used to shut it down during Close, with the
+	// result being passed back via closeCh.
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &watcher{
+		// See struct comments for why it's buffered.
+		ch:       make(chan *state, 1),
+		closeCh:  make(chan error),
+		shutdown: cancel,
+	}
+	go w.watch(ctx, notifier, file, decoder, waitTime)
+	return runtimevar.New(w), nil
 }
 
 // state implements driver.State.
@@ -101,80 +107,111 @@ func (s *state) UpdateTime() time.Time {
 
 // watcher implements driver.Watcher for configurations stored in files.
 type watcher struct {
-	notifier *fsnotify.Watcher
-	file     string
-	decoder  *runtimevar.Decoder
-	waitTime time.Duration
-}
-
-// errorState returns a new State with err, unless prevS also represents
-// the same error, in which case it returns nil.
-func errorState(err error, prevS driver.State) driver.State {
-	s := &state{err: err}
-	if prevS == nil {
-		return s
-	}
-	prev := prevS.(*state)
-	if prev.err == nil {
-		// New error.
-		return s
-	}
-	if err == prev.err {
-		return nil
-	}
-	if os.IsNotExist(err) && os.IsNotExist(prev.err) {
-		return nil
-	}
-	return s
+	// The background goroutine writes new *state values to ch.
+	// It is buffered so that the background goroutine can write without
+	// blocking; otherwise, it could be blocked indefinitely from reading
+	// fsnotify events.
+	ch chan *state
+	// closeCh is used to return any errors from closing the notifier
+	// back to watcher.Close.
+	closeCh chan error
+	// shutdown tells the background goroutine to exit.
+	shutdown func()
 }
 
 // WatchVariable implements driver.WatchVariable.
-func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
-	// Start watching over the file and wait for events/errors.
-	// We can skip this if prev == nil, as we'll always immediately
-	// return a value in that case.
-	// We'll get a notifierErr if the file doesn't currently exist.
-	var notifierErr error
-	if prev != nil {
-		notifierErr = w.notifier.Add(w.file)
-		if notifierErr == nil {
-			defer func() {
-				_ = w.notifier.Remove(w.file)
-			}()
-		}
+func (w *watcher) WatchVariable(ctx context.Context, _ driver.State) (driver.State, time.Duration) {
+	select {
+	case <-ctx.Done():
+		return &state{err: ctx.Err()}, 0
+	case cur := <-w.ch:
+		return cur, 0
 	}
+}
+
+// updateState checks to see if s and prev both represent the same error.
+// If not, it drains any previous state buffered in w.ch, then writes s to it.
+// It always return s.
+func (w *watcher) updateState(s, prev *state) *state {
+	if s.err != nil && prev != nil && prev.err != nil && (s.err == prev.err || (os.IsNotExist(s.err) && os.IsNotExist(prev.err))) {
+		// s represents the same error as prev.
+		return s
+	}
+	// Drain any buffered value on ch; it is now stale.
+	select {
+	case <-w.ch:
+	default:
+	}
+	// This write can't block, since we're the only writer, ch has a buffer
+	// size of 1, and we just read anything that was buffered.
+	w.ch <- s
+	return s
+}
+
+// watch is run by a background goroutine.
+// It watches file using notifier, and writes new states to w.ch.
+// If it can't read or watch the file, it re-checks every waitTime.
+// It exits when ctx is canceled, and writes any shutdown errors (or
+// nil if there weren't any) to w.closeCh.
+func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file string, decoder *runtimevar.Decoder, waitTime time.Duration) {
+	// addedToNotifier is true iff file has been added to the notifier.
+	addedToNotifier := false
+	var cur *state
 
 	for {
+		// If the current state is an error, pause between attempts
+		// to avoid spin loops. In particular, this happens when the file
+		// doesn't exist.
+		if cur != nil && cur.err != nil {
+			select {
+			case <-ctx.Done():
+				w.closeCh <- notifier.Close()
+				return
+			case <-time.After(waitTime):
+			}
+		}
+
+		// If needed, add the file to the notifier to be watched.
+		if !addedToNotifier {
+			if err := notifier.Add(file); err != nil {
+				// File probably does not exist. Try again later.
+				cur = w.updateState(&state{err: err}, cur)
+				continue
+			}
+			addedToNotifier = true
+		}
+
 		// Read the file.
-		b, err := ioutil.ReadFile(w.file)
+		b, err := ioutil.ReadFile(file)
 		if err != nil {
-			// If the error hasn't changed, wait waitTime before trying again.
-			// E.g., if the file doesn't exist.
-			return errorState(err, prev), w.waitTime
+			cur = w.updateState(&state{err: err}, cur)
+			// It's likely that the file was deleted. fsnotifier
+			// stops watching a deleted file, so we'll need to
+			// re-add the file once it exists again.
+			notifier.Remove(file)
+			addedToNotifier = false
+			continue
 		}
 
 		// If it's a new value, decode and return it.
-		if prev == nil || !bytes.Equal(prev.(*state).raw, b) {
-			val, err := w.decoder.Decode(b)
-			if err != nil {
-				return errorState(err, prev), w.waitTime
+		if cur == nil || cur.err != nil || !bytes.Equal(cur.raw, b) {
+			if val, err := decoder.Decode(b); err != nil {
+				cur = w.updateState(&state{err: err}, cur)
+			} else {
+				cur = w.updateState(&state{val: val, updateTime: time.Now(), raw: b}, cur)
 			}
-			return &state{val: val, updateTime: time.Now(), raw: b}, 0
 		}
 
-		// No change in variable value. Block until notifier tells us something
-		// relevant changed.
-		if notifierErr != nil {
-			return errorState(notifierErr, prev), w.waitTime
-		}
+		// Block until notifier tells us something relevant changed.
 		wait := true
 		for wait {
 			select {
 			case <-ctx.Done():
-				return &state{err: ctx.Err()}, 0
+				w.closeCh <- notifier.Close()
+				return
 
-			case event := <-w.notifier.Events:
-				if event.Name != w.file {
+			case event := <-notifier.Events:
+				if event.Name != file {
 					continue
 				}
 				// Ignore if not one of the following operations.
@@ -183,8 +220,8 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 				}
 				wait = false
 
-			case err := <-w.notifier.Errors:
-				return errorState(err, prev), w.waitTime
+			case err := <-notifier.Errors:
+				cur = w.updateState(&state{err: err}, cur)
 			}
 		}
 	}
@@ -199,5 +236,12 @@ type WatchOptions struct {
 
 // Close implements driver.WatchVariable.
 func (w *watcher) Close() error {
-	return w.notifier.Close()
+	// Tell the background goroutine to shut down by canceling its ctx.
+	w.shutdown()
+	// Wait for it to return the result of closing the notifier.
+	err := <-w.closeCh
+	// Cleanup our channels.
+	close(w.ch)
+	close(w.closeCh)
+	return err
 }
