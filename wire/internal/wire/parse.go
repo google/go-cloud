@@ -193,7 +193,7 @@ func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
 				if !ok {
 					continue
 				}
-				buildCall, err := isInjector(&pkgInfo.Info, fn)
+				buildCall, err := findInjectorBuild(&pkgInfo.Info, fn)
 				if err != nil {
 					ec.add(notePosition(prog.Fset.Position(fn.Pos()), fmt.Errorf("inject %s: %v", fn.Name.Name, err)))
 					continue
@@ -774,10 +774,9 @@ func processInterfaceValue(fset *token.FileSet, info *types.Info, call *ast.Call
 	}, nil
 }
 
-// isInjector checks whether a given function declaration is an
-// injector template, returning the wire.Build call. It returns nil if
-// the function is not an injector template.
-func isInjector(info *types.Info, fn *ast.FuncDecl) (*ast.CallExpr, error) {
+// findInjectorBuild returns the wire.Build call if fn is an injector template.
+// It returns nil if the function is not an injector template.
+func findInjectorBuild(info *types.Info, fn *ast.FuncDecl) (*ast.CallExpr, error) {
 	if fn.Body == nil {
 		return nil, nil
 	}
