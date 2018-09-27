@@ -167,11 +167,12 @@ type watcher struct {
 	decoder  *runtimevar.Decoder
 }
 
-// Close implements driver.Watcher.Close.  This is a no-op for this driver.
+// Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
 }
 
+// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	// Get the variable from the backend.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
