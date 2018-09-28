@@ -472,5 +472,5 @@ include the mocked types.
 
 Create a new struct that includes the app plus all of the dependencies you want
 to mock. Create a test-only injector that returns this struct, give it providers
-for the concrete mock types, and use `wire.Bind` to tell `wire` that the
+for the concrete mock types, and use `wire.Bind` to tell Wire that the
 concrete mock types should be used to fulfill the appropriate interface.

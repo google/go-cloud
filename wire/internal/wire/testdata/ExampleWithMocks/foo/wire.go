@@ -21,19 +21,22 @@ import (
 )
 
 // initApp returns a real app.
-func initApp() app {
-	panic(wire.Build(appSet))
+func initApp() *app {
+	wire.Build(appSet)
+	return nil
 }
 
 // initMockedAppFromArgs returns an app with mocked dependencies provided via
 // arguments (Approach A). Note that the argument's type is the interface
 // type (timer), but the concrete mock type should be passed.
-func initMockedAppFromArgs(mt timer) app {
-	panic(wire.Build(appSetWithoutMocks))
+func initMockedAppFromArgs(mt timer) *app {
+	wire.Build(appSetWithoutMocks)
+	return nil
 }
 
 // initMockedApp returns an app with its mocked dependencies, created
 // via providers (Approach B).
 func initMockedApp() *appWithMocks {
-	panic(wire.Build(mockAppSet))
+	wire.Build(mockAppSet)
+	return nil
 }

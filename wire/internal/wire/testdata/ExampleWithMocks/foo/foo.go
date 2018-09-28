@@ -27,7 +27,7 @@ func main() {
 	// Create a "real" greeter.
 	// Greet() will include the real current time, so elide it for repeatable
 	// tests.
-	fmt.Printf("Real time greeting: %s [current time elided]\n", initApp().Greet()[0:16])
+	fmt.Printf("Real time greeting: %s [current time elided]\n", initApp().Greet()[0:15])
 
 	// There are two approaches for creating an app with mocks.
 

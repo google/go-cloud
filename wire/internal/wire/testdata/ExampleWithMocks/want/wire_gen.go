@@ -7,12 +7,12 @@ package main
 
 // Injectors from wire.go:
 
-func initApp() app {
+func initApp() *app {
 	mainTimer := _wireRealTimeValue
 	mainGreeter := greeter{
 		T: mainTimer,
 	}
-	mainApp := app{
+	mainApp := &app{
 		g: mainGreeter,
 	}
 	return mainApp
@@ -22,11 +22,11 @@ var (
 	_wireRealTimeValue = realTime{}
 )
 
-func initMockedAppFromArgs(mt timer) app {
+func initMockedAppFromArgs(mt timer) *app {
 	mainGreeter := greeter{
 		T: mt,
 	}
-	mainApp := app{
+	mainApp := &app{
 		g: mainGreeter,
 	}
 	return mainApp
