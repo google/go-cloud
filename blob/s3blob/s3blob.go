@@ -168,8 +168,8 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	return driver.Attributes{
 		ContentType: aws.StringValue(resp.ContentType),
-		Size:        aws.Int64Value(resp.ContentLength),
 		ModTime:     aws.TimeValue(resp.LastModified),
+		Size:        aws.Int64Value(resp.ContentLength),
 	}, nil
 }
 
@@ -195,6 +195,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		body: resp.Body,
 		attrs: driver.ReaderAttributes{
 			ContentType: aws.StringValue(resp.ContentType),
+			ModTime:     aws.TimeValue(resp.LastModified),
 			Size:        getSize(resp),
 		},
 	}, nil

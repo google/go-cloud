@@ -172,6 +172,9 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			if r.Size() != contentSize {
 				t.Errorf("got size %d want %d", r.Size(), contentSize)
 			}
+			if r.ModTime().IsZero() {
+				t.Errorf("got zero mod time, want non-zero")
+			}
 			r.Close()
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"time"
 
 	"github.com/google/go-cloud/blob/driver"
 )
@@ -46,6 +47,11 @@ func (r *Reader) Close() error {
 // ContentType returns the MIME type of the blob object.
 func (r *Reader) ContentType() string {
 	return r.r.Attributes().ContentType
+}
+
+// ModTime is the time the blob object was last modified.
+func (r *Reader) ModTime() time.Time {
+	return r.r.Attributes().ModTime
 }
 
 // Size returns the content size of the blob object.

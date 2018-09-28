@@ -66,6 +66,8 @@ type WriterOptions struct {
 type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
 }
@@ -74,11 +76,10 @@ type ReaderAttributes struct {
 type Attributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-
-	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
-	ModTime time.Time
 }
 
 // Bucket provides read, write and delete operations on objects within it on the

@@ -85,8 +85,8 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	return driver.Attributes{
 		ContentType: attrs.ContentType,
-		Size:        attrs.Size,
 		ModTime:     attrs.Updated,
+		Size:        attrs.Size,
 	}, nil
 }
 
@@ -101,10 +101,12 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
+	modTime, _ := r.LastModified()
 	return &reader{
 		body: r,
 		attrs: driver.ReaderAttributes{
 			ContentType: r.ContentType(),
+			ModTime:     modTime,
 			Size:        r.Size(),
 		},
 	}, nil
