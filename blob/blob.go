@@ -46,19 +46,21 @@ func (r *Reader) Close() error {
 
 // ContentType returns the MIME type of the blob object.
 func (r *Reader) ContentType() string {
-	return r.r.Attrs().ContentType
+	return r.r.Attributes().ContentType
+}
+
+// ModTime is the time the blob object was last modified.
+func (r *Reader) ModTime() time.Time {
+	return r.r.Attributes().ModTime
 }
 
 // Size returns the content size of the blob object.
 func (r *Reader) Size() int64 {
-	return r.r.Attrs().Size
+	return r.r.Attributes().Size
 }
 
-// ModTime returns the modification time of the blob object.
-// This is optional and will be time.Time zero value if unknown.
-func (r *Reader) ModTime() time.Time {
-	return r.r.Attrs().ModTime
-}
+// Attributes holds blob attributes.
+type Attributes = driver.Attributes
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
@@ -157,6 +159,15 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+// Attributes reads attributes for the given key.
+func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error) {
+	a, err := b.b.Attributes(ctx, key)
+	if err != nil {
+		return Attributes{}, err
+	}
+	return Attributes(a), nil
+}
+
 // NewReader returns a Reader to read from an object, or an error when the object
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
@@ -166,15 +177,21 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 }
 
 // NewRangeReader returns a Reader that reads part of an object, reading at
-// most length bytes starting at the given offset. If length is 0, it will read
-// only the metadata. If length is negative, it will read till the end of the
-// object. It returns an error if that object does not exist, which can be
-// checked by calling IsNotExist.
+// most length bytes starting at the given offset. If length is negative, it
+// will read till the end of the object. offset must be >= 0, and length cannot
+// be 0.
+//
+// NewRangeReader returns an error if the object does not exist, which can be
+// checked by calling IsNotExist. Attributes() is a lighter-weight way to check
+// for existence.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
+	}
+	if length == 0 {
+		return nil, errors.New("new blob range reader: length cannot be 0")
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
 	return &Reader{r: r}, newBlobError(err)

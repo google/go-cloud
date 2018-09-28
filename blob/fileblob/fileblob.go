@@ -30,7 +30,6 @@ import (
 	slashpath "path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -77,32 +76,47 @@ func resolvePath(key string) (string, error) {
 	return filepath.FromSlash(key), nil
 }
 
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	path := filepath.Join(b.dir, relpath)
 	if strings.HasSuffix(path, attrsExt) {
-		return nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
+		return "", nil, nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
 	}
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
+			return "", nil, nil, fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
 		}
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
 	xa, err := getAttrs(path)
 	if err != nil {
-		return nil, fmt.Errorf("open file attributes %s: %v", key, err)
+		return "", nil, nil, fmt.Errorf("open file attributes %s: %v", key, err)
 	}
-	if length == 0 {
-		return reader{
-			size:    info.Size(),
-			modTime: info.ModTime(),
-			xa:      xa,
-		}, nil
+	return path, info, &xa, nil
+}
+
+// Attributes implements driver.Attributes.
+func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	_, info, xa, err := b.forKey(key)
+	if err != nil {
+		return driver.Attributes{}, err
+	}
+	return driver.Attributes{
+		ContentType: xa.ContentType,
+		ModTime:     info.ModTime(),
+		Size:        info.Size(),
+	}, nil
+}
+
+// NewRangeReader implements driver.NewRangeReader.
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	path, info, xa, err := b.forKey(key)
+	if err != nil {
+		return nil, err
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -118,20 +132,20 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		r = io.LimitReader(r, length)
 	}
 	return reader{
-		r:       r,
-		c:       f,
-		size:    info.Size(),
-		modTime: info.ModTime(),
-		xa:      xa,
+		r: r,
+		c: f,
+		attrs: driver.ReaderAttributes{
+			ContentType: xa.ContentType,
+			ModTime:     info.ModTime(),
+			Size:        info.Size(),
+		},
 	}, nil
 }
 
 type reader struct {
-	r       io.Reader
-	c       io.Closer
-	size    int64
-	modTime time.Time
-	xa      xattrs
+	r     io.Reader
+	c     io.Closer
+	attrs driver.ReaderAttributes
 }
 
 func (r reader) Read(p []byte) (int, error) {
@@ -148,14 +162,11 @@ func (r reader) Close() error {
 	return r.c.Close()
 }
 
-func (r reader) Attrs() *driver.ObjectAttrs {
-	return &driver.ObjectAttrs{
-		Size:        r.size,
-		ContentType: r.xa.ContentType,
-		ModTime:     r.modTime,
-	}
+func (r reader) Attributes() driver.ReaderAttributes {
+	return r.attrs
 }
 
+// NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {
@@ -206,6 +217,7 @@ func (w writer) Close() error {
 	return w.w.Close()
 }
 
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	relpath, err := resolvePath(key)
 	if err != nil {
