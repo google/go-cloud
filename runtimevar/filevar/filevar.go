@@ -109,8 +109,9 @@ func (s *state) UpdateTime() time.Time {
 type watcher struct {
 	// The background goroutine writes new *state values to ch.
 	// It is buffered so that the background goroutine can write without
-	// blocking; otherwise, it could be blocked indefinitely from reading
-	// fsnotify events.
+	// blocking; it always drains the buffer before writing so that the latest
+	// write is buffered. If writes could block, the background goroutine could be
+	// blocked indefinitely from reading fsnotify events.
 	ch chan *state
 	// closeCh is used to return any errors from closing the notifier
 	// back to watcher.Close.
