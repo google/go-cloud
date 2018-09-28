@@ -28,30 +28,22 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-// defaultWait is the default value for WatchOptions.WaitTime.
-const defaultWait = 30 * time.Second
-
 // New constructs a runtimevar.Variable object that uses client to watch
 // variables in etcd.
 // Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
-	if opts == nil {
-		opts = &WatchOptions{}
+func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+	// Create a ctx for the background goroutine that does all of the reading.
+	// The cancel function will be used to shut it down during Close.
+	ctx, cancel := context.WithCancel(context.Background())
+	w := &watcher{
+		// See struct comments for why it's buffered.
+		ch:       make(chan *state, 1),
+		closeCh:  make(chan struct{}),
+		shutdown: cancel,
 	}
-	waitTime := opts.WaitTime
-	switch {
-	case waitTime == 0:
-		waitTime = defaultWait
-	case waitTime < 0:
-		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
-	}
-	return runtimevar.New(&watcher{
-		name:    name,
-		client:  cli,
-		decoder: decoder,
-		wait:    waitTime,
-	}), nil
+	go w.watch(ctx, cli, name, decoder)
+	return runtimevar.New(w), nil
 }
 
 // state implements driver.State.
@@ -70,84 +62,106 @@ func (s *state) UpdateTime() time.Time {
 	return s.updateTime
 }
 
-// errorState returns a new State with err, unless prevS also represents
-// the same error, in which case it returns nil.
-func errorState(err error, prevS driver.State) driver.State {
-	s := &state{err: err}
-	if prevS == nil {
-		return s
-	}
-	prev := prevS.(*state)
-	if prev.err == nil {
-		// New error.
-		return s
-	}
-	if err == prev.err {
-		return nil
-	}
-	var code, prevCode codes.Code
-	if etcdErr, ok := err.(rpctypes.EtcdError); ok {
-		code = etcdErr.Code()
-	}
-	if etcdErr, ok := prev.err.(rpctypes.EtcdError); ok {
-		prevCode = etcdErr.Code()
-	}
-	if code != codes.OK && code == prevCode {
-		return nil
-	}
-	return s
-}
-
 // watcher implements driver.Watcher.
 type watcher struct {
-	name    string
-	client  *clientv3.Client
-	decoder *runtimevar.Decoder
-	wait    time.Duration
+	// The background goroutine writes new *state values to ch.
+	// It is buffered so that the background goroutine can write without
+	// blocking; it always drains the buffer before writing so that the latest
+	// write is buffered. If writes could block, the background goroutine could be
+	// blocked indefinitely from reading etcd's Watch events.
+	ch chan *state
+	// closeCh is used to signal when the background goroutine has exited
+	// during shutdown.
+	closeCh chan struct{}
+	// shutdown tells the background goroutine to exit.
+	shutdown func()
 }
 
 // WatchVariable implements driver.WatchVariable.
-func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
-
-	// Create a watching channel in case the variable hasn't changed.
-	// We must create it now before the Get to avoid race conditions.
-	var ch clientv3.WatchChan
-	if prev != nil {
-		ch = w.client.Watch(ctx, w.name)
+func (w *watcher) WatchVariable(ctx context.Context, _ driver.State) (driver.State, time.Duration) {
+	select {
+	case <-ctx.Done():
+		return &state{err: ctx.Err()}, 0
+	case cur := <-w.ch:
+		return cur, 0
 	}
+}
 
+// updateState checks to see if s and prev both represent the same error.
+// If not, it drains any previous state buffered in w.ch, then writes s to it.
+// It always return s.
+func (w *watcher) updateState(s, prev *state) *state {
+	if s.err != nil && prev != nil && prev.err != nil {
+		if s.err == prev.err {
+			// s represents the same error as prev.
+			return s
+		}
+		var code, prevCode codes.Code
+		if etcdErr, ok := s.err.(rpctypes.EtcdError); ok {
+			code = etcdErr.Code()
+		}
+		if etcdErr, ok := prev.err.(rpctypes.EtcdError); ok {
+			prevCode = etcdErr.Code()
+		}
+		if code != codes.OK && code == prevCode {
+			// s represents the same etcd error code error as prev.
+			return s
+		}
+	}
+	// Drain any buffered value on ch; it is now stale.
+	select {
+	case <-w.ch:
+	default:
+	}
+	// This write can't block, since we're the only writer, ch has a buffer
+	// size of 1, and we just read anything that was buffered.
+	w.ch <- s
+	return s
+}
+
+// watch is run by a background goroutine.
+// It watches file using cli.Watch, and writes new states to w.ch.
+// It exits when ctx is canceled, and closes w.closeCh.
+func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, decoder *runtimevar.Decoder) {
+	var cur *state
+	defer close(w.closeCh)
+
+	watchCh := cli.Watch(ctx, name)
 	for {
-		resp, err := w.client.Get(ctx, w.name)
+		resp, err := cli.Get(ctx, name)
 		if err != nil {
-			return errorState(err, prev), w.wait
-		}
-		if len(resp.Kvs) == 0 {
-			return errorState(fmt.Errorf("%q not found", w.name), prev), w.wait
+			cur = w.updateState(&state{err: err}, cur)
+		} else if len(resp.Kvs) == 0 {
+			cur = w.updateState(&state{err: fmt.Errorf("%q not found", name)}, cur)
 		} else if len(resp.Kvs) > 1 {
-			return errorState(fmt.Errorf("%q has multiple values", w.name), prev), w.wait
-		}
-		kv := resp.Kvs[0]
-		if prev == nil || kv.Version != prev.(*state).version {
-			// New Value
-			val, err := w.decoder.Decode(kv.Value)
-			if err != nil {
-				return errorState(err, prev), w.wait
+			cur = w.updateState(&state{err: fmt.Errorf("%q has multiple values", name)}, cur)
+		} else {
+			kv := resp.Kvs[0]
+			if cur == nil || cur.err != nil || kv.Version != cur.version {
+				val, err := decoder.Decode(kv.Value)
+				if err != nil {
+					cur = w.updateState(&state{err: err}, cur)
+				}
+				cur = w.updateState(&state{val: val, updateTime: time.Now(), version: kv.Version}, cur)
 			}
-			return &state{val: val, updateTime: time.Now(), version: kv.Version}, 0
 		}
 
 		// Value hasn't changed. Wait for change events.
-		<-ch
+		select {
+		case <-ctx.Done():
+			return
+		case <-watchCh:
+		}
 	}
 }
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
+	// Tell the background goroutine to shut down by canceling its ctx.
+	w.shutdown()
+	// Wait for it to exit.
+	<-w.closeCh
+	// Cleanup our channels.
+	close(w.ch)
 	return nil
-}
-
-// WatchOptions allows the specification of various options to a watcher.
-type WatchOptions struct {
-	// WaitTime controls the frequency of retries after an error. Defaults to 30 seconds.
-	WaitTime time.Duration
 }
