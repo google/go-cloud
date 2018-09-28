@@ -51,6 +51,7 @@ func (w *watcher) UpdateTime() time.Time {
 	return w.t
 }
 
+// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 
 	// The first time this is called, return the constant value.
@@ -63,4 +64,5 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	return w, 0
 }
 
+// Close implements driver.Close.
 func (_ *watcher) Close() error { return nil }

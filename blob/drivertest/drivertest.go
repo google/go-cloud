@@ -397,38 +397,25 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 // testCanceledWrite tests the functionality of canceling an in-progress write.
 func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 	const key = "blob-for-canceled-write"
-	smallText := []byte("hello world")
-	//chunkableContent := loadTestFile(t, pathToTestdata, "test-chunkable.tar")
+	content := []byte("hello world")
 
 	tests := []struct {
 		description string
-		content     []byte
 		contentType string
 	}{
 		{
-			// The partial write will be buffered in the concrete type as part of
+			// The write will be buffered in the concrete type as part of
 			// ContentType detection, so the first call to the Driver will be Close.
 			description: "EmptyContentType",
-			content:     smallText,
 		},
 		{
-			// The partial write will be sent to the Driver, which may do its own
+			// The write will be sent to the Driver, which may do its own
 			// internal buffering.
 			description: "NonEmptyContentType",
 			contentType: "text/plain",
-			content:     smallText,
 		},
-		/*
-			TODO(#475): This test is flaky on Travis due to race conditions. Disable
-			it for now. Note: if the test is removed, also delete the line about
-			chunkableContent above, and remove test-chunkable.tar.
-			{
-				// A write larger than the BufferSize we set below, so some providers
-				// make start uploading the first chunk before the cancel.
-				description: "ChunkedUpload",
-				content:     chunkableContent,
-			},
-		*/
+		// TODO(issue #482): Find a way to test that a chunked upload that's interrupted
+		// after some chunks are uploaded cancels correctly.
 	}
 
 	ctx := context.Background()
@@ -449,17 +436,13 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata str
 			// to cancel.
 			opts := &blob.WriterOptions{
 				ContentType: test.contentType,
-				// TODO(#475): Restore or remove depending on the ChunkedUpload test.
-				// This must be smaller than the size of the test-chunkable.tar file,
-				// and at least the minimum allowed buffer size across all providers.
-				// BufferSize:  8 * 1024 * 1024,
 			}
 			w, err := b.NewWriter(cancelCtx, key, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
-			// Write a few bytes.
-			if _, err := w.Write(test.content[:len(test.content)-5]); err != nil {
+			// Write the content.
+			if _, err := w.Write(content); err != nil {
 				t.Fatal(err)
 			}
 			// Cancel the context to abort the write.

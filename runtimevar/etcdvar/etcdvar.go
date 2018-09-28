@@ -106,6 +106,7 @@ type watcher struct {
 	wait    time.Duration
 }
 
+// WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 
 	// Create a watching channel in case the variable hasn't changed.
@@ -140,6 +141,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 }
 
+// Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
 }
