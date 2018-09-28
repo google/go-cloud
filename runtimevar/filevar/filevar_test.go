@@ -48,8 +48,17 @@ func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	path := filepath.Join(h.dir, name)
-	return ioutil.WriteFile(path, val, 0666)
+	// Write to a temporary file and rename; otherwise,
+	// Watch can read an empty file during the write.
+	tmp, err := ioutil.TempFile(h.dir, "tmp")
+	if err != nil {
+		return err
+	}
+	defer tmp.Close()
+	if _, err := tmp.Write(val); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), filepath.Join(h.dir, name))
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
