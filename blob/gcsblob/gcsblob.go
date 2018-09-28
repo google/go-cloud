@@ -55,9 +55,8 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads a GCS object. It implements io.ReadCloser.
 type reader struct {
-	body        io.ReadCloser
-	contentType string
-	size        int64
+	body  io.ReadCloser
+	attrs driver.ReaderAttributes
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -69,12 +68,8 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) ContentType() string {
-	return r.contentType
-}
-
-func (r *reader) Size() int64 {
-	return r.size
+func (r *reader) Attributes() driver.ReaderAttributes {
+	return r.attrs
 }
 
 // Attributes implements driver.Attributes.
@@ -89,9 +84,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: attrs.ContentType,
-		ModTime:     attrs.Updated,
-		Size:        attrs.Size,
+		ReaderAttributes: driver.ReaderAttributes{
+			ContentType: attrs.ContentType,
+			Size:        attrs.Size,
+		},
+		ModTime: attrs.Updated,
 	}, nil
 }
 
@@ -107,9 +104,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	return &reader{
-		body:        r,
-		contentType: r.ContentType(),
-		size:        r.Size(),
+		body: r,
+		attrs: driver.ReaderAttributes{
+			ContentType: r.ContentType(),
+			Size:        r.Size(),
+		},
 	}, nil
 }
 

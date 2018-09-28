@@ -106,9 +106,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: xa.ContentType,
-		ModTime:     info.ModTime(),
-		Size:        info.Size(),
+		ReaderAttributes: driver.ReaderAttributes{
+			ContentType: xa.ContentType,
+			Size:        info.Size(),
+		},
+		ModTime: info.ModTime(),
 	}, nil
 }
 
@@ -132,18 +134,19 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		r = io.LimitReader(r, length)
 	}
 	return reader{
-		r:           r,
-		c:           f,
-		contentType: xa.ContentType,
-		size:        info.Size(),
+		r: r,
+		c: f,
+		attrs: driver.ReaderAttributes{
+			ContentType: xa.ContentType,
+			Size:        info.Size(),
+		},
 	}, nil
 }
 
 type reader struct {
-	r           io.Reader
-	c           io.Closer
-	contentType string
-	size        int64
+	r     io.Reader
+	c     io.Closer
+	attrs driver.ReaderAttributes
 }
 
 func (r reader) Read(p []byte) (int, error) {
@@ -160,12 +163,8 @@ func (r reader) Close() error {
 	return r.c.Close()
 }
 
-func (r reader) ContentType() string {
-	return r.contentType
-}
-
-func (r reader) Size() int64 {
-	return r.size
+func (r reader) Attributes() driver.ReaderAttributes {
+	return r.attrs
 }
 
 // NewTypedWriter implements driver.NewTypedWriter.

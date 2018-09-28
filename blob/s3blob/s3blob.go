@@ -50,9 +50,8 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads an S3 object. It implements io.ReadCloser.
 type reader struct {
-	body        io.ReadCloser
-	size        int64
-	contentType string
+	body  io.ReadCloser
+	attrs driver.ReaderAttributes
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -64,12 +63,8 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) ContentType() string {
-	return r.contentType
-}
-
-func (r *reader) Size() int64 {
-	return r.size
+func (r *reader) Attributes() driver.ReaderAttributes {
+	return r.attrs
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -172,9 +167,11 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: aws.StringValue(resp.ContentType),
-		ModTime:     aws.TimeValue(resp.LastModified),
-		Size:        aws.Int64Value(resp.ContentLength),
+		ReaderAttributes: driver.ReaderAttributes{
+			ContentType: aws.StringValue(resp.ContentType),
+			Size:        aws.Int64Value(resp.ContentLength),
+		},
+		ModTime: aws.TimeValue(resp.LastModified),
 	}, nil
 }
 
@@ -197,9 +194,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 	return &reader{
-		body:        resp.Body,
-		contentType: aws.StringValue(resp.ContentType),
-		size:        getSize(resp),
+		body: resp.Body,
+		attrs: driver.ReaderAttributes{
+			ContentType: aws.StringValue(resp.ContentType),
+			Size:        getSize(resp),
+		},
 	}, nil
 }
 

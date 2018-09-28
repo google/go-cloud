@@ -42,10 +42,9 @@ type Error interface {
 type Reader interface {
 	io.ReadCloser
 
-	// ContentType is the MIME type of the blob object. It must not be empty.
-	ContentType() string
-	// Size is the size of the object in bytes.
-	Size() int64
+	// Attributes returns a subset of attributes about the blob.
+	// Use Bucket.Attributes to get the full set.
+	Attributes() ReaderAttributes
 }
 
 // Writer writes an object to the blob.
@@ -61,14 +60,21 @@ type WriterOptions struct {
 	BufferSize int
 }
 
-// Attributes contains attributes about a blob.
-type Attributes struct {
+// ReaderAttributes contains a subset of attributes about a blob that are
+// accessible from Reader. Use Bucket.Attributes to get the full set of
+// attributes.
+type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
-	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
-	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+}
+
+// Attributes contains attributes about a blob.
+type Attributes struct {
+	ReaderAttributes
+	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
+	ModTime time.Time
 }
 
 // Bucket provides read, write and delete operations on objects within it on the

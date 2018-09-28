@@ -43,15 +43,16 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// ContentType returns the MIME type of the blob object.
-func (r *Reader) ContentType() string {
-	return r.r.ContentType()
+// Attributes returns a subset of attributes about the blob.
+// Use Bucket.Attributes to get the full set.
+func (r *Reader) Attributes() ReaderAttributes {
+	return ReaderAttributes(r.r.Attributes())
 }
 
-// Size returns the content size of the blob object.
-func (r *Reader) Size() int64 {
-	return r.r.Size()
-}
+// ReaderAttributes contains a subset of attributes about a blob that are
+// accessible from Reader. Use Bucket.Attributes to get the full set of
+// attributes.
+type ReaderAttributes driver.ReaderAttributes
 
 // Attributes holds blob attributes.
 type Attributes driver.Attributes
