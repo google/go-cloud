@@ -167,11 +167,9 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ReaderAttributes: driver.ReaderAttributes{
-			ContentType: aws.StringValue(resp.ContentType),
-			Size:        aws.Int64Value(resp.ContentLength),
-		},
-		ModTime: aws.TimeValue(resp.LastModified),
+		ContentType: aws.StringValue(resp.ContentType),
+		Size:        aws.Int64Value(resp.ContentLength),
+		ModTime:     aws.TimeValue(resp.LastModified),
 	}, nil
 }
 

@@ -169,8 +169,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			if !cmp.Equal(got[:tc.wantReadSize], tc.want) {
 				t.Errorf("got %q want %q", string(got), string(tc.want))
 			}
-			if r.Attributes().Size != contentSize {
-				t.Errorf("got size %d want %d", r.Attributes().Size, contentSize)
+			if r.Size() != contentSize {
+				t.Errorf("got size %d want %d", r.Size(), contentSize)
 			}
 			r.Close()
 		})
@@ -227,14 +227,14 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if a.ContentType != contentType {
 		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
 	}
-	if r.Attributes().ContentType != contentType {
-		t.Errorf("got Reader.Attributes().ContentType %q want %q", r.Attributes().ContentType, contentType)
+	if r.ContentType() != contentType {
+		t.Errorf("got Reader.ContentType() %q want %q", r.ContentType(), contentType)
 	}
 	if a.Size != int64(len(content)) {
 		t.Errorf("got Size %d want %d", a.Size, len(content))
 	}
-	if r.Attributes().Size != int64(len(content)) {
-		t.Errorf("got Reader.Attributes().Size %d want %d", r.Attributes().Size, len(content))
+	if r.Size() != int64(len(content)) {
+		t.Errorf("got Reader.Size() %d want %d", r.Size(), len(content))
 	}
 
 	t1 := a.ModTime

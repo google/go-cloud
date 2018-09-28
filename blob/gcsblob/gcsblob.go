@@ -84,11 +84,9 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ReaderAttributes: driver.ReaderAttributes{
-			ContentType: attrs.ContentType,
-			Size:        attrs.Size,
-		},
-		ModTime: attrs.Updated,
+		ContentType: attrs.ContentType,
+		Size:        attrs.Size,
+		ModTime:     attrs.Updated,
 	}, nil
 }
 

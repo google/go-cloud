@@ -43,19 +43,18 @@ func (r *Reader) Close() error {
 	return r.r.Close()
 }
 
-// Attributes returns a subset of attributes about the blob.
-// Use Bucket.Attributes to get the full set.
-func (r *Reader) Attributes() ReaderAttributes {
-	return ReaderAttributes(r.r.Attributes())
+// ContentType returns the MIME type of the blob object.
+func (r *Reader) ContentType() string {
+	return r.r.Attributes().ContentType
 }
 
-// ReaderAttributes contains a subset of attributes about a blob that are
-// accessible from Reader. Use Bucket.Attributes to get the full set of
-// attributes.
-type ReaderAttributes driver.ReaderAttributes
+// Size returns the content size of the blob object.
+func (r *Reader) Size() int64 {
+	return r.r.Attributes().Size
+}
 
 // Attributes holds blob attributes.
-type Attributes driver.Attributes
+type Attributes = driver.Attributes
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
@@ -173,11 +172,12 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 
 // NewRangeReader returns a Reader that reads part of an object, reading at
 // most length bytes starting at the given offset. If length is negative, it
-// will read till the end of the object.
-// offset must be >= 0, and length cannot be 0; use Attributes to check for
-// existence.
-// It returns an error if that object does not exist, which can be
-// checked by calling IsNotExist.
+// will read till the end of the object. offset must be >= 0, and length cannot
+// be 0.
+//
+// NewRangeReader returns an error if the object does not exist, which can be
+// checked by calling IsNotExist. Attributes() is a lighter-weight way to check
+// for existence.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {

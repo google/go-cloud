@@ -301,7 +301,7 @@ func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.Header().Set("Content-Type", "application/octet-stream")
 	}
-	w.Header().Set("Content-Length", strconv.FormatInt(blobRead.Attributes().Size, 10))
+	w.Header().Set("Content-Length", strconv.FormatInt(blobRead.Size(), 10))
 	if _, err = io.Copy(w, blobRead); err != nil {
 		log.Println("Copying blob:", err)
 	}

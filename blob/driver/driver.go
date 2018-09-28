@@ -72,7 +72,11 @@ type ReaderAttributes struct {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
-	ReaderAttributes
+	// ContentType is the MIME type of the blob object. It must not be empty.
+	ContentType string
+	// Size is the size of the object in bytes.
+	Size int64
+
 	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
 	ModTime time.Time
 }
