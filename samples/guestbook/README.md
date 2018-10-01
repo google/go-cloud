@@ -88,6 +88,26 @@ The deploy script will display the URL of your running service.
 To clean up the created resources, run `terraform destroy` inside the `gcp`
 directory using the same variables you entered during `terraform apply`.
 
+## Running on Google App Engine (GAE)
+
+If you want to run this sample on GAE, you need to create a project, download
+the gcloud SDK, and log in.
+
+``` shell
+gcloud auth login
+gcloud auth application-default login
+cd gae
+terraform init
+terraform apply
+gcloud app deploy
+```
+
+The `gcloud app deploy` command will display the URL of your running app.
+
+### Cleanup
+To clean up the created resources, run `terraform destroy` inside the `gae`
+directory using the same variables you entered during `terraform apply`.
+
 ## Running on Amazon Web Services (AWS)
 
 If you want to run this sample on AWS, you need to set up an account, download

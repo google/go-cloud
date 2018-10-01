@@ -19,22 +19,12 @@ output "project" {
 
 output "server_service_account" {
   value       = "${google_service_account.server.email}"
-  description = "The service account email that will be used for the server running inside the GKE cluster."
+  description = "The service account email that will be used for the server."
 }
 
 output "db_access_service_account" {
   value       = "${google_service_account.db_access.email}"
   description = "The service account email that was used for provisioning the database."
-}
-
-output "cluster_name" {
-  value       = "${var.cluster_name}"
-  description = "GKE cluster name."
-}
-
-output "cluster_zone" {
-  value       = "${google_container_cluster.guestbook.zone}"
-  description = "GCP zone that the GKE cluster is in."
 }
 
 output "bucket" {
