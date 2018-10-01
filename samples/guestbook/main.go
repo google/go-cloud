@@ -180,14 +180,17 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	app.mu.RLock()
 	data.MOTD = app.motd
 	app.mu.RUnlock()
-	switch envFlag {
-	case "gcp":
+	switch {
+	case os.Getenv("GAE_ENV") == "standard":
+		data.Env = "GAE"
+		data.BannerSrc = "/blob/gae.png"
+	case envFlag == "gcp":
 		data.Env = "GCP"
 		data.BannerSrc = "/blob/gcp.png"
-	case "aws":
+	case envFlag == "aws":
 		data.Env = "AWS"
 		data.BannerSrc = "/blob/aws.png"
-	case "local":
+	case envFlag == "local":
 		data.Env = "Local"
 		data.BannerSrc = "/blob/gophers.jpg"
 	}
