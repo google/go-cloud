@@ -294,7 +294,8 @@ func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 		// TODO(light): Distinguish 404.
 		// https://github.com/google/go-cloud/issues/2
 		log.Println("serve blob:", err)
-		http.Error(w, "blob read error", http.StatusInternalServerError)
+		msg := fmt.Sprintf("blob read error: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 	// TODO(light): Get content type from blob storage.
