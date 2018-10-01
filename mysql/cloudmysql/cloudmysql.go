@@ -19,7 +19,9 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
@@ -77,6 +79,26 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		DBName:               params.Database,
 	}
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
+}
+
+// OpenGAE opens a Cloud SQL database on Google App Engine (GAE) using the
+// environment variables $DB_USER, $DB_DATABASE, $DB_INSTANCE, and
+// $DB_PASSWORD.
+func OpenGAE(ctx context.Context, certSource proxy.CertSource) (*sql.DB, error) {
+	p := &Params{}
+	if p.User = os.Getenv("DB_USER"); p.User == "" {
+		return nil, errors.New("opening db connection on GAE: $DB_USER is undefined")
+	}
+	if p.Database = os.Getenv("DB_DATABASE"); p.Database == "" {
+		return nil, errors.New("opening db connection on GAE: $DB_DATABASE is undefined")
+	}
+	if p.Instance = os.Getenv("DB_INSTANCE"); p.Instance == "" {
+		return nil, errors.New("opening db connection on GAE: $DB_INSTANCE is undefined")
+	}
+	if p.Password = os.Getenv("DB_PASSWORD"); p.Password == "" {
+		return nil, errors.New("opening db connection on GAE: $DB_PASSWORD is undefined")
+	}
+	return Open(ctx, certSource, p)
 }
 
 var dialerCounter struct {
