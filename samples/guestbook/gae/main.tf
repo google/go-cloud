@@ -210,27 +210,10 @@ resource "google_storage_bucket_iam_member" "guestbook_server_view" {
   member = "serviceAccount:${google_service_account.server.email}"
 }
 
-resource "google_storage_bucket_object" "aws" {
+resource "google_storage_bucket_object" "gae" {
   bucket       = "${google_storage_bucket.guestbook.name}"
-  name         = "aws.png"
+  name         = "gae.png"
   content_type = "image/png"
-  source       = "${path.module}/../blobs/aws.png"
+  source       = "${path.module}/../blobs/gae.png"
   depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
 }
-
-resource "google_storage_bucket_object" "gcp" {
-  bucket       = "${google_storage_bucket.guestbook.name}"
-  name         = "gcp.png"
-  content_type = "image/png"
-  source       = "${path.module}/../blobs/gcp.png"
-  depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
-}
-
-resource "google_storage_bucket_object" "gophers" {
-  bucket       = "${google_storage_bucket.guestbook.name}"
-  name         = "gophers.jpg"
-  content_type = "image/jpeg"
-  source       = "${path.module}/../blobs/gophers.jpg"
-  depends_on   = ["google_storage_bucket_iam_member.guestbook_server_view"]
-}
-
