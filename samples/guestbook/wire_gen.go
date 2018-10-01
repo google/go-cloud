@@ -159,27 +159,22 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 func setupGAE(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
-	roundTripper := gcp.DefaultTransport()
-	credentials, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
-	httpClient, err := gcp.NewHTTPClient(roundTripper, tokenSource)
-	if err != nil {
-		return nil, nil, err
-	}
-	remoteCertSource := cloudmysql.NewCertSource(httpClient)
-	db, err := cloudmysql.OpenGAE(ctx, remoteCertSource)
+	db, err := cloudmysql.OpenGAE(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup := appHealthChecks(db)
+	credentials, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
+	tokenSource := gcp.CredentialsTokenSource(credentials)
 	exporter, err := sdserver.NewExporter(projectID, tokenSource)
 	if err != nil {
 		cleanup()
@@ -193,6 +188,12 @@ func setupGAE(ctx context.Context, flags *cliFlags) (*application, func(), error
 		DefaultSamplingPolicy: sampler,
 	}
 	server2 := server.New(options)
+	roundTripper := gcp.DefaultTransport()
+	httpClient, err := gcp.NewHTTPClient(roundTripper, tokenSource)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
 	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()

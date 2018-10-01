@@ -70,7 +70,6 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	}
 	dialerName := fmt.Sprintf("github.com/google/go-cloud/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
-
 	cfg := &mysql.Config{
 		AllowNativePasswords: true,
 		Net:                  dialerName,
@@ -85,31 +84,33 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 // OpenGAE opens a Cloud SQL database on Google App Engine (GAE) using the
 // environment variables $DB_USER, $DB_DATABASE, $DB_INSTANCE, and
 // $DB_PASSWORD.
-func OpenGAE(ctx context.Context, certSource proxy.CertSource) (*sql.DB, error) {
-	p := &Params{}
-	if p.User = os.Getenv("DB_USER"); p.User == "" {
+func OpenGAE(ctx context.Context) (*sql.DB, error) {
+	var user, pw, inst, db string
+	if user = os.Getenv("DB_USER"); user == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_USER is undefined")
 	}
-	if p.Database = os.Getenv("DB_DATABASE"); p.Database == "" {
+	if db = os.Getenv("DB_DATABASE"); db == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_DATABASE is undefined")
 	}
 
-	var instance string
-	if instance = os.Getenv("DB_INSTANCE"); instance == "" {
+	var instEnv string
+	if instEnv = os.Getenv("DB_INSTANCE"); instEnv == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_INSTANCE is undefined")
 	}
-	parts := strings.Split(instance, ":")
+	parts := strings.Split(instEnv, ":")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("opening db connection on GAE: $DB_INSTANCE is %q, want three fields separated by ':'", instance)
+		return nil, fmt.Errorf("opening db connection on GAE: $DB_INSTANCE is %q, want three fields separated by ':'", instEnv)
 	}
-	p.ProjectID = parts[0]
-	p.Region = parts[1]
-	p.Instance = parts[2]
+	// project id is parts[0]
+	// region is parts[1]
+	inst = parts[2]
 
-	if p.Password = os.Getenv("DB_PASSWORD"); p.Password == "" {
+	if pw = os.Getenv("DB_PASSWORD"); pw == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_PASSWORD is undefined")
 	}
-	return Open(ctx, certSource, p)
+
+	dsn := fmt.Sprintf("%s:%s@unix(/cloudsql/%s)/%s", user, pw, inst, db)
+	return sql.OpenDB(connector(dsn)), nil
 }
 
 var dialerCounter struct {
