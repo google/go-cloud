@@ -37,3 +37,17 @@ var Services = wire.NewSet(
 	gcp.NewHTTPClient,
 	runtimeconfigurator.Set,
 	sdserver.Set)
+
+// GAE is a Wire provider set, similar to the GCP Wire provider
+// set except that GAEServices is used instead of Services.
+var GAE = wire.NewSet(GAEServices, gcp.DefaultIdentity)
+
+// GAEServices is a Wire provider set, similar to Services
+// except that cloudmysql.OpenGAE is used instead of cloudmysql.Open.
+var GAEServices = wire.NewSet(
+	cloudmysql.CertSourceSet,
+	cloudmysql.OpenGAE,
+	gcp.DefaultTransport,
+	gcp.NewHTTPClient,
+	runtimeconfigurator.Set,
+	sdserver.Set)

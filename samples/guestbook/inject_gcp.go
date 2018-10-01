@@ -48,6 +48,19 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	return nil, nil, nil
 }
 
+// setupGAE is a Wire injector function that sets up the application using GAE.
+func setupGAE(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	// This will be filled in by Wire with providers from the provider sets in
+	// wire.Build.
+	wire.Build(
+		gcpcloud.GAE,
+		applicationSet,
+		gcpBucket,
+		gcpMOTDVar,
+	)
+	return nil, nil, nil
+}
+
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
 func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, error) {
