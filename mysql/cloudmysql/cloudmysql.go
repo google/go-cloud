@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
@@ -92,19 +91,9 @@ func OpenGAE(ctx context.Context) (*sql.DB, error) {
 	if db = os.Getenv("DB_DATABASE"); db == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_DATABASE is undefined")
 	}
-
-	var instEnv string
-	if instEnv = os.Getenv("DB_INSTANCE"); instEnv == "" {
+	if inst = os.Getenv("DB_INSTANCE"); inst == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_INSTANCE is undefined")
 	}
-	parts := strings.Split(instEnv, ":")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("opening db connection on GAE: $DB_INSTANCE is %q, want three fields separated by ':'", instEnv)
-	}
-	// project id is parts[0]
-	// region is parts[1]
-	inst = parts[2]
-
 	if pw = os.Getenv("DB_PASSWORD"); pw == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_PASSWORD is undefined")
 	}
