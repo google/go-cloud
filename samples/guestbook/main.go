@@ -21,10 +21,12 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -75,15 +77,18 @@ func main() {
 	var app *application
 	var cleanup func()
 	var err error
-	switch envFlag {
-	case "gcp":
+
+	switch {
+	case os.Getenv("GAE_ENV") == "standard":
+		app, cleanup, err = setupGAE(ctx, cf)
+	case envFlag == "gcp":
 		app, cleanup, err = setupGCP(ctx, cf)
-	case "aws":
+	case envFlag == "aws":
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
 		app, cleanup, err = setupAWS(ctx, cf)
-	case "local":
+	case envFlag == "local":
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
 		}
@@ -188,7 +193,8 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	q, err := app.db.QueryContext(r.Context(), query)
 	if err != nil {
 		log.Println("main page SQL error:", err)
-		http.Error(w, "could not load greetings", http.StatusInternalServerError)
+		msg := fmt.Sprintf("could not load greetings: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 	defer q.Close()
