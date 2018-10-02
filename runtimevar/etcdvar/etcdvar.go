@@ -39,7 +39,6 @@ func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runti
 	w := &watcher{
 		// See struct comments for why it's buffered.
 		ch:       make(chan *state, 1),
-		closeCh:  make(chan struct{}),
 		shutdown: cancel,
 	}
 	go w.watch(ctx, cli, name, decoder)
@@ -69,10 +68,8 @@ type watcher struct {
 	// blocking; it always drains the buffer before writing so that the latest
 	// write is buffered. If writes could block, the background goroutine could be
 	// blocked indefinitely from reading etcd's Watch events.
+	// The background goroutine closes ch during shutdown.
 	ch chan *state
-	// closeCh is used to signal when the background goroutine has exited
-	// during shutdown.
-	closeCh chan struct{}
 	// shutdown tells the background goroutine to exit.
 	shutdown func()
 }
@@ -121,10 +118,10 @@ func (w *watcher) updateState(s, prev *state) *state {
 
 // watch is run by a background goroutine.
 // It watches file using cli.Watch, and writes new states to w.ch.
-// It exits when ctx is canceled, and closes w.closeCh.
+// It exits when ctx is canceled, and closes w.ch.
 func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, decoder *runtimevar.Decoder) {
 	var cur *state
-	defer close(w.closeCh)
+	defer close(w.ch)
 
 	watchCh := cli.Watch(ctx, name)
 	for {
@@ -160,8 +157,7 @@ func (w *watcher) Close() error {
 	// Tell the background goroutine to shut down by canceling its ctx.
 	w.shutdown()
 	// Wait for it to exit.
-	<-w.closeCh
-	// Cleanup our channels.
-	close(w.ch)
+	for _ = range w.ch {
+	}
 	return nil
 }
