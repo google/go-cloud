@@ -114,6 +114,17 @@ resource "random_string" "db_password" {
   length  = 20
 }
 
+resource "random_string" "db_guestbook_password" {
+  keepers = {
+    project = "${var.project}"
+    db_name = "${local.sql_instance}"
+    region  = "${var.region}"
+  }
+
+  special = false
+  length  = 20
+}
+
 resource "google_sql_user" "root" {
   name     = "root"
   instance = "${google_sql_database_instance.guestbook.name}"
@@ -124,6 +135,7 @@ resource "google_sql_user" "guestbook" {
   name     = "guestbook"
   instance = "${google_sql_database_instance.guestbook.name}"
   host     = "cloudsqlproxy~%"
+  password = "${random_string.db_guestbook_password.result}"
 }
 
 resource "google_service_account" "db_access" {

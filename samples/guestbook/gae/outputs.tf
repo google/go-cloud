@@ -43,6 +43,12 @@ output "database_root_password" {
   description = "The Cloud SQL instance password for root."
 }
 
+output "database_guestbook_password" {
+  value       = "${random_string.db_guestbook_password.result}"
+  sensitive   = true
+  description = "The Cloud SQL instance password for the guestbook user."
+}
+
 output "database_region" {
   value       = "${var.region}"
   description = "The Cloud SQL instance region."
