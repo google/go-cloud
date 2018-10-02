@@ -51,7 +51,7 @@ func deploy() error {
 		MotdVarConfig    tfItem `json:"motd_var_config"`
 		MotdVarName      tfItem `json:"motd_var_name"`
 	}
-	tfStateb, err := runb("terraform", "output", "-state", "gae/terraform/tfstate", "-json")
+	tfStateb, err := runb("terraform", "output", "-state", "gae/terraform.tfstate", "-json")
 	if err != nil {
 		return err
 	}
