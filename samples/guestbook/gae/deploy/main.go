@@ -13,12 +13,12 @@
 // limitations under the License.
 
 // The deploy program deploys the Guestbook app to GAE.
+// It is meant to be run from the go-cloud-samples/guestbook directory.
 package main
 
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -31,15 +31,12 @@ import (
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("gae/deploy: ")
-	guestbookDir := flag.String("guestbook_dir", ".", "directory containing the guestbook example")
-	tfStatePath := flag.String("tfstate", "terraform.tfstate", "path to terraform state file")
-	flag.Parse()
-	if err := deploy(*guestbookDir, *tfStatePath); err != nil {
+	if err := deploy(); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func deploy(guestbookDir, tfStatePath string) error {
+func deploy() error {
 	// Extract some info from the tfstate file.
 	type tfItem struct {
 		Sensitive bool
@@ -47,30 +44,31 @@ func deploy(guestbookDir, tfStatePath string) error {
 		Value     string
 	}
 	type state struct {
-		Project          tfItem
-		Bucket           tfItem
+		Project          tfItem `json:"project"`
+		Bucket           tfItem `json:"bucket"`
 		DatabaseInstance tfItem `json:"database_instance"`
 		DatabaseRegion   tfItem `json:"database_region"`
 		MotdVarConfig    tfItem `json:"motd_var_config"`
 		MotdVarName      tfItem `json:"motd_var_name"`
 	}
-	tfStateb, err := runb("terraform", "output", "-state", tfStatePath, "-json")
+	tfStateb, err := runb("terraform", "output", "-state", "gae/terraform/tfstate", "-json")
 	if err != nil {
 		return err
 	}
-	var tfState state
-	if err := json.Unmarshal(tfStateb, &tfState); err != nil {
+	var s state
+	if err := json.Unmarshal(tfStateb, &s); err != nil {
 		return fmt.Errorf("parsing terraform state JSON: %v", err)
 	}
 
 	// Fill out the params for app.yaml.
 	var p Params
-	p.Instance = fmt.Sprintf("%s:%s:%s", state.Project.Value, state.DatabaseRegion.Value, state.DatabaseInstance.Value)
+	p.Instance = fmt.Sprintf("%s:%s:%s", s.Project.Value, s.DatabaseRegion.Value, s.DatabaseInstance.Value)
 	p.Password = fmt.Sprintf("%d", rand.Int())
-	if err = setDbPassword(p.Password); err != nil {
+	user := "guestbook"
+	if err = setDbPassword(s.DatabaseInstance.Value, user, p.Password); err != nil {
 		return err
 	}
-	p.Bucket = state.Bucket.Value
+	p.Bucket = s.Bucket.Value
 
 	// Write the app.yaml configuration file.
 	t, err := template.New("appyaml").Parse(appYAML)
@@ -139,19 +137,21 @@ func runb(args ...string) (stdout []byte, err error) {
 	return stdoutb, nil
 }
 
-func setDbPassword(pw string) error {
+func setDbPassword(instance, user, pw string) error {
+	_, err := run("gcloud", "sql", "users", "set-password", "--instance", instance, "--password", pw)
+	return err
+}
+
+// getSQLInstance gets the only SQL instance, or returns an error.
+func getSQLInstance() (string, error) {
 	instances, err := getSQLInstances()
 	if err != nil {
-		return fmt.Errorf("getting GCP SQL instances: %v", err)
+		return "", fmt.Errorf("getting GCP SQL instances: %v", err)
 	}
 	if len(instances) != 1 {
-		return fmt.Errorf("got %d instances, want exactly one", len(instances))
+		return "", fmt.Errorf("got %d instances, want exactly one", len(instances))
 	}
-	user := "guestbook"
-	if err := setPassword(instance, user, pw); err != nil {
-		return fmt.Errorf("setting guestbook db user password: %v", err)
-	}
-	return nil
+	return instances[0], nil
 }
 
 func getSQLInstances() ([]string, error) {
