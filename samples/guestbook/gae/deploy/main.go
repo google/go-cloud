@@ -104,18 +104,6 @@ env_variables:
 
 `
 
-type gcloud struct {
-	projectID string
-}
-
-func (gcp *gcloud) cmd(args ...string) *exec.Cmd {
-	args = append([]string{"--quiet", "--project", gcp.projectID}, args...)
-	cmd := exec.Command("gcloud", args...)
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	cmd.Stderr = os.Stderr
-	return cmd
-}
-
 func run(args ...string) (stdout string, err error) {
 	stdoutb, err := runb(args...)
 	return strings.TrimSpace(string(stdoutb)), err
