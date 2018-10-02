@@ -493,6 +493,12 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			wantErr:  true,
 		},
 		{
+			name:     "duplicate case-insensitive key fails",
+			content:  hello,
+			metadata: map[string]string{"abc": "foo", "aBc": "bar"},
+			wantErr:  true,
+		},
+		{
 			name:    "valid metadata",
 			content: hello,
 			metadata: map[string]string{
