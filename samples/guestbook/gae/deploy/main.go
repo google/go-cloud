@@ -18,7 +18,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -140,37 +139,4 @@ func runb(args ...string) (stdout []byte, err error) {
 func setDbPassword(instance, user, pw string) error {
 	_, err := run("gcloud", "sql", "users", "set-password", user, "--instance", instance, "--password", pw)
 	return err
-}
-
-// getSQLInstance gets the only SQL instance, or returns an error.
-func getSQLInstance() (string, error) {
-	instances, err := getSQLInstances()
-	if err != nil {
-		return "", fmt.Errorf("getting GCP SQL instances: %v", err)
-	}
-	if len(instances) != 1 {
-		return "", fmt.Errorf("got %d instances, want exactly one", len(instances))
-	}
-	return instances[0], nil
-}
-
-func getSQLInstances() ([]string, error) {
-	out, err := run("gcloud", "sql", "instances", "list")
-	if err != nil {
-		return nil, fmt.Errorf("calling gcloud sql instances list: %v", err)
-	}
-	lines := strings.Split(out, "\n")
-	if len(lines) == 0 {
-		return nil, errors.New("no lines returned from gcloud sql instances list")
-	}
-	var insts []string
-	for _, l := range lines[1:] {
-		parts := strings.Split(l, " ")
-		if len(parts) == 0 {
-			break
-		}
-		inst := parts[0]
-		insts = append(insts, inst)
-	}
-	return insts, nil
 }
