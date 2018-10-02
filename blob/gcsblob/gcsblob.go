@@ -85,6 +85,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	return driver.Attributes{
 		ContentType: attrs.ContentType,
+		Metadata:    attrs.Metadata,
 		ModTime:     attrs.Updated,
 		Size:        attrs.Size,
 	}, nil
@@ -120,6 +121,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	w.ContentType = contentType
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
+		w.Metadata = opts.Metadata
 	}
 	return w, nil
 }

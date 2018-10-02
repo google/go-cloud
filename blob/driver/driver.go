@@ -58,6 +58,9 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
+	// Metadata holds key/value strings to be associated with the blob.
+	// Keys are guaranteed to be non-empty and lowercased.
+	Metadata map[string]string
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
@@ -76,6 +79,12 @@ type ReaderAttributes struct {
 type Attributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
+	// Metadata holds key/value pairs associated with the blob.
+	// Keys will be lowercased by the concrete type before being returned
+	// to the user. If there are duplicate case-insensitive keys (e.g.,
+	// "foo" and "FOO"), only one value will be kept, and it is undefined
+	// which one.
+	Metadata map[string]string
 	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
 	// Size is the size of the object in bytes.
