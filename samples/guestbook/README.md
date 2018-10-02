@@ -99,6 +99,11 @@ gcloud auth application-default login
 cd gae
 terraform init
 terraform apply
+cd ..
+go run gae/deploy/main.go
+```
+
+```shell
 gcloud app deploy
 ```
 
