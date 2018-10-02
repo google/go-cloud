@@ -138,7 +138,7 @@ func runb(args ...string) (stdout []byte, err error) {
 }
 
 func setDbPassword(instance, user, pw string) error {
-	_, err := run("gcloud", "sql", "users", "set-password", "--instance", instance, "--password", pw)
+	_, err := run("gcloud", "sql", "users", "set-password", user, "--instance", instance, "--password", pw)
 	return err
 }
 
