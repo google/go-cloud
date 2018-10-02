@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"os/exec"
 	"strings"
@@ -43,12 +42,13 @@ func deploy() error {
 		Value     string
 	}
 	type state struct {
-		Project          tfItem `json:"project"`
-		Bucket           tfItem `json:"bucket"`
-		DatabaseInstance tfItem `json:"database_instance"`
-		DatabaseRegion   tfItem `json:"database_region"`
-		MotdVarConfig    tfItem `json:"motd_var_config"`
-		MotdVarName      tfItem `json:"motd_var_name"`
+		Project             tfItem `json:"project"`
+		Bucket              tfItem `json:"bucket"`
+		DBInstance          tfItem `json:"database_instance"`
+		DBRegion            tfItem `json:"database_region"`
+		DBGuestbookPassword tfItem `json:"database_guestbook_password"`
+		MotdVarConfig       tfItem `json:"motd_var_config"`
+		MotdVarName         tfItem `json:"motd_var_name"`
 	}
 	tfStateb, err := runb("terraform", "output", "-state", "gae/terraform.tfstate", "-json")
 	if err != nil {
@@ -61,12 +61,8 @@ func deploy() error {
 
 	// Fill out the params for app.yaml.
 	var p Params
-	p.Instance = fmt.Sprintf("%s:%s:%s", s.Project.Value, s.DatabaseRegion.Value, s.DatabaseInstance.Value)
-	p.Password = fmt.Sprintf("%d", rand.Int())
-	user := "guestbook"
-	if err = setDbPassword(s.DatabaseInstance.Value, user, p.Password); err != nil {
-		return err
-	}
+	p.Instance = fmt.Sprintf("%s:%s:%s", s.Project.Value, s.DBRegion.Value, s.DBInstance.Value)
+	p.Password = s.DBGuestbookPassword.Value
 	p.Bucket = s.Bucket.Value
 
 	// Write the app.yaml configuration file.
@@ -134,9 +130,4 @@ func runb(args ...string) (stdout []byte, err error) {
 		return nil, fmt.Errorf("running %v: %v", cmd.Args, err)
 	}
 	return stdoutb, nil
-}
-
-func setDbPassword(instance, user, pw string) error {
-	_, err := run("gcloud", "sql", "users", "set-password", user, "--instance", instance, "--password", pw)
-	return err
 }

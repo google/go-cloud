@@ -96,6 +96,7 @@ the gcloud SDK, and log in.
 ``` shell
 gcloud auth login
 gcloud auth application-default login
+gcloud app create
 cd gae
 terraform init
 terraform apply

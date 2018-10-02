@@ -107,6 +107,10 @@ func main() {
 	}
 	defer cleanup()
 
+	if cf.bucket == "" {
+		log.Fatal("bucket name is empty")
+	}
+
 	// Set up URL routes.
 	r := mux.NewRouter()
 	r.HandleFunc("/", app.index)
