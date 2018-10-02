@@ -8,10 +8,6 @@ package main
 import (
 	context "context"
 	sql "database/sql"
-	"log"
-	http "net/http"
-	"strings"
-
 	client "github.com/aws/aws-sdk-go/aws/client"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	mysql "github.com/go-sql-driver/mysql"
@@ -31,6 +27,7 @@ import (
 	sdserver "github.com/google/go-cloud/server/sdserver"
 	xrayserver "github.com/google/go-cloud/server/xrayserver"
 	trace "go.opencensus.io/trace"
+	http "net/http"
 )
 
 // Injectors from inject_aws.go:
@@ -286,10 +283,6 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 // inject_gcp.go:
 
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	b := flags.bucket
-	if strings.TrimSpace(b) == "" {
-		log.Fatal("gcpBucket: bucket name is empty")
-	}
 	return gcsblob.OpenBucket(ctx, flags.bucket, client2)
 }
 
