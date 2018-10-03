@@ -114,7 +114,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, err := cloudmysql.Open(remoteCertSource, params)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -159,7 +159,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 func setupGAE(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
-	db, err := cloudmysql.OpenGAE(ctx)
+	db, err := cloudmysql.OpenGAE()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -58,7 +58,7 @@ type Params struct {
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+func Open(certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -83,7 +83,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 // OpenGAE opens a Cloud SQL database on Google App Engine (GAE) using the
 // environment variables $DB_USER, $DB_DATABASE, $DB_INSTANCE, and
 // $DB_PASSWORD.
-func OpenGAE(ctx context.Context) (*sql.DB, error) {
+func OpenGAE() (*sql.DB, error) {
 	var user, pw, inst, db string
 	if user = os.Getenv("DB_USER"); user == "" {
 		return nil, errors.New("opening db connection on GAE: $DB_USER is undefined")
