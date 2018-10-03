@@ -104,11 +104,7 @@ cd ..
 go run gae/deploy/main.go
 ```
 
-```shell
-gcloud app deploy
-```
-
-The `gcloud app deploy` command will display the URL of your running app.
+The `gae/deploy/main.go` command will display the URL of your running app.
 
 ### Cleanup
 To clean up the created resources, run `terraform destroy` inside the `gae`
