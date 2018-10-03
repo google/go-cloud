@@ -193,7 +193,11 @@ func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
 				if !ok {
 					continue
 				}
-				buildCall := isInjector(&pkgInfo.Info, fn)
+				buildCall, err := findInjectorBuild(&pkgInfo.Info, fn)
+				if err != nil {
+					ec.add(notePosition(prog.Fset.Position(fn.Pos()), fmt.Errorf("inject %s: %v", fn.Name.Name, err)))
+					continue
+				}
 				if buildCall == nil {
 					continue
 				}
@@ -676,22 +680,23 @@ func processBind(fset *token.FileSet, info *types.Info, call *ast.CallExpr) (*If
 	ifaceArgType := info.TypeOf(call.Args[0])
 	ifacePtr, ok := ifaceArgType.(*types.Pointer)
 	if !ok {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to Bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
 	}
-	methodSet, ok := ifacePtr.Elem().Underlying().(*types.Interface)
+	iface := ifacePtr.Elem()
+	methodSet, ok := iface.Underlying().(*types.Interface)
 	if !ok {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("first argument to Bind must be a pointer to an interface type; found %s", types.TypeString(ifaceArgType, nil)))
 	}
 	provided := info.TypeOf(call.Args[1])
-	if types.Identical(ifacePtr.Elem(), provided) {
+	if types.Identical(iface, provided) {
 		return nil, notePosition(fset.Position(call.Pos()), errors.New("cannot bind interface to itself"))
 	}
 	if !types.Implements(provided, methodSet) {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(ifaceArgType, nil)))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(iface, nil)))
 	}
 	return &IfaceBinding{
 		Pos:      call.Pos(),
-		Iface:    ifacePtr.Elem(),
+		Iface:    iface,
 		Provided: provided,
 	}, nil
 }
@@ -760,7 +765,7 @@ func processInterfaceValue(fset *token.FileSet, info *types.Info, call *ast.Call
 	}
 	provided := info.TypeOf(call.Args[1])
 	if !types.Implements(provided, methodSet) {
-		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(ifaceArgType, nil)))
+		return nil, notePosition(fset.Position(call.Pos()), fmt.Errorf("%s does not implement %s", types.TypeString(provided, nil), types.TypeString(iface, nil)))
 	}
 	return &Value{
 		Pos:  call.Args[1].Pos(),
@@ -770,53 +775,59 @@ func processInterfaceValue(fset *token.FileSet, info *types.Info, call *ast.Call
 	}, nil
 }
 
-// isInjector checks whether a given function declaration is an
-// injector template, returning the wire.Build call. It returns nil if
-// the function is not an injector template.
-func isInjector(info *types.Info, fn *ast.FuncDecl) *ast.CallExpr {
+// findInjectorBuild returns the wire.Build call if fn is an injector template.
+// It returns nil if the function is not an injector template.
+func findInjectorBuild(info *types.Info, fn *ast.FuncDecl) (*ast.CallExpr, error) {
 	if fn.Body == nil {
-		return nil
+		return nil, nil
 	}
-	var only *ast.ExprStmt
+	numStatements := 0
+	invalid := false
+	var wireBuildCall *ast.CallExpr
 	for _, stmt := range fn.Body.List {
 		switch stmt := stmt.(type) {
 		case *ast.ExprStmt:
-			if only != nil {
-				return nil
+			numStatements++
+			if numStatements > 1 {
+				invalid = true
 			}
-			only = stmt
+			call, ok := stmt.X.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			if qualifiedIdentObject(info, call.Fun) == types.Universe.Lookup("panic") {
+				if len(call.Args) != 1 {
+					continue
+				}
+				call, ok = call.Args[0].(*ast.CallExpr)
+				if !ok {
+					continue
+				}
+			}
+			buildObj := qualifiedIdentObject(info, call.Fun)
+			if buildObj == nil || buildObj.Pkg() == nil || !isWireImport(buildObj.Pkg().Path()) || buildObj.Name() != "Build" {
+				continue
+			}
+			wireBuildCall = call
 		case *ast.EmptyStmt:
 			// Do nothing.
 		case *ast.ReturnStmt:
 			// Allow the function to end in a return.
-			if only == nil {
-				return nil
+			if numStatements == 0 {
+				return nil, nil
 			}
 		default:
-			return nil
+			invalid = true
 		}
+
 	}
-	if only == nil {
-		return nil
+	if wireBuildCall == nil {
+		return nil, nil
 	}
-	call, ok := only.X.(*ast.CallExpr)
-	if !ok {
-		return nil
+	if invalid {
+		return nil, errors.New("a call to wire.Build indicates that this function is an injector, but injectors must consist of only the wire.Build call and an optional return")
 	}
-	if qualifiedIdentObject(info, call.Fun) == types.Universe.Lookup("panic") {
-		if len(call.Args) != 1 {
-			return nil
-		}
-		call, ok = call.Args[0].(*ast.CallExpr)
-		if !ok {
-			return nil
-		}
-	}
-	buildObj := qualifiedIdentObject(info, call.Fun)
-	if buildObj == nil || buildObj.Pkg() == nil || !isWireImport(buildObj.Pkg().Path()) || buildObj.Name() != "Build" {
-		return nil
-	}
-	return call
+	return wireBuildCall, nil
 }
 
 func isWireImport(path string) bool {

@@ -42,10 +42,9 @@ type Error interface {
 type Reader interface {
 	io.ReadCloser
 
-	// Attrs returns the object's metadata. It may return a different pointer each
-	// time, but it must return the exact same values each time it is called. The
-	// caller must not modify any fields in the returned ObjectAttrs.
-	Attrs() *ObjectAttrs
+	// Attributes returns a subset of attributes about the blob.
+	// Use Bucket.Attributes to get the full set.
+	Attributes() ReaderAttributes
 }
 
 // Writer writes an object to the blob.
@@ -59,26 +58,52 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
+	// Metadata holds key/value strings to be associated with the blob.
+	// Keys are guaranteed to be non-empty and lowercased.
+	Metadata map[string]string
 }
 
-// ObjectAttrs contains metadata of an object.
-type ObjectAttrs struct {
-	// Size is the size of the object in bytes.
-	Size int64
+// ReaderAttributes contains a subset of attributes about a blob that are
+// accessible from Reader. Use Bucket.Attributes to get the full set of
+// attributes.
+type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
-	// ModTime is the modified time of the blob object. Will be time.Time zero value if unknown.
+	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
+}
+
+// Attributes contains attributes about a blob.
+type Attributes struct {
+	// ContentType is the MIME type of the blob object. It must not be empty.
+	ContentType string
+	// Metadata holds key/value pairs associated with the blob.
+	// Keys will be lowercased by the concrete type before being returned
+	// to the user. If there are duplicate case-insensitive keys (e.g.,
+	// "foo" and "FOO"), only one value will be kept, and it is undefined
+	// which one.
+	Metadata map[string]string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
+	// Attributes returns attributes for the blob. If the specified object does
+	// not exist, Attributes must return an error whose BlobError method returns
+	// NotFound.
+	Attributes(ctx context.Context, key string) (Attributes, error)
+
 	// NewRangeReader returns a Reader that reads part of an object, reading at
-	// most length bytes starting at the given offset. If length is 0, it will read
-	// only the metadata. If length is negative, it will read till the end of the
-	// object. If the specified object does not exist, NewRangeReader must return
-	// an error whose BlobError method returns NotFound.
+	// most length bytes starting at the given offset. If length is negative, it
+	// will read till the end of the object. If the specified object does not
+	// exist, NewRangeReader must return an error whose BlobError method returns
+	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewTypedWriter returns Writer that writes to an object associated with key.

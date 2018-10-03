@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
-	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -56,10 +55,8 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads a GCS object. It implements io.ReadCloser.
 type reader struct {
-	body        io.ReadCloser
-	size        int64
-	contentType string
-	updated     time.Time
+	body  io.ReadCloser
+	attrs driver.ReaderAttributes
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -71,38 +68,33 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attrs() *driver.ObjectAttrs {
-	return &driver.ObjectAttrs{
-		Size:        r.size,
-		ContentType: r.contentType,
-		ModTime:     r.updated,
-	}
+func (r *reader) Attributes() driver.ReaderAttributes {
+	return r.attrs
 }
 
-// NewRangeReader returns a Reader that reads part of an object, reading at most
-// length bytes starting at the given offset. If length is 0, it will read only
-// the metadata. If length is negative, it will read till the end of the object.
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
-	if offset < 0 {
-		return nil, fmt.Errorf("negative offset %d", offset)
-	}
+// Attributes implements driver.Attributes.
+func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	if length == 0 {
-		attrs, err := obj.Attrs(ctx)
-		if err != nil {
-			if isErrNotExist(err) {
-				return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-			}
-			return nil, err
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		if isErrNotExist(err) {
+			return driver.Attributes{}, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 		}
-		return &reader{
-			body:        emptyBody,
-			size:        attrs.Size,
-			contentType: attrs.ContentType,
-			updated:     attrs.Updated,
-		}, nil
+		return driver.Attributes{}, err
 	}
+	return driver.Attributes{
+		ContentType: attrs.ContentType,
+		Metadata:    attrs.Metadata,
+		ModTime:     attrs.Updated,
+		Size:        attrs.Size,
+	}, nil
+}
+
+// NewRangeReader implements driver.NewRangeReader.
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	bkt := b.client.Bucket(b.name)
+	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if err != nil {
 		if isErrNotExist(err) {
@@ -110,26 +102,18 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 		return nil, err
 	}
-	// updated is set to zero value when non-nil error returned, no need to check or report.
-	updated, _ := r.LastModified()
+	modTime, _ := r.LastModified()
 	return &reader{
-		body:        r,
-		size:        r.Size(),
-		contentType: r.ContentType(),
-		updated:     updated,
+		body: r,
+		attrs: driver.ReaderAttributes{
+			ContentType: r.ContentType(),
+			ModTime:     modTime,
+			Size:        r.Size(),
+		},
 	}, nil
 }
 
-// NewTypedWriter returns Writer that writes to an object associated with key.
-//
-// A new object will be created unless an object with this key already exists.
-// Otherwise any previous object with the same name will be replaced.
-// The object will not be available (and any previous object will remain)
-// until Close has been called.
-//
-// A WriterOptions can be given to change the default behavior of the Writer.
-//
-// The caller must call Close on the returned Writer when done writing.
+// NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
@@ -137,12 +121,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	w.ContentType = contentType
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
+		w.Metadata = opts.Metadata
 	}
 	return w, nil
 }
 
-// Delete deletes the object associated with key. It is a no-op if that object
-// does not exist.
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)

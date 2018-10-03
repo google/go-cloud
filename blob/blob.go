@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -46,18 +48,34 @@ func (r *Reader) Close() error {
 
 // ContentType returns the MIME type of the blob object.
 func (r *Reader) ContentType() string {
-	return r.r.Attrs().ContentType
+	return r.r.Attributes().ContentType
+}
+
+// ModTime is the time the blob object was last modified.
+func (r *Reader) ModTime() time.Time {
+	return r.r.Attributes().ModTime
 }
 
 // Size returns the content size of the blob object.
 func (r *Reader) Size() int64 {
-	return r.r.Attrs().Size
+	return r.r.Attributes().Size
 }
 
-// ModTime returns the modification time of the blob object.
-// This is optional and will be time.Time zero value if unknown.
-func (r *Reader) ModTime() time.Time {
-	return r.r.Attrs().ModTime
+// Attributes contains attributes about a blob.
+type Attributes struct {
+	// ContentType is the MIME type of the blob object. It will not be empty.
+	ContentType string
+	// Metadata holds key/value pairs associated with the blob.
+	// Keys are guaranteed to be in lowercase, even if the backend provider
+	// has case-sensitive keys (although note that Metadata written via
+	// this package will always be lowercased). If there are duplicate
+	// case-insensitive keys (e.g., "foo" and "FOO"), only one value
+	// will be kept, and it is undefined which one.
+	Metadata map[string]string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
@@ -157,6 +175,30 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+// Attributes reads attributes for the given key.
+func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error) {
+	a, err := b.b.Attributes(ctx, key)
+	if err != nil {
+		return Attributes{}, err
+	}
+	var md map[string]string
+	if len(a.Metadata) > 0 {
+		// Providers are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md = make(map[string]string, len(a.Metadata))
+		for k, v := range a.Metadata {
+			md[strings.ToLower(k)] = v
+		}
+	}
+	return Attributes{
+		ContentType: a.ContentType,
+		Metadata:    md,
+		ModTime:     a.ModTime,
+		Size:        a.Size,
+	}, nil
+}
+
 // NewReader returns a Reader to read from an object, or an error when the object
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
@@ -166,15 +208,21 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 }
 
 // NewRangeReader returns a Reader that reads part of an object, reading at
-// most length bytes starting at the given offset. If length is 0, it will read
-// only the metadata. If length is negative, it will read till the end of the
-// object. It returns an error if that object does not exist, which can be
-// checked by calling IsNotExist.
+// most length bytes starting at the given offset. If length is negative, it
+// will read till the end of the object. offset must be >= 0, and length cannot
+// be 0.
+//
+// NewRangeReader returns an error if the object does not exist, which can be
+// checked by calling IsNotExist. Attributes() is a lighter-weight way to check
+// for existence.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("new blob range reader: offset must be non-negative")
+	}
+	if length == 0 {
+		return nil, errors.New("new blob range reader: length cannot be 0")
 	}
 	r, err := b.b.NewRangeReader(ctx, key, offset, length)
 	return &Reader{r: r}, newBlobError(err)
@@ -221,6 +269,23 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
 			return &Writer{w: w}, err
 		}
+		if len(opt.Metadata) > 0 {
+			// Providers are inconsistent, but at least some treat keys
+			// as case-insensitive. To make the behavior consistent, we
+			// force-lowercase them when writing and reading.
+			md := make(map[string]string, len(opt.Metadata))
+			for k, v := range opt.Metadata {
+				if k == "" {
+					return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
+				}
+				lowerK := strings.ToLower(k)
+				if _, found := md[lowerK]; found {
+					return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
+				}
+				md[lowerK] = v
+			}
+			dopt.Metadata = md
+		}
 	}
 	return &Writer{
 		ctx:    ctx,
@@ -256,6 +321,11 @@ type WriterOptions struct {
 	// then it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
+
+	// Metadata are key/value strings to be associated with the blob, or nil.
+	// Keys may not be empty, and are lowercased before being written.
+	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
+	Metadata map[string]string
 }
 
 type blobError struct {
