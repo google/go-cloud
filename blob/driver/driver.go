@@ -38,13 +38,20 @@ type Error interface {
 	BlobError() ErrorKind
 }
 
+// NoAs can be used as an As function that always returns false.
+var NoAs = func(interface{}) bool { return false }
+
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
 
 	// Attributes returns a subset of attributes about the blob.
-	// Use Bucket.Attributes to get the full set.
 	Attributes() ReaderAttributes
+
+	// As allows providers to expose provider-specific types.
+	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more details.
+	As(interface{}) bool
 }
 
 // Writer writes an object to the blob.
@@ -61,11 +68,17 @@ type WriterOptions struct {
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
+	// Callback is a callback that must be called before any data is written. It
+	// should be called at most once. asFunc allows providers to expose
+	// provider-specific types.
+	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more details.
+	// Pass NoAs to indicate no provider-specific types are supported.
+	Callback func(asFunc func(interface{}) bool) error
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
-// accessible from Reader. Use Bucket.Attributes to get the full set of
-// attributes.
+// accessible from Reader.
 type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
@@ -89,11 +102,21 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// AsFunc allows providers to expose provider-specific types.
+	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more details.
+	// Defaults to NoAs, meaning no provider-specific types are supported.
+	AsFunc func(interface{}) bool
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
+	// As allows providers to expose provider-specific types.
+	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more details.
+	As(i interface{}) bool
+
 	// Attributes returns attributes for the blob. If the specified object does
 	// not exist, Attributes must return an error whose BlobError method returns
 	// NotFound.

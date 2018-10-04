@@ -14,6 +14,14 @@
 
 // Package gcsblob provides an implementation of using blob API on GCS.
 // It is a wrapper around GCS client library.
+//
+// It exposes the following escape hatch types (see
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+// for more details).
+// Bucket: *storage.Client
+// Reader: storage.Reader
+// Attributes: storage.ObjectAttrs
+// Writer: *storage.Writer
 package gcsblob
 
 import (
@@ -53,10 +61,11 @@ type bucket struct {
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
-// reader reads a GCS object. It implements io.ReadCloser.
+// reader reads a GCS object. It implements driver.Reader.
 type reader struct {
 	body  io.ReadCloser
 	attrs driver.ReaderAttributes
+	raw   *storage.Reader
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -70,6 +79,25 @@ func (r *reader) Close() error {
 
 func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
+}
+
+func (r *reader) As(i interface{}) bool {
+	p, ok := i.(*storage.Reader)
+	if !ok {
+		return false
+	}
+	*p = *r.raw
+	return true
+}
+
+// As implements driver.As.
+func (b *bucket) As(i interface{}) bool {
+	p, ok := i.(**storage.Client)
+	if !ok {
+		return false
+	}
+	*p = b.client
+	return true
 }
 
 // Attributes implements driver.Attributes.
@@ -88,6 +116,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    attrs.Metadata,
 		ModTime:     attrs.Updated,
 		Size:        attrs.Size,
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*storage.ObjectAttrs)
+			if !ok {
+				return false
+			}
+			*p = *attrs
+			return true
+		},
 	}, nil
 }
 
@@ -110,6 +146,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			ModTime:     modTime,
 			Size:        r.Size(),
 		},
+		raw: r,
 	}, nil
 }
 
@@ -122,6 +159,19 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
 		w.Metadata = opts.Metadata
+	}
+	if opts != nil && opts.Callback != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**storage.Writer)
+			if !ok {
+				return false
+			}
+			*p = w
+			return true
+		}
+		if err := opts.Callback(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	return w, nil
 }

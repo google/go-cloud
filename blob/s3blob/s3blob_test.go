@@ -16,9 +16,13 @@ package s3blob
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
@@ -55,5 +59,49 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, "../testdata")
+	drivertest.RunConformanceTests(t, newHarness, "../testdata", []drivertest.AsTest{verifyContentLanguage{}})
+}
+
+const language = "nl"
+
+type verifyContentLanguage struct{}
+
+func (verifyContentLanguage) Name() string {
+	return "verify ContentLanguage can be written and read through As"
+}
+
+func (verifyContentLanguage) BucketCheck(t *testing.T, b *blob.Bucket) {
+	var client *s3.S3
+	if !b.As(&client) {
+		t.Fatal("Bucket.As failed")
+	}
+}
+
+func (verifyContentLanguage) Write(as func(interface{}) bool) error {
+	var req *s3manager.UploadInput
+	if !as(&req) {
+		return errors.New("WriterAs failed")
+	}
+	req.ContentLanguage = aws.String(language)
+	return nil
+}
+
+func (verifyContentLanguage) AttributesCheck(t *testing.T, attrs *blob.Attributes) {
+	var hoo s3.HeadObjectOutput
+	if !attrs.As(&hoo) {
+		t.Fatal("Attributes.As returned false")
+	}
+	if got := *hoo.ContentLanguage; got != language {
+		t.Errorf("got %q want %q", got, language)
+	}
+}
+
+func (verifyContentLanguage) ReaderCheck(t *testing.T, r *blob.Reader) {
+	var goo s3.GetObjectOutput
+	if !r.As(&goo) {
+		t.Fatal("Reader.As returned false")
+	}
+	if got := *goo.ContentLanguage; got != language {
+		t.Errorf("got %q want %q", got, language)
+	}
 }

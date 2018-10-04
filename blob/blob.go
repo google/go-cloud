@@ -61,6 +61,14 @@ func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
 
+// As is an escape hatch for accessing provider-specific types.
+// See the provider documentation for which type(s) are supported, and
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+// for more details on escape hatches.
+func (r *Reader) As(i interface{}) bool {
+	return r.r.As(i)
+}
+
 // Attributes contains attributes about a blob.
 type Attributes struct {
 	// ContentType is the MIME type of the blob object. It will not be empty.
@@ -75,7 +83,19 @@ type Attributes struct {
 	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
 	// Size is the size of the object in bytes.
-	Size int64
+	Size   int64
+	asFunc func(interface{}) bool
+}
+
+// As is an escape hatch for accessing provider-specific types.
+// See the provider documentation for which type(s) are supported, and
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+// for more details on escape hatches.
+func (a *Attributes) As(i interface{}) bool {
+	if a.asFunc == nil {
+		return false
+	}
+	return a.asFunc(i)
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
@@ -165,6 +185,14 @@ func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
+// As is an escape hatch for accessing provider-specific types.
+// See the provider documentation for which type(s) are supported, and
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+// for more details on escape hatches.
+func (b *Bucket) As(i interface{}) bool {
+	return b.b.As(i)
+}
+
 // ReadAll is a shortcut for creating a Reader via NewReader and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	r, err := b.NewReader(ctx, key)
@@ -196,6 +224,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 		Metadata:    md,
 		ModTime:     a.ModTime,
 		Size:        a.Size,
+		asFunc:      a.AsFunc,
 	}, nil
 }
 
@@ -259,6 +288,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	if opt != nil {
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
+			Callback:   opt.Callback,
 		}
 		if opt.ContentType != "" {
 			t, p, err := mime.ParseMediaType(opt.ContentType)
@@ -326,6 +356,14 @@ type WriterOptions struct {
 	// Keys may not be empty, and are lowercased before being written.
 	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
 	Metadata map[string]string
+
+	// Callback is a callback that will be called at most once, before any data
+	// is written. asFunc can be used as an escape hatch for accessing
+	// provider-specific types.
+	// See the provider documentation for which type(s) are supported, and
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more details on escape hatches.
+	Callback func(asFunc func(interface{}) bool) error
 }
 
 type blobError struct {

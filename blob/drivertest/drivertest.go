@@ -19,6 +19,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -42,11 +43,67 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// AsTest represents a test of As functionality.
+// The conformance test:
+// 1. Calls BucketCheck.
+// 2. Creates a blob using Write as a WriterOption.
+// 3. Fetches the blob's attributes and calls AttributeCheck.
+// 4. Creates a Reader for the blob, and calls ReaderCheck.
+// For example, an AsTest might set a provider-specific field to a custom
+// value in Write, and then verify the custom value was returned in
+// AttributesCheck and/or ReaderCheck.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// BucketCheck will be called to allow verification of Bucket.As.
+	BucketCheck(t *testing.T, b *blob.Bucket)
+	// Write will be passed directly to WriterOptions as part of creating
+	// a test blob. Return an error to fail the test.
+	Write(as func(interface{}) bool) error
+	// AttributesCheck will called after fetching the test blob's attributes.
+	// It should call attrs.As and verify the results.
+	AttributesCheck(t *testing.T, attrs *blob.Attributes)
+	// ReaderCheck will be called after creating a blob.Reader.
+	// It should call r.As and verify the results.
+	ReaderCheck(t *testing.T, r *blob.Reader)
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) BucketCheck(t *testing.T, b *blob.Bucket) {
+	if b.As(nil) {
+		t.Fatal("want Bucket.As to return false when passed nil")
+	}
+}
+
+func (verifyAsFailsOnNil) Write(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Writer.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) AttributesCheck(t *testing.T, attrs *blob.Attributes) {
+	if attrs.As(nil) {
+		t.Fatal("want Attributes.As to return false when passed nil")
+	}
+}
+
+func (verifyAsFailsOnNil) ReaderCheck(t *testing.T, r *blob.Reader) {
+	if r.As(nil) {
+		t.Fatal("want Reader.As to return false when passed nil")
+	}
+}
+
 // RunConformanceTests runs conformance tests for provider implementations
 // of blob.
 // pathToTestdata is a (possibly relative) path to a directory containing
 // blob/testdata/* (e.g., test-small.txt).
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata string, asTests []AsTest) {
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -64,6 +121,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
+	})
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("TestAs", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				testAs(t, newHarness, st)
+			})
+		}
 	})
 }
 
@@ -615,4 +683,45 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete want IsNotExist error, got %v", err)
 		}
 	})
+}
+
+// testAs tests the various As functions, using AsTest.
+func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
+	const key = "as-test"
+	var content = []byte("hello world")
+	ctx := context.Background()
+
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	b, err := h.MakeBucket(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify Bucket.As.
+	st.BucketCheck(t, b)
+
+	// Create a blob, using the provided callback.
+	if err := b.WriteAll(ctx, key, content, &blob.WriterOptions{Callback: st.Write}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Delete(ctx, key) }()
+
+	// Verify Attributes.As.
+	attrs, err := b.Attributes(ctx, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.AttributesCheck(t, &attrs)
+
+	// Verify Reader.As.
+	r, err := b.NewReader(ctx, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.ReaderCheck(t, r)
 }
