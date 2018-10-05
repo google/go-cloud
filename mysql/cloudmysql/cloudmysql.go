@@ -98,8 +98,8 @@ func OpenGAE(ctx context.Context) (*sql.DB, error) {
 		return nil, errors.New("opening db connection on GAE: $DB_PASSWORD is undefined")
 	}
 
-	dsn := fmt.Sprintf("%s:%s@unix(/cloudsql/%s)/%s", user, pw, inst, db)
-	return sql.OpenDB(connector(dsn)), nil
+	cfg := &mysql.Config{User: user, Passwd: pw, Net: "unix", Addr: "/cloudsql/" + inst, DBName: db, AllowNativePasswords: true}
+	return sql.OpenDB(connector(cfg.FormatDSN())), nil
 }
 
 var dialerCounter struct {
