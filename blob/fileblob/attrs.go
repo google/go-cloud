@@ -25,7 +25,8 @@ const attrsExt = ".attrs"
 // filesystem extended attributes, see
 // https://www.freedesktop.org/wiki/CommonExtendedAttributes.
 type xattrs struct {
-	ContentType string `json:"user.content_type"`
+	ContentType string            `json:"user.content_type"`
+	Metadata    map[string]string `json:"user.metadata"`
 }
 
 // setAttrs creates a "path.attrs" file along with blob to store the attributes,
@@ -49,7 +50,7 @@ func getAttrs(path string) (xattrs, error) {
 	f, err := os.Open(path + attrsExt)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Handle gracefully for non-existing .attr files.
+			// Handle gracefully for non-existent .attr files.
 			return xattrs{
 				ContentType: "application/octet-stream",
 			}, nil

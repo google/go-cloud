@@ -107,6 +107,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	return driver.Attributes{
 		ContentType: xa.ContentType,
+		Metadata:    xa.Metadata,
 		ModTime:     info.ModTime(),
 		Size:        info.Size(),
 	}, nil
@@ -183,8 +184,13 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
+	var metadata map[string]string
+	if opt != nil && len(opt.Metadata) > 0 {
+		metadata = opt.Metadata
+	}
 	attrs := xattrs{
 		ContentType: contentType,
+		Metadata:    metadata,
 	}
 	return &writer{
 		ctx:   ctx,

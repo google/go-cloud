@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -59,8 +61,22 @@ func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
 
-// Attributes holds blob attributes.
-type Attributes = driver.Attributes
+// Attributes contains attributes about a blob.
+type Attributes struct {
+	// ContentType is the MIME type of the blob object. It will not be empty.
+	ContentType string
+	// Metadata holds key/value pairs associated with the blob.
+	// Keys are guaranteed to be in lowercase, even if the backend provider
+	// has case-sensitive keys (although note that Metadata written via
+	// this package will always be lowercased). If there are duplicate
+	// case-insensitive keys (e.g., "foo" and "FOO"), only one value
+	// will be kept, and it is undefined which one.
+	Metadata map[string]string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
+}
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
 // all writes are done.
@@ -165,7 +181,22 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 	if err != nil {
 		return Attributes{}, err
 	}
-	return Attributes(a), nil
+	var md map[string]string
+	if len(a.Metadata) > 0 {
+		// Providers are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md = make(map[string]string, len(a.Metadata))
+		for k, v := range a.Metadata {
+			md[strings.ToLower(k)] = v
+		}
+	}
+	return Attributes{
+		ContentType: a.ContentType,
+		Metadata:    md,
+		ModTime:     a.ModTime,
+		Size:        a.Size,
+	}, nil
 }
 
 // NewReader returns a Reader to read from an object, or an error when the object
@@ -238,6 +269,23 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
 			return &Writer{w: w}, err
 		}
+		if len(opt.Metadata) > 0 {
+			// Providers are inconsistent, but at least some treat keys
+			// as case-insensitive. To make the behavior consistent, we
+			// force-lowercase them when writing and reading.
+			md := make(map[string]string, len(opt.Metadata))
+			for k, v := range opt.Metadata {
+				if k == "" {
+					return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
+				}
+				lowerK := strings.ToLower(k)
+				if _, found := md[lowerK]; found {
+					return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
+				}
+				md[lowerK] = v
+			}
+			dopt.Metadata = md
+		}
 	}
 	return &Writer{
 		ctx:    ctx,
@@ -273,6 +321,11 @@ type WriterOptions struct {
 	// then it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
+
+	// Metadata are key/value strings to be associated with the blob, or nil.
+	// Keys may not be empty, and are lowercased before being written.
+	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
+	Metadata map[string]string
 }
 
 type blobError struct {
