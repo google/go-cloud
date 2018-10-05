@@ -57,8 +57,8 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{client: cli}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
-	return New(name, h.client, decoder, &WatchOptions{WaitTime: wait})
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, _ time.Duration) (*runtimevar.Variable, error) {
+	return New(name, h.client, decoder)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
