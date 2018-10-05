@@ -32,19 +32,6 @@ var GCP = wire.NewSet(Services, gcp.DefaultIdentity)
 // credentials. Individual services may require additional configuration.
 var Services = wire.NewSet(
 	cloudmysql.Open,
-	sharedServices)
-
-// GAE is a Wire provider set, similar to the GCP Wire provider
-// set but intended for use with GAE (Google App Engine).
-var GAE = wire.NewSet(GAEServices, gcp.DefaultIdentity)
-
-// GAEServices is a Wire provider set, similar to Services
-// except that cloudmysql.OpenGAE is used instead of cloudmysql.Open.
-var GAEServices = wire.NewSet(
-	cloudmysql.OpenGAE,
-	sharedServices)
-
-var sharedServices = wire.NewSet(
 	cloudmysql.CertSourceSet,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,

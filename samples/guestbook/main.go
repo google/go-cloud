@@ -83,7 +83,7 @@ func main() {
 		if cf.bucket = os.Getenv("GUESTBOOK_BUCKET"); cf.bucket == "" {
 			log.Fatal("$GUESTBOOK_BUCKET is undefined, should be set to the GCS bucket for the guestbook")
 		}
-		app, cleanup, err = setupGAE(ctx, cf)
+		app, cleanup, err = setupGCP(ctx, cf)
 	case envFlag == "gcp":
 		app, cleanup, err = setupGCP(ctx, cf)
 	case envFlag == "aws":

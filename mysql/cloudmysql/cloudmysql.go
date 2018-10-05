@@ -59,6 +59,13 @@ type Params struct {
 
 // Open opens a Cloud SQL database.
 func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+	if os.Getenv("GAE_ENV") == "standard" {
+		return openGAE(ctx, params)
+	}
+	return open(ctx, certSource, params)
+}
+
+func open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -80,26 +87,30 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
 }
 
-// OpenGAE opens a Cloud SQL database on Google App Engine (GAE) using the
-// environment variables $DB_USER, $DB_DATABASE, $DB_INSTANCE, and
-// $DB_PASSWORD.
-func OpenGAE(ctx context.Context) (*sql.DB, error) {
-	var user, pw, inst, db string
-	if user = os.Getenv("DB_USER"); user == "" {
-		return nil, errors.New("opening db connection on GAE: $DB_USER is undefined")
-	}
-	if db = os.Getenv("DB_DATABASE"); db == "" {
-		return nil, errors.New("opening db connection on GAE: $DB_DATABASE is undefined")
-	}
-	if inst = os.Getenv("DB_INSTANCE"); inst == "" {
-		return nil, errors.New("opening db connection on GAE: $DB_INSTANCE is undefined")
-	}
-	if pw = os.Getenv("DB_PASSWORD"); pw == "" {
-		return nil, errors.New("opening db connection on GAE: $DB_PASSWORD is undefined")
-	}
-
-	cfg := &mysql.Config{User: user, Passwd: pw, Net: "unix", Addr: "/cloudsql/" + inst, DBName: db, AllowNativePasswords: true}
+// openGAE opens a connection to a cloudmysql instance via a unix
+// socket at /cloudsql/<instance>.
+func openGAE(ctx context.Context, p *Params) (*sql.DB, error) {
+	cfg := &mysql.Config{User: p.User, Passwd: p.Password, Net: "unix", Addr: "/cloudsql/" + p.Instance, DBName: p.Database, AllowNativePasswords: true}
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
+}
+
+// ParamsFromEnv constructs a Params struct from environment variables:
+// $DB_USER, $DB_DATABASE, $DB_INSTANCE, and $DB_PASSWORD.
+func ParamsFromEnv() (*Params, error) {
+	p := &Params{}
+	if p.User = os.Getenv("DB_USER"); p.User == "" {
+		return nil, errors.New("$DB_USER is undefined")
+	}
+	if p.Database = os.Getenv("DB_DATABASE"); p.Database == "" {
+		return nil, errors.New("$DB_DATABASE is undefined")
+	}
+	if p.Instance = os.Getenv("DB_INSTANCE"); p.Instance == "" {
+		return nil, errors.New("$DB_INSTANCE is undefined")
+	}
+	if p.Password = os.Getenv("DB_PASSWORD"); p.Password == "" {
+		return nil, errors.New("$DB_PASSWORD is undefined")
+	}
+	return p, nil
 }
 
 var dialerCounter struct {
