@@ -27,7 +27,9 @@ import (
 	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/go-cloud/server/xrayserver"
 	"go.opencensus.io/trace"
+	"log"
 	"net/http"
+	"os"
 )
 
 // Injectors from inject_aws.go:
@@ -157,68 +159,6 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}, nil
 }
 
-func setupGAE(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	stackdriverLogger := sdserver.NewRequestLogger()
-	db, err := cloudmysql.OpenGAE(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	v, cleanup := appHealthChecks(db)
-	credentials, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	projectID, err := gcp.DefaultProjectID(credentials)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	tokenSource := gcp.CredentialsTokenSource(credentials)
-	exporter, err := sdserver.NewExporter(projectID, tokenSource)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	sampler := trace.AlwaysSample()
-	options := &server.Options{
-		RequestLogger:         stackdriverLogger,
-		HealthChecks:          v,
-		TraceExporter:         exporter,
-		DefaultSamplingPolicy: sampler,
-	}
-	serverServer := server.New(options)
-	roundTripper := gcp.DefaultTransport()
-	httpClient, err := gcp.NewHTTPClient(roundTripper, tokenSource)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	bucket, err := gcpBucket(ctx, flags, httpClient)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	runtimeConfigManagerClient, cleanup2, err := runtimeconfigurator.Dial(ctx, tokenSource)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	client := runtimeconfigurator.NewClient(runtimeConfigManagerClient)
-	variable, cleanup3, err := gcpMOTDVar(ctx, client, projectID, flags)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	mainApplication := newApplication(serverServer, db, bucket, variable)
-	return mainApplication, func() {
-		cleanup3()
-		cleanup2()
-		cleanup()
-	}, nil
-}
-
 // Injectors from inject_local.go:
 
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
@@ -287,6 +227,13 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
+	if os.Getenv("GAE_ENV") == "standard" {
+		p, err := cloudmysql.ParamsFromEnv()
+		if err != nil {
+			log.Fatalf("Failed to get cloudsql params from env: %v", err)
+		}
+		return p
+	}
 	return &cloudmysql.Params{
 		ProjectID: string(id),
 		Region:    flags.cloudSQLRegion,
