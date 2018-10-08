@@ -26,6 +26,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	slashpath "path"
 	"path/filepath"
@@ -97,6 +98,42 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 		return "", nil, nil, fmt.Errorf("open file attributes %s: %v", key, err)
 	}
 	return path, info, &xa, nil
+}
+
+// List implements driver.List.
+func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	// List everything the directory, sorted by name.
+	fileinfos, err := ioutil.ReadDir(b.dir)
+	if err != nil {
+		return nil, err
+	}
+	var result driver.ListPage
+	for _, info := range fileinfos {
+		if strings.HasSuffix(info.Name(), attrsExt) {
+			// Skip the self-generated attribute files.
+			continue
+		}
+		if opt.Prefix != "" && !strings.HasPrefix(info.Name(), opt.Prefix) {
+			continue
+		}
+		if opt.PageToken != "" && info.Name() < opt.PageToken {
+			// If a PageToken was provided, skip to it.
+			continue
+		}
+		if opt.PageSize != 0 && len(result.Objects) == opt.PageSize {
+			// We've got a full page of results, and there are more
+			// to come. Send back a NextPageToken and stop here.
+			result.NextPageToken = info.Name()
+			break
+		}
+		// Add this object.
+		result.Objects = append(result.Objects, &driver.ListObject{
+			Key:     info.Name(),
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		})
+	}
+	return &result, nil
 }
 
 // Attributes implements driver.Attributes.

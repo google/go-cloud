@@ -29,6 +29,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -70,6 +71,32 @@ func (r *reader) Close() error {
 
 func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
+}
+
+// List implements driver.List.
+func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	bkt := b.client.Bucket(b.name)
+	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
+	pager := iterator.NewPager(iter, int(opt.PageSize), opt.PageToken)
+
+	var objects []*storage.ObjectAttrs
+	nextPageToken, err := pager.NextPage(&objects)
+	if err != nil {
+		return nil, err
+	}
+	var result driver.ListPage
+	result.NextPageToken = nextPageToken
+	if len(objects) > 0 {
+		result.Objects = make([]*driver.ListObject, len(objects))
+		for i, obj := range objects {
+			result.Objects[i] = &driver.ListObject{
+				Key:     obj.Name,
+				ModTime: obj.Updated,
+				Size:    obj.Size,
+			}
+		}
+	}
+	return &result, nil
 }
 
 // Attributes implements driver.Attributes.

@@ -19,8 +19,11 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cloud/blob"
@@ -47,6 +50,9 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // pathToTestdata is a (possibly relative) path to a directory containing
 // blob/testdata/* (e.g., test-small.txt).
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+	t.Run("TestList", func(t *testing.T) {
+		testList(t, newHarness)
+	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -65,6 +71,185 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
+}
+
+// testList tests the functionality of List and ListIter.
+func testList(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "blob-for-list"
+	content := []byte("hello")
+
+	keyForIndex := func(i int) string { return fmt.Sprintf("%s-%d", keyPrefix, i) }
+	indexFromKey := func(key string) (int, error) {
+		if !strings.HasPrefix(key, keyPrefix) {
+			return 0, fmt.Errorf("got name %q, expected it to have prefix %q", key, keyPrefix)
+		}
+		return strconv.Atoi(key[len(keyPrefix)+1:])
+	}
+
+	tests := []struct {
+		name       string
+		skipCreate bool
+		pageSize   int
+		prefix     string
+		want       [][]int
+		wantIter   []int
+		wantErr    bool
+	}{
+		{
+			name:       "negative page size returns an error",
+			skipCreate: true,
+			pageSize:   -1,
+			wantErr:    true,
+		},
+		{
+			name:       "page size out of range returns an error",
+			skipCreate: true,
+			pageSize:   blob.MaxPageSize + 1,
+			wantErr:    true,
+		},
+		{
+			name:   "no objects",
+			prefix: "no-objects-with-this-prefix",
+			want:   [][]int{nil},
+		},
+		{
+			name:     "exactly 1 object due to prefix",
+			prefix:   keyForIndex(1),
+			want:     [][]int{[]int{1}},
+			wantIter: []int{1},
+		},
+		{
+			name:     "no pagination",
+			prefix:   keyPrefix,
+			want:     [][]int{[]int{0, 1, 2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 1",
+			prefix:   keyPrefix,
+			pageSize: 1,
+			want:     [][]int{[]int{0}, []int{1}, []int{2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 2",
+			prefix:   keyPrefix,
+			pageSize: 2,
+			want:     [][]int{[]int{0, 1}, []int{2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 3",
+			prefix:   keyPrefix,
+			pageSize: 3,
+			want:     [][]int{[]int{0, 1, 2}},
+			wantIter: []int{0, 1, 2},
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it
+	// may be flaky due to this race.
+	init := func(t *testing.T, skipCreate bool) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !skipCreate {
+			// See if the blobs are already there.
+			lr, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(lr.Objects) != 3 {
+				for i := 0; i < 3; i++ {
+					if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, done := init(t, tc.skipCreate)
+			defer done()
+
+			var got [][]int
+			var nextPageToken string
+			for {
+				lr, err := b.List(ctx, &blob.ListOptions{
+					PageSize:  tc.pageSize,
+					PageToken: nextPageToken,
+					Prefix:    tc.prefix,
+				})
+				if (err != nil) != tc.wantErr {
+					t.Fatalf("got err %v want error %v", err, tc.wantErr)
+				}
+				if err != nil {
+					break
+				}
+				var thisGot []int
+				for _, obj := range lr.Objects {
+					i, err := indexFromKey(obj.Key)
+					if err != nil {
+						t.Error(err)
+						continue
+					}
+					thisGot = append(thisGot, i)
+				}
+				got = append(got, thisGot)
+				nextPageToken = lr.NextPageToken
+				if nextPageToken == "" {
+					break
+				}
+			}
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+			}
+
+			// Repeat using the iterator.
+			it := b.ListIter(ctx, &blob.ListOptions{
+				PageSize: tc.pageSize,
+				Prefix:   tc.prefix,
+			})
+			var gotIter []int
+			for {
+				obj, err := it.Next(ctx)
+				if len(gotIter) > 0 && err != nil {
+					t.Fatalf("got err %v after first iteration", err)
+				}
+				if (err != nil) != tc.wantErr {
+					t.Fatalf("got err %v want error %v", err, tc.wantErr)
+				}
+				if err != nil {
+					break
+				}
+				if obj == nil {
+					break
+				}
+				i, err := indexFromKey(obj.Key)
+				if err != nil {
+					t.Error(err)
+					continue
+				}
+				gotIter = append(gotIter, i)
+			}
+			if diff := cmp.Diff(gotIter, tc.wantIter); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotIter, tc.wantIter, diff)
+			}
+		})
+	}
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.

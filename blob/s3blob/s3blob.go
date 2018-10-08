@@ -156,6 +156,39 @@ type bucket struct {
 	client *s3.S3
 }
 
+// List implements driver.List.
+func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	in := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(b.name),
+		MaxKeys: aws.Int64(int64(opt.PageSize)),
+	}
+	if opt.PageToken != "" {
+		in.ContinuationToken = aws.String(opt.PageToken)
+	}
+	if opt.Prefix != "" {
+		in.Prefix = aws.String(opt.Prefix)
+	}
+	req, resp := b.client.ListObjectsV2Request(in)
+	if err := req.Send(); err != nil {
+		return nil, err
+	}
+	var result driver.ListPage
+	if resp.NextContinuationToken != nil {
+		result.NextPageToken = *resp.NextContinuationToken
+	}
+	if len(resp.Contents) > 0 {
+		result.Objects = make([]*driver.ListObject, len(resp.Contents))
+		for i, obj := range resp.Contents {
+			result.Objects[i] = &driver.ListObject{
+				Key:     *obj.Key,
+				ModTime: *obj.LastModified,
+				Size:    *obj.Size,
+			}
+		}
+	}
+	return &result, nil
+}
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	in := &s3.HeadObjectInput{
