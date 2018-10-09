@@ -59,13 +59,6 @@ type Params struct {
 
 // Open opens a Cloud SQL database.
 func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
-	if os.Getenv("GAE_ENV") == "standard" {
-		return openGAE(ctx, params)
-	}
-	return open(ctx, certSource, params)
-}
-
-func open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -87,13 +80,6 @@ func open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	return sql.OpenDB(connector(cfg.FormatDSN())), nil
 }
 
-// openGAE opens a connection to a cloudmysql instance via a unix
-// socket at /cloudsql/<instance>.
-func openGAE(ctx context.Context, p *Params) (*sql.DB, error) {
-	cfg := &mysql.Config{User: p.User, Passwd: p.Password, Net: "unix", Addr: "/cloudsql/" + p.Instance, DBName: p.Database, AllowNativePasswords: true}
-	return sql.OpenDB(connector(cfg.FormatDSN())), nil
-}
-
 // ParamsFromEnv constructs a Params struct from environment variables:
 // $DB_USER, $DB_DATABASE, $DB_INSTANCE, and $DB_PASSWORD.
 func ParamsFromEnv() (*Params, error) {
@@ -109,6 +95,12 @@ func ParamsFromEnv() (*Params, error) {
 	}
 	if p.Password = os.Getenv("DB_PASSWORD"); p.Password == "" {
 		return nil, errors.New("$DB_PASSWORD is undefined")
+	}
+	if p.ProjectID = os.Getenv("PROJECT_ID"); p.ProjectID == "" {
+		return nil, errors.New("$PROJECT_ID is undefined")
+	}
+	if p.Region = os.Getenv("REGION"); p.Region == "" {
+		return nil, errors.New("$REGION is undefined")
 	}
 	return p, nil
 }
