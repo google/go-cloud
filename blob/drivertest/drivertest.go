@@ -706,7 +706,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	st.BucketCheck(t, b)
 
 	// Create a blob, using the provided callback.
-	if err := b.WriteAll(ctx, key, content, &blob.WriterOptions{Callback: st.Write}); err != nil {
+	if err := b.WriteAll(ctx, key, content, &blob.WriterOptions{BeforeWrite: st.Write}); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = b.Delete(ctx, key) }()

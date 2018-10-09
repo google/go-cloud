@@ -38,9 +38,6 @@ type Error interface {
 	BlobError() ErrorKind
 }
 
-// NoAs can be used as an As function that always returns false.
-var NoAs = func(interface{}) bool { return false }
-
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
@@ -68,13 +65,13 @@ type WriterOptions struct {
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
-	// Callback is a callback that must be called before any data is written. It
-	// should be called at most once. asFunc allows providers to expose
+	// BeforeWrite is a callback that must be called exactly once, before
+	// any data is written, unless NewTypedWriter returns an error, in
+	// which case it should not be called. asFunc allows providers to expose
 	// provider-specific types.
 	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
 	// for more details.
-	// Pass NoAs to indicate no provider-specific types are supported.
-	Callback func(asFunc func(interface{}) bool) error
+	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
@@ -105,7 +102,7 @@ type Attributes struct {
 	// AsFunc allows providers to expose provider-specific types.
 	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
 	// for more details.
-	// Defaults to NoAs, meaning no provider-specific types are supported.
+	// If not set, no provider-specific types are supported.
 	AsFunc func(interface{}) bool
 }
 

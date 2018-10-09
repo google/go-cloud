@@ -275,7 +275,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		Key:         aws.String(key),
 		Metadata:    metadata,
 	}
-	if opts != nil && opts.Callback != nil {
+	if opts != nil && opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3manager.UploadInput)
 			if !ok {
@@ -284,7 +284,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			*p = req
 			return true
 		}
-		if err := opts.Callback(asFunc); err != nil {
+		if err := opts.BeforeWrite(asFunc); err != nil {
 			return nil, err
 		}
 	}

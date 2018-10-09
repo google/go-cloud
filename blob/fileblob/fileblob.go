@@ -191,8 +191,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	if opt != nil && opt.Callback != nil {
-		if err := opt.Callback(driver.NoAs); err != nil {
+	if opt != nil && opt.BeforeWrite != nil {
+		if err := opt.BeforeWrite(func(interface{}) bool { return false }); err != nil {
 			return nil, err
 		}
 	}

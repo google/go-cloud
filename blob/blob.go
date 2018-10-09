@@ -83,7 +83,8 @@ type Attributes struct {
 	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
 	// Size is the size of the object in bytes.
-	Size   int64
+	Size int64
+
 	asFunc func(interface{}) bool
 }
 
@@ -287,8 +288,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	var w driver.Writer
 	if opt != nil {
 		dopt = &driver.WriterOptions{
-			BufferSize: opt.BufferSize,
-			Callback:   opt.Callback,
+			BufferSize:  opt.BufferSize,
+			BeforeWrite: opt.BeforeWrite,
 		}
 		if opt.ContentType != "" {
 			t, p, err := mime.ParseMediaType(opt.ContentType)
@@ -357,13 +358,15 @@ type WriterOptions struct {
 	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
 	Metadata map[string]string
 
-	// Callback is a callback that will be called at most once, before any data
-	// is written. asFunc can be used as an escape hatch for accessing
-	// provider-specific types.
+	// BeforeWrite is a callback that will be called exactly once, before
+	// any data is written (unless NewWriter returns an error, in which case
+	// it will not be called at all). Note that this is not necessarily during
+	// or after the first Write call, as providers may buffer. asFunc can be
+	// used as an escape hatch for accessing provider-specific types.
 	// See the provider documentation for which type(s) are supported, and
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
 	// for more details on escape hatches.
-	Callback func(asFunc func(interface{}) bool) error
+	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
 type blobError struct {

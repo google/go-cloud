@@ -160,7 +160,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		w.ChunkSize = bufferSize(opts.BufferSize)
 		w.Metadata = opts.Metadata
 	}
-	if opts != nil && opts.Callback != nil {
+	if opts != nil && opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Writer)
 			if !ok {
@@ -169,7 +169,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			*p = w
 			return true
 		}
-		if err := opts.Callback(asFunc); err != nil {
+		if err := opts.BeforeWrite(asFunc); err != nil {
 			return nil, err
 		}
 	}
