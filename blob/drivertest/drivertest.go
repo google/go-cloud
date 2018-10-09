@@ -659,11 +659,12 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	hello := []byte("hello")
 
 	tests := []struct {
-		name     string
-		metadata map[string]string
-		content  []byte
-		want     map[string]string
-		wantErr  bool
+		name        string
+		metadata    map[string]string
+		content     []byte
+		contentType string
+		want        map[string]string
+		wantErr     bool
 	}{
 		{
 			name:     "empty",
@@ -703,6 +704,13 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			metadata: map[string]string{"foo": "bar"},
 			want:     map[string]string{"foo": "bar"},
 		},
+		{
+			name:        "valid metadata with content type",
+			content:     hello,
+			contentType: "text/plain",
+			metadata:    map[string]string{"foo": "bar"},
+			want:        map[string]string{"foo": "bar"},
+		},
 	}
 
 	ctx := context.Background()
@@ -719,7 +727,8 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			opts := &blob.WriterOptions{
-				Metadata: tc.metadata,
+				Metadata:    tc.metadata,
+				ContentType: tc.contentType,
 			}
 			err = b.WriteAll(ctx, key, hello, opts)
 			if (err != nil) != tc.wantErr {

@@ -399,15 +399,6 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 		dopt = &driver.WriterOptions{
 			BufferSize: opt.BufferSize,
 		}
-		if opt.ContentType != "" {
-			t, p, err := mime.ParseMediaType(opt.ContentType)
-			if err != nil {
-				return nil, err
-			}
-			ct := mime.FormatMediaType(t, p)
-			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
-			return &Writer{w: w}, err
-		}
 		if len(opt.Metadata) > 0 {
 			// Providers are inconsistent, but at least some treat keys
 			// as case-insensitive. To make the behavior consistent, we
@@ -424,6 +415,15 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 				md[lowerK] = v
 			}
 			dopt.Metadata = md
+		}
+		if opt.ContentType != "" {
+			t, p, err := mime.ParseMediaType(opt.ContentType)
+			if err != nil {
+				return nil, err
+			}
+			ct := mime.FormatMediaType(t, p)
+			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
+			return &Writer{w: w}, err
 		}
 	}
 	return &Writer{
