@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	issueTitleRegexp       = regexp.MustCompile("^[a-z0-9/-]+: .*$")
+	issueTitleRegexp       = regexp.MustCompile(`^[a-z0-9./-]+: .*$`)
 	pullRequestTitleRegexp = issueTitleRegexp
 )
 
