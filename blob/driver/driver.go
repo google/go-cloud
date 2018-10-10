@@ -32,10 +32,10 @@ const (
 
 // Error is an interface that may be implemented by an error returned by
 // a driver to indicate the kind of failure.  If an error does not have the
-// BlobError method, then it is assumed to be GenericError.
+// Kind method, then it is assumed to be GenericError.
 type Error interface {
 	error
-	BlobError() ErrorKind
+	Kind() ErrorKind
 }
 
 // Reader reads an object from the blob.
@@ -95,14 +95,14 @@ type Attributes struct {
 // blob service.
 type Bucket interface {
 	// Attributes returns attributes for the blob. If the specified object does
-	// not exist, Attributes must return an error whose BlobError method returns
+	// not exist, Attributes must return an error whose Kind method returns
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
 	// will read till the end of the object. If the specified object does not
-	// exist, NewRangeReader must return an error whose BlobError method returns
+	// exist, NewRangeReader must return an error whose Kind method returns
 	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
@@ -123,7 +123,7 @@ type Bucket interface {
 	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
-	// not exist, NewRangeReader must return an error whose BlobError method
+	// not exist, NewRangeReader must return an error whose Kind method
 	// returns NotFound.
 	Delete(ctx context.Context, key string) error
 }
