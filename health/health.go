@@ -43,16 +43,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	writeHealthy(w)
 }
 
-func writeHeaders(status string, w http.ResponseWriter) {
-	w.Header().Set("Content-Length", strconv.Itoa(len(status)))
+func writeHeaders(statusLen int, w http.ResponseWriter) {
+	w.Header().Set("Content-Length", strconv.Itoa(statusLen))
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
 func writeUnhealthy(w http.ResponseWriter) {
-	const status = "unhealthy"
+	const (
+		status    = "unhealthy"
+		statusLen = 9
+	)
 
-	writeHeaders(status, w)
+	writeHeaders(statusLen, w)
 	w.WriteHeader(http.StatusInternalServerError)
 	io.WriteString(w, status)
 }
@@ -64,9 +67,12 @@ func HandleLive(w http.ResponseWriter, _ *http.Request) {
 }
 
 func writeHealthy(w http.ResponseWriter) {
-	const status = "ok"
+	const (
+		status    = "ok"
+		statusLen = 2
+	)
 
-	writeHeaders(status, w)
+	writeHeaders(statusLen, w)
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, status)
 }
