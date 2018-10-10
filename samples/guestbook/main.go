@@ -87,7 +87,7 @@ func main() {
 		}
 		app, cleanup, err = setupGCP(ctx, cf, traceOpt)
 	case envFlag == "gcp":
-		app, cleanup, err = setupGCP(ctx, cf)
+		app, cleanup, err = setupGCP(ctx, cf, traceOpt)
 	case envFlag == "aws":
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
