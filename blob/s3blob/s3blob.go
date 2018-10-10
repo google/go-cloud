@@ -156,8 +156,8 @@ type bucket struct {
 	client *s3.S3
 }
 
-// List implements driver.List.
-func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	in := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(b.name),
 		MaxKeys: aws.Int64(int64(opt.PageSize)),

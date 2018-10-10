@@ -73,8 +73,8 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 
-// List implements driver.List.
-func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
 	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
 	pager := iterator.NewPager(iter, opt.PageSize, opt.PageToken)

@@ -154,26 +154,27 @@ func (w *Writer) open(p []byte) (n int, err error) {
 	return w.w.Write(p)
 }
 
-// MaxPageSize is the maximum number of results to retrieve at a time via List.
+// MaxPageSize is the maximum number of results to retrieve at a time via ListPaged.
 const MaxPageSize = 1000
 
 // ListOptions sets options for listing objects.
+// TODO(rvangent): Add Delimiter.
 type ListOptions struct {
-	// PageSize sets the maximum number of objects that will be returned in
-	// a single call to List. For ListIter, it sets the internal buffer size.
-	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
-	PageSize int
-	// PageToken should be filled in with the NextPageToken from a previous
-	// List call, to get the next page of results.
-	// Ignored when using ListIter.
-	PageToken string
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
 	Prefix string
-	// TODO(rvangent): Add Delimiter.
+
+	// PageSize sets the maximum number of objects that will be returned in
+	// a single call to ListPaged. For List, it sets the internal buffer size.
+	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
+	PageSize int
+	// PageToken should be filled in with the NextPageToken from a previous
+	// ListPaged call, to get the next page of results.
+	// Ignored when using List.
+	PageToken string
 }
 
-// ListIterator is used to iterate over ListIter results.
+// ListIterator is used to iterate over List results.
 type ListIterator struct {
 	b       *Bucket
 	opt     ListOptions
@@ -200,7 +201,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		i.opt.PageToken = i.page.NextPageToken
 	}
 	// Loading a new page.
-	p, err := i.b.List(ctx, &i.opt)
+	p, err := i.b.ListPaged(ctx, &i.opt)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	return i.Next(ctx)
 }
 
-// ListObject represents a single blob object returned from List.
+// ListObject represents a single blob object returned from List or ListPaged.
 type ListObject struct {
 	// Key is the key for this blob.
 	Key string
@@ -219,7 +220,7 @@ type ListObject struct {
 	Size int64
 }
 
-// ListPage represents a page of results returned from List.
+// ListPage represents a page of results returned from ListPaged.
 type ListPage struct {
 	// Objects is the slice of matching objects found. The slice will
 	// contain at most ListOptions.PageSize values.
@@ -253,14 +254,14 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// List lists objects in the bucket, returning pages of objects at a time.
+// ListPaged lists objects in the bucket, returning pages of objects at a time.
 // Use ListOptions for pagination and filtering.
 //
-// List is not guaranteed to include all recently-written objects;
+// ListPaged is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
 //
-// To iterate over objects one at a time instead of in pages, use ListIter.
-func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) {
+// To iterate over objects one at a time instead of in pages, use List.
+func (b *Bucket) ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error) {
 	if opt == nil {
 		opt = &ListOptions{}
 	}
@@ -278,7 +279,7 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) 
 		PageToken: opt.PageToken,
 		Prefix:    opt.Prefix,
 	}
-	p, err := b.b.List(ctx, dopt)
+	p, err := b.b.ListPaged(ctx, dopt)
 	if err != nil {
 		return nil, err
 	}
@@ -298,15 +299,15 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) 
 	return result, nil
 }
 
-// ListIter returns an object that can be used to iterate over objects in a
+// List returns an object that can be used to iterate over objects in a
 // bucket. The underlying implementation fetches results in pages.
 // Use ListOptions to control the page size and filtering.
 //
-// ListIter is not guaranteed to include all recently-written objects;
+// List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
 //
-// To list objects in pages, use List.
-func (b *Bucket) ListIter(ctx context.Context, opt *ListOptions) *ListIterator {
+// To list objects in pages, use ListPaged.
+func (b *Bucket) List(ctx context.Context, opt *ListOptions) *ListIterator {
 	if opt == nil {
 		opt = &ListOptions{}
 	}

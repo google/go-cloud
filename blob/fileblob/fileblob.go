@@ -100,8 +100,8 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	return path, info, &xa, nil
 }
 
-// List implements driver.List.
-func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	// List everything the directory, sorted by name.
 	fileinfos, err := ioutil.ReadDir(b.dir)
 	if err != nil {

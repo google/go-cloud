@@ -92,20 +92,21 @@ type Attributes struct {
 }
 
 // ListOptions sets options for listing objects in the bucket.
+// TODO(rvangent): Add Delimiter.
 type ListOptions struct {
+	// Prefix indicates that only results with the given prefix should be
+	// returned.
+	Prefix string
+
 	// PageSize sets the maximum number of objects that will be returned in
 	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
-	// List call.
+	// ListPaged call.
 	PageToken string
-	// Prefix indicates that only results with the given prefix should be
-	// returned.
-	Prefix string
-	// TODO(rvangent): Add Delimiter.
 }
 
-// ListObject represents a specific blob object returned from List.
+// ListObject represents a specific blob object returned from ListPaged.
 type ListObject struct {
 	// Key is the key for this blob.
 	Key string
@@ -115,7 +116,7 @@ type ListObject struct {
 	Size int64
 }
 
-// ListPage represents a page of results return from List.
+// ListPage represents a page of results return from ListPaged.
 type ListPage struct {
 	// Objects is the slice of objects found. It should have at most
 	// ListOptions.PageSize entries.
@@ -123,7 +124,7 @@ type ListPage struct {
 	// NextPageToken should be left empty unless
 	// len(Objects) == ListOptions.PageSize and there are more objects to
 	// return. The value may be returned as ListOptions.PageToken on a
-	// subsequent List call, to fetch the next page of results.
+	// subsequent ListPaged call, to fetch the next page of results.
 	// It can be an arbitrary string; it need not be a valid key.
 	NextPageToken string
 }
@@ -136,12 +137,12 @@ type Bucket interface {
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
-	// List lists objects in the bucket, returning them in pages.
+	// ListPaged lists objects in the bucket, returning them in pages.
 	// Providers are only required to be eventually consistent with respect
 	// to recently-written objects. I.e., there is no guarantee that an object
-	// that's been written will immediately be returned from List.
+	// that's been written will immediately be returned from ListPaged.
 	// opt is guaranteed to be non-nil.
-	List(ctx context.Context, opt *ListOptions) (*ListPage, error)
+	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it

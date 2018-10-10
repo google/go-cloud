@@ -73,7 +73,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	})
 }
 
-// testList tests the functionality of List and ListIter.
+// testList tests the functionality of List and ListPaged.
 func testList(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "blob-for-list"
 	content := []byte("hello")
@@ -152,8 +152,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	// Creates blobs for sub-tests below.
 	// We only create the blobs once, for efficiency and because there's
 	// no guarantee that after we create them they will be immediately returned
-	// from List. The very first time the test is run against a Bucket, it
-	// may be flaky due to this race.
+	// from List/ListPaged. The very first time the test is run against a
+	// Bucket, it may be flaky due to this race.
 	init := func(t *testing.T, skipCreate bool) (*blob.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
@@ -165,11 +165,11 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		}
 		if !skipCreate {
 			// See if the blobs are already there.
-			lr, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
+			p, err := b.ListPaged(ctx, &blob.ListOptions{Prefix: keyPrefix})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(lr.Objects) != 3 {
+			if len(p.Objects) != 3 {
 				for i := 0; i < 3; i++ {
 					if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
 						t.Fatal(err)
@@ -185,13 +185,14 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.skipCreate)
 			defer done()
 
+			// Retrieve using ListPaged.
 			var got [][]int
 			var nextPageToken string
 			for {
-				lr, err := b.List(ctx, &blob.ListOptions{
+				p, err := b.ListPaged(ctx, &blob.ListOptions{
+					Prefix:    tc.prefix,
 					PageSize:  tc.pageSize,
 					PageToken: nextPageToken,
-					Prefix:    tc.prefix,
 				})
 				if (err != nil) != tc.wantErr {
 					t.Fatalf("got err %v want error %v", err, tc.wantErr)
@@ -200,7 +201,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 					break
 				}
 				var thisGot []int
-				for _, obj := range lr.Objects {
+				for _, obj := range p.Objects {
 					i, err := indexFromKey(obj.Key)
 					if err != nil {
 						t.Error(err)
@@ -209,7 +210,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 					thisGot = append(thisGot, i)
 				}
 				got = append(got, thisGot)
-				nextPageToken = lr.NextPageToken
+				nextPageToken = p.NextPageToken
 				if nextPageToken == "" {
 					break
 				}
@@ -218,8 +219,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
 			}
 
-			// Repeat using ListIter.
-			it := b.ListIter(ctx, &blob.ListOptions{
+			// Repeat using List.
+			it := b.List(ctx, &blob.ListOptions{
 				PageSize: tc.pageSize,
 				Prefix:   tc.prefix,
 			})

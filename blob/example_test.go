@@ -166,7 +166,7 @@ func ExampleBucket_ReadAll() {
 	// Go Cloud
 }
 
-func ExampleBucket_List() {
+func ExampleBucket_ListPaged() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -178,20 +178,16 @@ func ExampleBucket_List() {
 		log.Fatal(err)
 	}
 
-	// Write some blob objects.
+	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
-		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
-			log.Fatal(err)
-		}
-	}
+	createListableFiles(ctx, bucket)
 
 	// List them in pages of size 2.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
 	var nextPageToken string
 	for {
-		p, err := bucket.List(ctx, &blob.ListOptions{PageSize: 2, PageToken: nextPageToken})
+		p, err := bucket.ListPaged(ctx, &blob.ListOptions{PageSize: 2, PageToken: nextPageToken})
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -215,7 +211,7 @@ func ExampleBucket_List() {
 	// foo4.txt
 }
 
-func ExampleBucket_ListIter() {
+func ExampleBucket_List() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -227,18 +223,14 @@ func ExampleBucket_ListIter() {
 		log.Fatal(err)
 	}
 
-	// Write some blob objects.
+	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
-		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
-			log.Fatal(err)
-		}
-	}
+	createListableFiles(ctx, bucket)
 
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	iter := bucket.ListIter(ctx, nil)
+	iter := bucket.List(ctx, nil)
 	for {
 		obj, err := iter.Next(ctx)
 		if err != nil {
@@ -256,6 +248,15 @@ func ExampleBucket_ListIter() {
 	// foo2.txt
 	// foo3.txt
 	// foo4.txt
+}
+
+func createListableFiles(ctx context.Context, b *blob.Bucket) error {
+	for i := 0; i < 5; i++ {
+		if err := b.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newTempDir() (string, func()) {
