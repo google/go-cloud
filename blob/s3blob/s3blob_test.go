@@ -16,6 +16,7 @@ package s3blob
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -38,12 +39,17 @@ const (
 
 type harness struct {
 	session *session.Session
+	rt      http.RoundTripper
 	closer  func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, done := setup.NewAWSSession(t, region)
-	return &harness{session: sess, closer: done}, nil
+	sess, rt, done := setup.NewAWSSession(t, region)
+	return &harness{session: sess, rt: rt, closer: done}, nil
+}
+
+func (h *harness) HTTPClient() *http.Client {
+	return &http.Client{Transport: h.rt}
 }
 
 func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {

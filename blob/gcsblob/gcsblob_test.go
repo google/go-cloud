@@ -16,6 +16,8 @@ package gcsblob
 
 import (
 	"context"
+	"io/ioutil"
+	"net/http"
 	"testing"
 
 	"github.com/google/go-cloud/blob"
@@ -25,27 +27,50 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-// bucketName records the bucket used for the last --record.
-// If you want to use --record mode,
-// 1. Create a bucket in your GCP project:
-//    https://console.cloud.google.com/storage/browser, then "Create Bucket".
-// 2. Update this constant to your bucket name.
-// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
-//    name from the Terraform output instead (saving a copy of it for replay).
-const bucketName = "go-cloud-blob-test-bucket"
+const (
+	// These constants capture values that were used during the last -record.
+	//
+	// If you want to use --record mode,
+	// 1. Create a bucket in your GCP project:
+	//    https://console.cloud.google.com/storage/browser, then "Create Bucket".
+	// 2. Update the bucketName constant to your bucket name.
+	// 3. Create a service account in your GCP project and update the
+	//    serviceAccountID constant to it.
+	// 4. Download a private key to a .pem file as described here:
+	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
+	//    and update the pathToPrivateKey constant with a path to the .pem file.
+	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
+	//    name from the Terraform output instead (saving a copy of it for replay).
+	bucketName       = "go-cloud-blob-test-bucket"
+	serviceAccountID = "storage-viewer@go-cloud-test-216917.iam.gserviceaccount.com"
+	pathToPrivateKey = "/usr/local/google/home/rvangent/Downloads/storage-viewer.pem"
+)
 
 type harness struct {
-	client *gcp.HTTPClient
-	closer func()
+	client     *gcp.HTTPClient
+	privateKey []byte
+	rt         http.RoundTripper
+	closer     func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	client, done := setup.NewGCPClient(ctx, t)
-	return &harness{client: client, closer: done}, nil
+	pk, err := ioutil.ReadFile(pathToPrivateKey)
+	if err != nil {
+		t.Fatalf("Couldn't find private key at %v: %v", pathToPrivateKey, err)
+	}
+	client, rt, done := setup.NewGCPClient(ctx, t)
+	return &harness{client: client, privateKey: pk, rt: rt, closer: done}, nil
+}
+
+func (h *harness) HTTPClient() *http.Client {
+	return &http.Client{Transport: h.rt}
 }
 
 func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return OpenBucket(ctx, bucketName, h.client)
+	return OpenBucket(ctx, bucketName, h.client, &Options{
+		GoogleAccessID: serviceAccountID,
+		PrivateKey:     h.privateKey,
+	})
 }
 
 func (h *harness) Close() {

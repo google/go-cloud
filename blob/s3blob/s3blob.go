@@ -270,6 +270,15 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return req.Send()
 }
 
+func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	in := &s3.GetObjectInput{
+		Bucket: aws.String(b.name),
+		Key:    aws.String(key),
+	}
+	req, _ := b.client.GetObjectRequest(in)
+	return req.Presign(opts.Expiry)
+}
+
 type s3Error struct {
 	bucket, key, msg string
 	kind             driver.ErrorKind
