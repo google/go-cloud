@@ -45,9 +45,8 @@ type Reader interface {
 	// Attributes returns a subset of attributes about the blob.
 	Attributes() ReaderAttributes
 
-	// As allows providers to expose provider-specific types.
-	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-	// for more details.
+	// As allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
 	As(interface{}) bool
 }
 
@@ -67,10 +66,9 @@ type WriterOptions struct {
 	Metadata map[string]string
 	// BeforeWrite is a callback that must be called exactly once, before
 	// any data is written, unless NewTypedWriter returns an error, in
-	// which case it should not be called. asFunc allows providers to expose
-	// provider-specific types.
-	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-	// for more details.
+	// which case it should not be called.
+	// asFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
@@ -99,9 +97,8 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// AsFunc allows providers to expose provider-specific types.
-	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-	// for more details.
+	// AsFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.
 	AsFunc func(interface{}) bool
 }
@@ -110,8 +107,27 @@ type Attributes struct {
 // blob service.
 type Bucket interface {
 	// As allows providers to expose provider-specific types.
-	// See https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-	// for more details.
+	//
+	// i will be a pointer to the type the user wants filled in.
+	// As should either fill it in and return true, or return false.
+	//
+	// Mutable objects should be exposed as a pointer to the object;
+	// i will therefore be a **.
+	//
+	// A provider should document the type(s) it support in package
+	// comments, and add conformance tests verifying them.
+	//
+	// A sample implementation might look like this, for supporting foo.MyType:
+	//   mt, ok := i.(*foo.MyType)
+	//   if !ok {
+	//     return false
+	//   }
+	//   *i = foo.MyType{}  // or, more likely, the existing value
+	//   return true
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// for more background.
 	As(i interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does

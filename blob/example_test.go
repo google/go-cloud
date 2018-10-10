@@ -166,6 +166,52 @@ func ExampleBucket_ReadAll() {
 	// Go Cloud
 }
 
+func ExampleBucket_As() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.NewBucket(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Use As as an escape hatch.
+	// This example tries to use a string variable against fileblob,
+	// which won't work because fileblob doesn't support any escape hatches.
+	// However, other providers do support escape hatches.
+	var providerSpecific string
+	if bucket.As(&providerSpecific) {
+		fmt.Println("fileblob supports the `string` type for Bucket.As")
+		// Use providerSpecific.
+	} else {
+		fmt.Println("fileblob does not support the `string` type for Bucket.As")
+	}
+
+	// Here's an example with WriterOptions. Again, the example does not work
+	// because fileblob doesn't support any escape hatches, but the code is
+	// representative.
+	fn := func(asFunc func(i interface{}) bool) error {
+		var mutableProviderSpecific *string
+		if asFunc(&mutableProviderSpecific) {
+			fmt.Println("fileblob supports the `*string` type for WriterOptions.BeforeWrite")
+			// Use mutableProviderSpecific.
+		} else {
+			fmt.Println("fileblob does not support the `*string` type for WriterOptions.BeforeWrite")
+		}
+		return nil
+	}
+	ctx := context.Background()
+	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), &blob.WriterOptions{BeforeWrite: fn}); err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// fileblob does not support the `string` type for Bucket.As
+	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
+}
+
 func newTempDir() (string, func()) {
 	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {

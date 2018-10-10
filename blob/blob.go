@@ -62,9 +62,7 @@ func (r *Reader) Size() int64 {
 }
 
 // As is an escape hatch for accessing provider-specific types.
-// See the provider documentation for which type(s) are supported, and
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-// for more details on escape hatches.
+// See Bucket.As for more details.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
@@ -89,9 +87,7 @@ type Attributes struct {
 }
 
 // As is an escape hatch for accessing provider-specific types.
-// See the provider documentation for which type(s) are supported, and
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-// for more details on escape hatches.
+// See Bucket.As for more details.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -187,9 +183,20 @@ func NewBucket(b driver.Bucket) *Bucket {
 }
 
 // As is an escape hatch for accessing provider-specific types.
-// See the provider documentation for which type(s) are supported, and
+// See provider documentation for which type(s) are supported.
+//
+// Usage:
+// 1. Declare a variable of the provider-specific type you want to access.
+// 2. Pass a pointer to it to As.
+// 3. As will return true iff the type is supported, and copy the
+//    provider-specific type into your variable.
+//
+// Provider-specific types that are intended to be mutable will be exposed
+// as a pointer to the underlying type.
+//
+// See
 // https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-// for more details on escape hatches.
+// for more background.
 func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
@@ -361,11 +368,10 @@ type WriterOptions struct {
 	// BeforeWrite is a callback that will be called exactly once, before
 	// any data is written (unless NewWriter returns an error, in which case
 	// it will not be called at all). Note that this is not necessarily during
-	// or after the first Write call, as providers may buffer. asFunc can be
-	// used as an escape hatch for accessing provider-specific types.
-	// See the provider documentation for which type(s) are supported, and
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-	// for more details on escape hatches.
+	// or after the first Write call, as providers may buffer.
+	// asFunc can be called as an escape hatch for accessing
+	// provider-specific types.
+	// See Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
