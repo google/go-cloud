@@ -178,57 +178,26 @@ top-level handle and making API calls, bypassing Go Cloud.
     instead of using `blob.Reader` to read a blob, the user would have to use
     the provider-specific method for reading.
 
-This approach exists today. Due to its shortcomings, we are designing a second
-approach. The proposal is to extend Go Cloud APIs, at the top-level (e.g.
-`blob.Bucket`) and in data objects, to expose provider-specific handles. For
-example:
+Go Cloud APIs also support `As` as a way to access provider-specific types.
 
 ```
 // The existing blob.Reader exposes some blob attributes, but not everything
 // that every provider exposes.
-type Reader struct {
-    ...
-    Size        int64
-    ContentType string
-    ...
+type Reader struct {...}
 
-    // New field!
-    Sys interface{}
+// As allows providers to expose provider-specific types.
+func (r *Reader) As func(i interface{}) bool {...}
+
+// User code would look like:
+r, _ := bucket.NewReader(ctx, "foo.txt")
+var s3type s3.GetObjectOutput
+if r.As(&s3type) {
+  ... use s3type...
 }
 ```
 
-The name `Sys` is modeled after
-[examples](https://golang.org/pkg/os/#ProcessState.Sys) in the `os` package.
-Using the `Sys` escape hatch to read an S3-specific attribute would look
-something like this:
-
-```
-if r, err := bucket.NewReader(ctx, "foo.txt"); err == nil {
-  acls := r.Sys.(*s3.GetObjectOutput).ACLs
-  ...
-}
-```
-
-Each provider implementation would document what type it returns for each of the
-escape hatch functions. `nil` is a valid return value for providers that don't
-support the escape hatch.
-
-We are also considering an alternative to `Sys` that would look something like
-this:
-
-```
-var s3obj s3.GetObjectOutput
-if r.As(&s3obj) {
-  acls := s3obj.ACLs
-  ...
-}
-```
-
-This alternative allows providers to map to multiple types.
-
-Design discussions regarding escape hatches are ongoing; we welcome input either
-on the [tracking issue](https://github.com/google/go-cloud/issues/470) or on the
-[mailing list](https://groups.google.com/forum/#!forum/go-cloud).
+Each provider implementation documents what type(s) it supports for each of the
+`As` escape hatch functions.
 
 ## Enforcing Portability
 
