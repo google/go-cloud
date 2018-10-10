@@ -47,22 +47,14 @@ cleanup2() {
 trap cleanup2 EXIT
 terraform apply -auto-approve -input=false -var project="$project_id" "$test_dir" || exit 1
 
-# Add vgo container.
-log "Building application..."
-vgo_image="gcr.io/${project_id//:/\/}/vgo"
-if ! GCLOUD container images describe --format='value(image_summary.digest)' "$vgo_image" 1>/dev/null 2>/dev/null; then
-  GCLOUD container builds submit \
-    -t "$vgo_image" \
-    "$test_dir/../../internal/vgo_docker" || exit 1
-fi
-
 # Build the app binary.
+log "Building application..."
 app_image="gcr.io/${project_id//:/\/}/gcp-test"
 build_id="$( GCLOUD container builds submit \
   --async \
   --format='value(id)' \
   --config="$test_dir/app/cloudbuild.yaml" \
-  --substitutions="_IMAGE_NAME=$app_image,_VGO_IMAGE_NAME=$vgo_image" \
+  --substitutions="_IMAGE_NAME=$app_image" \
   "$test_dir/../.." )" || exit 1
 GCLOUD container builds log --stream "$build_id" || exit 1
 
@@ -89,4 +81,4 @@ done
 
 # Run test driver.
 log "Running test:"
-( cd "$test_dir/app" && vgo test -v -args --address "http://${endpoint}" --project "$project_id" ) || exit 1
+( cd "$test_dir/app" && go test -v -args --address "http://${endpoint}" --project "$project_id" ) || exit 1

@@ -75,7 +75,11 @@ func generateInjectors(g *gen, pkgInfo *loader.PackageInfo) (injectorFiles []*as
 			if !ok {
 				continue
 			}
-			buildCall := isInjector(&pkgInfo.Info, fn)
+			buildCall, err := findInjectorBuild(&pkgInfo.Info, fn)
+			if err != nil {
+				ec.add(err)
+				continue
+			}
 			if buildCall == nil {
 				continue
 			}
@@ -113,7 +117,9 @@ func copyNonInjectorDecls(g *gen, files []*ast.File, info *types.Info) {
 		for _, decl := range f.Decls {
 			switch decl := decl.(type) {
 			case *ast.FuncDecl:
-				if isInjector(info, decl) != nil {
+				// OK to ignore error, as any error cases should already have
+				// been filtered out.
+				if buildCall, _ := findInjectorBuild(info, decl); buildCall != nil {
 					continue
 				}
 			case *ast.GenDecl:
@@ -134,11 +140,18 @@ func copyNonInjectorDecls(g *gen, files []*ast.File, info *types.Info) {
 	}
 }
 
+// importInfo holds info about an import.
+type importInfo struct {
+	name string
+	// fullpath is the full, possibly vendored, path.
+	fullpath string
+}
+
 // gen is the file-wide generator state.
 type gen struct {
 	currPackage string
 	buf         bytes.Buffer
-	imports     map[string]string
+	imports     map[string]*importInfo
 	values      map[ast.Expr]string
 	prog        *loader.Program // for positions and determining package names
 }
@@ -146,7 +159,7 @@ type gen struct {
 func newGen(prog *loader.Program, pkg string) *gen {
 	return &gen{
 		currPackage: pkg,
-		imports:     make(map[string]string),
+		imports:     make(map[string]*importInfo),
 		values:      make(map[ast.Expr]string),
 		prog:        prog,
 	}
@@ -172,9 +185,13 @@ func (g *gen) frame() []byte {
 		}
 		sort.Strings(imps)
 		for _, path := range imps {
-			// TODO(light): Omit the local package identifier if it matches
-			// the package name.
-			fmt.Fprintf(&buf, "\t%s %q\n", g.imports[path], path)
+			// Omit the local package identifier if it matches the package name.
+			info := g.imports[path]
+			if g.prog.Package(info.fullpath).Pkg.Name() == info.name {
+				fmt.Fprintf(&buf, "\t%q\n", path)
+			} else {
+				fmt.Fprintf(&buf, "\t%s %q\n", info.name, path)
+			}
 		}
 		buf.WriteString(")\n\n")
 	}
@@ -414,21 +431,21 @@ func (g *gen) qualifyImport(path string) string {
 	if i := strings.LastIndex(path, vendorPart); i != -1 && (i == 0 || path[i-1] == '/') {
 		unvendored = path[i+len(vendorPart):]
 	}
-	if name := g.imports[unvendored]; name != "" {
-		return name
+	if info := g.imports[unvendored]; info != nil {
+		return info.name
 	}
 	// TODO(light): Use parts of import path to disambiguate.
 	name := disambiguate(g.prog.Package(path).Pkg.Name(), func(n string) bool {
 		// Don't let an import take the "err" name. That's annoying.
 		return n == "err" || g.nameInFileScope(n)
 	})
-	g.imports[unvendored] = name
+	g.imports[unvendored] = &importInfo{name: name, fullpath: path}
 	return name
 }
 
 func (g *gen) nameInFileScope(name string) bool {
 	for _, other := range g.imports {
-		if other == name {
+		if other.name == name {
 			return true
 		}
 	}
@@ -698,7 +715,7 @@ func typeVariableName(t types.Type, defaultName string, transform func(string) s
 
 	// See if there's an unambiguous name; if so, use it.
 	for _, name := range names {
-		if !collides(name) {
+		if !reservedKeyword[name] && !collides(name) {
 			return name
 		}
 	}
@@ -756,9 +773,40 @@ func export(name string) string {
 	return sbuf.String()
 }
 
+// reservedKeyword is a set of Go's reserved keywords:
+// https://golang.org/ref/spec#Keywords
+var reservedKeyword = map[string]bool{
+	"break":       true,
+	"case":        true,
+	"chan":        true,
+	"const":       true,
+	"continue":    true,
+	"default":     true,
+	"defer":       true,
+	"else":        true,
+	"fallthrough": true,
+	"for":         true,
+	"func":        true,
+	"go":          true,
+	"goto":        true,
+	"if":          true,
+	"import":      true,
+	"interface":   true,
+	"map":         true,
+	"package":     true,
+	"range":       true,
+	"return":      true,
+	"select":      true,
+	"struct":      true,
+	"switch":      true,
+	"type":        true,
+	"var":         true,
+}
+
 // disambiguate picks a unique name, preferring name if it is already unique.
+// It also disambiguates against Go's reserved keywords.
 func disambiguate(name string, collides func(string) bool) string {
-	if !collides(name) {
+	if !reservedKeyword[name] && !collides(name) {
 		return name
 	}
 	buf := []byte(name)
@@ -769,7 +817,7 @@ func disambiguate(name string, collides func(string) bool) string {
 	for n := 2; ; n++ {
 		buf = strconv.AppendInt(buf[:base], int64(n), 10)
 		sbuf := string(buf)
-		if !collides(sbuf) {
+		if !reservedKeyword[sbuf] && !collides(sbuf) {
 			return sbuf
 		}
 	}

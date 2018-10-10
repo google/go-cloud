@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore reads parameters to the AWS Systems Manager Parameter Store.
+// Package paramstore provides a runtimevar.Driver implementation
+// that reads variables from AWS Systems Manager Parameter Store.
+//
+// Construct a Client, then use NewVariable to construct any number of
+// runtimevar.Variable objects.
 package paramstore
 
 import (
@@ -29,9 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// defaultWait is the default amount of time for a watcher to make a new AWS
-// API call.
-// Change the docstring for NewVariable if this time is modified.
+// defaultWait is the default value for WatchOptions.WaitTime.
 const defaultWait = 30 * time.Second
 
 // Client stores long-lived variables for connecting to Parameter Store.
@@ -46,7 +48,6 @@ func NewClient(p client.ConfigProvider) *Client {
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
-// If WaitTime is not set the polling time is set to 30 seconds.
 func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -69,11 +70,52 @@ func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Wat
 
 // WatchOptions provide optional configurations to the Watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of making an HTTP call and checking for
-	// updates by the Watch method. The smaller the value, the higher the frequency
-	// of making calls, which also means a faster rate of hitting the API quota.
-	// If this option is not set or set to 0, it uses a default value.
+	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
 	WaitTime time.Duration
+}
+
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	version    int64
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
+	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err == prev.err {
+		return nil
+	}
+	var code, prevCode string
+	if awsErr, ok := err.(awserr.Error); ok {
+		code = awsErr.Code()
+	}
+	if awsErr, ok := prev.err.(awserr.Error); ok {
+		prevCode = awsErr.Code()
+	}
+	if code != "" && code == prevCode {
+		return nil
+	}
+	return s
 }
 
 type watcher struct {
@@ -87,48 +129,31 @@ type watcher struct {
 	decoder *runtimevar.Decoder
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
-	// the "no change" signal with w.waitTime.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			var code, prevCode string
-			if awsErr, ok := err.(awserr.Error); ok {
-				code = awsErr.Code()
-			}
-			if awsErr, ok := prevErr.(awserr.Error); ok {
-				prevCode = awsErr.Code()
-			}
-			if (code != "" && code == prevCode) || err.Error() == prevErr.Error() {
-				return nil, nil, w.waitTime, nil
-			}
-		}
-		return nil, nil, 0, err
-	}
-
+// WatchVariable implements driver.WatchVariable.
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	lastVersion := int64(-1)
-	if prevVersion != nil {
-		lastVersion = prevVersion.(int64)
+	if prev != nil {
+		lastVersion = prev.(*state).version
 	}
 	// Read the variable from the backend.
 	p, err := readParam(w.sess, w.name, lastVersion)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
 	if p == nil {
 		// Version hasn't changed.
-		return nil, nil, w.waitTime, nil
+		return nil, w.waitTime
 	}
 
 	// New value! Decode it.
 	val, err := w.decoder.Decode([]byte(p.value))
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-	return &driver.Variable{Value: val, UpdateTime: p.updateTime}, p.version, 0, nil
+	return &state{val: val, updateTime: p.updateTime, version: p.version}, w.waitTime
 }
 
-// Close is a no-op. Cancel the context passed to Watch if watching should end.
+// Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
 }

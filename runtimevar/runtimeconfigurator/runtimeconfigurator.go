@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfigurator provides a runtimevar driver implementation to read configurations from
-// Cloud Runtime Configurator service and ability to detect changes and get updates.
+// Package runtimeconfigurator provides a runtimevar.Driver implementation
+// that reads variables from GCP Cloud Runtime Configurator.
 //
-// User constructs a Client that provides the gRPC connection, then use the client to construct any
-// number of runtimevar.Variable objects using NewConfig method.
+// Construct a Client, then use NewVariable to construct any number of
+// runtimevar.Variable objects.
 package runtimeconfigurator
 
 import (
@@ -47,8 +47,7 @@ var Set = wire.NewSet(
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
 	endPoint = "runtimeconfig.googleapis.com:443"
-	// defaultWait is the default value for WatchOptions.WaitTime if not set.
-	// Change the docstring for NewVariable if this time is modified.
+	// defaultWait is the default value for WatchOptions.WaitTime.
 	defaultWait = 30 * time.Second
 )
 
@@ -80,7 +79,6 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-// If WaitTime is not set the poller will check for updates to the variable every 30 seconds.
 func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
@@ -118,70 +116,86 @@ func (r ResourceName) String() string {
 
 // WatchOptions provide optional configurations to the Watcher.
 type WatchOptions struct {
-	// WaitTime controls the frequency of RPC calls and checking for updates by the Watch method.
-	// A Watcher keeps track of the last time it made an RPC, when Watch is called, it waits for
-	// configured WaitTime from the last RPC before making another RPC. The smaller the value, the
-	// higher the frequency of making RPCs, which also means faster rate of hitting the API quota.
-	//
-	// If this option is not set or set to 0, it uses defaultWait value.
+	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
 	WaitTime time.Duration
+}
+
+// state implements driver.State.
+type state struct {
+	val        interface{}
+	updateTime time.Time
+	raw        []byte
+	err        error
+}
+
+func (s *state) Value() (interface{}, error) {
+	return s.val, s.err
+}
+
+func (s *state) UpdateTime() time.Time {
+	return s.updateTime
+}
+
+// errorState returns a new State with err, unless prevS also represents
+// the same error, in which case it returns nil.
+func errorState(err error, prevS driver.State) driver.State {
+	s := &state{err: err}
+	if prevS == nil {
+		return s
+	}
+	prev := prevS.(*state)
+	if prev.err == nil {
+		// New error.
+		return s
+	}
+	if err == prev.err {
+		return nil
+	}
+	code, prevCode := grpc.Code(err), grpc.Code(prev.err)
+	if code != codes.OK && code == prevCode {
+		return nil
+	}
+	return s
 }
 
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
 // service.
 type watcher struct {
-	client      pb.RuntimeConfigManagerClient
-	waitTime    time.Duration
-	name        string
-	decoder     *runtimevar.Decoder
-	lastBytes   []byte
-	lastErrCode codes.Code
+	client   pb.RuntimeConfigManagerClient
+	waitTime time.Duration
+	name     string
+	decoder  *runtimevar.Decoder
 }
 
-// Close implements driver.Watcher.Close.  This is a no-op for this driver.
+// Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
 }
 
-func (w *watcher) WatchVariable(ctx context.Context, prevVersion interface{}, prevErr error) (*driver.Variable, interface{}, time.Duration, error) {
-
-	// checkSameErr checks to see if err is the same as prevErr, andif so, returns
-	// the "no change" signal with w.waitTime.
-	checkSameErr := func(err error) (*driver.Variable, interface{}, time.Duration, error) {
-		if prevErr != nil {
-			code, prevCode := grpc.Code(err), grpc.Code(prevErr)
-			if (code != codes.OK && code == prevCode) || err.Error() == prevErr.Error() {
-				return nil, nil, w.waitTime, nil
-			}
-		}
-		return nil, nil, 0, err
-	}
-
+// WatchVariable implements driver.WatchVariable.
+func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	// Get the variable from the backend.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
 	updateTime, err := parseUpdateTime(vpb)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-
 	// See if it's the same raw bytes as before.
 	b := bytesFromProto(vpb)
-	if prevVersion != nil && bytes.Equal(prevVersion.([]byte), b) {
-		return nil, nil, w.waitTime, nil
+	if prev != nil && bytes.Equal(b, prev.(*state).raw) {
+		// No change!
+		return nil, w.waitTime
 	}
 
-	// New value! Decode it.
+	// Decode the value.
 	val, err := w.decoder.Decode(b)
 	if err != nil {
-		return checkSameErr(err)
+		return errorState(err, prev), w.waitTime
 	}
-	return &driver.Variable{
-		Value:      val,
-		UpdateTime: updateTime,
-	}, b, 0, nil
+	return &state{val: val, updateTime: updateTime, raw: b}, w.waitTime
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {

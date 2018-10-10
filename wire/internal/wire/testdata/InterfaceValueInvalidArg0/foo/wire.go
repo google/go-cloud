@@ -21,6 +21,7 @@ import (
 )
 
 func injectedMessage() string {
+	// wrong: arg0 must be a pointer to an interface.
 	wire.Build(wire.InterfaceValue("foo", "bar"))
 	return ""
 }

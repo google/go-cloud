@@ -31,7 +31,7 @@ Go Cloud uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
 implementation of that interface. This distinction prevents Go Cloud going down
 a path of complexity that makes application portability difficult. The
-[`blob.Bucket`] type is a prime example: the API does not provide a way of
+[`blob.Bucket`][] type is a prime example: the API does not provide a way of
 creating a new bucket. To properly and safely create such a bucket requires
 careful consideration, getting something like ACLs wrong could lead to a
 catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
@@ -96,6 +96,17 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
+## Driver Naming Convention
+
+Inside this repository, we name packages that handle cloud services after the
+service name, not the providing cloud (`s3blob` instead of `awsblob`). While a
+cloud provider may provide a unique offering for a particular API, they may not
+always provide only one, so distinguishing them in this way keeps the API
+symbols stable over time.
+
+The exception to this rule is if the name is not unique across providers. The
+canonical example is `gcpkms` and `awskms`.
+
 ## Errors
 
 -   The callee is expected to return `error`s with messages that include
@@ -129,6 +140,158 @@ https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
+
+## Escape Hatches
+
+It is not feasible or desirable for APIs like [`blob.Bucket`] to encompass the
+full functionality of every provider. Rather, we intend to provide a subset of
+the most commonly used functionality. There will be cases where a developer
+wants to access provider-specific functionality, which might consist of:
+
+1.  **Top-level APIs**. For example, `blob` does not expose a `Copy`, but some
+    provider might.
+1.  **Data fields**. For example, **blob** exposes a few attributes like
+    ContentType and Size, but S3 and GCS both have many more.
+1.  **Options**. Different providers may support different options for
+    functionality.
+
+**Escape hatches** provide the user a way to escape the Go Cloud abstraction to
+access provider-specific functionality. They might be used as an interim
+solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
+choose not to support specific features, and the escape hatch will be permanent.
+As an example, both S3 and GCS blobs have the concept of ACLs, but it might be
+difficult to represent them in a generic way (although, we have not tried).
+
+Using an escape hatch implies that the resulting code is no longer portable; the
+escape hatched code will need to be ported in order to switch providers.
+Therefore, they should be avoided if possible.
+
+### Ways To Escape Hatch
+
+Users can always access the provider service directly, by constructing the
+top-level handle and making API calls, bypassing Go Cloud.
+
+*   For top-level operations, this may be fine, although it might require a
+    bunch of plumbing code to pass the provider service handle to where it is
+    needed.
+*   For data objects, it implies dropping Go Cloud entirely; for example,
+    instead of using `blob.Reader` to read a blob, the user would have to use
+    the provider-specific method for reading.
+
+This approach exists today. Due to its shortcomings, we are designing a second
+approach. The proposal is to extend Go Cloud APIs, at the top-level (e.g.
+`blob.Bucket`) and in data objects, to expose provider-specific handles. For
+example:
+
+```
+// The existing blob.Reader exposes some blob attributes, but not everything
+// that every provider exposes.
+type Reader struct {
+    ...
+    Size        int64
+    ContentType string
+    ...
+
+    // New field!
+    Sys interface{}
+}
+```
+
+The name `Sys` is modeled after
+[examples](https://golang.org/pkg/os/#ProcessState.Sys) in the `os` package.
+Using the `Sys` escape hatch to read an S3-specific attribute would look
+something like this:
+
+```
+if r, err := bucket.NewReader(ctx, "foo.txt"); err == nil {
+  acls := r.Sys.(*s3.GetObjectOutput).ACLs
+  ...
+}
+```
+
+Each provider implementation would document what type it returns for each of the
+escape hatch functions. `nil` is a valid return value for providers that don't
+support the escape hatch.
+
+We are also considering an alternative to `Sys` that would look something like
+this:
+
+```
+var s3obj s3.GetObjectOutput
+if r.As(&s3obj) {
+  acls := s3obj.ACLs
+  ...
+}
+```
+
+This alternative allows providers to map to multiple types.
+
+Design discussions regarding escape hatches are ongoing; we welcome input either
+on the [tracking issue](https://github.com/google/go-cloud/issues/470) or on the
+[mailing list](https://groups.google.com/forum/#!forum/go-cloud).
+
+## Enforcing Portability
+
+Go Cloud APIs will end up exposing functionality that is not supported by all
+provider implementations. In addition, some functionality details will differ
+across providers. Some theoretical examples using [`blob.Bucket`][]:
+
+1.  **Top-level APIs**: There might be a provider implementation that supports
+    reads, but not writes or deletes.
+1.  **Data fields**. Some providers may support key/value metadata associated
+    with a blob, others may not.
+1.  **Naming rules**. Different providers may allow different name lengths, or
+    allow/disallow unicode characters.
+1.  **Semantic guarantees**. Different providers may have different consistency
+    guarantees; for example, S3 only provides eventually consistency while GCS
+    provides strong consistency.
+
+How can we maintain portability while these differences exist?
+
+### Guiding Principle
+
+Any incompatibilities between provider implementations should be visible to the
+user as soon as possible. From best to worst:
+
+1.  At compile time
+1.  At configuration/app startup time (e.g., when the concrete type is created)
+1.  At runtime (e.g., when the incompatible behavior is accessed), via a non-nil
+    error
+1.  At runtime, via panic
+
+### Approaches Considered
+
+1.  **Documentation**. We could try to document non-uniform or optional
+    functionality across providers. Optional fields or functionality would
+    return "not implemented" errors or zero values.
+1.  **Restrict functionality to the intersection**. We could explicitly only
+    support the intersection of all provider implementations. For example, if
+    not all providers allow unicode characters in names, then **blob** would not
+    allow it either.
+1.  **Enforced feature codes**: Go Cloud APIs could enumerate the ways in which
+    providers differ as a `FeatureCode` enum.
+    *   Provider implementations would declare which feature codes they support,
+        enforced by extensions to the existing conformance tests.
+    *   API users would declare which feature codes they need.
+    *   Mismatches between what a user requests and what the provider supports
+        would be enforced at initialization time.
+    *   As much as possible, the API (via the concrete type) would enforce that
+        the user is only exposed to optional functionality that they asked for.
+    *   For example, the default legal name for a blob might be ASCII only, with
+        a `FeatureUnicodeNames` feature code. Users that don't request this
+        feature code would only be able to use blobs with ASCII names, even if
+        the underlying provider supports unicode. If the user requested
+        `FeatureUnicodeNames`, and their provider supports it, they could then
+        use blobs with unicode; if their provider doesn't support it, they would
+        get an initialization-time error.
+
+```
+b, err := blob.NewBucket(d, blob.FeatureUnicodeNames)
+...
+```
+
+Design discussions regarding enforcing portability are ongoing; we welcome input
+on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 
 ## Tests
 
@@ -209,3 +372,20 @@ not to do this, for several reasons:
 Overall, massive diffs in the replay files are expected and fine. As part of a
 code change, you may want to check for things like the number of RPCs made to
 identify performance regressions.
+
+## Module Boundaries
+
+With the advent of [Go modules], there are mechanisms to release different parts
+of a repository on different schedules. This permits one API to be in alpha/beta
+(pre-1.0), whereas another API can be stable (1.0 or later).
+
+As of 2018-09-13, Go Cloud as a whole still is not stable enough to call any
+part 1.0 yet. Until this milestone is reached, all of the Go Cloud libraries
+will be placed under a single module. The exceptions are standalone tools like
+[Contribute Bot][] that are part of the project, but not part of the library.
+After 1.0 is released, it is expected that each interface in Go Cloud will be
+released as one module. Provider implementations will live in separate modules.
+The exact details remain to be determined.
+
+[Go modules]: https://github.com/golang/go/wiki/Modules
+[Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot

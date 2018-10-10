@@ -42,14 +42,23 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
 	path := filepath.Join(h.dir, name)
-	return NewVariable(path, decoder, &WatchOptions{WaitTime: 50 * time.Millisecond})
+	return NewVariable(path, decoder, &WatchOptions{WaitTime: wait})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	path := filepath.Join(h.dir, name)
-	return ioutil.WriteFile(path, val, 0666)
+	// Write to a temporary file and rename; otherwise,
+	// Watch can read an empty file during the write.
+	tmp, err := ioutil.TempFile(h.dir, "tmp")
+	if err != nil {
+		return err
+	}
+	defer tmp.Close()
+	if _, err := tmp.Write(val); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), filepath.Join(h.dir, name))
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
@@ -64,6 +73,8 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 func (h *harness) Close() {
 	h.closer()
 }
+
+func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)

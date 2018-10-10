@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
 
 	"github.com/basvanbeek/ocsql"
 	"github.com/google/go-cloud/blob"
@@ -59,6 +61,13 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*b
 // connection parameters based on the command-line flags. Other providers inside
 // gcpcloud.GCP use the parameters to construct a *sql.DB.
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
+	if os.Getenv("GAE_ENV") == "standard" {
+		p, err := cloudmysql.ParamsFromEnv()
+		if err != nil {
+			log.Fatalf("Failed to get cloudsql params from env: %v", err)
+		}
+		return p
+	}
 	return &cloudmysql.Params{
 		ProjectID: string(id),
 		Region:    flags.cloudSQLRegion,

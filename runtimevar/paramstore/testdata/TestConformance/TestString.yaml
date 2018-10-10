@@ -100,35 +100,6 @@ interactions:
       X-Amz-Date:
       - 20180906T171734Z
       X-Amz-Target:
-      - AmazonSSM.GetParameter
-    url: https://ssm.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-config-variable","LastModifiedDate":1.536254253833E9,"Name":"test-config-variable","Type":"String","Value":"hello
-      world","Version":1}}'
-    headers:
-      Content-Type:
-      - application/x-amz-json-1.1
-      Date:
-      - Thu, 06 Sep 2018 17:17:34 GMT
-      X-Amzn-Requestid:
-      - 33032fb7-3323-4515-8f02-f074d4262b77
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: '{"Name":"test-config-variable"}'
-    form: {}
-    headers:
-      Content-Length:
-      - "31"
-      Content-Type:
-      - application/x-amz-json-1.1
-      User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
-      X-Amz-Date:
-      - 20180906T171734Z
-      X-Amz-Target:
       - AmazonSSM.DeleteParameter
     url: https://ssm.us-east-2.amazonaws.com/
     method: POST

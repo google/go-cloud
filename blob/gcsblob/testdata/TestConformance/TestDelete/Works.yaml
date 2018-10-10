@@ -2,102 +2,102 @@
 version: 1
 interactions:
 - request:
-    body: "--e86ff3e1b7594cdb22df2521cfcddf9d05fdbc8e6c979992ac564eae0423\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"pledged-solved-practically\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"name\":\"blob-for-deleting\"}\n\r\n--e86ff3e1b7594cdb22df2521cfcddf9d05fdbc8e6c979992ac564eae0423\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nHello world\r\n--e86ff3e1b7594cdb22df2521cfcddf9d05fdbc8e6c979992ac564eae0423--\r\n"
+    body: "--d7c5fbe5aef97f4111ccfe8c26296545136a8e6e8b807593e09e9dc5e0e4\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"blob-for-deleting\"}\n\r\n--d7c5fbe5aef97f4111ccfe8c26296545136a8e6e8b807593e09e9dc5e0e4\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nHello world\r\n--d7c5fbe5aef97f4111ccfe8c26296545136a8e6e8b807593e09e9dc5e0e4--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=e86ff3e1b7594cdb22df2521cfcddf9d05fdbc8e6c979992ac564eae0423
+      - multipart/related; boundary=d7c5fbe5aef97f4111ccfe8c26296545136a8e6e8b807593e09e9dc5e0e4
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/upload/storage/v1/b/pledged-solved-practically/o?alt=json&projection=full&uploadType=multipart
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&projection=full&uploadType=multipart
     method: POST
   response:
     body: |
       {
        "kind": "storage#object",
-       "id": "pledged-solved-practically/blob-for-deleting/1534529148789319",
-       "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting",
+       "id": "go-cloud-blob-test-bucket/blob-for-deleting/1537380234359654",
+       "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting",
        "name": "blob-for-deleting",
-       "bucket": "pledged-solved-practically",
-       "generation": "1534529148789319",
+       "bucket": "go-cloud-blob-test-bucket",
+       "generation": "1537380234359654",
        "metageneration": "1",
        "contentType": "text/plain; charset=utf-8",
-       "timeCreated": "2018-08-17T18:05:48.788Z",
-       "updated": "2018-08-17T18:05:48.788Z",
+       "timeCreated": "2018-09-19T18:03:54.359Z",
+       "updated": "2018-09-19T18:03:54.359Z",
        "storageClass": "REGIONAL",
-       "timeStorageClassUpdated": "2018-08-17T18:05:48.788Z",
+       "timeStorageClassUpdated": "2018-09-19T18:03:54.359Z",
        "size": "11",
        "md5Hash": "PiWWCnnbxptnTNTsZ6csYg==",
-       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/pledged-solved-practically/o/blob-for-deleting?generation=1534529148789319&alt=media",
+       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting?generation=1537380234359654&alt=media",
        "acl": [
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-deleting/1534529148789319/project-owners-59487849370",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting/acl/project-owners-59487849370",
-         "bucket": "pledged-solved-practically",
+         "id": "go-cloud-blob-test-bucket/blob-for-deleting/1537380234359654/project-owners-892942638129",
+         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting/acl/project-owners-892942638129",
+         "bucket": "go-cloud-blob-test-bucket",
          "object": "blob-for-deleting",
-         "generation": "1534529148789319",
-         "entity": "project-owners-59487849370",
+         "generation": "1537380234359654",
+         "entity": "project-owners-892942638129",
          "role": "OWNER",
          "projectTeam": {
-          "projectNumber": "59487849370",
+          "projectNumber": "892942638129",
           "team": "owners"
          },
-         "etag": "CMfEvsbW9NwCEAE="
+         "etag": "CObmg9bTx90CEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-deleting/1534529148789319/project-editors-59487849370",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting/acl/project-editors-59487849370",
-         "bucket": "pledged-solved-practically",
+         "id": "go-cloud-blob-test-bucket/blob-for-deleting/1537380234359654/project-editors-892942638129",
+         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting/acl/project-editors-892942638129",
+         "bucket": "go-cloud-blob-test-bucket",
          "object": "blob-for-deleting",
-         "generation": "1534529148789319",
-         "entity": "project-editors-59487849370",
+         "generation": "1537380234359654",
+         "entity": "project-editors-892942638129",
          "role": "OWNER",
          "projectTeam": {
-          "projectNumber": "59487849370",
+          "projectNumber": "892942638129",
           "team": "editors"
          },
-         "etag": "CMfEvsbW9NwCEAE="
+         "etag": "CObmg9bTx90CEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-deleting/1534529148789319/project-viewers-59487849370",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting/acl/project-viewers-59487849370",
-         "bucket": "pledged-solved-practically",
+         "id": "go-cloud-blob-test-bucket/blob-for-deleting/1537380234359654/project-viewers-892942638129",
+         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting/acl/project-viewers-892942638129",
+         "bucket": "go-cloud-blob-test-bucket",
          "object": "blob-for-deleting",
-         "generation": "1534529148789319",
-         "entity": "project-viewers-59487849370",
+         "generation": "1537380234359654",
+         "entity": "project-viewers-892942638129",
          "role": "READER",
          "projectTeam": {
-          "projectNumber": "59487849370",
+          "projectNumber": "892942638129",
           "team": "viewers"
          },
-         "etag": "CMfEvsbW9NwCEAE="
+         "etag": "CObmg9bTx90CEAE="
         },
         {
          "kind": "storage#objectAccessControl",
-         "id": "pledged-solved-practically/blob-for-deleting/1534529148789319/user-shantuo@google.com",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting/acl/user-shantuo@google.com",
-         "bucket": "pledged-solved-practically",
+         "id": "go-cloud-blob-test-bucket/blob-for-deleting/1537380234359654/user-rvangent@google.com",
+         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting/acl/user-rvangent@google.com",
+         "bucket": "go-cloud-blob-test-bucket",
          "object": "blob-for-deleting",
-         "generation": "1534529148789319",
-         "entity": "user-shantuo@google.com",
+         "generation": "1537380234359654",
+         "entity": "user-rvangent@google.com",
          "role": "OWNER",
-         "email": "shantuo@google.com",
-         "etag": "CMfEvsbW9NwCEAE="
+         "email": "rvangent@google.com",
+         "etag": "CObmg9bTx90CEAE="
         }
        ],
        "owner": {
-        "entity": "user-shantuo@google.com"
+        "entity": "user-rvangent@google.com"
        },
        "crc32c": "crUfeA==",
-       "etag": "CMfEvsbW9NwCEAE="
+       "etag": "CObmg9bTx90CEAE="
       }
     headers:
       Alt-Svc:
@@ -105,13 +105,13 @@ interactions:
       Cache-Control:
       - no-cache, no-store, max-age=0, must-revalidate
       Content-Length:
-      - "3137"
+      - "3138"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 17 Aug 2018 18:05:48 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Etag:
-      - CMfEvsbW9NwCEAE=
+      - CObmg9bTx90CEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -122,32 +122,32 @@ interactions:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534529448000"
+      - "1537380534000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
-      - "1039017688798"
+      - "61688748495"
       X-Google-Backends:
-      - hhlaxbae3:4489,/bns/hh/borg/hh/bns/blobstore2/bitpusher/6.scotty,acsfob5:443
+      - hilaxcab3:4021,/bns/hg/borg/hg/bns/blobstore2/bitpusher/69.scotty,acsfoi11:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=fA53W86eLKS2xgOMuKuICw
+      - eid=io-iW9nCCcGUxgP2tbPwCQ
       X-Google-Gfe-Cloud-Project-Number:
-      - "59487849370"
+      - "892942638129"
       X-Google-Gfe-Request-Trace:
-      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/6.scotty,acsfob5:443
+      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/69.scotty,acsfoi11:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/6:caf3
+      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/69:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCYVk2akFaXzlPc0tSNF81TW5vcVZQLWZLWDVFUGVrNGV0YzMxZHplR1A4R0g2OFo4X3FGWlhjWHdqdkExdkFjVUZzSm0tdThLbm5zcVp3RG9BVVdxMjlseTlYSVAwR1MzdS1laXZ6MmRHWE1ULXlYcjlLdXFZeUFlTWcwBDoNMS84TzV1MVo3ODNhfg
+      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCbEtvOVFwa1I0NTZXdG5Tdi1HQm5ERUxnRnlwWlRfM2g0MmNpS1pJZ0QwWXRzN2dqN09OQk1kRFdNSHIwc0VNNDVUTUQ1RnZwWWc4UHAweGlTOThtSkFUQWVFZ3VWREJkd01hRmpjSFdRQmo3MFNPcF9UMFI5d0pmUTAEOg0xL2pEbkFzZkxEUV9-
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -157,7 +157,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2Upl3WbJNA3OJEA2-VP_IV7QgdoSmW14bNG7anMy4TWTUH2qy7_lg-7-3-6wiG2NFUUcmr3b5HRFGrXDQEIdcYAuAIS-2Q
+      - AEnB2UqmVfaB39w3U9fA2NQcsLhx7xVGYIEMZs45h_bvrlB_BgJV0EnSarww4mQvNEoX6YISgufzH8gZu6niB2JJ2jsSsLT9CA
     status: 200 OK
     code: 200
     duration: ""
@@ -168,8 +168,8 @@ interactions:
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting?alt=json
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting?alt=json
     method: DELETE
   response:
     body: ""
@@ -183,7 +183,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 17 Aug 2018 18:05:48 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -194,30 +194,30 @@ interactions:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534529448000"
+      - "1537380534000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
-      - "1039017688798"
+      - "61688748495"
       X-Google-Backends:
-      - hhlaxbap1:4461,/bns/hh/borg/hh/bns/blobstore2/bitpusher/32.scotty,acsfob5:443
+      - hhlaxbaj9:4002,/bns/hg/borg/hg/bns/blobstore2/bitpusher/39.scotty,acsfoi11:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=fA53W7OPM6GwxgOhg5iICw
+      - eid=io-iW52BF-yVxgOO9rWQCQ
       X-Google-Gfe-Request-Trace:
-      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/32.scotty,acsfob5:443
+      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/39.scotty,acsfoi11:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/32:caf3
+      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/39:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCYVk2akFaXzlPc0tSNF81TW5vcVZQLWZLWDVFUGVrNGV0YzMxZHplR1A4R0g2OFo4X3FGWlhjWHdqdkExdkFjVUZzSm0tdThLbm5zcVp3RG9BVVdxMjlseTlYSVAwR1MzdS1laXZ6MmRHWE1ULXlYcjlLdXFZeUFlTWcwBDoNMS84TzV1MVo3ODNhfg
+      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCbEtvOVFwa1I0NTZXdG5Tdi1HQm5ERUxnRnlwWlRfM2g0MmNpS1pJZ0QwWXRzN2dqN09OQk1kRFdNSHIwc0VNNDVUTUQ1RnZwWWc4UHAweGlTOThtSkFUQWVFZ3VWREJkd01hRmpjSFdRQmo3MFNPcF9UMFI5d0pmUTAEOg0xL2pEbkFzZkxEUV9-
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -227,7 +227,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UrI-i0JkKjLmV3vLONWZq-MSdLJoC_k8TZfIsywnumhegEBCbKg5y-BysVOvZtIdwdiBFrQAwZh_pa45bxKfhc77ypvmg
+      - AEnB2Uo2J8KqGiNDScMzW0GgPeO4oHz9YGCewuPTuQQeI2BMf9heKQpQAl-dfGtVIskLNTYfQWyzKE794s1bysxL1rCMs8NlOw
     status: 204 No Content
     code: 204
     duration: ""
@@ -235,42 +235,42 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://storage.googleapis.com/pledged-solved-practically/blob-for-deleting
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-deleting
     method: GET
   response:
     body: '<?xml version=''1.0'' encoding=''UTF-8''?><Error><Code>NoSuchKey</Code><Message>The
-      specified key does not exist.</Message><Details>No such object: pledged-solved-practically/blob-for-deleting</Details></Error>'
+      specified key does not exist.</Message><Details>No such object: go-cloud-blob-test-bucket/blob-for-deleting</Details></Error>'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
       Cache-Control:
       - private, max-age=0
       Content-Length:
-      - "206"
+      - "205"
       Content-Type:
       - application/xml; charset=UTF-8
       Date:
-      - Fri, 17 Aug 2018 18:05:49 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Expires:
-      - Fri, 17 Aug 2018 18:05:49 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Server:
       - UploadServer
       X-Google-Backends:
-      - /bns/hi/borg/hi/bns/cloud-storage/prod-cloud-storage-frontend.frontend/33,/bns/hi/borg/hi/bns/blobstore2/bitpusher/4.scotty,acsfoc17:443
+      - /bns/hh/borg/hh/bns/cloud-storage/prod-cloud-storage-frontend.frontend/60,/bns/hh/borg/hh/bns/blobstore2/bitpusher/10.scotty,acsfob19:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=fA53W8i9OMSkxgPr3rWgCA
+      - eid=io-iW_aMHIO2xgO0xbbADw
       X-Google-Gfe-Cloud-Project-Number:
-      - "59487849370"
+      - "892942638129"
       X-Google-Gfe-Request-Trace:
-      - acsfoc17:443,/bns/hi/borg/hi/bns/blobstore2/bitpusher/4.scotty,acsfoc17:443
+      - acsfob19:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/10.scotty,acsfob19:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-cloud-storage
       X-Google-Netmon-Label:
-      - /bns/hi/borg/hi/bns/blobstore2/bitpusher/4:caf3
+      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/10:caf3
       X-Google-Service:
       - bitpusher-cloud-storage
       X-Google-Shellfish-Status:
@@ -282,7 +282,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UqHrIITreH-r0I0X-kaEuW8IpauTex_69JiZ5lXVkOr8XeU513EjQdBraIiPc1CuHbuUt7ZMu4t02QhQfQR91kzbTtV1Q
+      - AEnB2Ur860MWFTM53Ugq-zZNQGFaL58hjucBivt1poiBEK5NX-34dtb0i47_CdrJ0UhOT_fqTlvURDlmmGsWwl7fgKnzQa4zgw
     status: 404 Not Found
     code: 404
     duration: ""
@@ -293,8 +293,8 @@ interactions:
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
-      - gl-go/b8669ef1ce gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/pledged-solved-practically/o/blob-for-deleting?alt=json
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-deleting?alt=json
     method: DELETE
   response:
     body: |
@@ -304,12 +304,12 @@ interactions:
          {
           "domain": "global",
           "reason": "notFound",
-          "message": "No such object: pledged-solved-practically/blob-for-deleting",
-          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=NOT_FOUND, category=USER_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=notFound, internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.NOT_FOUND, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=NOT_FOUND, errorProtoDomain=gdata.CoreErrorDomain, filteredMessage=null, location=entity.resource_id.name, message=No such object: pledged-solved-practically/blob-for-deleting, unnamedArguments=[]}, location=entity.resource_id.name, message=No such object: pledged-solved-practically/blob-for-deleting, reason=notFound, rpcCode=404} No such object: pledged-solved-practically/blob-for-deleting: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:293)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: pledged-solved-practically/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.MoreExecutors$DirectExecutor.execute(MoreExecutors.java:402)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1029)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:871)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:694)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
+          "message": "No such object: go-cloud-blob-test-bucket/blob-for-deleting",
+          "debugInfo": "com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:292)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=NOT_FOUND, category=USER_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:292)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=notFound, internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.NOT_FOUND, createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:292)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n, errorProtoCode=NOT_FOUND, errorProtoDomain=gdata.CoreErrorDomain, filteredMessage=null, location=entity.resource_id.name, message=No such object: go-cloud-blob-test-bucket/blob-for-deleting, unnamedArguments=[]}, location=entity.resource_id.name, message=No such object: go-cloud-blob-test-bucket/blob-for-deleting, reason=notFound, rpcCode=404} No such object: go-cloud-blob-test-bucket/blob-for-deleting: com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:292)\n\tat com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException: No such object: go-cloud-blob-test-bucket/blob-for-deleting\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t... 17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1154)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1154)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
          }
         ],
         "code": 404,
-        "message": "No such object: pledged-solved-practically/blob-for-deleting"
+        "message": "No such object: go-cloud-blob-test-bucket/blob-for-deleting"
        }
       }
     headers:
@@ -318,43 +318,43 @@ interactions:
       Cache-Control:
       - private, max-age=0
       Content-Length:
-      - "12067"
+      - "12026"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 17 Aug 2018 18:05:49 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Expires:
-      - Fri, 17 Aug 2018 18:05:49 GMT
+      - Wed, 19 Sep 2018 18:03:54 GMT
       Server:
       - UploadServer
       Vary:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1534529448000"
+      - "1537380534000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
-      - "1039017688798"
+      - "61688748495"
       X-Google-Backends:
-      - hilaxcad8:4407,/bns/hh/borg/hh/bns/blobstore2/bitpusher/10.scotty,acsfob5:443
+      - hglaxaay12:4147,/bns/hg/borg/hg/bns/blobstore2/bitpusher/50.scotty,acsfoi11:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=fQ53W_73BoKzxgPto5mwBg
+      - eid=io-iW72XKYuZxgPF97rQBw
       X-Google-Gfe-Request-Trace:
-      - acsfob5:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/10.scotty,acsfob5:443
+      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/50.scotty,acsfoi11:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/10:caf3
+      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/50:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CN79ntKeHhoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMzhCYVk2akFaXzlPc0tSNF81TW5vcVZQLWZLWDVFUGVrNGV0YzMxZHplR1A4R0g2OFo4X3FGWlhjWHdqdkExdkFjVUZzSm0tdThLbm5zcVp3RG9BVVdxMjlseTlYSVAwR1MzdS1laXZ6MmRHWE1ULXlYcjlLdXFZeUFlTWcwBDoNMS84TzV1MVo3ODNhfg
+      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCbEtvOVFwa1I0NTZXdG5Tdi1HQm5ERUxnRnlwWlRfM2g0MmNpS1pJZ0QwWXRzN2dqN09OQk1kRFdNSHIwc0VNNDVUTUQ1RnZwWWc4UHAweGlTOThtSkFUQWVFZ3VWREJkd01hRmpjSFdRQmo3MFNPcF9UMFI5d0pmUTAEOg0xL2pEbkFzZkxEUV9-
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -364,7 +364,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UrfoyT96eNvm4OX377qWEQG0f-1sXStM2tQeWyfyX3DD9_YueeuanVs7ucUp1VRIRKfRYOzMw8NpfSJaUZhCoTpxP9Wgg
+      - AEnB2UpuKP5Gtd8L9jUkD8to77Tkgd_jC78_BKl8zokydcg7gelR1ZPcXocC9bts6Uu0Kv91NIlKCRWLc8X4xdwG2Hp2z016Tw
     status: 404 Not Found
     code: 404
     duration: ""

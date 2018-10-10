@@ -19,8 +19,6 @@ package drivertest
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"io"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -58,6 +56,12 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	t.Run("TestWrite", func(t *testing.T) {
 		testWrite(t, newHarness, pathToTestdata)
 	})
+	t.Run("TestCanceledWrite", func(t *testing.T) {
+		testCanceledWrite(t, newHarness, pathToTestdata)
+	})
+	t.Run("TestMetadata", func(t *testing.T) {
+		testMetadata(t, newHarness)
+	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
@@ -84,8 +88,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			wantErr: true,
 		},
 		{
-			name:    "length 0 read of nonexistent key fails",
-			key:     "key-does-not-exist",
+			name:    "length 0 read fails",
+			key:     key,
 			wantErr: true,
 		},
 		{
@@ -133,15 +137,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		w, err := b.NewWriter(ctx, key, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = w.Write(content)
-		if err == nil {
-			err = w.Close()
-		}
-		if err != nil {
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -179,12 +175,15 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			if r.Size() != contentSize {
 				t.Errorf("got size %d want %d", r.Size(), contentSize)
 			}
+			if r.ModTime().IsZero() {
+				t.Errorf("got zero mod time, want non-zero")
+			}
 			r.Close()
 		})
 	}
 }
 
-// testAttributes tests the behavior of attributes returned by Reader.
+// testAttributes tests Attributes.
 func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
 		key         = "blob-for-attributes"
@@ -207,15 +206,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
-		w, err := b.NewWriter(ctx, key, opts)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = w.Write(content)
-		if err == nil {
-			err = w.Close()
-		}
-		if err != nil {
+		if err := b.WriteAll(ctx, key, content, opts); err != nil {
 			t.Fatal(err)
 		}
 		return b, func() {
@@ -224,74 +215,45 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		}
 	}
 
-	for _, rLen := range []int64{0, -1} {
-		t.Run(fmt.Sprintf("ReadLength %d", rLen), func(t *testing.T) {
+	b, done := init(t)
+	defer done()
 
-			t.Run("ContentType", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
+	a, err := b.Attributes(ctx, key)
+	if err != nil {
+		t.Fatalf("failed Attributes: %v", err)
+	}
+	// Also make a Reader so we can verify the subset of attributes
+	// that it exposes.
+	r, err := b.NewReader(ctx, key)
+	if err != nil {
+		t.Fatalf("failed Attributes: %v", err)
+	}
+	defer r.Close()
 
-				r, err := b.NewRangeReader(ctx, key, 0, 0)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				if r.ContentType() != contentType {
-					t.Errorf("got ContentType %q want %q", r.ContentType(), contentType)
-				}
-			})
+	if a.ContentType != contentType {
+		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
+	}
+	if r.ContentType() != contentType {
+		t.Errorf("got Reader.ContentType() %q want %q", r.ContentType(), contentType)
+	}
+	if a.Size != int64(len(content)) {
+		t.Errorf("got Size %d want %d", a.Size, len(content))
+	}
+	if r.Size() != int64(len(content)) {
+		t.Errorf("got Reader.Size() %d want %d", r.Size(), len(content))
+	}
 
-			t.Run("Size", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
-
-				r, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				if r.Size() != int64(len(content)) {
-					t.Errorf("got Size %d want %d", r.Size(), len(content))
-				}
-			})
-
-			t.Run("ModTime", func(t *testing.T) {
-				b, done := init(t)
-				defer done()
-
-				r, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Fatalf("failed NewRangeReader: %v", err)
-				}
-				defer r.Close()
-				t1 := r.ModTime()
-				if t1.IsZero() {
-					// This provider doesn't support ModTime.
-					// TODO(issue #315): There should be a way to tell if the provider
-					// is supposed to return it.
-					return
-				}
-				w, err := b.NewWriter(ctx, key, nil)
-				if err != nil {
-					t.Fatalf("failed NewWriter: %v", err)
-				}
-				if _, err := w.Write(content); err != nil {
-					t.Fatalf("failed Write content: %v", err)
-				}
-				if err = w.Close(); err != nil {
-					t.Errorf("failed Close Writer: %v", err)
-				}
-				r2, err := b.NewRangeReader(ctx, key, 0, rLen)
-				if err != nil {
-					t.Errorf("failed NewRangeReader#2: %v", err)
-				}
-				defer r2.Close()
-				t2 := r2.ModTime()
-				if t2.Before(t1) {
-					t.Errorf("ModTime %v is before %v", t2, t1)
-				}
-			})
-		})
+	t1 := a.ModTime
+	if err := b.WriteAll(ctx, key, content, nil); err != nil {
+		t.Fatal(err)
+	}
+	a2, err := b.Attributes(ctx, key)
+	if err != nil {
+		t.Errorf("failed Attributes#2: %v", err)
+	}
+	t2 := a2.ModTime
+	if t2.Before(t1) {
+		t.Errorf("ModTime %v is before %v", t2, t1)
 	}
 }
 
@@ -423,15 +385,9 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 			defer func() { _ = b.Delete(ctx, tc.key) }()
 
 			// Read it back.
-			r, err := b.NewReader(ctx, tc.key)
+			buf, err := b.ReadAll(ctx, tc.key)
 			if err != nil {
-				t.Fatalf("failed to NewReader: %v", err)
-			}
-			defer r.Close()
-			buf := make([]byte, len(tc.content))
-			_, err = r.Read(buf)
-			if err != nil {
-				t.Errorf("failed to Read: %v", err)
+				t.Fatal(err)
 			}
 			if !bytes.Equal(buf, tc.content) {
 				if len(buf) < 100 && len(tc.content) < 100 {
@@ -439,6 +395,163 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 				} else {
 					t.Error("read didn't match write, content too large to display")
 				}
+			}
+		})
+	}
+}
+
+// testCanceledWrite tests the functionality of canceling an in-progress write.
+func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+	const key = "blob-for-canceled-write"
+	content := []byte("hello world")
+
+	tests := []struct {
+		description string
+		contentType string
+	}{
+		{
+			// The write will be buffered in the concrete type as part of
+			// ContentType detection, so the first call to the Driver will be Close.
+			description: "EmptyContentType",
+		},
+		{
+			// The write will be sent to the Driver, which may do its own
+			// internal buffering.
+			description: "NonEmptyContentType",
+			contentType: "text/plain",
+		},
+		// TODO(issue #482): Find a way to test that a chunked upload that's interrupted
+		// after some chunks are uploaded cancels correctly.
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			cancelCtx, cancel := context.WithCancel(ctx)
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a writer with the context that we're going
+			// to cancel.
+			opts := &blob.WriterOptions{
+				ContentType: test.contentType,
+			}
+			w, err := b.NewWriter(cancelCtx, key, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Write the content.
+			if _, err := w.Write(content); err != nil {
+				t.Fatal(err)
+			}
+			// Cancel the context to abort the write.
+			cancel()
+			// Close should return some kind of canceled context error.
+			// We can't verify the kind of error cleanly, so we just verify there's
+			// an error.
+			if err := w.Close(); err == nil {
+				t.Errorf("got Close error %v want canceled ctx error", err)
+			}
+			// A Read of the same key should fail; the write was aborted
+			// so the blob shouldn't exist.
+			if _, err := b.NewReader(ctx, key); err == nil {
+				t.Error("wanted NewReturn to return an error when write was canceled")
+			}
+		})
+	}
+}
+
+// testMetadata tests writing and reading the key/value metadata for a blob.
+func testMetadata(t *testing.T, newHarness HarnessMaker) {
+	const key = "blob-for-metadata"
+	hello := []byte("hello")
+
+	tests := []struct {
+		name     string
+		metadata map[string]string
+		content  []byte
+		want     map[string]string
+		wantErr  bool
+	}{
+		{
+			name:     "empty",
+			content:  hello,
+			metadata: map[string]string{},
+			want:     nil,
+		},
+		{
+			name:     "empty key fails",
+			content:  hello,
+			metadata: map[string]string{"": "empty key value"},
+			wantErr:  true,
+		},
+		{
+			name:     "duplicate case-insensitive key fails",
+			content:  hello,
+			metadata: map[string]string{"abc": "foo", "aBc": "bar"},
+			wantErr:  true,
+		},
+		{
+			name:    "valid metadata",
+			content: hello,
+			metadata: map[string]string{
+				"key-a": "value-a",
+				"kEy-B": "value-b",
+				"key-c": "vAlUe-c",
+			},
+			want: map[string]string{
+				"key-a": "value-a",
+				"key-b": "value-b",
+				"key-c": "vAlUe-c",
+			},
+		},
+		{
+			name:     "valid metadata with empty body",
+			content:  nil,
+			metadata: map[string]string{"foo": "bar"},
+			want:     map[string]string{"foo": "bar"},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			h, err := newHarness(ctx, t)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer h.Close()
+
+			b, err := h.MakeBucket(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			opts := &blob.WriterOptions{
+				Metadata: tc.metadata,
+			}
+			err = b.WriteAll(ctx, key, hello, opts)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("got error %v want error %v", err, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			defer func() {
+				_ = b.Delete(ctx, key)
+			}()
+			a, err := b.Attributes(ctx, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(a.Metadata, tc.want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", a.Metadata, tc.want, diff)
 			}
 		})
 	}
@@ -480,16 +593,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		}
 
 		// Create the blob.
-		writer, err := b.NewWriter(ctx, key, nil)
-		if err != nil {
-			t.Fatalf("failed to NewWriter: %v", err)
-		}
-		_, err = io.WriteString(writer, "Hello world")
-		if err != nil {
-			t.Errorf("failed to write: %v", err)
-		}
-		if err := writer.Close(); err != nil {
-			t.Errorf("failed to close Writer: %v", err)
+		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
+			t.Fatal(err)
 		}
 		// Delete it.
 		if err := b.Delete(ctx, key); err != nil {

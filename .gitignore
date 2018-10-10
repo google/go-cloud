@@ -22,7 +22,6 @@ vendor/
 
 # Populated config files
 /internal/contributebot/dev/
-/internal/contributebot/k8s/*.yaml
 /internal/contributebot/webhook/app.yaml
 /tests/gcp/app/gcp-test.yaml
 
@@ -68,3 +67,6 @@ Session.vim
 # Mercurial files
 **/.hg
 **/.hg*
+
+# runtimevar/etcdvar tests create this directory.
+runtimevar/etcdvar/default.etcd

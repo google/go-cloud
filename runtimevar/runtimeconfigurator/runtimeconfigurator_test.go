@@ -17,6 +17,7 @@ package runtimeconfigurator
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
@@ -71,9 +72,9 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
 	rn := resourceName(name)
-	return h.client.NewVariable(rn, decoder, nil)
+	return h.client.NewVariable(rn, decoder, &WatchOptions{WaitTime: wait})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
@@ -108,6 +109,8 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 func (h *harness) Close() {
 	h.closer()
 }
+
+func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)

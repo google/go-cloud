@@ -34,6 +34,13 @@ func TestProcessIssueEvent(t *testing.T) {
 		labels      []string
 		want        *issueEdits
 	}{
+		// Closed issue should not be checked other than "in progress" label
+		{
+			description: "close with invalid title -> no change",
+			action:      "closed",
+			title:       "foo",
+			want:        &issueEdits{},
+		},
 		// Remove "in progress" label from closed issues.
 		{
 			description: "close with random label -> no change",
@@ -120,47 +127,132 @@ func TestProcessIssueEvent(t *testing.T) {
 
 func TestProcessPullRequestEvent(t *testing.T) {
 	const (
-		mainRepoName = "google/go-cloud"
-		forkRepoName = "user/go-cloud"
+		mainRepoOwner = "google"
+		defaultTitle  = "foo: bar"
 	)
 
 	tests := []struct {
 		description string
 		action      string
-		branchRepo  string
+		state       string
+		reviewers   []string
+		title       string
+		prevTitle   string
+		fork        bool
 		want        *pullRequestEdits
 	}{
+		// Skip processing when the PR is closed.
+		{
+			description: "closed with invalid title -> no change",
+			title:       defaultTitle,
+			state:       "closed",
+			fork:        false,
+			want:        &pullRequestEdits{},
+		},
 		// If the pull request is from a branch of the main repo, close it.
 		{
 			description: "open with branch from fork -> no change",
 			action:      "opened",
-			branchRepo:  forkRepoName,
+			title:       defaultTitle,
+			fork:        true,
 			want:        &pullRequestEdits{},
 		},
 		{
 			description: "open with branch from main repo -> close",
 			action:      "opened",
-			branchRepo:  mainRepoName,
+			fork:        false,
 			want: &pullRequestEdits{
 				Close:       true,
 				AddComments: []string{branchesInForkCloseComment},
+			},
+		},
+		// Assign to reviewers.
+		{
+			description: "open with no assignee and a reviewer -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo"},
+			fork:        true,
+			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
+		},
+		{
+			description: "open with no assignee and multiple reviewers -> assign",
+			action:      "opened",
+			title:       defaultTitle,
+			reviewers:   []string{"foo", "bar"},
+			fork:        true,
+			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
+		},
+		{
+			description: "closed with no assignee and a reviewer -> no change",
+			action:      "edited",
+			title:       defaultTitle,
+			state:       "closed",
+			reviewers:   []string{"foo"},
+			fork:        true,
+			want:        &pullRequestEdits{},
+		},
+		// Check title looks like "foo: bar".
+		{
+			description: "open with invalid title -> add comment",
+			action:      "opened",
+			title:       "foo",
+			fork:        true,
+			want: &pullRequestEdits{
+				AddComments: []string{pullRequestTitleComment},
+			},
+		},
+		{
+			description: "edit on invalid title but title didn't change -> no change",
+			action:      "edited",
+			title:       "foo",
+			prevTitle:   "foo",
+			fork:        true,
+			want:        &pullRequestEdits{},
+		},
+		{
+			description: "edit to invalid title -> add comment",
+			action:      "edited",
+			title:       "prev",
+			prevTitle:   "foo",
+			fork:        true,
+			want: &pullRequestEdits{
+				AddComments: []string{pullRequestTitleComment},
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
+			var reviewers []*github.User
+			for _, reviewer := range tc.reviewers {
+				reviewers = append(reviewers, &github.User{Login: github.String(reviewer)})
+			}
 			pr := &github.PullRequest{
 				Head: &github.PullRequestBranch{
 					Repo: &github.Repository{
-						Name: github.String(tc.branchRepo),
+						Fork: github.Bool(tc.fork),
 					},
 				},
+				Title:              github.String(tc.title),
+				State:              github.String(tc.state),
+				RequestedReviewers: reviewers,
+			}
+			var chg *github.EditChange
+			if tc.action == "edited" {
+				chg = &github.EditChange{}
+				if tc.prevTitle != "" {
+					title := struct {
+						From *string `json:"from,omitempty"`
+					}{From: github.String(tc.prevTitle)}
+					chg.Title = &title
+				}
 			}
 			data := &pullRequestData{
 				Action:      tc.action,
-				Repo:        mainRepoName,
+				OwnerLogin:  mainRepoOwner,
 				PullRequest: pr,
+				Change:      chg,
 			}
 			got := processPullRequestEvent(data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
