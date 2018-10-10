@@ -218,7 +218,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
 			}
 
-			// Repeat using the iterator.
+			// Repeat using ListIter.
 			it := b.ListIter(ctx, &blob.ListOptions{
 				PageSize: tc.pageSize,
 				Prefix:   tc.prefix,

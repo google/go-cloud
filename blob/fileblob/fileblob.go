@@ -109,20 +109,21 @@ func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.Lis
 	}
 	var result driver.ListPage
 	for _, info := range fileinfos {
+		// Skip the self-generated attribute files.
 		if strings.HasSuffix(info.Name(), attrsExt) {
-			// Skip the self-generated attribute files.
 			continue
 		}
+		// Skip files that don't match the Prefix.
 		if opt.Prefix != "" && !strings.HasPrefix(info.Name(), opt.Prefix) {
 			continue
 		}
+		// If a PageToken was provided, skip to it.
 		if opt.PageToken != "" && info.Name() < opt.PageToken {
-			// If a PageToken was provided, skip to it.
 			continue
 		}
+		// If we've got a full page of results, and there are more
+		// to come, set NextPageToken and stop here.
 		if opt.PageSize != 0 && len(result.Objects) == opt.PageSize {
-			// We've got a full page of results, and there are more
-			// to come. Send back a NextPageToken and stop here.
 			result.NextPageToken = info.Name()
 			break
 		}

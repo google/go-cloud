@@ -157,17 +157,17 @@ func (w *Writer) open(p []byte) (n int, err error) {
 // MaxPageSize is the maximum number of results to retrieve at a time via List.
 const MaxPageSize = 1000
 
-// ListOptions sets options for listing objects in the bucket.
+// ListOptions sets options for listing objects.
 type ListOptions struct {
 	// PageSize sets the maximum number of objects that will be returned in
-	// a single call. Must be >= 0 and <= MaxPageSize; 0 defaults to
-	// MaxPageSize.
+	// a single call to List. For ListIter, it sets the internal buffer size.
+	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
 	PageSize int
 	// PageToken should be filled in with the NextPageToken from a previous
 	// List call, to get the next page of results.
 	// Ignored when using ListIter.
 	PageToken string
-	// Prefix indicates that only results whose key starts with this prefix
+	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
 	Prefix string
 	// TODO(rvangent): Add Delimiter.
@@ -181,28 +181,30 @@ type ListIterator struct {
 	nextIdx int
 }
 
-// Next returns the next object in the List. It returns nil if there are
+// Next returns the next object. It returns nil if there are
 // no more objects.
 func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	if i.page != nil {
+		// We've already got a page of results.
 		if i.nextIdx < len(i.page.Objects) {
-			// We've already got the next object; return it.
+			// Next object is in the page; return it.
 			obj := i.page.Objects[i.nextIdx]
 			i.nextIdx++
 			return obj, nil
 		}
 		if i.page.NextPageToken == "" {
-			// Done with current page, and there are no more.
+			// Done with current page, and there are no more; return nil.
 			return nil, nil
 		}
-		// We're going to load the next page.
+		// We need to load the next page.
 		i.opt.PageToken = i.page.NextPageToken
 	}
-	lr, err := i.b.List(ctx, &i.opt)
+	// Loading a new page.
+	p, err := i.b.List(ctx, &i.opt)
 	if err != nil {
 		return nil, err
 	}
-	i.page = lr
+	i.page = p
 	i.nextIdx = 0
 	return i.Next(ctx)
 }
@@ -257,7 +259,7 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 // List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
 //
-// Use ListIter instead to iterate over objects one at a time.
+// To iterate over objects one at a time instead of in pages, use ListIter.
 func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) {
 	if opt == nil {
 		opt = &ListOptions{}
@@ -276,16 +278,16 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) 
 		PageToken: opt.PageToken,
 		Prefix:    opt.Prefix,
 	}
-	lr, err := b.b.List(ctx, dopt)
+	p, err := b.b.List(ctx, dopt)
 	if err != nil {
 		return nil, err
 	}
 	result := &ListPage{
-		NextPageToken: lr.NextPageToken,
+		NextPageToken: p.NextPageToken,
 	}
-	if len(lr.Objects) > 0 {
-		result.Objects = make([]*ListObject, len(lr.Objects))
-		for i, obj := range lr.Objects {
+	if len(p.Objects) > 0 {
+		result.Objects = make([]*ListObject, len(p.Objects))
+		for i, obj := range p.Objects {
 			result.Objects[i] = &ListObject{
 				Key:     obj.Key,
 				ModTime: obj.ModTime,
@@ -296,14 +298,14 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListPage, error) 
 	return result, nil
 }
 
-// ListIter returns an object that can be used to iterate over objects in a bucket
-// one at a time. The underlying implementation fetches results in pages.
+// ListIter returns an object that can be used to iterate over objects in a
+// bucket. The underlying implementation fetches results in pages.
 // Use ListOptions to control the page size and filtering.
 //
 // ListIter is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
 //
-// Use List instead to iterate over results in pages.
+// To list objects in pages, use List.
 func (b *Bucket) ListIter(ctx context.Context, opt *ListOptions) *ListIterator {
 	if opt == nil {
 		opt = &ListOptions{}

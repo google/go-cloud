@@ -172,21 +172,21 @@ func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.Lis
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
-	var result driver.ListPage
+	page := driver.ListPage{}
 	if resp.NextContinuationToken != nil {
-		result.NextPageToken = *resp.NextContinuationToken
+		page.NextPageToken = *resp.NextContinuationToken
 	}
 	if len(resp.Contents) > 0 {
-		result.Objects = make([]*driver.ListObject, len(resp.Contents))
+		page.Objects = make([]*driver.ListObject, len(resp.Contents))
 		for i, obj := range resp.Contents {
-			result.Objects[i] = &driver.ListObject{
+			page.Objects[i] = &driver.ListObject{
 				Key:     *obj.Key,
 				ModTime: *obj.LastModified,
 				Size:    *obj.Size,
 			}
 		}
 	}
-	return &result, nil
+	return &page, nil
 }
 
 // Attributes implements driver.Attributes.

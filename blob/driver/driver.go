@@ -94,7 +94,7 @@ type Attributes struct {
 // ListOptions sets options for listing objects in the bucket.
 type ListOptions struct {
 	// PageSize sets the maximum number of objects that will be returned in
-	// a single call. It is guaranteed to be > 0.
+	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
 	// List call.

@@ -77,26 +77,25 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 func (b *bucket) List(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
 	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
-	pager := iterator.NewPager(iter, int(opt.PageSize), opt.PageToken)
+	pager := iterator.NewPager(iter, opt.PageSize, opt.PageToken)
 
 	var objects []*storage.ObjectAttrs
 	nextPageToken, err := pager.NextPage(&objects)
 	if err != nil {
 		return nil, err
 	}
-	var result driver.ListPage
-	result.NextPageToken = nextPageToken
+	page := driver.ListPage{NextPageToken: nextPageToken}
 	if len(objects) > 0 {
-		result.Objects = make([]*driver.ListObject, len(objects))
+		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
-			result.Objects[i] = &driver.ListObject{
+			page.Objects[i] = &driver.ListObject{
 				Key:     obj.Name,
 				ModTime: obj.Updated,
 				Size:    obj.Size,
 			}
 		}
 	}
-	return &result, nil
+	return &page, nil
 }
 
 // Attributes implements driver.Attributes.
