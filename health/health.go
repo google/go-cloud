@@ -18,7 +18,6 @@ package health
 import (
 	"io"
 	"net/http"
-	"strconv"
 )
 
 // Handler is an HTTP handler that reports on the success of an
@@ -43,8 +42,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	writeHealthy(w)
 }
 
-func writeHeaders(statusLen int, w http.ResponseWriter) {
-	w.Header().Set("Content-Length", strconv.Itoa(statusLen))
+func writeHeaders(statusLen string, w http.ResponseWriter) {
+	w.Header().Set("Content-Length", statusLen)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
@@ -52,7 +51,7 @@ func writeHeaders(statusLen int, w http.ResponseWriter) {
 func writeUnhealthy(w http.ResponseWriter) {
 	const (
 		status    = "unhealthy"
-		statusLen = 9
+		statusLen = "9"
 	)
 
 	writeHeaders(statusLen, w)
@@ -69,7 +68,7 @@ func HandleLive(w http.ResponseWriter, _ *http.Request) {
 func writeHealthy(w http.ResponseWriter) {
 	const (
 		status    = "ok"
-		statusLen = 2
+		statusLen = "2"
 	)
 
 	writeHeaders(statusLen, w)
