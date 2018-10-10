@@ -1,6 +1,8 @@
 # The Go Cloud Project
 _Write once, run on any cloud ☁️_
 
+<img src="logo-gopherblue.png" alt="" width="180" height="180">
+
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
 
