@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package s3blob provides an implementation of using blob API on S3.
+// Package s3blob provides an implementation of blob using S3.
 //
-// It exposes the following escape hatch types (see
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-// for more details).
+// It exposes the following escape hatch types for As:
 // Bucket: *s3.S3
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput

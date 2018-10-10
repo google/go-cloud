@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcsblob provides an implementation of using blob API on GCS.
-// It is a wrapper around GCS client library.
+// Package gcsblob provides an implementation of blob that uses GCS.
 //
-// It exposes the following escape hatch types (see
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
-// for more details).
+// It exposes the following escape hatch types for As:
 // Bucket: *storage.Client
 // Reader: storage.Reader
 // Attributes: storage.ObjectAttrs

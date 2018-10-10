@@ -64,7 +64,7 @@ type WriterOptions struct {
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
-	// BeforeWrite is a callback that must be called exactly once, before
+	// BeforeWrite is a callback that must be called exactly once before
 	// any data is written, unless NewTypedWriter returns an error, in
 	// which case it should not be called.
 	// asFunc allows providers to expose provider-specific types;

@@ -17,6 +17,7 @@ package s3blob
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -64,20 +65,23 @@ func TestConformance(t *testing.T) {
 
 const language = "nl"
 
+// verifyContentLanguage uses As to access the underlying GCS types and
+// read/write the ContentLanguage field.
 type verifyContentLanguage struct{}
 
 func (verifyContentLanguage) Name() string {
 	return "verify ContentLanguage can be written and read through As"
 }
 
-func (verifyContentLanguage) BucketCheck(t *testing.T, b *blob.Bucket) {
+func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	var client *s3.S3
 	if !b.As(&client) {
-		t.Fatal("Bucket.As failed")
+		return errors.New("Bucket.As failed")
 	}
+	return nil
 }
 
-func (verifyContentLanguage) Write(as func(interface{}) bool) error {
+func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var req *s3manager.UploadInput
 	if !as(&req) {
 		return errors.New("WriterAs failed")
@@ -86,22 +90,24 @@ func (verifyContentLanguage) Write(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) AttributesCheck(t *testing.T, attrs *blob.Attributes) {
+func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 	var hoo s3.HeadObjectOutput
 	if !attrs.As(&hoo) {
-		t.Fatal("Attributes.As returned false")
+		return errors.New("Attributes.As returned false")
 	}
 	if got := *hoo.ContentLanguage; got != language {
-		t.Errorf("got %q want %q", got, language)
+		return fmt.Errorf("got %q want %q", got, language)
 	}
+	return nil
 }
 
-func (verifyContentLanguage) ReaderCheck(t *testing.T, r *blob.Reader) {
+func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 	var goo s3.GetObjectOutput
 	if !r.As(&goo) {
-		t.Fatal("Reader.As returned false")
+		return errors.New("Reader.As returned false")
 	}
 	if got := *goo.ContentLanguage; got != language {
-		t.Errorf("got %q want %q", got, language)
+		return fmt.Errorf("got %q want %q", got, language)
 	}
+	return nil
 }

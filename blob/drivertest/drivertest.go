@@ -46,26 +46,26 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // AsTest represents a test of As functionality.
 // The conformance test:
 // 1. Calls BucketCheck.
-// 2. Creates a blob using Write as a WriterOption.
+// 2. Creates a blob using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
 // 4. Creates a Reader for the blob, and calls ReaderCheck.
 // For example, an AsTest might set a provider-specific field to a custom
-// value in Write, and then verify the custom value was returned in
+// value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
 	// BucketCheck will be called to allow verification of Bucket.As.
-	BucketCheck(t *testing.T, b *blob.Bucket)
-	// Write will be passed directly to WriterOptions as part of creating
-	// a test blob. Return an error to fail the test.
-	Write(as func(interface{}) bool) error
-	// AttributesCheck will called after fetching the test blob's attributes.
+	BucketCheck(b *blob.Bucket) error
+	// BeforeWrite will be passed directly to WriterOptions as part of creating
+	// a test blob.
+	BeforeWrite(as func(interface{}) bool) error
+	// AttributesCheck will be called after fetching the test blob's attributes.
 	// It should call attrs.As and verify the results.
-	AttributesCheck(t *testing.T, attrs *blob.Attributes)
+	AttributesCheck(attrs *blob.Attributes) error
 	// ReaderCheck will be called after creating a blob.Reader.
 	// It should call r.As and verify the results.
-	ReaderCheck(t *testing.T, r *blob.Reader)
+	ReaderCheck(r *blob.Reader) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -74,29 +74,32 @@ func (verifyAsFailsOnNil) Name() string {
 	return "verify As returns false when passed nil"
 }
 
-func (verifyAsFailsOnNil) BucketCheck(t *testing.T, b *blob.Bucket) {
+func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	if b.As(nil) {
-		t.Fatal("want Bucket.As to return false when passed nil")
+		return errors.New("want Bucket.As to return false when passed nil")
 	}
+	return nil
 }
 
-func (verifyAsFailsOnNil) Write(as func(interface{}) bool) error {
+func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	if as(nil) {
 		return errors.New("want Writer.As to return false when passed nil")
 	}
 	return nil
 }
 
-func (verifyAsFailsOnNil) AttributesCheck(t *testing.T, attrs *blob.Attributes) {
+func (verifyAsFailsOnNil) AttributesCheck(attrs *blob.Attributes) error {
 	if attrs.As(nil) {
-		t.Fatal("want Attributes.As to return false when passed nil")
+		return errors.New("want Attributes.As to return false when passed nil")
 	}
+	return nil
 }
 
-func (verifyAsFailsOnNil) ReaderCheck(t *testing.T, r *blob.Reader) {
+func (verifyAsFailsOnNil) ReaderCheck(r *blob.Reader) error {
 	if r.As(nil) {
-		t.Fatal("want Reader.As to return false when passed nil")
+		return errors.New("want Reader.As to return false when passed nil")
 	}
+	return nil
 }
 
 // RunConformanceTests runs conformance tests for provider implementations
@@ -721,11 +724,13 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify Bucket.As.
-	st.BucketCheck(t, b)
+	if err := st.BucketCheck(b); err != nil {
+		t.Error(err)
+	}
 
 	// Create a blob, using the provided callback.
-	if err := b.WriteAll(ctx, key, content, &blob.WriterOptions{BeforeWrite: st.Write}); err != nil {
-		t.Fatal(err)
+	if err := b.WriteAll(ctx, key, content, &blob.WriterOptions{BeforeWrite: st.BeforeWrite}); err != nil {
+		t.Error(err)
 	}
 	defer func() { _ = b.Delete(ctx, key) }()
 
@@ -734,12 +739,16 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	st.AttributesCheck(t, &attrs)
+	if err := st.AttributesCheck(&attrs); err != nil {
+		t.Error(err)
+	}
 
 	// Verify Reader.As.
 	r, err := b.NewReader(ctx, key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	st.ReaderCheck(t, r)
+	if err := st.ReaderCheck(r); err != nil {
+		t.Error(err)
+	}
 }

@@ -21,7 +21,7 @@
 // or the sequence "/./" is not permitted. This is to ensure that blob names map
 // cleanly onto files underneath a directory.
 //
-// It does not expose any escape hatches.
+// It does not support any escape-hatch types for As.
 package fileblob
 
 import (
