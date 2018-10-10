@@ -106,10 +106,11 @@ func (c *Variable) Close() error {
 // Decode is a function type for unmarshaling/decoding bytes into given object.
 type Decode func([]byte, interface{}) error
 
-// Decoder is a helper for decoding bytes into a particular Go type object.  The Variable objects
-// produced by a particular driver.Watcher should always contain the same type for Variable.Value
-// field.  A driver.Watcher can use/construct a Decoder object with an associated type (Type) and
-// decoding function (Func) for decoding retrieved bytes into Variable.Value.
+// Decoder is a helper for decoding bytes into a particular Go type object. The
+// Variable objects produced by a particular driver.Watcher should always
+// contain the same type for Variable.Value field. A driver.Watcher can
+// use/construct a Decoder object with an associated type (Type) and decoding
+// function (Func) for decoding retrieved bytes into Variable.Value.
 type Decoder struct {
 	Type reflect.Type
 	// Func is a Decode function.
