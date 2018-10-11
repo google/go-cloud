@@ -32,7 +32,12 @@ import (
 // Set is a Wire provider set that produces a *Server given the fields of
 // Options. This set might add new inputs over time, but they can always be the
 // zero value.
-var Set = wire.NewSet(New, Options{})
+var Set = wire.NewSet(
+	New,
+	Options{},
+	wire.Value(&DefaultDriver{}),
+	wire.Bind(new(driver.Server), new(*DefaultDriver)),
+)
 
 // Server is a preconfigured HTTP server with diagnostic hooks.
 // The zero value is a server with the default options.
