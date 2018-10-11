@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines an interface that the server package uses
-// so that custom drivers may be supplied.
+// Package driver defines an interface for custom HTTP listeners.
 package driver
 
 import (
@@ -21,8 +20,7 @@ import (
 	"net/http"
 )
 
-// Server lists the methods which are required in the server package,
-// to be called by the http server implementation
+// A type that implements Server dispatches requests to an http.Handler.
 type Server interface {
 	// ListenAndServe listens on the TCP network address addr and then
 	// calls Serve with handler to handle requests on incoming connections.

@@ -138,20 +138,19 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // DefaultDriver implements the driver.Server interface. The zero value is a valid http.Server.
 type DefaultDriver struct {
-	server http.Server
+	Server http.Server
 }
 
 // ListenAndServe sets the address and handler on DefaultDriver's http.Server,
 // then calls ListenAndServe on it.
 func (dd *DefaultDriver) ListenAndServe(addr string, h http.Handler) error {
-	dd.server.Addr = addr
-	dd.server.Handler = h
-
-	return dd.server.ListenAndServe()
+	dd.Server.Addr = addr
+	dd.Server.Handler = h
+	return dd.Server.ListenAndServe()
 }
 
 // Shutdown gracefully shuts down the server without interrupting any active connections,
 // by calling Shutdown on DefaultDriver's http.Server
 func (dd *DefaultDriver) Shutdown(ctx context.Context) error {
-	return dd.server.Shutdown(ctx)
+	return dd.Server.Shutdown(ctx)
 }
