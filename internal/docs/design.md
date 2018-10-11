@@ -158,7 +158,7 @@ wants to access provider-specific functionality, which might consist of:
 **As** functions in the APIs provide the user a way to escape the Go Cloud
 abstraction to access provider-specific types. They might be used as an interim
 solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
-choose not to support specific features, and the escape hatch will be permanent.
+choose not to support specific features, and the use of `As` will be permanent.
 As an example, both S3 and GCS blobs have the concept of ACLs, but it might be
 difficult to represent them in a generic way (although, we have not tried).
 
@@ -185,7 +185,7 @@ if r.As(&s3type) {
 ```
 
 Each provider implementation documents what type(s) it supports for each of the
-`As` escape hatch functions.
+`As` functions.
 
 ### Other Ways To Access Provider-Specific Features
 
