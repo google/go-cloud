@@ -80,6 +80,10 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		want           []byte
 		wantReadSize   int64
 		wantErr        bool
+		// set to true to skip creation of the object for
+		// tests where we expect an error without any actual
+		// read.
+		skipCreate bool
 	}{
 		{
 			name:    "read of nonexistent key fails",
@@ -88,15 +92,17 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			wantErr: true,
 		},
 		{
-			name:    "length 0 read fails",
-			key:     key,
-			wantErr: true,
+			name:       "length 0 read fails",
+			key:        key,
+			wantErr:    true,
+			skipCreate: true,
 		},
 		{
-			name:    "negative offset fails",
-			key:     key,
-			offset:  -1,
-			wantErr: true,
+			name:       "negative offset fails",
+			key:        key,
+			offset:     -1,
+			wantErr:    true,
+			skipCreate: true,
 		},
 		{
 			name:         "read from positive offset to end",
@@ -127,7 +133,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 
 	// Creates a blob for sub-tests below.
-	init := func(t *testing.T) (*blob.Bucket, func()) {
+	init := func(t *testing.T, skipCreate bool) (*blob.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
 			t.Fatal(err)
@@ -136,6 +142,9 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		b, err := h.MakeBucket(ctx)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if skipCreate {
+			return b, func() { h.Close() }
 		}
 		if err := b.WriteAll(ctx, key, content, nil); err != nil {
 			t.Fatal(err)
@@ -148,7 +157,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, done := init(t)
+			b, done := init(t, tc.skipCreate)
 			defer done()
 
 			r, err := b.NewRangeReader(ctx, tc.key, tc.offset, tc.length)
@@ -474,11 +483,12 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	hello := []byte("hello")
 
 	tests := []struct {
-		name     string
-		metadata map[string]string
-		content  []byte
-		want     map[string]string
-		wantErr  bool
+		name        string
+		metadata    map[string]string
+		content     []byte
+		contentType string
+		want        map[string]string
+		wantErr     bool
 	}{
 		{
 			name:     "empty",
@@ -518,6 +528,13 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			metadata: map[string]string{"foo": "bar"},
 			want:     map[string]string{"foo": "bar"},
 		},
+		{
+			name:        "valid metadata with content type",
+			content:     hello,
+			contentType: "text/plain",
+			metadata:    map[string]string{"foo": "bar"},
+			want:        map[string]string{"foo": "bar"},
+		},
 	}
 
 	ctx := context.Background()
@@ -534,7 +551,8 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			opts := &blob.WriterOptions{
-				Metadata: tc.metadata,
+				Metadata:    tc.metadata,
+				ContentType: tc.contentType,
 			}
 			err = b.WriteAll(ctx, key, hello, opts)
 			if (err != nil) != tc.wantErr {
