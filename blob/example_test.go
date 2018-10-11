@@ -178,10 +178,10 @@ func ExampleBucket_As() {
 		log.Fatal(err)
 	}
 
-	// Use As as an escape hatch.
-	// This example tries to use a string variable against fileblob,
-	// which won't work because fileblob doesn't support any escape hatches.
-	// However, other providers do support escape hatches.
+	// This example uses As to try to fill in a string variable. As will return
+	// false because fileblob doesn't support any types for Bucket.As.
+	// See the package documentation for your provider (e.g., gcsblob or s3blob)
+	// to see what type(s) it supports.
 	var providerSpecific string
 	if bucket.As(&providerSpecific) {
 		fmt.Println("fileblob supports the `string` type for Bucket.As")
@@ -190,9 +190,10 @@ func ExampleBucket_As() {
 		fmt.Println("fileblob does not support the `string` type for Bucket.As")
 	}
 
-	// Here's an example with WriterOptions. Again, the example does not work
-	// because fileblob doesn't support any escape hatches, but the code is
-	// representative.
+	// This example sets WriterOptions.BeforeWrite to be called before the
+	// provider starts writing. In the callback, it uses asFunc to try to fill in
+	// a *string. Again, asFunc will return false because fileblob doesn't support
+	// any types for Writer.
 	fn := func(asFunc func(i interface{}) bool) error {
 		var mutableProviderSpecific *string
 		if asFunc(&mutableProviderSpecific) {

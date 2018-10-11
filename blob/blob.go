@@ -61,7 +61,7 @@ func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
 
-// As is an escape hatch for accessing provider-specific types.
+// As converts i to provider-specific types.
 // See Bucket.As for more details.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
@@ -86,7 +86,7 @@ type Attributes struct {
 	asFunc func(interface{}) bool
 }
 
-// As is an escape hatch for accessing provider-specific types.
+// As converts i to provider-specific types.
 // See Bucket.As for more details.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
@@ -182,8 +182,8 @@ func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
-// As is an escape hatch for accessing provider-specific types.
-// See provider documentation for which type(s) are supported.
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
 //
 // Usage:
 // 1. Declare a variable of the provider-specific type you want to access.
@@ -195,7 +195,7 @@ func NewBucket(b driver.Bucket) *Bucket {
 // as a pointer to the underlying type.
 //
 // See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 // for more background.
 func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
@@ -369,8 +369,7 @@ type WriterOptions struct {
 	// any data is written (unless NewWriter returns an error, in which case
 	// it will not be called at all). Note that this is not necessarily during
 	// or after the first Write call, as providers may buffer.
-	// asFunc can be called as an escape hatch for accessing
-	// provider-specific types.
+	// asFunc converts its argument to provider-specific types.
 	// See Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }

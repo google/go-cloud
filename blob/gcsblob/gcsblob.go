@@ -14,7 +14,7 @@
 
 // Package gcsblob provides an implementation of blob that uses GCS.
 //
-// It exposes the following escape hatch types for As:
+// It exposes the following types for As:
 // Bucket: *storage.Client
 // Reader: storage.Reader
 // Attributes: storage.ObjectAttrs

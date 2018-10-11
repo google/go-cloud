@@ -14,7 +14,7 @@
 
 // Package s3blob provides an implementation of blob using S3.
 //
-// It exposes the following escape hatch types for As:
+// It exposes the following types for As:
 // Bucket: *s3.S3
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput

@@ -141,7 +141,7 @@ canonical example is `gcpkms` and `awskms`.
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
 
-## Escape Hatches
+## As
 
 It is not feasible or desirable for APIs like [`blob.Bucket`] to encompass the
 full functionality of every provider. Rather, we intend to provide a subset of
@@ -155,37 +155,25 @@ wants to access provider-specific functionality, which might consist of:
 1.  **Options**. Different providers may support different options for
     functionality.
 
-**Escape hatches** provide the user a way to escape the Go Cloud abstraction to
-access provider-specific functionality. They might be used as an interim
+**As** functions in the APIs provide the user a way to escape the Go Cloud
+abstraction to access provider-specific types. They might be used as an interim
 solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
 choose not to support specific features, and the escape hatch will be permanent.
 As an example, both S3 and GCS blobs have the concept of ACLs, but it might be
 difficult to represent them in a generic way (although, we have not tried).
 
-Using an escape hatch implies that the resulting code is no longer portable; the
-escape hatched code will need to be ported in order to switch providers.
-Therefore, they should be avoided if possible.
+Using `As`implies that the resulting code is no longer portable; the
+provider-specific code will need to be ported in order to switch providers.
+Therefore, it should be avoided if possible.
 
-### Ways To Escape Hatch
-
-Users can always access the provider service directly, by constructing the
-top-level handle and making API calls, bypassing Go Cloud.
-
-*   For top-level operations, this may be fine, although it might require a
-    bunch of plumbing code to pass the provider service handle to where it is
-    needed.
-*   For data objects, it implies dropping Go Cloud entirely; for example,
-    instead of using `blob.Reader` to read a blob, the user would have to use
-    the provider-specific method for reading.
-
-Go Cloud APIs also support `As` as a way to access provider-specific types.
+### Example
 
 ```
 // The existing blob.Reader exposes some blob attributes, but not everything
 // that every provider exposes.
 type Reader struct {...}
 
-// As allows providers to expose provider-specific types.
+// As converts i to provider-specific types.
 func (r *Reader) As func(i interface{}) bool {...}
 
 // User code would look like:
@@ -198,6 +186,18 @@ if r.As(&s3type) {
 
 Each provider implementation documents what type(s) it supports for each of the
 `As` escape hatch functions.
+
+### Other Ways To Access Provider-Specific Features
+
+Users can always access the provider service directly, by constructing the
+top-level handle and making API calls, bypassing Go Cloud.
+
+*   For top-level operations, this may be fine, although it might require a
+    bunch of plumbing code to pass the provider service handle to where it is
+    needed.
+*   For data objects, it implies dropping Go Cloud entirely; for example,
+    instead of using `blob.Reader` to read a blob, the user would have to use
+    the provider-specific method for reading.
 
 ## Enforcing Portability
 

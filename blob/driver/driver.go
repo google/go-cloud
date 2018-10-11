@@ -126,7 +126,7 @@ type Bucket interface {
 	//   return true
 	//
 	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#escape-hatches
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
 
