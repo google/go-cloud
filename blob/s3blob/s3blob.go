@@ -275,7 +275,7 @@ type s3Error struct {
 	kind             driver.ErrorKind
 }
 
-func (e s3Error) BlobError() driver.ErrorKind {
+func (e s3Error) Kind() driver.ErrorKind {
 	return e.kind
 }
 
