@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------
+---
+name: Feature request
+about: Suggest an idea for this project
 
-name: Feature request about: Suggest an idea for this project
-
---------------------------------------------------------------------------------
+---
 
 Please use a title starting with the name of the affected package, or \"all\",
 followed by a colon, followed by a short summary of the feature request.

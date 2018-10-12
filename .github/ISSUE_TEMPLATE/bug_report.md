@@ -1,8 +1,8 @@
---------------------------------------------------------------------------------
+---
+name: Bug report
+about: Create a report to help us improve
 
-name: Bug report about: Create a report to help us improve
-
---------------------------------------------------------------------------------
+---
 
 Please use a title starting with the name of the affected package, or \"all\",
 followed by a colon, followed by a short summary of the issue. Example:
