@@ -134,7 +134,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	})
 	t.Run("TestSignedURL", func(t *testing.T) {
 		testSignedURL(t, newHarness)
-	}
+	})
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -783,6 +783,18 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	const key = "as-test"
 	var content = []byte("hello world")
 	ctx := context.Background()
+
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	b, err := h.MakeBucket(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Verify Bucket.As.
 	if err := st.BucketCheck(b); err != nil {
 		t.Error(err)
