@@ -255,6 +255,6 @@ func (e fileError) Error() string {
 	return fmt.Sprintf("fileblob: object %s: %v", e.relpath, e.msg)
 }
 
-func (e fileError) BlobError() driver.ErrorKind {
+func (e fileError) Kind() driver.ErrorKind {
 	return e.kind
 }

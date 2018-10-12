@@ -155,7 +155,7 @@ func (e gcsError) Error() string {
 	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
 }
 
-func (e gcsError) BlobError() driver.ErrorKind {
+func (e gcsError) Kind() driver.ErrorKind {
 	return e.kind
 }
 

@@ -17,7 +17,7 @@ module github.com/google/go-cloud
 require (
 	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180321230639-1e456b1c68cb
+	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180907232109-123a90f520a1
 	github.com/aws/aws-sdk-go v1.13.20
 	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
