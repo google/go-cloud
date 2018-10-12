@@ -102,7 +102,9 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
-	// List everything the directory, sorted by name.
+	// List everything in the directory, sorted by name.
+	// TODO(Issue #541): This should be doing a recursive walk of the directory
+	// as well as translating into the abstract namespace that we've created.
 	fileinfos, err := ioutil.ReadDir(b.dir)
 	if err != nil {
 		return nil, err

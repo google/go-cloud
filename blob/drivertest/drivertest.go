@@ -76,6 +76,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 
 // testList tests the functionality of List and ListPaged.
 func testList(t *testing.T, newHarness HarnessMaker) {
+	// TODO(Issue #541): Add tests for slash-separated paths.
 	const keyPrefix = "blob-for-list"
 	content := []byte("hello")
 
