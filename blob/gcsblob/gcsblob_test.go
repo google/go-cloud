@@ -47,19 +47,27 @@ const (
 )
 
 type harness struct {
-	client     *gcp.HTTPClient
-	privateKey []byte
-	rt         http.RoundTripper
-	closer     func()
+	client *gcp.HTTPClient
+	opts   *Options
+	rt     http.RoundTripper
+	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	pk, err := ioutil.ReadFile(pathToPrivateKey)
-	if err != nil {
-		t.Fatalf("Couldn't find private key at %v: %v", pathToPrivateKey, err)
+	opts := &Options{GoogleAccessID: serviceAccountID}
+	if *setup.Record {
+		// Use a real private key for signing URLs during -record.
+		pk, err := ioutil.ReadFile(pathToPrivateKey)
+		if err != nil {
+			t.Fatalf("Couldn't find private key at %v: %v", pathToPrivateKey, err)
+		}
+		opts.PrivateKey = pk
+	} else {
+		// Use a dummy signer in replay mode.
+		opts.SignBytes = func(b []byte) ([]byte, error) { return []byte("signed!"), nil }
 	}
 	client, rt, done := setup.NewGCPClient(ctx, t)
-	return &harness{client: client, privateKey: pk, rt: rt, closer: done}, nil
+	return &harness{client: client, opts: opts, rt: rt, closer: done}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -67,10 +75,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return OpenBucket(ctx, bucketName, h.client, &Options{
-		GoogleAccessID: serviceAccountID,
-		PrivateKey:     h.privateKey,
-	})
+	return OpenBucket(ctx, bucketName, h.client, h.opts)
 }
 
 func (h *harness) Close() {
