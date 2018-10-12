@@ -36,7 +36,7 @@ var Set = wire.NewSet(
 	New,
 	Options{},
 	wire.Value(&DefaultDriver{}),
-	wire.Bind(new(driver.Server), new(*DefaultDriver)),
+	wire.Bind(new(driver.Server), new(DefaultDriver)),
 )
 
 // Server is a preconfigured HTTP server with diagnostic hooks.
