@@ -16,8 +16,11 @@ package gcsblob
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/gcp"
@@ -53,7 +56,54 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+}
+
+const language = "nl"
+
+// verifyContentLanguage uses As to access the underlying GCS types and
+// read/write the ContentLanguage field.
+type verifyContentLanguage struct{}
+
+func (verifyContentLanguage) Name() string {
+	return "verify ContentLanguage can be written and read through As"
+}
+
+func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
+	var client *storage.Client
+	if !b.As(&client) {
+		return errors.New("Bucket.As failed")
+	}
+	return nil
+}
+
+func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+	var sw *storage.Writer
+	if !as(&sw) {
+		return errors.New("Writer.As failed")
+	}
+	sw.ContentLanguage = language
+	return nil
+}
+
+func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
+	var oa storage.ObjectAttrs
+	if !attrs.As(&oa) {
+		return errors.New("Attributes.As returned false")
+	}
+	if got := oa.ContentLanguage; got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
+	return nil
+}
+
+func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
+	var rr storage.Reader
+	if !r.As(&rr) {
+		return errors.New("Reader.As returned false")
+	}
+	// GCS doesn't return Content-Language via storage.Reader.
+	return nil
 }
 
 // GCS-specific unit tests.
