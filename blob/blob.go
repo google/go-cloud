@@ -61,6 +61,12 @@ func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
 
+// As converts i to provider-specific types.
+// See Bucket.As for more details.
+func (r *Reader) As(i interface{}) bool {
+	return r.r.As(i)
+}
+
 // Attributes contains attributes about a blob.
 type Attributes struct {
 	// ContentType is the MIME type of the blob object. It will not be empty.
@@ -76,6 +82,17 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+
+	asFunc func(interface{}) bool
+}
+
+// As converts i to provider-specific types.
+// See Bucket.As for more details.
+func (a *Attributes) As(i interface{}) bool {
+	if a.asFunc == nil {
+		return false
+	}
+	return a.asFunc(i)
 }
 
 // Writer implements io.WriteCloser to write to blob. It must be closed after
@@ -244,6 +261,25 @@ func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
+//
+// Usage:
+// 1. Declare a variable of the provider-specific type you want to access.
+// 2. Pass a pointer to it to As.
+// 3. As will return true iff the type is supported, and copy the
+//    provider-specific type into your variable.
+//
+// Provider-specific types that are intended to be mutable will be exposed
+// as a pointer to the underlying type.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (b *Bucket) As(i interface{}) bool {
+	return b.b.As(i)
+}
+
 // ReadAll is a shortcut for creating a Reader via NewReader and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	r, err := b.NewReader(ctx, key)
@@ -340,6 +376,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 		Metadata:    md,
 		ModTime:     a.ModTime,
 		Size:        a.Size,
+		asFunc:      a.AsFunc,
 	}, nil
 }
 
@@ -402,7 +439,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	var w driver.Writer
 	if opt != nil {
 		dopt = &driver.WriterOptions{
-			BufferSize: opt.BufferSize,
+			BufferSize:  opt.BufferSize,
+			BeforeWrite: opt.BeforeWrite,
 		}
 		if len(opt.Metadata) > 0 {
 			// Providers are inconsistent, but at least some treat keys
@@ -470,6 +508,14 @@ type WriterOptions struct {
 	// Keys may not be empty, and are lowercased before being written.
 	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
 	Metadata map[string]string
+
+	// BeforeWrite is a callback that will be called exactly once, before
+	// any data is written (unless NewWriter returns an error, in which case
+	// it will not be called at all). Note that this is not necessarily during
+	// or after the first Write call, as providers may buffer.
+	// asFunc converts its argument to provider-specific types.
+	// See Bucket.As for more details.
+	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
 // IsNotExist returns true iff err indicates that the referenced blob does not exist.
