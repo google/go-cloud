@@ -56,7 +56,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, "../testdata")
+	drivertest.RunConformanceTests(t, newHarness, "../testdata", nil)
 }
 
 // File-specific unit tests.

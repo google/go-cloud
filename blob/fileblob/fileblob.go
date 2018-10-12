@@ -20,6 +20,8 @@
 // spaces, underscores, and dashes. Repeated slashes, a leading "./" or "../",
 // or the sequence "/./" is not permitted. This is to ensure that blob names map
 // cleanly onto files underneath a directory.
+//
+// It does not support any types for As.
 package fileblob
 
 import (
@@ -99,6 +101,9 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	return path, info, &xa, nil
 }
 
+// As implements driver.As.
+func (b *bucket) As(i interface{}) bool { return false }
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)
@@ -167,6 +172,8 @@ func (r reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 
+func (r reader) As(i interface{}) bool { return false }
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
@@ -183,6 +190,11 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+	}
+	if opt != nil && opt.BeforeWrite != nil {
+		if err := opt.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+			return nil, err
+		}
 	}
 	var metadata map[string]string
 	if opt != nil && len(opt.Metadata) > 0 {
