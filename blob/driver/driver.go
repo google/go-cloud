@@ -92,7 +92,7 @@ type Attributes struct {
 }
 
 // ListOptions sets options for listing objects in the bucket.
-// TODO(rvangent): Add Delimiter.
+// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
@@ -137,6 +137,8 @@ type Bucket interface {
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
+	// ListPaged lists objects in the bucket, in alphabetical order by key,
+	// returning pages of objects at a time.
 	// ListPaged lists objects in the bucket, returning them in pages.
 	// Providers are only required to be eventually consistent with respect
 	// to recently-written objects. I.e., there is no guarantee that an object

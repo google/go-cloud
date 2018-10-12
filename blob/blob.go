@@ -158,7 +158,7 @@ func (w *Writer) open(p []byte) (n int, err error) {
 const MaxPageSize = 1000
 
 // ListOptions sets options for listing objects.
-// TODO(rvangent): Add Delimiter.
+// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
@@ -254,8 +254,9 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// ListPaged lists objects in the bucket, returning pages of objects at a time.
-// Use ListOptions for pagination and filtering.
+// ListPaged lists objects in the bucket, in alphabetical order by key,
+// returning pages of objects at a time. Use ListOptions for pagination and
+// filtering.
 //
 // ListPaged is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
@@ -300,7 +301,8 @@ func (b *Bucket) ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, er
 }
 
 // List returns an object that can be used to iterate over objects in a
-// bucket. The underlying implementation fetches results in pages.
+// bucket, in alphabetical order by key. The underlying implementation fetches
+// results in pages.
 // Use ListOptions to control the page size and filtering.
 //
 // List is not guaranteed to include all recently-written objects;
