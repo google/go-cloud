@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -358,7 +359,8 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			// the expected number of bytes.
 			got := make([]byte, tc.wantReadSize+10)
 			n, err := r.Read(got)
-			if err != nil {
+			// EOF error is optional, see https://golang.org/pkg/io/#Reader.
+			if err != nil && err != io.EOF {
 				t.Errorf("unexpected error during read: %v", err)
 			}
 			if int64(n) != tc.wantReadSize {
