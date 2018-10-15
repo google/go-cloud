@@ -15,68 +15,69 @@
 module github.com/google/go-cloud
 
 require (
-	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
+	cloud.google.com/go v0.30.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20180906190126-dd54a7ef511e
-	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
-	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180907232109-123a90f520a1
-	github.com/aws/aws-sdk-go v1.15.54
-	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
+	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
+	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181009230506-ac834ce67862
+	github.com/aws/aws-sdk-go v1.15.55
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
-	github.com/coreos/etcd v3.3.9+incompatible
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
-	github.com/coreos/go-systemd v0.0.0-20180828140353-eee3db372b31 // indirect
-	github.com/coreos/pkg v0.0.0-20180108230652-97fdf19511ea // indirect
-	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
+	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/dnaeon/go-vcr v0.0.0-20180920040454-5637cf3d8a31
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-ini/ini v1.37.0 // indirect
-	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
+	github.com/go-ini/ini v1.39.0 // indirect
+	github.com/go-sql-driver/mysql v1.4.0
 	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/groupcache v0.0.0-20180513044358-24b0969c4cb7 // indirect
+	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4 // indirect
 	github.com/golang/protobuf v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
-	github.com/googleapis/gax-go v1.0.0 // indirect
-	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb // indirect
+	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
+	github.com/gopherjs/gopherjs v0.0.0-20181004151105-1babbf986f6f // indirect
 	github.com/gorilla/context v1.1.1 // indirect
-	github.com/gorilla/mux v1.6.1
+	github.com/gorilla/mux v1.6.2
 	github.com/gorilla/websocket v1.4.0 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.5.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.5.1 // indirect
+	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/onsi/gomega v1.4.2 // indirect
-	github.com/opencensus-integrations/ocsql v0.0.0-20180908125828-63b3e35325e2
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v0.8.0 // indirect
-	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
-	github.com/prometheus/common v0.0.0-20180801064454-c7de2306084e // indirect
-	github.com/prometheus/procfs v0.0.0-20180725123919-05ee40e3a273 // indirect
-	github.com/sirupsen/logrus v1.0.6 // indirect
-	github.com/smartystreets/assertions v0.0.0-20180301161246-7678a5452ebe // indirect
+	github.com/jtolds/gls v4.2.1+incompatible // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
+	github.com/opencensus-integrations/ocsql v0.1.1
+	github.com/pkg/errors v0.8.0 // indirect
+	github.com/prometheus/client_golang v0.9.0 // indirect
+	github.com/prometheus/common v0.0.0-20181015124227-bcb74de08d37 // indirect
+	github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d // indirect
+	github.com/sirupsen/logrus v1.1.1 // indirect
+	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
-	github.com/smartystreets/gunit v0.0.0-20180314194857-6f0d6275bdcd // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
-	github.com/stretchr/testify v1.2.1 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
-	github.com/ugorji/go/codec v0.0.0-20180831062425-e253f1f20942 // indirect
+	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
-	go.opencensus.io v0.15.0
-	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
-	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
-	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
+	go.opencensus.io v0.17.0
+	go.uber.org/atomic v1.3.2 // indirect
+	go.uber.org/multierr v1.1.0 // indirect
+	go.uber.org/zap v1.9.1 // indirect
+	golang.org/x/crypto v0.0.0-20181015023909-0c41d7ab0a0e
+	golang.org/x/net v0.0.0-20181011144130-49bb7cea24b1
+	golang.org/x/oauth2 v0.0.0-20181003184128-c57b0facaced
+	golang.org/x/sys v0.0.0-20181011152604-fa43e7bc11ba // indirect
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
-	golang.org/x/tools v0.0.0-20180314180217-d853e8088c62
-	google.golang.org/api v0.0.0-20180606215403-8e9de5a6de6d
-	google.golang.org/appengine v1.1.0 // indirect
-	google.golang.org/genproto v0.0.0-20180627194029-ff3583edef7d
-	google.golang.org/grpc v1.13.0
-	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
-	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
+	golang.org/x/tools v0.0.0-20181015221341-5d4988d199e2
+	google.golang.org/api v0.0.0-20181015230434-fb1353d1c907
+	google.golang.org/appengine v1.2.0 // indirect
+	google.golang.org/genproto v0.0.0-20181004005441-af9cb2a35e7f
+	google.golang.org/grpc v1.15.0
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/ini.v1 v1.39.0 // indirect
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
+	gopkg.in/yaml.v2 v2.2.1 // indirect
 )
