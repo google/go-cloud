@@ -31,7 +31,6 @@ require (
 	github.com/dnaeon/go-vcr v0.0.0-20180920040454-5637cf3d8a31
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-ini/ini v1.37.0 // indirect
 	github.com/go-sql-driver/mysql v0.0.0-20180308100310-1a676ac6e4dc
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
@@ -79,6 +78,5 @@ require (
 	google.golang.org/grpc v1.13.0
 	gopkg.in/airbrake/gobrake.v2 v2.0.9 // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
-	gopkg.in/ini.v1 v1.37.0 // indirect
 	gopkg.in/pipe.v2 v2.0.0-20140414041502-3c2ca4d52544
 )
