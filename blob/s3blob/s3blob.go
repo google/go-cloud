@@ -165,8 +165,8 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		Bucket:  aws.String(b.name),
 		MaxKeys: aws.Int64(int64(opt.PageSize)),
 	}
-	if opt.PageToken != "" {
-		in.ContinuationToken = aws.String(opt.PageToken)
+	if len(opt.PageToken) > 0 {
+		in.ContinuationToken = aws.String(string(opt.PageToken))
 	}
 	if opt.Prefix != "" {
 		in.Prefix = aws.String(opt.Prefix)
@@ -177,7 +177,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	}
 	page := driver.ListPage{}
 	if resp.NextContinuationToken != nil {
-		page.NextPageToken = *resp.NextContinuationToken
+		page.NextPageToken = []byte(*resp.NextContinuationToken)
 	}
 	if len(resp.Contents) > 0 {
 		page.Objects = make([]*driver.ListObject, len(resp.Contents))

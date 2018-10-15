@@ -122,13 +122,13 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			continue
 		}
 		// If a PageToken was provided, skip to it.
-		if opt.PageToken != "" && info.Name() < opt.PageToken {
+		if len(opt.PageToken) > 0 && info.Name() < string(opt.PageToken) {
 			continue
 		}
 		// If we've got a full page of results, and there are more
 		// to come, set NextPageToken and stop here.
 		if opt.PageSize != 0 && len(result.Objects) == opt.PageSize {
-			result.NextPageToken = info.Name()
+			result.NextPageToken = []byte(info.Name())
 			break
 		}
 		// Add this object.

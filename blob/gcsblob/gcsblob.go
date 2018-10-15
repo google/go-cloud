@@ -92,14 +92,14 @@ func (r *reader) As(i interface{}) bool {
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
 	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
-	pager := iterator.NewPager(iter, opt.PageSize, opt.PageToken)
+	pager := iterator.NewPager(iter, opt.PageSize, string(opt.PageToken))
 
 	var objects []*storage.ObjectAttrs
 	nextPageToken, err := pager.NextPage(&objects)
 	if err != nil {
 		return nil, err
 	}
-	page := driver.ListPage{NextPageToken: nextPageToken}
+	page := driver.ListPage{NextPageToken: []byte(nextPageToken)}
 	if len(objects) > 0 {
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {

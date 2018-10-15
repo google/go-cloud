@@ -260,7 +260,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 
 			// Retrieve using ListPaged.
 			var got [][]int
-			var nextPageToken string
+			var nextPageToken []byte
 			for {
 				p, err := b.ListPaged(ctx, &blob.ListOptions{
 					Prefix:    tc.prefix,
@@ -284,7 +284,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 				}
 				got = append(got, thisGot)
 				nextPageToken = p.NextPageToken
-				if nextPageToken == "" {
+				if len(nextPageToken) == 0 {
 					break
 				}
 			}

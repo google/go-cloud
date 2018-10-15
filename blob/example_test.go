@@ -185,7 +185,7 @@ func ExampleBucket_ListPaged() {
 	// List them in pages of size 2.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	var nextPageToken string
+	var nextPageToken []byte
 	for {
 		p, err := bucket.ListPaged(ctx, &blob.ListOptions{PageSize: 2, PageToken: nextPageToken})
 		if err != nil {
@@ -194,7 +194,7 @@ func ExampleBucket_ListPaged() {
 		for _, obj := range p.Objects {
 			fmt.Println(obj.Key)
 		}
-		if p.NextPageToken == "" {
+		if len(p.NextPageToken) == 0 {
 			break
 		}
 		fmt.Println("-- end of page")

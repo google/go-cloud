@@ -188,7 +188,7 @@ type ListOptions struct {
 	// PageToken should be filled in with the NextPageToken from a previous
 	// ListPaged call, to get the next page of results.
 	// Ignored when using List.
-	PageToken string
+	PageToken []byte
 }
 
 // ListIterator is used to iterate over List results.
@@ -210,7 +210,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 			i.nextIdx++
 			return obj, nil
 		}
-		if i.page.NextPageToken == "" {
+		if len(i.page.NextPageToken) == 0 {
 			// Done with current page, and there are no more; return nil.
 			return nil, nil
 		}
@@ -242,12 +242,12 @@ type ListPage struct {
 	// Objects is the slice of matching objects found. The slice will
 	// contain at most ListOptions.PageSize values.
 	Objects []*ListObject
-	// If len(Objects) == ListOptions.PageSize and NextPageToken != "",
+	// If len(Objects) == ListOptions.PageSize and len(NextPageToken) > 0,
 	// there are more results. Use NextPageToken as
 	// PageToken in a subsequent request to get the next page of results.
 	// NextPageToken should not be used in any other way; in particular,
 	// it is not guaranteed to be a valid key.
-	NextPageToken string
+	NextPageToken []byte
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
@@ -337,8 +337,8 @@ func (b *Bucket) ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, er
 }
 
 // List returns an object that can be used to iterate over objects in a
-// bucket, in alphabetical order by key. The underlying implementation fetches
-// results in pages.
+// bucket, in lexicographical order of UTF-8 encoded keys. The underlying
+// implementation fetches results in pages.
 // Use ListOptions to control the page size and filtering.
 //
 // List is not guaranteed to include all recently-written objects;
@@ -349,8 +349,8 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) *ListIterator {
 	if opt == nil {
 		opt = &ListOptions{}
 	}
-	if opt.PageToken != "" {
-		opt.PageToken = ""
+	if len(opt.PageToken) > 0 {
+		opt.PageToken = nil
 	}
 	return &ListIterator{b: b, opt: *opt}
 }

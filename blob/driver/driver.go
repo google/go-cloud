@@ -115,7 +115,7 @@ type ListOptions struct {
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
-	PageToken string
+	PageToken []byte
 }
 
 // ListObject represents a specific blob object returned from ListPaged.
@@ -138,7 +138,7 @@ type ListPage struct {
 	// return. The value may be returned as ListOptions.PageToken on a
 	// subsequent ListPaged call, to fetch the next page of results.
 	// It can be an arbitrary string; it need not be a valid key.
-	NextPageToken string
+	NextPageToken []byte
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
