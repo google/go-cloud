@@ -20,9 +20,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180907232109-123a90f520a1
 	github.com/aws/aws-sdk-go v1.15.27
-	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
-	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
@@ -41,7 +39,7 @@ require (
 	github.com/golang/protobuf v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
-	github.com/google/martian v2.0.0-beta.2+incompatible // indirect
+	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/googleapis/gax-go v1.0.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb // indirect
 	github.com/gorilla/context v1.1.1 // indirect
