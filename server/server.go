@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/server/driver"
 	"github.com/google/go-cloud/wire"
 
 	"go.opencensus.io/trace"
@@ -31,7 +32,12 @@ import (
 // Set is a Wire provider set that produces a *Server given the fields of
 // Options. This set might add new inputs over time, but they can always be the
 // zero value.
-var Set = wire.NewSet(New, Options{})
+var Set = wire.NewSet(
+	New,
+	Options{},
+	wire.Value(&DefaultDriver{}),
+	wire.Bind(new(driver.Server), new(DefaultDriver)),
+)
 
 // Server is a preconfigured HTTP server with diagnostic hooks.
 // The zero value is a server with the default options.
@@ -41,7 +47,7 @@ type Server struct {
 	te            trace.Exporter
 	sampler       trace.Sampler
 	once          sync.Once
-	server        *http.Server
+	driver        driver.Server
 }
 
 // Options is the set of optional parameters.
@@ -51,6 +57,7 @@ type Options struct {
 
 	TraceExporter         trace.Exporter
 	DefaultSamplingPolicy trace.Sampler
+	Driver                driver.Server
 }
 
 // New creates a new server. New(nil) is the same as new(Server).
@@ -63,6 +70,7 @@ func New(opts *Options) *Server {
 			srv.healthHandler.Add(c)
 		}
 		srv.sampler = opts.DefaultSamplingPolicy
+		srv.driver = opts.Driver
 	}
 	return srv
 }
@@ -74,6 +82,9 @@ func (srv *Server) init() {
 		}
 		if srv.sampler != nil {
 			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
+		}
+		if srv.driver == nil {
+			srv.driver = new(DefaultDriver)
 		}
 	})
 }
@@ -101,16 +112,15 @@ func (srv *Server) ListenAndServe(addr string, h http.Handler) error {
 	}
 	mux.Handle("/", h)
 
-	srv.server = &http.Server{Addr: addr, Handler: mux}
-	return srv.server.ListenAndServe()
+	return srv.driver.ListenAndServe(addr, mux)
 }
 
 // Shutdown gracefully shuts down the server without interrupting any active connections.
 func (srv *Server) Shutdown(ctx context.Context) error {
-	if srv.server == nil {
+	if srv.driver == nil {
 		return nil
 	}
-	return srv.server.Shutdown(ctx)
+	return srv.driver.Shutdown(ctx)
 }
 
 // handler is a handler wrapper that handles tracing through OpenCensus for users.
@@ -129,4 +139,23 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handler = http.DefaultServeMux
 	}
 	h.handler.ServeHTTP(w, r)
+}
+
+// DefaultDriver implements the driver.Server interface. The zero value is a valid http.Server.
+type DefaultDriver struct {
+	Server http.Server
+}
+
+// ListenAndServe sets the address and handler on DefaultDriver's http.Server,
+// then calls ListenAndServe on it.
+func (dd *DefaultDriver) ListenAndServe(addr string, h http.Handler) error {
+	dd.Server.Addr = addr
+	dd.Server.Handler = h
+	return dd.Server.ListenAndServe()
+}
+
+// Shutdown gracefully shuts down the server without interrupting any active connections,
+// by calling Shutdown on DefaultDriver's http.Server
+func (dd *DefaultDriver) Shutdown(ctx context.Context) error {
+	return dd.Server.Shutdown(ctx)
 }
