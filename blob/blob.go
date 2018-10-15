@@ -171,7 +171,7 @@ func (w *Writer) open(p []byte) (n int, err error) {
 	return w.w.Write(p)
 }
 
-// MaxPageSize is the maximum number of results to retrieve at a time via ListPaged.
+// MaxPageSize is the maximum value for ListOptions.PageSize.
 const MaxPageSize = 1000
 
 // ListOptions sets options for listing objects.
@@ -181,21 +181,17 @@ type ListOptions struct {
 	// should be returned.
 	Prefix string
 
-	// PageSize sets the maximum number of objects that will be returned in
-	// a single call to ListPaged. For List, it sets the internal buffer size.
+	// PageSize sets the maximum number of objects that will be retrieved
+	// at a time from the provider.
 	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
 	PageSize int
-	// PageToken should be filled in with the NextPageToken from a previous
-	// ListPaged call, to get the next page of results.
-	// Ignored when using List.
-	PageToken []byte
 }
 
 // ListIterator is used to iterate over List results.
 type ListIterator struct {
 	b       *Bucket
-	opt     ListOptions
-	page    *ListPage
+	opt     *driver.ListOptions
+	page    *driver.ListPage
 	nextIdx int
 }
 
@@ -206,9 +202,13 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		// We've already got a page of results.
 		if i.nextIdx < len(i.page.Objects) {
 			// Next object is in the page; return it.
-			obj := i.page.Objects[i.nextIdx]
+			dobj := i.page.Objects[i.nextIdx]
 			i.nextIdx++
-			return obj, nil
+			return &ListObject{
+				Key:     dobj.Key,
+				ModTime: dobj.ModTime,
+				Size:    dobj.Size,
+			}, nil
 		}
 		if len(i.page.NextPageToken) == 0 {
 			// Done with current page, and there are no more; return nil.
@@ -218,7 +218,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		i.opt.PageToken = i.page.NextPageToken
 	}
 	// Loading a new page.
-	p, err := i.b.ListPaged(ctx, &i.opt)
+	p, err := i.b.b.ListPaged(ctx, i.opt)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	return i.Next(ctx)
 }
 
-// ListObject represents a single blob object returned from List or ListPaged.
+// ListObject represents a single blob object returned from List.
 type ListObject struct {
 	// Key is the key for this blob.
 	Key string
@@ -235,19 +235,6 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-}
-
-// ListPage represents a page of results returned from ListPaged.
-type ListPage struct {
-	// Objects is the slice of matching objects found. The slice will
-	// contain at most ListOptions.PageSize values.
-	Objects []*ListObject
-	// If len(Objects) == ListOptions.PageSize and len(NextPageToken) > 0,
-	// there are more results. Use NextPageToken as
-	// PageToken in a subsequent request to get the next page of results.
-	// NextPageToken should not be used in any other way; in particular,
-	// it is not guaranteed to be a valid key.
-	NextPageToken []byte
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
@@ -290,15 +277,14 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// ListPaged lists objects in the bucket, in alphabetical order by key,
-// returning pages of objects at a time. Use ListOptions for pagination and
-// filtering.
+// List returns an object that can be used to iterate over objects in a
+// bucket, in lexicographical order of UTF-8 encoded keys. The underlying
+// implementation fetches results in pages.
+// Use ListOptions to control the page size and filtering.
 //
-// ListPaged is not guaranteed to include all recently-written objects;
+// List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
-//
-// To iterate over objects one at a time instead of in pages, use List.
-func (b *Bucket) ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error) {
+func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, error) {
 	if opt == nil {
 		opt = &ListOptions{}
 	}
@@ -312,47 +298,10 @@ func (b *Bucket) ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, er
 		opt.PageSize = MaxPageSize
 	}
 	dopt := &driver.ListOptions{
-		PageSize:  opt.PageSize,
-		PageToken: opt.PageToken,
-		Prefix:    opt.Prefix,
+		Prefix:   opt.Prefix,
+		PageSize: opt.PageSize,
 	}
-	p, err := b.b.ListPaged(ctx, dopt)
-	if err != nil {
-		return nil, err
-	}
-	result := &ListPage{
-		NextPageToken: p.NextPageToken,
-	}
-	if len(p.Objects) > 0 {
-		result.Objects = make([]*ListObject, len(p.Objects))
-		for i, obj := range p.Objects {
-			result.Objects[i] = &ListObject{
-				Key:     obj.Key,
-				ModTime: obj.ModTime,
-				Size:    obj.Size,
-			}
-		}
-	}
-	return result, nil
-}
-
-// List returns an object that can be used to iterate over objects in a
-// bucket, in lexicographical order of UTF-8 encoded keys. The underlying
-// implementation fetches results in pages.
-// Use ListOptions to control the page size and filtering.
-//
-// List is not guaranteed to include all recently-written objects;
-// some providers are only eventually consistent.
-//
-// To list objects in pages, use ListPaged.
-func (b *Bucket) List(ctx context.Context, opt *ListOptions) *ListIterator {
-	if opt == nil {
-		opt = &ListOptions{}
-	}
-	if len(opt.PageToken) > 0 {
-		opt.PageToken = nil
-	}
-	return &ListIterator{b: b, opt: *opt}
+	return &ListIterator{b: b, opt: dopt}, nil
 }
 
 // Attributes reads attributes for the given key.

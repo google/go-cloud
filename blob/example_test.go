@@ -166,51 +166,6 @@ func ExampleBucket_ReadAll() {
 	// Go Cloud
 }
 
-func ExampleBucket_ListPaged() {
-	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
-	dir, cleanup := newTempDir()
-	defer cleanup()
-
-	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create some blob objects for listing: "foo[0..4].txt".
-	ctx := context.Background()
-	createListableFiles(ctx, bucket)
-
-	// List them in pages of size 2.
-	// This will list the blobs created above because fileblob is strongly
-	// consistent, but is not guaranteed to work on all providers.
-	var nextPageToken []byte
-	for {
-		p, err := bucket.ListPaged(ctx, &blob.ListOptions{PageSize: 2, PageToken: nextPageToken})
-		if err != nil {
-			log.Fatal(err)
-		}
-		for _, obj := range p.Objects {
-			fmt.Println(obj.Key)
-		}
-		if len(p.NextPageToken) == 0 {
-			break
-		}
-		fmt.Println("-- end of page")
-		nextPageToken = p.NextPageToken
-	}
-
-	// Output:
-	// foo0.txt
-	// foo1.txt
-	// -- end of page
-	// foo2.txt
-	// foo3.txt
-	// -- end of page
-	// foo4.txt
-}
-
 func ExampleBucket_List() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
@@ -230,7 +185,10 @@ func ExampleBucket_List() {
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	iter := bucket.List(ctx, nil)
+	iter, err := bucket.List(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 	for {
 		obj, err := iter.Next(ctx)
 		if err != nil {

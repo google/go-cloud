@@ -137,7 +137,7 @@ type ListPage struct {
 	// len(Objects) == ListOptions.PageSize and there are more objects to
 	// return. The value may be returned as ListOptions.PageToken on a
 	// subsequent ListPaged call, to fetch the next page of results.
-	// It can be an arbitrary string; it need not be a valid key.
+	// It can be an arbitrary []byte; it need not be a valid key.
 	NextPageToken []byte
 }
 
@@ -173,9 +173,8 @@ type Bucket interface {
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
-	// ListPaged lists objects in the bucket, in alphabetical order by key,
-	// returning pages of objects at a time.
-	// ListPaged lists objects in the bucket, returning them in pages.
+	// ListPaged lists objects in the bucket, in lexicographical order by
+	// UTF-encoded key, returning pages of objects at a time.
 	// Providers are only required to be eventually consistent with respect
 	// to recently-written objects. I.e., there is no guarantee that an object
 	// that's been written will immediately be returned from ListPaged.

@@ -145,7 +145,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 	})
 }
 
-// testList tests the functionality of List and ListPaged.
+// testList tests the functionality of List.
 func testList(t *testing.T, newHarness HarnessMaker) {
 	// TODO(Issue #541): Add tests for slash-separated paths.
 	const keyPrefix = "blob-for-list"
@@ -238,11 +238,22 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		}
 		if !skipCreate {
 			// See if the blobs are already there.
-			p, err := b.ListPaged(ctx, &blob.ListOptions{Prefix: keyPrefix})
+			iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(p.Objects) != 3 {
+			count := 0
+			for {
+				obj, err := iter.Next(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if obj == nil {
+					break
+				}
+				count++
+			}
+			if count != 3 {
 				for i := 0; i < 3; i++ {
 					if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
 						t.Fatal(err)
@@ -258,48 +269,19 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.skipCreate)
 			defer done()
 
-			// Retrieve using ListPaged.
-			var got [][]int
-			var nextPageToken []byte
-			for {
-				p, err := b.ListPaged(ctx, &blob.ListOptions{
-					Prefix:    tc.prefix,
-					PageSize:  tc.pageSize,
-					PageToken: nextPageToken,
-				})
-				if (err != nil) != tc.wantErr {
-					t.Fatalf("got err %v want error %v", err, tc.wantErr)
-				}
-				if err != nil {
-					break
-				}
-				var thisGot []int
-				for _, obj := range p.Objects {
-					i, err := indexFromKey(obj.Key)
-					if err != nil {
-						t.Error(err)
-						continue
-					}
-					thisGot = append(thisGot, i)
-				}
-				got = append(got, thisGot)
-				nextPageToken = p.NextPageToken
-				if len(nextPageToken) == 0 {
-					break
-				}
-			}
-			if diff := cmp.Diff(got, tc.want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
-			}
-
-			// Repeat using List.
-			it := b.List(ctx, &blob.ListOptions{
+			iter, err := b.List(ctx, &blob.ListOptions{
 				PageSize: tc.pageSize,
 				Prefix:   tc.prefix,
 			})
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got err %v want error %v", err, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
 			var gotIter []int
 			for {
-				obj, err := it.Next(ctx)
+				obj, err := iter.Next(ctx)
 				if len(gotIter) > 0 && err != nil {
 					t.Fatalf("got err %v after first iteration", err)
 				}
