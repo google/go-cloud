@@ -38,6 +38,7 @@ import (
 	"google.golang.org/api/option"
 )
 
+// Options sets options for constructing a *blob.Bucket backed by GCS.
 type Options struct {
 	// GoogleAccessID represents the authorizer for SignedURL.
 	// Required to use SignedURL.

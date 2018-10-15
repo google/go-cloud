@@ -259,7 +259,8 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	return "", fileError{msg: "SignedURL not supported", kind: driver.NotImplemented}
+	// TODO(Issue #546): Implemented SignedURL for fileblob.
+	return "", fileError{msg: "SignedURL not supported (see issue #546)", kind: driver.NotImplemented}
 }
 
 type fileError struct {

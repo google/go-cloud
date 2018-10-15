@@ -17,6 +17,7 @@ package gcsblob
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -41,13 +42,14 @@ const (
 	//    serviceAccountID constant to it.
 	// 4. Download a private key to a .pem file as described here:
 	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
-	//    and update the pathToPrivateKey constant with a path to the .pem file.
+	//    and pass a path to it via the --privatekey flag.
 	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 	//    name from the Terraform output instead (saving a copy of it for replay).
 	bucketName       = "go-cloud-blob-test-bucket"
 	serviceAccountID = "storage-viewer@go-cloud-test-216917.iam.gserviceaccount.com"
-	pathToPrivateKey = "/usr/local/google/home/rvangent/Downloads/storage-viewer.pem"
 )
+
+var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record)")
 
 type harness struct {
 	client *gcp.HTTPClient
@@ -59,10 +61,13 @@ type harness struct {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	opts := &Options{GoogleAccessID: serviceAccountID}
 	if *setup.Record {
+		if *pathToPrivateKey == "" {
+			t.Fatalf("--privatekey is required in --record mode.")
+		}
 		// Use a real private key for signing URLs during -record.
-		pk, err := ioutil.ReadFile(pathToPrivateKey)
+		pk, err := ioutil.ReadFile(*pathToPrivateKey)
 		if err != nil {
-			t.Fatalf("Couldn't find private key at %v: %v", pathToPrivateKey, err)
+			t.Fatalf("Couldn't find private key at %v: %v", *pathToPrivateKey, err)
 		}
 		opts.PrivateKey = pk
 	} else {

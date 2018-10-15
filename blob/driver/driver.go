@@ -167,8 +167,8 @@ type Bucket interface {
 	// returns NotFound.
 	Delete(ctx context.Context, key string) error
 
-	// SignedURL returns a URL that can be used to GET the blob for a
-	// limited time. opts is guaranteed to be non-nil.
+	// SignedURL returns a URL that can be used to GET the blob for the duration
+	// specified in opts.Expiry. opts is guaranteed to be non-nil.
 	// If not supported, return an error whose Kind method returns NotImplemented.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
 }

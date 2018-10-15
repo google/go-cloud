@@ -340,7 +340,8 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 	return b.b.Delete(ctx, key)
 }
 
-// SignedURL returns a URL that can be used to GET the blob for a limited time.
+// SignedURL returns a URL that can be used to GET the blob for the duration
+// specified in opts.Expiry.
 // If IsNotImplemented returns true for the returned error, the provider does
 // not support SignedURL.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
