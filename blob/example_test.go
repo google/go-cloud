@@ -166,6 +166,53 @@ func ExampleBucket_ReadAll() {
 	// Go Cloud
 }
 
+func ExampleBucket_As() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.NewBucket(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// This example uses As to try to fill in a string variable. As will return
+	// false because fileblob doesn't support any types for Bucket.As.
+	// See the package documentation for your provider (e.g., gcsblob or s3blob)
+	// to see what type(s) it supports.
+	var providerSpecific string
+	if bucket.As(&providerSpecific) {
+		fmt.Println("fileblob supports the `string` type for Bucket.As")
+		// Use providerSpecific.
+	} else {
+		fmt.Println("fileblob does not support the `string` type for Bucket.As")
+	}
+
+	// This example sets WriterOptions.BeforeWrite to be called before the
+	// provider starts writing. In the callback, it uses asFunc to try to fill in
+	// a *string. Again, asFunc will return false because fileblob doesn't support
+	// any types for Writer.
+	fn := func(asFunc func(i interface{}) bool) error {
+		var mutableProviderSpecific *string
+		if asFunc(&mutableProviderSpecific) {
+			fmt.Println("fileblob supports the `*string` type for WriterOptions.BeforeWrite")
+			// Use mutableProviderSpecific.
+		} else {
+			fmt.Println("fileblob does not support the `*string` type for WriterOptions.BeforeWrite")
+		}
+		return nil
+	}
+	ctx := context.Background()
+	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), &blob.WriterOptions{BeforeWrite: fn}); err != nil {
+		log.Fatal(err)
+	}
+	// Output:
+	// fileblob does not support the `string` type for Bucket.As
+	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
+}
+
 func newTempDir() (string, func()) {
 	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {

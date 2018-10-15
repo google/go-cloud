@@ -12,8 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcsblob provides an implementation of using blob API on GCS.
-// It is a wrapper around GCS client library.
+// Package gcsblob provides an implementation of blob that uses GCS.
+//
+// It exposes the following types for As:
+// Bucket: *storage.Client
+// Reader: storage.Reader
+// Attributes: storage.ObjectAttrs
+// Writer: *storage.Writer
 package gcsblob
 
 import (
@@ -53,10 +58,11 @@ type bucket struct {
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
-// reader reads a GCS object. It implements io.ReadCloser.
+// reader reads a GCS object. It implements driver.Reader.
 type reader struct {
 	body  io.ReadCloser
 	attrs driver.ReaderAttributes
+	raw   *storage.Reader
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -70,6 +76,25 @@ func (r *reader) Close() error {
 
 func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
+}
+
+func (r *reader) As(i interface{}) bool {
+	p, ok := i.(*storage.Reader)
+	if !ok {
+		return false
+	}
+	*p = *r.raw
+	return true
+}
+
+// As implements driver.As.
+func (b *bucket) As(i interface{}) bool {
+	p, ok := i.(**storage.Client)
+	if !ok {
+		return false
+	}
+	*p = b.client
+	return true
 }
 
 // Attributes implements driver.Attributes.
@@ -88,6 +113,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    attrs.Metadata,
 		ModTime:     attrs.Updated,
 		Size:        attrs.Size,
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*storage.ObjectAttrs)
+			if !ok {
+				return false
+			}
+			*p = *attrs
+			return true
+		},
 	}, nil
 }
 
@@ -110,6 +143,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			ModTime:     modTime,
 			Size:        r.Size(),
 		},
+		raw: r,
 	}, nil
 }
 
@@ -122,6 +156,19 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
 		w.Metadata = opts.Metadata
+	}
+	if opts != nil && opts.BeforeWrite != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**storage.Writer)
+			if !ok {
+				return false
+			}
+			*p = w
+			return true
+		}
+		if err := opts.BeforeWrite(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	return w, nil
 }
@@ -155,7 +202,7 @@ func (e gcsError) Error() string {
 	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
 }
 
-func (e gcsError) BlobError() driver.ErrorKind {
+func (e gcsError) Kind() driver.ErrorKind {
 	return e.kind
 }
 

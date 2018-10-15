@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package s3blob provides an implementation of using blob API on S3.
+// Package s3blob provides an implementation of blob using S3.
+//
+// It exposes the following types for As:
+// Bucket: *s3.S3
+// Reader: s3.GetObjectOutput
+// Attributes: s3.HeadObjectOutput
+// Writer: *s3manager.UploadInput
 package s3blob
 
 import (
@@ -52,6 +58,7 @@ var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 type reader struct {
 	body  io.ReadCloser
 	attrs driver.ReaderAttributes
+	raw   *s3.GetObjectOutput
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -63,6 +70,15 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
+func (r *reader) As(i interface{}) bool {
+	p, ok := i.(*s3.GetObjectOutput)
+	if !ok {
+		return false
+	}
+	*p = *r.raw
+	return true
+}
+
 func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
@@ -71,13 +87,10 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 type writer struct {
 	w *io.PipeWriter
 
-	bucket      string
-	key         string
-	ctx         context.Context
-	uploader    *s3manager.Uploader
-	contentType string
-	metadata    map[string]*string
-	donec       chan struct{} // closed when done writing
+	ctx      context.Context
+	uploader *s3manager.Uploader
+	req      *s3manager.UploadInput
+	donec    chan struct{} // closed when done writing
 	// The following fields will be written before donec closes:
 	err error
 }
@@ -104,13 +117,8 @@ func (w *writer) open() error {
 	go func() {
 		defer close(w.donec)
 
-		_, err := w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-			Bucket:      aws.String(w.bucket),
-			ContentType: aws.String(w.contentType),
-			Key:         aws.String(w.key),
-			Body:        pr,
-			Metadata:    w.metadata,
-		})
+		w.req.Body = pr
+		_, err := w.uploader.UploadWithContext(w.ctx, w.req)
 		if err != nil {
 			w.err = err
 			pr.CloseWithError(err)
@@ -140,13 +148,8 @@ func (w *writer) touch() {
 		return
 	}
 	defer close(w.donec)
-	_, w.err = w.uploader.UploadWithContext(w.ctx, &s3manager.UploadInput{
-		Bucket:      aws.String(w.bucket),
-		ContentType: aws.String(w.contentType),
-		Key:         aws.String(w.key),
-		Body:        emptyBody,
-		Metadata:    w.metadata,
-	})
+	w.req.Body = emptyBody
+	_, w.err = w.uploader.UploadWithContext(w.ctx, w.req)
 }
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
@@ -154,6 +157,16 @@ type bucket struct {
 	name   string
 	sess   client.ConfigProvider
 	client *s3.S3
+}
+
+// As implements driver.As.
+func (b *bucket) As(i interface{}) bool {
+	p, ok := i.(**s3.S3)
+	if !ok {
+		return false
+	}
+	*p = b.client
+	return true
 }
 
 // Attributes implements driver.Attributes.
@@ -183,6 +196,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    md,
 		ModTime:     aws.TimeValue(resp.LastModified),
 		Size:        aws.Int64Value(resp.ContentLength),
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*s3.HeadObjectOutput)
+			if !ok {
+				return false
+			}
+			*p = *resp
+			return true
+		},
 	}, nil
 }
 
@@ -211,6 +232,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			ModTime:     aws.TimeValue(resp.LastModified),
 			Size:        getSize(resp),
 		},
+		raw: resp,
 	}, nil
 }
 
@@ -245,16 +267,31 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			metadata[k] = aws.String(v)
 		}
 	}
-	w := &writer{
-		bucket:      b.name,
-		ctx:         ctx,
-		key:         key,
-		uploader:    uploader,
-		contentType: contentType,
-		metadata:    metadata,
-		donec:       make(chan struct{}),
+	req := &s3manager.UploadInput{
+		Bucket:      aws.String(b.name),
+		ContentType: aws.String(contentType),
+		Key:         aws.String(key),
+		Metadata:    metadata,
 	}
-	return w, nil
+	if opts != nil && opts.BeforeWrite != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**s3manager.UploadInput)
+			if !ok {
+				return false
+			}
+			*p = req
+			return true
+		}
+		if err := opts.BeforeWrite(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	return &writer{
+		ctx:      ctx,
+		uploader: uploader,
+		req:      req,
+		donec:    make(chan struct{}),
+	}, nil
 }
 
 // Delete implements driver.Delete.
@@ -275,7 +312,7 @@ type s3Error struct {
 	kind             driver.ErrorKind
 }
 
-func (e s3Error) BlobError() driver.ErrorKind {
+func (e s3Error) Kind() driver.ErrorKind {
 	return e.kind
 }
 

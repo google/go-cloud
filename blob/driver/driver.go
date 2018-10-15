@@ -32,10 +32,10 @@ const (
 
 // Error is an interface that may be implemented by an error returned by
 // a driver to indicate the kind of failure.  If an error does not have the
-// BlobError method, then it is assumed to be GenericError.
+// Kind method, then it is assumed to be GenericError.
 type Error interface {
 	error
-	BlobError() ErrorKind
+	Kind() ErrorKind
 }
 
 // Reader reads an object from the blob.
@@ -43,8 +43,11 @@ type Reader interface {
 	io.ReadCloser
 
 	// Attributes returns a subset of attributes about the blob.
-	// Use Bucket.Attributes to get the full set.
 	Attributes() ReaderAttributes
+
+	// As allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	As(interface{}) bool
 }
 
 // Writer writes an object to the blob.
@@ -61,11 +64,16 @@ type WriterOptions struct {
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
+	// BeforeWrite is a callback that must be called exactly once before
+	// any data is written, unless NewTypedWriter returns an error, in
+	// which case it should not be called.
+	// asFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
-// accessible from Reader. Use Bucket.Attributes to get the full set of
-// attributes.
+// accessible from Reader.
 type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
 	ContentType string
@@ -89,20 +97,48 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// AsFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	// If not set, no provider-specific types are supported.
+	AsFunc func(interface{}) bool
 }
 
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
+	// As allows providers to expose provider-specific types.
+	//
+	// i will be a pointer to the type the user wants filled in.
+	// As should either fill it in and return true, or return false.
+	//
+	// Mutable objects should be exposed as a pointer to the object;
+	// i will therefore be a **.
+	//
+	// A provider should document the type(s) it support in package
+	// comments, and add conformance tests verifying them.
+	//
+	// A sample implementation might look like this, for supporting foo.MyType:
+	//   mt, ok := i.(*foo.MyType)
+	//   if !ok {
+	//     return false
+	//   }
+	//   *i = foo.MyType{}  // or, more likely, the existing value
+	//   return true
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	As(i interface{}) bool
+
 	// Attributes returns attributes for the blob. If the specified object does
-	// not exist, Attributes must return an error whose BlobError method returns
+	// not exist, Attributes must return an error whose Kind method returns
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
 	// will read till the end of the object. If the specified object does not
-	// exist, NewRangeReader must return an error whose BlobError method returns
+	// exist, NewRangeReader must return an error whose Kind method returns
 	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
@@ -123,7 +159,7 @@ type Bucket interface {
 	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
-	// not exist, NewRangeReader must return an error whose BlobError method
+	// not exist, NewRangeReader must return an error whose Kind method
 	// returns NotFound.
 	Delete(ctx context.Context, key string) error
 }
