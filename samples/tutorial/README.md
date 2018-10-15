@@ -118,7 +118,7 @@ func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 ```
 
 The cloud-specific setup is the tricky part as each cloud has its own series of
-invocations to create a bucket. It's worth thinking about this point for moment.
+invocations to create a bucket. It's worth thinking about this point for a moment.
 
 Without Go Cloud, both your setup code and your business logic are platform
 dependent. That's a bad thing because business logic has a tendency to grow
@@ -243,7 +243,7 @@ Finally, we close the writer with `Close` and check the error.
 
 ## Uploading an image
 
-That's it! Let's try it out. As setup, we will to create an [S3
+That's it! Let's try it out. As setup, we will need to create an [S3
 bucket][s3-bucket] and a
 [GCS bucket][gcs-bucket]. In the code above, I called that bucket `my-cool-bucket`, but you
 can change that to match whatever your bucket is called. For GCP, you will need
