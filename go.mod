@@ -16,12 +16,11 @@ module github.com/google/go-cloud
 
 require (
 	cloud.google.com/go v0.0.0-20180816152847-43dc61c3e9d0
+	contrib.go.opencensus.io/exporter/aws v0.0.0-20180906190126-dd54a7ef511e
 	contrib.go.opencensus.io/exporter/stackdriver v0.0.0-20180421005815-665cf5131b71
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20180907232109-123a90f520a1
-	github.com/aws/aws-sdk-go v1.13.20
-	github.com/aws/aws-xray-sdk-go v1.0.0-rc.5 // indirect
+	github.com/aws/aws-sdk-go v1.15.54
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
-	github.com/census-ecosystem/opencensus-go-exporter-aws v0.0.0-20180411051634-41633bc1ff6b
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
 	github.com/coreos/etcd v3.3.9+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
@@ -40,7 +39,7 @@ require (
 	github.com/golang/protobuf v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
-	github.com/google/martian v2.0.0-beta.2+incompatible // indirect
+	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/googleapis/gax-go v1.0.0 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20180424202546-8dffc02ea1cb // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -48,7 +47,6 @@ require (
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.5.0 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v0.0.0-20170503224851-77f18212c9c7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
@@ -68,7 +66,7 @@ require (
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	github.com/ugorji/go/codec v0.0.0-20180831062425-e253f1f20942 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect
-	go.opencensus.io v0.12.0
+	go.opencensus.io v0.15.0
 	golang.org/x/crypto v0.0.0-20180718160520-a2144134853f
 	golang.org/x/net v0.0.0-20180906233101-161cd47e91fd
 	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a
