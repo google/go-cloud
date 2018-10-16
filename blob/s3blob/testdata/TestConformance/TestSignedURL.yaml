@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64) S3Manager
+      - aws-sdk-go/1.15.54 (go1.11rc2; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
       X-Amz-Date:
-      - 20181011T234311Z
+      - 20181016T011447Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-signing
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Thu, 11 Oct 2018 23:43:12 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - cBVhczzAwNI+2kEEJaQ/CUywP8yuYBhcgKfvFCdumrnnVTYp67zYokzjjGP+MBgOuh7Iq0qidd4=
+      - Wa7cQdc/+AFylMbWQ5WMwzXVHx8yFe/ss0uZUPDybsW/YJVv+qYAnKE390mytKIZTUhaGAqF9qo=
       X-Amz-Request-Id:
-      - BC5B663F22B32062
+      - 4DA33AFF708F1849
     status: 200 OK
     code: 200
     duration: ""
@@ -41,7 +41,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAJMFPXLG5HTUALT5A%2F20181011%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20181011T234311Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=5e7178398791c07cd1bc42a84fc4da8c0f46717d53e65662be63f96aeed612a3
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJMFPXLG5HTUALT5A%2F20181016%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20181016T011447Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=292ad3e3e3b7bcefed9261e7f9a2bc56c54e26866c2043410a21bb735e78286e
     method: GET
   response:
     body: hello world
@@ -53,17 +53,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 11 Oct 2018 23:43:13 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Thu, 11 Oct 2018 23:43:12 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 6mNB16UPvvwtAgi7mytHqmVOFq2Ho0RAiRWywW/3S70Hn+fJ6kL27bAs0ycNb26E+UkESMP45yQ=
+      - 4GAoviZAMcXPp0LxbnGnTLE3gidkTpXXJ2766YIxL81nwJMa3VXerGbQPkc0JRYok3SpxILxNII=
       X-Amz-Request-Id:
-      - AE71A736E5DE85E0
+      - 6630270326741FA2
     status: 200 OK
     code: 200
     duration: ""
@@ -72,11 +72,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      - aws-sdk-go/1.15.54 (go1.11rc2; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181011T234312Z
+      - 20181016T011448Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-signing
     method: HEAD
   response:
@@ -89,17 +89,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 11 Oct 2018 23:43:13 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Thu, 11 Oct 2018 23:43:12 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - /5hAQJZtVF6C8DlWav3oEAn+Eg2/t61aEVI0IrDz1B29G+Hybumvqgwd2UXscb2l37IoH0ljYyQ=
+      - lKMriHYGw292TC/Wequi54Ku34uRB0wckdLeC/quNGXb1ezjbkjBAnTvufBNP1NbpFRweFooGT0=
       X-Amz-Request-Id:
-      - 646801CBB2A26DD9
+      - 5F108DDED07C7979
     status: 200 OK
     code: 200
     duration: ""
@@ -108,24 +108,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      - aws-sdk-go/1.15.54 (go1.11rc2; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181011T234312Z
+      - 20181016T011448Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-signing
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 11 Oct 2018 23:43:13 GMT
+      - Tue, 16 Oct 2018 01:14:49 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 75DXup/3e/gWeBpoptMoTUgcAElRmyih32XWGfu3a6jDmQmpdh96GS/JE4xBZDdkwdTdyhk2eMk=
+      - cRe/scnrJQ07gm33ksAuMHp2JYTf/tLf/Hw6YEewjHQXPT92KRX2Y4QVf+V6hUAcJKk6Rq33KfQ=
       X-Amz-Request-Id:
-      - C07D8E3C0B6740F8
+      - A91E468258D8DD0A
     status: 204 No Content
     code: 204
     duration: ""

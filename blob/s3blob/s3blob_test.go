@@ -66,7 +66,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, "../testdata", []drivertest.AsTest{verifyContentLanguage{}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
 const language = "nl"
