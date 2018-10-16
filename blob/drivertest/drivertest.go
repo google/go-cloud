@@ -22,10 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"path/filepath"
-	"strconv"
 	"strings"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cloud/blob"
@@ -106,11 +104,8 @@ func (verifyAsFailsOnNil) ReaderCheck(r *blob.Reader) error {
 	return nil
 }
 
-// RunConformanceTests runs conformance tests for provider implementations
-// of blob.
-// pathToTestdata is a (possibly relative) path to a directory containing
-// blob/testdata/* (e.g., test-small.txt).
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata string, asTests []AsTest) {
+// RunConformanceTests runs conformance tests for provider implementations of blob.
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
@@ -121,10 +116,10 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, pathToTestdata s
 		testAttributes(t, newHarness)
 	})
 	t.Run("TestWrite", func(t *testing.T) {
-		testWrite(t, newHarness, pathToTestdata)
+		testWrite(t, newHarness)
 	})
 	t.Run("TestCanceledWrite", func(t *testing.T) {
-		testCanceledWrite(t, newHarness, pathToTestdata)
+		testCanceledWrite(t, newHarness)
 	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
@@ -508,10 +503,9 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-// loadTestFile loads a file from the blob/testdata/ directory.
-// TODO(rvangent): Consider using go-bindata to inline these as source code.
-func loadTestFile(t *testing.T, pathToTestdata, filename string) []byte {
-	data, err := ioutil.ReadFile(filepath.Join(pathToTestdata, filename))
+// loadTestData loads test data, inlined using go-bindata.
+func loadTestData(t *testing.T, name string) []byte {
+	data, err := Asset(name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,11 +513,11 @@ func loadTestFile(t *testing.T, pathToTestdata, filename string) []byte {
 }
 
 // testWrite tests the functionality of NewWriter and Writer.
-func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+func testWrite(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-reading"
-	smallText := loadTestFile(t, pathToTestdata, "test-small.txt")
-	mediumHTML := loadTestFile(t, pathToTestdata, "test-medium.html")
-	largeJpg := loadTestFile(t, pathToTestdata, "test-large.jpg")
+	smallText := loadTestData(t, "test-small.txt")
+	mediumHTML := loadTestData(t, "test-medium.html")
+	largeJpg := loadTestData(t, "test-large.jpg")
 
 	tests := []struct {
 		name            string
@@ -652,7 +646,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
 }
 
 // testCanceledWrite tests the functionality of canceling an in-progress write.
-func testCanceledWrite(t *testing.T, newHarness HarnessMaker, pathToTestdata string) {
+func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-canceled-write"
 	content := []byte("hello world")
 
