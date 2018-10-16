@@ -1,2 +1,3 @@
-no provider found for example.com/foo.Foo
-no provider found for example.com/foo.Bar
+/wire_gopath/src/example.com/foo/wire.go:x:y: inject injectBaz: no provider found for example.com/foo.Foo (required by provider of example.com/foo.Baz)
+
+/wire_gopath/src/example.com/foo/wire.go:x:y: inject injectBaz: no provider found for example.com/foo.Bar (required by provider of example.com/foo.Baz)
