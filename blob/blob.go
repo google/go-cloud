@@ -171,6 +171,72 @@ func (w *Writer) open(p []byte) (n int, err error) {
 	return w.w.Write(p)
 }
 
+// MaxPageSize is the maximum value for ListOptions.PageSize.
+const MaxPageSize = 1000
+
+// ListOptions sets options for listing objects.
+// TODO(Issue #541): Add Delimiter.
+type ListOptions struct {
+	// Prefix indicates that only objects with a key starting with this prefix
+	// should be returned.
+	Prefix string
+
+	// PageSize sets the maximum number of objects that will be retrieved
+	// at a time from the provider.
+	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
+	PageSize int
+}
+
+// ListIterator is used to iterate over List results.
+type ListIterator struct {
+	b       *Bucket
+	opt     *driver.ListOptions
+	page    *driver.ListPage
+	nextIdx int
+}
+
+// Next returns the next object. It returns nil if there are
+// no more objects.
+func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
+	if i.page != nil {
+		// We've already got a page of results.
+		if i.nextIdx < len(i.page.Objects) {
+			// Next object is in the page; return it.
+			dobj := i.page.Objects[i.nextIdx]
+			i.nextIdx++
+			return &ListObject{
+				Key:     dobj.Key,
+				ModTime: dobj.ModTime,
+				Size:    dobj.Size,
+			}, nil
+		}
+		if len(i.page.NextPageToken) == 0 {
+			// Done with current page, and there are no more; return nil.
+			return nil, nil
+		}
+		// We need to load the next page.
+		i.opt.PageToken = i.page.NextPageToken
+	}
+	// Loading a new page.
+	p, err := i.b.b.ListPaged(ctx, i.opt)
+	if err != nil {
+		return nil, err
+	}
+	i.page = p
+	i.nextIdx = 0
+	return i.Next(ctx)
+}
+
+// ListObject represents a single blob object returned from List.
+type ListObject struct {
+	// Key is the key for this blob.
+	Key string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
+}
+
 // Bucket manages the underlying blob service and provides read, write and delete
 // operations on given object within it.
 type Bucket struct {
@@ -209,6 +275,33 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	}
 	defer r.Close()
 	return ioutil.ReadAll(r)
+}
+
+// List returns an object that can be used to iterate over objects in a
+// bucket, in lexicographical order of UTF-8 encoded keys. The underlying
+// implementation fetches results in pages.
+// Use ListOptions to control the page size and filtering.
+//
+// List is not guaranteed to include all recently-written objects;
+// some providers are only eventually consistent.
+func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, error) {
+	if opt == nil {
+		opt = &ListOptions{}
+	}
+	if opt.PageSize < 0 {
+		return nil, errors.New("ListOptions.PageSize must be >= 0")
+	}
+	if opt.PageSize > MaxPageSize {
+		return nil, fmt.Errorf("ListOptions.PageSize must be < %d", MaxPageSize)
+	}
+	if opt.PageSize == 0 {
+		opt.PageSize = MaxPageSize
+	}
+	dopt := &driver.ListOptions{
+		Prefix:   opt.Prefix,
+		PageSize: opt.PageSize,
+	}
+	return &ListIterator{b: b, opt: dopt}, nil
 }
 
 // Attributes reads attributes for the given key.

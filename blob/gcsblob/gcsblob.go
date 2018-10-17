@@ -35,6 +35,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -108,6 +109,31 @@ func (r *reader) As(i interface{}) bool {
 	}
 	*p = *r.raw
 	return true
+}
+
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	bkt := b.client.Bucket(b.name)
+	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
+	pager := iterator.NewPager(iter, opt.PageSize, string(opt.PageToken))
+
+	var objects []*storage.ObjectAttrs
+	nextPageToken, err := pager.NextPage(&objects)
+	if err != nil {
+		return nil, err
+	}
+	page := driver.ListPage{NextPageToken: []byte(nextPageToken)}
+	if len(objects) > 0 {
+		page.Objects = make([]*driver.ListObject, len(objects))
+		for i, obj := range objects {
+			page.Objects[i] = &driver.ListObject{
+				Key:     obj.Name,
+				ModTime: obj.Updated,
+				Size:    obj.Size,
+			}
+		}
+	}
+	return &page, nil
 }
 
 // As implements driver.As.
