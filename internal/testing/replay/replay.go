@@ -34,6 +34,9 @@ import (
 type ProviderMatcher struct {
 	// Headers is a slice of HTTP request headers that will be verified to match.
 	Headers []string
+	// URLScrubbers is a slice of regular expressions that will be used to
+	// scrub the URL before matching, via ReplaceAllString.
+	URLScrubbers []*regexp.Regexp
 	// BodyScrubber is a slice of regular expressions that will be used to
 	// scrub the HTTP request body before matching, via ReplaceAllString.
 	BodyScrubbers []*regexp.Regexp
@@ -76,8 +79,14 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 		if r.Method != i.Method {
 			t.Fatalf("mismatched Method at request #%d; got %q want %q", cur, r.Method, i.Method)
 		}
-		if r.URL.String() != i.URL {
-			t.Fatalf("mismatched URL at request #%d; got %q want %q", cur, r.URL, i.URL)
+		gotURL := r.URL.String()
+		wantURL := i.URL
+		for _, re := range matcher.URLScrubbers {
+			gotURL = re.ReplaceAllString(gotURL, "")
+			wantURL = re.ReplaceAllString(wantURL, "")
+		}
+		if gotURL != wantURL {
+			t.Fatalf("mismatched URL at request #%d; got\n%q\nwant\n%q", cur, gotURL, wantURL)
 		}
 		for _, header := range matcher.Headers {
 			got := r.Header.Get(header)
