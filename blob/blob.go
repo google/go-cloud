@@ -340,6 +340,36 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 	return b.b.Delete(ctx, key)
 }
 
+// SignedURL returns a URL that can be used to GET the blob for the duration
+// specified in opts.Expiry.
+// If IsNotImplemented returns true for the returned error, the provider does
+// not support SignedURL.
+func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
+	if opts == nil {
+		opts = &SignedURLOptions{}
+	}
+	if opts.Expiry < 0 {
+		return "", errors.New("SignedURLOptions.Expiry must be >= 0")
+	}
+	if opts.Expiry == 0 {
+		opts.Expiry = DefaultSignedURLExpiry
+	}
+	dopts := driver.SignedURLOptions{
+		Expiry: opts.Expiry,
+	}
+	return b.b.SignedURL(ctx, key, &dopts)
+}
+
+// DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
+const DefaultSignedURLExpiry = 1 * time.Hour
+
+// SignedURLOptions sets options for SignedURL.
+type SignedURLOptions struct {
+	// Expiry sets how long the returned URL is valid for.
+	// Defaults to DefaultSignedURLExpiry.
+	Expiry time.Duration
+}
+
 // WriterOptions controls Writer behaviors.
 type WriterOptions struct {
 	// BufferSize changes the default size in bytes of the maximum part Writer can
@@ -378,6 +408,15 @@ type WriterOptions struct {
 func IsNotExist(err error) bool {
 	if e, ok := err.(driver.Error); ok {
 		return e.Kind() == driver.NotFound
+	}
+	return false
+}
+
+// IsNotImplemented returns true iff err indicates that the provider does not
+// support the given operation.
+func IsNotImplemented(err error) bool {
+	if e, ok := err.(driver.Error); ok {
+		return e.Kind() == driver.NotImplemented
 	}
 	return false
 }

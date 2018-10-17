@@ -26,8 +26,12 @@ import (
 type ErrorKind int
 
 const (
+	// GenericError is the default ErrorKind.
 	GenericError ErrorKind = iota
+	// NotFound indicates that the referenced key does not exist.
 	NotFound
+	// NotImplemented indicates that the provider does not support this operation.
+	NotImplemented
 )
 
 // Error is an interface that may be implemented by an error returned by
@@ -145,7 +149,7 @@ type Bucket interface {
 	// NewTypedWriter returns Writer that writes to an object associated with key.
 	//
 	// A new object will be created unless an object with this key already exists.
-	// Otherwise any previous object with the same name will be replaced.
+	// Otherwise any previous object with the same key will be replaced.
 	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
@@ -162,4 +166,15 @@ type Bucket interface {
 	// not exist, NewRangeReader must return an error whose Kind method
 	// returns NotFound.
 	Delete(ctx context.Context, key string) error
+
+	// SignedURL returns a URL that can be used to GET the blob for the duration
+	// specified in opts.Expiry. opts is guaranteed to be non-nil.
+	// If not supported, return an error whose Kind method returns NotImplemented.
+	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
+}
+
+// SignedURLOptions sets options for SignedURL.
+type SignedURLOptions struct {
+	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
+	Expiry time.Duration
 }

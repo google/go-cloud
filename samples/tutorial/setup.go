@@ -52,7 +52,7 @@ func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gcsblob.OpenBucket(ctx, bucket, c)
+	return gcsblob.OpenBucket(ctx, bucket, c, nil)
 }
 
 // setupAWS creates a connection to Simple Cloud Storage Service (S3).
