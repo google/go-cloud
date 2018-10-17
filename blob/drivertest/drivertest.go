@@ -24,8 +24,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
