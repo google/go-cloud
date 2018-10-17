@@ -159,6 +159,39 @@ type bucket struct {
 	client *s3.S3
 }
 
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	in := &s3.ListObjectsV2Input{
+		Bucket:  aws.String(b.name),
+		MaxKeys: aws.Int64(int64(opt.PageSize)),
+	}
+	if len(opt.PageToken) > 0 {
+		in.ContinuationToken = aws.String(string(opt.PageToken))
+	}
+	if opt.Prefix != "" {
+		in.Prefix = aws.String(opt.Prefix)
+	}
+	req, resp := b.client.ListObjectsV2Request(in)
+	if err := req.Send(); err != nil {
+		return nil, err
+	}
+	page := driver.ListPage{}
+	if resp.NextContinuationToken != nil {
+		page.NextPageToken = []byte(*resp.NextContinuationToken)
+	}
+	if len(resp.Contents) > 0 {
+		page.Objects = make([]*driver.ListObject, len(resp.Contents))
+		for i, obj := range resp.Contents {
+			page.Objects[i] = &driver.ListObject{
+				Key:     *obj.Key,
+				ModTime: *obj.LastModified,
+				Size:    *obj.Size,
+			}
+		}
+	}
+	return &page, nil
+}
+
 // As implements driver.As.
 func (b *bucket) As(i interface{}) bool {
 	p, ok := i.(**s3.S3)
