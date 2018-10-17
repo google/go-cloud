@@ -17,6 +17,7 @@ package fileblob
 import (
 	"context"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -40,6 +41,10 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		dir:    dir,
 		closer: func() { _ = os.RemoveAll(dir) },
 	}, nil
+}
+
+func (h *harness) HTTPClient() *http.Client {
+	return nil
 }
 
 func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
