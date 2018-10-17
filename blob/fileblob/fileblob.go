@@ -298,13 +298,21 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	// TODO(Issue #546): Implemented SignedURL for fileblob.
+	return "", fileError{msg: "SignedURL not supported (see issue #546)", kind: driver.NotImplemented}
+}
+
 type fileError struct {
 	relpath, msg string
 	kind         driver.ErrorKind
 }
 
 func (e fileError) Error() string {
-	return fmt.Sprintf("fileblob: object %s: %v", e.relpath, e.msg)
+	if e.relpath == "" {
+		return fmt.Sprintf("fileblob: %s", e.msg)
+	}
+	return fmt.Sprintf("fileblob: object %s: %s", e.relpath, e.msg)
 }
 
 func (e fileError) Kind() driver.ErrorKind {

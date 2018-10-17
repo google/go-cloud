@@ -17,7 +17,10 @@ package gcsblob
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"testing"
 
 	"cloud.google.com/go/storage"
@@ -28,27 +31,59 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-// bucketName records the bucket used for the last --record.
-// If you want to use --record mode,
-// 1. Create a bucket in your GCP project:
-//    https://console.cloud.google.com/storage/browser, then "Create Bucket".
-// 2. Update this constant to your bucket name.
-// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
-//    name from the Terraform output instead (saving a copy of it for replay).
-const bucketName = "go-cloud-blob-test-bucket"
+const (
+	// These constants capture values that were used during the last -record.
+	//
+	// If you want to use --record mode,
+	// 1. Create a bucket in your GCP project:
+	//    https://console.cloud.google.com/storage/browser, then "Create Bucket".
+	// 2. Update the bucketName constant to your bucket name.
+	// 3. Create a service account in your GCP project and update the
+	//    serviceAccountID constant to it.
+	// 4. Download a private key to a .pem file as described here:
+	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
+	//    and pass a path to it via the --privatekey flag.
+	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
+	//    name from the Terraform output instead (saving a copy of it for replay).
+	bucketName       = "go-cloud-blob-test-bucket"
+	serviceAccountID = "storage-viewer@go-cloud-test-216917.iam.gserviceaccount.com"
+)
+
+var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record)")
 
 type harness struct {
 	client *gcp.HTTPClient
+	opts   *Options
+	rt     http.RoundTripper
 	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	client, done := setup.NewGCPClient(ctx, t)
-	return &harness{client: client, closer: done}, nil
+	opts := &Options{GoogleAccessID: serviceAccountID}
+	if *setup.Record {
+		if *pathToPrivateKey == "" {
+			t.Fatalf("--privatekey is required in --record mode.")
+		}
+		// Use a real private key for signing URLs during -record.
+		pk, err := ioutil.ReadFile(*pathToPrivateKey)
+		if err != nil {
+			t.Fatalf("Couldn't find private key at %v: %v", *pathToPrivateKey, err)
+		}
+		opts.PrivateKey = pk
+	} else {
+		// Use a dummy signer in replay mode.
+		opts.SignBytes = func(b []byte) ([]byte, error) { return []byte("signed!"), nil }
+	}
+	client, rt, done := setup.NewGCPClient(ctx, t)
+	return &harness{client: client, opts: opts, rt: rt, closer: done}, nil
+}
+
+func (h *harness) HTTPClient() *http.Client {
+	return &http.Client{Transport: h.rt}
 }
 
 func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return OpenBucket(ctx, bucketName, h.client)
+	return OpenBucket(ctx, bucketName, h.client, h.opts)
 }
 
 func (h *harness) Close() {

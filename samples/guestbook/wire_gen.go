@@ -221,7 +221,7 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 // inject_gcp.go:
 
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, flags.bucket, client2)
+	return gcsblob.OpenBucket(ctx, flags.bucket, client2, nil)
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
