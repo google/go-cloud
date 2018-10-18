@@ -16,9 +16,11 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
+// ListObject: storage.ObjectAttrs
+// ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
 // Attributes: storage.ObjectAttrs
-// Writer: *storage.Writer
+// WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob
 
 import (

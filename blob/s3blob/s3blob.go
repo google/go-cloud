@@ -16,9 +16,11 @@
 //
 // It exposes the following types for As:
 // Bucket: *s3.S3
+// ListObject: s3.Object
+// ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput
-// Writer: *s3manager.UploadInput
+// WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob
 
 import (
