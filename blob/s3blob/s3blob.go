@@ -179,6 +179,9 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if opt.Prefix != "" {
 		in.Prefix = aws.String(opt.Prefix)
 	}
+	if opt.Delimiter != "" {
+		in.Delimiter = aws.String(opt.Delimiter)
+	}
 	if opt.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3.ListObjectsV2Input)
@@ -200,8 +203,8 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if resp.NextContinuationToken != nil {
 		page.NextPageToken = []byte(*resp.NextContinuationToken)
 	}
-	if len(resp.Contents) > 0 {
-		page.Objects = make([]*driver.ListObject, len(resp.Contents))
+	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
+		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
 			page.Objects[i] = &driver.ListObject{
 				Key:     *obj.Key,
@@ -216,6 +219,16 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 					return true
 				},
 			}
+		}
+		for i, prefix := range resp.CommonPrefixes {
+			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
+				Prefix: *prefix.Prefix,
+			}
+		}
+		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
+			// S3 gives us "files" and "directories" in separate lists.
+			// So far we've just appended them; we need to sort them.
+			driver.SortListObjects(page.Objects)
 		}
 	}
 	return &page, nil

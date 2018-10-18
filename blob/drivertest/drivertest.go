@@ -138,6 +138,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
+	t.Run("TestListDelimiters", func(t *testing.T) {
+		testListDelimiters(t, newHarness)
+	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -174,7 +177,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 
 // testList tests the functionality of List.
 func testList(t *testing.T, newHarness HarnessMaker) {
-	// TODO(Issue #541): Add tests for slash-separated paths.
 	const keyPrefix = "blob-for-list"
 	content := []byte("hello")
 
@@ -238,8 +240,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	// Creates blobs for sub-tests below.
 	// We only create the blobs once, for efficiency and because there's
 	// no guarantee that after we create them they will be immediately returned
-	// from List/ListPaged. The very first time the test is run against a
-	// Bucket, it may be flaky due to this race.
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
 	init := func(t *testing.T) (driver.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
@@ -314,6 +316,219 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			}
 			if diff := cmp.Diff(got, tc.want); diff != "" {
 				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+			}
+		})
+	}
+}
+
+type listResult struct {
+	Key   string
+	IsDir bool
+	Sub   []*listResult
+}
+
+func (r *listResult) String() string {
+	if r.IsDir {
+		return fmt.Sprintf("Dir %s (%d entries)", r.Key, len(r.Sub))
+	}
+	return r.Key
+}
+
+// listRecursively recursively lists b using prefix and delim.
+func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) ([]*listResult, error) {
+	iter, err := b.List(ctx, &blob.ListOptions{
+		Prefix:    prefix,
+		Delimiter: delim,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var retval []*listResult
+	for {
+		obj, err := iter.Next(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if obj == nil {
+			break
+		}
+		if obj.Prefix != "" {
+			sub, err := listRecursively(ctx, b, obj.Prefix, delim)
+			if err != nil {
+				return nil, err
+			}
+			retval = append(retval, &listResult{
+				Key:   obj.Prefix,
+				IsDir: true,
+				Sub:   sub,
+			})
+		} else {
+			retval = append(retval, &listResult{Key: obj.Key})
+		}
+	}
+	return retval, nil
+}
+
+// testListDelimiters tests the functionality of List using Delimiters.
+func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "blob-for-delimiters-"
+	content := []byte("hello")
+
+	// The set of files to use for these tests. The strings in each entry will
+	// be joined using delim, so the result is a directory structure like this
+	// (using / as delimiter):
+	// dir1/a.txt
+	// dir1/b.txt
+	// dir1/subdir/c.txt
+	// dir1/subdir/d.txt
+	// dir2/e.txt
+	// f.txt
+	keys := [][]string{
+		[]string{"dir1", "a.txt"},
+		[]string{"dir1", "b.txt"},
+		[]string{"dir1", "subdir", "c.txt"},
+		[]string{"dir1", "subdir", "d.txt"},
+		[]string{"dir2", "e.txt"},
+		[]string{"f.txt"},
+	}
+
+	// mkwantFlat creates "want" for a flat listing of keys created using delim.
+	// There should be one entry for each key.
+	mkWantFlat := func(delim string) []string {
+		flat := make([]string, len(keys))
+		for i, key := range keys {
+			flat[i] = strings.Join(append([]string{keyPrefix}, key...), delim)
+		}
+		return flat
+	}
+
+	// mkWantWithDelim creates "want" for a delimited listing of keys created using delim.
+	mkWantWithDelim := func(delim string) []*listResult {
+		return []*listResult{
+			&listResult{
+				Key:   strings.Join([]string{keyPrefix, "dir1", ""}, delim),
+				IsDir: true,
+				Sub: []*listResult{
+					&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "a.txt"}, delim)},
+					&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "b.txt"}, delim)},
+					&listResult{
+						Key:   strings.Join([]string{keyPrefix, "dir1", "subdir", ""}, delim),
+						IsDir: true,
+						Sub: []*listResult{
+							// dir1/subdir/c.txt and dir1/subdir/d.txt.
+							&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "subdir", "c.txt"}, delim)},
+							&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "subdir", "d.txt"}, delim)},
+						},
+					},
+				},
+			},
+			&listResult{
+				Key:   strings.Join([]string{keyPrefix, "dir2", ""}, delim),
+				IsDir: true,
+				Sub: []*listResult{
+					&listResult{Key: strings.Join([]string{keyPrefix, "dir2", "e.txt"}, delim)},
+				},
+			},
+			&listResult{Key: strings.Join([]string{keyPrefix, "f.txt"}, delim)},
+		}
+	}
+
+	// Test with several different delimiters.
+	tests := []struct {
+		name, delim string
+	}{
+		{name: "fwdslash", delim: "/"},
+		{name: "backslash", delim: "\\"},
+		{name: "abc", delim: "abc"},
+	}
+
+	ctx := context.Background()
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
+	init := func(t *testing.T, delim string) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+
+		// See if the blobs are already there.
+		prefix := keyPrefix + delim
+		iter, err := b.List(ctx, &blob.ListOptions{Prefix: prefix})
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		for {
+			obj, err := iter.Next(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if obj == nil {
+				break
+			}
+			count++
+		}
+		if count != len(keys) {
+			for _, key := range keys {
+				if err := b.WriteAll(ctx, prefix+strings.Join(key, delim), content, nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, done := init(t, tc.delim)
+			defer done()
+
+			prefix := keyPrefix + tc.delim
+
+			// Fetch without using Delimiter; we should get back all of the keys
+			// in a single flat namespace.
+			iter, err := b.List(ctx, &blob.ListOptions{
+				Prefix: prefix,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var gotFlat []string
+			for {
+				obj, err := iter.Next(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if obj == nil {
+					break
+				}
+				if obj.Prefix != "" {
+					t.Errorf("got non-empty Prefix %q, expected empty string with empty Delimiter", obj.Prefix)
+				}
+				gotFlat = append(gotFlat, obj.Key)
+			}
+			wantFlat := mkWantFlat(tc.delim)
+			if diff := cmp.Diff(gotFlat, wantFlat); diff != "" {
+				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotFlat, wantFlat, diff)
+			}
+
+			// Fetch using Delimiter.
+			gotWithDelim, err := listRecursively(ctx, b, prefix, tc.delim)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantWithDelim := mkWantWithDelim(tc.delim)
+			if diff := cmp.Diff(gotWithDelim, wantWithDelim); diff != "" {
+				t.Errorf("using delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotWithDelim, wantWithDelim, diff)
 			}
 		})
 	}

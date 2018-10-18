@@ -19,6 +19,7 @@ package driver
 import (
 	"context"
 	"io"
+	"sort"
 	"time"
 )
 
@@ -113,11 +114,22 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
+	// Delimiter sets the delimiter used to define a hierarchical namespace,
+	// like a filesystem with "directories".
+	//
+	// An empty delimiter means that the bucket is treated as a single flat
+	// namespace.
+	//
+	// A non-empty delimiter means that any result with the delimiter in its key
+	// after ListOptions.Prefix is stripped will be returned with a non-empty
+	// ListObject.Prefix field, and zero values for other fields. These results
+	// represent "directories". Other results in that "directory" will not be
+	// returned.
+	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
 	// max.
 	PageSize int
-
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
@@ -136,10 +148,33 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// Prefix indicates that this results represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. It can be
+	// passed as ListOptions.Prefix to list items in the "directory".
+	// Other ListObject fields will not be set.
+	Prefix string
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.
 	AsFunc func(interface{}) bool
+}
+
+// Name returns Prefix or Key, whichever is non-empty.
+func (lo *ListObject) Name() string {
+	if lo.Prefix != "" {
+		return lo.Prefix
+	}
+	return lo.Key
+}
+
+// SortListObjects sorts objs by ListObject.Name().
+// It is provided as a helper because some providers return "directories"
+// separately from files, and driver implementations must merge them into
+// a sorted []*ListObject.
+func SortListObjects(objs []*ListObject) {
+	sort.Slice(objs, func(i, j int) bool {
+		return objs[i].Name() < objs[j].Name()
+	})
 }
 
 // ListPage represents a page of results return from ListPaged.

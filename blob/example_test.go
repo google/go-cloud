@@ -208,6 +208,76 @@ func ExampleBucket_List() {
 	// foo4.txt
 }
 
+// List lists files in b starting with prefix. It uses the delimiter "/",
+// and recurses into "directories", adding 2 spaces to indent each time.
+// The result is an indented listing like this:
+// foo/
+//   a.txt
+//   b.txt
+// bar/
+//   barsubdir/
+//     c.txt
+func List(ctx context.Context, b *blob.Bucket, prefix, indent string) {
+	iter, err := b.List(ctx, &blob.ListOptions{
+		Delimiter: "/",
+		Prefix:    prefix,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		obj, err := iter.Next(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if obj == nil {
+			break
+		}
+		if obj.Prefix != "" {
+			// Directory.
+			fmt.Printf("%s%s\n", indent, obj.Prefix)
+			List(ctx, b, obj.Prefix, indent+"  ")
+		} else {
+			fmt.Printf("%s%s\n", indent, obj.Key)
+		}
+	}
+}
+
+func ExampleBucket_List_withdelimiter() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.NewBucket(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create some blob objects in a hierarchy:
+	// dir1/subdir/a.txt
+	// dir1/subdir/b.txt
+	// dir2/c.txt
+	// d.txt
+	ctx := context.Background()
+	createListableFilesInHierarchy(ctx, bucket)
+
+	// This function uses / as a delimiter and recursively lists all objects,
+	// indenting subdirectories.
+	// It will list the blobs created above because fileblob is strongly
+	// consistent, but is not guaranteed to work on all providers.
+	List(ctx, bucket, "", "")
+
+	// Output:
+	// d.txt
+	// dir1/
+	//   dir1/subdir/
+	//     dir1/subdir/a.txt
+	//     dir1/subdir/b.txt
+	// dir2/
+	//   dir2/c.txt
+}
 func ExampleBucket_As() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
@@ -257,6 +327,20 @@ func ExampleBucket_As() {
 func createListableFiles(ctx context.Context, b *blob.Bucket) error {
 	for i := 0; i < 5; i++ {
 		if err := b.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createListableFilesInHierarchy(ctx context.Context, b *blob.Bucket) error {
+	for _, name := range []string{
+		"dir1/subdir/a.txt",
+		"dir1/subdir/b.txt",
+		"dir2/c.txt",
+		"d.txt",
+	} {
+		if err := b.WriteAll(ctx, name, []byte("Go Cloud"), nil); err != nil {
 			return err
 		}
 	}

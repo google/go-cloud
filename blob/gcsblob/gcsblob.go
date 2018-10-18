@@ -118,7 +118,10 @@ func (r *reader) As(i interface{}) bool {
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
-	query := &storage.Query{Prefix: opt.Prefix}
+	query := &storage.Query{
+		Prefix:    opt.Prefix,
+		Delimiter: opt.Delimiter,
+	}
 	if opt.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Query)
@@ -151,6 +154,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				Key:     obj.Name,
 				ModTime: obj.Updated,
 				Size:    obj.Size,
+				Prefix:  obj.Prefix,
 				AsFunc: func(i interface{}) bool {
 					p, ok := i.(*storage.ObjectAttrs)
 					if !ok {
@@ -161,6 +165,9 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				},
 			}
 		}
+		// GCS always returns "directories" (with obj.Prefix != "" and obj.Name == "")
+		// at the end of the list. We need to sort them.
+		driver.SortListObjects(page.Objects)
 	}
 	return &page, nil
 }
