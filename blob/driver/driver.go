@@ -137,9 +137,8 @@ type ListPage struct {
 	// Objects is the slice of objects found. It should have at most
 	// ListOptions.PageSize entries.
 	Objects []*ListObject
-	// NextPageToken should be left empty unless
-	// len(Objects) == ListOptions.PageSize and there are more objects to
-	// return. The value may be returned as ListOptions.PageToken on a
+	// NextPageToken should be left empty unless there are more objects
+	// to return. The value may be returned as ListOptions.PageToken on a
 	// subsequent ListPaged call, to fetch the next page of results.
 	// It can be an arbitrary []byte; it need not be a valid key.
 	NextPageToken []byte
