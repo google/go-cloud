@@ -113,13 +113,17 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
-
 	// PageSize sets the maximum number of objects that will be returned in
 	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
+	// BeforeList is a callback that must be called exactly once during ListPaged,
+	// before the underlying provider's list is executed.
+	// asFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	BeforeList func(asFunc func(interface{}) bool) error
 }
 
 // ListObject represents a specific blob object returned from ListPaged.
@@ -130,6 +134,10 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// AsFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	// If not set, no provider-specific types are supported.
+	AsFunc func(interface{}) bool
 }
 
 // ListPage represents a page of results return from ListPaged.

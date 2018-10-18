@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -69,12 +70,18 @@ type AsTest interface {
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
+	// BeforeList will be passed directly to ListOptions as part of listing the
+	// test blob.
+	BeforeList(as func(interface{}) bool) error
 	// AttributesCheck will be called after fetching the test blob's attributes.
 	// It should call attrs.As and verify the results.
 	AttributesCheck(attrs *blob.Attributes) error
 	// ReaderCheck will be called after creating a blob.Reader.
 	// It should call r.As and verify the results.
 	ReaderCheck(r *blob.Reader) error
+	// ListObjectCheck will be called after calling List with the test object's
+	// name as the Prefix. It should call o.As and verify the results.
+	ListObjectCheck(o *blob.ListObject) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -97,6 +104,13 @@ func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyAsFailsOnNil) BeforeList(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want List.As to return false when passed nil")
+	}
+	return nil
+}
+
 func (verifyAsFailsOnNil) AttributesCheck(attrs *blob.Attributes) error {
 	if attrs.As(nil) {
 		return errors.New("want Attributes.As to return false when passed nil")
@@ -107,6 +121,13 @@ func (verifyAsFailsOnNil) AttributesCheck(attrs *blob.Attributes) error {
 func (verifyAsFailsOnNil) ReaderCheck(r *blob.Reader) error {
 	if r.As(nil) {
 		return errors.New("want Reader.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) ListObjectCheck(o *blob.ListObject) error {
+	if o.As(nil) {
+		return errors.New("want ListObject.As to return false when passed nil")
 	}
 	return nil
 }
@@ -986,5 +1007,23 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	if err := st.ReaderCheck(r); err != nil {
 		t.Error(err)
+	}
+
+	// Verify ListObject.As.
+	iter, err := b.List(ctx, &blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		obj, err := iter.Next(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if obj == nil {
+			break
+		}
+		if err := st.ListObjectCheck(obj); err != nil {
+			t.Error(err)
+		}
 	}
 }
