@@ -121,6 +121,15 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+	var q *storage.Query
+	if !as(&q) {
+		return errors.New("List.As failed")
+	}
+	// Nothing to do.
+	return nil
+}
+
 func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 	var oa storage.ObjectAttrs
 	if !attrs.As(&oa) {
@@ -138,6 +147,17 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 		return errors.New("Reader.As returned false")
 	}
 	// GCS doesn't return Content-Language via storage.Reader.
+	return nil
+}
+
+func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	var oa storage.ObjectAttrs
+	if !o.As(&oa) {
+		return errors.New("ListObject.As returned false")
+	}
+	if got := oa.ContentLanguage; got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
 	return nil
 }
 

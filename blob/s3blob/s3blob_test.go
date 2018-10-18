@@ -90,9 +90,18 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var req *s3manager.UploadInput
 	if !as(&req) {
-		return errors.New("WriterAs failed")
+		return errors.New("Writer.As failed")
 	}
 	req.ContentLanguage = aws.String(language)
+	return nil
+}
+
+func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+	var req *s3.ListObjectsV2Input
+	if !as(&req) {
+		return errors.New("List.As failed")
+	}
+	// Nothing to do.
 	return nil
 }
 
@@ -115,5 +124,14 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 	if got := *goo.ContentLanguage; got != language {
 		return fmt.Errorf("got %q want %q", got, language)
 	}
+	return nil
+}
+
+func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	var obj s3.Object
+	if !o.As(&obj) {
+		return errors.New("ListObject.As returned false")
+	}
+	// Nothing to check.
 	return nil
 }

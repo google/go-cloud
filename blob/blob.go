@@ -185,6 +185,12 @@ type ListOptions struct {
 	// at a time from the provider.
 	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
 	PageSize int
+
+	// BeforeList is a callback that will be called before each call to the
+	// the underlying provider's list functionality.
+	// asFunc converts its argument to provider-specific types.
+	// See Bucket.As for more details.
+	BeforeList func(asFunc func(interface{}) bool) error
 }
 
 // ListIterator is used to iterate over List results.
@@ -208,6 +214,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 				Key:     dobj.Key,
 				ModTime: dobj.ModTime,
 				Size:    dobj.Size,
+				asFunc:  dobj.AsFunc,
 			}, nil
 		}
 		if len(i.page.NextPageToken) == 0 {
@@ -235,6 +242,17 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+
+	asFunc func(interface{}) bool
+}
+
+// As converts i to provider-specific types.
+// See Bucket.As for more details.
+func (o *ListObject) As(i interface{}) bool {
+	if o.asFunc == nil {
+		return false
+	}
+	return o.asFunc(i)
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
@@ -298,8 +316,9 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, err
 		opt.PageSize = MaxPageSize
 	}
 	dopt := &driver.ListOptions{
-		Prefix:   opt.Prefix,
-		PageSize: opt.PageSize,
+		Prefix:     opt.Prefix,
+		PageSize:   opt.PageSize,
+		BeforeList: opt.BeforeList,
 	}
 	return &ListIterator{b: b, opt: dopt}, nil
 }

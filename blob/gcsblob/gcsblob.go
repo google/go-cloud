@@ -16,9 +16,11 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
+// ListObject: storage.ObjectAttrs
+// ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
 // Attributes: storage.ObjectAttrs
-// Writer: *storage.Writer
+// WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob
 
 import (
@@ -114,7 +116,21 @@ func (r *reader) As(i interface{}) bool {
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
-	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
+	query := &storage.Query{Prefix: opt.Prefix}
+	if opt.BeforeList != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**storage.Query)
+			if !ok {
+				return false
+			}
+			*p = query
+			return true
+		}
+		if err := opt.BeforeList(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	iter := bkt.Objects(ctx, query)
 	pager := iterator.NewPager(iter, opt.PageSize, string(opt.PageToken))
 
 	var objects []*storage.ObjectAttrs
@@ -130,6 +146,14 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				Key:     obj.Name,
 				ModTime: obj.Updated,
 				Size:    obj.Size,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*storage.ObjectAttrs)
+					if !ok {
+						return false
+					}
+					*p = *obj
+					return true
+				},
 			}
 		}
 	}

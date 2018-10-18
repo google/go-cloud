@@ -16,9 +16,11 @@
 //
 // It exposes the following types for As:
 // Bucket: *s3.S3
+// ListObject: s3.Object
+// ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput
-// Writer: *s3manager.UploadInput
+// WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob
 
 import (
@@ -171,6 +173,19 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if opt.Prefix != "" {
 		in.Prefix = aws.String(opt.Prefix)
 	}
+	if opt.BeforeList != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**s3.ListObjectsV2Input)
+			if !ok {
+				return false
+			}
+			*p = in
+			return true
+		}
+		if err := opt.BeforeList(asFunc); err != nil {
+			return nil, err
+		}
+	}
 	req, resp := b.client.ListObjectsV2Request(in)
 	if err := req.Send(); err != nil {
 		return nil, err
@@ -186,6 +201,14 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				Key:     *obj.Key,
 				ModTime: *obj.LastModified,
 				Size:    *obj.Size,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.Object)
+					if !ok {
+						return false
+					}
+					*p = *obj
+					return true
+				},
 			}
 		}
 	}
