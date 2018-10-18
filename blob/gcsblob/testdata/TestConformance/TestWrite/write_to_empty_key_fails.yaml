@@ -2,75 +2,90 @@
 version: 1
 interactions:
 - request:
-    body: "--1e9dcd2dd2bbecb8655c94efebfbdf29b801cdcac4554f53653b2cecfbf2\r\nContent-Type:
+    body: "--24fe3be283b8c51ee1426a86454be806617ca09ea7fb34651ac3ae6935c2\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\"}\n\r\n--1e9dcd2dd2bbecb8655c94efebfbdf29b801cdcac4554f53653b2cecfbf2\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\n\r\n--1e9dcd2dd2bbecb8655c94efebfbdf29b801cdcac4554f53653b2cecfbf2--\r\n"
+      charset=utf-8\"}\n\r\n--24fe3be283b8c51ee1426a86454be806617ca09ea7fb34651ac3ae6935c2\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\n\r\n--24fe3be283b8c51ee1426a86454be806617ca09ea7fb34651ac3ae6935c2--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=1e9dcd2dd2bbecb8655c94efebfbdf29b801cdcac4554f53653b2cecfbf2
+      - multipart/related; boundary=24fe3be283b8c51ee1426a86454be806617ca09ea7fb34651ac3ae6935c2
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
       - gl-go/1.11.0-rc2 gccl/20180226
-    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&projection=full&uploadType=multipart
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
     method: POST
   response:
-    body: |
-      {
-       "error": {
-        "errors": [
-         {
-          "domain": "global",
-          "reason": "required",
-          "message": "Required",
-          "debugInfo": "com.google.api.server.core.Fault: ImmutableErrorDefinition{base=REQUIRED, category=USER_ERROR, cause=null, debugInfo=null, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=badRequest, internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.REQUIRED, createdByBackend=true, debugMessage=null, errorProtoCode=REQUIRED, errorProtoDomain=gdata.CoreErrorDomain, filteredMessage=null, location=entity.resource.id.name, message=null, unnamedArguments=[]}, location=entity.resource.id.name, message=Required, reason=required, rpcCode=400} Required\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1154)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1154)\n\tat com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:455)\n\tat com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:462)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:321)\n\tat com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:313)\n\tat com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:459)\n\tat com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"
-         }
-        ],
-        "code": 400,
-        "message": "Required"
-       }
-      }
+    body: '{"error":{"errors":[{"domain":"global","reason":"required","message":"Required","debugInfo":"com.google.api.server.core.Fault:
+      ImmutableErrorDefinition{base=REQUIRED, category=USER_ERROR, cause=null, debugInfo=null,
+      domain=global, extendedHelp=null, httpHeaders={}, httpStatus=badRequest, internalReason=Reason{arguments={},
+      cause=null, code=gdata.CoreErrorDomain.REQUIRED, createdByBackend=true, debugMessage=null,
+      errorProtoCode=REQUIRED, errorProtoDomain=gdata.CoreErrorDomain, filteredMessage=null,
+      location=entity.resource.id.name, message=null, unnamedArguments=[]}, location=entity.resource.id.name,
+      message=Required, reason=required, rpcCode=400} Required\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
+      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:311)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:457)\n\tat
+      com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"}],"code":400,"message":"Required"}}'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
       Content-Length:
-      - "2958"
+      - "2948"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 19 Sep 2018 18:03:50 GMT
+      - Mon, 15 Oct 2018 23:17:25 GMT
       Server:
       - UploadServer
       Vary:
       - Origin
       - X-Origin
       X-Google-Apiary-Auth-Expires:
-      - "1537380530000"
+      - "1539645745000"
       X-Google-Apiary-Auth-Scopes:
       - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
         https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
       X-Google-Apiary-Auth-User:
       - "61688748495"
       X-Google-Backends:
-      - hilaxcak9:4053,/bns/hg/borg/hg/bns/blobstore2/bitpusher/25.scotty,acsfoi11:443
+      - hilaxcau12:4228,/bns/hi/borg/hi/bns/blobstore2/bitpusher/8.scotty,acsfoc4-v6:443
       X-Google-Dos-Service-Trace:
       - main:apps-upload-cloud-storage-unified
       X-Google-Gfe-Backend-Request-Info:
-      - eid=ho-iW_zHHqyUxgOIpYnYDQ
+      - eid=BSDFW4vGD4mjxgOWvabYAw
       X-Google-Gfe-Request-Trace:
-      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/25.scotty,acsfoi11:443
+      - acsfoc4-v6:443,/bns/hi/borg/hi/bns/blobstore2/bitpusher/8.scotty,acsfoc4-v6:443
       X-Google-Gfe-Response-Code-Details-Trace:
       - response_code_set_by_backend
       X-Google-Gfe-Service-Trace:
       - bitpusher-gcs-apiary
       X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/25:caf3
+      - /bns/hi/borg/hi/bns/blobstore2/bitpusher/8:caf3
       X-Google-Service:
       - bitpusher-gcs-apiary
       X-Google-Session-Info:
-      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCb0gwaW1ZN0t0NkxwZVBIRDVUYXVtWVpGV1puNnFQdE16T2dmZDJIQ3pZUHZIUGVjOE9qOGZidWtIUDZzSWFBcV81bXlScHFpNnRucWN3akJDQlFEeUhVbWJSWW1paEo2RG1OblFtWWlqRUZmVWthTER2dU50UjdMZzAEOg0xL2pEbkFzZkxEUV9-
+      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5LkdsdzNCdW9SdkVYak50VHhLUnpsNHpFWnJ4bklVZDJaalJ1NC1BS3BaOTM5TVF1dklpZmE4ZVV2UDVDbUFkY21rZFdDOUZNblZ3bmY1THJKX1FiaXhWTFlxWVRGSGVGTm9wMlBGekQteDdRbnZpdmw4al9jQ0w1eENxemZMUTAEOg0xL1IyYlZDRmpHNUh-
       X-Google-Shellfish-Status:
       - CA0gBEBG
       X-Guploader-Customer:
@@ -80,7 +95,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UrJFDmLdi3p2fQWFj-wgUnFenMfexEXj1NlJX68MyZ3l2WnUXDGnRGhJgsrOQtZrmbjmrvXvzf0cKvIK6r2zZM3e37_Xw
+      - AEnB2UpHr8aGgoUOiJAILzoQB__DrdUnVKTT2RRQBz4Ubon91d98ubwzOEiUujCZx1DzOpw3PrsrrfiXuhan41Lg7E3_DZXtDQ
     status: 400 Bad Request
     code: 400
     duration: ""
