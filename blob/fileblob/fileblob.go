@@ -28,6 +28,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	slashpath "path"
 	"path/filepath"
@@ -99,6 +100,45 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 		return "", nil, nil, fmt.Errorf("open file attributes %s: %v", key, err)
 	}
 	return path, info, &xa, nil
+}
+
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	// List everything in the directory, sorted by name.
+	// TODO(Issue #541): This should be doing a recursive walk of the directory
+	// as well as translating into the abstract namespace that we've created.
+	fileinfos, err := ioutil.ReadDir(b.dir)
+	if err != nil {
+		return nil, err
+	}
+	var result driver.ListPage
+	for _, info := range fileinfos {
+		// Skip the self-generated attribute files.
+		if strings.HasSuffix(info.Name(), attrsExt) {
+			continue
+		}
+		// Skip files that don't match the Prefix.
+		if opt.Prefix != "" && !strings.HasPrefix(info.Name(), opt.Prefix) {
+			continue
+		}
+		// If a PageToken was provided, skip to it.
+		if len(opt.PageToken) > 0 && info.Name() < string(opt.PageToken) {
+			continue
+		}
+		// If we've got a full page of results, and there are more
+		// to come, set NextPageToken and stop here.
+		if opt.PageSize != 0 && len(result.Objects) == opt.PageSize {
+			result.NextPageToken = []byte(info.Name())
+			break
+		}
+		// Add this object.
+		result.Objects = append(result.Objects, &driver.ListObject{
+			Key:     info.Name(),
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		})
+	}
+	return &result, nil
 }
 
 // As implements driver.As.
@@ -258,13 +298,21 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	// TODO(Issue #546): Implemented SignedURL for fileblob.
+	return "", fileError{msg: "SignedURL not supported (see issue #546)", kind: driver.NotImplemented}
+}
+
 type fileError struct {
 	relpath, msg string
 	kind         driver.ErrorKind
 }
 
 func (e fileError) Error() string {
-	return fmt.Sprintf("fileblob: object %s: %v", e.relpath, e.msg)
+	if e.relpath == "" {
+		return fmt.Sprintf("fileblob: %s", e.msg)
+	}
+	return fmt.Sprintf("fileblob: object %s: %s", e.relpath, e.msg)
 }
 
 func (e fileError) Kind() driver.ErrorKind {

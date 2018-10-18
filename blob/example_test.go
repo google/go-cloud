@@ -166,7 +166,7 @@ func ExampleBucket_ReadAll() {
 	// Go Cloud
 }
 
-func ExampleBucket_As() {
+func ExampleBucket_List() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -178,6 +178,47 @@ func ExampleBucket_As() {
 		log.Fatal(err)
 	}
 
+	// Create some blob objects for listing: "foo[0..4].txt".
+	ctx := context.Background()
+	createListableFiles(ctx, bucket)
+
+	// Iterate over them.
+	// This will list the blobs created above because fileblob is strongly
+	// consistent, but is not guaranteed to work on all providers.
+	iter, err := bucket.List(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		obj, err := iter.Next(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if obj == nil {
+			break
+		}
+		fmt.Println(obj.Key)
+	}
+
+	// Output:
+	// foo0.txt
+	// foo1.txt
+	// foo2.txt
+	// foo3.txt
+	// foo4.txt
+}
+
+func ExampleBucket_As() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.NewBucket(dir)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// This example uses As to try to fill in a string variable. As will return
 	// false because fileblob doesn't support any types for Bucket.As.
 	// See the package documentation for your provider (e.g., gcsblob or s3blob)
@@ -211,6 +252,15 @@ func ExampleBucket_As() {
 	// Output:
 	// fileblob does not support the `string` type for Bucket.As
 	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
+}
+
+func createListableFiles(ctx context.Context, b *blob.Bucket) error {
+	for i := 0; i < 5; i++ {
+		if err := b.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newTempDir() (string, func()) {

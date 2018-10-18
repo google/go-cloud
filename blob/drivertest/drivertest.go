@@ -20,8 +20,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cmp/cmp"
@@ -35,6 +41,10 @@ type Harness interface {
 	// same storage bucket; i.e., a blob created using one *blob.Bucket must
 	// be readable by a subsequent *blob.Bucket.
 	MakeBucket(ctx context.Context) (*blob.Bucket, error)
+	// HTTPClient should return an unauthorized *http.Client, or nil.
+	// Required if the provider supports SignedURL.
+	HTTPClient() *http.Client
+	// Close closes resources used by the harness.
 	Close()
 }
 
@@ -103,6 +113,9 @@ func (verifyAsFailsOnNil) ReaderCheck(r *blob.Reader) error {
 
 // RunConformanceTests runs conformance tests for provider implementations of blob.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
+	t.Run("TestList", func(t *testing.T) {
+		testList(t, newHarness)
+	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -121,6 +134,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
+	t.Run("TestSignedURL", func(t *testing.T) {
+		testSignedURL(t, newHarness)
+	})
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -132,6 +148,169 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 			})
 		}
 	})
+}
+
+// testList tests the functionality of List.
+func testList(t *testing.T, newHarness HarnessMaker) {
+	// TODO(Issue #541): Add tests for slash-separated paths.
+	const keyPrefix = "blob-for-list"
+	content := []byte("hello")
+
+	keyForIndex := func(i int) string { return fmt.Sprintf("%s-%d", keyPrefix, i) }
+	indexFromKey := func(key string) (int, error) {
+		if !strings.HasPrefix(key, keyPrefix) {
+			return 0, fmt.Errorf("got name %q, expected it to have prefix %q", key, keyPrefix)
+		}
+		return strconv.Atoi(key[len(keyPrefix)+1:])
+	}
+
+	tests := []struct {
+		name       string
+		skipCreate bool
+		pageSize   int
+		prefix     string
+		want       [][]int
+		wantIter   []int
+		wantErr    bool
+	}{
+		{
+			name:       "negative page size returns an error",
+			skipCreate: true,
+			pageSize:   -1,
+			wantErr:    true,
+		},
+		{
+			name:       "page size out of range returns an error",
+			skipCreate: true,
+			pageSize:   blob.MaxPageSize + 1,
+			wantErr:    true,
+		},
+		{
+			name:   "no objects",
+			prefix: "no-objects-with-this-prefix",
+			want:   [][]int{nil},
+		},
+		{
+			name:     "exactly 1 object due to prefix",
+			prefix:   keyForIndex(1),
+			want:     [][]int{[]int{1}},
+			wantIter: []int{1},
+		},
+		{
+			name:     "no pagination",
+			prefix:   keyPrefix,
+			want:     [][]int{[]int{0, 1, 2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 1",
+			prefix:   keyPrefix,
+			pageSize: 1,
+			want:     [][]int{[]int{0}, []int{1}, []int{2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 2",
+			prefix:   keyPrefix,
+			pageSize: 2,
+			want:     [][]int{[]int{0, 1}, []int{2}},
+			wantIter: []int{0, 1, 2},
+		},
+		{
+			name:     "by 3",
+			prefix:   keyPrefix,
+			pageSize: 3,
+			want:     [][]int{[]int{0, 1, 2}},
+			wantIter: []int{0, 1, 2},
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List/ListPaged. The very first time the test is run against a
+	// Bucket, it may be flaky due to this race.
+	init := func(t *testing.T, skipCreate bool) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, err := h.MakeBucket(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !skipCreate {
+			// See if the blobs are already there.
+			iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
+			if err != nil {
+				t.Fatal(err)
+			}
+			count := 0
+			for {
+				obj, err := iter.Next(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if obj == nil {
+					break
+				}
+				count++
+			}
+			if count != 3 {
+				for i := 0; i < 3; i++ {
+					if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, done := init(t, tc.skipCreate)
+			defer done()
+
+			iter, err := b.List(ctx, &blob.ListOptions{
+				PageSize: tc.pageSize,
+				Prefix:   tc.prefix,
+			})
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("got err %v want error %v", err, tc.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			var gotIter []int
+			for {
+				obj, err := iter.Next(ctx)
+				if len(gotIter) > 0 && err != nil {
+					t.Fatalf("got err %v after first iteration", err)
+				}
+				if (err != nil) != tc.wantErr {
+					t.Fatalf("got err %v want error %v", err, tc.wantErr)
+				}
+				if err != nil {
+					break
+				}
+				if obj == nil {
+					break
+				}
+				i, err := indexFromKey(obj.Key)
+				if err != nil {
+					t.Error(err)
+					continue
+				}
+				gotIter = append(gotIter, i)
+			}
+			if diff := cmp.Diff(gotIter, tc.wantIter); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotIter, tc.wantIter, diff)
+			}
+		})
+	}
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
@@ -700,6 +879,67 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete want IsNotExist error, got %v", err)
 		}
 	})
+}
+
+// testSignedURL tests the functionality of SignedURL.
+func testSignedURL(t *testing.T, newHarness HarnessMaker) {
+	const key = "blob-for-signing"
+	var contents = []byte("hello world")
+
+	ctx := context.Background()
+
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	b, err := h.MakeBucket(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify that a negative Expiry gives an error. This is enforced in the
+	// concrete type, so works regardless of provider support.
+	_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Expiry: -1 * time.Minute})
+	if err == nil {
+		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
+	}
+
+	// Try to generate a real signed URL.
+	url, err := b.SignedURL(ctx, key, nil)
+	if err != nil {
+		if blob.IsNotImplemented(err) {
+			t.Skipf("SignedURL not supported")
+			return
+		}
+		t.Fatal(err)
+	}
+	if url == "" {
+		t.Fatal("got empty url")
+	}
+	client := h.HTTPClient()
+	if client == nil {
+		t.Fatal("can't verify SignedURL, Harness.HTTPClient() returned nil")
+	}
+	// Create the blob.
+	if err := b.WriteAll(ctx, key, contents, nil); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Delete(ctx, key) }()
+
+	resp, err := client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Errorf("got status code %d, want 200", resp.StatusCode)
+	}
+	got, err := ioutil.ReadAll(resp.Body)
+	if !bytes.Equal(got, contents) {
+		t.Errorf("got body %q, want %q", string(got), string(contents))
+	}
 }
 
 // testAs tests the various As functions, using AsTest.

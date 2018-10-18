@@ -26,8 +26,12 @@ import (
 type ErrorKind int
 
 const (
+	// GenericError is the default ErrorKind.
 	GenericError ErrorKind = iota
+	// NotFound indicates that the referenced key does not exist.
 	NotFound
+	// NotImplemented indicates that the provider does not support this operation.
+	NotImplemented
 )
 
 // Error is an interface that may be implemented by an error returned by
@@ -103,6 +107,44 @@ type Attributes struct {
 	AsFunc func(interface{}) bool
 }
 
+// ListOptions sets options for listing objects in the bucket.
+// TODO(Issue #541): Add Delimiter.
+type ListOptions struct {
+	// Prefix indicates that only results with the given prefix should be
+	// returned.
+	Prefix string
+
+	// PageSize sets the maximum number of objects that will be returned in
+	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
+	PageSize int
+	// PageToken may be filled in with the NextPageToken from a previous
+	// ListPaged call.
+	PageToken []byte
+}
+
+// ListObject represents a specific blob object returned from ListPaged.
+type ListObject struct {
+	// Key is the key for this blob.
+	Key string
+	// ModTime is the time the blob object was last modified.
+	ModTime time.Time
+	// Size is the size of the object in bytes.
+	Size int64
+}
+
+// ListPage represents a page of results return from ListPaged.
+type ListPage struct {
+	// Objects is the slice of objects found. It should have at most
+	// ListOptions.PageSize entries.
+	Objects []*ListObject
+	// NextPageToken should be left empty unless
+	// len(Objects) == ListOptions.PageSize and there are more objects to
+	// return. The value may be returned as ListOptions.PageToken on a
+	// subsequent ListPaged call, to fetch the next page of results.
+	// It can be an arbitrary []byte; it need not be a valid key.
+	NextPageToken []byte
+}
+
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
@@ -135,6 +177,14 @@ type Bucket interface {
 	// NotFound.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
+	// ListPaged lists objects in the bucket, in lexicographical order by
+	// UTF-encoded key, returning pages of objects at a time.
+	// Providers are only required to be eventually consistent with respect
+	// to recently-written objects. I.e., there is no guarantee that an object
+	// that's been written will immediately be returned from ListPaged.
+	// opt is guaranteed to be non-nil.
+	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
+
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
 	// will read till the end of the object. If the specified object does not
@@ -145,7 +195,7 @@ type Bucket interface {
 	// NewTypedWriter returns Writer that writes to an object associated with key.
 	//
 	// A new object will be created unless an object with this key already exists.
-	// Otherwise any previous object with the same name will be replaced.
+	// Otherwise any previous object with the same key will be replaced.
 	// The object may not be available (and any previous object will remain)
 	// until Close has been called.
 	//
@@ -162,4 +212,15 @@ type Bucket interface {
 	// not exist, NewRangeReader must return an error whose Kind method
 	// returns NotFound.
 	Delete(ctx context.Context, key string) error
+
+	// SignedURL returns a URL that can be used to GET the blob for the duration
+	// specified in opts.Expiry. opts is guaranteed to be non-nil.
+	// If not supported, return an error whose Kind method returns NotImplemented.
+	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
+}
+
+// SignedURLOptions sets options for SignedURL.
+type SignedURLOptions struct {
+	// Expiry sets how long the returned URL is valid for. It is guaranteed to be > 0.
+	Expiry time.Duration
 }

@@ -1,0 +1,227 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225205Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><KeyCount>3</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-list-0</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-list-1</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-list-2</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:06 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - ixJqiTVK+elhIIU9FnYgHbdnge64r+lY96iL35c8K3Rk3+eMGr1r0UlBmDxhzs0cPPypPwEDho8=
+      X-Amz-Request-Id:
+      - 743CB296273A3F5A
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225205Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><NextContinuationToken>1T5VqoTF9bhgdmCEwz4P3L4gghcWdU5srEAhlr5RH8+bjLlFgalLScPAtgidtf32z</NextContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>true</IsTruncated><Contents><Key>blob-for-list-0</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:06 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - p6R8WJNZNUBITac/A2XUHLvvL9tr3UN0HxCDGdiidzoxxZs4C7AutjP068W5LsmpPp7eYHISQJE=
+      X-Amz-Request-Id:
+      - 54630C1A494EC3AB
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225206Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?continuation-token=1T5VqoTF9bhgdmCEwz4P3L4gghcWdU5srEAhlr5RH8%2BbjLlFgalLScPAtgidtf32z&list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><ContinuationToken>1T5VqoTF9bhgdmCEwz4P3L4gghcWdU5srEAhlr5RH8+bjLlFgalLScPAtgidtf32z</ContinuationToken><NextContinuationToken>1s0nnDXCcpPycCbJX6M3xc1bcGZB+2zI5tpA/Mj5nU6f3BRcRUHUZa3L1BGbXA6YI</NextContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>true</IsTruncated><Contents><Key>blob-for-list-1</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:07 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - /4wlkbkqKqZSm6wOXwj+h3l1alhqmqPQwe9PDKAFTiXGkLXm+Lf1xaEQTZHKnJ9B86Wuo5Dye3M=
+      X-Amz-Request-Id:
+      - FA9DB1845CB6A73C
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225206Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?continuation-token=1s0nnDXCcpPycCbJX6M3xc1bcGZB%2B2zI5tpA%2FMj5nU6f3BRcRUHUZa3L1BGbXA6YI&list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><ContinuationToken>1s0nnDXCcpPycCbJX6M3xc1bcGZB+2zI5tpA/Mj5nU6f3BRcRUHUZa3L1BGbXA6YI</ContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-list-2</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:07 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - rHMvj+w5UZYxs3+sDpBsMJ99N97I/fW8T556FmP5e5WmX8bjrdfJPu05gxPonmomHDWuZ8aCZtk=
+      X-Amz-Request-Id:
+      - FD9A7CCC766C49CB
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225206Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><NextContinuationToken>1YW0ai3G+ix1L7xj25QVJThp58xJ+JPtdCbFn2RzADEvsQ6mPdRbRADXXechC6coP</NextContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>true</IsTruncated><Contents><Key>blob-for-list-0</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:07 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - QoAuWJiJQ/ESIpHfrPBTNL9v0GErq0YhbrhpzMBG2u1T+fwPyTQhSwhNG3KK0apahzJ2/0jyn3U=
+      X-Amz-Request-Id:
+      - 0921AEEBE4CB7A81
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225206Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?continuation-token=1YW0ai3G%2Bix1L7xj25QVJThp58xJ%2BJPtdCbFn2RzADEvsQ6mPdRbRADXXechC6coP&list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><ContinuationToken>1YW0ai3G+ix1L7xj25QVJThp58xJ+JPtdCbFn2RzADEvsQ6mPdRbRADXXechC6coP</ContinuationToken><NextContinuationToken>1YsNhjCjIcqyx/hPyJRXlqgYr1fQ49sN0CShle5tOzFEEsVWSJ+GLdVTUAxCfa8ox</NextContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>true</IsTruncated><Contents><Key>blob-for-list-1</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:07 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - 2YxAG6Lci9DEl4LMtllfKcpcvOB0A17QlwpVMglbBTvGIOnrmGZSr4x9w1LUUbOimRXwevqEFN8=
+      X-Amz-Request-Id:
+      - 9FEDA9A903C90632
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.13.20 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181009T225206Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?continuation-token=1YsNhjCjIcqyx%2FhPyJRXlqgYr1fQ49sN0CShle5tOzFEEsVWSJ%2BGLdVTUAxCfa8ox&list-type=2&max-keys=1&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-list</Prefix><ContinuationToken>1YsNhjCjIcqyx/hPyJRXlqgYr1fQ49sN0CShle5tOzFEEsVWSJ+GLdVTUAxCfa8ox</ContinuationToken><KeyCount>1</KeyCount><MaxKeys>1</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-list-2</Key><LastModified>2018-10-09T22:49:10.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 09 Oct 2018 22:52:07 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - aCriPBZzJFSUv2kYGnu5OjRB2o+2ripBdSfoTEXz6Lg38FrDLxR8sFHqqOILlwIZhcvBDfxy9BQ=
+      X-Amz-Request-Id:
+      - EB1E02198FD24996
+    status: 200 OK
+    code: 200
+    duration: ""

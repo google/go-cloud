@@ -27,6 +27,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/driver"
@@ -34,19 +35,41 @@ import (
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
+// Options sets options for constructing a *blob.Bucket backed by GCS.
+type Options struct {
+	// GoogleAccessID represents the authorizer for SignedURL.
+	// Required to use SignedURL.
+	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
+	GoogleAccessID string
+
+	// PrivateKey is the Google service account private key.
+	// Exactly one of PrivateKey or SignBytes must be non-nil to use SignedURL.
+	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
+	PrivateKey []byte
+
+	// SignBytes is a function for implementing custom signing.
+	// Exactly one of PrivateKey or SignBytes must be non-nil to use SignedURL.
+	// See https://godoc.org/cloud.google.com/go/storage#SignedURLOptions.
+	SignBytes func([]byte) ([]byte, error)
+}
+
 // OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
-func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) (*blob.Bucket, error) {
+func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
 	if client == nil {
-		return nil, fmt.Errorf("NewBucket requires an HTTP client to communicate using")
+		return nil, fmt.Errorf("OpenBucket requires an HTTP client")
 	}
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
 		return nil, err
 	}
-	return blob.NewBucket(&bucket{name: bucketName, client: c}), nil
+	if opts == nil {
+		opts = &Options{}
+	}
+	return blob.NewBucket(&bucket{name: bucketName, client: c, opts: opts}), nil
 }
 
 // bucket represents a GCS bucket, which handles read, write and delete operations
@@ -54,6 +77,7 @@ func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient) 
 type bucket struct {
 	name   string
 	client *storage.Client
+	opts   *Options
 }
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
@@ -85,6 +109,31 @@ func (r *reader) As(i interface{}) bool {
 	}
 	*p = *r.raw
 	return true
+}
+
+// ListPaged implements driver.ListPaged.
+func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	bkt := b.client.Bucket(b.name)
+	iter := bkt.Objects(ctx, &storage.Query{Prefix: opt.Prefix})
+	pager := iterator.NewPager(iter, opt.PageSize, string(opt.PageToken))
+
+	var objects []*storage.ObjectAttrs
+	nextPageToken, err := pager.NextPage(&objects)
+	if err != nil {
+		return nil, err
+	}
+	page := driver.ListPage{NextPageToken: []byte(nextPageToken)}
+	if len(objects) > 0 {
+		page.Objects = make([]*driver.ListObject, len(objects))
+		for i, obj := range objects {
+			page.Objects[i] = &driver.ListObject{
+				Key:     obj.Name,
+				ModTime: obj.Updated,
+				Size:    obj.Size,
+			}
+		}
+	}
+	return &page, nil
 }
 
 // As implements driver.As.
@@ -182,6 +231,20 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		return gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
 	}
 	return err
+}
+
+func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.SignedURLOptions) (string, error) {
+	if b.opts.GoogleAccessID == "" || (b.opts.PrivateKey == nil && b.opts.SignBytes == nil) {
+		return "", fmt.Errorf("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
+	}
+	opts := &storage.SignedURLOptions{
+		Expires:        time.Now().Add(dopts.Expiry),
+		Method:         "GET",
+		GoogleAccessID: b.opts.GoogleAccessID,
+		PrivateKey:     b.opts.PrivateKey,
+		SignBytes:      b.opts.SignBytes,
+	}
+	return storage.SignedURL(b.name, key, opts)
 }
 
 func bufferSize(size int) int {
