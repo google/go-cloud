@@ -35,7 +35,8 @@ func (h *Handler) Add(c Checker) {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
 		if err := c.CheckHealth(); err != nil {
-			writeUnhealthy(w)
+			writeUnhealthy(w, err)
+			w.Write([]byte(err.Error()))
 			return
 		}
 	}
@@ -48,15 +49,11 @@ func writeHeaders(statusLen string, w http.ResponseWriter) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 }
 
-func writeUnhealthy(w http.ResponseWriter) {
-	const (
-		status    = "unhealthy"
-		statusLen = "9"
-	)
-
+func writeUnhealthy(w http.ResponseWriter, err error) {
+	statusLen := string(len(err.Error()))
 	writeHeaders(statusLen, w)
 	w.WriteHeader(http.StatusInternalServerError)
-	io.WriteString(w, status)
+	io.WriteString(w, err.Error())
 }
 
 // HandleLive is an http.HandleFunc that handles liveness checks by
@@ -79,7 +76,7 @@ func writeHealthy(w http.ResponseWriter) {
 // Checker wraps the CheckHealth method.
 //
 // CheckHealth returns nil if the resource is healthy, or a non-nil
-// error if the resource is not healthy.  CheckHealth must be safe to
+// error if the resource is not healthy. CheckHealth must be safe to
 // call from multiple goroutines.
 type Checker interface {
 	CheckHealth() error
