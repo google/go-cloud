@@ -194,7 +194,7 @@ type Bucket interface {
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
-	// will read till the end of the object. If the specified object does not
+	// will read until the end of the object. If the specified object does not
 	// exist, NewRangeReader must return an error whose Kind method returns
 	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
