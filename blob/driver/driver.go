@@ -185,10 +185,11 @@ type Bucket interface {
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
-	// UTF-encoded key, returning pages of objects at a time.
+	// UTF-8-encoded key, returning pages of objects at a time.
 	// Providers are only required to be eventually consistent with respect
-	// to recently-written objects. I.e., there is no guarantee that an object
-	// that's been written will immediately be returned from ListPaged.
+	// to recently written or deleted objects. That is to say, there is no
+	// guarantee that an object that's been written will immediately be returned
+	// from ListPaged.
 	// opt is guaranteed to be non-nil.
 	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
 
