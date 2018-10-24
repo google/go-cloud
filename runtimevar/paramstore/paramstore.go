@@ -49,6 +49,14 @@ func NewClient(p client.ConfigProvider) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
 func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+	w, err := c.newWatcher(name, decoder, opts)
+	if err != nil {
+		return nil, err
+	}
+	return runtimevar.New(w), nil
+}
+
+func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*watcher, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -59,13 +67,12 @@ func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Wat
 	case waitTime < 0:
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
-
-	return runtimevar.New(&watcher{
+	return &watcher{
 		sess:     c.sess,
 		name:     name,
 		waitTime: waitTime,
 		decoder:  decoder,
-	}), nil
+	}, nil
 }
 
 // WatchOptions provide optional configurations to the Watcher.
