@@ -31,17 +31,18 @@ import (
 	"time"
 
 	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cmp/cmp"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeBucket creates a *blob.Bucket to test.
-	// Multiple calls to MakeBucket during a test run must refer to	the
-	// same storage bucket; i.e., a blob created using one *blob.Bucket must
-	// be readable by a subsequent *blob.Bucket.
-	MakeBucket(ctx context.Context) (*blob.Bucket, error)
+	// MakeDriver creates a driver.Bucket to test.
+	// Multiple calls to MakeDriver during a test run must refer to the
+	// same storage bucket; i.e., a blob created using one driver.Bucket must
+	// be readable by a subsequent driver.Bucket.
+	MakeDriver(ctx context.Context) (driver.Bucket, error)
 	// HTTPClient should return an unauthorized *http.Client, or nil.
 	// Required if the provider supports SignedURL.
 	HTTPClient() *http.Client
@@ -258,10 +259,11 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := h.MakeBucket(ctx)
+		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		b := blob.NewBucket(drv)
 		if !skipCreate {
 			// See if the blobs are already there.
 			iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
@@ -406,10 +408,11 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 
-		b, err := h.MakeBucket(ctx)
+		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		b := blob.NewBucket(drv)
 		if skipCreate {
 			return b, func() { h.Close() }
 		}
@@ -476,10 +479,11 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := h.MakeBucket(ctx)
+		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		b := blob.NewBucket(drv)
 		opts := &blob.WriterOptions{
 			ContentType: contentType,
 		}
@@ -625,10 +629,11 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			defer h.Close()
-			b, err := h.MakeBucket(ctx)
+			drv, err := h.MakeDriver(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+			b := blob.NewBucket(drv)
 
 			// Write the content.
 			opts := &blob.WriterOptions{
@@ -709,10 +714,11 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			defer h.Close()
-			b, err := h.MakeBucket(ctx)
+			drv, err := h.MakeDriver(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+			b := blob.NewBucket(drv)
 
 			// Create a writer with the context that we're going
 			// to cancel.
@@ -813,10 +819,11 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			}
 			defer h.Close()
 
-			b, err := h.MakeBucket(ctx)
+			drv, err := h.MakeDriver(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
+			b := blob.NewBucket(drv)
 			opts := &blob.WriterOptions{
 				Metadata:    tc.metadata,
 				ContentType: tc.contentType,
@@ -853,10 +860,11 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer h.Close()
-		b, err := h.MakeBucket(ctx)
+		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		b := blob.NewBucket(drv)
 
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
@@ -872,10 +880,11 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer h.Close()
-		b, err := h.MakeBucket(ctx)
+		drv, err := h.MakeDriver(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		b := blob.NewBucket(drv)
 
 		// Create the blob.
 		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
@@ -915,10 +924,11 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	b, err := h.MakeBucket(ctx)
+	drv, err := h.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	b := blob.NewBucket(drv)
 
 	// Verify that a negative Expiry gives an error. This is enforced in the
 	// concrete type, so works regardless of provider support.
@@ -975,10 +985,11 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	defer h.Close()
 
-	b, err := h.MakeBucket(ctx)
+	drv, err := h.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	b := blob.NewBucket(drv)
 
 	// Verify Bucket.As.
 	if err := st.BucketCheck(b); err != nil {
