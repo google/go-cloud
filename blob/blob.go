@@ -147,7 +147,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // Close flushes any buffered data and completes the Write. It is the user's
 // responsibility to call it after finishing the write and handle the error if returned.
-// Close will return an error if the ctx provided to create w is canceled.
+// Close will return an error if the context provided to create w is canceled or times out.
 func (w *Writer) Close() error {
 	if w.w != nil {
 		return w.w.Close()
@@ -256,7 +256,7 @@ func (o *ListObject) As(i interface{}) bool {
 }
 
 // Bucket manages the underlying blob service and provides read, write and delete
-// operations on given object within it.
+// operations on objects within it.
 type Bucket struct {
 	b driver.Bucket
 }
@@ -272,8 +272,8 @@ func NewBucket(b driver.Bucket) *Bucket {
 // Usage:
 // 1. Declare a variable of the provider-specific type you want to access.
 // 2. Pass a pointer to it to As.
-// 3. As will return true iff the type is supported, and copy the
-//    provider-specific type into your variable.
+// 3. If the type is supported, As will return true and copy the
+//    provider-specific type into your variable. Otherwise, it will return false.
 //
 // Provider-specific types that are intended to be mutable will be exposed
 // as a pointer to the underlying type.
@@ -361,9 +361,9 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 // will read till the end of the object. offset must be >= 0, and length cannot
 // be 0.
 //
-// NewRangeReader returns an error if the object does not exist, which can be
-// checked by calling IsNotExist. Attributes() is a lighter-weight way to check
-// for existence.
+// NewRangeReader returns an error if the object does not exist, which can be checked
+// by calling IsNotExist. Bucket.Attributes is a lighter-weight way to check for
+// existence.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
@@ -396,8 +396,8 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *Writer
 // Otherwise any previous object with the same key will be replaced. The object
 // is not guaranteed to be available until Close has been called.
 //
-// The returned Writer will store the ctx for later use in Write and/or Close.
-// To abort a write, cancel the provided ctx; othewise it must remain open until
+// The returned Writer will store ctx for later use in Write and/or Close.
+// To abort a write, cancel the provided context; otherwise it must remain open until
 // Close is called.
 //
 // The caller must call Close on the returned Writer, even if the write is
