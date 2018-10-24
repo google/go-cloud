@@ -11,13 +11,6 @@ seamlessly deploy cloud applications on any combination of cloud providers. It
 does this by providing stable, idiomatic interfaces for common uses like storage
 and databases. Think `database/sql` for cloud products.
 
-A key part of the project is to also provide a code generator called
-[Wire](https://github.com/google/go-cloud/blob/master/wire/README.md). It
-creates human-readable code that only imports the cloud SDKs for providers you
-use. This allows Go Cloud to grow to support any number of cloud providers,
-without increasing compile times or binary sizes, and avoiding any side effects
-from `init()` functions.
-
 Imagine writing this to read from blob storage (like Google Cloud Storage or
 S3):
 
@@ -28,6 +21,14 @@ blobReader, err := bucket.NewReader(context.Background(), "my-blob")
 and being able to run that code on any cloud you want, avoiding all the ceremony
 of cloud-specific authorization, tracing, SDKs and all the other code required
 to make an application portable across cloud platforms.
+
+Another key part of the project is a code generator called
+[Wire](https://github.com/google/go-cloud/blob/master/wire/README.md). It
+creates human-readable code that only imports the cloud SDKs for providers you
+use. This allows Go Cloud to grow to support any number of cloud providers,
+without increasing compile times or binary sizes, and avoiding any side effects
+from `init()` functions.
+
 
 You can learn more about the project from our [announcement blog post][], or our
 talk at Next 2018:
