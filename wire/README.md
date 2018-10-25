@@ -7,7 +7,10 @@ global variables. Because Wire operates without runtime state or reflection,
 code written to be used with Wire is useful even for hand-written
 initialization.
 
+For an overview, see the [introductory blog post][].
+
 [dependency injection]: https://en.wikipedia.org/wiki/Dependency_injection
+[introductory blog post]: https://blog.golang.org/wire
 
 ## Installing
 
@@ -533,11 +536,10 @@ Follow [#513][] for updates.
 In the early prototypes, Wire directives were specially formatted comments. This
 seemed appealing at first glance as this meant no compile-time or runtime
 impact. However, this unstructured approach becomes opaque to other tooling not
-written for Wire. Consider tools like [`gorename`][] or [guru][]: it would not
-be able to recognize references to the identifiers existing in comments without
-being specially modified to understand Wire's comment format. By moving the
-references into no-op function calls, Wire interoperates seamlessly with other
-Go tooling.
+written for Wire. Tools like [`gorename`][] or [guru][] would not be able to
+recognize references to the identifiers existing in comments without being
+specially modified to understand Wire's comment format. By moving the references
+into no-op function calls, Wire interoperates seamlessly with other Go tooling.
 
 [`gorename`]: https://godoc.org/golang.org/x/tools/cmd/gorename
 
@@ -600,7 +602,7 @@ simpler.
 
 ### Who is using Wire?
 
-Wire is still fairly new and doesn't have large users yet. However, we have
-heard a lot of interest from Go users wanting to simplify their applications. If
-your project or company uses Wire, please let us know by either emailing us or
-sending a pull request amending this section.
+Wire is still fairly new and doesn't have a large user base yet. However, we
+have heard a lot of interest from Go users wanting to simplify their
+applications. If your project or company uses Wire, please let us know by either
+emailing us or sending a pull request amending this section.
