@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 )
 
@@ -33,18 +34,18 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{vars: map[string][]byte{}}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
 	rawVal, found := h.vars[name]
 	if !found {
 		// The variable isn't set. Create a Variable that always returns an error.
-		return NewError(errors.New("not found")), nil
+		return &watcher{err: errors.New("not found")}, nil
 	}
 	val, err := decoder.Decode(rawVal)
 	if err != nil {
 		// The variable didn't decode.
-		return NewError(errors.New("not found")), nil
+		return &watcher{err: errors.New("not found")}, nil
 	}
-	return New(val), nil
+	return &watcher{value: val, t: time.Now()}, nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
