@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 )
 
@@ -45,8 +46,8 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{client: client, session: sess, closer: done}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
-	return h.client.NewVariable(name, decoder, &WatchOptions{WaitTime: wait})
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
+	return h.client.newWatcher(name, decoder, &WatchOptions{WaitTime: wait})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {

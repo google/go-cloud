@@ -248,7 +248,7 @@ type FooerPlus interface {
   Bar() String
 }
 
-func ProviderFooerPlus() FooerPlus {
+func ProvideFooerPlus() FooerPlus {
   ...
 }
 

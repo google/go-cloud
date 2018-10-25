@@ -80,6 +80,14 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
 func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+	w, err := c.newWatcher(name, decoder, opts)
+	if err != nil {
+		return nil, err
+	}
+	return runtimevar.New(w), nil
+}
+
+func (c *Client) newWatcher(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (driver.Watcher, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -90,12 +98,12 @@ func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opt
 	case waitTime < 0:
 		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
 	}
-	return runtimevar.New(&watcher{
+	return &watcher{
 		client:   c.client,
 		waitTime: waitTime,
 		name:     name.String(),
 		decoder:  decoder,
-	}), nil
+	}, nil
 }
 
 // ResourceName identifies the full configuration variable path used by the service.

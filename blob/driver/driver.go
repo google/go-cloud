@@ -113,9 +113,11 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
-	// PageSize sets the maximum number of objects that will be returned in
-	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
+	// PageSize sets the maximum number of objects to be returned.
+	// 0 means no maximum; driver implementations should choose a reasonable
+	// max.
 	PageSize int
+
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
@@ -142,8 +144,8 @@ type ListObject struct {
 
 // ListPage represents a page of results return from ListPaged.
 type ListPage struct {
-	// Objects is the slice of objects found. It should have at most
-	// ListOptions.PageSize entries.
+	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
+	// it should have at most ListOptions.PageSize entries.
 	Objects []*ListObject
 	// NextPageToken should be left empty unless there are more objects
 	// to return. The value may be returned as ListOptions.PageToken on a
@@ -185,16 +187,17 @@ type Bucket interface {
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
-	// UTF-encoded key, returning pages of objects at a time.
+	// UTF-8-encoded key, returning pages of objects at a time.
 	// Providers are only required to be eventually consistent with respect
-	// to recently-written objects. I.e., there is no guarantee that an object
-	// that's been written will immediately be returned from ListPaged.
+	// to recently written or deleted objects. That is to say, there is no
+	// guarantee that an object that's been written will immediately be returned
+	// from ListPaged.
 	// opt is guaranteed to be non-nil.
 	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
-	// will read till the end of the object. If the specified object does not
+	// will read until the end of the object. If the specified object does not
 	// exist, NewRangeReader must return an error whose Kind method returns
 	// NotFound.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)

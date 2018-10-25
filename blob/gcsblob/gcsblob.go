@@ -41,6 +41,8 @@ import (
 	"google.golang.org/api/option"
 )
 
+const defaultPageSize = 1000
+
 // Options sets options for constructing a *blob.Bucket backed by GCS.
 type Options struct {
 	// GoogleAccessID represents the authorizer for SignedURL.
@@ -130,9 +132,12 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			return nil, err
 		}
 	}
+	pageSize := opt.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
 	iter := bkt.Objects(ctx, query)
-	pager := iterator.NewPager(iter, opt.PageSize, string(opt.PageToken))
-
+	pager := iterator.NewPager(iter, pageSize, string(opt.PageToken))
 	var objects []*storage.ObjectAttrs
 	nextPageToken, err := pager.NextPage(&objects)
 	if err != nil {

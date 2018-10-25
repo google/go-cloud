@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 )
@@ -72,9 +73,9 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
 	rn := resourceName(name)
-	return h.client.NewVariable(rn, decoder, &WatchOptions{WaitTime: wait})
+	return h.client.newWatcher(rn, decoder, &WatchOptions{WaitTime: wait})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {

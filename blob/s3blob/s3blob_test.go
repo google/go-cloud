@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
 )
@@ -57,8 +58,8 @@ func (h *harness) HTTPClient() *http.Client {
 	return &http.Client{Transport: h.rt}
 }
 
-func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return OpenBucket(ctx, h.session, bucketName)
+func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
+	return &bucket{name: bucketName, sess: h.session, client: s3.New(h.session)}, nil
 }
 
 func (h *harness) Close() {
