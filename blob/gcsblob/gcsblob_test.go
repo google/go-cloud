@@ -25,10 +25,12 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -82,8 +84,12 @@ func (h *harness) HTTPClient() *http.Client {
 	return &http.Client{Transport: h.rt}
 }
 
-func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return OpenBucket(ctx, bucketName, h.client, h.opts)
+func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(&h.client.Client))
+	if err != nil {
+		return nil, err
+	}
+	return &bucket{name: bucketName, client: c, opts: h.opts}, nil
 }
 
 func (h *harness) Close() {

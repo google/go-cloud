@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-cloud/blob"
+	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cloud/blob/drivertest"
 )
 
@@ -47,8 +47,8 @@ func (h *harness) HTTPClient() *http.Client {
 	return nil
 }
 
-func (h *harness) MakeBucket(ctx context.Context) (*blob.Bucket, error) {
-	return NewBucket(h.dir)
+func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
+	return &bucket{h.dir}, nil
 }
 
 func (h *harness) Close() {
