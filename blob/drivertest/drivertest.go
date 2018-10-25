@@ -187,63 +187,49 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	tests := []struct {
-		name       string
-		skipCreate bool
-		pageSize   int
-		prefix     string
-		want       [][]int
-		wantIter   []int
-		wantErr    bool
+		name      string
+		pageSize  int
+		prefix    string
+		wantPages [][]int
+		want      []int
 	}{
 		{
-			name:       "negative page size returns an error",
-			skipCreate: true,
-			pageSize:   -1,
-			wantErr:    true,
+			name:      "no objects",
+			prefix:    "no-objects-with-this-prefix",
+			wantPages: [][]int{nil},
 		},
 		{
-			name:       "page size out of range returns an error",
-			skipCreate: true,
-			pageSize:   blob.MaxPageSize + 1,
-			wantErr:    true,
+			name:      "exactly 1 object due to prefix",
+			prefix:    keyForIndex(1),
+			wantPages: [][]int{[]int{1}},
+			want:      []int{1},
 		},
 		{
-			name:   "no objects",
-			prefix: "no-objects-with-this-prefix",
-			want:   [][]int{nil},
+			name:      "no pagination",
+			prefix:    keyPrefix,
+			wantPages: [][]int{[]int{0, 1, 2}},
+			want:      []int{0, 1, 2},
 		},
 		{
-			name:     "exactly 1 object due to prefix",
-			prefix:   keyForIndex(1),
-			want:     [][]int{[]int{1}},
-			wantIter: []int{1},
+			name:      "by 1",
+			prefix:    keyPrefix,
+			pageSize:  1,
+			wantPages: [][]int{[]int{0}, []int{1}, []int{2}},
+			want:      []int{0, 1, 2},
 		},
 		{
-			name:     "no pagination",
-			prefix:   keyPrefix,
-			want:     [][]int{[]int{0, 1, 2}},
-			wantIter: []int{0, 1, 2},
+			name:      "by 2",
+			prefix:    keyPrefix,
+			pageSize:  2,
+			wantPages: [][]int{[]int{0, 1}, []int{2}},
+			want:      []int{0, 1, 2},
 		},
 		{
-			name:     "by 1",
-			prefix:   keyPrefix,
-			pageSize: 1,
-			want:     [][]int{[]int{0}, []int{1}, []int{2}},
-			wantIter: []int{0, 1, 2},
-		},
-		{
-			name:     "by 2",
-			prefix:   keyPrefix,
-			pageSize: 2,
-			want:     [][]int{[]int{0, 1}, []int{2}},
-			wantIter: []int{0, 1, 2},
-		},
-		{
-			name:     "by 3",
-			prefix:   keyPrefix,
-			pageSize: 3,
-			want:     [][]int{[]int{0, 1, 2}},
-			wantIter: []int{0, 1, 2},
+			name:      "by 3",
+			prefix:    keyPrefix,
+			pageSize:  3,
+			wantPages: [][]int{[]int{0, 1, 2}},
+			want:      []int{0, 1, 2},
 		},
 	}
 
@@ -254,7 +240,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	// no guarantee that after we create them they will be immediately returned
 	// from List/ListPaged. The very first time the test is run against a
 	// Bucket, it may be flaky due to this race.
-	init := func(t *testing.T, skipCreate bool) (*blob.Bucket, func()) {
+	init := func(t *testing.T) (driver.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
 			t.Fatal(err)
@@ -263,74 +249,71 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// See if the blobs are already there.
 		b := blob.NewBucket(drv)
-		if !skipCreate {
-			// See if the blobs are already there.
-			iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
+		iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		for {
+			obj, err := iter.Next(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}
-			count := 0
-			for {
-				obj, err := iter.Next(ctx)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if obj == nil {
-					break
-				}
-				count++
+			if obj == nil {
+				break
 			}
-			if count != 3 {
-				for i := 0; i < 3; i++ {
-					if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
-						t.Fatal(err)
-					}
+			count++
+		}
+		if count != 3 {
+			for i := 0; i < 3; i++ {
+				if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
+					t.Fatal(err)
 				}
 			}
 		}
-		return b, func() { h.Close() }
+		return drv, func() { h.Close() }
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, done := init(t, tc.skipCreate)
+			drv, done := init(t)
 			defer done()
 
-			iter, err := b.List(ctx, &blob.ListOptions{
-				PageSize: tc.pageSize,
-				Prefix:   tc.prefix,
-			})
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("got err %v want error %v", err, tc.wantErr)
-			}
-			if err != nil {
-				return
-			}
-			var gotIter []int
+			var gotPages [][]int
+			var got []int
+			var nextPageToken []byte
 			for {
-				obj, err := iter.Next(ctx)
-				if len(gotIter) > 0 && err != nil {
-					t.Fatalf("got err %v after first iteration", err)
-				}
-				if (err != nil) != tc.wantErr {
-					t.Fatalf("got err %v want error %v", err, tc.wantErr)
-				}
+				page, err := drv.ListPaged(ctx, &driver.ListOptions{
+					PageSize:  tc.pageSize,
+					Prefix:    tc.prefix,
+					PageToken: nextPageToken,
+				})
 				if err != nil {
+					t.Fatal(err)
+				}
+				var gotThisPage []int
+				for _, obj := range page.Objects {
+					i, err := indexFromKey(obj.Key)
+					if err != nil {
+						t.Error(err)
+						continue
+					}
+					got = append(got, i)
+					gotThisPage = append(gotThisPage, i)
+				}
+				gotPages = append(gotPages, gotThisPage)
+				if len(page.NextPageToken) == 0 {
 					break
 				}
-				if obj == nil {
-					break
-				}
-				i, err := indexFromKey(obj.Key)
-				if err != nil {
-					t.Error(err)
-					continue
-				}
-				gotIter = append(gotIter, i)
+				nextPageToken = page.NextPageToken
 			}
-			if diff := cmp.Diff(gotIter, tc.wantIter); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotIter, tc.wantIter, diff)
+			if diff := cmp.Diff(gotPages, tc.wantPages); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotPages, tc.wantPages, diff)
+			}
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
 			}
 		})
 	}

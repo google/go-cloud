@@ -113,9 +113,11 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
-	// PageSize sets the maximum number of objects that will be returned in
-	// a single call. It is guaranteed to be > 0 and <= blob.MaxPageSize.
+	// PageSize sets the maximum number of objects to be returned.
+	// 0 means no maximum; driver implementations should choose a reasonable
+	// max.
 	PageSize int
+
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
@@ -142,8 +144,8 @@ type ListObject struct {
 
 // ListPage represents a page of results return from ListPaged.
 type ListPage struct {
-	// Objects is the slice of objects found. It should have at most
-	// ListOptions.PageSize entries.
+	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
+	// it should have at most ListOptions.PageSize entries.
 	Objects []*ListObject
 	// NextPageToken should be left empty unless there are more objects
 	// to return. The value may be returned as ListOptions.PageToken on a

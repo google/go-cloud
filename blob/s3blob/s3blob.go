@@ -42,6 +42,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
+const defaultPageSize = 1000
+
 // OpenBucket returns an S3 Bucket.
 func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
 	if sess == nil {
@@ -163,9 +165,13 @@ type bucket struct {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+	pageSize := opt.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
 	in := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(b.name),
-		MaxKeys: aws.Int64(int64(opt.PageSize)),
+		MaxKeys: aws.Int64(int64(pageSize)),
 	}
 	if len(opt.PageToken) > 0 {
 		in.ContinuationToken = aws.String(string(opt.PageToken))

@@ -171,20 +171,12 @@ func (w *Writer) open(p []byte) (n int, err error) {
 	return w.w.Write(p)
 }
 
-// MaxPageSize is the maximum value for ListOptions.PageSize.
-const MaxPageSize = 1000
-
 // ListOptions sets options for listing objects.
 // TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
 	Prefix string
-
-	// PageSize sets the maximum number of objects that will be retrieved
-	// at a time from the provider.
-	// Must be >= 0 and <= MaxPageSize; 0 defaults to MaxPageSize.
-	PageSize int
 
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
@@ -306,18 +298,8 @@ func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, err
 	if opt == nil {
 		opt = &ListOptions{}
 	}
-	if opt.PageSize < 0 {
-		return nil, errors.New("ListOptions.PageSize must be >= 0")
-	}
-	if opt.PageSize > MaxPageSize {
-		return nil, fmt.Errorf("ListOptions.PageSize must be < %d", MaxPageSize)
-	}
-	if opt.PageSize == 0 {
-		opt.PageSize = MaxPageSize
-	}
 	dopt := &driver.ListOptions{
 		Prefix:     opt.Prefix,
-		PageSize:   opt.PageSize,
 		BeforeList: opt.BeforeList,
 	}
 	return &ListIterator{b: b, opt: dopt}, nil

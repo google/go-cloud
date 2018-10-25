@@ -38,6 +38,8 @@ import (
 	"github.com/google/go-cloud/blob/driver"
 )
 
+const defaultPageSize = 1000
+
 type bucket struct {
 	dir string
 }
@@ -111,6 +113,10 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if err != nil {
 		return nil, err
 	}
+	pageSize := opt.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
 	var result driver.ListPage
 	for _, info := range fileinfos {
 		// Skip the self-generated attribute files.
@@ -127,7 +133,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		}
 		// If we've got a full page of results, and there are more
 		// to come, set NextPageToken and stop here.
-		if opt.PageSize != 0 && len(result.Objects) == opt.PageSize {
+		if len(result.Objects) == pageSize {
 			result.NextPageToken = []byte(info.Name())
 			break
 		}
