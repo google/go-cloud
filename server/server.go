@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"path"
 	"sync"
+	"time"
 
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
@@ -84,7 +85,7 @@ func (srv *Server) init() {
 			trace.ApplyConfig(trace.Config{DefaultSampler: srv.sampler})
 		}
 		if srv.driver == nil {
-			srv.driver = new(DefaultDriver)
+			srv.driver = NewDefaultDriver()
 		}
 	})
 }
@@ -144,6 +145,17 @@ func (h handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // DefaultDriver implements the driver.Server interface. The zero value is a valid http.Server.
 type DefaultDriver struct {
 	Server http.Server
+}
+
+// NewDefaultDriver creates a driver with an http.Server with default timeouts.
+func NewDefaultDriver() *DefaultDriver {
+	return &DefaultDriver{
+		Server: http.Server{
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 30 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		},
+	}
 }
 
 // ListenAndServe sets the address and handler on DefaultDriver's http.Server,
