@@ -500,7 +500,7 @@ concrete mock types should be used to fulfill the appropriate interface.
 ### How does Wire relate to other Go dependency injection tools?
 
 Other dependency injection tools for Go like [dig][] or [facebookgo/inject][]
-are based on reflection. Wire run as a code generator, which means that the
+are based on reflection. Wire runs as a code generator, which means that the
 injector works without making calls to a runtime library. This enables easier
 introspection of initialization and correct cross-references for tooling like
 [guru][].
@@ -526,7 +526,7 @@ Wire was designed to reduce the toil in setting up the multitude of dependencies
 often found when interacting with common cloud providers. However, Wire is not
 coupled to Go Cloud or cloud servers: Wire is a standalone tool.
 
-The Go Cloud team is investigating splitting Wire into its own repository.
+The Go Cloud team is investigating splitting out Wire as its own repository.
 Follow [#513][] for updates.
 
 [#513]: https://github.com/google/go-cloud/issues/513
