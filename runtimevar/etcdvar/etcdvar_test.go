@@ -22,6 +22,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 )
 
@@ -57,8 +58,8 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{client: cli}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, _ time.Duration) (*runtimevar.Variable, error) {
-	return New(name, h.client, decoder)
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, _ time.Duration) (driver.Watcher, error) {
+	return newWatcher(name, h.client, decoder), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {

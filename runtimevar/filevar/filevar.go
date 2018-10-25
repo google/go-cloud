@@ -52,6 +52,14 @@ const defaultWait = 30 * time.Second
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
 func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+	w, err := newWatcher(file, decoder, opts)
+	if err != nil {
+		return nil, err
+	}
+	return runtimevar.New(w), nil
+}
+
+func newWatcher(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (*watcher, error) {
 	if opts == nil {
 		opts = &WatchOptions{}
 	}
@@ -86,7 +94,7 @@ func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (
 		shutdown: cancel,
 	}
 	go w.watch(ctx, notifier, file, decoder, waitTime)
-	return runtimevar.New(w), nil
+	return w, nil
 }
 
 // state implements driver.State.

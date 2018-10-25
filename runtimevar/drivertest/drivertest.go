@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -36,10 +37,10 @@ const (
 
 // Harness descibes the functionality test harnesses must provide to run conformance tests.
 type Harness interface {
-	// MakeVar creates a *runtimevar.Variable to watch the given variable.
-	// If possible, wait should be used to configure what the driver returns
+	// MakeWatcher creates a driver.Watcher to watch the given variable.
+	// If possible, wait should be used to configure what the Watcher returns
 	// as the wait time.
-	MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error)
+	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error)
 	// CreateVariable creates the variable with the given contents in the provider.
 	CreateVariable(ctx context.Context, name string, val []byte) error
 	// UpdateVariable updates an existing variable to have the given contents in the provider.
@@ -89,10 +90,11 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	defer h.Close()
 	ctx := context.Background()
 
-	v, err := h.MakeVar(ctx, "does-not-exist", runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, "does-not-exist", runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
@@ -132,10 +134,11 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// below. Using shortWait here results in polling implementations spinning
 	// and replay-based tests being flaky based on how many polls happen
 	// before the ctx times out.
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, defaultWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, defaultWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
@@ -200,10 +203,11 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
@@ -246,10 +250,11 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	v, err := h.MakeVar(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
@@ -284,10 +289,11 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
@@ -337,10 +343,11 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	v, err := h.MakeVar(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
 	if err != nil {
 		t.Fatal(err)
 	}
+	v := runtimevar.New(drv)
 	defer func() {
 		if err := v.Close(); err != nil {
 			t.Error(err)
