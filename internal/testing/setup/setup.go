@@ -74,7 +74,15 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 		mode = recorder.ModeRecording
 	}
 
+	// GFEs scrub X-Google- and X-GFE- headers from requests and responses.
+	// Drop them from recordings made by users inside Google.
+	// http://g3doc/gfe/g3doc/gfe3/design/http_filters/google_header_filter
+	// (internal Google documentation).
+	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
+
 	gcpMatcher := &replay.ProviderMatcher{
+		DropRequestHeaders: gfeDroppedHeaders,
+		DropResponseHeaders: gfeDroppedHeaders,
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`Expires=[^?]*`),
 		},
