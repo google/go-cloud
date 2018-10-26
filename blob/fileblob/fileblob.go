@@ -16,10 +16,12 @@
 // filesystem. This should not be used for production: it is intended for local
 // development.
 //
-// Blob names must only contain alphanumeric characters, slashes, periods,
-// spaces, underscores, and dashes. Repeated slashes, a leading "./" or "../",
-// or the sequence "/./" is not permitted. This is to ensure that blob names map
-// cleanly onto files underneath a directory.
+// Blob names are escaped using url.PathEscape before writing them
+// to disk, and unescaped using url.PathUnescape during List.
+// Exception: "/" is not escaped, so that it can be used as the real file
+// separator on the filesystem.
+// Filenames on disk that return an error for url.PathUnescape are not visible
+// using fileblob.
 //
 // It does not support any types for As.
 package fileblob
@@ -28,9 +30,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/url"
 	"os"
-	slashpath "path"
 	"path/filepath"
 	"strings"
 
@@ -47,6 +48,7 @@ type bucket struct {
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
 // dir must exist.
 func OpenBucket(dir string) (*blob.Bucket, error) {
+	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
 		return nil, fmt.Errorf("open file bucket: %v", err)
@@ -57,35 +59,18 @@ func OpenBucket(dir string) (*blob.Bucket, error) {
 	return blob.NewBucket(&bucket{dir}), nil
 }
 
-// resolvePath converts a key into a relative filesystem path. It guarantees
-// that there will only be one valid key for a given path and that the resulting
-// path will not reach outside the directory.
-func resolvePath(key string) (string, error) {
-	for _, c := range key {
-		if !('A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '/' || c == '.' || c == ' ' || c == '_' || c == '-') {
-			return "", fmt.Errorf("contains invalid character %q", c)
-		}
-	}
-	if cleaned := slashpath.Clean(key); key != cleaned {
-		return "", fmt.Errorf("not a clean slash-separated path")
-	}
-	if slashpath.IsAbs(key) {
-		return "", fmt.Errorf("starts with a slash")
-	}
-	if key == "." {
-		return "", fmt.Errorf("invalid path \".\"")
-	}
-	if strings.HasPrefix(key, "../") {
-		return "", fmt.Errorf("starts with \"../\"")
-	}
-	return filepath.FromSlash(key), nil
+func escape(s string) string {
+	s = url.PathEscape(s)
+	// Unescape "/".
+	return strings.Replace(s, "%2F", "/", -1)
+}
+
+func unescape(s string) (string, error) {
+	return url.PathUnescape(s)
 }
 
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
+	relpath := escape(key)
 	path := filepath.Join(b.dir, relpath)
 	if strings.HasSuffix(path, attrsExt) {
 		return "", nil, nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
@@ -106,43 +91,79 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
-	// List everything in the directory, sorted by name.
-	// TODO(Issue #541): This should be doing a recursive walk of the directory
-	// as well as translating into the abstract namespace that we've created.
-	fileinfos, err := ioutil.ReadDir(b.dir)
+
+	// First, do a full recursive scan of the root directory.
+	var result driver.ListPage
+	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// Couldn't read this file/directory for some reason; just skip it.
+			return nil
+		}
+		// Skip the self-generated attribute files.
+		if strings.HasSuffix(path, attrsExt) {
+			return nil
+		}
+		// os.Walk returns the root directory; skip it.
+		if path == b.dir {
+			return nil
+		}
+		// Strip the <b.dir> prefix from path; +1 is to include the separator.
+		path = path[len(b.dir)+1:]
+		// Unescape the path to get the key; if this fails, skip.
+		key, err := unescape(path)
+		if err != nil {
+			return nil
+		}
+		// Skip all directories.
+		// Note that returning nil means that we'll still recurse into it;
+		// we're just not adding a result for the directory itself.
+		// We can avoid recursing into subdirectories if the directory name
+		// already doesn't match the prefix; any files in it are guaranteed not
+		// to match.
+		if info.IsDir() {
+			key += "/"
+			if len(key) > len(opt.Prefix) && !strings.HasPrefix(key, opt.Prefix) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Skip files/directories that don't match the Prefix.
+		if !strings.HasPrefix(key, opt.Prefix) {
+			return nil
+		}
+		// Add a ListObject for this file.
+		result.Objects = append(result.Objects, &driver.ListObject{
+			Key:     key,
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		})
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(rvangent): It is likely possible (but not trivial) to optimize by
+	// doing the collapsing and pagination inline to os.Walk, instead of as
+	// post-processing.
+
+	// If there's a pageToken, skip ahead.
+	if len(opt.PageToken) > 0 {
+		pageToken := string(opt.PageToken)
+		for len(result.Objects) > 0 && result.Objects[0].Key < pageToken {
+			result.Objects = result.Objects[1:]
+		}
+	}
+
+	// If we've got more than a full page of results, truncate and set
+	// NextPageToken.
 	pageSize := opt.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
-	var result driver.ListPage
-	for _, info := range fileinfos {
-		// Skip the self-generated attribute files.
-		if strings.HasSuffix(info.Name(), attrsExt) {
-			continue
-		}
-		// Skip files that don't match the Prefix.
-		if opt.Prefix != "" && !strings.HasPrefix(info.Name(), opt.Prefix) {
-			continue
-		}
-		// If a PageToken was provided, skip to it.
-		if len(opt.PageToken) > 0 && info.Name() < string(opt.PageToken) {
-			continue
-		}
-		// If we've got a full page of results, and there are more
-		// to come, set NextPageToken and stop here.
-		if len(result.Objects) == pageSize {
-			result.NextPageToken = []byte(info.Name())
-			break
-		}
-		// Add this object.
-		result.Objects = append(result.Objects, &driver.ListObject{
-			Key:     info.Name(),
-			ModTime: info.ModTime(),
-			Size:    info.Size(),
-		})
+	if len(result.Objects) > pageSize {
+		result.NextPageToken = []byte(result.Objects[pageSize].Key)
+		result.Objects = result.Objects[:pageSize]
 	}
 	return &result, nil
 }
@@ -222,11 +243,7 @@ func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
-	path := filepath.Join(b.dir, relpath)
+	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
 	}
@@ -283,18 +300,14 @@ func (w writer) Close() error {
 
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return fmt.Errorf("delete file blob %s: %v", key, err)
-	}
-	path := filepath.Join(b.dir, relpath)
+	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return fmt.Errorf("delete file blob %s: extension %q cannot be directly deleted", key, attrsExt)
 	}
-	err = os.Remove(path)
+	err := os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
+			return fileError{relpath: key, msg: err.Error(), kind: driver.NotFound}
 		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}

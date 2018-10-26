@@ -156,6 +156,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
+	t.Run("TestKeys", func(t *testing.T) {
+		testKeys(t, newHarness)
+	})
 	t.Run("TestSignedURL", func(t *testing.T) {
 		testSignedURL(t, newHarness)
 	})
@@ -892,6 +895,85 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete want IsNotExist error, got %v", err)
 		}
 	})
+}
+
+// testKeys tests a variety of weird keys.
+func testKeys(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "weird-keys"
+	content := []byte("hello")
+
+	tests := []struct {
+		description string
+		key         string
+	}{
+		{
+			description: "fwdslashes",
+			key:         "foo/bar/baz",
+		},
+		{
+			description: "backslashes",
+			key:         "foo\\bar\\baz",
+		},
+		{
+			description: "quote",
+			key:         "foo\"bar\"baz",
+		},
+		{
+			description: "unicode",
+			key:         strings.Repeat("☺", 10),
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates the blob.
+	// We don't delete the blob, because there's no guarantee that after we
+	// create it that it will be immediately returned from List. The very first
+	// time the test is run against a Bucket, it may be flaky due to this race.
+	init := func(t *testing.T, key string) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
+			t.Fatal(err)
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			key := keyPrefix + tc.key
+			b, done := init(t, key)
+			defer done()
+
+			// Verify read works.
+			gotContent, err := b.ReadAll(ctx, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(gotContent, content) {
+				t.Errorf("got %q want %q", string(gotContent), string(content))
+			}
+			// Verify List returns the key.
+			iter, err := b.List(ctx, &blob.ListOptions{Prefix: key})
+			if err != nil {
+				t.Fatal(err)
+			}
+			obj, err := iter.Next(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if obj == nil || obj.Key != key {
+				t.Error("key not returned from List")
+			}
+		})
+	}
 }
 
 // testSignedURL tests the functionality of SignedURL.

@@ -1,0 +1,107 @@
+---
+version: 1
+interactions:
+- request:
+    body: hello
+    form: {}
+    headers:
+      Content-Length:
+      - "5"
+      Content-Md5:
+      - XUFAKrxLKna5cZ2REBfFkg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+      X-Amz-Date:
+      - 20181026T193411Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/weird-keysfoo%5Cbar%5Cbaz
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Fri, 26 Oct 2018 19:34:12 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - PQTnV5kNZ35TwRRhx505xCC4lP/F8XqCcqQyLFcWN495TeYJPmwE8feTX6A1znj5sVc+SZHg4QU=
+      X-Amz-Request-Id:
+      - 8A2C004BBB581FD4
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181026T193411Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/weird-keysfoo%5Cbar%5Cbaz
+    method: GET
+  response:
+    body: hello
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Fri, 26 Oct 2018 19:34:12 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Last-Modified:
+      - Fri, 26 Oct 2018 19:34:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 8FtOuY8PLvYYIBrzQudPW4P390aieYPuZ7iv1zEEWemMw97Ybw/tg/xg11AolJZbogu/Z1zwtMU=
+      X-Amz-Request-Id:
+      - 01C05D3FF5FE51F6
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181026T193411Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=weird-keysfoo%5Cbar%5Cbaz
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>weird-keysfoo\bar\baz</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>weird-keysfoo\bar\baz</Key><LastModified>2018-10-26T19:34:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Fri, 26 Oct 2018 19:34:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - tPnbLIXu6qjUocS5BlrFbCF0HrXF3dHnfD/jFnlDTdINNjPe7V2FretnuaAY/82wwy0eWZVkRlA=
+      X-Amz-Request-Id:
+      - 21A186F27A138A5F
+    status: 200 OK
+    code: 200
+    duration: ""
