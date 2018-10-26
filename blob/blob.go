@@ -484,6 +484,10 @@ type WriterOptions struct {
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
 
+	// Content-MD5 which may be used as a message integrity check (MIC)
+	// https://tools.ietf.org/html/rfc1864
+	ContentMD5 string
+
 	// Metadata are key/value strings to be associated with the blob, or nil.
 	// Keys may not be empty, and are lowercased before being written.
 	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
