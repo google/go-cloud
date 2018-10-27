@@ -318,12 +318,12 @@ func getSize(resp *s3.GetObjectOutput) int64 {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
-		if opts != nil {
+		if opts.BufferSize != 0 {
 			u.PartSize = int64(opts.BufferSize)
 		}
 	})
 	var metadata map[string]*string
-	if opts != nil && len(opts.Metadata) > 0 {
+	if len(opts.Metadata) > 0 {
 		metadata = make(map[string]*string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
 			metadata[k] = aws.String(v)
@@ -335,7 +335,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		Key:         aws.String(key),
 		Metadata:    metadata,
 	}
-	if opts != nil && opts.BeforeWrite != nil {
+	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3manager.UploadInput)
 			if !ok {
