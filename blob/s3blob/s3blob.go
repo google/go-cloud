@@ -164,8 +164,8 @@ type bucket struct {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
-	pageSize := opt.PageSize
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
@@ -173,13 +173,13 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		Bucket:  aws.String(b.name),
 		MaxKeys: aws.Int64(int64(pageSize)),
 	}
-	if len(opt.PageToken) > 0 {
-		in.ContinuationToken = aws.String(string(opt.PageToken))
+	if len(opts.PageToken) > 0 {
+		in.ContinuationToken = aws.String(string(opts.PageToken))
 	}
-	if opt.Prefix != "" {
-		in.Prefix = aws.String(opt.Prefix)
+	if opts.Prefix != "" {
+		in.Prefix = aws.String(opts.Prefix)
 	}
-	if opt.BeforeList != nil {
+	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3.ListObjectsV2Input)
 			if !ok {
@@ -188,7 +188,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			*p = in
 			return true
 		}
-		if err := opt.BeforeList(asFunc); err != nil {
+		if err := opts.BeforeList(asFunc); err != nil {
 			return nil, err
 		}
 	}
