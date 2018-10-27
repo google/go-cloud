@@ -33,9 +33,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// defaultWait is the default value for WatchOptions.WaitTime.
-const defaultWait = 30 * time.Second
-
 // Client stores long-lived variables for connecting to Parameter Store.
 type Client struct {
 	sess client.ConfigProvider
@@ -48,7 +45,7 @@ func NewClient(p client.ConfigProvider) *Client {
 
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation.
-func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := c.newWatcher(name, decoder, opts)
 	if err != nil {
 		return nil, err
@@ -56,29 +53,22 @@ func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Wat
 	return runtimevar.New(w), nil
 }
 
-func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *WatchOptions) (*watcher, error) {
+func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
 	if opts == nil {
-		opts = &WatchOptions{}
-	}
-	waitTime := opts.WaitTime
-	switch {
-	case waitTime == 0:
-		waitTime = defaultWait
-	case waitTime < 0:
-		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
+		opts = &Options{}
 	}
 	return &watcher{
-		sess:     c.sess,
-		name:     name,
-		waitTime: waitTime,
-		decoder:  decoder,
+		sess:    c.sess,
+		name:    name,
+		wait:    driver.Wait(opts.Wait),
+		decoder: decoder,
 	}, nil
 }
 
-// WatchOptions provide optional configurations to the Watcher.
-type WatchOptions struct {
-	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
-	WaitTime time.Duration
+// Options sets options.
+type Options struct {
+	// Wait controls how quickly Watch polls. Defaults to 30 seconds.
+	Wait time.Duration
 }
 
 // state implements driver.State.
@@ -130,8 +120,8 @@ type watcher struct {
 	sess client.ConfigProvider
 	// name is the parameter to retrieve.
 	name string
-	// waitTime is the amount of time to wait between querying AWS.
-	waitTime time.Duration
+	// wait is the amount of time to wait between querying AWS.
+	wait time.Duration
 	// decoder is the decoder that unmarshals the value in the param.
 	decoder *runtimevar.Decoder
 }
@@ -145,19 +135,19 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	// Read the variable from the backend.
 	p, err := readParam(w.sess, w.name, lastVersion)
 	if err != nil {
-		return errorState(err, prev), w.waitTime
+		return errorState(err, prev), w.wait
 	}
 	if p == nil {
 		// Version hasn't changed.
-		return nil, w.waitTime
+		return nil, w.wait
 	}
 
 	// New value! Decode it.
 	val, err := w.decoder.Decode([]byte(p.value))
 	if err != nil {
-		return errorState(err, prev), w.waitTime
+		return errorState(err, prev), w.wait
 	}
-	return &state{val: val, updateTime: p.updateTime, version: p.version}, w.waitTime
+	return &state{val: val, updateTime: p.updateTime, version: p.version}, w.wait
 }
 
 // Close implements driver.Close.

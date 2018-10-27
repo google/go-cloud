@@ -21,6 +21,17 @@ import (
 	"time"
 )
 
+// DefaultWait is the default value for Wait.
+const DefaultWait = 30 * time.Second
+
+// Wait returns DefaultWait if d is <= 0, otherwise it returns d.
+func Wait(d time.Duration) time.Duration {
+	if d <= 0 {
+		return DefaultWait
+	}
+	return d
+}
+
 // State represents the current state of a variable.
 type State interface {
 	// Value returns the current variable value.
