@@ -67,7 +67,7 @@ type WriterOptions struct {
 	BufferSize int
 	// Content-MD5 which may be used as a message integrity check (MIC)
 	// https://tools.ietf.org/html/rfc1864
-	ContentMD5 string
+	ContentMD5 []byte
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
