@@ -269,7 +269,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 }
 
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.NewVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
+	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
 		WaitTime: flags.motdVarWaitTime,
 	})
 	if err != nil {
