@@ -19,7 +19,7 @@
 // Blob names are escaped using url.PathEscape before writing them
 // to disk, and unescaped using url.PathUnescape during List.
 // Exception: "/" is not escaped, so that it can be used as the real file
-// separate on the filesystem.
+// separator on the filesystem.
 // Filenames on disk that return an error for url.PathUnescape are not visible
 // using fileblob.
 //
@@ -70,10 +70,7 @@ func unescape(s string) (string, error) {
 }
 
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
-	relpath, err := unescape(key)
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
+	relpath := escape(key)
 	path := filepath.Join(b.dir, relpath)
 	if strings.HasSuffix(path, attrsExt) {
 		return "", nil, nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
