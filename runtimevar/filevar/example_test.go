@@ -26,9 +26,9 @@ type MyAppConfig struct {
 	MsgOfTheDay string `json:"msg_of_the_day"`
 }
 
-func ExampleNewVariable() {
+func ExampleNew() {
 	// Configure a JSON decoder for myapp.json to unmarshal into a MyAppConfig object.
-	v, err := filevar.NewVariable("/etc/myapp/myapp.json", runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
+	v, err := filevar.New("/etc/myapp/myapp.json", runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
 	if err != nil {
 		log.Fatalf("Error in constructing variable: %v", err)
 	}
