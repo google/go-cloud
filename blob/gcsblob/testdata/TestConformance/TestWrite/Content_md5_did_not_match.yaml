@@ -2,14 +2,14 @@
 version: 1
 interactions:
 - request:
-    body: "--d345c62d5de5372611cc52f0a9e704f9b2fd7baf251c7d1253fa1bf5da5d\r\nContent-Type:
+    body: "--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--d345c62d5de5372611cc52f0a9e704f9b2fd7baf251c7d1253fa1bf5da5d\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--d345c62d5de5372611cc52f0a9e704f9b2fd7baf251c7d1253fa1bf5da5d--\r\n"
+      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=d345c62d5de5372611cc52f0a9e704f9b2fd7baf251c7d1253fa1bf5da5d
+      - multipart/related; boundary=f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
@@ -62,39 +62,12 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 29 Oct 2018 22:37:29 GMT
+      - Mon, 29 Oct 2018 22:42:35 GMT
       Server:
       - UploadServer
       Vary:
       - Origin
       - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1540852949000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "61688748495"
-      X-Google-Backends:
-      - hilaxcac1:4449,/bns/hg/borg/hg/bns/blobstore2/bitpusher/16.scotty,acsfou1-v6:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=qYvXW_O7JOyaxgP9sJ6oCw
-      X-Google-Gfe-Request-Trace:
-      - acsfou1-v6:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/16.scotty,acsfou1-v6:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/16:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKmAEShAF5YTI5LkdsMUZCdXJvaC0xS3BWR1FuZ0hUYk03d0NPLXlqSDd1YnMxNENGQS02dmdYc1BIOE9PMlh1dkdBbjRLa3NqX2Ywa0ZmVGRJUTUtcmt4dXNTSWQ5UW0xbjJ2em9wLUE2bnV5MmVjT3d4U25FWlIwN2k5a0prLVVybE1ZSTJuT0UwBDoNMS9SMmJWQ0ZqRzVIfg
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
       X-Guploader-Customer:
       - apiary_cloudstorage_single_post_uploads
       X-Guploader-Request-Result:
@@ -102,7 +75,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UqRJL26AE3eSLGSE-PIbfF_Oodmq3dbRGSDxl5cggiaaD8tTyn_dsfs-QyD17PPVAz24ups301Kt2kM-fOWvv_BtlpyfQ
+      - AEnB2Uq3Ne6DiCJycnpp3EvHsDX1gWxOpGIwWp5EZoIz4DAJFz9juVIojG7IXyj0CpQnrEgDhAFkLVyhypQR2T-nomgE72UOtQ
     status: 400 Bad Request
     code: 400
     duration: ""
