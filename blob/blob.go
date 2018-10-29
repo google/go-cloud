@@ -183,7 +183,7 @@ type ListOptions struct {
 	// namespace.
 	//
 	// A non-empty delimiter means that any result with the delimiter in its key
-	// after ListOptions.Prefix is stripped will be returned with a non-empty
+	// after Prefix is stripped will be returned with a non-empty
 	// ListObject.Prefix field, and zero values for other fields. These results
 	// represent "directories". Other results in that "directory" will not be
 	// returned.
