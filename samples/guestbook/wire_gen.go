@@ -253,7 +253,7 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 // inject_local.go:
 
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.NewBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket)
 }
 
 func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {

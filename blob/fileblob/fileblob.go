@@ -44,9 +44,9 @@ type bucket struct {
 	dir string
 }
 
-// NewBucket creates a new bucket that reads and writes to dir.
+// OpenBucket creates a *blob.Bucket that reads and writes to dir.
 // dir must exist.
-func NewBucket(dir string) (*blob.Bucket, error) {
+func OpenBucket(dir string) (*blob.Bucket, error) {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return nil, fmt.Errorf("open file bucket: %v", err)
