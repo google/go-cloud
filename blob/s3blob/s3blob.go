@@ -336,7 +336,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		Key:         aws.String(key),
 		Metadata:    metadata,
 	}
-	if opts != nil && opts.ContentMD5 != nil {
+	if opts != nil && len(opts.ContentMD5) > 0 {
 		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 	}
 	if opts != nil && opts.BeforeWrite != nil {

@@ -485,7 +485,7 @@ type WriterOptions struct {
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
 
-	// Content-MD5 which may be used as a message integrity check (MIC)
+	// ContentMD5 may be used as a message integrity check (MIC).
 	// https://tools.ietf.org/html/rfc1864
 	ContentMD5 []byte
 

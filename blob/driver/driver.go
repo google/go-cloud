@@ -65,7 +65,7 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
-	// Content-MD5 which may be used as a message integrity check (MIC)
+	// ContentMD5 may be used as a message integrity check (MIC).
 	// https://tools.ietf.org/html/rfc1864
 	ContentMD5 []byte
 	// Metadata holds key/value strings to be associated with the blob.

@@ -25,6 +25,7 @@
 package fileblob
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/base64"
@@ -259,8 +260,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		path:  path,
 		attrs: attrs,
 	}
-	if opt != nil && opt.ContentMD5 != nil {
-		w.contentMD5 = base64.StdEncoding.EncodeToString(opt.ContentMD5)
+	if opt != nil && len(opt.ContentMD5) > 0 {
+		w.contentMD5 = opt.ContentMD5
 		w.md5hash = md5.New()
 	}
 	return w, nil
@@ -271,7 +272,7 @@ type writer struct {
 	w          io.WriteCloser
 	path       string
 	attrs      xattrs
-	contentMD5 string
+	contentMD5 []byte
 	md5hash    hash.Hash
 }
 
@@ -297,12 +298,13 @@ func (w writer) Close() error {
 	if err != nil {
 		return err
 	}
-	if w.contentMD5 != "" && w.md5hash != nil {
-		md5sum := base64.StdEncoding.EncodeToString(w.md5hash.Sum(nil))
-		if md5sum != w.contentMD5 {
+	if w.md5hash != nil {
+		md5sum := w.md5hash.Sum(nil)
+		if !bytes.Equal(md5sum, w.contentMD5) {
 			return fmt.Errorf(
-				"The Content-Md5 you specified did not match what we received.(%s!=%s)",
-				md5sum, w.contentMD5,
+				"the ContentMD5 you specified did not match what we received (%s != %s)",
+				base64.StdEncoding.EncodeToString(md5sum),
+				base64.StdEncoding.EncodeToString(w.contentMD5),
 			)
 		}
 	}

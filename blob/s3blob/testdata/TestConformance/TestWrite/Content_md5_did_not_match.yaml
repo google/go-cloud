@@ -1,0 +1,39 @@
+---
+version: 1
+interactions:
+- request:
+    body: not hello world
+    form: {}
+    headers:
+      Content-Length:
+      - "15"
+      Content-Md5:
+      - XrY7u+Ae7tCTyyK7j1rNww==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - f6a38f96511ff15cad471549b9a6ed62dc63c030bfe979dda3ca5588a1c9a5a1
+      X-Amz-Date:
+      - 20181029T223745Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>BadDigest</Code><Message>The Content-MD5 you specified did not match what we received.</Message><ExpectedDigest>5eb63bbbe01eeed093cb22bb8f5acdc3</ExpectedDigest><CalculatedDigest>Ez8VjWWFa3iojnEMdt3EXA==</CalculatedDigest><RequestId>814713E7E1DFC62C</RequestId><HostId>WB2e8WCosNe8rph7JWSsfUeQ5flh3MtfMHEOR9lR2d7ZAEN2eEzZ4OTlcn9nsXYXfVOxFExN9cA=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Mon, 29 Oct 2018 22:37:44 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - WB2e8WCosNe8rph7JWSsfUeQ5flh3MtfMHEOR9lR2d7ZAEN2eEzZ4OTlcn9nsXYXfVOxFExN9cA=
+      X-Amz-Request-Id:
+      - 814713E7E1DFC62C
+    status: 400 Bad Request
+    code: 400
+    duration: ""
