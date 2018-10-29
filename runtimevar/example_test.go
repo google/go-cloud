@@ -31,7 +31,7 @@ type DBConfig struct {
 
 func initVariable() (*runtimevar.Variable, func()) {
 	// Construct a runtimevar.Variable object.
-	v, err := filevar.NewVariable("/etc/myapp/db.json", runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode), nil)
+	v, err := filevar.New("/etc/myapp/db.json", runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
