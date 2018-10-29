@@ -56,7 +56,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 // localBucket is a Wire provider function that returns a directory-based bucket
 // based on the command-line flags.
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.NewBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket)
 }
 
 // dialLocalSQL is a Wire provider function that connects to a MySQL database
