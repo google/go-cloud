@@ -90,10 +90,10 @@ func (c *Client) newWatcher(name ResourceName, decoder *runtimevar.Decoder, opts
 		opts = &Options{}
 	}
 	return &watcher{
-		client:   c.client,
-		wait: driver.Wait(opts.Wait),
-		name:     name.String(),
-		decoder:  decoder,
+		client:  c.client,
+		wait:    driver.WaitDuration(opts.WaitDuration),
+		name:    name.String(),
+		decoder: decoder,
 	}, nil
 }
 
@@ -115,8 +115,8 @@ func (r ResourceName) String() string {
 
 // Options sets options.
 type Options struct {
-	// Wait controls how quickly Watch polls. Defaults to 30 seconds.
-	Wait time.Duration
+	// WaitDuration controls how quickly Watch polls. Defaults to 30 seconds.
+	WaitDuration time.Duration
 }
 
 // state implements driver.State.
@@ -160,10 +160,10 @@ func errorState(err error, prevS driver.State) driver.State {
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
 // service.
 type watcher struct {
-	client   pb.RuntimeConfigManagerClient
-	wait time.Duration
-	name     string
-	decoder  *runtimevar.Decoder
+	client  pb.RuntimeConfigManagerClient
+	wait    time.Duration
+	name    string
+	decoder *runtimevar.Decoder
 }
 
 // Close implements driver.Close.

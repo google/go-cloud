@@ -77,7 +77,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 // Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
-		Wait: flags.motdVarWaitTime,
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err

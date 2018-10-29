@@ -82,7 +82,7 @@ func newWatcher(file string, decoder *runtimevar.Decoder, opts *Options) (*watch
 		closeCh:  make(chan error),
 		shutdown: cancel,
 	}
-	go w.watch(ctx, notifier, file, decoder, driver.Wait(opts.Wait))
+	go w.watch(ctx, notifier, file, decoder, driver.WaitDuration(opts.WaitDuration))
 	return w, nil
 }
 
@@ -227,9 +227,9 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 
 // Options sets options.
 type Options struct {
-	// Wait controls the frequency of retries after an error. For example,
+	// WaitDuration controls the frequency of retries after an error. For example,
 	// if the file does not exist. Defaults to 30 seconds.
-	Wait time.Duration
+	WaitDuration time.Duration
 }
 
 // Close implements driver.WatchVariable.

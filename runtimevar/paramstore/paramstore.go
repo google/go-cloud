@@ -60,15 +60,15 @@ func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *Opti
 	return &watcher{
 		sess:    c.sess,
 		name:    name,
-		wait:    driver.Wait(opts.Wait),
+		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
 	}, nil
 }
 
 // Options sets options.
 type Options struct {
-	// Wait controls how quickly Watch polls. Defaults to 30 seconds.
-	Wait time.Duration
+	// WaitDuration controls how quickly Watch polls. Defaults to 30 seconds.
+	WaitDuration time.Duration
 }
 
 // state implements driver.State.

@@ -70,6 +70,6 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, client *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
 	return client.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
-		Wait: flags.motdVarWaitTime,
+		WaitDuration: flags.motdVarWaitTime,
 	})
 }

@@ -21,13 +21,13 @@ import (
 	"time"
 )
 
-// DefaultWait is the default value for Wait.
-const DefaultWait = 30 * time.Second
+// DefaultWaitDuration is the default value for WaitDuration.
+const DefaultWaitDuration = 30 * time.Second
 
-// Wait returns DefaultWait if d is <= 0, otherwise it returns d.
-func Wait(d time.Duration) time.Duration {
+// WaitDuration returns DefaultWaitDuration if d is <= 0, otherwise it returns d.
+func WaitDuration(d time.Duration) time.Duration {
 	if d <= 0 {
-		return DefaultWait
+		return DefaultWaitDuration
 	}
 	return d
 }
