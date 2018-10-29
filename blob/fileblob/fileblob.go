@@ -26,7 +26,10 @@ package fileblob
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/base64"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
@@ -250,22 +253,34 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType: contentType,
 		Metadata:    metadata,
 	}
-	return &writer{
+	w := &writer{
 		ctx:   ctx,
 		w:     f,
 		path:  path,
 		attrs: attrs,
-	}, nil
+	}
+	if opt != nil && opt.ContentMD5 != nil {
+		w.contentMD5 = base64.StdEncoding.EncodeToString(opt.ContentMD5)
+		w.md5hash = md5.New()
+	}
+	return w, nil
 }
 
 type writer struct {
-	ctx   context.Context
-	w     io.WriteCloser
-	path  string
-	attrs xattrs
+	ctx        context.Context
+	w          io.WriteCloser
+	path       string
+	attrs      xattrs
+	contentMD5 string
+	md5hash    hash.Hash
 }
 
 func (w writer) Write(p []byte) (n int, err error) {
+	if w.md5hash != nil {
+		if _, err := w.md5hash.Write(p); err != nil {
+			return 0, err
+		}
+	}
 	return w.w.Write(p)
 }
 
@@ -278,7 +293,20 @@ func (w writer) Close() error {
 	if err := setAttrs(w.path, w.attrs); err != nil {
 		return fmt.Errorf("write blob attributes: %v", err)
 	}
-	return w.w.Close()
+	err := w.w.Close()
+	if err != nil {
+		return err
+	}
+	if w.contentMD5 != "" && w.md5hash != nil {
+		md5sum := base64.StdEncoding.EncodeToString(w.md5hash.Sum(nil))
+		if md5sum != w.contentMD5 {
+			return fmt.Errorf(
+				"The Content-Md5 you specified did not match what we received.(%s!=%s)",
+				md5sum, w.contentMD5,
+			)
+		}
+	}
+	return nil
 }
 
 // Delete implements driver.Delete.

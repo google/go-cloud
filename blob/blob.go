@@ -389,6 +389,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) 
 	var w driver.Writer
 	if opt != nil {
 		dopt = &driver.WriterOptions{
+			ContentMD5:  opt.ContentMD5,
 			BufferSize:  opt.BufferSize,
 			BeforeWrite: opt.BeforeWrite,
 		}
@@ -483,6 +484,10 @@ type WriterOptions struct {
 	// then it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
+
+	// Content-MD5 which may be used as a message integrity check (MIC)
+	// https://tools.ietf.org/html/rfc1864
+	ContentMD5 []byte
 
 	// Metadata are key/value strings to be associated with the blob, or nil.
 	// Keys may not be empty, and are lowercased before being written.
