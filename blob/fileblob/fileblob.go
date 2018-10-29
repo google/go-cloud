@@ -169,7 +169,8 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				if prefix != lastPrefix {
 					// First time seeing this "subdirectory"; add it.
 					collapsedObjects = append(collapsedObjects, &driver.ListObject{
-						Prefix: prefix,
+						Key:   prefix,
+						IsDir: true,
 					})
 					lastPrefix = prefix
 				}
@@ -181,7 +182,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	// If there's a pageToken, skip ahead.
 	if len(opt.PageToken) > 0 {
 		pageToken := string(opt.PageToken)
-		for len(result.Objects) > 0 && result.Objects[0].Name() < pageToken {
+		for len(result.Objects) > 0 && result.Objects[0].Key < pageToken {
 			result.Objects = result.Objects[1:]
 		}
 	}
@@ -193,7 +194,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		pageSize = defaultPageSize
 	}
 	if len(result.Objects) > pageSize {
-		result.NextPageToken = []byte(result.Objects[pageSize].Name())
+		result.NextPageToken = []byte(result.Objects[pageSize].Key)
 		result.Objects = result.Objects[:pageSize]
 	}
 	return &result, nil

@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strings"
 	"time"
 
@@ -150,11 +151,17 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if len(objects) > 0 {
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
+			key := obj.Name
+			isDir := false
+			if obj.Prefix != "" {
+				key = obj.Prefix
+				isDir = true
+			}
 			page.Objects[i] = &driver.ListObject{
-				Key:     obj.Name,
+				Key:     key,
 				ModTime: obj.Updated,
 				Size:    obj.Size,
-				Prefix:  obj.Prefix,
+				IsDir:   isDir,
 				AsFunc: func(i interface{}) bool {
 					p, ok := i.(*storage.ObjectAttrs)
 					if !ok {
@@ -167,7 +174,9 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		}
 		// GCS always returns "directories" (with obj.Prefix != "" and obj.Name == "")
 		// at the end of the list. We need to sort them.
-		driver.SortListObjects(page.Objects)
+		sort.Slice(page.Objects, func(i, j int) bool {
+			return page.Objects[i].Key < page.Objects[j].Key
+		})
 	}
 	return &page, nil
 }

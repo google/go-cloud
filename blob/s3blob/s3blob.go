@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -222,13 +223,16 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		}
 		for i, prefix := range resp.CommonPrefixes {
 			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
-				Prefix: *prefix.Prefix,
+				Key:   *prefix.Prefix,
+				IsDir: true,
 			}
 		}
 		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
 			// S3 gives us "files" and "directories" in separate lists.
 			// So far we've just appended them; we need to sort them.
-			driver.SortListObjects(page.Objects)
+			sort.Slice(page.Objects, func(i, j int) bool {
+				return page.Objects[i].Key < page.Objects[j].Key
+			})
 		}
 	}
 	return &page, nil

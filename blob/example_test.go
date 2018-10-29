@@ -208,42 +208,7 @@ func ExampleBucket_List() {
 	// foo4.txt
 }
 
-// List lists files in b starting with prefix. It uses the delimiter "/",
-// and recurses into "directories", adding 2 spaces to indent each time.
-// The result is an indented listing like this:
-// foo/
-//   a.txt
-//   b.txt
-// bar/
-//   barsubdir/
-//     c.txt
-func List(ctx context.Context, b *blob.Bucket, prefix, indent string) {
-	iter, err := b.List(ctx, &blob.ListOptions{
-		Delimiter: "/",
-		Prefix:    prefix,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	for {
-		obj, err := iter.Next(ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if obj == nil {
-			break
-		}
-		if obj.Prefix != "" {
-			// Directory.
-			fmt.Printf("%s%s\n", indent, obj.Prefix)
-			List(ctx, b, obj.Prefix, indent+"  ")
-		} else {
-			fmt.Printf("%s%s\n", indent, obj.Key)
-		}
-	}
-}
-
-func ExampleBucket_List_withdelimiter() {
+func ExampleBucket_List_with_delimiter() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -263,11 +228,34 @@ func ExampleBucket_List_withdelimiter() {
 	ctx := context.Background()
 	createListableFilesInHierarchy(ctx, bucket)
 
-	// This function uses / as a delimiter and recursively lists all objects,
-	// indenting subdirectories.
+	// list lists files in b starting with prefix. It uses the delimiter "/",
+	// and recurses into "directories", adding 2 spaces to indent each time.
 	// It will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	List(ctx, bucket, "", "")
+	list := func(context.Context, *blob.Bucket, string, string) {}
+	list = func(ctx context.Context, b *blob.Bucket, prefix, indent string) {
+		iter, err := b.List(ctx, &blob.ListOptions{
+			Delimiter: "/",
+			Prefix:    prefix,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		for {
+			obj, err := iter.Next(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if obj == nil {
+				break
+			}
+			fmt.Printf("%s%s\n", indent, obj.Key)
+			if obj.IsDir {
+				list(ctx, b, obj.Key, indent+"  ")
+			}
+		}
+	}
+	list(ctx, bucket, "", "")
 
 	// Output:
 	// d.txt

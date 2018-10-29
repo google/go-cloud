@@ -19,7 +19,6 @@ package driver
 import (
 	"context"
 	"io"
-	"sort"
 	"time"
 )
 
@@ -121,10 +120,10 @@ type ListOptions struct {
 	// namespace.
 	//
 	// A non-empty delimiter means that any result with the delimiter in its key
-	// after ListOptions.Prefix is stripped will be returned with a non-empty
-	// ListObject.Prefix field, and zero values for other fields. These results
-	// represent "directories". Other results in that "directory" will not be
-	// returned.
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for fields
+	// other than Key. These results represent "directories". Multiple results in
+	// a "directory" are returned as a single result.
 	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
@@ -148,33 +147,15 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// Prefix indicates that this results represents a "directory" in the
-	// hierarchical namespace, ending in ListOptions.Delimiter. It can be
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
-	// Other ListObject fields will not be set.
-	Prefix string
+	// ListObject fields other than Key will not be set.
+	IsDir bool
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.
 	AsFunc func(interface{}) bool
-}
-
-// Name returns Prefix or Key, whichever is non-empty.
-func (lo *ListObject) Name() string {
-	if lo.Prefix != "" {
-		return lo.Prefix
-	}
-	return lo.Key
-}
-
-// SortListObjects sorts objs by ListObject.Name().
-// It is provided as a helper because some providers return "directories"
-// separately from files, and driver implementations must merge them into
-// a sorted []*ListObject.
-func SortListObjects(objs []*ListObject) {
-	sort.Slice(objs, func(i, j int) bool {
-		return objs[i].Name() < objs[j].Name()
-	})
 }
 
 // ListPage represents a page of results return from ListPaged.

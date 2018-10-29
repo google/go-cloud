@@ -183,10 +183,10 @@ type ListOptions struct {
 	// namespace.
 	//
 	// A non-empty delimiter means that any result with the delimiter in its key
-	// after Prefix is stripped will be returned with a non-empty
-	// Prefix field, and zero values for other fields. These results
-	// represent "directories". Other results in that "directory" will not be
-	// returned.
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for fields
+	// other than Key. These results represent "directories". Multiple results in
+	// a "directory" are returned as a single result.
 	Delimiter string
 
 	// BeforeList is a callback that will be called before each call to the
@@ -217,7 +217,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 				Key:     dobj.Key,
 				ModTime: dobj.ModTime,
 				Size:    dobj.Size,
-				Prefix:  dobj.Prefix,
+				IsDir:   dobj.IsDir,
 				asFunc:  dobj.AsFunc,
 			}, nil
 		}
@@ -246,11 +246,11 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// Prefix indicates that this results represents a "directory" in the
-	// hierarchical namespace, ending in ListOptions.Delimiter. It can be
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
-	// Other ListObject fields will not be set.
-	Prefix string
+	// ListObject fields other than Key will not be set.
+	IsDir bool
 
 	asFunc func(interface{}) bool
 }

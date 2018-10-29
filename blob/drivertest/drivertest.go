@@ -352,13 +352,13 @@ func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) 
 		if obj == nil {
 			break
 		}
-		if obj.Prefix != "" {
-			sub, err := listRecursively(ctx, b, obj.Prefix, delim)
+		if obj.IsDir {
+			sub, err := listRecursively(ctx, b, obj.Key, delim)
 			if err != nil {
 				return nil, err
 			}
 			retval = append(retval, &listResult{
-				Key:   obj.Prefix,
+				Key:   obj.Key,
 				IsDir: true,
 				Sub:   sub,
 			})
@@ -510,9 +510,6 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				}
 				if obj == nil {
 					break
-				}
-				if obj.Prefix != "" {
-					t.Errorf("got non-empty Prefix %q, expected empty string with empty Delimiter", obj.Prefix)
 				}
 				gotFlat = append(gotFlat, obj.Key)
 			}
