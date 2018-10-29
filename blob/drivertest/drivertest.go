@@ -321,21 +321,16 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
+// listResult is a recursive view of the hierarchy. It's used to verify
+// List using Delimiter.
 type listResult struct {
 	Key   string
 	IsDir bool
-	Sub   []*listResult
-}
-
-func (r *listResult) String() string {
-	if r.IsDir {
-		return fmt.Sprintf("Dir %s (%d entries)", r.Key, len(r.Sub))
-	}
-	return r.Key
+	Sub   []listResult
 }
 
 // listRecursively recursively lists b using prefix and delim.
-func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) ([]*listResult, error) {
+func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) ([]listResult, error) {
 	iter, err := b.List(ctx, &blob.ListOptions{
 		Prefix:    prefix,
 		Delimiter: delim,
@@ -343,7 +338,7 @@ func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) 
 	if err != nil {
 		return nil, err
 	}
-	var retval []*listResult
+	var retval []listResult
 	for {
 		obj, err := iter.Next(ctx)
 		if err != nil {
@@ -352,19 +347,18 @@ func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) 
 		if obj == nil {
 			break
 		}
+		var sub []listResult
 		if obj.IsDir {
-			sub, err := listRecursively(ctx, b, obj.Key, delim)
+			sub, err = listRecursively(ctx, b, obj.Key, delim)
 			if err != nil {
 				return nil, err
 			}
-			retval = append(retval, &listResult{
-				Key:   obj.Key,
-				IsDir: true,
-				Sub:   sub,
-			})
-		} else {
-			retval = append(retval, &listResult{Key: obj.Key})
 		}
+		retval = append(retval, listResult{
+			Key:   obj.Key,
+			IsDir: obj.IsDir,
+			Sub:   sub,
+		})
 	}
 	return retval, nil
 }
@@ -392,54 +386,126 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		[]string{"f.txt"},
 	}
 
-	// mkwantFlat creates "want" for a flat listing of keys created using delim.
-	// There should be one entry for each key.
-	mkWantFlat := func(delim string) []string {
-		flat := make([]string, len(keys))
-		for i, key := range keys {
-			flat[i] = strings.Join(append([]string{keyPrefix}, key...), delim)
-		}
-		return flat
-	}
-
-	// mkWantWithDelim creates "want" for a delimited listing of keys created using delim.
-	mkWantWithDelim := func(delim string) []*listResult {
-		return []*listResult{
-			&listResult{
-				Key:   strings.Join([]string{keyPrefix, "dir1", ""}, delim),
-				IsDir: true,
-				Sub: []*listResult{
-					&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "a.txt"}, delim)},
-					&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "b.txt"}, delim)},
-					&listResult{
-						Key:   strings.Join([]string{keyPrefix, "dir1", "subdir", ""}, delim),
-						IsDir: true,
-						Sub: []*listResult{
-							// dir1/subdir/c.txt and dir1/subdir/d.txt.
-							&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "subdir", "c.txt"}, delim)},
-							&listResult{Key: strings.Join([]string{keyPrefix, "dir1", "subdir", "d.txt"}, delim)},
-						},
-					},
-				},
-			},
-			&listResult{
-				Key:   strings.Join([]string{keyPrefix, "dir2", ""}, delim),
-				IsDir: true,
-				Sub: []*listResult{
-					&listResult{Key: strings.Join([]string{keyPrefix, "dir2", "e.txt"}, delim)},
-				},
-			},
-			&listResult{Key: strings.Join([]string{keyPrefix, "f.txt"}, delim)},
-		}
-	}
-
 	// Test with several different delimiters.
 	tests := []struct {
 		name, delim string
+		wantFlat    []string
+		want        []listResult
 	}{
-		{name: "fwdslash", delim: "/"},
-		{name: "backslash", delim: "\\"},
-		{name: "abc", delim: "abc"},
+		{
+			name:  "fwdslash",
+			delim: "/",
+			wantFlat: []string{
+				keyPrefix + "/dir1/a.txt",
+				keyPrefix + "/dir1/b.txt",
+				keyPrefix + "/dir1/subdir/c.txt",
+				keyPrefix + "/dir1/subdir/d.txt",
+				keyPrefix + "/dir2/e.txt",
+				keyPrefix + "/f.txt",
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir1/a.txt"},
+						listResult{Key: keyPrefix + "/dir1/b.txt"},
+						listResult{
+							Key:   keyPrefix + "/dir1/subdir/",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+								listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "/dir2/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir2/e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+		},
+		{
+			name:  "backslash",
+			delim: "\\",
+			wantFlat: []string{
+				keyPrefix + "\\dir1\\a.txt",
+				keyPrefix + "\\dir1\\b.txt",
+				keyPrefix + "\\dir1\\subdir\\c.txt",
+				keyPrefix + "\\dir1\\subdir\\d.txt",
+				keyPrefix + "\\dir2\\e.txt",
+				keyPrefix + "\\f.txt",
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+						listResult{
+							Key:   keyPrefix + "\\dir1\\subdir\\",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+		},
+		{
+			name:  "abc",
+			delim: "abc",
+			wantFlat: []string{
+				keyPrefix + "abcdir1abca.txt",
+				keyPrefix + "abcdir1abcb.txt",
+				keyPrefix + "abcdir1abcsubdirabcc.txt",
+				keyPrefix + "abcdir1abcsubdirabcd.txt",
+				keyPrefix + "abcdir2abce.txt",
+				keyPrefix + "abcf.txt",
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir1abca.txt"},
+						listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+						listResult{
+							Key:   keyPrefix + "abcdir1abcsubdirabc",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "abcdir2abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir2abce.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+		},
 	}
 
 	ctx := context.Background()
@@ -492,12 +558,10 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.delim)
 			defer done()
 
-			prefix := keyPrefix + tc.delim
-
 			// Fetch without using Delimiter; we should get back all of the keys
 			// in a single flat namespace.
 			iter, err := b.List(ctx, &blob.ListOptions{
-				Prefix: prefix,
+				Prefix: keyPrefix + tc.delim,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -513,19 +577,17 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				}
 				gotFlat = append(gotFlat, obj.Key)
 			}
-			wantFlat := mkWantFlat(tc.delim)
-			if diff := cmp.Diff(gotFlat, wantFlat); diff != "" {
-				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotFlat, wantFlat, diff)
+			if diff := cmp.Diff(gotFlat, tc.wantFlat); diff != "" {
+				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotFlat, tc.wantFlat, diff)
 			}
 
 			// Fetch using Delimiter.
-			gotWithDelim, err := listRecursively(ctx, b, prefix, tc.delim)
+			got, err := listRecursively(ctx, b, keyPrefix+tc.delim, tc.delim)
 			if err != nil {
 				t.Fatal(err)
 			}
-			wantWithDelim := mkWantWithDelim(tc.delim)
-			if diff := cmp.Diff(gotWithDelim, wantWithDelim); diff != "" {
-				t.Errorf("using delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotWithDelim, wantWithDelim, diff)
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("using delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
 			}
 		})
 	}
