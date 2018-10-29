@@ -38,7 +38,7 @@ func ExampleBucket_NewReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func ExampleBucket_NewRangeReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func ExampleBucket_NewWriter() {
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
 	defer cleanup()
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func ExampleBucket_ReadAll() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func ExampleBucket_List() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func ExampleBucket_As() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.NewBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir)
 	if err != nil {
 		log.Fatal(err)
 	}

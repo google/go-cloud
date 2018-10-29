@@ -67,7 +67,7 @@ func TestNewBucket(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer os.RemoveAll(dir)
-		_, gotErr := NewBucket(filepath.Join(dir, "notfound"))
+		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"))
 		if gotErr == nil {
 			t.Errorf("want error, got nil")
 		}
@@ -78,7 +78,7 @@ func TestNewBucket(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		_, gotErr := NewBucket(f.Name())
+		_, gotErr := OpenBucket(f.Name())
 		if gotErr == nil {
 			t.Error("want error, got nil")
 		}

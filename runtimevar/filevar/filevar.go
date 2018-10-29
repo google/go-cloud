@@ -44,10 +44,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// NewVariable constructs a runtimevar.Variable object with this package as the driver
+// New constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-func NewVariable(file string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func New(file string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := newWatcher(file, decoder, opts)
 	if err != nil {
 		return nil, err

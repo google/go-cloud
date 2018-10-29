@@ -253,7 +253,7 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 // inject_local.go:
 
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.NewBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket)
 }
 
 func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
@@ -269,7 +269,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 }
 
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.NewVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
 		Wait: flags.motdVarWaitTime,
 	})
 	if err != nil {
