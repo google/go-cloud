@@ -16,7 +16,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *s3.S3
-// ListObject: s3.Object
+// ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput
@@ -226,11 +226,18 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
 				Key:   *prefix.Prefix,
 				IsDir: true,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.CommonPrefix)
+					if !ok {
+						return false
+					}
+					*p = *prefix
+					return true
+				},
 			}
 		}
 		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
-			// S3 gives us "files" and "directories" in separate lists.
-			// So far we've just appended them; we need to sort them.
+			// S3 gives us blobs and "directories" in separate lists; sort them.
 			sort.Slice(page.Objects, func(i, j int) bool {
 				return page.Objects[i].Key < page.Objects[j].Key
 			})

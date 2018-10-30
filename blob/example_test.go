@@ -180,7 +180,11 @@ func ExampleBucket_List() {
 
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
-	createListableFiles(ctx, bucket)
+	for i := 0; i < 5; i++ {
+		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
@@ -220,13 +224,18 @@ func ExampleBucket_List_with_delimiter() {
 		log.Fatal(err)
 	}
 
-	// Create some blob objects in a hierarchy:
-	// dir1/subdir/a.txt
-	// dir1/subdir/b.txt
-	// dir2/c.txt
-	// d.txt
+	// Create some blob objects in a hierarchy.
 	ctx := context.Background()
-	createListableFilesInHierarchy(ctx, bucket)
+	for _, key := range []string{
+		"dir1/subdir/a.txt",
+		"dir1/subdir/b.txt",
+		"dir2/c.txt",
+		"d.txt",
+	} {
+		if err := bucket.WriteAll(ctx, key, []byte("Go Cloud"), nil); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	// list lists files in b starting with prefix. It uses the delimiter "/",
 	// and recurses into "directories", adding 2 spaces to indent each time.
@@ -310,29 +319,6 @@ func ExampleBucket_As() {
 	// Output:
 	// fileblob does not support the `string` type for Bucket.As
 	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
-}
-
-func createListableFiles(ctx context.Context, b *blob.Bucket) error {
-	for i := 0; i < 5; i++ {
-		if err := b.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func createListableFilesInHierarchy(ctx context.Context, b *blob.Bucket) error {
-	for _, name := range []string{
-		"dir1/subdir/a.txt",
-		"dir1/subdir/b.txt",
-		"dir2/c.txt",
-		"d.txt",
-	} {
-		if err := b.WriteAll(ctx, name, []byte("Go Cloud"), nil); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func newTempDir() (string, func()) {

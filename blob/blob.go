@@ -184,9 +184,9 @@ type ListOptions struct {
 	//
 	// A non-empty delimiter means that any result with the delimiter in its key
 	// after Prefix is stripped will be returned with ListObject.IsDir = true,
-	// ListObject.Key truncated after the delimiter, and zero values for fields
-	// other than Key. These results represent "directories". Multiple results in
-	// a "directory" are returned as a single result.
+	// ListObject.Key truncated after the delimiter, and zero values for other
+	// ListObject fields. These results represent "directories". Multiple results
+	// in a "directory" are returned as a single result.
 	Delimiter string
 
 	// BeforeList is a callback that will be called before each call to the
@@ -249,7 +249,7 @@ type ListObject struct {
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
-	// ListObject fields other than Key will not be set.
+	// Fields other than Key and IsDir will not be set.
 	IsDir bool
 
 	asFunc func(interface{}) bool

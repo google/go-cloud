@@ -417,12 +417,13 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
-// listResult is a recursive view of the hierarchy. It's used to verify
-// List using Delimiter.
+// listResult is a recursive view of the hierarchy. It's used to verify List
+// using Delimiter.
 type listResult struct {
 	Key   string
 	IsDir bool
-	Sub   []listResult
+	// If IsDir is true and recursion is enabled, the recursive listing of the directory.
+	Sub []listResult
 }
 
 // doList lists b using prefix and delim.
