@@ -90,9 +90,24 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 }
 
 // ListPaged implements driver.ListPaged.
+<<<<<<< HEAD
 func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
 
 	// First, do a full recursive scan of the root directory.
+=======
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	// List everything in the directory, sorted by name.
+	// TODO(Issue #541): This should be doing a recursive walk of the directory
+	// as well as translating into the abstract namespace that we've created.
+	fileinfos, err := ioutil.ReadDir(b.dir)
+	if err != nil {
+		return nil, err
+	}
+	pageSize := opts.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+>>>>>>> master
 	var result driver.ListPage
 	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -107,6 +122,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		if path == b.dir {
 			return nil
 		}
+<<<<<<< HEAD
 		// Strip the <b.dir> prefix from path; +1 is to include the separator.
 		path = path[len(b.dir)+1:]
 		// Unescape the path to get the key; if this fails, skip.
@@ -126,6 +142,15 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 				return filepath.SkipDir
 			}
 			return nil
+=======
+		// Skip files that don't match the Prefix.
+		if opts.Prefix != "" && !strings.HasPrefix(info.Name(), opts.Prefix) {
+			continue
+		}
+		// If a PageToken was provided, skip to it.
+		if len(opts.PageToken) > 0 && info.Name() < string(opts.PageToken) {
+			continue
+>>>>>>> master
 		}
 		// Skip files/directories that don't match the Prefix.
 		if !strings.HasPrefix(key, opt.Prefix) {
@@ -242,7 +267,7 @@ func (r reader) Attributes() driver.ReaderAttributes {
 func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
@@ -254,14 +279,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	if opt != nil && opt.BeforeWrite != nil {
-		if err := opt.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+	if opts.BeforeWrite != nil {
+		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
 	var metadata map[string]string
-	if opt != nil && len(opt.Metadata) > 0 {
-		metadata = opt.Metadata
+	if len(opts.Metadata) > 0 {
+		metadata = opts.Metadata
 	}
 	attrs := xattrs{
 		ContentType: contentType,

@@ -119,6 +119,9 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 			gotBody = re.ReplaceAllString(gotBody, "")
 			wantBody = re.ReplaceAllString(wantBody, "")
 		}
+		if gotBody != wantBody {
+			t.Fatalf("mismatched HTTP body at request #%d", cur)
+		}
 
 		// We've got a match!
 		t.Logf("matched request #%d (%s %s)", cur, i.Method, i.URL)
