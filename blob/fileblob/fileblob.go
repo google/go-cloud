@@ -16,21 +16,27 @@
 // filesystem. This should not be used for production: it is intended for local
 // development.
 //
-// Blob names are escaped using url.PathEscape before writing them
-// to disk, and unescaped using url.PathUnescape during List.
-// Exception: "/" is not escaped, so that it can be used as the real file
-// separator on the filesystem.
-// Filenames on disk that return an error for url.PathUnescape are not visible
-// using fileblob.
+// Blob keys are escaped before being used as filenames, and filenames are
+// unescaped when they are passed back as blob keys during List. The escape
+// algorithm is:
+// -- Alphanumeric characters (A-Z a-z 0-9) are not escaped.
+// -- Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
+// -- The OS-specific path separator character (os.PathSeparator) is not escaped.
+// -- All other characters are escaped similar to url.PathEscape:
+//    "%<hex ASCII code>", with capital letters ABCDEF in the hex code.
 //
-// It does not support any types for As.
+// Filenames that can't be unescaped due to invalid escape sequences
+// (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
+// (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
+// aren't visible using fileblob.
+//
+// fileblob does not support any types for As.
 package fileblob
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,16 +65,129 @@ func OpenBucket(dir string) (*blob.Bucket, error) {
 	return blob.NewBucket(&bucket{dir}), nil
 }
 
+// shouldEscape returns true if c should be escaped.
+func shouldEscape(c byte) bool {
+	switch {
+	case 'A' <= c && c <= 'Z':
+		return false
+	case 'a' <= c && c <= 'z':
+		return false
+	case '0' <= c && c <= '9':
+		return false
+	case c == ' ' || c == '-' || c == '_' || c == '.':
+		return false
+	case c == os.PathSeparator:
+		return false
+	}
+	return true
+}
+
+// escape returns s escaped per the rules described in the package docstring.
+// The code is modified from https://golang.org/src/net/url/url.go.
 func escape(s string) string {
-	s = url.PathEscape(s)
-	// Unescape "/".
-	return strings.Replace(s, "%2F", "/", -1)
+	hexCount := 0
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if shouldEscape(c) {
+			hexCount++
+		}
+	}
+	if hexCount == 0 {
+		return s
+	}
+	t := make([]byte, len(s)+2*hexCount)
+	j := 0
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case shouldEscape(c):
+			t[j] = '%'
+			t[j+1] = "0123456789ABCDEF"[c>>4]
+			t[j+2] = "0123456789ABCDEF"[c&15]
+			j += 3
+		default:
+			t[j] = s[i]
+			j++
+		}
+	}
+	return string(t)
 }
 
+// ishex returns true if c is a valid part of a hexadecimal number.
+func ishex(c byte) bool {
+	switch {
+	case '0' <= c && c <= '9':
+		return true
+	case 'a' <= c && c <= 'f':
+		return true
+	case 'A' <= c && c <= 'F':
+		return true
+	}
+	return false
+}
+
+// unhex returns the hexadecimal value of the hexadecimal character c.
+// For example, unhex('A') returns 10.
+func unhex(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	return 0
+}
+
+// unescape unescapes s per the rules described in the package docstring.
+// It returns an error if s has invalid escape sequences, or if
+// escape(unescape(s)) != s.
+// The code is modified from https://golang.org/src/net/url/url.go.
 func unescape(s string) (string, error) {
-	return url.PathUnescape(s)
+	// Count %, check that they're well-formed.
+	n := 0
+	for i := 0; i < len(s); {
+		switch s[i] {
+		case '%':
+			n++
+			if i+2 >= len(s) || !ishex(s[i+1]) || !ishex(s[i+2]) {
+				bad := s[i:]
+				if len(bad) > 3 {
+					bad = bad[:3]
+				}
+				return "", fmt.Errorf("couldn't unescape %q near %q", s, bad)
+			}
+			i += 3
+		default:
+			i++
+		}
+	}
+	unescaped := s
+	if n > 0 {
+		t := make([]byte, len(s)-2*n)
+		j := 0
+		for i := 0; i < len(s); {
+			switch s[i] {
+			case '%':
+				t[j] = unhex(s[i+1])<<4 | unhex(s[i+2])
+				j++
+				i += 3
+			default:
+				t[j] = s[i]
+				j++
+				i++
+			}
+		}
+		unescaped = string(t)
+	}
+	escaped := escape(unescaped)
+	if escaped != s {
+		return "", fmt.Errorf("%q unescaped to %q but escaped back to %q instead of itself", s, unescaped, escaped)
+	}
+	return unescaped, nil
 }
 
+// forKey returns the full path, os.FileInfo, and attributes for key.
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	relpath := escape(key)
 	path := filepath.Join(b.dir, relpath)
