@@ -532,7 +532,5 @@ What is the throughput and latency of Go Cloud's `pubsub` package, relative to d
 * receive, for 1, 10, 100 subscribers, and for 1, 10, 100 goroutines pulling from each subscriber
 
 ## References
-* Github issue: https://github.com/google/go-cloud/issues/312
-* AWS Go API documentation for SNS (Simple Notification Service)
+* https://github.com/google/go-cloud/issues/312
 * http://queues.io/
-* http://www.imatix.com/articles:whats-wrong-with-amqp/
