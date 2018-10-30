@@ -183,11 +183,21 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	content := []byte("hello")
 
 	keyForIndex := func(i int) string { return fmt.Sprintf("%s-%d", keyPrefix, i) }
-	indexFromKey := func(key string) (int, error) {
-		if !strings.HasPrefix(key, keyPrefix) {
-			return 0, fmt.Errorf("got name %q, expected it to have prefix %q", key, keyPrefix)
+	gotIndices := func(t *testing.T, objs []*driver.ListObject) []int {
+		var got []int
+		for _, obj := range objs {
+			if !strings.HasPrefix(obj.Key, keyPrefix) {
+				t.Errorf("got name %q, expected it to have prefix %q", obj.Key, keyPrefix)
+				continue
+			}
+			i, err := strconv.Atoi(obj.Key[len(keyPrefix)+1:])
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+			got = append(got, i)
 		}
-		return strconv.Atoi(key[len(keyPrefix)+1:])
+		return got
 	}
 
 	tests := []struct {
@@ -297,16 +307,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotThisPage []int
-				for _, obj := range page.Objects {
-					i, err := indexFromKey(obj.Key)
-					if err != nil {
-						t.Error(err)
-						continue
-					}
-					got = append(got, i)
-					gotThisPage = append(gotThisPage, i)
-				}
+				gotThisPage := gotIndices(t, page.Objects)
+				got = append(got, gotThisPage...)
 				gotPages = append(gotPages, gotThisPage)
 				if len(page.NextPageToken) == 0 {
 					break
@@ -321,6 +323,96 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			}
 		})
 	}
+
+	// Verify pagination works when inserting in a retrieved page.
+	t.Run("PaginationConsistencyAfterInsert", func(t *testing.T) {
+		drv, done := init(t)
+		defer done()
+
+		// Fetch a page of 2 results: 0, 1.
+		page, err := drv.ListPaged(ctx, &driver.ListOptions{
+			PageSize: 2,
+			Prefix:   keyPrefix,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := gotIndices(t, page.Objects)
+		want := []int{0, 1}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+
+		// Insert a key "0a" in the middle of the page we already retrieved.
+		b := blob.NewBucket(drv)
+		key := page.Objects[0].Key + "a"
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = b.Delete(ctx, key)
+		}()
+
+		// Fetch the next page. It should not include 0, 0a, or 1, and it should
+		// include 2.
+		page, err = drv.ListPaged(ctx, &driver.ListOptions{
+			Prefix:    keyPrefix,
+			PageToken: page.NextPageToken,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = gotIndices(t, page.Objects)
+		want = []int{2}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+	})
+
+	// Verify pagination works when deleting in a retrieved page.
+	t.Run("PaginationConsistencyAfterDelete", func(t *testing.T) {
+		drv, done := init(t)
+		defer done()
+
+		// Fetch a page of 2 results: 0, 1.
+		page, err := drv.ListPaged(ctx, &driver.ListOptions{
+			PageSize: 2,
+			Prefix:   keyPrefix,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := gotIndices(t, page.Objects)
+		want := []int{0, 1}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+
+		// Delete key "1".
+		b := blob.NewBucket(drv)
+		key := page.Objects[1].Key
+		if err := b.Delete(ctx, key); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = b.WriteAll(ctx, key, content, nil)
+		}()
+
+		// Fetch the next page. It should not include 0 or 1, and it should
+		// include 2.
+		page, err = drv.ListPaged(ctx, &driver.ListOptions{
+			Prefix:    keyPrefix,
+			PageToken: page.NextPageToken,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = gotIndices(t, page.Objects)
+		want = []int{2}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+	})
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
