@@ -243,7 +243,7 @@ Adding support for a new pubsub system involves two main steps:
 1. Write the driver, implementing the interfaces in the github.com/go-cloud/pubsub/driver package. The new driver could be located at github.com/go-cloud/pubsub/$newsystem/driver.
 2. Write the concrete implementation, including publisher.New to construct a pubsub.Publisher and subscriber.New to construct a pubsub.Subscriber. These constructors could be located at github.com/go-cloud/pubsub/$newsystem/publisher and github.com/go-cloud/pubsub/$newsystem/subscriber.
 
-The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity that it would impose.
+The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
 
 The driver interfaces will be located in the github.com/google/go-cloud/pubsub/driver package and will look something like this:
 
@@ -363,8 +363,7 @@ func (s *Subscriber) Close() error { … }
 ## Alternative designs considered
 
 ### Batch oriented concrete API
-In this design, `pub.Send` and `sub.Receive` are done in terms of batches of messages.
-
+In this design, the application code sends, receives and acknowledges messages in batches.
 Here is an example of how it would look from the developer's perspective:
 ```go
 import (
@@ -497,49 +496,10 @@ Pro:
 Con:
 * Go micro has code to auto-create topics and subscriptions as needed, but this is not consistent with Go Cloud’s design principle to not get involved in ops.
 
-### Google's pubsub2
-
-
-```go
-topic := "/pubsub2/user-signups"
-
-// Make a subscriber.
-sub, err := subscriber.New(ctx, topic, subscriber.EphemeralId(), nil /* opts */)
-if err != nil { /* handle err */ }
-defer sub.Close(ctx)
-
-// Consume messages.
-go func() {
-        for item := range sub.Chan() {
-                log.Infof("Got message: %s\n", item.Message.Data)
-                item.Ack()
-        }
-}()
-
-// Make a publisher.
-pub, err := publisher.New(ctx, topic, publisher.EphemeralId(), nil /* opts */)
-if err != nil { /* handle err */ }
-
-// Close will disconnect the publisher from pubsub2.
-defer pub.Close(ctx)
-
-// Publish a message.
-err = pub.SendString(ctx, pub, "alice signed up")
-if err != nil { /* handle err */ }
-```
-
-Pro:
-* The API looks simple, only requiring a small number of calls.
-* publisher and subscriber are clear names.
-Efficient batching is done behind the scenes.
-
-Con:
-* Exposing a channel in the API with the Chan() method means having no way to cancel a receive.
-
-## Pubsub acknowledgements
+## Acknowledgements
 In pubsub systems with acknowledgement, messages are kept in a queue associated with the subscription on the server. When a client receives one of these messages, its counterpart on the server is marked as being processed. Once the client finishes processing the message, it sends an acknowledgement (or "ack") to the server and the server removes the message from the subscription queue. There may be a deadline for the acknowledgement, past which the server unmarks the message so that it can be received again for another try at processing.
 
-Redis and ZeroMQ don’t support Ack/Nack, but many others do including GCP PubSub, Azure Service Bus, and RabbitMQ. Given the wide support and usefulness, it makes sense to support this in Go Cloud. For systems that don't have acknowledgement, such as Redis, it is probably best for the associated Go Cloud driver to simulate it so that users of Go Cloud pubsub never have to worry about whether it will be supported on different implementations.
+Redis and ZeroMQ don’t support Ack, but many others do including GCP PubSub, Azure Service Bus, and RabbitMQ. Given the wide support and usefulness, it makes sense to support this in Go Cloud. For systems that don't have acknowledgement, such as Redis, it is probably best for the associated Go Cloud driver to simulate it so that users of Go Cloud pubsub never have to worry about whether acknowledgement is supported.
 
 Let’s look at some possibilities for how message acknowledgement could look from a developer's perspective.
 
