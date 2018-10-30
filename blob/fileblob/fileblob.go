@@ -109,7 +109,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	// List everything in the directory, sorted by name.
 	// TODO(Issue #541): This should be doing a recursive walk of the directory
 	// as well as translating into the abstract namespace that we've created.
@@ -117,7 +117,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if err != nil {
 		return nil, err
 	}
-	pageSize := opt.PageSize
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
@@ -128,11 +128,11 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			continue
 		}
 		// Skip files that don't match the Prefix.
-		if opt.Prefix != "" && !strings.HasPrefix(info.Name(), opt.Prefix) {
+		if opts.Prefix != "" && !strings.HasPrefix(info.Name(), opts.Prefix) {
 			continue
 		}
 		// If a PageToken was provided, skip to it.
-		if len(opt.PageToken) > 0 && info.Name() < string(opt.PageToken) {
+		if len(opts.PageToken) > 0 && info.Name() < string(opts.PageToken) {
 			continue
 		}
 		// If we've got a full page of results, and there are more
@@ -225,7 +225,7 @@ func (r reader) Attributes() driver.ReaderAttributes {
 func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	relpath, err := resolvePath(key)
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
@@ -241,14 +241,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	if opt != nil && opt.BeforeWrite != nil {
-		if err := opt.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+	if opts.BeforeWrite != nil {
+		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
 	var metadata map[string]string
-	if opt != nil && len(opt.Metadata) > 0 {
-		metadata = opt.Metadata
+	if len(opts.Metadata) > 0 {
+		metadata = opts.Metadata
 	}
 	attrs := xattrs{
 		ContentType: contentType,
@@ -260,8 +260,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		path:  path,
 		attrs: attrs,
 	}
-	if opt != nil && len(opt.ContentMD5) > 0 {
-		w.contentMD5 = opt.ContentMD5
+	if len(opts.ContentMD5) > 0 {
+		w.contentMD5 = opts.ContentMD5
 		w.md5hash = md5.New()
 	}
 	return w, nil
