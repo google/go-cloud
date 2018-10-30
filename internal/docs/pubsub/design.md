@@ -47,6 +47,8 @@ There are several pubsub systems available that could be made to work with Go Cl
 Given a topic that has already been created on the pubsub server, messages can be sent to that topic by creating a new `pubsub.Publisher` and calling its `Send` method, like this (assuming a fictional pubsub provider called "acme"):
 
 ```go
+package main
+
 import (
     "context"
     "log"
@@ -81,6 +83,8 @@ Messages can be received from an existing subscription to a topic by
 creating a `pubsub.Subscriber` and calling its `Receive` method, like this:
 
 ```go
+package main
+
 import (
     "context"
     "fmt"
@@ -116,6 +120,8 @@ func receive() error {
 A more realistic subscriber client would process messages in a loop, like this:
 
 ```go
+package main
+
 import (
     "context"
     "log"
