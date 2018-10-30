@@ -139,6 +139,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
+	t.Run("TestListDelimiters", func(t *testing.T) {
+		testListDelimiters(t, newHarness)
+	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -178,7 +181,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 
 // testList tests the functionality of List.
 func testList(t *testing.T, newHarness HarnessMaker) {
-	// TODO(Issue #541): Add tests for slash-separated paths.
 	const keyPrefix = "blob-for-list"
 	content := []byte("hello")
 
@@ -252,8 +254,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	// Creates blobs for sub-tests below.
 	// We only create the blobs once, for efficiency and because there's
 	// no guarantee that after we create them they will be immediately returned
-	// from List/ListPaged. The very first time the test is run against a
-	// Bucket, it may be flaky due to this race.
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
 	init := func(t *testing.T) (driver.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
@@ -413,6 +415,315 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 		}
 	})
+}
+
+// listResult is a recursive view of the hierarchy. It's used to verify List
+// using Delimiter.
+type listResult struct {
+	Key   string
+	IsDir bool
+	// If IsDir is true and recursion is enabled, the recursive listing of the directory.
+	Sub []listResult
+}
+
+// doList lists b using prefix and delim.
+// If recurse is true, it recurses into directories filling in listResult.Sub.
+func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse bool) ([]listResult, error) {
+	iter, err := b.List(ctx, &blob.ListOptions{
+		Prefix:    prefix,
+		Delimiter: delim,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var retval []listResult
+	for {
+		obj, err := iter.Next(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if obj == nil {
+			break
+		}
+		var sub []listResult
+		if obj.IsDir && recurse {
+			sub, err = doList(ctx, b, obj.Key, delim, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+		retval = append(retval, listResult{
+			Key:   obj.Key,
+			IsDir: obj.IsDir,
+			Sub:   sub,
+		})
+	}
+	return retval, nil
+}
+
+// testListDelimiters tests the functionality of List using Delimiters.
+func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "blob-for-delimiters-"
+	content := []byte("hello")
+
+	// The set of files to use for these tests. The strings in each entry will
+	// be joined using delim, so the result is a directory structure like this
+	// (using / as delimiter):
+	// dir1/a.txt
+	// dir1/b.txt
+	// dir1/subdir/c.txt
+	// dir1/subdir/d.txt
+	// dir2/e.txt
+	// f.txt
+	keys := [][]string{
+		[]string{"dir1", "a.txt"},
+		[]string{"dir1", "b.txt"},
+		[]string{"dir1", "subdir", "c.txt"},
+		[]string{"dir1", "subdir", "d.txt"},
+		[]string{"dir2", "e.txt"},
+		[]string{"f.txt"},
+	}
+
+	// Test with several different delimiters.
+	tests := []struct {
+		name, delim string
+		// Expected result of doList with an empty delimiter.
+		// All keys should be listed at the top level, with no directories.
+		wantFlat []listResult
+		// Expected result of doList with delimiter and recurse = true.
+		// All keys should be listed, with keys in directories in the Sub field
+		// of their directory.
+		want []listResult
+		// expected result of doList with delimiter and recurse = false
+		// after dir2/e.txt is deleted
+		// dir1/ and f.txt should be listed; dir2/ should no longer be present
+		// because there are no keys in it.
+		wantAfterDel []listResult
+	}{
+		{
+			name:  "fwdslash",
+			delim: "/",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "/dir1/a.txt"},
+				listResult{Key: keyPrefix + "/dir1/b.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+				listResult{Key: keyPrefix + "/dir2/e.txt"},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir1/a.txt"},
+						listResult{Key: keyPrefix + "/dir1/b.txt"},
+						listResult{
+							Key:   keyPrefix + "/dir1/subdir/",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+								listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "/dir2/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir2/e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+		},
+		{
+			name:  "backslash",
+			delim: "\\",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+						listResult{
+							Key:   keyPrefix + "\\dir1\\subdir\\",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+		},
+		{
+			name:  "abc",
+			delim: "abc",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "abcdir1abca.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+				listResult{Key: keyPrefix + "abcdir2abce.txt"},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			want: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir1abca.txt"},
+						listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+						listResult{
+							Key:   keyPrefix + "abcdir1abcsubdirabc",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "abcdir2abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir2abce.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
+	init := func(t *testing.T, delim string) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+
+		// See if the blobs are already there.
+		prefix := keyPrefix + delim
+		iter, err := b.List(ctx, &blob.ListOptions{Prefix: prefix})
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := 0
+		for {
+			obj, err := iter.Next(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if obj == nil {
+				break
+			}
+			count++
+		}
+		if count != len(keys) {
+			for _, key := range keys {
+				if err := b.WriteAll(ctx, prefix+strings.Join(key, delim), content, nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			b, done := init(t, tc.delim)
+			defer done()
+
+			// Fetch without using delimiter.
+			got, err := doList(ctx, b, keyPrefix+tc.delim, "", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantFlat); diff != "" {
+				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantFlat, diff)
+			}
+
+			// Fetch using delimiter, recursively.
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.want); diff != "" {
+				t.Errorf("with delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+			}
+
+			// Delete dir2/e.txt and verify that dir2/ is no longer returned.
+			key := strings.Join(append([]string{keyPrefix}, "dir2", "e.txt"), tc.delim)
+			if err := b.Delete(ctx, key); err != nil {
+				t.Fatal(err)
+			}
+			// Attempt to restore dir2/e.txt at the end of the test for the next run.
+			defer func() {
+				_ = b.WriteAll(ctx, key, content, nil)
+			}()
+
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantAfterDel); diff != "" {
+				t.Errorf("after delete, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantAfterDel, diff)
+			}
+		})
+	}
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.

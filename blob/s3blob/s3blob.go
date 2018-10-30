@@ -16,7 +16,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *s3.S3
-// ListObject: s3.Object
+// ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput
@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -180,6 +181,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if opts.Prefix != "" {
 		in.Prefix = aws.String(opts.Prefix)
 	}
+	if opts.Delimiter != "" {
+		in.Delimiter = aws.String(opts.Delimiter)
+	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3.ListObjectsV2Input)
@@ -201,8 +205,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if resp.NextContinuationToken != nil {
 		page.NextPageToken = []byte(*resp.NextContinuationToken)
 	}
-	if len(resp.Contents) > 0 {
-		page.Objects = make([]*driver.ListObject, len(resp.Contents))
+	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
+		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
 			page.Objects[i] = &driver.ListObject{
 				Key:     *obj.Key,
@@ -217,6 +221,26 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					return true
 				},
 			}
+		}
+		for i, prefix := range resp.CommonPrefixes {
+			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
+				Key:   *prefix.Prefix,
+				IsDir: true,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.CommonPrefix)
+					if !ok {
+						return false
+					}
+					*p = *prefix
+					return true
+				},
+			}
+		}
+		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
+			// S3 gives us blobs and "directories" in separate lists; sort them.
+			sort.Slice(page.Objects, func(i, j int) bool {
+				return page.Objects[i].Key < page.Objects[j].Key
+			})
 		}
 	}
 	return &page, nil

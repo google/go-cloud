@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 	"strings"
 	"time"
 
@@ -118,7 +119,10 @@ func (r *reader) As(i interface{}) bool {
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
-	query := &storage.Query{Prefix: opts.Prefix}
+	query := &storage.Query{
+		Prefix:    opts.Prefix,
+		Delimiter: opts.Delimiter,
+	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Query)
@@ -147,20 +151,35 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if len(objects) > 0 {
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
-			page.Objects[i] = &driver.ListObject{
-				Key:     obj.Name,
-				ModTime: obj.Updated,
-				Size:    obj.Size,
-				AsFunc: func(i interface{}) bool {
-					p, ok := i.(*storage.ObjectAttrs)
-					if !ok {
-						return false
-					}
-					*p = *obj
-					return true
-				},
+			asFunc := func(i interface{}) bool {
+				p, ok := i.(*storage.ObjectAttrs)
+				if !ok {
+					return false
+				}
+				*p = *obj
+				return true
+			}
+			if obj.Prefix == "" {
+				// Regular blob.
+				page.Objects[i] = &driver.ListObject{
+					Key:     obj.Name,
+					ModTime: obj.Updated,
+					Size:    obj.Size,
+					AsFunc:  asFunc,
+				}
+			} else {
+				// "Directory".
+				page.Objects[i] = &driver.ListObject{
+					Key:    obj.Prefix,
+					IsDir:  true,
+					AsFunc: asFunc,
+				}
 			}
 		}
+		// GCS always returns "directories" at the end; sort them.
+		sort.Slice(page.Objects, func(i, j int) bool {
+			return page.Objects[i].Key < page.Objects[j].Key
+		})
 	}
 	return &page, nil
 }

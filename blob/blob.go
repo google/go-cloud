@@ -172,11 +172,22 @@ func (w *Writer) open(p []byte) (n int, err error) {
 }
 
 // ListOptions sets options for listing objects.
-// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
 	Prefix string
+	// Delimiter sets the delimiter used to define a hierarchical namespace,
+	// like a filesystem with "directories".
+	//
+	// An empty delimiter means that the bucket is treated as a single flat
+	// namespace.
+	//
+	// A non-empty delimiter means that any result with the delimiter in its key
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for other
+	// ListObject fields. These results represent "directories". Multiple results
+	// in a "directory" are returned as a single result.
+	Delimiter string
 
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
@@ -206,6 +217,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 				Key:     dobj.Key,
 				ModTime: dobj.ModTime,
 				Size:    dobj.Size,
+				IsDir:   dobj.IsDir,
 				asFunc:  dobj.AsFunc,
 			}, nil
 		}
@@ -234,6 +246,11 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
+	// passed as ListOptions.Prefix to list items in the "directory".
+	// Fields other than Key and IsDir will not be set if IsDir is true.
+	IsDir bool
 
 	asFunc func(interface{}) bool
 }
@@ -300,6 +317,7 @@ func (b *Bucket) List(ctx context.Context, opts *ListOptions) (*ListIterator, er
 	}
 	dopts := &driver.ListOptions{
 		Prefix:     opts.Prefix,
+		Delimiter:  opts.Delimiter,
 		BeforeList: opts.BeforeList,
 	}
 	return &ListIterator{b: b, opts: dopts}, nil
