@@ -396,43 +396,48 @@ import (
     "github.com/go-cloud/pubsub/somepubsub"
 )
 
-…
-topic := "user-signup"
-client, err := somepubsub.NewClient(ctx, ...)
-if err != nil { /* handle err */ }
-defer client.Close()
-pub, err := somepubsub.NewPublisher(ctx, client, topic)
-if err != nil { /* handle err */ }
-defer pub.Close()
-
-// Listen to an existing subscription with a known ID, processing messages with
-// a pool of workers.
-subscriptionID := "user-signup-subscription-1"
-sub, err := somepubsub.NewSubscriber(ctx, client, subscriptionID)
-if err != nil { /* handle err */ }
-defer sub.Close()
-
-// Receive and process the messages.
-for {
-    msgs, err := sub.Receive(ctx, 10)
-    // Clean shutdown if sub.Close was called.
-    if err == io.EOF { return }
+func main() {}
+    topic := "user-signup"
+    client, err := somepubsub.NewClient(ctx, ...)
     if err != nil { /* handle err */ }
-    acks := []pubsub.AckID
-    for _, msg := range msgs {
-        // Do something with msg.
-        fmt.Printf("Got message: %q\n", msg.Body)
-        acks = append(acks, msg.AckID)
+    defer client.Close()
+    pub, err := somepubsub.NewPublisher(ctx, client, topic)
+    if err != nil { /* handle err */ }
+    defer pub.Close()
+
+    // Listen to an existing subscription with a known ID, processing messages with
+    // a pool of workers.
+    subscriptionID := "user-signup-subscription-1"
+    sub, err := somepubsub.NewSubscriber(ctx, client, subscriptionID)
+    if err != nil { /* handle err */ }
+    defer sub.Close()
+
+    // Receive and process the messages.
+    go func() {}
+        for {
+            msgs, err := sub.Receive(ctx, 10)
+            // Clean shutdown if sub.Close was called.
+            if err == io.EOF { return }
+            if err != nil { /* handle err */ }
+            acks := []pubsub.AckID
+            for _, msg := range msgs {
+                // Do something with msg.
+                fmt.Printf("Got message: %q\n", msg.Body)
+                acks = append(acks, msg.AckID)
+            }
+            err := sub.SendAcks(ctx, acks)
+            if err != nil { /* handle err */ }
+        }
     }
-    err := sub.SendAcks(ctx, acks)
-    if err != nil { /* handle err */ }
-}
 
-// Publish some messages.
-msgs := []string {"Alice signed up", "Bob signed up"}
-for _, m := range msgs {
-    err = pub.Send(ctx, &pubsub.Message{ Body: []byte(m) })
-    if err != nil { /* handle err */ }
+    // Publish some messages.
+    msgs := []string {"Alice signed up", "Bob signed up"}
+    for _, m := range msgs {
+        err = pub.Send(ctx, &pubsub.Message{ Body: []byte(m) })
+        if err != nil { /* handle err */ }
+    }
+
+
 }
 ```
 
