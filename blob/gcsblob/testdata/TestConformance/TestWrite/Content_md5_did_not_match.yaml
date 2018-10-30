@@ -1,0 +1,81 @@
+---
+version: 1
+interactions:
+- request:
+    body: "--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=f9419848b1eb49dd891f4da6f32b1a93e6023705fbd4662ceb10e2206e4f
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: '{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Provided
+      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".","debugInfo":"com.google.api.server.core.Fault:
+      ImmutableErrorDefinition{base=INVALID_VALUE, category=USER_ERROR, cause=null,
+      debugInfo=null, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=badRequest,
+      internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.INVALID_VALUE,
+      createdByBackend=true, debugMessage=null, errorProtoCode=INVALID_VALUE, errorProtoDomain=gdata.CoreErrorDomain,
+      filteredMessage=null, location=entity.resource.md5_hash_base64, message=Provided
+      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".,
+      unnamedArguments=[XrY7u+Ae7tCTyyK7j1rNww==]}, location=entity.resource.md5_hash_base64,
+      message=Provided MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated
+      MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\"., reason=invalid, rpcCode=400} Provided
+      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".\n\tat
+      com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
+      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
+      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
+      com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
+      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:824)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
+      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:311)\n\tat
+      com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:457)\n\tat
+      com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"}],"code":400,"message":"Provided
+      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\"."}}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Content-Length:
+      - "3515"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 29 Oct 2018 22:42:35 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2Uq3Ne6DiCJycnpp3EvHsDX1gWxOpGIwWp5EZoIz4DAJFz9juVIojG7IXyj0CpQnrEgDhAFkLVyhypQR2T-nomgE72UOtQ
+    status: 400 Bad Request
+    code: 400
+    duration: ""
