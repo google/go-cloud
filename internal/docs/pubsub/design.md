@@ -294,7 +294,7 @@ type Subscriber interface {
 ## Detailed design
 The developer experience of using Go Cloud pubsub involves sending, receiving and acknowledging one message at a time, all in terms of synchronous calls. Behind the scenes, the driver implementations deal with batches of messages and acks. The concrete API, to be written by the Go Cloud team, takes care of creating the batches in the case of Send or Ack, and dealing out messages one at a time in the case of Receive.
 
-The concrete API will be located at github.com/google/go-cloud/pubsub and will probably look like this:
+The concrete API will be located at `github.com/google/go-cloud/pubsub` and will look something like this:
 ```go
 package pubsub
 
