@@ -527,7 +527,9 @@ Con:
 * Acked messages don't get received again after waiting twice the ack deadline.
 
 ## Benchmarks
-Compare messages per second for one publisher and different numbers of subscribers on raw API versus Go Cloud for the first implementations.
+What is the throughput and latency of Go Cloud's `pubsub` package, relative to directly using the APIs for various providers?
+* send, for 1, 10, 100 topics, and for 1, 10, 100 goroutines
+* receive, for 1, 10, 100 subscribers, and for 1, 10, 100 goroutines pulling from each subscriber
 
 ## References
 * Github issue: https://github.com/google/go-cloud/issues/312
