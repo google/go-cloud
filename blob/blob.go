@@ -111,7 +111,7 @@ type Writer struct {
 	ctx    context.Context
 	bucket driver.Bucket
 	key    string
-	opt    *driver.WriterOptions
+	opts   *driver.WriterOptions
 	buf    *bytes.Buffer
 }
 
@@ -161,13 +161,13 @@ func (w *Writer) Close() error {
 // open tries to detect the MIME type of p and write it to the blob.
 func (w *Writer) open(p []byte) (n int, err error) {
 	ct := http.DetectContentType(p)
-	if w.w, err = w.bucket.NewTypedWriter(w.ctx, w.key, ct, w.opt); err != nil {
+	if w.w, err = w.bucket.NewTypedWriter(w.ctx, w.key, ct, w.opts); err != nil {
 		return 0, err
 	}
 	w.buf = nil
 	w.ctx = nil
 	w.key = ""
-	w.opt = nil
+	w.opts = nil
 	return w.w.Write(p)
 }
 
@@ -188,7 +188,7 @@ type ListOptions struct {
 // ListIterator is used to iterate over List results.
 type ListIterator struct {
 	b       *Bucket
-	opt     *driver.ListOptions
+	opts    *driver.ListOptions
 	page    *driver.ListPage
 	nextIdx int
 }
@@ -214,10 +214,10 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 			return nil, nil
 		}
 		// We need to load the next page.
-		i.opt.PageToken = i.page.NextPageToken
+		i.opts.PageToken = i.page.NextPageToken
 	}
 	// Loading a new page.
-	p, err := i.b.b.ListPaged(ctx, i.opt)
+	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
 		return nil, err
 	}
@@ -294,15 +294,15 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 //
 // List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
-func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, error) {
-	if opt == nil {
-		opt = &ListOptions{}
+func (b *Bucket) List(ctx context.Context, opts *ListOptions) (*ListIterator, error) {
+	if opts == nil {
+		opts = &ListOptions{}
 	}
-	dopt := &driver.ListOptions{
-		Prefix:     opt.Prefix,
-		BeforeList: opt.BeforeList,
+	dopts := &driver.ListOptions{
+		Prefix:     opts.Prefix,
+		BeforeList: opts.BeforeList,
 	}
-	return &ListIterator{b: b, opt: dopt}, nil
+	return &ListIterator{b: b, opts: dopts}, nil
 }
 
 // Attributes reads attributes for the given key.
@@ -360,8 +360,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
-func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *WriterOptions) error {
-	w, err := b.NewWriter(ctx, key, opt)
+func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) error {
+	w, err := b.NewWriter(ctx, key, opts)
 	if err != nil {
 		return err
 	}
@@ -384,46 +384,47 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *Writer
 //
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
-func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
-	var dopt *driver.WriterOptions
+func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (*Writer, error) {
+	var dopts *driver.WriterOptions
 	var w driver.Writer
-	if opt != nil {
-		dopt = &driver.WriterOptions{
-			BufferSize:  opt.BufferSize,
-			BeforeWrite: opt.BeforeWrite,
-		}
-		if len(opt.Metadata) > 0 {
-			// Providers are inconsistent, but at least some treat keys
-			// as case-insensitive. To make the behavior consistent, we
-			// force-lowercase them when writing and reading.
-			md := make(map[string]string, len(opt.Metadata))
-			for k, v := range opt.Metadata {
-				if k == "" {
-					return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
-				}
-				lowerK := strings.ToLower(k)
-				if _, found := md[lowerK]; found {
-					return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
-				}
-				md[lowerK] = v
+	if opts == nil {
+		opts = &WriterOptions{}
+	}
+	dopts = &driver.WriterOptions{
+		BufferSize:  opts.BufferSize,
+		BeforeWrite: opts.BeforeWrite,
+	}
+	if len(opts.Metadata) > 0 {
+		// Providers are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md := make(map[string]string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			if k == "" {
+				return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
 			}
-			dopt.Metadata = md
-		}
-		if opt.ContentType != "" {
-			t, p, err := mime.ParseMediaType(opt.ContentType)
-			if err != nil {
-				return nil, err
+			lowerK := strings.ToLower(k)
+			if _, found := md[lowerK]; found {
+				return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
 			}
-			ct := mime.FormatMediaType(t, p)
-			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
-			return &Writer{w: w}, err
+			md[lowerK] = v
 		}
+		dopts.Metadata = md
+	}
+	if opts.ContentType != "" {
+		t, p, err := mime.ParseMediaType(opts.ContentType)
+		if err != nil {
+			return nil, err
+		}
+		ct := mime.FormatMediaType(t, p)
+		w, err = b.b.NewTypedWriter(ctx, key, ct, dopts)
+		return &Writer{w: w}, err
 	}
 	return &Writer{
 		ctx:    ctx,
 		bucket: b.b,
 		key:    key,
-		opt:    dopt,
+		opts:   dopts,
 		buf:    bytes.NewBuffer([]byte{}),
 	}, nil
 }
