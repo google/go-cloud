@@ -279,7 +279,7 @@ type writer struct {
 func (w writer) Write(p []byte) (n int, err error) {
 	if w.md5hash != nil {
 		if _, err := w.md5hash.Write(p); err != nil {
-			return 0, err
+			return 0, fmt.Errorf("updating md5 hash: %v", err)
 		}
 	}
 	return w.w.Write(p)
