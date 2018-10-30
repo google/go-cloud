@@ -470,13 +470,12 @@ Con:
 * Apps needing to send more than a few thousand messages per second (see benchmark below) need their own logic for creating batches with size greater than 1.
 
 ### go-micro
-Here is an example of what application code could look like for a pubsub API based on [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
+Here is an example of what application code could look like for a pubsub API inspired by [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
 ```go
 b := somepubsub.NewBroker(...)
 err := b.Connect()
 if err != nil { /* handle err */ }
 topic := "user-signups"
-// Listen to an existing subscription
 subID := "user-signups-subscription-1"
 sub, err := b.Subscription(ctx, topic, subID, func(pub broker.Publication) error {
     fmt.Printf("%s\n", pub.Message.Body)
@@ -490,10 +489,10 @@ if err != nil { /* handle err */ }
 ```
 
 Pro:
-* The callback to the subscription returning an error to decide about ack/nack is concise, and might allow unportable message IDs to be hidden entirely in the driver.
+* The callback to the subscription returning an error to decide whether to acknowledge the message means the developer cannot forget to ack.
 
 Con:
-* Go micro has code to auto-create topics and subscriptions as needed, but this is not consistent with Go Cloud’s design principle to not get involved in operations.
+* Go micro has code to auto-create [topics](https://github.com/micro/go-plugins/blob/f3fcfcdf77392b4e053c8d5b361abfabc0c623d3/broker/googlepubsub/googlepubsub.go#L152) and [subscriptions](https://github.com/micro/go-plugins/blob/f3fcfcdf77392b4e053c8d5b361abfabc0c623d3/broker/googlepubsub/googlepubsub.go#L185) as needed, but this is not consistent with Go Cloud’s design principle to not get involved in operations.
 
 ## Acknowledgements
 In pubsub systems with acknowledgement, messages are kept in a queue associated with the subscription on the server. When a client receives one of these messages, its counterpart on the server is marked as being processed. Once the client finishes processing the message, it sends an acknowledgement (or "ack") to the server and the server removes the message from the subscription queue. There may be a deadline for the acknowledgement, past which the server unmarks the message so that it can be received again for another try at processing.
