@@ -52,27 +52,23 @@ package main
 import (
     "context"
     "log"
+    "net/http"
 
     "github.com/google/go-cloud/pubsub" 
     "github.com/google/go-cloud/pubsub/acme/publisher" 
 )
 
 func main() {
-    if err := send(); err != nil {
-        log.Fatal(err)
-    }
-}
-
-func send() error {
     ctx := context.Background()
     topic := "projects/unicornvideohub/topics/user-signup"
     pub, err := publisher.New(ctx, topic)
-    if err != nil { return err }
+    if err != nil { log.Fatal(err) }
     defer pub.Close()
-    err := pub.Send(ctx, pubsub.Message{ Body: []byte("Alice signed up") })
-    if err != nil { return err }
-    err := pub.Send(ctx, pubsub.Message{ Body: []byte("Bob signed up") })
-    if err != nil { return err }
+    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+        err := pub.Send(ctx, pubsub.Message{ Body: []byte("Someone signed up") })
+        if err != nil { log.Println(err) }
+    })
+    log.Fatal(http.ListenAndServer(":8080", nil))
 }
 ```
 
