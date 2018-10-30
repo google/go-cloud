@@ -208,8 +208,8 @@ type Bucket interface {
 	// to recently written or deleted objects. That is to say, there is no
 	// guarantee that an object that's been written will immediately be returned
 	// from ListPaged.
-	// opt is guaranteed to be non-nil.
-	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
+	// opts is guaranteed to be non-nil.
+	ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
@@ -226,13 +226,13 @@ type Bucket interface {
 	// until Close has been called.
 	//
 	// contentType sets the MIME type of the object to be written. It must not be
-	// empty.
+	// empty. opts is guaranteed to be non-nil.
 	//
 	// The caller must call Close on the returned Writer when done writing.
 	//
 	// Implementations should abort an ongoing write if ctx is later canceled,
 	// and do any necessary cleanup in Close. Close should then return ctx.Err().
-	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
+	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, NewRangeReader must return an error whose Kind method

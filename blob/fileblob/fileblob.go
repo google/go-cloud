@@ -90,9 +90,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
-
-	// First, do a full recursive scan of the root directory.
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	var result driver.ListPage
 	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -114,7 +112,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		if err != nil {
 			return nil
 		}
-		// Skip all directories. If opt.Delimiter is set, we'll create
+		// Skip all directories. If opts.Delimiter is set, we'll create
 		// pseudo-directories later.
 		// Note that returning nil means that we'll still recurse into it;
 		// we're just not adding a result for the directory itself.
@@ -123,13 +121,13 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		// to match.
 		if info.IsDir() {
 			key += "/"
-			if len(key) > len(opt.Prefix) && !strings.HasPrefix(key, opt.Prefix) {
+			if len(key) > len(opts.Prefix) && !strings.HasPrefix(key, opts.Prefix) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		// Skip files/directories that don't match the Prefix.
-		if !strings.HasPrefix(key, opt.Prefix) {
+		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
 		// Add a ListObject for this file.
@@ -149,20 +147,20 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	// post-processing.
 
 	// If using Delimiter, collapse "directories".
-	if len(result.Objects) > 0 && opt.Delimiter != "" {
+	if len(result.Objects) > 0 && opts.Delimiter != "" {
 		var collapsedObjects []*driver.ListObject
 		var lastPrefix string
 		for _, obj := range result.Objects {
 			// Strip the prefix, which may contain Delimiter.
-			keyWithoutPrefix := obj.Key[len(opt.Prefix):]
+			keyWithoutPrefix := obj.Key[len(opts.Prefix):]
 			// See if the key still contains Delimiter.
 			// If no, it's a file and we just include it.
 			// If yes, it's a file in a "sub-directory" and we want to collapse
 			// all files in that "sub-directory" into a single "directory" result.
-			if idx := strings.Index(keyWithoutPrefix, opt.Delimiter); idx == -1 {
+			if idx := strings.Index(keyWithoutPrefix, opts.Delimiter); idx == -1 {
 				collapsedObjects = append(collapsedObjects, obj)
 			} else {
-				prefix := opt.Prefix + keyWithoutPrefix[0:idx+len(opt.Delimiter)]
+				prefix := opts.Prefix + keyWithoutPrefix[0:idx+len(opts.Delimiter)]
 				if prefix != lastPrefix {
 					// First time seeing this "subdirectory"; add it.
 					collapsedObjects = append(collapsedObjects, &driver.ListObject{
@@ -177,8 +175,8 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	}
 
 	// If there's a pageToken, skip ahead.
-	if len(opt.PageToken) > 0 {
-		pageToken := string(opt.PageToken)
+	if len(opts.PageToken) > 0 {
+		pageToken := string(opts.PageToken)
 		for len(result.Objects) > 0 && result.Objects[0].Key < pageToken {
 			result.Objects = result.Objects[1:]
 		}
@@ -186,7 +184,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 
 	// If we've got more than a full page of results, truncate and set
 	// NextPageToken.
-	pageSize := opt.PageSize
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
@@ -271,7 +269,7 @@ func (r reader) Attributes() driver.ReaderAttributes {
 func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
-func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opt *driver.WriterOptions) (driver.Writer, error) {
+func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
@@ -283,14 +281,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	if opt != nil && opt.BeforeWrite != nil {
-		if err := opt.BeforeWrite(func(interface{}) bool { return false }); err != nil {
+	if opts.BeforeWrite != nil {
+		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
 			return nil, err
 		}
 	}
 	var metadata map[string]string
-	if opt != nil && len(opt.Metadata) > 0 {
-		metadata = opt.Metadata
+	if len(opts.Metadata) > 0 {
+		metadata = opts.Metadata
 	}
 	attrs := xattrs{
 		ContentType: contentType,
