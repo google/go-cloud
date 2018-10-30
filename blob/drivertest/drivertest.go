@@ -19,6 +19,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -539,12 +540,15 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 	smallText := loadTestData(t, "test-small.txt")
 	mediumHTML := loadTestData(t, "test-medium.html")
 	largeJpg := loadTestData(t, "test-large.jpg")
+	helloWorld := []byte("hello world")
+	helloWorldMD5 := md5.Sum(helloWorld)
 
 	tests := []struct {
 		name            string
 		key             string
 		content         []byte
 		contentType     string
+		contentMD5      []byte
 		firstChunk      int
 		wantContentType string
 		wantErr         bool
@@ -575,6 +579,19 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			content:         mediumHTML,
 			contentType:     "application/json",
 			wantContentType: "application/json",
+		},
+		{
+			name:       "Content md5 match",
+			key:        key,
+			content:    helloWorld,
+			contentMD5: helloWorldMD5[:],
+		},
+		{
+			name:       "Content md5 did not match",
+			key:        key,
+			content:    []byte("not hello world"),
+			contentMD5: helloWorldMD5[:],
+			wantErr:    true,
 		},
 		{
 			name:            "a small text file",
@@ -624,6 +641,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			// Write the content.
 			opts := &blob.WriterOptions{
 				ContentType: tc.contentType,
+				ContentMD5:  tc.contentMD5[:],
 			}
 			w, err := b.NewWriter(ctx, tc.key, opts)
 			if err == nil {

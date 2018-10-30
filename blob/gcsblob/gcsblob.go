@@ -233,6 +233,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	w.ContentType = contentType
 	w.ChunkSize = bufferSize(opts.BufferSize)
 	w.Metadata = opts.Metadata
+	w.MD5 = opts.ContentMD5
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Writer)
