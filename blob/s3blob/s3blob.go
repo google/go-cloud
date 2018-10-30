@@ -25,6 +25,7 @@ package s3blob
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -334,6 +335,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    metadata,
+	}
+	if len(opts.ContentMD5) > 0 {
+		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
 	}
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
