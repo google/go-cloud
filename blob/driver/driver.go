@@ -153,7 +153,7 @@ type ListObject struct {
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
-	// Fields other than Key and IsDir will not be set.
+	// Fields other than Key and IsDir will not be set if IsDir is true.
 	IsDir bool
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.

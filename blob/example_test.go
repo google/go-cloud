@@ -212,7 +212,7 @@ func ExampleBucket_List() {
 	// foo4.txt
 }
 
-func ExampleBucket_List_with_delimiter() {
+func ExampleBucket_List_withDelimiter() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -241,7 +241,7 @@ func ExampleBucket_List_with_delimiter() {
 	// and recurses into "directories", adding 2 spaces to indent each time.
 	// It will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	list := func(context.Context, *blob.Bucket, string, string) {}
+	var list func(context.Context, *blob.Bucket, string, string)
 	list = func(ctx context.Context, b *blob.Bucket, prefix, indent string) {
 		iter, err := b.List(ctx, &blob.ListOptions{
 			Delimiter: "/",
