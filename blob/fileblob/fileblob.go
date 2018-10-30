@@ -91,6 +91,8 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+
+	// First, do a full recursive scan of the root directory.
 	var result driver.ListPage
 	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
