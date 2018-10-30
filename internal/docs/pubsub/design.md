@@ -41,8 +41,6 @@ architectures](https://en.wikipedia.org/wiki/Event-driven_architecture).
 
 There are several pubsub systems available that could be made to work with Go Cloud by writing drivers for them. Here is a [table](https://docs.google.com/a/google.com/spreadsheets/d/e/2PACX-1vQ2CML8muCrqhinxOeKTcWtwAeGk-RFFFMjB3O2u5DbbBt9R3YnUQcgRjRp6TySXe1CzSOtPVCsKACY/pubhtml) comparing some of them.
 
-The go-micro project already provides a portability layer (called broker) for several Go pubsub clients. The API is here and the implementations for various pubsub systems are here. The go-micro broker could be used as a reference for designing the Go Cloud pubsub API, bearing in mind that it isn’t structured according to the concrete type + driver paradigm used by Go Cloud.
-
 ## Design overview
 ### Developer’s perspective
 Given a topic that has already been created on the pubsub server, messages can be sent to that topic by creating a new `pubsub.Publisher` and calling its `Send` method, like this (assuming a fictional pubsub provider called "acme"):
