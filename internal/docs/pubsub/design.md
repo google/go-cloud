@@ -470,8 +470,7 @@ Con:
 * Apps needing to send more than a few thousand messages per second (see benchmark below) need their own logic for creating batches with size greater than 1.
 
 ### go-micro
-Here is a sketch of what Go Cloud pubsub could look like from a developer's perspective, inspired by `go-micro`'s `broker` package:
-
+Here is an example of what application code could look like for a pubsub API based on [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
 ```go
 b := somepubsub.NewBroker(...)
 err := b.Connect()
@@ -494,7 +493,7 @@ Pro:
 * The callback to the subscription returning an error to decide about ack/nack is concise, and might allow unportable message IDs to be hidden entirely in the driver.
 
 Con:
-* Go micro has code to auto-create topics and subscriptions as needed, but this is not consistent with Go Cloud’s design principle to not get involved in ops.
+* Go micro has code to auto-create topics and subscriptions as needed, but this is not consistent with Go Cloud’s design principle to not get involved in operations.
 
 ## Acknowledgements
 In pubsub systems with acknowledgement, messages are kept in a queue associated with the subscription on the server. When a client receives one of these messages, its counterpart on the server is marked as being processed. Once the client finishes processing the message, it sends an acknowledgement (or "ack") to the server and the server removes the message from the subscription queue. There may be a deadline for the acknowledgement, past which the server unmarks the message so that it can be received again for another try at processing.
