@@ -919,6 +919,10 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			key:         "foo\"bar\"baz",
 		},
 		{
+			description: "punctuation",
+			key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",./<>?",
+		},
+		{
 			description: "unicode",
 			key:         strings.Repeat("☺", 10),
 		},
