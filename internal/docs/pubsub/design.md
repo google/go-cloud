@@ -387,8 +387,88 @@ func (s *Subscriber) Close() error { … }
 ## Alternative designs considered
 
 ### Batch oriented concrete API
-In this design, the application code sends, receives and acknowledges messages in batches.
-Here is an example of how it would look from the developer's perspective:
+In this alternative, the application code sends, receives and acknowledges messages in batches.
+Here is an example of how it would look from the developer's perspective, in a situation where
+not more than about a thousand users are signing up per second:
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acme/publisher"
+)
+
+func main() {
+	ctx := context.Background()
+	topic := "projects/unicornvideohub/topics/user-signup"
+	pub, err := publisher.New(ctx, topic)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pub.Close()
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+		if err != nil {
+			log.Println(err)
+		}
+	})
+	log.Fatal(http.ListenAndServer(":8080", nil))
+}
+```
+For a company experiencing explosive growth or enthusiastic spammers creating
+many thousands of signups per second, the app would have to be adapted to
+create non-singleton batches, like this:
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acme/publisher"
+)
+
+const batchSize = 1000
+
+func main() {
+	ctx := context.Background()
+	topic := "projects/unicornvideohub/topics/user-signup"
+	pub, err := publisher.New(ctx, topic)
+	if err != nil {
+		log.Fatal(err)
+	}
+    defer pub.Close()
+    c := make(chan *pubsub.Message)
+    go sendBatches(ctx, pub, c)
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		err := pub.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
+		if err != nil {
+			log.Println(err)
+		}
+	})
+	log.Fatal(http.ListenAndServer(":8080", nil))
+}
+
+func sendBatches(ctx context.Context, pub *pubsub.Publisher, c chan *pubsub.Message) {
+    batch := make([]*pubsub.Message, batchSize)
+    for {
+        for i := 0; i < batchSize; i++ {
+            batch[i] = <-c
+        }
+        if err := pub.Send(ctx, batch); err != nil {
+            log.Println(err)
+        }
+    }
+}
+```
+This shows how the complexity of batching has been pushed onto the application code.
+
 ```go
 import (
     "github.com/go-cloud/pubsub"
@@ -429,15 +509,6 @@ func main() {}
             if err != nil { /* handle err */ }
         }
     }
-
-    // Publish some messages.
-    msgs := []string {"Alice signed up", "Bob signed up"}
-    for _, m := range msgs {
-        err = pub.Send(ctx, &pubsub.Message{ Body: []byte(m) })
-        if err != nil { /* handle err */ }
-    }
-
-
 }
 ```
 
@@ -529,18 +600,16 @@ In pubsub systems with acknowledgement, messages are kept in a queue associated 
 Redis and ZeroMQ don’t support Ack, but many others do including GCP PubSub, Azure Service Bus, and RabbitMQ. Given the wide support and usefulness, it makes sense to support this in Go Cloud. For systems that don't have acknowledgement, such as Redis, it is probably best for the associated Go Cloud driver to simulate it so that users of Go Cloud pubsub never have to worry about whether acknowledgement is supported.
 
 ### Rejected alternative: `Receive` method returns an `ack` func
-Usage would look like this:
+In this alternative, the application code would look something like this:
 ```go
-for {
-        msg, ack, err := sub.Receive(ctx)
-        // Do something with msg...
-        if /* something went wrong */ {
-                // Don't acknowledge the message. Let it time out and be
-                // redelivered.
-                continue
-        }
-        ack(msg)
+msg, ack, err := sub.Receive(ctx)
+// Do something with msg...
+if /* something went wrong */ {
+        // Don't acknowledge the message. Let it time out and be
+        // redelivered.
+        continue
 }
+ack(msg)
 ```
 Pro:
 * The compiler will complain if the returned `ack` function is not used.
