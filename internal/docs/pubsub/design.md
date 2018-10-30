@@ -528,8 +528,8 @@ Con:
 
 ## Benchmarks
 What is the throughput and latency of Go Cloud's `pubsub` package, relative to directly using the APIs for various providers?
-* send, for 1, 10, 100 topics, and for 1, 10, 100 goroutines
-* receive, for 1, 10, 100 subscribers, and for 1, 10, 100 goroutines pulling from each subscriber
+* send, for 1, 10, 100 publishers, and for 1, 10, 100 goroutines sending messages via those publishers
+* receive, for 1, 10, 100 subscribers, and for 1, 10, 100 goroutines receiving from each subscriber
 
 ## References
 * https://github.com/google/go-cloud/issues/312
