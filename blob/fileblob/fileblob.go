@@ -16,12 +16,22 @@
 // filesystem. This should not be used for production: it is intended for local
 // development.
 //
-// Blob names must only contain alphanumeric characters, slashes, periods,
-// spaces, underscores, and dashes. Repeated slashes, a leading "./" or "../",
-// or the sequence "/./" is not permitted. This is to ensure that blob names map
-// cleanly onto files underneath a directory.
+// Blob keys are escaped before being used as filenames, and filenames are
+// unescaped when they are passed back as blob keys during List. The escape
+// algorithm is:
+// -- Alphanumeric characters (A-Z a-z 0-9) are not escaped.
+// -- Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
+// -- Slash ('/') is always escaped to the OS-specific path separator character
+//    (os.PathSeparator).
+// -- All other characters are escaped similar to url.PathEscape:
+//    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
 //
-// It does not support any types for As.
+// Filenames that can't be unescaped due to invalid escape sequences
+// (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
+// (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
+// aren't visible using fileblob.
+//
+// fileblob does not support any types for As.
 package fileblob
 
 import (
@@ -32,9 +42,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
-	slashpath "path"
 	"path/filepath"
 	"strings"
 
@@ -51,6 +59,7 @@ type bucket struct {
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
 // dir must exist.
 func OpenBucket(dir string) (*blob.Bucket, error) {
+	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
 		return nil, fmt.Errorf("open file bucket: %v", err)
@@ -61,35 +70,145 @@ func OpenBucket(dir string) (*blob.Bucket, error) {
 	return blob.NewBucket(&bucket{dir}), nil
 }
 
-// resolvePath converts a key into a relative filesystem path. It guarantees
-// that there will only be one valid key for a given path and that the resulting
-// path will not reach outside the directory.
-func resolvePath(key string) (string, error) {
-	for _, c := range key {
-		if !('A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || c == '/' || c == '.' || c == ' ' || c == '_' || c == '-') {
-			return "", fmt.Errorf("contains invalid character %q", c)
-		}
+// shouldEscape returns true if c should be escaped.
+func shouldEscape(c byte) bool {
+	switch {
+	case 'A' <= c && c <= 'Z':
+		return false
+	case 'a' <= c && c <= 'z':
+		return false
+	case '0' <= c && c <= '9':
+		return false
+	case c == ' ' || c == '-' || c == '_' || c == '.':
+		return false
+	case c == '/':
+		return false
 	}
-	if cleaned := slashpath.Clean(key); key != cleaned {
-		return "", fmt.Errorf("not a clean slash-separated path")
-	}
-	if slashpath.IsAbs(key) {
-		return "", fmt.Errorf("starts with a slash")
-	}
-	if key == "." {
-		return "", fmt.Errorf("invalid path \".\"")
-	}
-	if strings.HasPrefix(key, "../") {
-		return "", fmt.Errorf("starts with \"../\"")
-	}
-	return filepath.FromSlash(key), nil
+	return true
 }
 
-func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
+// escape returns s escaped per the rules described in the package docstring.
+// The code is modified from https://golang.org/src/net/url/url.go.
+func escape(s string) string {
+	hexCount := 0
+	replaceSlash := false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if shouldEscape(c) {
+			hexCount++
+		} else if c == '/' && os.PathSeparator != '/' {
+			replaceSlash = true
+		}
 	}
+	if hexCount == 0 && !replaceSlash {
+		return s
+	}
+	t := make([]byte, len(s)+2*hexCount)
+	j := 0
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case c == '/':
+			t[j] = os.PathSeparator
+			j++
+		case shouldEscape(c):
+			t[j] = '%'
+			t[j+1] = "0123456789ABCDEF"[c>>4]
+			t[j+2] = "0123456789ABCDEF"[c&15]
+			j += 3
+		default:
+			t[j] = s[i]
+			j++
+		}
+	}
+	return string(t)
+}
+
+// ishex returns true if c is a valid part of a hexadecimal number.
+func ishex(c byte) bool {
+	switch {
+	case '0' <= c && c <= '9':
+		return true
+	case 'a' <= c && c <= 'f':
+		return true
+	case 'A' <= c && c <= 'F':
+		return true
+	}
+	return false
+}
+
+// unhex returns the hexadecimal value of the hexadecimal character c.
+// For example, unhex('A') returns 10.
+func unhex(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	return 0
+}
+
+// unescape unescapes s per the rules described in the package docstring.
+// It returns an error if s has invalid escape sequences, or if
+// escape(unescape(s)) != s.
+// The code is modified from https://golang.org/src/net/url/url.go.
+func unescape(s string) (string, error) {
+	// Count %, check that they're well-formed.
+	n := 0
+	replacePathSeparator := false
+	for i := 0; i < len(s); {
+		switch s[i] {
+		case '%':
+			n++
+			if i+2 >= len(s) || !ishex(s[i+1]) || !ishex(s[i+2]) {
+				bad := s[i:]
+				if len(bad) > 3 {
+					bad = bad[:3]
+				}
+				return "", fmt.Errorf("couldn't unescape %q near %q", s, bad)
+			}
+			i += 3
+		case os.PathSeparator:
+			replacePathSeparator = os.PathSeparator != '/'
+			i++
+		default:
+			i++
+		}
+	}
+	unescaped := s
+	if n > 0 || replacePathSeparator {
+		t := make([]byte, len(s)-2*n)
+		j := 0
+		for i := 0; i < len(s); {
+			switch s[i] {
+			case '%':
+				t[j] = unhex(s[i+1])<<4 | unhex(s[i+2])
+				j++
+				i += 3
+			case os.PathSeparator:
+				t[j] = '/'
+				j++
+				i++
+			default:
+				t[j] = s[i]
+				j++
+				i++
+			}
+		}
+		unescaped = string(t)
+	}
+	escaped := escape(unescaped)
+	if escaped != s {
+		return "", fmt.Errorf("%q unescaped to %q but escaped back to %q instead of itself", s, unescaped, escaped)
+	}
+	return unescaped, nil
+}
+
+// forKey returns the full path, os.FileInfo, and attributes for key.
+func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
+	relpath := escape(key)
 	path := filepath.Join(b.dir, relpath)
 	if strings.HasSuffix(path, attrsExt) {
 		return "", nil, nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
@@ -110,43 +229,79 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
-	// List everything in the directory, sorted by name.
-	// TODO(Issue #541): This should be doing a recursive walk of the directory
-	// as well as translating into the abstract namespace that we've created.
-	fileinfos, err := ioutil.ReadDir(b.dir)
+
+	// First, do a full recursive scan of the root directory.
+	var result driver.ListPage
+	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			// Couldn't read this file/directory for some reason; just skip it.
+			return nil
+		}
+		// Skip the self-generated attribute files.
+		if strings.HasSuffix(path, attrsExt) {
+			return nil
+		}
+		// os.Walk returns the root directory; skip it.
+		if path == b.dir {
+			return nil
+		}
+		// Strip the <b.dir> prefix from path; +1 is to include the separator.
+		path = path[len(b.dir)+1:]
+		// Unescape the path to get the key; if this fails, skip.
+		key, err := unescape(path)
+		if err != nil {
+			return nil
+		}
+		// Skip all directories.
+		// Note that returning nil means that we'll still recurse into it;
+		// we're just not adding a result for the directory itself.
+		// We can avoid recursing into subdirectories if the directory name
+		// already doesn't match the prefix; any files in it are guaranteed not
+		// to match.
+		if info.IsDir() {
+			key += "/"
+			if len(key) > len(opts.Prefix) && !strings.HasPrefix(key, opts.Prefix) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		// Skip files/directories that don't match the Prefix.
+		if !strings.HasPrefix(key, opts.Prefix) {
+			return nil
+		}
+		// Add a ListObject for this file.
+		result.Objects = append(result.Objects, &driver.ListObject{
+			Key:     key,
+			ModTime: info.ModTime(),
+			Size:    info.Size(),
+		})
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO(rvangent): It is likely possible (but not trivial) to optimize by
+	// doing the collapsing and pagination inline to os.Walk, instead of as
+	// post-processing.
+
+	// If there's a pageToken, skip ahead.
+	if len(opts.PageToken) > 0 {
+		pageToken := string(opts.PageToken)
+		for len(result.Objects) > 0 && result.Objects[0].Key < pageToken {
+			result.Objects = result.Objects[1:]
+		}
+	}
+
+	// If we've got more than a full page of results, truncate and set
+	// NextPageToken.
 	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
-	var result driver.ListPage
-	for _, info := range fileinfos {
-		// Skip the self-generated attribute files.
-		if strings.HasSuffix(info.Name(), attrsExt) {
-			continue
-		}
-		// Skip files that don't match the Prefix.
-		if opts.Prefix != "" && !strings.HasPrefix(info.Name(), opts.Prefix) {
-			continue
-		}
-		// If a PageToken was provided, skip to it.
-		if len(opts.PageToken) > 0 && info.Name() < string(opts.PageToken) {
-			continue
-		}
-		// If we've got a full page of results, and there are more
-		// to come, set NextPageToken and stop here.
-		if len(result.Objects) == pageSize {
-			result.NextPageToken = []byte(info.Name())
-			break
-		}
-		// Add this object.
-		result.Objects = append(result.Objects, &driver.ListObject{
-			Key:     info.Name(),
-			ModTime: info.ModTime(),
-			Size:    info.Size(),
-		})
+	if len(result.Objects) > pageSize {
+		result.NextPageToken = []byte(result.Objects[pageSize].Key)
+		result.Objects = result.Objects[:pageSize]
 	}
 	return &result, nil
 }
@@ -226,11 +381,7 @@ func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
-	}
-	path := filepath.Join(b.dir, relpath)
+	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
 	}
@@ -313,18 +464,14 @@ func (w writer) Close() error {
 
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	relpath, err := resolvePath(key)
-	if err != nil {
-		return fmt.Errorf("delete file blob %s: %v", key, err)
-	}
-	path := filepath.Join(b.dir, relpath)
+	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return fmt.Errorf("delete file blob %s: extension %q cannot be directly deleted", key, attrsExt)
 	}
-	err = os.Remove(path)
+	err := os.Remove(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
+			return fileError{relpath: key, msg: err.Error(), kind: driver.NotFound}
 		}
 		return fmt.Errorf("delete file blob %s: %v", key, err)
 	}
