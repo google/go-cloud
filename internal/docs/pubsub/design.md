@@ -497,9 +497,7 @@ In pubsub systems with acknowledgement, messages are kept in a queue associated 
 
 Redis and ZeroMQ don’t support Ack, but many others do including GCP PubSub, Azure Service Bus, and RabbitMQ. Given the wide support and usefulness, it makes sense to support this in Go Cloud. For systems that don't have acknowledgement, such as Redis, it is probably best for the associated Go Cloud driver to simulate it so that users of Go Cloud pubsub never have to worry about whether acknowledgement is supported.
 
-Let’s look at some possibilities for how message acknowledgement could look from a developer's perspective.
-
-### Option 1: `Receive` method returns an `ack` func
+### Rejected alternative: `Receive` method returns an `ack` func
 Usage would look like this:
 ```go
 for {
