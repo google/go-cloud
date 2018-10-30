@@ -116,10 +116,10 @@ func (r *reader) As(i interface{}) bool {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
-	query := &storage.Query{Prefix: opt.Prefix}
-	if opt.BeforeList != nil {
+	query := &storage.Query{Prefix: opts.Prefix}
+	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Query)
 			if !ok {
@@ -128,16 +128,16 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			*p = query
 			return true
 		}
-		if err := opt.BeforeList(asFunc); err != nil {
+		if err := opts.BeforeList(asFunc); err != nil {
 			return nil, err
 		}
 	}
-	pageSize := opt.PageSize
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
 	iter := bkt.Objects(ctx, query)
-	pager := iterator.NewPager(iter, pageSize, string(opt.PageToken))
+	pager := iterator.NewPager(iter, pageSize, string(opts.PageToken))
 	var objects []*storage.ObjectAttrs
 	nextPageToken, err := pager.NextPage(&objects)
 	if err != nil {
@@ -231,11 +231,9 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
 	w.ContentType = contentType
-	if opts != nil {
 		w.ChunkSize = bufferSize(opts.BufferSize)
 		w.Metadata = opts.Metadata
-	}
-	if opts != nil && opts.BeforeWrite != nil {
+	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Writer)
 			if !ok {
