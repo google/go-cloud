@@ -50,25 +50,29 @@ Given a topic that has already been created on the pubsub server, messages can b
 package main
 
 import (
-    "context"
-    "log"
-    "net/http"
+	"context"
+	"log"
+	"net/http"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/publisher" 
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acme/publisher"
 )
 
 func main() {
-    ctx := context.Background()
-    topic := "projects/unicornvideohub/topics/user-signup"
-    pub, err := publisher.New(ctx, topic)
-    if err != nil { log.Fatal(err) }
-    defer pub.Close()
-    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := pub.Send(ctx, pubsub.Message{ Body: []byte("Someone signed up") })
-        if err != nil { log.Println(err) }
-    })
-    log.Fatal(http.ListenAndServer(":8080", nil))
+	ctx := context.Background()
+	topic := "projects/unicornvideohub/topics/user-signup"
+	pub, err := publisher.New(ctx, topic)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pub.Close()
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+		if err != nil {
+			log.Println(err)
+		}
+	})
+	log.Fatal(http.ListenAndServer(":8080", nil))
 }
 ```
 
