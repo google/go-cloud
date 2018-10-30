@@ -116,11 +116,22 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
+	// Delimiter sets the delimiter used to define a hierarchical namespace,
+	// like a filesystem with "directories".
+	//
+	// An empty delimiter means that the bucket is treated as a single flat
+	// namespace.
+	//
+	// A non-empty delimiter means that any result with the delimiter in its key
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for other
+	// ListObject fields. These results represent "directories". Multiple results
+	// in a "directory" are returned as a single result.
+	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
 	// max.
 	PageSize int
-
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
@@ -139,6 +150,11 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
+	// passed as ListOptions.Prefix to list items in the "directory".
+	// Fields other than Key and IsDir will not be set if IsDir is true.
+	IsDir bool
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.

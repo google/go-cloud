@@ -252,7 +252,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if err != nil {
 			return nil
 		}
-		// Skip all directories.
+		// Skip all directories. If opts.Delimiter is set, we'll create
+		// pseudo-directories later.
 		// Note that returning nil means that we'll still recurse into it;
 		// we're just not adding a result for the directory itself.
 		// We can avoid recursing into subdirectories if the directory name
@@ -284,6 +285,34 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	// TODO(rvangent): It is likely possible (but not trivial) to optimize by
 	// doing the collapsing and pagination inline to os.Walk, instead of as
 	// post-processing.
+
+	// If using Delimiter, collapse "directories".
+	if len(result.Objects) > 0 && opts.Delimiter != "" {
+		var collapsedObjects []*driver.ListObject
+		var lastPrefix string
+		for _, obj := range result.Objects {
+			// Strip the prefix, which may contain Delimiter.
+			keyWithoutPrefix := obj.Key[len(opts.Prefix):]
+			// See if the key still contains Delimiter.
+			// If no, it's a file and we just include it.
+			// If yes, it's a file in a "sub-directory" and we want to collapse
+			// all files in that "sub-directory" into a single "directory" result.
+			if idx := strings.Index(keyWithoutPrefix, opts.Delimiter); idx == -1 {
+				collapsedObjects = append(collapsedObjects, obj)
+			} else {
+				prefix := opts.Prefix + keyWithoutPrefix[0:idx+len(opts.Delimiter)]
+				if prefix != lastPrefix {
+					// First time seeing this "subdirectory"; add it.
+					collapsedObjects = append(collapsedObjects, &driver.ListObject{
+						Key:   prefix,
+						IsDir: true,
+					})
+					lastPrefix = prefix
+				}
+			}
+		}
+		result.Objects = collapsedObjects
+	}
 
 	// If there's a pageToken, skip ahead.
 	if len(opts.PageToken) > 0 {
