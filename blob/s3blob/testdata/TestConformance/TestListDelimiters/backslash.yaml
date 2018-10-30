@@ -10,26 +10,26 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5C
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\</Prefix><KeyCount>6</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir1\a.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\b.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\c.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\d.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\f.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\</Prefix><KeyCount>6</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir1\a.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\b.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\c.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\d.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-26T20:21:23.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\f.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - sga56pCeiX7gIasYQxg3QfWsUWAyqyFZGK7kT/7G6llKfiBJTI1N5P8QKPbg8djWCyU+miXSZ7E=
+      - 3yYmof+VQ2lZEP7JeMYfpvOviQpJ9dsh9bsiqoG3me7O9Gau0KY4UtyzIusWn+vrNCMduN41X1Y=
       X-Amz-Request-Id:
-      - 3D48E09A323D1F2C
+      - B4D6C95396F70F48
     status: 200 OK
     code: 200
     duration: ""
@@ -42,26 +42,26 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5C
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\</Prefix><KeyCount>6</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir1\a.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\b.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\c.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\d.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\f.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\</Prefix><KeyCount>6</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir1\a.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\b.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\c.txt</Key><LastModified>2018-10-18T21:07:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir1\subdir\d.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-26T20:21:23.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-\f.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - aIFP7JQ8r07zjiyQZzhZkiFYACYqsnO/K9bkaa2xooGzcrqe7ZOK04w3y1UlAOMIpC6ndN3sL7k=
+      - ulJxgwkZJ+HWP3eJZxwyA5KsZiR9mhaK82Vci/97M8ka+rdhDq+TRaR0mZ4LCWTyLNa6IzwzDRU=
       X-Amz-Request-Id:
-      - 6F9FA58934138DAB
+      - 0B90FE2484BA0C03
     status: 200 OK
     code: 200
     duration: ""
@@ -74,7 +74,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?delimiter=%5C&list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5C
     method: GET
   response:
@@ -85,15 +85,15 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - MRAhmXcFboJzvr5b2dZqu8xGlCQK6trDJVc5dhVpWg1wH+GdNgqg2OOtbbJjfm81E5IHNnL1C+w=
+      - zgcJcjmRrf4UhxasQq1ngNTvi/tdJsWZAE64g1vlTywjYPZ9+aJqUA9wsNDy48LIUmCF9AYqnb0=
       X-Amz-Request-Id:
-      - D8DD2D575F96DB7E
+      - F38ED588FEED7B3A
     status: 200 OK
     code: 200
     duration: ""
@@ -106,7 +106,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?delimiter=%5C&list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5Cdir1%5C
     method: GET
   response:
@@ -117,15 +117,15 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - LCMblFcI/NvSsihWMbyNe3SZf8jP4CTfvWDIuuOGCTQEp1NPagHmTMxvqgqgMnqTHWM38cBzxew=
+      - c9YXOqjNAHO2fWdSQlJLt/zPC1C00FRuBthSq59fDtl1irJD7iCulRwGktAka4Mf400b719kLbI=
       X-Amz-Request-Id:
-      - BFCB7BACC5613C09
+      - C00E4809EE6837CF
     status: 200 OK
     code: 200
     duration: ""
@@ -138,7 +138,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?delimiter=%5C&list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5Cdir1%5Csubdir%5C
     method: GET
   response:
@@ -149,15 +149,15 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - WyXK7i3fQCJA/1TPTbJJYc/j4vuAtnONtQlXul8MNQ8d2g+pGTJlTSQ3eGeYzG5LdJnxvSplckQ=
+      - SzLabm2PqZ9XrFhRBxHdpf9ntXD1uS00YWdLdW/30xnVbYyEfyZdbwWwXOKu3ZQECdhESxBpXN4=
       X-Amz-Request-Id:
-      - A2728A1CC2AD066F
+      - D893DB15ED0EA355
     status: 200 OK
     code: 200
     duration: ""
@@ -170,26 +170,156 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181018T215752Z
+      - 20181030T201703Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?delimiter=%5C&list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5Cdir2%5C
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\dir2\</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><Delimiter>\</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\dir2\</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><Delimiter>\</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\dir2\e.txt</Key><LastModified>2018-10-26T20:21:23.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 18 Oct 2018 21:57:53 GMT
+      - Tue, 30 Oct 2018 20:17:04 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
       - us-east-2
       X-Amz-Id-2:
-      - SoJWR171Rs+Ppg/46wZlhPefATZDBh5sn3SDxwHRsu9roL7Pn/zlkFbgFGowcr1LMcIWye4rKRg=
+      - 5sh7R7euTfJwPTdsysqGUq3JYhUUsoKcnG+ZTS5e4QmU4hA5njuE7JXfkNdxj7lrHieyblW4Nr4=
       X-Amz-Request-Id:
-      - BA858AF0C1C4A30E
+      - 9F5A171E896CCCCF
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181030T201703Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-delimiters-%5Cdir2%5Ce.txt
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 30 Oct 2018 20:17:04 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Last-Modified:
+      - Fri, 26 Oct 2018 20:21:23 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - W/yqG7Ha1/LfA0tN15gHDzzxw7mnsOP6KflLuSxFGVutdNtMaFgJpH5aNpGjM2q9x0x0//7Fjco=
+      X-Amz-Request-Id:
+      - A69D8CDC46535393
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181030T201703Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-delimiters-%5Cdir2%5Ce.txt
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Tue, 30 Oct 2018 20:17:04 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - EGAeHCvOx1mJHUb95zkUZjCxgJ90QQw9xZPLO/sefFADVhC63PmjG3MPsEQE2O4L5eNNFCu33Qs=
+      X-Amz-Request-Id:
+      - 49A1EACA7ED5FABA
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181030T201704Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?delimiter=%5C&list-type=2&max-keys=1000&prefix=blob-for-delimiters-%5C
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-delimiters-\</Prefix><KeyCount>2</KeyCount><MaxKeys>1000</MaxKeys><Delimiter>\</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-\f.txt</Key><LastModified>2018-10-18T21:07:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><CommonPrefixes><Prefix>blob-for-delimiters-\dir1\</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Tue, 30 Oct 2018 20:17:05 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - DAgcuB6PWR0MdkmYuJqfZnoeuK+ktj2lxgOtgKtjukgUWFFT0KpHgl7GCDHp/E2UCojlYeu4AyM=
+      X-Amz-Request-Id:
+      - 1A226F817920826D
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: hello
+    form: {}
+    headers:
+      Content-Length:
+      - "5"
+      Content-Md5:
+      - XUFAKrxLKna5cZ2REBfFkg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+      X-Amz-Date:
+      - 20181030T201704Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-delimiters-%5Cdir2%5Ce.txt
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Tue, 30 Oct 2018 20:17:05 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Mm1qDMf67+4u6Byrk/mCyZzjIXmf1TZ6/wXbE+xqHQ4HruIV4A/XaeMEbM2pKPJtIqVbfDgRXfU=
+      X-Amz-Request-Id:
+      - BC84AB8BC3E575B5
     status: 200 OK
     code: 200
     duration: ""

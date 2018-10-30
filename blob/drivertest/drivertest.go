@@ -422,8 +422,9 @@ type listResult struct {
 	Sub   []listResult
 }
 
-// listRecursively recursively lists b using prefix and delim.
-func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) ([]listResult, error) {
+// doList lists b using prefix and delim.
+// If recurse is true, it recurses into directories filling in listResult.Sub.
+func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse bool) ([]listResult, error) {
 	iter, err := b.List(ctx, &blob.ListOptions{
 		Prefix:    prefix,
 		Delimiter: delim,
@@ -441,8 +442,8 @@ func listRecursively(ctx context.Context, b *blob.Bucket, prefix, delim string) 
 			break
 		}
 		var sub []listResult
-		if obj.IsDir {
-			sub, err = listRecursively(ctx, b, obj.Key, delim)
+		if obj.IsDir && recurse {
+			sub, err = doList(ctx, b, obj.Key, delim, true)
 			if err != nil {
 				return nil, err
 			}
@@ -482,19 +483,29 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 	// Test with several different delimiters.
 	tests := []struct {
 		name, delim string
-		wantFlat    []string
-		want        []listResult
+		// Expected result of doList with an empty delimiter.
+		// All keys should be listed at the top level, with no directories.
+		wantFlat []listResult
+		// Expected result of doList with delimiter and recurse = true.
+		// All keys should be listed, with keys in directories in the Sub field
+		// of their directory.
+		want []listResult
+		// expected result of doList with delimiter and recurse = false
+		// after dir2/e.txt is deleted
+		// dir1/ and f.txt should be listed; dir2/ should no longer be present
+		// because there are no keys in it.
+		wantAfterDel []listResult
 	}{
 		{
 			name:  "fwdslash",
 			delim: "/",
-			wantFlat: []string{
-				keyPrefix + "/dir1/a.txt",
-				keyPrefix + "/dir1/b.txt",
-				keyPrefix + "/dir1/subdir/c.txt",
-				keyPrefix + "/dir1/subdir/d.txt",
-				keyPrefix + "/dir2/e.txt",
-				keyPrefix + "/f.txt",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "/dir1/a.txt"},
+				listResult{Key: keyPrefix + "/dir1/b.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+				listResult{Key: keyPrefix + "/dir2/e.txt"},
+				listResult{Key: keyPrefix + "/f.txt"},
 			},
 			want: []listResult{
 				listResult{
@@ -522,17 +533,24 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				},
 				listResult{Key: keyPrefix + "/f.txt"},
 			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
 		},
 		{
 			name:  "backslash",
 			delim: "\\",
-			wantFlat: []string{
-				keyPrefix + "\\dir1\\a.txt",
-				keyPrefix + "\\dir1\\b.txt",
-				keyPrefix + "\\dir1\\subdir\\c.txt",
-				keyPrefix + "\\dir1\\subdir\\d.txt",
-				keyPrefix + "\\dir2\\e.txt",
-				keyPrefix + "\\f.txt",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+				listResult{Key: keyPrefix + "\\f.txt"},
 			},
 			want: []listResult{
 				listResult{
@@ -560,17 +578,24 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				},
 				listResult{Key: keyPrefix + "\\f.txt"},
 			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
 		},
 		{
 			name:  "abc",
 			delim: "abc",
-			wantFlat: []string{
-				keyPrefix + "abcdir1abca.txt",
-				keyPrefix + "abcdir1abcb.txt",
-				keyPrefix + "abcdir1abcsubdirabcc.txt",
-				keyPrefix + "abcdir1abcsubdirabcd.txt",
-				keyPrefix + "abcdir2abce.txt",
-				keyPrefix + "abcf.txt",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "abcdir1abca.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+				listResult{Key: keyPrefix + "abcdir2abce.txt"},
+				listResult{Key: keyPrefix + "abcf.txt"},
 			},
 			want: []listResult{
 				listResult{
@@ -595,6 +620,13 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 					Sub: []listResult{
 						listResult{Key: keyPrefix + "abcdir2abce.txt"},
 					},
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
 				},
 				listResult{Key: keyPrefix + "abcf.txt"},
 			},
@@ -651,36 +683,40 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.delim)
 			defer done()
 
-			// Fetch without using Delimiter; we should get back all of the keys
-			// in a single flat namespace.
-			iter, err := b.List(ctx, &blob.ListOptions{
-				Prefix: keyPrefix + tc.delim,
-			})
+			// Fetch without using delimiter.
+			got, err := doList(ctx, b, keyPrefix+tc.delim, "", true)
 			if err != nil {
 				t.Fatal(err)
 			}
-			var gotFlat []string
-			for {
-				obj, err := iter.Next(ctx)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if obj == nil {
-					break
-				}
-				gotFlat = append(gotFlat, obj.Key)
-			}
-			if diff := cmp.Diff(gotFlat, tc.wantFlat); diff != "" {
-				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", gotFlat, tc.wantFlat, diff)
+			if diff := cmp.Diff(got, tc.wantFlat); diff != "" {
+				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantFlat, diff)
 			}
 
-			// Fetch using Delimiter.
-			got, err := listRecursively(ctx, b, keyPrefix+tc.delim, tc.delim)
+			// Fetch using delimiter, recursively.
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, true)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if diff := cmp.Diff(got, tc.want); diff != "" {
-				t.Errorf("using delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+				t.Errorf("with delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+			}
+
+			// Delete dir2/e.txt and verify that dir2/ is no longer returned.
+			key := strings.Join(append([]string{keyPrefix}, "dir2", "e.txt"), tc.delim)
+			if err := b.Delete(ctx, key); err != nil {
+				t.Fatal(err)
+			}
+			// Attempt to restore dir2/e.txt at the end of the test for the next run.
+			defer func() {
+				_ = b.WriteAll(ctx, key, content, nil)
+			}()
+
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantAfterDel); diff != "" {
+				t.Errorf("after delete, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantAfterDel, diff)
 			}
 		})
 	}
