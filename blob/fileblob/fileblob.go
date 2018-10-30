@@ -21,9 +21,10 @@
 // algorithm is:
 // -- Alphanumeric characters (A-Z a-z 0-9) are not escaped.
 // -- Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-// -- The OS-specific path separator character (os.PathSeparator) is not escaped.
+// -- Slash ('/') is always escaped to the OS-specific path separator character
+//    (os.PathSeparator).
 // -- All other characters are escaped similar to url.PathEscape:
-//    "%<hex ASCII code>", with capital letters ABCDEF in the hex code.
+//    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
 //
 // Filenames that can't be unescaped due to invalid escape sequences
 // (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
@@ -80,7 +81,7 @@ func shouldEscape(c byte) bool {
 		return false
 	case c == ' ' || c == '-' || c == '_' || c == '.':
 		return false
-	case c == os.PathSeparator:
+	case c == '/':
 		return false
 	}
 	return true
@@ -90,19 +91,25 @@ func shouldEscape(c byte) bool {
 // The code is modified from https://golang.org/src/net/url/url.go.
 func escape(s string) string {
 	hexCount := 0
+	replaceSlash := false
 	for i := 0; i < len(s); i++ {
 		c := s[i]
 		if shouldEscape(c) {
 			hexCount++
+		} else if c == '/' && os.PathSeparator != '/' {
+			replaceSlash = true
 		}
 	}
-	if hexCount == 0 {
+	if hexCount == 0 && !replaceSlash {
 		return s
 	}
 	t := make([]byte, len(s)+2*hexCount)
 	j := 0
 	for i := 0; i < len(s); i++ {
 		switch c := s[i]; {
+		case c == '/':
+			t[j] = os.PathSeparator
+			j++
 		case shouldEscape(c):
 			t[j] = '%'
 			t[j+1] = "0123456789ABCDEF"[c>>4]
@@ -150,6 +157,7 @@ func unhex(c byte) byte {
 func unescape(s string) (string, error) {
 	// Count %, check that they're well-formed.
 	n := 0
+	replacePathSeparator := false
 	for i := 0; i < len(s); {
 		switch s[i] {
 		case '%':
@@ -162,12 +170,15 @@ func unescape(s string) (string, error) {
 				return "", fmt.Errorf("couldn't unescape %q near %q", s, bad)
 			}
 			i += 3
+		case os.PathSeparator:
+			replacePathSeparator = os.PathSeparator != '/'
+			i++
 		default:
 			i++
 		}
 	}
 	unescaped := s
-	if n > 0 {
+	if n > 0 || replacePathSeparator {
 		t := make([]byte, len(s)-2*n)
 		j := 0
 		for i := 0; i < len(s); {
@@ -176,6 +187,10 @@ func unescape(s string) (string, error) {
 				t[j] = unhex(s[i+1])<<4 | unhex(s[i+2])
 				j++
 				i += 3
+			case os.PathSeparator:
+				t[j] = '/'
+				j++
+				i++
 			default:
 				t[j] = s[i]
 				j++

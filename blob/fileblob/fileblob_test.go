@@ -98,6 +98,10 @@ func TestEscape(t *testing.T) {
 			want: "%7E%21%40%23%24%25%5E%26%2A%28%29%2B%60%3D%5B%5D%7B%7D%5C%7C%3B%3A%27%22%2C%3C%3E%2C",
 		},
 		{
+			key:  "/",
+			want: string(os.PathSeparator),
+		},
+		{
 			key:  "☺☺",
 			want: "%E2%98%BA%E2%98%BA",
 		},
