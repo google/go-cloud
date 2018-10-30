@@ -329,9 +329,17 @@ func (e AckNotSupportedError) Error() string {
 // do not support Acks.
 func (m *Message) Ack() error { … }
 
+// PublisherOptions contains configuration for Publishers.
+type PublisherOptions struct {
+    // SendWait tells the max duration to wait before sending the next batch of
+    // messages to the server.
+    SendWait time.Duration
+}
+
 // Publisher publishes messages to all its subscribers.
 type Publisher struct {
-    p driver.Publisher
+    p       driver.Publisher
+    opts    PublisherOptions
 }
 
 // Send publishes a message. It only returns after the message has been
