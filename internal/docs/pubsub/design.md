@@ -469,45 +469,67 @@ func sendBatches(ctx context.Context, pub *pubsub.Publisher, c chan *pubsub.Mess
 ```
 This shows how the complexity of batching has been pushed onto the application code.
 
+In this API, the application code has to either request batches of size 1, meaning more
+network traffic, or it has to explicitly manage the batches of messages it receives.
+Here is an example of how it would be used for serial message processing:
 ```go
+package main
+
 import (
-    "github.com/go-cloud/pubsub"
-    // For example, gcppubsub, azurebuspubsub, amazonmqpubsub
-    "github.com/go-cloud/pubsub/somepubsub"
+    "context"
+    "log"
+    "os"
+    "os/signal"
+
+    "github.com/google/go-cloud/pubsub" 
+    "github.com/google/go-cloud/pubsub/acme/subscriber" 
 )
 
-func main() {}
-    topic := "user-signup"
-    client, err := somepubsub.NewClient(ctx, ...)
-    if err != nil { /* handle err */ }
-    defer client.Close()
-    pub, err := somepubsub.NewPublisher(ctx, client, topic)
-    if err != nil { /* handle err */ }
-    defer pub.Close()
+const batchSize = 10
 
-    // Listen to an existing subscription with a known ID, processing messages with
-    // a pool of workers.
-    subscriptionID := "user-signup-subscription-1"
-    sub, err := somepubsub.NewSubscriber(ctx, client, subscriptionID)
-    if err != nil { /* handle err */ }
-    defer sub.Close()
+func main() {
+    if err := receive(); err != nil {
+        log.Fatal(err)
+    }
+}
 
-    // Receive and process the messages.
-    go func() {}
-        for {
-            msgs, err := sub.Receive(ctx, 10)
-            // Clean shutdown if sub.Close was called.
-            if err == io.EOF { return }
-            if err != nil { /* handle err */ }
-            acks := []pubsub.AckID
-            for _, msg := range msgs {
-                // Do something with msg.
-                fmt.Printf("Got message: %q\n", msg.Body)
-                acks = append(acks, msg.AckID)
-            }
-            err := sub.SendAcks(ctx, acks)
-            if err != nil { /* handle err */ }
+func receive() error {
+    ctx := context.Background()
+    subscriptionID := "projects/unicornvideohub/subscriptions/signup-minder"
+    sub, err := subscriber.New(ctx, subscriptionID)
+    if err != nil { return err }
+    defer sub.Close(ctx)
+
+    // Handle ctrl-C.
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    go func() {
+        for sig := range c {
+            err := sub.Close(ctx)
+            if err != nil { log.Fatal(err) }
         }
+    }()
+
+    // Process messages until the user hits ctrl-C.
+    for {
+        msgs, err := sub.Receive(ctx, batchSize)
+        switch err {
+        // sub.Close() causes io.EOF to be returned from sub.Receive().
+        case io.EOF:
+            log.Printf("Got ctrl-C. Exiting.")
+            break
+        case nil:
+        default:
+            return err
+        }
+        acks := make([]pubsub.AckID, 0, batchSize)
+        for _, msg := range msgs {
+            // Do something with msg.
+            fmt.Printf("Got message: %q\n", msg.Body)
+            acks = append(acks, msg.AckID)
+        }
+        err := sub.SendAcks(ctx, acks)
+        if err != nil { return err }
     }
 }
 ```
@@ -566,8 +588,8 @@ Pro:
 * Efficient sending and receiving of messages is possible by tuning batch size and the number of goroutines sending or receiving messages.
 
 Con:
-* It makes the inverted worker pool pattern verbose.
-* Apps needing to send more than a few thousand messages per second (see benchmark below) need their own logic for creating batches with size greater than 1.
+* This style of API makes the inverted worker pool pattern verbose.
+* Apps needing to send or receive a large volume of messages must have their own logic to create batches of size greater than 1.
 
 ### go-micro
 Here is an example of what application code could look like for a pubsub API inspired by [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
