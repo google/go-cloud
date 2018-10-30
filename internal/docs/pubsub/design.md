@@ -1,7 +1,7 @@
 # Go Cloud PubSub
 
 ## Summary
-This document proposes a new pubsub package for Go Cloud.
+This document proposes a new `pubsub` package for Go Cloud.
 
 ## Motivation
 A developer designing a new system with cross-cloud portability in mind could
@@ -14,22 +14,23 @@ of portability.
 
 So what’s missing? The solution described above means being locked into a
 particular implementation of pubsub. The potential lock-in is even greater
-when building systems in terms of the cloud-specific APIs such as GCP PubSub
-or Azure Service Bus.
+when building systems in terms of the cloud-specific services such as AWS
+SNS+SQS, GCP PubSub or Azure Service Bus.
 
 Developers may wish to compare different pubsub systems in terms of their
 performance, reliability, cost or other factors, and they may want the option
-to move between these systems without too much friction. A pubsub package in
-Go Cloud would lower the cost of such experiments and migrations.
+to move between these systems without too much friction. A `pubsub` package in
+Go Cloud could lower the cost of such experiments and migrations.
 
 ## Goals
 * Publish messages to an existing topic.
 * Receive messages from an existing subscription.
-* Performance should not be much worse than 90% as fast as directly using existing pubsub APIs.
+* Peform not much worse than 90% compared to directly using the APIs of various pubsub systems.
 * Work well with managed pubsub services on AWS, Azure, GCP and the most used open source pubsub systems.
 
 ## Non-goals
-* Create new topics. This is consistent with the lack of bucket creation in the Go Cloud blob API but may be revisited if there is sufficient demand and if it can be done in a portable way. [rationale](https://github.com/google/go-cloud/blob/master/internal/docs/design.md#developers-and-operators)
+* Create new topics. Go Cloud focuses on developer concerns, but topic creation is an [operator concern](https://github.com/google/go-cloud/blob/master/internal/docs/design.md#developers-and-operators)
+
 * Create new subscriptions. For the first version of the Go Cloud pubsub package, we will assume that the set of subscribers for a particular topic doesn’t change during the normal operation of the application's system. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
 
 ## Background
@@ -238,12 +239,12 @@ func receive() error {
 ### Driver implementer’s perspective
 Adding support for a new pubsub system involves two main steps:
 
-1. Write the driver, implementing the interfaces in the github.com/go-cloud/pubsub/driver package. The new driver could be located at github.com/go-cloud/pubsub/$newsystem/driver.
-2. Write the concrete implementation, including publisher.New to construct a pubsub.Publisher and subscriber.New to construct a pubsub.Subscriber. These constructors could be located at github.com/go-cloud/pubsub/$newsystem/publisher and github.com/go-cloud/pubsub/$newsystem/subscriber.
+1. Write the driver, implementing the interfaces in the `github.com/go-cloud/pubsub/driver` package. The new driver could be located at `github.com/go-cloud/pubsub/${newsystem}/driver`.
+2. Write the concrete implementation, including `publisher.New` to construct a `pubsub.Publisher` and `subscriber.New` to construct a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/$newsystem/publisher` and `github.com/go-cloud/pubsub/$newsystem/subscriber`.
 
 The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
 
-The driver interfaces will be located in the github.com/google/go-cloud/pubsub/driver package and will look something like this:
+The driver interfaces will be located in the `github.com/google/go-cloud/pubsub/driver` package and will look something like this:
 
 ```go
 type Message struct {
@@ -341,17 +342,28 @@ func (p *Publisher) Send(ctx context.Context, m *Message) error { … }
 // Close disconnects the Publisher.
 func (p *Publisher) Close() error
 
+// SubscriberOptions contains configuration for Subscribers.
+type SubscriberOptions struct {
+    // AckWait tells the max duration to wait before sending the next batch 
+    // of acknowledgements back to the server.
+    AckWait     time.Duration
+
+    // AckDeadline tells how long the server should wait before assuming a
+    // received message has failed to be processed.
+    AckDeadline time.Duration
+}
+
 // Subscriber receives published messages.
 type Subscriber struct {
-    s driver.Subscriber
+    s       driver.Subscriber
+    opts    SubscriberOptions
 }
 
 // Receive receives and returns the next message from the Subscriber's queue,
-// blocking if none are available. This method can be called concurrently
-// from multiple
-// goroutines. On systems that support acks, the Ack() method of the
-// returned Message has to be called once
-// the message has been processed, to prevent it from being received again.
+// blocking if none are available. This method can be called concurrently from
+// multiple goroutines. On systems that support acks, the Ack() method of the
+// returned Message has to be called once the message has been processed, to
+// prevent it from being received again.
 func (s *Subscriber) Receive(ctx context.Context) (*Message, error) { … }
 
 // Close disconnects the Subscriber.
