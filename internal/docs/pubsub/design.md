@@ -336,7 +336,7 @@ func (e AckNotSupportedError) Error() string {
 // occurs. An AckNotSupportedError can be returned for pubsub systems that
 // do not support Acks.
 func (m *Message) Ack(ctx context.Context) error {
-    // Send the ack id back to the subscriber.
+    // Send the ack ID back to the subscriber for batching.
     m.sub.ackChan <- m.ackID
     select {
     case err := <-m.sub.ackErrChan:
@@ -382,7 +382,7 @@ func (p *Publisher) Send(ctx context.Context, m *Message) error {
 
 // Close disconnects the Publisher.
 func (p *Publisher) Close() error {
-    p.doneChan <- struct{}{}
+    close(p.doneChan)
 }
 
 // startBatcher spins up a goroutine to bundle messages into batches behind the
@@ -428,6 +428,10 @@ type SubscriberOptions struct {
     // of acknowledgements back to the server.
     AckWait     time.Duration
 
+    // AckBatchSize is the maximum number of acks that should be sent to
+    // the server in a batch.
+    AckBatchSize int
+
     // AckDeadline tells how long the server should wait before assuming a
     // received message has failed to be processed.
     AckDeadline time.Duration
@@ -435,8 +439,20 @@ type SubscriberOptions struct {
 
 // Subscriber receives published messages.
 type Subscriber struct {
-    s       driver.Subscriber
+    driver  driver.Subscriber
     opts    SubscriberOptions
+
+    // ackChan conveys ackIDs from Message.Ack to the ack batcher goroutine.
+    ackChan     chan AckID
+
+    // ackErrChan reports errors back to Message.Ack.
+    ackErrChan  chan error
+
+    // doneChan tells the goroutine from startAckBatcher to finish.
+    doneChan    chan struct{}{}
+
+    // q is the local queue of messages downloaded from the server.
+    q           []*Message
 }
 
 // Receive receives and returns the next message from the Subscriber's queue,
@@ -444,10 +460,39 @@ type Subscriber struct {
 // multiple goroutines. On systems that support acks, the Ack() method of the
 // returned Message has to be called once the message has been processed, to
 // prevent it from being received again.
-func (s *Subscriber) Receive(ctx context.Context) (*Message, error) { … }
+func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
+    if len(s.q) == 0 {
+        // Get the next batch of messages from the server.
+        for {
+            msgs, err := s.driver.ReceiveBatch(ctx)
+            if err != nil {
+                return nil, err
+            }
+            select {
+            case <-ctx.Done():
+                return nil, ctx.Err()
+            default:
+            }
+            if len(msgs) > 0 {
+                s.q = msgs
+                break
+            }
+        }
+    }
+    m := s.q[0]
+    s.q = s.q[1:]
+    return m, nil
+}
 
 // Close disconnects the Subscriber.
-func (s *Subscriber) Close() error { … }
+func (s *Subscriber) Close() error {
+    close(s.doneChan)
+}
+
+// startAckBatcher spins up a goroutine to gather acks into batches.
+func (s *Subscriber) startAckBatcher(ctx context.Context) {
+    // Something similar to Publisher.startBatcher should go here.
+}
 ```
 
 ## Alternative designs considered
