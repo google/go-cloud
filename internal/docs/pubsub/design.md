@@ -335,7 +335,16 @@ func (e AckNotSupportedError) Error() string {
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs. An AckNotSupportedError can be returned for pubsub systems that
 // do not support Acks.
-func (m *Message) Ack() error { … }
+func (m *Message) Ack(ctx context.Context) error {
+    // Send the ack id back to the subscriber.
+    m.sub.ackChan <- m.ackID
+    select {
+    case err := <-m.sub.ackErrChan:
+        return err
+    case <-ctx.Done():
+        return nil
+    }
+}
 
 // PublisherOptions contains configuration for Publishers.
 type PublisherOptions struct {
