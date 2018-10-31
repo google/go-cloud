@@ -18,4 +18,5 @@ import "fmt"
 
 func main() {
 	fmt.Println(injectedMessage())
+	fmt.Println(injectedBar())
 }
