@@ -34,10 +34,8 @@ Go Cloud could lower the cost of such experiments and migrations.
 * Create new subscriptions. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
 
 ## Background
-[Pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) is
-a frequently requested feature for the Go Cloud project \[[github issue](https://github.com/google/go-cloud/issues/312)]. A key use case
-motivating these requests is to support [event driven
-architectures](https://en.wikipedia.org/wiki/Event-driven_architecture).
+[Pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) is a frequently requested feature for the Go Cloud project \[[github issue](https://github.com/google/go-cloud/issues/312)]. A key use case
+motivating these requests is to support [event driven architectures](https://en.wikipedia.org/wiki/Event-driven_architecture).
 
 There are several pubsub systems available that could be made to work with Go Cloud by writing drivers for them. Here is a [table](https://docs.google.com/a/google.com/spreadsheets/d/e/2PACX-1vQ2CML8muCrqhinxOeKTcWtwAeGk-RFFFMjB3O2u5DbbBt9R3YnUQcgRjRp6TySXe1CzSOtPVCsKACY/pubhtml) comparing some of them.
 
