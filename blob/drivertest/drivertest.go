@@ -493,7 +493,10 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		// Expected result of doList with delimiter and recurse = true.
 		// All keys should be listed, with keys in directories in the Sub field
 		// of their directory.
-		want []listResult
+		wantRecursive []listResult
+		// Expected result of repeatedly calling driver.ListPaged with delimiter
+		// and page size = 1.
+		wantPaged []listResult
 		// expected result of doList with delimiter and recurse = false
 		// after dir2/e.txt is deleted
 		// dir1/ and f.txt should be listed; dir2/ should no longer be present
@@ -511,7 +514,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				listResult{Key: keyPrefix + "/dir2/e.txt"},
 				listResult{Key: keyPrefix + "/f.txt"},
 			},
-			want: []listResult{
+			wantRecursive: []listResult{
 				listResult{
 					Key:   keyPrefix + "/dir1/",
 					IsDir: true,
@@ -537,6 +540,17 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				},
 				listResult{Key: keyPrefix + "/f.txt"},
 			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "/dir2/",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
 			wantAfterDel: []listResult{
 				listResult{
 					Key:   keyPrefix + "/dir1/",
@@ -556,7 +570,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
 				listResult{Key: keyPrefix + "\\f.txt"},
 			},
-			want: []listResult{
+			wantRecursive: []listResult{
 				listResult{
 					Key:   keyPrefix + "\\dir1\\",
 					IsDir: true,
@@ -582,6 +596,17 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				},
 				listResult{Key: keyPrefix + "\\f.txt"},
 			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
 			wantAfterDel: []listResult{
 				listResult{
 					Key:   keyPrefix + "\\dir1\\",
@@ -601,7 +626,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				listResult{Key: keyPrefix + "abcdir2abce.txt"},
 				listResult{Key: keyPrefix + "abcf.txt"},
 			},
-			want: []listResult{
+			wantRecursive: []listResult{
 				listResult{
 					Key:   keyPrefix + "abcdir1abc",
 					IsDir: true,
@@ -627,6 +652,17 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				},
 				listResult{Key: keyPrefix + "abcf.txt"},
 			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "abcdir2abc",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
 			wantAfterDel: []listResult{
 				listResult{
 					Key:   keyPrefix + "abcdir1abc",
@@ -644,7 +680,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 	// no guarantee that after we create them they will be immediately returned
 	// from List. The very first time the test is run against a Bucket, it may be
 	// flaky due to this race.
-	init := func(t *testing.T, delim string) (*blob.Bucket, func()) {
+	init := func(t *testing.T, delim string) (driver.Bucket, *blob.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
 			t.Fatal(err)
@@ -679,12 +715,12 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				}
 			}
 		}
-		return b, func() { h.Close() }
+		return drv, b, func() { h.Close() }
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			b, done := init(t, tc.delim)
+			drv, b, done := init(t, tc.delim)
 			defer done()
 
 			// Fetch without using delimiter.
@@ -701,8 +737,39 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, tc.want); diff != "" {
-				t.Errorf("with delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.want, diff)
+			if diff := cmp.Diff(got, tc.wantRecursive); diff != "" {
+				t.Errorf("with delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantRecursive, diff)
+			}
+
+			// Test pagination via driver.ListPaged.
+			var nextPageToken []byte
+			got = nil
+			for {
+				page, err := drv.ListPaged(ctx, &driver.ListOptions{
+					Prefix:    keyPrefix + tc.delim,
+					Delimiter: tc.delim,
+					PageSize:  1,
+					PageToken: nextPageToken,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(page.Objects) > 1 {
+					t.Errorf("got %d objects on a page, want 0 or 1", len(page.Objects))
+				}
+				for _, obj := range page.Objects {
+					got = append(got, listResult{
+						Key:   obj.Key,
+						IsDir: obj.IsDir,
+					})
+				}
+				if len(page.NextPageToken) == 0 {
+					break
+				}
+				nextPageToken = page.NextPageToken
+			}
+			if diff := cmp.Diff(got, tc.wantPaged); diff != "" {
+				t.Errorf("paged got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantPaged, diff)
 			}
 
 			// Delete dir2/e.txt and verify that dir2/ is no longer returned.
