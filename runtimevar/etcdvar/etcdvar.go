@@ -28,11 +28,15 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+// Options sets options.
+// It is provided for future extensibility.
+type Options struct{}
+
 // New constructs a runtimevar.Variable object that uses client to watch
 // variables in etcd.
 // Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(name, cli, decoder)), nil
 }
 
