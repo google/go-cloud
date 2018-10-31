@@ -56,21 +56,24 @@ import (
 )
 
 func main() {
+    log.Fatal(serve())
+}
+
+func serve() error {
     ctx := context.Background()
     topic := "projects/unicornvideohub/topics/user-signup"
     pub, err := publisher.New(ctx, topic)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
+    defer pub.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
         err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
         if err != nil {
             log.Println(err)
         }
     })
-    err := http.ListenAndServer(":8080", nil)
-    pub.Close()
-    log.Fatal(err)
+    return http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -140,7 +143,9 @@ func receive() error {
     ctx := context.Background()
     subscriptionID := "projects/unicornvideohub/subscriptions/signup-minder"
     sub, err := subscriber.New(ctx, subscriptionID)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     defer sub.Close(ctx)
 
     // Handle ctrl-C.
@@ -197,7 +202,9 @@ func receive() error {
     ctx := context.Background()
     subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
     sub, err := subscriber.New(ctx, subscriptionID)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     defer sub.Close(ctx)
 
     // Handle ctrl-C.
@@ -246,7 +253,7 @@ func receive() error {
 Adding support for a new pubsub system involves two main steps:
 
 1. Write the driver, implementing the interfaces in the `github.com/go-cloud/pubsub/driver` package. The new driver could be located at `github.com/go-cloud/pubsub/${newsystem}/driver`.
-2. Write the concrete implementation, including `publisher.New` to construct a `pubsub.Publisher` and `subscriber.New` to construct a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/$newsystem/publisher` and `github.com/go-cloud/pubsub/$newsystem/subscriber`.
+2. Write the concrete implementation, including `publisher.New` to construct a `pubsub.Publisher` and `subscriber.New` to construct a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/${newsystem}/publisher` and `github.com/go-cloud/pubsub/${newsystem}/subscriber`.
 
 The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
 
@@ -519,21 +526,24 @@ import (
 )
 
 func main() {
+    log.Fatal(serve())
+}
+
+func serve() error {
     ctx := context.Background()
     topic := "projects/unicornvideohub/topics/user-signup"
     pub, err := publisher.New(ctx, topic)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
+    defer pub.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
         err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
             log.Println(err)
         }
     })
-    err := http.ListenAndServer(":8080", nil)
-    pub.Close()
-    log.Fatal(err)
+    return http.ListenAndServe(":8080", nil)
 }
 ```
 For a company experiencing explosive growth or enthusiastic spammers creating
@@ -554,11 +564,15 @@ import (
 const batchSize = 1000
 
 func main() {
+    log.Fatal(serve())
+}
+
+func serve() error {
     ctx := context.Background()
     topic := "projects/unicornvideohub/topics/user-signup"
     pub, err := publisher.New(ctx, topic)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
     defer pub.Close()
     c := make(chan *pubsub.Message)
@@ -569,7 +583,7 @@ func main() {
             log.Println(err)
         }
     })
-    log.Fatal(http.ListenAndServer(":8080", nil))
+    return http.ListenAndServe(":8080", nil)
 }
 
 func sendBatches(ctx context.Context, pub *pubsub.Publisher, c chan *pubsub.Message) {
