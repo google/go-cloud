@@ -47,30 +47,30 @@ Given a topic that has already been created on the pubsub server, messages can b
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
+    "context"
+    "log"
+    "net/http"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub"
+    "github.com/google/go-cloud/pubsub/acme/publisher"
 )
 
 func main() {
-	ctx := context.Background()
-	topic := "projects/unicornvideohub/topics/user-signup"
-	pub, err := publisher.New(ctx, topic)
-	if err != nil {
-		log.Fatal(err)
-	}
-	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-		err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
-		if err != nil {
-			log.Println(err)
-		}
+    ctx := context.Background()
+    topic := "projects/unicornvideohub/topics/user-signup"
+    pub, err := publisher.New(ctx, topic)
+    if err != nil {
+        log.Fatal(err)
+    }
+    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+        err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+        if err != nil {
+            log.Println(err)
+        }
     })
     err := http.ListenAndServer(":8080", nil)
     pub.Close()
-	log.Fatal(err)
+    log.Fatal(err)
 }
 ```
 
@@ -510,30 +510,30 @@ not more than about a thousand users are signing up per second:
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
+    "context"
+    "log"
+    "net/http"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub"
+    "github.com/google/go-cloud/pubsub/acme/publisher"
 )
 
 func main() {
-	ctx := context.Background()
-	topic := "projects/unicornvideohub/topics/user-signup"
-	pub, err := publisher.New(ctx, topic)
-	if err != nil {
-		log.Fatal(err)
-	}
-	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-		err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
-		if err != nil {
-			log.Println(err)
-		}
+    ctx := context.Background()
+    topic := "projects/unicornvideohub/topics/user-signup"
+    pub, err := publisher.New(ctx, topic)
+    if err != nil {
+        log.Fatal(err)
+    }
+    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+        err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+        if err != nil {
+            log.Println(err)
+        }
     })
     err := http.ListenAndServer(":8080", nil)
     pub.Close()
-	log.Fatal(err)
+    log.Fatal(err)
 }
 ```
 For a company experiencing explosive growth or enthusiastic spammers creating
@@ -543,33 +543,33 @@ create non-singleton batches, like this:
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
+    "context"
+    "log"
+    "net/http"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub"
+    "github.com/google/go-cloud/pubsub/acme/publisher"
 )
 
 const batchSize = 1000
 
 func main() {
-	ctx := context.Background()
-	topic := "projects/unicornvideohub/topics/user-signup"
-	pub, err := publisher.New(ctx, topic)
-	if err != nil {
-		log.Fatal(err)
-	}
+    ctx := context.Background()
+    topic := "projects/unicornvideohub/topics/user-signup"
+    pub, err := publisher.New(ctx, topic)
+    if err != nil {
+        log.Fatal(err)
+    }
     defer pub.Close()
     c := make(chan *pubsub.Message)
     go sendBatches(ctx, pub, c)
-	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-		err := pub.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
-		if err != nil {
-			log.Println(err)
-		}
-	})
-	log.Fatal(http.ListenAndServer(":8080", nil))
+    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+        err := pub.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
+        if err != nil {
+            log.Println(err)
+        }
+    })
+    log.Fatal(http.ListenAndServer(":8080", nil))
 }
 
 func sendBatches(ctx context.Context, pub *pubsub.Publisher, c chan *pubsub.Message) {
