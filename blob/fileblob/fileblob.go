@@ -250,7 +250,20 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 
-	// First, do a full recursive scan of the root directory.
+	var pageToken string
+	if len(opts.PageToken) > 0 {
+		pageToken = string(opts.PageToken)
+	}
+	pageSize := opts.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+	// If opts.Delimiter != "", lastPrefix contains the last "directory" key we
+	// added. It is used to avoid adding it again; all files in this "directory"
+	// are collapsed to the single directory entry.
+	var lastPrefix string
+
+	// Do a full recursive scan of the root directory.
 	var result driver.ListPage
 	err := filepath.Walk(b.dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -276,12 +289,17 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		// pseudo-directories later.
 		// Note that returning nil means that we'll still recurse into it;
 		// we're just not adding a result for the directory itself.
-		// We can avoid recursing into subdirectories if the directory name
-		// already doesn't match the prefix; any files in it are guaranteed not
-		// to match.
 		if info.IsDir() {
 			key += "/"
+			// Avoid recursing into subdirectories if the directory name already
+			// doesn't match the prefix; any files in it are guaranteed not to match.
 			if len(key) > len(opts.Prefix) && !strings.HasPrefix(key, opts.Prefix) {
+				return filepath.SkipDir
+			}
+			// Similarly, avoid recursing into subdirectories if we're making
+			// "directories" and all of the files in this subdirectory are guaranteed
+			// to collapse to a "directory" that we've already added.
+			if lastPrefix != "" && strings.HasPrefix(key, lastPrefix) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -290,67 +308,47 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
-		// Add a ListObject for this file.
-		result.Objects = append(result.Objects, &driver.ListObject{
+		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
-		})
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO(rvangent): It is likely possible (but not trivial) to optimize by
-	// doing the collapsing and pagination inline to os.Walk, instead of as
-	// post-processing.
-
-	// If using Delimiter, collapse "directories".
-	if len(result.Objects) > 0 && opts.Delimiter != "" {
-		var collapsedObjects []*driver.ListObject
-		var lastPrefix string
-		for _, obj := range result.Objects {
+		}
+		// If using Delimiter, collapse "directories".
+		if opts.Delimiter != "" {
 			// Strip the prefix, which may contain Delimiter.
-			keyWithoutPrefix := obj.Key[len(opts.Prefix):]
+			keyWithoutPrefix := key[len(opts.Prefix):]
 			// See if the key still contains Delimiter.
 			// If no, it's a file and we just include it.
 			// If yes, it's a file in a "sub-directory" and we want to collapse
 			// all files in that "sub-directory" into a single "directory" result.
-			if idx := strings.Index(keyWithoutPrefix, opts.Delimiter); idx == -1 {
-				collapsedObjects = append(collapsedObjects, obj)
-			} else {
+			if idx := strings.Index(keyWithoutPrefix, opts.Delimiter); idx != -1 {
 				prefix := opts.Prefix + keyWithoutPrefix[0:idx+len(opts.Delimiter)]
-				if prefix != lastPrefix {
-					// First time seeing this "subdirectory"; add it.
-					collapsedObjects = append(collapsedObjects, &driver.ListObject{
-						Key:   prefix,
-						IsDir: true,
-					})
-					lastPrefix = prefix
+				// We've already included this "directory"; don't add it.
+				if prefix == lastPrefix {
+					return nil
 				}
+				// Update the object to be a "directory".
+				obj = &driver.ListObject{
+					Key:   prefix,
+					IsDir: true,
+				}
+				lastPrefix = prefix
 			}
 		}
-		result.Objects = collapsedObjects
-	}
-
-	// If there's a pageToken, skip ahead.
-	if len(opts.PageToken) > 0 {
-		pageToken := string(opts.PageToken)
-		for len(result.Objects) > 0 && result.Objects[0].Key < pageToken {
-			result.Objects = result.Objects[1:]
+		// If there's a pageToken, skip anything before it.
+		if pageToken != "" && obj.Key <= pageToken {
+			return nil
 		}
-	}
-
-	// If we've got more than a full page of results, truncate and set
-	// NextPageToken.
-	pageSize := opts.PageSize
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	}
-	if len(result.Objects) > pageSize {
-		result.NextPageToken = []byte(result.Objects[pageSize].Key)
-		result.Objects = result.Objects[:pageSize]
+		// If we've already got a full page of results, set NextPageToken and stop.
+		if len(result.Objects) == pageSize {
+			result.NextPageToken = []byte(result.Objects[pageSize-1].Key)
+			return io.EOF
+		}
+		result.Objects = append(result.Objects, obj)
+		return nil
+	})
+	if err != nil && err != io.EOF {
+		return nil, err
 	}
 	return &result, nil
 }
