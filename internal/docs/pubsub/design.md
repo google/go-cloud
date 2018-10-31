@@ -177,6 +177,8 @@ func receive() error {
 
 The messages can be processed concurrently with an inverted worker pool, like this:
 ```go
+package main
+
 import (
     "context"
     "log"
@@ -471,7 +473,7 @@ This shows how the complexity of batching has been pushed onto the application c
 
 In this API, the application code has to either request batches of size 1, meaning more
 network traffic, or it has to explicitly manage the batches of messages it receives.
-Here is an example of how it would be used for serial message processing:
+Here is an example of how this API would be used for serial message processing:
 ```go
 package main
 
@@ -536,50 +538,93 @@ func receive() error {
 
 Here’s what it might look like to use this batch-only API with the inverted worker pool pattern:
 ```go
-// Receive the messages and forward them to a chan.
-msgsChan := make(chan *pubsub.Message)
-go func() {
-    for {
-        msgs, err := sub.Receive(ctx, 10)
-        // Clean shutdown if sub.Close was called.
-        if err == io.EOF { return }
-        if err != nil { /* handle err */ }
-        for _, m := range msgs {
-            msgsChan <- m
-        }
-    }
-}
+package main
 
-// Get the acks from a chan and send them back to the
-// server in batches.
-acksChan := make(chan pubsub.AckID)
-go func() {
-    for {
-        const batchSize = 10
-        batch := make([]pubsub.AckID, batchSize)
-        for i := 0; i < len(batch); i++ {
-            batch[i] = <-acksChan
-        }
-        if err := sub.SendAcks(ctx, batch); err != nil {
-            /* handle err */
-        }
-    }
-}
+import (
+    "context"
+    "log"
+    "os"
+    "os/signal"
 
-// Receive and process the messages with an inverted worker pool.
+    "github.com/google/go-cloud/pubsub" 
+    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+)
+
+const batchSize = 100
 const poolSize = 10
-sem := make(chan token, poolSize)
-for m := range msgsChan {
-    sem <- token{}
-    go func(msg *Message) {
-        fmt.Printf("Got message: %q\n", msg.Body)
-        acksChan <- msg.AckID
-        <-sem
-    }(msg)
 
+func main() {
+    if err := receive(); err != nil {
+        log.Fatal(err)
+    }
 }
-for n := poolSize; n > 0; n-- {
-    sem <- token{}
+
+func receive() error {
+    ctx := context.Background()
+    subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
+    sub, err := subscriber.New(ctx, subscriptionID)
+    if err != nil { return err }
+    defer sub.Close(ctx)
+
+    // Handle ctrl-C.
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, os.Interrupt)
+    go func() {
+        for sig := range c {
+            if err := sub.Close(ctx); err != nil {
+                log.Fatal(err)
+            }
+        }
+    }()
+
+    // Receive the messages and forward them to a chan.
+    msgsChan := make(chan *pubsub.Message)
+    go func() {
+        for {
+            msgs, err := sub.Receive(ctx, batchSize)
+            // Shut down if sub.Close was called.
+            if err == io.EOF {
+                log.Println("Got ctrl-C. Exiting")
+                os.Exit(0)
+            }
+            if err != nil { /* handle err */ }
+            for _, m := range msgs {
+                msgsChan <- m
+            }
+        }
+    }
+
+    // Get the acks from a chan and send them back to the
+    // server in batches.
+    acksChan := make(chan pubsub.AckID)
+    go func() {
+        for {
+            batch := make([]pubsub.AckID, batchSize)
+            for i := 0; i < len(batch); i++ {
+                batch[i] = <-acksChan
+            }
+            if err := sub.SendAcks(ctx, batch); err != nil {
+                /* handle err */
+            }
+        }
+    }
+
+    // Process messages until the user hits ctrl-C.
+    // Use a buffered channel as a semaphore.
+    sem := make(chan token, poolSize)
+    for msg := range msgsChan {
+        sem <- token{}
+        go func(msg *pubsub.Message) {
+            log.Printf("Got message: %s", msg.Body)
+            if err := msg.Ack(); err != nil {
+                log.Printf("Failed to ack message: %v", err)
+            }
+            <-sem
+        }(msg)
+    }
+    for n := poolSize; n > 0; n-- {
+        sem <- token{}
+    }
 }
 ```
 
