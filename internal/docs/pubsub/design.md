@@ -916,7 +916,7 @@ We can test that the batched sending, receiving and acking work as intended by m
 * Error occurs when making a local topic with an ID that doesn’t exist on the server.
 * Error occurs when making a subscription with an ID that doesn’t exist on the server.
 * Message gets sent again after ack deadline if a message is never acknowledged.
-* ~~Acked messages don't get received again after waiting twice the ack deadline.~~ <- This test would probably be too flakey.
+* ~~Acked messages don't get received again after waiting twice the ack deadline.~~ :point_left: This test would probably be too flakey.
 
 ## Benchmarks
 What is the throughput and latency of Go Cloud's `pubsub` package, relative to directly using the APIs for various providers?
