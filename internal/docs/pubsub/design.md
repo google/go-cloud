@@ -1,4 +1,4 @@
-# Go Cloud PubSub
+# Go Cloud `pubsub` Design
 
 ## Summary
 This document proposes a new `pubsub` package for Go Cloud.
