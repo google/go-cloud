@@ -323,6 +323,8 @@ The driver interfaces will be located in the `github.com/google/go-cloud/pubsub/
 ```go
 package driver
 
+type AckID interface{}
+
 type Message struct {
     // Body contains the content of the message.
     Body []byte
@@ -332,7 +334,7 @@ type Message struct {
 
     // AckID identifies the message on the server.
     // It can be used to ack the message after it has been received.
-    AckID interface{}
+    AckID AckID
 }
 
 // Topic publishes messages.
@@ -623,7 +625,7 @@ import (
     "net/http"
 
     "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 1000
@@ -634,8 +636,8 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topic := "projects/unicornvideohub/topics/user-signup"
-    pub, err := publisher.New(ctx, topic)
+    topicName := "projects/unicornvideohub/topics/user-signup"
+    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
     if err != nil {
         return err
     }
@@ -651,7 +653,7 @@ func serve() error {
     return http.ListenAndServe(":8080", nil)
 }
 
-func sendBatches(ctx context.Context, pub *pubsub.Topic, c chan *pubsub.Message) {
+func sendBatches(ctx context.Context, topic *pubsub.Topic, c chan *pubsub.Message) {
     batch := make([]*pubsub.Message, batchSize)
     for {
         for i := 0; i < batchSize; i++ {
@@ -678,7 +680,7 @@ import (
     "os/signal"
 
     "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+    "github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 10
@@ -691,8 +693,8 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionID := "projects/unicornvideohub/subscriptions/signup-minder"
-    sub, err := subscriber.New(ctx, subscriptionID)
+    subscriptionName := "projects/unicornvideohub/subscriptions/signup-minder"
+    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName)
     if err != nil {
         return err
     }
