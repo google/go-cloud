@@ -165,6 +165,11 @@ type ListObject struct {
 type ListPage struct {
 	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
 	// it should have at most ListOptions.PageSize entries.
+	//
+	// Objects should be returned in lexicographical order of UTF-8 encoded keys,
+	// including across pages. I.e., all objects returned from a ListPage request
+	// made using a PageToken from a previous ListPage request's NextPageToken
+	// should have Key >= the Key for all objects from the previous request.
 	Objects []*ListObject
 	// NextPageToken should be left empty unless there are more objects
 	// to return. The value may be returned as ListOptions.PageToken on a
