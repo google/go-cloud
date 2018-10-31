@@ -454,10 +454,10 @@ func (t *Topic) Close() error {
     return t.driver.Close()
 }
 
-// startBatcher spins up a goroutine to bundle messages into batches behind the
-// scenes, and send them to the server. This method should typically be called
-// by publisher.New in particular implementations of Go Cloud pubsub.
-func (t *Topic) Open(ctx context.Context, topic string) {
+// NewTopic makes a pubsub.Topic from a driver.Topic.
+// Behind the scenes, this function spins up a goroutine to bundle messages into
+// batches and send them to the server.
+func NewTopic(t driver.Topic) *Topic {
     t.mcChan = make(chan msgCtx)
     t.doneChan = make(chan struct{}{})
     go func() {
@@ -564,9 +564,11 @@ func (s *Subscription) Close() error {
     return s.driver.Close()
 }
 
-// startAckBatcher spins up a goroutine to gather acks into batches.
-func (s *Subscription) startAckBatcher(ctx context.Context) {
-    // Something similar to Topic.startBatcher should go here.
+// NewSubscription creates a Subscription from a driver.Subscription.
+// Behind the scenes, NewSubscription spins up a goroutine to gather acks into
+// batches and periodically send them to the server.
+func NewSubscription(s driver.Subscription) *Subscription {
+    // Details similar to the body of NewTopic should go here.
 }
 ```
 
