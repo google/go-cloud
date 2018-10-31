@@ -258,16 +258,71 @@ func receive() error {
 ```
 
 ### Driver implementer’s perspective
-Adding support for a new pubsub system involves two main steps:
+Adding support for a new pubsub system involves the following steps, continuing with the "acme" example:
 
-1. Write the driver, implementing the interfaces in the `github.com/go-cloud/pubsub/driver` package. The new driver could be located at `github.com/go-cloud/pubsub/${newsystem}/driver`.
-2. Write the constructors: `publisher.New` to make a `pubsub.Publisher` and `subscriber.New` to make a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/${newsystem}/publisher` and `github.com/go-cloud/pubsub/${newsystem}/subscriber`.
+1. Add a new package called `acmepubsub`.
+2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
+3. Add a func called `acmepubsub.OpenTopic` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object make from it.
+4. Add a func called `acmepubsub.OpenSubscription` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
+
+Here is a sketch of what the `acmepubsub` package could look like:
+```go
+package acmepubsub
+
+import (
+    "context"
+
+    "github.com/go-cloud/pubsub"
+)
+
+func OpenTopic(ctx context.Context, topicName string, opts pubsub.TopicOptions) (*pubsub.Topic, error) {
+    t := &topic{topicName, opts}
+    return pubsub.NewTopic(t)
+}
+
+func OpenSubscription(ctx context.Context, subscriptionName string, opts pubsub.SubscriptionOptions) (*pubsub.Subscription, error) {
+    s := &subscription{subscriptionName, opts}
+    return pubsub.NewSubscription(s)
+}
+
+type topic struct {
+    name string
+    opts pubsub.TopicOptions
+}
+
+func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
+    // ...
+}
+
+func (t *topic) Close(ctx context.Context) error {
+    // ...
+}
+
+type subscription struct {
+    name string
+    opts pubsub.SubscriptionOptions
+}
+
+func (s *subscription) ReceiveBatch(ctx context.Context) ([]*pubsub.Message, error) {
+    // ...
+}
+
+func (s *subscription) SendAcks(ctx context.Context, []pubsub.AckID) error {
+    // ...
+}
+
+func (s *subscription) Close(ctx context.Context) error {
+    // ...
+}
+```
 
 The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
 
 The driver interfaces will be located in the `github.com/google/go-cloud/pubsub/driver` package and will look something like this:
 
 ```go
+package driver
+
 type Message struct {
     // Body contains the content of the message.
     Body []byte
