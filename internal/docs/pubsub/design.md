@@ -886,8 +886,10 @@ Con:
 
 ## Tests
 ### Unit tests for the concrete API
-We can test that the batched sending, receiving and acking work as intended
-by making mock implementations of the driver interfaces.
+We can test that the batched sending, receiving and acking work as intended by making mock implementations of the driver interfaces.
+* Calling `pubsub.Message.Ack` causes `driver.Subscription.SendAcks` to be called.
+* Calling `pubsub.Topic.Send` causes `driver.Topic.SendBatch` to be called.
+* Calling `pubsub.Subscription.Receive` causes `driver.Subscription.ReceiveBatch` to be called.
 
 ### Conformance tests for concrete driver implementations
 * Sent messages with random contents are received with the same contents.
@@ -895,7 +897,7 @@ by making mock implementations of the driver interfaces.
 * Error occurs when making a local topic with an ID that doesn’t exist on the server.
 * Error occurs when making a subscription with an ID that doesn’t exist on the server.
 * Message gets sent again after ack deadline if a message is never acknowledged.
-* Acked messages don't get received again after waiting twice the ack deadline.
+* ~~Acked messages don't get received again after waiting twice the ack deadline.~~ <- This test would probably be too flakey.
 
 ## Benchmarks
 What is the throughput and latency of Go Cloud's `pubsub` package, relative to directly using the APIs for various providers?
