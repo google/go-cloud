@@ -31,7 +31,7 @@ Go Cloud could lower the cost of such experiments and migrations.
 ## Non-goals
 * Create new topics. Go Cloud focuses on developer concerns, but topic creation is an [operator concern](https://github.com/google/go-cloud/blob/master/internal/docs/design.md#developers-and-operators)
 
-* Create new subscriptions. For the first version of the Go Cloud pubsub package, we will assume that the set of subscribers for a particular topic doesn’t change during the normal operation of the application's system. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
+* Create new subscriptions. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
 
 ## Background
 [Pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) is
