@@ -16,13 +16,13 @@
 // For an overview of working with Wire, see the user guide at
 // https://github.com/google/go-cloud/blob/master/wire/README.md
 //
-// The directives in this package are used as input to the Wire code
-// generation tool. The entry point of Wire's analysis are injector functions:
-// function templates denoted by only containing a call to Build. Build names
-// a set of providers and the Wire code generation tool builds a directed
-// acylic graph of the providers' output types. The generated generated code
-// will fill in the function template by calling the providers from the
-// provider set.
+// The directives in this package are used as input to the Wire code generation
+// tool. The entry point of Wire's analysis are injector functions: function
+// templates denoted by only containing a call to Build. The arguments to Build
+// describes a set of providers and the Wire code generation tool builds a
+// directed acylic graph of the providers' output types. The generated code will
+// fill in the function template by using the providers from the provider set to
+// instantiate any needed types.
 package wire
 
 // ProviderSet is a marker type that collects a group of providers.
@@ -49,6 +49,9 @@ type ProviderSet struct{}
 //
 // Passing a ProviderSet to NewSet is the same as if the set's contents
 // were passed as arguments to NewSet directly.
+//
+// The behavior of passing the result of a call to other functions in this
+// package are described in their respective doc comments.
 func NewSet(...interface{}) ProviderSet {
 	return ProviderSet{}
 }
@@ -60,13 +63,15 @@ func NewSet(...interface{}) ProviderSet {
 // dependency graph. Build returns an error message that can be sent to a call
 // to panic().
 //
-// The parameters of an injector function are used as inputs in the dependency
-// graph. Similar to provider functions passed into NewSet, the first return
-// value is the output of the injector function, the optional second return
-// value is a cleanup function, and the optional last return value is an
-// error. If any of the provider functions in the injector function's
-// provider set return errors or cleanup functions, the corresponding
-// return value must be present in the injector function template.
+// The parameters of the injector function are used as inputs in the dependency
+// graph.
+//
+// Similar to provider functions passed into NewSet, the first return value is
+// the output of the injector function, the optional second return value is a
+// cleanup function, and the optional last return value is an error. If any of
+// the provider functions in the injector function's provider set return errors
+// or cleanup functions, the corresponding return value must be present in the
+// injector function template.
 //
 // Examples:
 //
