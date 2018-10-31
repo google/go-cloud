@@ -26,9 +26,3 @@ func injectedMessage() string {
 	wire.Build(bar.Value)
 	return ""
 }
-
-func injectedBar() string {
-	// Fails because bar.bar is unexported.
-	wire.Build(bar.bar.X)
-	return ""
-}

@@ -12,10 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//+build wireinject
+
 package main
 
-import "fmt"
+import (
+	"example.com/bar"
+	"github.com/google/go-cloud/wire"
+)
 
-func main() {
-	fmt.Println(injectedMessage())
+func injectedBar() string {
+	// Fails because bar.foo is unexported.
+	wire.Build(bar.foo.X)
+	return ""
 }

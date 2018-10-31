@@ -17,5 +17,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println(injectedMessage())
+	fmt.Printf("%v\n", injectedBar())
 }

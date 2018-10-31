@@ -19,9 +19,3 @@ import "github.com/google/go-cloud/wire"
 var Value = wire.Value(privateMsg)
 
 var privateMsg = "Hello, World!"
-
-var bar struct {
-	X int
-}
-
-

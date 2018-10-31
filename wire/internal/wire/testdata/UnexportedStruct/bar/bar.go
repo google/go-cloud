@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package bar
 
-import "fmt"
-
-func main() {
-	fmt.Println(injectedMessage())
+var foo struct {
+	X int
 }
+
+
