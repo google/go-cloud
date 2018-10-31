@@ -14,6 +14,17 @@
 
 // Package gcsblob provides an implementation of blob that uses GCS.
 //
+// For blob.Open URLs, gcsblob registers for the "gs" protocol.
+// The URL's Host is used as the bucket name.
+// The following query options are supported:
+// - cred_path: Sets path to the Google credentials file. If unset, default
+//       credentials are loaded.
+//       See https://cloud.google.com/docs/authentication/production.
+// - access_id: Sets Options.GoogleAccessID.
+// - private_key_path: Sets path to a private key, which is read and used
+//       to set Options.PrivateKey.
+// Example URL: blob.Open("gs://mybucket")
+//
 // It exposes the following types for As:
 // Bucket: *storage.Client
 // ListObject: storage.ObjectAttrs
@@ -28,6 +39,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -37,12 +49,56 @@ import (
 	"github.com/google/go-cloud/gcp"
 
 	"cloud.google.com/go/storage"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 const defaultPageSize = 1000
+
+func init() {
+	blob.Register("gs", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+		q := u.Query()
+		opts := &Options{}
+
+		if accessID := q["access_id"]; len(accessID) > 0 {
+			opts.GoogleAccessID = accessID[0]
+		}
+
+		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
+			pk, err := ioutil.ReadFile(keyPath[0])
+			if err != nil {
+				return nil, fmt.Errorf("failed to read private key: %v", err)
+			}
+			opts.PrivateKey = pk
+		}
+
+		var creds *google.Credentials
+		if credPath := q["cred_path"]; len(credPath) == 0 {
+			var err error
+			creds, err = gcp.DefaultCredentials(ctx)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			jsonCreds, err := ioutil.ReadFile(credPath[0])
+			if err != nil {
+				return nil, fmt.Errorf("failed to read credentials: %v", err)
+			}
+			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load credentials: %v", err)
+			}
+		}
+
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+		if err != nil {
+			return nil, err
+		}
+		return openBucket(ctx, u.Host, client, opts)
+	})
+}
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
 type Options struct {
@@ -62,8 +118,8 @@ type Options struct {
 	SignBytes func([]byte) ([]byte, error)
 }
 
-// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
-func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
+// openBucket returns a GCS Bucket that communicates using the given HTTP client.
+func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (driver.Bucket, error) {
 	if client == nil {
 		return nil, fmt.Errorf("OpenBucket requires an HTTP client")
 	}
@@ -74,7 +130,16 @@ func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, 
 	if opts == nil {
 		opts = &Options{}
 	}
-	return blob.NewBucket(&bucket{name: bucketName, client: c, opts: opts}), nil
+	return &bucket{name: bucketName, client: c, opts: opts}, nil
+}
+
+// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
+func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, bucketName, client, opts)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 // bucket represents a GCS bucket, which handles read, write and delete operations

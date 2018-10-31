@@ -14,6 +14,12 @@
 
 // Package s3blob provides an implementation of blob using S3.
 //
+// For blob.Open URLs, s3blob registers for the "s3" protocol.
+// The URL's Host is used as the bucket name.
+// The following query options are supported:
+// - region: The AWS region for requests.
+// Example URL: blob.Open("s3://mybucket?region=us-east-1")
+//
 // It exposes the following types for As:
 // Bucket: *s3.S3
 // ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
@@ -30,6 +36,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,22 +47,48 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const defaultPageSize = 1000
 
-// OpenBucket returns an S3 Bucket.
-func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
+func init() {
+	blob.Register("s3", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+		q := u.Query()
+		cfg := &aws.Config{}
+
+		if region := q["region"]; len(region) > 0 {
+			cfg.Region = aws.String(region[0])
+		}
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return openBucket(ctx, sess, u.Host)
+	})
+}
+
+// openBucket returns an S3 Bucket.
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (driver.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
-	return blob.NewBucket(&bucket{
+	return &bucket{
 		name:   bucketName,
 		sess:   sess,
 		client: s3.New(sess),
-	}), nil
+	}, nil
+}
+
+// OpenBucket returns an S3 Bucket.
+func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, sess, bucketName)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
