@@ -383,6 +383,7 @@ func (p *Publisher) Send(ctx context.Context, m *Message) error {
 // Close disconnects the Publisher.
 func (p *Publisher) Close() error {
     close(p.doneChan)
+    return p.driver.Close()
 }
 
 // startBatcher spins up a goroutine to bundle messages into batches behind the
@@ -487,6 +488,7 @@ func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
 // Close disconnects the Subscriber.
 func (s *Subscriber) Close() error {
     close(s.doneChan)
+    return s.driver.Close()
 }
 
 // startAckBatcher spins up a goroutine to gather acks into batches.
