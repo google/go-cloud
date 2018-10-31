@@ -614,7 +614,9 @@ func receive() error {
     ctx := context.Background()
     subscriptionID := "projects/unicornvideohub/subscriptions/signup-minder"
     sub, err := subscriber.New(ctx, subscriptionID)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     defer sub.Close(ctx)
 
     // Handle ctrl-C.
@@ -623,7 +625,9 @@ func receive() error {
     go func() {
         for sig := range c {
             err := sub.Close(ctx)
-            if err != nil { log.Fatal(err) }
+            if err != nil {
+                log.Fatal(err)
+            }
         }
     }()
 
@@ -646,7 +650,9 @@ func receive() error {
             acks = append(acks, msg.AckID)
         }
         err := sub.SendAcks(ctx, acks)
-        if err != nil { return err }
+        if err != nil {
+            return err
+        }
     }
 }
 ```
