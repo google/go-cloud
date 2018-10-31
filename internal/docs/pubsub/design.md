@@ -819,7 +819,7 @@ Pro:
 * The semantics are simple, making it
     * straightforward to implement the concrete API and the drivers for most pubsub providers
     * easy for developers to reason about how it will behave
-    * less risky that bugs will be present in the concrete API
+    * less risky that bugs will be present in the concrete API.
 * Fairly efficient sending and receiving of messages is possible by tuning batch size and the number of goroutines sending or receiving messages.
 
 Con:
@@ -895,8 +895,8 @@ We can test that the batched sending, receiving and acking work as intended by m
 
 ## Benchmarks
 What is the throughput and latency of Go Cloud's `pubsub` package, relative to directly using the APIs for various providers?
-* send, for 1, 10, 100 publishers, and for 1, 10, 100 goroutines sending messages via those publishers
-* receive, for 1, 10, 100 subscribers, and for 1, 10, 100 goroutines receiving from each subscriber
+* send, for 1, 10, 100 topics, and for 1, 10, 100 goroutines sending messages to those topics
+* receive, for 1, 10, 100 subscriptions, and for 1, 10, 100 goroutines receiving from each subscription
 
 ## References
 * https://github.com/google/go-cloud/issues/312
