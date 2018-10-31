@@ -603,7 +603,7 @@ func serve() error {
     }
     defer topic.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+        err := topic.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
             log.Println(err)
         }
@@ -639,11 +639,11 @@ func serve() error {
     if err != nil {
         return err
     }
-    defer pub.Close()
+    defer topic.Close()
     c := make(chan *pubsub.Message)
     go sendBatches(ctx, pub, c)
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := pub.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
+        err := topic.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
             log.Println(err)
         }
@@ -657,7 +657,7 @@ func sendBatches(ctx context.Context, pub *pubsub.Topic, c chan *pubsub.Message)
         for i := 0; i < batchSize; i++ {
             batch[i] = <-c
         }
-        if err := pub.Send(ctx, batch); err != nil {
+        if err := topic.Send(ctx, batch); err != nil {
             log.Println(err)
         }
     }
