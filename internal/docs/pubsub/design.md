@@ -105,10 +105,14 @@ func receive() error {
     ctx := context.Background()
     subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
     sub, err := subscriber.New(ctx, subscriptionID)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     defer sub.Close()
     msg, err := sub.Receive(ctx)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     // Do something with msg.
     fmt.Printf("Got message: %s\n", msg.Body)
     // Acknowledge that we handled the message.
@@ -154,7 +158,9 @@ func receive() error {
     go func() {
         for sig := range c {
             err := sub.Close(ctx)
-            if err != nil { log.Fatal(err) }
+            if err != nil {
+                log.Fatal(err)
+            }
         }
     }()
 
@@ -698,7 +704,9 @@ func receive() error {
     ctx := context.Background()
     subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
     sub, err := subscriber.New(ctx, subscriptionID)
-    if err != nil { return err }
+    if err != nil {
+        return err
+    }
     defer sub.Close(ctx)
 
     // Handle ctrl-C.
@@ -775,19 +783,22 @@ Con:
 Here is an example of what application code could look like for a pubsub API inspired by [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
 ```go
 b := somepubsub.NewBroker(...)
-err := b.Connect()
-if err != nil { /* handle err */ }
+if err := b.Connect(); err != nil {
+    /* handle err */
+}
 topic := "user-signups"
 subID := "user-signups-subscription-1"
 sub, err := b.Subscription(ctx, topic, subID, func(pub broker.Publication) error {
     fmt.Printf("%s\n", pub.Message.Body)
     return nil
 })
-err = b.Publish(ctx, topic, &broker.Message{ Body: []byte("alice signed up") })
-if err != nil { /* handle err */ }
+if err := b.Publish(ctx, topic, &broker.Message{ Body: []byte("alice signed up") }); err != nil {
+    /* handle err */
+}
 // Sometime later:
-err = sub.Unsubscribe(ctx)
-if err != nil { /* handle err */ }
+if err := sub.Unsubscribe(ctx); err != nil {
+    /* handle err */
+}
 ```
 
 Pro:
