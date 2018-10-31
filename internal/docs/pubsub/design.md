@@ -62,14 +62,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pub.Close()
 	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
 		err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
 		if err != nil {
 			log.Println(err)
 		}
-	})
-	log.Fatal(http.ListenAndServer(":8080", nil))
+    })
+    err := http.ListenAndServer(":8080", nil)
+    pub.Close()
+	log.Fatal(err)
 }
 ```
 
@@ -524,14 +525,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pub.Close()
 	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
 		err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
 		if err != nil {
 			log.Println(err)
 		}
-	})
-	log.Fatal(http.ListenAndServer(":8080", nil))
+    })
+    err := http.ListenAndServer(":8080", nil)
+    pub.Close()
+	log.Fatal(err)
 }
 ```
 For a company experiencing explosive growth or enthusiastic spammers creating
