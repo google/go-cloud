@@ -342,21 +342,69 @@ type PublisherOptions struct {
     // SendWait tells the max duration to wait before sending the next batch of
     // messages to the server.
     SendWait time.Duration
+
+    // BatchSize specifies the maximum number of messages that can go in a batch
+    // for sending.
+    BatchSize int
 }
 
 // Publisher publishes messages to all its subscribers.
 type Publisher struct {
-    p       driver.Publisher
-    opts    PublisherOptions
+    driver      driver.Publisher
+    opts        PublisherOptions
+    mcChan      chan msgCtx
+    doneChan    chan struct {}{}
+}
+
+// msgCtx pairs a Message with the Context of its Send call.
+type msgCtx struct {
+    msg    *Message
+    ctx    context.Context
 }
 
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
-func (p *Publisher) Send(ctx context.Context, m *Message) error { … }
+func (p *Publisher) Send(ctx context.Context, m *Message) error {
+    p.mcChan <- msgCtx{m, ctx}
+    // Wait for the batch to be sent to the server.
+    return <-m.errChan
+}
 
 // Close disconnects the Publisher.
-func (p *Publisher) Close() error
+func (p *Publisher) Close() error {
+    p.doneChan <- struct{}{}
+}
+
+// startBatcher spins up a goroutine to bundle messages into batches behind the
+// scenes, and send them to the server. This method should typically be called
+// by publisher.New in particular implementations of Go Cloud pubsub.
+func (p *Publisher) startBatcher(ctx context.Context) {
+    p.mcChan = make(chan msgCtx)
+    p.doneChan = make(chan struct{}{})
+    go func() {
+        for {
+            for i := 0; i < p.opts.BatchSize; i++ {
+                select {
+                case mc := <-p.mcChan:
+                    select {
+                    case <-mc.ctx.Done():
+                        // This message's Send call was cancelled, so just skip
+                        // over it.
+                    default:
+                        batch = append(batch, m.msg)
+                    }
+                case <-p.doneChan:
+                    return
+                }
+            }
+            err := p.driver.SendBatch(ctx, batch)
+            for _, m := range batch {
+                m.errChan <- err
+            }
+        }
+    }()
+}
 
 // SubscriberOptions contains configuration for Subscribers.
 type SubscriberOptions struct {
