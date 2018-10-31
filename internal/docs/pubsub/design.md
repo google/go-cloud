@@ -783,7 +783,9 @@ func receive() error {
                 log.Println("Got ctrl-C. Exiting")
                 os.Exit(0)
             }
-            if err != nil { /* handle err */ }
+            if err != nil {
+                /* handle err */
+            }
             for _, m := range msgs {
                 msgsChan <- m
             }
