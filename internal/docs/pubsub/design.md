@@ -436,6 +436,10 @@ type SubscriberOptions struct {
     // AckDeadline tells how long the server should wait before assuming a
     // received message has failed to be processed.
     AckDeadline time.Duration
+
+    // PollSleep is how long to wait before trying again to fetch a batch
+    // of messages from the server.
+    PollSleep time.Duration
 }
 
 // Subscriber receives published messages.
@@ -478,6 +482,7 @@ func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
                 s.q = msgs
                 break
             }
+            time.Sleep(s.opts.PollSleep)
         }
     }
     m := s.q[0]
