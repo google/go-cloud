@@ -808,6 +808,11 @@ Con:
 * Passing `ack` around along with `msg` is inconvenient.
 
 ## Tests
+### Unit tests for the concrete API
+We can test that the batched sending, receiving and acking work as intended
+by making mock implementations of the driver interfaces.
+
+### Conformance tests for concrete driver implementations
 * Sent messages with random contents are received with the same contents.
 * Sent messages with random attributes are received with the same attributes.
 * Error occurs when making a local topic with an ID that doesn’t exist on the server.
