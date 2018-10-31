@@ -388,14 +388,6 @@ type Message struct {
 
 type AckID interface{}
 
-type AckNotSupportedError struct {
-    Provider string
-}
-
-func (e AckNotSupportedError) Error() string {
-    return fmt.Sprintf("The %s implementation of pubsub does not support Acks.", e.Provider)
-}
-
 // Ack acknowledges the message, telling the server that it does not need to
 // be sent again to the associated Subscription. This method blocks until
 // the message has been confirmed as acknowledged on the server, or failure
