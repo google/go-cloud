@@ -175,7 +175,7 @@ func receive() error {
 }
 ```
 
-The messages can be processed concurrently with an inverted worker pool, like this:
+The messages can be processed concurrently with an [inverted worker pool](https://www.youtube.com/watch?v=5zXAHh5tJqQ), like this:
 ```go
 package main
 
