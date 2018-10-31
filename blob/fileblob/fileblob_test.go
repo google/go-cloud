@@ -48,7 +48,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return &bucket{h.dir}, nil
+	return openBucket(h.dir)
 }
 
 func (h *harness) Close() {

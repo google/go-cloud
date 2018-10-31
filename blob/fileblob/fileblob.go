@@ -31,6 +31,11 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
+// For blob.Open URLs, fileblob registers for the "file" protocol. The bucket
+// name in the URL is used as the root directory. For example,
+// blob.Open("file:///a/directory") is equivalent to
+// fileblob.OpenBucket("/a/directory"). No options are supported.
+//
 // fileblob does not support any types for As.
 package fileblob
 
@@ -52,13 +57,19 @@ import (
 
 const defaultPageSize = 1000
 
+func init() {
+	blob.Register("file", func(_ context.Context, bucket string, _ map[string]string) (driver.Bucket, error) {
+		return openBucket(bucket)
+	})
+}
+
 type bucket struct {
 	dir string
 }
 
-// OpenBucket creates a *blob.Bucket that reads and writes to dir.
+// openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
-func OpenBucket(dir string) (*blob.Bucket, error) {
+func openBucket(dir string) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
@@ -67,7 +78,16 @@ func OpenBucket(dir string) (*blob.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("open file bucket: %s is not a directory", dir)
 	}
-	return blob.NewBucket(&bucket{dir}), nil
+	return &bucket{dir}, nil
+}
+// OpenBucket creates a *blob.Bucket that reads and writes to dir.
+// dir must exist.
+func OpenBucket(dir string) (*blob.Bucket, error) {
+	drv, err := openBucket(dir)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 // shouldEscape returns true if c should be escaped.

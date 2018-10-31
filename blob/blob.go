@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -271,6 +272,7 @@ type Bucket struct {
 }
 
 // NewBucket creates a new Bucket for a group of objects for a blob service.
+// It is for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
@@ -520,6 +522,68 @@ type WriterOptions struct {
 	// asFunc converts its argument to provider-specific types.
 	// See Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
+}
+
+// FromURLFn allows providers to convert a parsed URL to a *Bucket.
+// It takes a bucket name and a map of key/value options. The map is guaranteed
+// to be non-nil, and all keys will be in lowercase.
+type FromURLFn func(context.Context, string, map[string]string) (driver.Bucket, error)
+
+// registry maps protocol strings to provider-specific instantiation functions.
+var registry = map[string]FromURLFn{}
+
+// Register is for use by provider implementations. It allows providers to
+// register an instantiation function for URLs with the given protocol. It is
+// expected to be called from the provider implementation's package init
+// function.
+//
+// fn will be called from Open, with a bucket name and options parsed from
+// the URL. All option keys will be lowercased.
+//
+// An error is returned if a provider has already registered for protocol.
+func Register(protocol string, fn FromURLFn) error {
+	if _, found := registry[protocol]; found {
+		return fmt.Errorf("a provider has already registered for protocol %q", protocol)
+	}
+	registry[protocol] = fn
+	return nil
+}
+
+// urlRegex is used to parse URLs in Open.
+var urlRegex = regexp.MustCompile("^([^:]+)://([^?]+)(.*)$")
+
+// Open creates a *Bucket from a URL of the form
+// protocol://bucket_name?opt1=a&opt2=b
+// The options after "?" are optional, case-insensitive, and provider-specific.
+// See provider documentation for more details on supported protocol(s) and
+// option(s).
+func Open(ctx context.Context, url string) (*Bucket, error) {
+	matches := urlRegex.FindStringSubmatch(url)
+	if matches == nil {
+		return nil, fmt.Errorf("%q is not a valid URL for blob", url)
+	}
+	protocol := matches[1]
+	bucket := matches[2]
+	optstr := matches[3]
+	options := map[string]string{}
+	if optstr != "" && optstr != "?" {
+		for _, opt := range strings.Split(optstr[1:], "&") {
+			kv := strings.Split(opt, "=")
+			if len(kv) != 2 || kv[0] == "" {
+				return nil, fmt.Errorf("%q is not a valid URL for blob (invalid option %q)", url, kv)
+			}
+			options[strings.ToLower(kv[0])] = kv[1]
+		}
+	}
+	fn := registry[protocol]
+	if fn == nil {
+		return nil, fmt.Errorf("no provider registered for protocol %q", protocol)
+	}
+	drv, err := fn(ctx, bucket, options)
+	if err != nil {
+		return nil, err
+	}
+	return NewBucket(drv), nil
 }
 
 // IsNotExist returns true iff err indicates that the referenced blob does not exist.
