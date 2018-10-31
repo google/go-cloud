@@ -195,11 +195,11 @@ func ExampleBucket_List() {
 	}
 	for {
 		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Fatal(err)
-		}
-		if obj == nil {
-			break
 		}
 		fmt.Println(obj.Key)
 	}
@@ -252,11 +252,11 @@ func ExampleBucket_List_withDelimiter() {
 		}
 		for {
 			obj, err := iter.Next(ctx)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				log.Fatal(err)
-			}
-			if obj == nil {
-				break
 			}
 			fmt.Printf("%s%s\n", indent, obj.Key)
 			if obj.IsDir {
