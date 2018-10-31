@@ -335,17 +335,17 @@ type Message struct {
     AckID interface{}
 }
 
-// Publisher publishes messages.
-type Publisher interface {
+// Topic publishes messages.
+type Topic interface {
     // SendBatch publishes all the messages in ms.
     SendBatch(ctx context.Context, ms []*Message) error
 
-    // Close disconnects the Publisher.
+    // Close disconnects the Topic.
     Close() error
 }
 
-// Subscriber receives published messages.
-type Subscriber interface {
+// Subscription receives published messages.
+type Subscription interface {
     // ReceiveBatch returns a batch of messages that have queued up for the
     // subscription on the server.
     ReceiveBatch(ctx context.Context) ([]*Message, error)
@@ -356,7 +356,7 @@ type Subscriber interface {
     // returns only after all the ackIDs are sent.
     SendAcks(ctx context.Context, ackIDs []interface{}) error
 
-    // Close disconnects the Subscriber.
+    // Close disconnects the Subscription.
     Close() error
 }
 ```
@@ -384,8 +384,8 @@ type Message struct {
     // ackID is an ID for the message on the server, used for acking.
     ackID AckID
 
-    // sub is the Subscriber this message was received from.
-    sub *Subscriber
+    // sub is the Subscription this message was received from.
+    sub *Subscription
 }
 
 type AckID interface{}
@@ -399,7 +399,7 @@ func (e AckNotSupportedError) Error() string {
 }
 
 // Ack acknowledges the message, telling the server that it does not need to
-// be sent again to the associated Subscriber. This method blocks until
+// be sent again to the associated Subscription. This method blocks until
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs. An AckNotSupportedError can be returned for pubsub systems that
 // do not support Acks.
@@ -414,8 +414,8 @@ func (m *Message) Ack(ctx context.Context) error {
     }
 }
 
-// PublisherOptions contains configuration for Publishers.
-type PublisherOptions struct {
+// TopicOptions contains configuration for Topics.
+type TopicOptions struct {
     // SendWait tells the max duration to wait before sending the next batch of
     // messages to the server.
     SendWait time.Duration
@@ -425,10 +425,10 @@ type PublisherOptions struct {
     BatchSize int
 }
 
-// Publisher publishes messages to all its subscribers.
-type Publisher struct {
-    driver      driver.Publisher
-    opts        PublisherOptions
+// Topic publishes messages to all its subscribers.
+type Topic struct {
+    driver      driver.Topic
+    opts        TopicOptions
     mcChan      chan msgCtx
     doneChan    chan struct {}{}
 }
@@ -442,34 +442,34 @@ type msgCtx struct {
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
-func (p *Publisher) Send(ctx context.Context, m *Message) error {
-    p.mcChan <- msgCtx{m, ctx}
+func (t *Topic) Send(ctx context.Context, m *Message) error {
+    t.mcChan <- msgCtx{m, ctx}
     // Wait for the batch including this message to be sent to the server.
     return <-m.errChan
 }
 
-// Close disconnects the Publisher.
-func (p *Publisher) Close() error {
-    close(p.doneChan)
-    return p.driver.Close()
+// Close disconnects the Topic.
+func (t *Topic) Close() error {
+    close(t.doneChan)
+    return t.driver.Close()
 }
 
 // startBatcher spins up a goroutine to bundle messages into batches behind the
 // scenes, and send them to the server. This method should typically be called
 // by publisher.New in particular implementations of Go Cloud pubsub.
-func (p *Publisher) Open(ctx context.Context, topic string) {
-    p.mcChan = make(chan msgCtx)
-    p.doneChan = make(chan struct{}{})
+func (t *Topic) Open(ctx context.Context, topic string) {
+    t.mcChan = make(chan msgCtx)
+    t.doneChan = make(chan struct{}{})
     go func() {
         for {
             batch := make([]*Message, 0, p.opts.BatchSize)
             timeout := time.After(p.opts.SendWait)
-            for i := 0; i < p.opts.BatchSize; i++ {
+            for i := 0; i < t.opts.BatchSize; i++ {
                 select {
                 case <-timeout:
                     // Time to send the batch, even if it isn't full.
                     break
-                case mc := <-p.mcChan:
+                case mc := <-t.mcChan:
                     select {
                     case <-mc.ctx.Done():
                         // This message's Send call was cancelled, so just skip
@@ -477,12 +477,12 @@ func (p *Publisher) Open(ctx context.Context, topic string) {
                     default:
                         batch = append(batch, m.msg)
                     }
-                case <-p.doneChan:
+                case <-t.doneChan:
                     return
                 }
             }
             if len(batch) > 0 {
-                err := p.driver.SendBatch(ctx, batch)
+                err := t.driver.SendBatch(ctx, batch)
                 for _, m := range batch {
                     m.errChan <- err
                 }
@@ -491,8 +491,8 @@ func (p *Publisher) Open(ctx context.Context, topic string) {
     }()
 }
 
-// SubscriberOptions contains configuration for Subscribers.
-type SubscriberOptions struct {
+// SubscriptionOptions contains configuration for Subscriptions.
+type SubscriptionOptions struct {
     // AckWait tells the max duration to wait before sending the next batch 
     // of acknowledgements back to the server.
     AckWait     time.Duration
@@ -510,10 +510,10 @@ type SubscriberOptions struct {
     PollSleep time.Duration
 }
 
-// Subscriber receives published messages.
-type Subscriber struct {
-    driver  driver.Subscriber
-    opts    SubscriberOptions
+// Subscription receives published messages.
+type Subscription struct {
+    driver  driver.Subscription
+    opts    SubscriptionOptions
 
     // ackChan conveys ackIDs from Message.Ack to the ack batcher goroutine.
     ackChan     chan AckID
@@ -528,12 +528,12 @@ type Subscriber struct {
     q           []*Message
 }
 
-// Receive receives and returns the next message from the Subscriber's queue,
+// Receive receives and returns the next message from the Subscription's queue,
 // blocking if none are available. This method can be called concurrently from
 // multiple goroutines. On systems that support acks, the Ack() method of the
 // returned Message has to be called once the message has been processed, to
 // prevent it from being received again.
-func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
+func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
     if len(s.q) == 0 {
         // Get the next batch of messages from the server.
         for {
@@ -558,15 +558,15 @@ func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
     return m, nil
 }
 
-// Close disconnects the Subscriber.
-func (s *Subscriber) Close() error {
+// Close disconnects the Subscription.
+func (s *Subscription) Close() error {
     close(s.doneChan)
     return s.driver.Close()
 }
 
 // startAckBatcher spins up a goroutine to gather acks into batches.
-func (s *Subscriber) startAckBatcher(ctx context.Context) {
-    // Something similar to Publisher.startBatcher should go here.
+func (s *Subscription) startAckBatcher(ctx context.Context) {
+    // Something similar to Topic.startBatcher should go here.
 }
 ```
 
@@ -649,7 +649,7 @@ func serve() error {
     return http.ListenAndServe(":8080", nil)
 }
 
-func sendBatches(ctx context.Context, pub *pubsub.Publisher, c chan *pubsub.Message) {
+func sendBatches(ctx context.Context, pub *pubsub.Topic, c chan *pubsub.Message) {
     batch := make([]*pubsub.Message, batchSize)
     for {
         for i := 0; i < batchSize; i++ {
