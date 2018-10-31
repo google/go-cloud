@@ -838,7 +838,7 @@ func receive() error {
 }
 ```
 
-Here are some trade-offs of this design alternative.
+Here are some trade-offs of this design:
 
 Pro:
 * The semantics are simple, making it straightforward to implement the concrete API and the drivers for most pubsub providers, making it easy for developers to reason about how it will behave, and minimizing the risk that bugs will be present in the concrete API.
