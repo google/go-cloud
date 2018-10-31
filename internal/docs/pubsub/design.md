@@ -62,14 +62,13 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topicName := "projects/unicornvideohub/topics/user-signup"
-    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
+    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
     if err != nil {
         return err
     }
-    defer topic.Close()
+    defer t.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := topic.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+        err := t.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
         if err != nil {
             log.Println(err)
         }
@@ -105,13 +104,12 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionName := "projects/unicornvideohub/subscriptions/user-signup-minder"
-    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
+    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
     if err != nil {
         return err
     }
-    defer sub.Close()
-    msg, err := sub.Receive(ctx)
+    defer s.Close()
+    msg, err := s.Receive(ctx)
     if err != nil {
         return err
     }
@@ -147,19 +145,18 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionName := "projects/unicornvideohub/subscriptions/signup-minder"
-    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
+    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
     if err != nil {
         return err
     }
-    defer sub.Close(ctx)
+    defer s.Close(ctx)
 
     // Handle ctrl-C.
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func() {
         for sig := range c {
-            err := sub.Close(ctx)
+            err := s.Close(ctx)
             if err != nil {
                 log.Fatal(err)
             }
@@ -168,7 +165,7 @@ func receive() error {
 
     // Process messages until the user hits ctrl-C.
     for {
-        msg, err := sub.Receive(ctx)
+        msg, err := s.Receive(ctx)
         switch err {
         // sub.Close() causes io.EOF to be returned from sub.Receive().
         case io.EOF:
@@ -208,8 +205,7 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionName := "projects/unicornvideohub/subscriptions/user-signup-minder"
-    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
+    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
     if err != nil {
         return err
     }
@@ -598,14 +594,13 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topicName := "projects/unicornvideohub/topics/user-signup"
-    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
+    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
     if err != nil {
         return err
     }
-    defer topic.Close()
+    defer t.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := topic.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+        err := t.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
             log.Println(err)
         }
@@ -636,16 +631,15 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topicName := "projects/unicornvideohub/topics/user-signup"
-    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
+    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
     if err != nil {
         return err
     }
-    defer topic.Close()
+    defer t.Close()
     c := make(chan *pubsub.Message)
-    go sendBatches(ctx, pub, c)
+    go sendBatches(ctx, t, c)
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := topic.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
+        err := t.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
             log.Println(err)
         }
@@ -653,13 +647,13 @@ func serve() error {
     return http.ListenAndServe(":8080", nil)
 }
 
-func sendBatches(ctx context.Context, topic *pubsub.Topic, c chan *pubsub.Message) {
+func sendBatches(ctx context.Context, t *pubsub.Topic, c chan *pubsub.Message) {
     batch := make([]*pubsub.Message, batchSize)
     for {
         for i := 0; i < batchSize; i++ {
             batch[i] = <-c
         }
-        if err := topic.Send(ctx, batch); err != nil {
+        if err := t.Send(ctx, batch); err != nil {
             log.Println(err)
         }
     }
@@ -693,8 +687,7 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionName := "projects/unicornvideohub/subscriptions/signup-minder"
-    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName)
+    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
     if err != nil {
         return err
     }
@@ -749,7 +742,7 @@ import (
     "os/signal"
 
     "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+    "github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 100
@@ -763,8 +756,7 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
-    sub, err := subscriber.New(ctx, subscriptionID)
+    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
     if err != nil {
         return err
     }
