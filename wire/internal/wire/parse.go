@@ -15,6 +15,7 @@
 package wire
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -193,8 +194,14 @@ type Value struct {
 // Load finds all the provider sets in the given packages, as well as
 // the provider sets' transitive dependencies. It may return both errors
 // and Info.
-func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
-	prog, errs := load(bctx, wd, pkgs)
+//
+// wd is the working directory and env is the set of environment
+// variables to use when loading the packages specified by patterns. If
+// env is nil or empty, it is interpreted as an empty set of variables.
+// In case of duplicate environment variables, the last one in the list
+// takes precedence.
+func Load(ctx context.Context, wd string, env []string, patterns []string) (*Info, []error) {
+	prog, errs := load(ctx, wd, env, patterns)
 	if len(errs) > 0 {
 		return nil, errs
 	}
@@ -277,10 +284,17 @@ func Load(bctx *build.Context, wd string, pkgs []string) (*Info, []error) {
 
 // load typechecks the packages, including function body type checking
 // for the packages directly named.
-func load(bctx *build.Context, wd string, pkgs []string) (*loader.Program, []error) {
+//
+// wd is the working directory and env is the set of environment
+// variables to use when loading the packages specified by patterns. If
+// env is nil or empty, it is interpreted as an empty set of variables.
+// In case of duplicate environment variables, the last one in the list
+// takes precedence.
+func load(ctx context.Context, wd string, env []string, patterns []string) (*loader.Program, []error) {
+	bctx := buildContextFromEnv(env)
 	var foundPkgs []*build.Package
 	ec := new(errorCollector)
-	for _, name := range pkgs {
+	for _, name := range patterns {
 		p, err := bctx.Import(name, wd, build.FindOnly)
 		if err != nil {
 			ec.add(err)
@@ -320,7 +334,7 @@ func load(bctx *build.Context, wd string, pkgs []string) (*loader.Program, []err
 			return pkg, err
 		},
 	}
-	for _, name := range pkgs {
+	for _, name := range patterns {
 		conf.Import(name)
 	}
 
@@ -332,6 +346,35 @@ func load(bctx *build.Context, wd string, pkgs []string) (*loader.Program, []err
 		return nil, []error{err}
 	}
 	return prog, nil
+}
+
+func buildContextFromEnv(env []string) *build.Context {
+	// TODO(#78): Remove this function in favor of using go/packages,
+	// which does not need a *build.Context.
+
+	getenv := func(name string) string {
+		for i := len(env) - 1; i >= 0; i-- {
+			if strings.HasPrefix(env[i], name+"=") {
+				return env[i][len(name)+1:]
+			}
+		}
+		return ""
+	}
+	bctx := new(build.Context)
+	*bctx = build.Default
+	if v := getenv("GOARCH"); v != "" {
+		bctx.GOARCH = v
+	}
+	if v := getenv("GOOS"); v != "" {
+		bctx.GOOS = v
+	}
+	if v := getenv("GOROOT"); v != "" {
+		bctx.GOROOT = v
+	}
+	if v := getenv("GOPATH"); v != "" {
+		bctx.GOPATH = v
+	}
+	return bctx
 }
 
 func importPathInPkgList(pkgs []*build.Package, path string) bool {
