@@ -41,7 +41,8 @@ There are several pubsub systems available that could be made to work with Go Cl
 
 ## Design overview
 ### Developer’s perspective
-Given a topic that has already been created on the pubsub server, messages can be sent to that topic by creating a new `pubsub.Publisher` and calling its `Send` method, like this (assuming a fictional pubsub provider called "acme"):
+Given a topic that has already been created on the pubsub server, messages can be sent to that topic by calling
+`acmepubsub.OpenTopic` and calling the `Send` method of the returned `Topic`, like this (assuming a fictional pubsub provider called "acme"):
 
 ```go
 package main
@@ -52,7 +53,7 @@ import (
     "net/http"
 
     "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
@@ -61,14 +62,14 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topic := "projects/unicornvideohub/topics/user-signup"
-    pub, err := publisher.New(ctx, topic)
+    topicName := "projects/unicornvideohub/topics/user-signup"
+    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
     if err != nil {
         return err
     }
-    defer pub.Close()
+    defer topic.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := pub.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+        err := topic.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
         if err != nil {
             log.Println(err)
         }
@@ -81,7 +82,8 @@ The call to `Send` will only return after the message has been sent to the
 server or its sending has failed.
 
 Messages can be received from an existing subscription to a topic by
-creating a `pubsub.Subscriber` and calling its `Receive` method, like this:
+calling the `Receive` method on a `Subscription` object returned from
+`acmepubsub.OpenSubscription`, like this:
 
 ```go
 package main
@@ -92,7 +94,7 @@ import (
     "log"
 
     "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+    "github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
@@ -103,8 +105,8 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
-    sub, err := subscriber.New(ctx, subscriptionID)
+    subscriptionName := "projects/unicornvideohub/subscriptions/user-signup-minder"
+    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
     if err != nil {
         return err
     }
@@ -116,7 +118,7 @@ func receive() error {
     // Do something with msg.
     fmt.Printf("Got message: %s\n", msg.Body)
     // Acknowledge that we handled the message.
-    if err := msg.Ack(); err != nil {
+    if err := msg.Ack(ctx); err != nil {
        return err
     }
 }
@@ -134,7 +136,7 @@ import (
     "os/signal"
 
     "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+    "github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
@@ -145,8 +147,8 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionID := "projects/unicornvideohub/subscriptions/signup-minder"
-    sub, err := subscriber.New(ctx, subscriptionID)
+    subscriptionName := "projects/unicornvideohub/subscriptions/signup-minder"
+    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
     if err != nil {
         return err
     }
@@ -177,7 +179,7 @@ func receive() error {
             return err
         }
         log.Printf("Got message: %s\n", msg.Body)
-        if err := msg.Ack(); err != nil {
+        if err := msg.Ack(ctx); err != nil {
             return err
         }
     }
@@ -195,7 +197,7 @@ import (
     "os/signal"
 
     "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acme/subscriber" 
+    "github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
@@ -206,8 +208,8 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    subscriptionID := "projects/unicornvideohub/subscriptions/user-signup-minder"
-    sub, err := subscriber.New(ctx, subscriptionID)
+    subscriptionName := "projects/unicornvideohub/subscriptions/user-signup-minder"
+    sub, err := acmepubsub.OpenSubscription(ctx, subscriptionName, nil)
     if err != nil {
         return err
     }
@@ -243,7 +245,7 @@ func receive() error {
         sem <- token{}
         go func(msg *pubsub.Message) {
             log.Printf("Got message: %s", msg.Body)
-            if err := msg.Ack(); err != nil {
+            if err := msg.Ack(ctx); err != nil {
                 log.Printf("Failed to ack message: %v", err)
             }
             <-sem
@@ -528,7 +530,7 @@ import (
     "net/http"
 
     "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acme/publisher"
+    "github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
@@ -537,12 +539,12 @@ func main() {
 
 func serve() error {
     ctx := context.Background()
-    topic := "projects/unicornvideohub/topics/user-signup"
-    pub, err := publisher.New(ctx, topic)
+    topicName := "projects/unicornvideohub/topics/user-signup"
+    topic, err := acmepubsub.OpenTopic(ctx, topicName, nil)
     if err != nil {
         return err
     }
-    defer pub.Close()
+    defer topic.Close()
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
         err := pub.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
         if err != nil {
