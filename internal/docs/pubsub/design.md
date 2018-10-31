@@ -4,23 +4,11 @@
 This document proposes a new `pubsub` package for Go Cloud.
 
 ## Motivation
-A developer designing a new system with cross-cloud portability in mind could
-choose a messaging system supporting pubsub, such as ZeroMQ, Kafka or
-RabbitMQ. These pubsub systems run on AWS, Azure, GCP and others, so they
-pose no obstacle to portability between clouds. They can also be run on-prem.
-Users wanting managed pubsub could go with Confluent Cloud for Kafka (AWS,
-GCP), or CloudAMQP for RabbitMQ (AWS, Azure) without losing much in the way
-of portability.
+A developer designing a new system with cross-cloud portability in mind could choose a messaging system supporting pubsub, such as ZeroMQ, Kafka or RabbitMQ. These pubsub systems run on AWS, Azure, GCP and others, so they pose no obstacle to portability between clouds. They can also be run on-prem. Users wanting managed pubsub could go with Confluent Cloud for Kafka (AWS, GCP), or CloudAMQP for RabbitMQ (AWS, Azure) without losing much in the way of portability.
 
-So what’s missing? The solution described above means being locked into a
-particular implementation of pubsub. There is also a potential for lock-in
-when building systems in terms of the cloud-specific services such as
-AWS SNS+SQS, GCP PubSub or Azure Service Bus.
+So what’s missing? The solution described above means being locked into a particular implementation of pubsub. There is also a potential for lock-in when building systems in terms of the cloud-specific services such as AWS SNS+SQS, GCP PubSub or Azure Service Bus.
 
-Developers may wish to compare different pubsub systems in terms of their
-performance, reliability, cost or other factors, and they may want the option
-to move between these systems without too much friction. A `pubsub` package in
-Go Cloud could lower the cost of such experiments and migrations.
+Developers may wish to compare different pubsub systems in terms of their performance, reliability, cost or other factors, and they may want the option to move between these systems without too much friction. A `pubsub` package in Go Cloud could lower the cost of such experiments and migrations.
 
 ## Goals
 * Publish messages to an existing topic.
@@ -41,9 +29,7 @@ There are several pubsub systems available that could be made to work with Go Cl
 
 ## Design overview
 ### Developer’s perspective
-Given a topic that has already been created on the pubsub server, messages can be sent to that topic by calling
-`acmepubsub.OpenTopic` and calling the `Send` method of the returned `Topic`, like this (assuming a fictional pubsub provider called "acme"):
-
+Given a topic that has already been created on the pubsub server, messages can be sent to that topic by calling `acmepubsub.OpenTopic` and calling the `Send` method of the returned `Topic`, like this (assuming a fictional pubsub provider called "acme"): 
 ```go
 package main
 
@@ -77,12 +63,9 @@ func serve() error {
 }
 ```
 
-The call to `Send` will only return after the message has been sent to the
-server or its sending has failed.
+The call to `Send` will only return after the message has been sent to the server or its sending has failed.
 
-Messages can be received from an existing subscription to a topic by
-calling the `Receive` method on a `Subscription` object returned from
-`acmepubsub.OpenSubscription`, like this:
+Messages can be received from an existing subscription to a topic by calling the `Receive` method on a `Subscription` object returned from `acmepubsub.OpenSubscription`, like this:
 
 ```go
 package main
@@ -254,7 +237,7 @@ func receive() error {
 ```
 
 ### Driver implementer’s perspective
-Adding support for a new pubsub system involves the following steps, continuing with the "acme" example:
+Adding support for a new pubsub system involves the following steps, continuing with the "acme" example: 
 
 1. Add a new package called `acmepubsub`.
 2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
@@ -404,9 +387,10 @@ type Subscription interface {
 ```
 
 ## Detailed design
-The developer experience of using Go Cloud pubsub involves sending, receiving and acknowledging one message at a time, all in terms of synchronous calls. Behind the scenes, the driver implementations deal with batches of messages and acks. The concrete API, to be written by the Go Cloud team, takes care of creating the batches in the case of Send or Ack, and dealing out messages one at a time in the case of Receive.
+The developer experience of using Go Cloud pubsub involves sending, receiving and acknowledging one message at a time, all in terms of synchronous calls. Behind the scenes, the driver implementations deal with batches of messages and acks. The concrete API, to be written by the Go Cloud team, takes care of creating the batches in the case of Send or Ack, and dealing out messages one at a time in the case of Receive. 
 
 The concrete API will be located at `github.com/google/go-cloud/pubsub` and will look something like this:
+
 ```go
 package pubsub
 
@@ -585,9 +569,7 @@ func NewSubscription(s driver.Subscription, batchSize int, ackWait time.Duration
 ## Alternative designs considered
 
 ### Batch oriented concrete API
-In this alternative, the application code sends, receives and acknowledges messages in batches.
-Here is an example of how it would look from the developer's perspective, in a situation where
-not more than about a thousand users are signing up per second:
+In this alternative, the application code sends, receives and acknowledges messages in batches. Here is an example of how it would look from the developer's perspective, in a situation where not too many signups are happening per second.
 ```go
 package main
 
@@ -620,9 +602,7 @@ func serve() error {
     return http.ListenAndServe(":8080", nil)
 }
 ```
-For a company experiencing explosive growth or enthusiastic spammers creating
-many thousands of signups per second, the app would have to be adapted to
-create non-singleton batches, like this:
+For a company experiencing explosive growth or enthusiastic spammers creating more signups than this simple-minded implementation can handle, the app would have to be adapted to create non-singleton batches, like this:
 ```go
 package main
 
@@ -651,10 +631,7 @@ func serve() error {
     c := make(chan *pubsub.Message)
     go sendBatches(ctx, t, c)
     http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := t.Send(ctx, []*pubsub.Message{{Body: []byte("Someone signed up")}})
-        if err != nil {
-            log.Println(err)
-        }
+        c <- &pubsub.Message{Body: []byte("Someone signed up")}
     })
     return http.ListenAndServe(":8080", nil)
 }
