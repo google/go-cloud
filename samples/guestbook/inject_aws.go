@@ -69,7 +69,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, client *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	return client.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 }
