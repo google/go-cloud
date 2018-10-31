@@ -13,9 +13,9 @@ GCP), or CloudAMQP for RabbitMQ (AWS, Azure) without losing much in the way
 of portability.
 
 So what’s missing? The solution described above means being locked into a
-particular implementation of pubsub. The potential lock-in is even greater
-when building systems in terms of the cloud-specific services such as AWS
-SNS+SQS, GCP PubSub or Azure Service Bus.
+particular implementation of pubsub. There is also a potential for lock-in
+when building systems in terms of the cloud-specific services such as
+AWS SNS+SQS, GCP PubSub or Azure Service Bus.
 
 Developers may wish to compare different pubsub systems in terms of their
 performance, reliability, cost or other factors, and they may want the option
