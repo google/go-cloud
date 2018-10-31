@@ -35,8 +35,7 @@ Go Cloud could lower the cost of such experiments and migrations.
 
 ## Background
 [Pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) is
-a frequently requested feature for the Go Cloud project [github
-issue](https://github.com/google/go-cloud/issues/312). A key use case
+a frequently requested feature for the Go Cloud project \[[github issue](https://github.com/google/go-cloud/issues/312)]. A key use case
 motivating these requests is to support [event driven
 architectures](https://en.wikipedia.org/wiki/Event-driven_architecture).
 
