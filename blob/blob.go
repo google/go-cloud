@@ -524,7 +524,8 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// FromURLFn allows providers to convert a parsed URL to a *Bucket.
+// FromURLFn is for use by provider implementations.
+// It allows providers to convert a parsed URL from Open to a driver.Bucket.
 // It takes a bucket name and a map of key/value options. The map is guaranteed
 // to be non-nil, and all keys will be in lowercase.
 type FromURLFn func(context.Context, string, map[string]string) (driver.Bucket, error)
