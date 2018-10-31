@@ -167,7 +167,7 @@ func receive() error {
     for {
         msg, err := s.Receive(ctx)
         switch err {
-        // sub.Close() causes io.EOF to be returned from sub.Receive().
+        // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
             break
@@ -205,18 +205,18 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
     if err != nil {
         return err
     }
-    defer sub.Close(ctx)
+    defer s.Close(ctx)
 
     // Handle ctrl-C.
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func() {
         for sig := range c {
-            if err := sub.Close(ctx); err != nil {
+            if err := s.Close(ctx); err != nil {
                 log.Fatal(err)
             }
         }
@@ -227,9 +227,9 @@ func receive() error {
     // Use a buffered channel as a semaphore.
     sem := make(chan token, poolSize)
     for {
-        msg, err := sub.Receive(ctx)
+        msg, err := s.Receive(ctx)
         switch err {
-        // sub.Close() causes io.EOF to be returned from sub.Receive().
+        // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
             break
@@ -687,18 +687,18 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
+    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
     if err != nil {
         return err
     }
-    defer sub.Close(ctx)
+    defer s.Close(ctx)
 
     // Handle ctrl-C.
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func() {
         for sig := range c {
-            err := sub.Close(ctx)
+            err := s.Close(ctx)
             if err != nil {
                 log.Fatal(err)
             }
@@ -707,9 +707,9 @@ func receive() error {
 
     // Process messages until the user hits ctrl-C.
     for {
-        msgs, err := sub.Receive(ctx, batchSize)
+        msgs, err := s.Receive(ctx, batchSize)
         switch err {
-        // sub.Close() causes io.EOF to be returned from sub.Receive().
+        // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
             break
@@ -723,7 +723,7 @@ func receive() error {
             fmt.Printf("Got message: %q\n", msg.Body)
             acks = append(acks, msg.AckID)
         }
-        err := sub.SendAcks(ctx, acks)
+        err := s.SendAcks(ctx, acks)
         if err != nil {
             return err
         }
@@ -756,18 +756,18 @@ func main() {
 
 func receive() error {
     ctx := context.Background()
-    sub, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
     if err != nil {
         return err
     }
-    defer sub.Close(ctx)
+    defer s.Close(ctx)
 
     // Handle ctrl-C.
     c := make(chan os.Signal, 1)
     signal.Notify(c, os.Interrupt)
     go func() {
         for sig := range c {
-            if err := sub.Close(ctx); err != nil {
+            if err := s.Close(ctx); err != nil {
                 log.Fatal(err)
             }
         }
@@ -777,8 +777,8 @@ func receive() error {
     msgsChan := make(chan *pubsub.Message)
     go func() {
         for {
-            msgs, err := sub.Receive(ctx, batchSize)
-            // Shut down if sub.Close was called.
+            msgs, err := s.Receive(ctx, batchSize)
+            // Shut down if s.Close was called.
             if err == io.EOF {
                 log.Println("Got ctrl-C. Exiting")
                 os.Exit(0)
@@ -801,7 +801,7 @@ func receive() error {
             for i := 0; i < len(batch); i++ {
                 batch[i] = <-acksChan
             }
-            if err := sub.SendAcks(ctx, batch); err != nil {
+            if err := s.SendAcks(ctx, batch); err != nil {
                 /* handle err */
             }
         }
@@ -843,7 +843,7 @@ if err := b.Connect(); err != nil {
 }
 topic := "user-signups"
 subID := "user-signups-subscription-1"
-sub, err := b.Subscription(ctx, topic, subID, func(pub broker.Publication) error {
+s, err := b.Subscription(ctx, topic, subID, func(pub broker.Publication) error {
     fmt.Printf("%s\n", pub.Message.Body)
     return nil
 })
@@ -851,7 +851,7 @@ if err := b.Publish(ctx, topic, &broker.Message{ Body: []byte("alice signed up")
     /* handle err */
 }
 // Sometime later:
-if err := sub.Unsubscribe(ctx); err != nil {
+if err := s.Unsubscribe(ctx); err != nil {
     /* handle err */
 }
 ```
@@ -875,7 +875,7 @@ As of this writing, it is an open question as to what should be done about pubsu
 ### Rejected acknowledgement API: `Receive` method returns an `ack` func
 In this alternative, the application code would look something like this:
 ```go
-msg, ack, err := sub.Receive(ctx)
+msg, ack, err := s.Receive(ctx)
 log.Printf("Received message: %q", msg.Body)
 ack(msg)
 ```
