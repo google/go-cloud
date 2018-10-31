@@ -65,6 +65,9 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
+	// ContentMD5 may be used as a message integrity check (MIC).
+	// https://tools.ietf.org/html/rfc1864
+	ContentMD5 []byte
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
 	Metadata map[string]string
@@ -113,11 +116,22 @@ type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
 	Prefix string
+	// Delimiter sets the delimiter used to define a hierarchical namespace,
+	// like a filesystem with "directories".
+	//
+	// An empty delimiter means that the bucket is treated as a single flat
+	// namespace.
+	//
+	// A non-empty delimiter means that any result with the delimiter in its key
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for other
+	// ListObject fields. These results represent "directories". Multiple results
+	// in a "directory" are returned as a single result.
+	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
 	// max.
 	PageSize int
-
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
 	PageToken []byte
@@ -136,6 +150,11 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
+	// passed as ListOptions.Prefix to list items in the "directory".
+	// Fields other than Key and IsDir will not be set if IsDir is true.
+	IsDir bool
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.
@@ -146,6 +165,11 @@ type ListObject struct {
 type ListPage struct {
 	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
 	// it should have at most ListOptions.PageSize entries.
+	//
+	// Objects should be returned in lexicographical order of UTF-8 encoded keys,
+	// including across pages. I.e., all objects returned from a ListPage request
+	// made using a PageToken from a previous ListPage request's NextPageToken
+	// should have Key >= the Key for all objects from the previous request.
 	Objects []*ListObject
 	// NextPageToken should be left empty unless there are more objects
 	// to return. The value may be returned as ListOptions.PageToken on a
@@ -192,8 +216,8 @@ type Bucket interface {
 	// to recently written or deleted objects. That is to say, there is no
 	// guarantee that an object that's been written will immediately be returned
 	// from ListPaged.
-	// opt is guaranteed to be non-nil.
-	ListPaged(ctx context.Context, opt *ListOptions) (*ListPage, error)
+	// opts is guaranteed to be non-nil.
+	ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error)
 
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
@@ -210,13 +234,13 @@ type Bucket interface {
 	// until Close has been called.
 	//
 	// contentType sets the MIME type of the object to be written. It must not be
-	// empty.
+	// empty. opts is guaranteed to be non-nil.
 	//
 	// The caller must call Close on the returned Writer when done writing.
 	//
 	// Implementations should abort an ongoing write if ctx is later canceled,
 	// and do any necessary cleanup in Close. Close should then return ctx.Err().
-	NewTypedWriter(ctx context.Context, key string, contentType string, opt *WriterOptions) (Writer, error)
+	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, NewRangeReader must return an error whose Kind method

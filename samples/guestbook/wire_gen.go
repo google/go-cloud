@@ -213,8 +213,8 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 }
 
 func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 }
 
@@ -241,8 +241,8 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -269,8 +269,8 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 }
 
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err

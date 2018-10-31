@@ -15,99 +15,95 @@ interactions:
     body: '{"error":{"errors":[{"domain":"global","reason":"notFound","message":"No
       such object: go-cloud-blob-test-bucket/does-not-exist","debugInfo":"com.google.net.rpc3.RpcException:
       cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:143)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:317)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat
       com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:294)\n\tat
       com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat
       com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat
-      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
       com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
       com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
-      com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
       com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat
-      java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat
-      java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
       java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
       java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
-      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t...
-      17 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=NOT_FOUND,
+      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:304)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:315)\n\t...
+      16 more\n\ncom.google.api.server.core.Fault: ImmutableErrorDefinition{base=NOT_FOUND,
       category=USER_ERROR, cause=null, debugInfo=com.google.net.rpc3.RpcException:
       cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:143)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:317)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat
       com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:294)\n\tat
       com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat
       com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat
-      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
       com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
       com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
-      com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
       com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat
-      java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat
-      java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
       java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
       java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
-      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t...
-      17 more\n, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=notFound,
+      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:304)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:315)\n\t...
+      16 more\n, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=notFound,
       internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.NOT_FOUND,
       createdByBackend=true, debugMessage=com.google.net.rpc3.RpcException: cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND:
-      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat
+      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:143)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:317)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat
       com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:294)\n\tat
       com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat
       com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat
-      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
       com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
       com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
-      com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
       com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat
-      java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat
-      java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
       java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
       java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
-      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t...
-      17 more\n, errorProtoCode=NOT_FOUND, errorProtoDomain=gdata.CoreErrorDomain,
+      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:304)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:315)\n\t...
+      16 more\n, errorProtoCode=NOT_FOUND, errorProtoDomain=gdata.CoreErrorDomain,
       filteredMessage=null, location=entity.resource_id.name, message=No such object:
       go-cloud-blob-test-bucket/does-not-exist, unnamedArguments=[]}, location=entity.resource_id.name,
       message=No such object: go-cloud-blob-test-bucket/does-not-exist, reason=notFound,
       rpcCode=404} No such object: go-cloud-blob-test-bucket/does-not-exist: com.google.net.rpc3.RpcException:
       cloud.bigstore.ResponseCode.ErrorCode::OBJECT_NOT_FOUND: No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:135)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:303)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.toRpc3Exception(BigstoreException.java:143)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:317)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:77)\n\tat
       com.google.cloud.bigstore.api.json.handlers.objects.DeleteObject.handleRequestReceived(DeleteObject.java:23)\n\tat
       com.google.cloud.bigstore.api.json.framework.RequestHandler.handle(RequestHandler.java:294)\n\tat
       com.google.cloud.bigstore.api.json.ObjectsDelegator.delete(ObjectsDelegator.java:113)\n\tat
       com.google.cloud.bigstore.isolation.RpcReceiver.lambda$processRequestAsync$4(RpcReceiver.java:203)\n\tat
-      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:272)\n\tat
+      com.google.cloud.bigstore.isolation.AsyncExecutor.lambda$submit$0(AsyncExecutor.java:253)\n\tat
       com.google.common.context.ContextRunnable.runInContext(ContextRunnable.java:50)\n\tat
       com.google.common.context.ContextRunnable$1.run(ContextRunnable.java:39)\n\tat
-      com.google.tracing.CurrentContext.runInContext(CurrentContext.java:320)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContextNoUnref(GenericContextCallback.java:72)\n\tat
       com.google.tracing.GenericContextCallback.runInInheritedContext(GenericContextCallback.java:64)\n\tat
       com.google.common.context.ContextRunnable.run(ContextRunnable.java:36)\n\tat
-      java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)\n\tat
-      java.util.concurrent.FutureTask.run(FutureTask.java:266)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
+      java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)\n\tat
       java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)\n\tat
       java.lang.Thread.run(Thread.java:748)\nCaused by: com.google.cloud.bigstore.common.BigstoreException:
-      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:290)\n\tat
-      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:301)\n\t...
-      17 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
+      No such object: go-cloud-blob-test-bucket/does-not-exist\n\tat com.google.cloud.bigstore.common.BigstoreException.throwOnError(BigstoreException.java:304)\n\tat
+      com.google.cloud.bigstore.common.BigstoreException.throwRpc3OnError(BigstoreException.java:315)\n\t...
+      16 more\n\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
       com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
       com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat
       com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat
@@ -138,45 +134,18 @@ interactions:
       Cache-Control:
       - private, max-age=0
       Content-Length:
-      - "11977"
+      - "11589"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 15 Oct 2018 23:17:32 GMT
+      - Fri, 26 Oct 2018 22:56:38 GMT
       Expires:
-      - Mon, 15 Oct 2018 23:17:32 GMT
+      - Fri, 26 Oct 2018 22:56:38 GMT
       Server:
       - UploadServer
       Vary:
       - Origin
       - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1539645752000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "61688748495"
-      X-Google-Backends:
-      - hhlaxbby10:4082,/bns/hi/borg/hi/bns/blobstore2/bitpusher/0.scotty,acsfoc4-v6:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=DCDFW9W_HaGlxgOynYegBA
-      X-Google-Gfe-Request-Trace:
-      - acsfoc4-v6:443,/bns/hi/borg/hi/bns/blobstore2/bitpusher/0.scotty,acsfoc4-v6:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hi/borg/hi/bns/blobstore2/bitpusher/0:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5LkdsdzNCcDc3ZDd0WFZJaXhvX09BUE5GN2ZHSE4zdTR3dUplTHhpdjZ3T2k1dmZjTkgwRzgzbW94bEE1ak04a0pDMTZqaWZTRnY0SVM5Rm1SN0Vlem5tYkNaNEhTaTRaWDBUOXBTWWp3N1pVc3pGNTJ1NXdxTEV6YWdobWNBUTAEOg0xL1IyYlZDRmpHNUh-
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
       X-Guploader-Customer:
       - apiary_cloudstorage_metadata
       X-Guploader-Request-Result:
@@ -184,7 +153,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UqmEcHGgg-0ZrNO07-D4oBvJH-Syx5cnzytbgM3VMrbaQDXsQz1bqVNgSwJKkJiNi8KXybB7VLDCII5Tq_iYFctJMAxrw
+      - AEnB2Uo-UWt0GdNDxBSVuroeYYp_MUt_7uZ4ebyJGFPdma1yvIX083bihHCjHPtryKvDZ1xguvoAyDicgdl3zaY7nBxTum3eGw
     status: 404 Not Found
     code: 404
     duration: ""
