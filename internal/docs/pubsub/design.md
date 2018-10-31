@@ -272,7 +272,7 @@ package acmepubsub
 import (
     "context"
 
-    "github.com/go-cloud/pubsub"
+    "github.com/google/go-cloud/pubsub"
 )
 
 func OpenTopic(ctx context.Context, topicName string, opts pubsub.TopicOptions) (*pubsub.Topic, error) {
