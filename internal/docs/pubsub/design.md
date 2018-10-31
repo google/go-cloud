@@ -286,6 +286,8 @@ var defaultTopicOptions = &TopicOptions {
     // ...
 }
 
+// OpenTopic opens an existing topic on the pubsub server and returns a pubsub.Topic object
+// that can be used to send messages to that topic.
 func OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
     if opts == nil {
         opts = defaultTopicOptions
@@ -326,6 +328,8 @@ var defaultSubscriptionOptions = &SubscriptionOptions {
     // ...
 }
 
+// OpenSubscription opens an existing subscription on the server and returns a
+// pubsub.Subscription object that can be used to receive messages.
 func OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
     if opts == nil {
         opts = defaultSubscriptionOptions
