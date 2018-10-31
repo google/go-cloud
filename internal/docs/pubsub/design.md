@@ -384,8 +384,13 @@ func (p *Publisher) startBatcher(ctx context.Context) {
     p.doneChan = make(chan struct{}{})
     go func() {
         for {
+            batch := make([]*Message, 0, p.opts.BatchSize)
+            timeout := time.After(p.opts.SendWait)
             for i := 0; i < p.opts.BatchSize; i++ {
                 select {
+                case <-timeout:
+                    // Time to send the batch, even if it isn't full.
+                    break
                 case mc := <-p.mcChan:
                     select {
                     case <-mc.ctx.Done():
@@ -398,9 +403,11 @@ func (p *Publisher) startBatcher(ctx context.Context) {
                     return
                 }
             }
-            err := p.driver.SendBatch(ctx, batch)
-            for _, m := range batch {
-                m.errChan <- err
+            if len(batch) > 0 {
+                err := p.driver.SendBatch(ctx, batch)
+                for _, m := range batch {
+                    m.errChan <- err
+                }
             }
         }
     }()
