@@ -29,9 +29,9 @@ Go Cloud could lower the cost of such experiments and migrations.
 * Work well with managed pubsub services on AWS, Azure, GCP and the most used open source pubsub systems.
 
 ## Non-goals
-* Create new topics. Go Cloud focuses on developer concerns, but topic creation is an [operator concern](https://github.com/google/go-cloud/blob/master/internal/docs/design.md#developers-and-operators)
+* Create new topics in the cloud. Go Cloud focuses on developer concerns, but topic creation is an [operator concern](https://github.com/google/go-cloud/blob/master/internal/docs/design.md#developers-and-operators).
 
-* Create new subscriptions. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
+* Create new subscriptions in the cloud. The subscribers are assumed to correspond to components of a distributed system rather than to users of that system.
 
 ## Background
 [Pubsub](https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern) is a frequently requested feature for the Go Cloud project \[[github issue](https://github.com/google/go-cloud/issues/312)]. A key use case
@@ -259,7 +259,7 @@ func receive() error {
 Adding support for a new pubsub system involves two main steps:
 
 1. Write the driver, implementing the interfaces in the `github.com/go-cloud/pubsub/driver` package. The new driver could be located at `github.com/go-cloud/pubsub/${newsystem}/driver`.
-2. Write the concrete implementation, including `publisher.New` to construct a `pubsub.Publisher` and `subscriber.New` to construct a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/${newsystem}/publisher` and `github.com/go-cloud/pubsub/${newsystem}/subscriber`.
+2. Write the constructors: `publisher.New` to make a `pubsub.Publisher` and `subscriber.New` to make a `pubsub.Subscriber`. These constructors should be located at `github.com/go-cloud/pubsub/${newsystem}/publisher` and `github.com/go-cloud/pubsub/${newsystem}/subscriber`.
 
 The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
 
@@ -387,7 +387,7 @@ type msgCtx struct {
 // at once.
 func (p *Publisher) Send(ctx context.Context, m *Message) error {
     p.mcChan <- msgCtx{m, ctx}
-    // Wait for the batch to be sent to the server.
+    // Wait for the batch including this message to be sent to the server.
     return <-m.errChan
 }
 
@@ -400,7 +400,7 @@ func (p *Publisher) Close() error {
 // startBatcher spins up a goroutine to bundle messages into batches behind the
 // scenes, and send them to the server. This method should typically be called
 // by publisher.New in particular implementations of Go Cloud pubsub.
-func (p *Publisher) startBatcher(ctx context.Context) {
+func (p *Publisher) Open(ctx context.Context, topic string) {
     p.mcChan = make(chan msgCtx)
     p.doneChan = make(chan struct{}{})
     go func() {
@@ -488,12 +488,12 @@ func (s *Subscriber) Receive(ctx context.Context) (*Message, error) {
             case <-ctx.Done():
                 return nil, ctx.Err()
             default:
+                if len(msgs) > 0 {
+                    s.q = msgs
+                    break
+                }
+                time.Sleep(s.opts.PollSleep)
             }
-            if len(msgs) > 0 {
-                s.q = msgs
-                break
-            }
-            time.Sleep(s.opts.PollSleep)
         }
     }
     m := s.q[0]
