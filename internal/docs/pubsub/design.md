@@ -258,13 +258,9 @@ import (
 
 // TopicOptions contains configuration for Topics.
 type TopicOptions struct {
-    // SendDelay tells the max duration to wait before sending the next batch of
-    // messages to the server.
-    SendDelay time.Duration
+    pubsub.TopicOptions
 
-    // BatchSize specifies the maximum number of messages that can go in a batch
-    // for sending.
-    BatchSize int
+    // More options go here...
 }
 
 var defaultTopicOptions = &TopicOptions {
@@ -440,6 +436,17 @@ type Topic struct {
     doneChan    chan struct {}{}
 }
 
+// TopicOptions contains configuration for Topics.
+type TopicOptions struct {
+    // SendDelay tells the max duration to wait before sending the next batch of
+    // messages to the server.
+    SendDelay time.Duration
+
+    // BatchSize specifies the maximum number of messages that can go in a batch
+    // for sending.
+    BatchSize int
+}
+
 // msgCtx pairs a Message with the Context of its Send call.
 type msgCtx struct {
     msg    *Message
@@ -461,12 +468,10 @@ func (t *Topic) Close() error {
     return t.driver.Close()
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic, a batchSize parameter
-// telling the maximum number of messages to send in a batch, and a sendWait
-// parameter telling the max number of time to wait before sending a non-empty
-// batch. Behind the scenes, NewTopic spins up a goroutine to bundle messages
-// into batches and send them to the server.
-func NewTopic(d driver.Topic, batchSize int, sendWait time.Duration) *Topic {
+// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
+// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
+// to bundle messages into batches and send them to the server.
+func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
     t := &Topic {
         driver: d,
         mcChan: make(chan msgCtx),
@@ -475,9 +480,9 @@ func NewTopic(d driver.Topic, batchSize int, sendWait time.Duration) *Topic {
     go func() {
         for {
             batch := make([]*driver.Message, 0, batchSize)
-            timeout := time.After(sendWait)
+            timeout := time.After(opts.SendDelay)
 Loop:
-            for i := 0; i < batchSize; i++ {
+            for i := 0; i < opts.BatchSize; i++ {
                 select {
                 case <-timeout:
                     // Time to send the batch, even if it isn't full.
