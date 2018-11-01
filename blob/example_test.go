@@ -324,7 +324,7 @@ func ExampleBucket_As() {
 func ExampleOpen() {
 	// Connect to a bucket using a URL.
 	// This example uses the file-based implementation, which registers for
-	// the "file" protocol.
+	// the "file" scheme.
 	dir, cleanup := newTempDir()
 	defer cleanup()
 
@@ -334,7 +334,7 @@ func ExampleOpen() {
 	}
 	fmt.Println("Error opening nonexistentpath")
 
-	if _, err := blob.Open(ctx, "file://" + dir); err != nil {
+	if _, err := blob.Open(ctx, "file://"+dir); err != nil {
 		log.Fatal(err)
 	} else {
 		fmt.Println("Got bucket for valid path")

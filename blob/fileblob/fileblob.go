@@ -31,10 +31,10 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
-// For blob.Open URLs, fileblob registers for the "file" protocol. The bucket
-// name in the URL is used as the root directory. For example,
-// blob.Open("file:///a/directory") is equivalent to
-// fileblob.OpenBucket("/a/directory"). No options are supported.
+// For blob.Open URLs, fileblob registers for the "file" scheme.
+// The URL's Host and Path are concatenated and used as the root directory.
+// For example, blob.Open("file:///a/directory") is equivalent to
+// fileblob.OpenBucket("/a/directory"). No query options are supported.
 //
 // fileblob does not support any types for As.
 package fileblob
@@ -47,6 +47,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,8 +59,8 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("file", func(_ context.Context, bucket string, _ map[string]string) (driver.Bucket, error) {
-		return openBucket(bucket)
+	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
+		return openBucket(u.Host + u.Path)
 	})
 }
 
@@ -80,6 +81,7 @@ func openBucket(dir string) (driver.Bucket, error) {
 	}
 	return &bucket{dir}, nil
 }
+
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
 // dir must exist.
 func OpenBucket(dir string) (*blob.Bucket, error) {

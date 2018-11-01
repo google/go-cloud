@@ -17,6 +17,7 @@ package blob
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -26,90 +27,62 @@ import (
 // TestOpen tests blob.Open.
 func TestOpen(t *testing.T) {
 	ctx := context.Background()
-	var gotBucket string
-	var gotOptions map[string]string
+	var got *url.URL
 
-	// Register protocol foo to always return nil.
-	// Sets gotBucket and gotOptions as a side effect
-	if err := Register("foo", func(_ context.Context, bucket string, opts map[string]string) (driver.Bucket, error) {
-		gotBucket = bucket
-		gotOptions = opts
+	// Register scheme foo to always return nil. Sets got as a side effect
+	Register("foo", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
+		got = u
 		return nil, nil
-	}); err != nil {
-		t.Fatalf("failed to register foo: %v", err)
-	}
+	})
 
-	// Register protocol err to always return an error.
-	if err := Register("err", func(_ context.Context, _ string, _ map[string]string) (driver.Bucket, error) {
+	// Register scheme err to always return an error.
+	Register("err", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
 		return nil, errors.New("fail")
-	}); err != nil {
-		t.Fatalf("failed to register foo: %v", err)
-	}
+	})
 
 	for _, tc := range []struct {
-		name        string
-		url         string
-		wantErr     bool
-		wantBucket  string
-		wantOptions map[string]string
+		name    string
+		url     string
+		wantErr bool
 	}{
 		{
 			name:    "empty URL",
 			wantErr: true,
 		},
 		{
-			name:    "invalid URL",
+			name:    "invalid URL no scheme",
 			url:     "foo",
 			wantErr: true,
 		},
 		{
-			name:    "invalid URL missing bucket",
-			url:     "foo://",
-			wantErr: true,
-		},
-		{
-			name:    "invalid URL empty bucket",
-			url:     "foo://?xxx=yyy&bbb",
-			wantErr: true,
-		},
-		{
-			name:    "invalid URL bad option",
-			url:     "foo://mybucket?xxx=yyy&bbb",
-			wantErr: true,
-		},
-		{
-			name:    "unregistered protocol",
+			name:    "unregistered scheme",
 			url:     "bar://mybucket",
 			wantErr: true,
 		},
 		{
-			name:    "fn returns error",
+			name:    "func returns error",
 			url:     "err://mybucket",
 			wantErr: true,
 		},
 		{
-			name:        "no options",
-			url:         "foo://mybucket",
-			wantBucket:  "mybucket",
-			wantOptions: map[string]string{},
+			name: "no query options",
+			url:  "foo://mybucket",
 		},
 		{
-			name:        "empty options",
-			url:         "foo://mybucket?",
-			wantBucket:  "mybucket",
-			wantOptions: map[string]string{},
+			name: "empty query options",
+			url:  "foo://mybucket?",
 		},
 		{
-			name:        "options",
-			url:         "foo://mybucket?aAa=bBb&cCc=dDd",
-			wantBucket:  "mybucket",
-			wantOptions: map[string]string{"aaa": "bBb", "ccc": "dDd"},
+			name: "query options",
+			url:  "foo://mybucket?aAa=bBb&cCc=dDd",
 		},
 		{
-			name:        "fancy bucket name",
-			url:         "foo:///foo/bar/baz",
-			wantBucket:  "/foo/bar/baz",
-			wantOptions: map[string]string{},
+			name: "multiple query options",
+			url:  "foo://mybucket?x=a&x=b&x=c",
+		},
+		{
+			name: "fancy bucket name",
+			url:  "foo:///foo/bar/baz",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -120,11 +93,12 @@ func TestOpen(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			if gotBucket != tc.wantBucket {
-				t.Errorf("got bucket name %q want %q", gotBucket, tc.wantBucket)
+			want, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if diff := cmp.Diff(gotOptions, tc.wantOptions); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotOptions, tc.wantOptions, diff)
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 			}
 		})
 	}

@@ -23,10 +23,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
-	"regexp"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -525,63 +527,61 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// FromURLFn is for use by provider implementations.
+// FromURLFunc is for use by provider implementations.
 // It allows providers to convert a parsed URL from Open to a driver.Bucket.
-// It takes a bucket name and a map of key/value options. The map is guaranteed
-// to be non-nil, and all keys will be in lowercase.
-type FromURLFn func(context.Context, string, map[string]string) (driver.Bucket, error)
+type FromURLFunc func(context.Context, *url.URL) (driver.Bucket, error)
 
-// registry maps protocol strings to provider-specific instantiation functions.
-var registry = map[string]FromURLFn{}
+var (
+	// registry maps scheme strings to provider-specific instantiation functions.
+	registry = map[string]FromURLFunc{}
+	// registryMu protected registry.
+	registryMu sync.Mutex
+)
 
 // Register is for use by provider implementations. It allows providers to
-// register an instantiation function for URLs with the given protocol. It is
+// register an instantiation function for URLs with the given scheme. It is
 // expected to be called from the provider implementation's package init
 // function.
 //
 // fn will be called from Open, with a bucket name and options parsed from
 // the URL. All option keys will be lowercased.
 //
-// An error is returned if a provider has already registered for protocol.
-func Register(protocol string, fn FromURLFn) error {
-	if _, found := registry[protocol]; found {
-		return fmt.Errorf("a provider has already registered for protocol %q", protocol)
+// Register panics if a provider has already registered for scheme.
+func Register(scheme string, fn FromURLFunc) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	if _, found := registry[scheme]; found {
+		log.Fatalf("a provider has already registered for scheme %q", scheme)
 	}
-	registry[protocol] = fn
-	return nil
+	registry[scheme] = fn
 }
 
-// urlRegex is used to parse URLs in Open.
-var urlRegex = regexp.MustCompile("^([^:]+)://([^?]+)(.*)$")
+// fromRegistry looks up the registered function for scheme.
+// It returns nil if scheme has not been registered for.
+func fromRegistry(scheme string) FromURLFunc {
+	registryMu.Lock()
+	defer registryMu.Unlock()
 
-// Open creates a *Bucket from a URL of the form
-// protocol://bucket_name?opt1=a&opt2=b
-// The options after "?" are optional, case-insensitive, and provider-specific.
-// See provider documentation for more details on supported protocol(s) and
+	return registry[scheme]
+}
+
+// Open creates a *Bucket from a URL.
+// See provider documentation for more details on supported scheme(s) and
 // option(s).
-func Open(ctx context.Context, url string) (*Bucket, error) {
-	matches := urlRegex.FindStringSubmatch(url)
-	if matches == nil {
-		return nil, fmt.Errorf("%q is not a valid URL for blob", url)
+func Open(ctx context.Context, urlstr string) (*Bucket, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, err
 	}
-	protocol := matches[1]
-	bucket := matches[2]
-	optstr := matches[3]
-	options := map[string]string{}
-	if optstr != "" && optstr != "?" {
-		for _, opt := range strings.Split(optstr[1:], "&") {
-			kv := strings.Split(opt, "=")
-			if len(kv) != 2 || kv[0] == "" {
-				return nil, fmt.Errorf("%q is not a valid URL for blob (invalid option %q)", url, kv)
-			}
-			options[strings.ToLower(kv[0])] = kv[1]
-		}
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("invalid URL %q, missing scheme", urlstr)
 	}
-	fn := registry[protocol]
+	fn := fromRegistry(u.Scheme)
 	if fn == nil {
-		return nil, fmt.Errorf("no provider registered for protocol %q", protocol)
+		return nil, fmt.Errorf("no provider registered for scheme %q", u.Scheme)
 	}
-	drv, err := fn(ctx, bucket, options)
+	drv, err := fn(ctx, u)
 	if err != nil {
 		return nil, err
 	}
