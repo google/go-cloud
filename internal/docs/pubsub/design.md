@@ -301,7 +301,7 @@ func (c *Client) OpenTopic(ctx context.Context, topicName string, opts *TopicOpt
 		return err
 	}
 	t := &topic{
-		rawtopic: rt,
+		rawTopic: rt,
 		opts: opts,
 	}
 	return pubsub.NewTopic(t, opts.TopicOptions)
@@ -318,8 +318,8 @@ func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, 
 		return err
 	}
 	s := &subscription{
-		rawsubscription: rs,
-		opts: opts,
+		rawSub: rs,
+		opts: 	opts,
 	}
 	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
 }
@@ -336,8 +336,8 @@ var defaultTopicOptions = &TopicOptions {
 }
 
 type topic struct {
-	name string
-	opts TopicOptions
+	rawTopic 	*rawacmepubsub.Topic
+	opts 		TopicOptions
 }
 
 func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
@@ -360,8 +360,8 @@ var defaultSubscriptionOptions = &SubscriptionOptions {
 }
 
 type subscription struct {
-	name string
-	opts SubscriptionOptions
+	rawSub 	*rawacmepubsub.Subscription
+	opts 	SubscriptionOptions
 }
 
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*pubsub.Message, error) {
