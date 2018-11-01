@@ -258,9 +258,9 @@ import (
 
 // TopicOptions contains configuration for Topics.
 type TopicOptions struct {
-    // SendWait tells the max duration to wait before sending the next batch of
+    // SendDelay tells the max duration to wait before sending the next batch of
     // messages to the server.
-    SendWait time.Duration
+    SendDelay time.Duration
 
     // BatchSize specifies the maximum number of messages that can go in a batch
     // for sending.
@@ -296,9 +296,9 @@ func (t *topic) Close(ctx context.Context) error {
 
 // SubscriptionOptions contains configuration for Subscriptions.
 type SubscriptionOptions struct {
-    // AckWait tells the max duration to wait before sending the next batch 
+    // AckDelay tells the max duration to wait before sending the next batch 
     // of acknowledgements back to the server.
-    AckWait     time.Duration
+    AckDelay     time.Duration
 
     // AckBatchSize is the maximum number of acks that should be sent to
     // the server in a batch.
@@ -320,7 +320,7 @@ func OpenSubscription(ctx context.Context, subscriptionName string, opts *Subscr
         opts = defaultSubscriptionOptions
     }
     s := &subscription{subscriptionName, opts}
-    return pubsub.NewSubscription(s, opts.BatchSize, opts.AckWait)
+    return pubsub.NewSubscription(s, opts.BatchSize, opts.AckDelay)
 }
 
 type subscription struct {
