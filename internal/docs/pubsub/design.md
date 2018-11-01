@@ -259,8 +259,9 @@ Adding support for a new pubsub system involves the following steps, continuing 
 
 1. Add a new package called `acmepubsub`.
 2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
-3. Add a func called `acmepubsub.OpenTopic` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
-4. Add a func called `acmepubsub.OpenSubscription` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
+3. (Usually) add a `Client` type to `acmepubsub` with an associated `NewClient` func that connects to the relevant service, and the following methods:
+	a. `func (c *Client) OpenTopic(ctx, topicName)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
+	b. `func (c *Client) OpenSubscription(ctx, subscriptionName)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
 
 Here is a sketch of what the `acmepubsub` package could look like:
 ```go
