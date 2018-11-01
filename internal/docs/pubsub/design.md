@@ -339,7 +339,7 @@ func (s *subscription) Close(ctx context.Context) error {
 }
 ```
 
-The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems.
+The driver interfaces are batch-oriented because some pubsub systems can more efficiently deal with batches of messages than with one at a time. Streaming was considered but it does not appear to provide enough of a performance gain to be worth the additional complexity of supporting it across different pubsub systems \[[benchmarks](https://github.com/ijt/pubsub/tree/master/benchmarks)].
 
 The driver interfaces will be located in the `github.com/google/go-cloud/pubsub/driver` package and will look something like this:
 
