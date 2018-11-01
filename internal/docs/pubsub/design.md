@@ -147,13 +147,14 @@ func receive() error {
     }()
 
     // Process messages until the user hits ctrl-C.
+Loop:
     for {
         msg, err := s.Receive(ctx)
         switch err {
         // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
-            break
+            break Loop
         case nil:
         default:
             return err
@@ -209,13 +210,14 @@ func receive() error {
     const poolSize = 10
     // Use a buffered channel as a semaphore.
     sem := make(chan token, poolSize)
+Loop:
     for {
         msg, err := s.Receive(ctx)
         switch err {
         // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
-            break
+            break Loop
         case nil:
         default:
             return err
@@ -474,11 +476,12 @@ func NewTopic(d driver.Topic, batchSize int, sendWait time.Duration) *Topic {
         for {
             batch := make([]*driver.Message, 0, batchSize)
             timeout := time.After(sendWait)
+Loop:
             for i := 0; i < batchSize; i++ {
                 select {
                 case <-timeout:
                     // Time to send the batch, even if it isn't full.
-                    break
+                    break Loop
                 case mc := <-t.mcChan:
                     select {
                     case <-mc.ctx.Done():
@@ -532,6 +535,7 @@ type Subscription struct {
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
     if len(s.q) == 0 {
         // Get the next batch of messages from the server.
+Loop:
         for {
             msgs, err := s.driver.ReceiveBatch(ctx)
             if err != nil {
@@ -551,7 +555,7 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
                             sub: s,
                         }
                     }
-                    break
+                    break Loop
                 }
             }
         }
@@ -707,13 +711,14 @@ func receive() error {
     }()
 
     // Process messages until the user hits ctrl-C.
+Loop:
     for {
         msgs, err := s.Receive(ctx, batchSize)
         switch err {
         // s.Close() causes io.EOF to be returned from s.Receive().
         case io.EOF:
             log.Printf("Got ctrl-C. Exiting.")
-            break
+            break Loop
         case nil:
         default:
             return err
