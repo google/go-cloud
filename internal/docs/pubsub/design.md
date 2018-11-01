@@ -470,6 +470,9 @@ func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
         doneChan: make(chan struct{}{}),
     }
     go func() {
+        // Pull messages from t.mcChan and put them in batches. Send the current
+        // batch whenever it is large enough or enough time has elapsed since
+        // the last send.
         for {
             batch := make([]*driver.Message, 0, batchSize)
             timeout := time.After(opts.SendDelay)
