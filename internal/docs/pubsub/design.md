@@ -269,8 +269,59 @@ package acmepubsub
 import (
 	"context"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/driver"
 )
+
+// Client connects to a pubsub server.
+type Client struct {
+	rawclient *rawacmepubsub.Client
+}
+
+// NewClient creates a client for the project with the given name on Acme
+// pubsub.
+func NewClient(ctx, projectName string) (*Client, error) {
+	c, err := rawacmepubsub.NewClient(ctx, projectName)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{ rawclient: c }, nil
+}
+
+// OpenTopic opens an existing topic on the pubsub server and returns a Topic
+// that can be used to send messages to that topic.
+func (c *Client) OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
+	if opts == nil {
+		opts = defaultTopicOptions
+	}
+	rt, err := c.rawclient.Topic(ctx, topicName)
+	if err != nil {
+		return err
+	}
+	t := &topic{
+		rawtopic: rt,
+		opts: opts,
+	}
+	return pubsub.NewTopic(t, opts.TopicOptions)
+}
+
+// OpenSubscription opens an existing subscription on the server and returns a
+// Subscription that can be used to receive messages.
+func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	if opts == nil {
+		opts = defaultSubscriptionOptions
+	}
+	rs, err := c.rawclient.Subscription(ctx, subscriptionName)
+	if err != nil {
+		return err
+	}
+	s := &subscription{
+		rawsubscription: rs,
+		opts: opts,
+	}
+	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
+}
 
 // TopicOptions contains configuration for Topics.
 type TopicOptions struct {
@@ -281,16 +332,6 @@ type TopicOptions struct {
 
 var defaultTopicOptions = &TopicOptions {
 	// ...
-}
-
-// OpenTopic opens an existing topic on the pubsub server and returns a pubsub.Topic object
-// that can be used to send messages to that topic.
-func OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-	if opts == nil {
-		opts = defaultTopicOptions
-	}
-	t := &topic{topicName, opts}
-	return pubsub.NewTopic(t, opts.TopicOptions)
 }
 
 type topic struct {
@@ -315,16 +356,6 @@ type SubscriptionOptions struct {
 
 var defaultSubscriptionOptions = &SubscriptionOptions {
 	// ...
-}
-
-// OpenSubscription opens an existing subscription on the server and returns a
-// pubsub.Subscription object that can be used to receive messages.
-func OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	if opts == nil {
-		opts = defaultSubscriptionOptions
-	}
-	s := &subscription{subscriptionName, opts}
-	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
 }
 
 type subscription struct {
