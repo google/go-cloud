@@ -542,7 +542,15 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
                 return nil, ctx.Err()
             default:
                 if len(msgs) > 0 {
-                    s.q = msgs
+                    s.q = make([]*Message, len(msgs))
+                    for _, m := range msgs {
+                        s.q[i] = &Message {
+                            Body: m.Body,
+                            Attributes: m.Attributes,
+                            AckID: m.AckID,
+                            sub: s,
+                        }
+                    }
                     break
                 }
             }
