@@ -332,16 +332,16 @@ func ExampleOpen() {
 	if _, err := blob.Open(ctx, "file:///nonexistentpath"); err == nil {
 		log.Fatal("Expected an error opening nonexistent path")
 	}
-	fmt.Println("Error opening nonexistentpath")
+	fmt.Println("Got expected error opening a nonexistent path")
 
 	if _, err := blob.Open(ctx, "file://"+dir); err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println("Got bucket for valid path")
 	}
+	fmt.Println("Got a bucket for valid path")
+
 	// Output:
-	// Error opening nonexistentpath
-	// Got bucket for valid path
+	// Got expected error opening a nonexistent path
+	// Got a bucket for valid path
 }
 
 func newTempDir() (string, func()) {
