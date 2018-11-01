@@ -274,7 +274,7 @@ func OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubs
         opts = defaultTopicOptions
     }
     t := &topic{topicName, opts}
-    return pubsub.NewTopic(t, opts.BatchSize)
+    return pubsub.NewTopic(t, opts.TopicOptions)
 }
 
 type topic struct {
@@ -292,17 +292,9 @@ func (t *topic) Close(ctx context.Context) error {
 
 // SubscriptionOptions contains configuration for Subscriptions.
 type SubscriptionOptions struct {
-    // AckDelay tells the max duration to wait before sending the next batch 
-    // of acknowledgements back to the server.
-    AckDelay     time.Duration
+    pubsub.SubscriptionOptions
 
-    // AckBatchSize is the maximum number of acks that should be sent to
-    // the server in a batch.
-    AckBatchSize int
-
-    // AckDeadline tells how long the server should wait before assuming a
-    // received message has failed to be processed.
-    AckDeadline time.Duration
+    // More options go here...
 }
 
 var defaultSubscriptionOptions = &SubscriptionOptions {
@@ -316,7 +308,7 @@ func OpenSubscription(ctx context.Context, subscriptionName string, opts *Subscr
         opts = defaultSubscriptionOptions
     }
     s := &subscription{subscriptionName, opts}
-    return pubsub.NewSubscription(s, opts.BatchSize, opts.AckDelay)
+    return pubsub.NewSubscription(s, opts.SubscriptionOptions)
 }
 
 type subscription struct {
@@ -532,6 +524,21 @@ type Subscription struct {
     q           []*Message
 }
 
+// SubscriptionOptions contains configuration for Subscriptions.
+type SubscriptionOptions struct {
+    // AckDelay tells the max duration to wait before sending the next batch 
+    // of acknowledgements back to the server.
+    AckDelay     time.Duration
+
+    // AckBatchSize is the maximum number of acks that should be sent to
+    // the server in a batch.
+    AckBatchSize int
+
+    // AckDeadline tells how long the server should wait before assuming a
+    // received message has failed to be processed.
+    AckDeadline time.Duration
+}
+
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking if none are available. This method can be called concurrently from
 // multiple goroutines. On systems that support acks, the Ack() method of the
@@ -576,13 +583,11 @@ func (s *Subscription) Close() error {
     return s.driver.Close()
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription a batchSize
-// parameter telling how many messages to fetch from the server at a time, and
-// an ackWait parameter telling the maximum amount of time to wait before
-// sending a non-empty batch of acks. Behind the scenes, NewSubscription spins
-// up a goroutine to gather acks into batches and periodically send them to the
-// server.
-func NewSubscription(s driver.Subscription, batchSize int, ackWait time.Duration) *Subscription {
+// NewSubscription creates a Subscription from a driver.Subscription and opts to
+// tune sending and receiving of acks and messages. Behind the scenes,
+// NewSubscription spins up a goroutine to gather acks into batches and
+// periodically send them to the server.
+func NewSubscription(s driver.Subscription, opts SubscriptionOptions) *Subscription {
     // Details similar to the body of NewTopic should go here.
 }
 ```
