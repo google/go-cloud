@@ -918,13 +918,15 @@ Con:
 * Passing `ack` around along with `msg` is inconvenient.
 
 ## Tests
-### Unit tests for the concrete API
+### Unit tests for the concrete API (`github.com/go-cloud/pubsub`)
 We can test that the batched sending, receiving and acking work as intended by making mock implementations of the driver interfaces.
+
+At least the following things should be tested:
 * Calling `pubsub.Message.Ack` causes `driver.Subscription.SendAcks` to be called.
 * Calling `pubsub.Topic.Send` causes `driver.Topic.SendBatch` to be called.
 * Calling `pubsub.Subscription.Receive` causes `driver.Subscription.ReceiveBatch` to be called.
 
-### Conformance tests for concrete driver implementations
+### Conformance tests for specific implementations (*e.g.*, `github.com/go-cloud/pubsub/acmepubsub`)
 * Sent messages with random contents are received with the same contents.
 * Sent messages with random attributes are received with the same attributes.
 * Error occurs when making a local topic with an ID that doesn’t exist on the server.
