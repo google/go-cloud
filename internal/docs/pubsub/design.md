@@ -547,7 +547,7 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
                         s.q[i] = &Message {
                             Body: m.Body,
                             Attributes: m.Attributes,
-                            AckID: m.AckID,
+                            ackID: m.AckID,
                             sub: s,
                         }
                     }
