@@ -833,9 +833,9 @@ Con:
 ## Acknowledgements
 In pubsub systems with acknowledgement, messages are kept in a queue associated with the subscription on the server. When a client receives one of these messages, its counterpart on the server is marked as being processed. Once the client finishes processing the message, it sends an acknowledgement (or "ack") to the server and the server removes the message from the subscription queue. There may be a deadline for the acknowledgement, past which the server unmarks the message so that it can be received again for another try at processing.
 
-Redis and ZeroMQ don’t support Ack, but many others do including GCP PubSub, Azure Service Bus, and RabbitMQ. Given the wide support and usefulness, it makes sense to support this in Go Cloud.
+Redis Pub/Sub and ZeroMQ don’t support acking, but many others do including GCP PubSub, Azure Service Bus, RabbitMQ, and [Redis Streams](https://redis.io/topics/streams-intro). Given the wide support and usefulness, it makes sense to support message acking in Go Cloud.
 
-As of this writing, it is an open question as to what should be done about pubsub systems that don't support acks. Some possibilities have been discussed, but no clear best option has emerged yet:
+As of this writing, it is an open question as to what should be done about pubsub systems that do not support acks. Some possibilities have been discussed, but no clear best option has emerged yet:
 1. simulating acknowledgement by constructing queues on the server. Con: the magically created queues would probably be a less than pleasant surprise for some users.
 2. making ack a no-op for systems that don't support it. With this, do we return a sentinel error from `Ack`, and if so then doesn't that unduly complicate the code for apps that never use non-acking systems? This option is also potentially misleading for developers who would naturally assume that un-acked messages would be redelivered.
 
