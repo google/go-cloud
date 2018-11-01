@@ -472,40 +472,8 @@ func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
 	go func() {
 		// Pull messages from t.mcChan and put them in batches. Send the current
 		// batch whenever it is large enough or enough time has elapsed since
-		// the last send.
-		for {
-			batch := make([]*driver.Message, 0, batchSize)
-			timeout := time.After(opts.SendDelay)
-		Loop:
-			for i := 0; i < opts.BatchSize; i++ {
-				select {
-				case <-timeout:
-					// Time to send the batch, even if it isn't full.
-					break Loop
-				case mc := <-t.mcChan:
-					select {
-					case <-mc.ctx.Done():
-						// This message's Send call was cancelled, so just skip
-						// over it.
-					default:
-						dm := &driver.Message{
-							Body:       m.msg.Body,
-							Attributes: m.msg.Attributes,
-							AckID:      m.msg.AckID,
-						}
-						batch = append(batch, dm)
-					}
-				case <-t.doneChan:
-					return
-				}
-			}
-			if len(batch) > 0 {
-				err := t.driver.SendBatch(ctx, batch)
-				for _, m := range batch {
-					m.errChan <- err
-				}
-			}
-		}
+        // the last send.
+        // ...
 	}()
 	return t
 }
@@ -549,31 +517,8 @@ type SubscriptionOptions struct {
 // prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	if len(s.q) == 0 {
-		// Get the next batch of messages from the server.
-	Loop:
-		for {
-			msgs, err := s.driver.ReceiveBatch(ctx)
-			if err != nil {
-				return nil, err
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-				if len(msgs) > 0 {
-					s.q = make([]*Message, len(msgs))
-					for _, m := range msgs {
-						s.q[i] = &Message{
-							Body:       m.Body,
-							Attributes: m.Attributes,
-							ackID:      m.AckID,
-							sub:        s,
-						}
-					}
-					break Loop
-				}
-			}
-		}
+        // Get the next batch of messages from the server.
+        // ...
 	}
 	m := s.q[0]
 	s.q = s.q[1:]
