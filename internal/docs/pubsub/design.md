@@ -34,32 +34,32 @@ Given a topic that has already been created on the pubsub server, messages can b
 package main
 
 import (
-    "context"
-    "log"
-    "net/http"
+	"context"
+	"log"
+	"net/http"
 
-    "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acmepubsub"
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
-    log.Fatal(serve())
+	log.Fatal(serve())
 }
 
 func serve() error {
-    ctx := context.Background()
-    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
-    if err != nil {
-        return err
-    }
-    defer t.Close()
-    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := t.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
-        if err != nil {
-            log.Println(err)
-        }
-    })
-    return http.ListenAndServe(":8080", nil)
+	ctx := context.Background()
+	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+	if err != nil {
+		return err
+	}
+	defer t.Close()
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		err := t.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+		if err != nil {
+			log.Println(err)
+		}
+	})
+	return http.ListenAndServe(":8080", nil)
 }
 ```
 
@@ -71,37 +71,37 @@ Messages can be received from an existing subscription to a topic by calling the
 package main
 
 import (
-    "context"
-    "fmt"
-    "log"
+	"context"
+	"fmt"
+	"log"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acmepubsub" 
+	"github.com/google/go-cloud/pubsub" 
+	"github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
-    if err := receive(); err != nil {
-        log.Fatal(err)
-    }
+	if err := receive(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func receive() error {
-    ctx := context.Background()
-    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
-    if err != nil {
-        return err
-    }
-    defer s.Close()
-    msg, err := s.Receive(ctx)
-    if err != nil {
-        return err
-    }
-    // Do something with msg.
-    fmt.Printf("Got message: %s\n", msg.Body)
-    // Acknowledge that we handled the message.
-    if err := msg.Ack(ctx); err != nil {
-       return err
-    }
+	ctx := context.Background()
+	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+	msg, err := s.Receive(ctx)
+	if err != nil {
+		return err
+	}
+	// Do something with msg.
+	fmt.Printf("Got message: %s\n", msg.Body)
+	// Acknowledge that we handled the message.
+	if err := msg.Ack(ctx); err != nil {
+	   return err
+	}
 }
 ```
 
@@ -111,59 +111,59 @@ A more realistic subscriber client would process messages in a loop, like this:
 package main
 
 import (
-    "context"
-    "log"
-    "os"
-    "os/signal"
+	"context"
+	"log"
+	"os"
+	"os/signal"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acmepubsub" 
+	"github.com/google/go-cloud/pubsub" 
+	"github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
-    if err := receive(); err != nil {
-        log.Fatal(err)
-    }
+	if err := receive(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func receive() error {
-    ctx := context.Background()
-    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
-    if err != nil {
-        return err
-    }
-    defer s.Close(ctx)
+	ctx := context.Background()
+	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
+	if err != nil {
+		return err
+	}
+	defer s.Close(ctx)
 
-    // Handle ctrl-C.
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        for sig := range c {
-            err := s.Close(ctx)
-            if err != nil {
-                log.Fatal(err)
-            }
-        }
-    }()
+	// Handle ctrl-C.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			err := s.Close(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
-    // Process messages until the user hits ctrl-C.
+	// Process messages until the user hits ctrl-C.
 Loop:
-    for {
-        msg, err := s.Receive(ctx)
-        switch err {
-        // s.Close() causes io.EOF to be returned from s.Receive().
-        case io.EOF:
-            log.Printf("Got ctrl-C. Exiting.")
-            break Loop
-        case nil:
-        default:
-            return err
-        }
-        log.Printf("Got message: %s\n", msg.Body)
-        if err := msg.Ack(ctx); err != nil {
-            return err
-        }
-    }
+	for {
+		msg, err := s.Receive(ctx)
+		switch err {
+		// s.Close() causes io.EOF to be returned from s.Receive().
+		case io.EOF:
+			log.Printf("Got ctrl-C. Exiting.")
+			break Loop
+		case nil:
+		default:
+			return err
+		}
+		log.Printf("Got message: %s\n", msg.Body)
+		if err := msg.Ack(ctx); err != nil {
+			return err
+		}
+	}
 }
 ```
 
@@ -172,69 +172,69 @@ The messages can be processed concurrently with an [inverted worker pool](https:
 package main
 
 import (
-    "context"
-    "log"
-    "os"
-    "os/signal"
+	"context"
+	"log"
+	"os"
+	"os/signal"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acmepubsub" 
+	"github.com/google/go-cloud/pubsub" 
+	"github.com/google/go-cloud/pubsub/acmepubsub" 
 )
 
 func main() {
-    if err := receive(); err != nil {
-        log.Fatal(err)
-    }
+	if err := receive(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func receive() error {
-    ctx := context.Background()
-    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
-    if err != nil {
-        return err
-    }
-    defer s.Close(ctx)
+	ctx := context.Background()
+	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	if err != nil {
+		return err
+	}
+	defer s.Close(ctx)
 
-    // Handle ctrl-C.
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        for sig := range c {
-            if err := s.Close(ctx); err != nil {
-                log.Fatal(err)
-            }
-        }
-    }()
+	// Handle ctrl-C.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			if err := s.Close(ctx); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
-    // Process messages until the user hits ctrl-C.
-    const poolSize = 10
-    // Use a buffered channel as a semaphore.
-    sem := make(chan token, poolSize)
+	// Process messages until the user hits ctrl-C.
+	const poolSize = 10
+	// Use a buffered channel as a semaphore.
+	sem := make(chan token, poolSize)
 Loop:
-    for {
-        msg, err := s.Receive(ctx)
-        switch err {
-        // s.Close() causes io.EOF to be returned from s.Receive().
-        case io.EOF:
-            log.Printf("Got ctrl-C. Exiting.")
-            break Loop
-        case nil:
-        default:
-            return err
-        }
+	for {
+		msg, err := s.Receive(ctx)
+		switch err {
+		// s.Close() causes io.EOF to be returned from s.Receive().
+		case io.EOF:
+			log.Printf("Got ctrl-C. Exiting.")
+			break Loop
+		case nil:
+		default:
+			return err
+		}
 
-        sem <- token{}
-        go func() {
-            log.Printf("Got message: %s", msg.Body)
-            if err := msg.Ack(ctx); err != nil {
-                log.Printf("Failed to ack message: %v", err)
-            }
-            <-sem
-        }()
-    }
-    for n := poolSize; n > 0; n-- {
-        sem <- token{}
-    }
+		sem <- token{}
+		go func() {
+			log.Printf("Got message: %s", msg.Body)
+			if err := msg.Ack(ctx); err != nil {
+				log.Printf("Failed to ack message: %v", err)
+			}
+			<-sem
+		}()
+	}
+	for n := poolSize; n > 0; n-- {
+		sem <- token{}
+	}
 }
 ```
 
@@ -251,81 +251,81 @@ Here is a sketch of what the `acmepubsub` package could look like:
 package acmepubsub
 
 import (
-    "context"
+	"context"
 
-    "github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub"
 )
 
 // TopicOptions contains configuration for Topics.
 type TopicOptions struct {
-    pubsub.TopicOptions
+	pubsub.TopicOptions
 
-    // More options go here...
+	// More options go here...
 }
 
 var defaultTopicOptions = &TopicOptions {
-    // ...
+	// ...
 }
 
 // OpenTopic opens an existing topic on the pubsub server and returns a pubsub.Topic object
 // that can be used to send messages to that topic.
 func OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-    if opts == nil {
-        opts = defaultTopicOptions
-    }
-    t := &topic{topicName, opts}
-    return pubsub.NewTopic(t, opts.TopicOptions)
+	if opts == nil {
+		opts = defaultTopicOptions
+	}
+	t := &topic{topicName, opts}
+	return pubsub.NewTopic(t, opts.TopicOptions)
 }
 
 type topic struct {
-    name string
-    opts TopicOptions
+	name string
+	opts TopicOptions
 }
 
 func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
-    // ...
+	// ...
 }
 
 func (t *topic) Close(ctx context.Context) error {
-    // ...
+	// ...
 }
 
 // SubscriptionOptions contains configuration for Subscriptions.
 type SubscriptionOptions struct {
-    pubsub.SubscriptionOptions
+	pubsub.SubscriptionOptions
 
-    // More options go here...
+	// More options go here...
 }
 
 var defaultSubscriptionOptions = &SubscriptionOptions {
-    // ...
+	// ...
 }
 
 // OpenSubscription opens an existing subscription on the server and returns a
 // pubsub.Subscription object that can be used to receive messages.
 func OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-    if opts == nil {
-        opts = defaultSubscriptionOptions
-    }
-    s := &subscription{subscriptionName, opts}
-    return pubsub.NewSubscription(s, opts.SubscriptionOptions)
+	if opts == nil {
+		opts = defaultSubscriptionOptions
+	}
+	s := &subscription{subscriptionName, opts}
+	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
 }
 
 type subscription struct {
-    name string
-    opts SubscriptionOptions
+	name string
+	opts SubscriptionOptions
 }
 
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*pubsub.Message, error) {
-    // ...
+	// ...
 }
 
 func (s *subscription) SendAcks(ctx context.Context, []pubsub.AckID) error {
-    // ...
+	// ...
 }
 
 func (s *subscription) Close(ctx context.Context) error {
-    // ...
+	// ...
 }
 ```
 
@@ -339,40 +339,40 @@ package driver
 type AckID interface{}
 
 type Message struct {
-    // Body contains the content of the message.
-    Body []byte
+	// Body contains the content of the message.
+	Body []byte
 
-    // Attributes has key/value metadata for the message.
-    Attributes map[string]string
+	// Attributes has key/value metadata for the message.
+	Attributes map[string]string
 
-    // AckID identifies the message on the server.
-    // It can be used to ack the message after it has been received.
-    AckID AckID
+	// AckID identifies the message on the server.
+	// It can be used to ack the message after it has been received.
+	AckID AckID
 }
 
 // Topic publishes messages.
 type Topic interface {
-    // SendBatch publishes all the messages in ms.
-    SendBatch(ctx context.Context, ms []*Message) error
+	// SendBatch publishes all the messages in ms.
+	SendBatch(ctx context.Context, ms []*Message) error
 
-    // Close disconnects the Topic.
-    Close() error
+	// Close disconnects the Topic.
+	Close() error
 }
 
 // Subscription receives published messages.
 type Subscription interface {
-    // ReceiveBatch returns a batch of messages that have queued up for the
-    // subscription on the server.
-    ReceiveBatch(ctx context.Context) ([]*Message, error)
+	// ReceiveBatch returns a batch of messages that have queued up for the
+	// subscription on the server.
+	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
-    // SendAcks acknowledges the messages with the given ackIDs on the
-    // server so that they
-    // will not be received again for this subscription. This method
-    // returns only after all the ackIDs are sent.
-    SendAcks(ctx context.Context, ackIDs []interface{}) error
+	// SendAcks acknowledges the messages with the given ackIDs on the
+	// server so that they
+	// will not be received again for this subscription. This method
+	// returns only after all the ackIDs are sent.
+	SendAcks(ctx context.Context, ackIDs []interface{}) error
 
-    // Close disconnects the Subscription.
-    Close() error
+	// Close disconnects the Subscription.
+	Close() error
 }
 ```
 
@@ -472,8 +472,8 @@ func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
 	go func() {
 		// Pull messages from t.mcChan and put them in batches. Send the current
 		// batch whenever it is large enough or enough time has elapsed since
-        // the last send.
-        // ...
+		// the last send.
+		// ...
 	}()
 	return t
 }
@@ -517,8 +517,8 @@ type SubscriptionOptions struct {
 // prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	if len(s.q) == 0 {
-        // Get the next batch of messages from the server.
-        // ...
+		// Get the next batch of messages from the server.
+		// ...
 	}
 	m := s.q[0]
 	s.q = s.q[1:]
@@ -548,32 +548,32 @@ In this alternative, the application code sends, receives and acknowledges messa
 package main
 
 import (
-    "context"
-    "log"
-    "net/http"
+	"context"
+	"log"
+	"net/http"
 
-    "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acmepubsub"
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
-    log.Fatal(serve())
+	log.Fatal(serve())
 }
 
 func serve() error {
-    ctx := context.Background()
-    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
-    if err != nil {
-        return err
-    }
-    defer t.Close()
-    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        err := t.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
-        if err != nil {
-            log.Println(err)
-        }
-    })
-    return http.ListenAndServe(":8080", nil)
+	ctx := context.Background()
+	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+	if err != nil {
+		return err
+	}
+	defer t.Close()
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		err := t.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+		if err != nil {
+			log.Println(err)
+		}
+	})
+	return http.ListenAndServe(":8080", nil)
 }
 ```
 For a company experiencing explosive growth or enthusiastic spammers creating more signups than this simple-minded implementation can handle, the app would have to be adapted to create non-singleton batches, like this:
@@ -581,45 +581,45 @@ For a company experiencing explosive growth or enthusiastic spammers creating mo
 package main
 
 import (
-    "context"
-    "log"
-    "net/http"
+	"context"
+	"log"
+	"net/http"
 
-    "github.com/google/go-cloud/pubsub"
-    "github.com/google/go-cloud/pubsub/acmepubsub"
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 1000
 
 func main() {
-    log.Fatal(serve())
+	log.Fatal(serve())
 }
 
 func serve() error {
-    ctx := context.Background()
-    t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
-    if err != nil {
-        return err
-    }
-    defer t.Close()
-    c := make(chan *pubsub.Message)
-    go sendBatches(ctx, t, c)
-    http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-        c <- &pubsub.Message{Body: []byte("Someone signed up")}
-    })
-    return http.ListenAndServe(":8080", nil)
+	ctx := context.Background()
+	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+	if err != nil {
+		return err
+	}
+	defer t.Close()
+	c := make(chan *pubsub.Message)
+	go sendBatches(ctx, t, c)
+	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
+		c <- &pubsub.Message{Body: []byte("Someone signed up")}
+	})
+	return http.ListenAndServe(":8080", nil)
 }
 
 func sendBatches(ctx context.Context, t *pubsub.Topic, c chan *pubsub.Message) {
-    batch := make([]*pubsub.Message, batchSize)
-    for {
-        for i := 0; i < batchSize; i++ {
-            batch[i] = <-c
-        }
-        if err := t.Send(ctx, batch); err != nil {
-            log.Println(err)
-        }
-    }
+	batch := make([]*pubsub.Message, batchSize)
+	for {
+		for i := 0; i < batchSize; i++ {
+			batch[i] = <-c
+		}
+		if err := t.Send(ctx, batch); err != nil {
+			log.Println(err)
+		}
+	}
 }
 ```
 This shows how the complexity of batching has been pushed onto the application code.
@@ -631,67 +631,67 @@ Here is an example of how this API would be used for serial message processing:
 package main
 
 import (
-    "context"
-    "log"
-    "os"
-    "os/signal"
+	"context"
+	"log"
+	"os"
+	"os/signal"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acmepubsub"
+	"github.com/google/go-cloud/pubsub" 
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 10
 
 func main() {
-    if err := receive(); err != nil {
-        log.Fatal(err)
-    }
+	if err := receive(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func receive() error {
-    ctx := context.Background()
-    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
-    if err != nil {
-        return err
-    }
-    defer s.Close(ctx)
+	ctx := context.Background()
+	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
+	if err != nil {
+		return err
+	}
+	defer s.Close(ctx)
 
-    // Handle ctrl-C.
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        for sig := range c {
-            err := s.Close(ctx)
-            if err != nil {
-                log.Fatal(err)
-            }
-        }
-    }()
+	// Handle ctrl-C.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			err := s.Close(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
-    // Process messages until the user hits ctrl-C.
+	// Process messages until the user hits ctrl-C.
 Loop:
-    for {
-        msgs, err := s.Receive(ctx, batchSize)
-        switch err {
-        // s.Close() causes io.EOF to be returned from s.Receive().
-        case io.EOF:
-            log.Printf("Got ctrl-C. Exiting.")
-            break Loop
-        case nil:
-        default:
-            return err
-        }
-        acks := make([]pubsub.AckID, 0, batchSize)
-        for _, msg := range msgs {
-            // Do something with msg.
-            fmt.Printf("Got message: %q\n", msg.Body)
-            acks = append(acks, msg.AckID)
-        }
-        err := s.SendAcks(ctx, acks)
-        if err != nil {
-            return err
-        }
-    }
+	for {
+		msgs, err := s.Receive(ctx, batchSize)
+		switch err {
+		// s.Close() causes io.EOF to be returned from s.Receive().
+		case io.EOF:
+			log.Printf("Got ctrl-C. Exiting.")
+			break Loop
+		case nil:
+		default:
+			return err
+		}
+		acks := make([]pubsub.AckID, 0, batchSize)
+		for _, msg := range msgs {
+			// Do something with msg.
+			fmt.Printf("Got message: %q\n", msg.Body)
+			acks = append(acks, msg.AckID)
+		}
+		err := s.SendAcks(ctx, acks)
+		if err != nil {
+			return err
+		}
+	}
 }
 ```
 
@@ -700,91 +700,91 @@ Here’s what it might look like to use this batch-only API with the inverted wo
 package main
 
 import (
-    "context"
-    "log"
-    "os"
-    "os/signal"
+	"context"
+	"log"
+	"os"
+	"os/signal"
 
-    "github.com/google/go-cloud/pubsub" 
-    "github.com/google/go-cloud/pubsub/acmepubsub"
+	"github.com/google/go-cloud/pubsub" 
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 const batchSize = 100
 const poolSize = 10
 
 func main() {
-    if err := receive(); err != nil {
-        log.Fatal(err)
-    }
+	if err := receive(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func receive() error {
-    ctx := context.Background()
-    s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
-    if err != nil {
-        return err
-    }
-    defer s.Close(ctx)
+	ctx := context.Background()
+	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	if err != nil {
+		return err
+	}
+	defer s.Close(ctx)
 
-    // Handle ctrl-C.
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, os.Interrupt)
-    go func() {
-        for sig := range c {
-            if err := s.Close(ctx); err != nil {
-                log.Fatal(err)
-            }
-        }
-    }()
+	// Handle ctrl-C.
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for sig := range c {
+			if err := s.Close(ctx); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 
-    // Receive the messages and forward them to a chan.
-    msgsChan := make(chan *pubsub.Message)
-    go func() {
-        for {
-            msgs, err := s.Receive(ctx, batchSize)
-            // Shut down if s.Close was called.
-            if err == io.EOF {
-                log.Println("Got ctrl-C. Exiting")
-                os.Exit(0)
-            }
-            if err != nil {
-                /* handle err */
-            }
-            for _, m := range msgs {
-                msgsChan <- m
-            }
-        }
-    }
+	// Receive the messages and forward them to a chan.
+	msgsChan := make(chan *pubsub.Message)
+	go func() {
+		for {
+			msgs, err := s.Receive(ctx, batchSize)
+			// Shut down if s.Close was called.
+			if err == io.EOF {
+				log.Println("Got ctrl-C. Exiting")
+				os.Exit(0)
+			}
+			if err != nil {
+				/* handle err */
+			}
+			for _, m := range msgs {
+				msgsChan <- m
+			}
+		}
+	}
 
-    // Get the acks from a chan and send them back to the
-    // server in batches.
-    acksChan := make(chan pubsub.AckID)
-    go func() {
-        for {
-            batch := make([]pubsub.AckID, batchSize)
-            for i := 0; i < len(batch); i++ {
-                batch[i] = <-acksChan
-            }
-            if err := s.SendAcks(ctx, batch); err != nil {
-                /* handle err */
-            }
-        }
-    }
+	// Get the acks from a chan and send them back to the
+	// server in batches.
+	acksChan := make(chan pubsub.AckID)
+	go func() {
+		for {
+			batch := make([]pubsub.AckID, batchSize)
+			for i := 0; i < len(batch); i++ {
+				batch[i] = <-acksChan
+			}
+			if err := s.SendAcks(ctx, batch); err != nil {
+				/* handle err */
+			}
+		}
+	}
 
-    // Process messages until the user hits ctrl-C.
-    // Use a buffered channel as a semaphore.
-    sem := make(chan token, poolSize)
-    for msg := range msgsChan {
-        sem <- token{}
-        go func(msg *pubsub.Message) {
-            log.Printf("Got message: %s", msg.Body)
-            acksChan <- msg.AckID
-            <-sem
-        }(msg)
-    }
-    for n := poolSize; n > 0; n-- {
-        sem <- token{}
-    }
+	// Process messages until the user hits ctrl-C.
+	// Use a buffered channel as a semaphore.
+	sem := make(chan token, poolSize)
+	for msg := range msgsChan {
+		sem <- token{}
+		go func(msg *pubsub.Message) {
+			log.Printf("Got message: %s", msg.Body)
+			acksChan <- msg.AckID
+			<-sem
+		}(msg)
+	}
+	for n := poolSize; n > 0; n-- {
+		sem <- token{}
+	}
 }
 ```
 
@@ -792,9 +792,9 @@ Here are some trade-offs of this design:
 
 Pro:
 * The semantics are simple, making it
-    * straightforward to implement the concrete API and the drivers for most pubsub providers
-    * easy for developers to reason about how it will behave
-    * less risky that bugs will be present in the concrete API.
+	* straightforward to implement the concrete API and the drivers for most pubsub providers
+	* easy for developers to reason about how it will behave
+	* less risky that bugs will be present in the concrete API.
 * Fairly efficient sending and receiving of messages is possible by tuning batch size and the number of goroutines sending or receiving messages.
 
 Con:
@@ -806,20 +806,20 @@ Here is an example of what application code could look like for a pubsub API ins
 ```go
 b := somepubsub.NewBroker(...)
 if err := b.Connect(); err != nil {
-    /* handle err */
+	/* handle err */
 }
 topic := "user-signups"
 subID := "user-signups-subscription-1"
 s, err := b.Subscription(ctx, topic, subID, func(pub broker.Publication) error {
-    fmt.Printf("%s\n", pub.Message.Body)
-    return nil
+	fmt.Printf("%s\n", pub.Message.Body)
+	return nil
 })
 if err := b.Publish(ctx, topic, &broker.Message{ Body: []byte("alice signed up") }); err != nil {
-    /* handle err */
+	/* handle err */
 }
 // Sometime later:
 if err := s.Unsubscribe(ctx); err != nil {
-    /* handle err */
+	/* handle err */
 }
 ```
 
