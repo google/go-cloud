@@ -779,11 +779,9 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 func countItems(ctx context.Context, t *testing.T, iter *blob.ListIterator) int {
 	count := 0
 	for {
-		_, err := iter.Next(ctx)
-		if err == io.EOF {
+		if _, err := iter.Next(ctx); err == io.EOF {
 			break
-		}
-		if err != nil {
+		} else if err != nil {
 			t.Fatal(err)
 		}
 		count++
