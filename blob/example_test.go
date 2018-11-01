@@ -322,6 +322,29 @@ func ExampleBucket_As() {
 	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
 }
 
+func ExampleOpen() {
+	// Connect to a bucket using a URL.
+	// This example uses the file-based implementation, which registers for
+	// the "file" scheme.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	ctx := context.Background()
+	if _, err := blob.Open(ctx, "file:///nonexistentpath"); err == nil {
+		log.Fatal("Expected an error opening nonexistent path")
+	}
+	fmt.Println("Got expected error opening a nonexistent path")
+
+	if _, err := blob.Open(ctx, "file://"+dir); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Got a bucket for valid path")
+
+	// Output:
+	// Got expected error opening a nonexistent path
+	// Got a bucket for valid path
+}
+
 func newTempDir() (string, func()) {
 	dir, err := ioutil.TempDir("", "go-cloud-blob-example")
 	if err != nil {
