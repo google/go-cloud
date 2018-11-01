@@ -222,13 +222,13 @@ func receive() error {
         }
 
         sem <- token{}
-        go func(msg *pubsub.Message) {
+        go func() {
             log.Printf("Got message: %s", msg.Body)
             if err := msg.Ack(ctx); err != nil {
                 log.Printf("Failed to ack message: %v", err)
             }
             <-sem
-        }(msg)
+        }()
     }
     for n := poolSize; n > 0; n-- {
         sem <- token{}
