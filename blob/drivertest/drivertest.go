@@ -273,12 +273,12 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		}
 		count := 0
 		for {
-			obj, err := iter.Next(ctx)
+			_, err := iter.Next(ctx)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				t.Fatal(err)
-			}
-			if obj == nil {
-				break
 			}
 			count++
 		}
@@ -439,11 +439,14 @@ func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse b
 	var retval []listResult
 	for {
 		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			if obj != nil {
+				return nil, errors.New("obj is not nil on EOF")
+			}
+			break
+		}
 		if err != nil {
 			return nil, err
-		}
-		if obj == nil {
-			break
 		}
 		var sub []listResult
 		if obj.IsDir && recurse {
@@ -699,12 +702,12 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		}
 		count := 0
 		for {
-			obj, err := iter.Next(ctx)
+			_, err := iter.Next(ctx)
+			if err == io.EOF {
+				break
+			}
 			if err != nil {
 				t.Fatal(err)
-			}
-			if obj == nil {
-				break
 			}
 			count++
 		}
@@ -1458,10 +1461,10 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			obj, err := iter.Next(ctx)
-			if err != nil {
+			if err != nil && err != io.EOF {
 				t.Fatal(err)
 			}
-			if obj == nil || obj.Key != key {
+			if err == io.EOF || obj.Key != key {
 				t.Error("key not returned from List")
 			}
 		})
@@ -1584,11 +1587,11 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	for {
 		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Fatal(err)
-		}
-		if obj == nil {
-			break
 		}
 		if err := st.ListObjectCheck(obj); err != nil {
 			t.Error(err)

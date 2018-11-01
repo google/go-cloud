@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"mime"
 	"net/http"
@@ -204,7 +205,7 @@ type ListIterator struct {
 	nextIdx int
 }
 
-// Next returns the next object. It returns nil if there are
+// Next returns the next object. It returns (nil, io.EOF) if there are
 // no more objects.
 func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	if i.page != nil {
@@ -222,8 +223,8 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 			}, nil
 		}
 		if len(i.page.NextPageToken) == 0 {
-			// Done with current page, and there are no more; return nil.
-			return nil, nil
+			// Done with current page, and there are no more; return io.EOF.
+			return nil, io.EOF
 		}
 		// We need to load the next page.
 		i.opts.PageToken = i.page.NextPageToken
