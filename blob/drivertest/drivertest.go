@@ -440,6 +440,9 @@ func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse b
 	for {
 		obj, err := iter.Next(ctx)
 		if err == io.EOF {
+			if obj != nil {
+				return nil, errors.New("obj is not nil on EOF")
+			}
 			break
 		}
 		if err != nil {
