@@ -47,8 +47,12 @@ func main() {
 }
 
 func serve() error {
-	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+    ctx := context.Background()
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := cli.OpenTopic(ctx, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := cli.OpenSubscription(ctx, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -128,7 +136,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := cli.OpenSubscription(ctx, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -189,7 +201,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := cli.OpenSubscription(ctx, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -562,7 +578,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := cli.OpenTopic(ctx, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -597,7 +617,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "projects/unicornvideohub/topics/user-signup", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := cli.OpenTopic(ctx, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -650,7 +674,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/signup-minder", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := cli.OpenSubscription(ctx, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -720,7 +748,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "projects/unicornvideohub/subscriptions/user-signup-minder", nil)
+	cli, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := cli.OpenSubscription(ctx, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
