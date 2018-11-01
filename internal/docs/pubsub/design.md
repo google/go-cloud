@@ -47,7 +47,7 @@ func main() {
 }
 
 func serve() error {
-    ctx := context.Background()
+	ctx := context.Background()
 	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
