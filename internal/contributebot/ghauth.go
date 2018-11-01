@@ -28,7 +28,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v18/github"
 )
 
 // gitHubAppAuth makes HTTP requests with GitHub application credentials.
@@ -181,9 +181,14 @@ func (auth *gitHubAppAuth) forInstall(id int64) *gitHubInstallAuth {
 	return &gitHubInstallAuth{app: auth, id: id}
 }
 
-// installationAuthAccept is the Accept header required to use GitHub
-// application installation tokens.
-const installationAuthAccept = "application/vnd.github.machine-man-preview+json"
+const (
+	// installationAuthAccept is the Accept header required to use GitHub
+	// application installation tokens.
+	installationAuthAccept = "application/vnd.github.machine-man-preview+json"
+
+	// checkrunAccept is the Accept header sent to use the check APIs.
+	checkrunAccept = "application/vnd.github.antiope-preview+json"
+)
 
 // fetchInstallToken obtains an authentication token for the given installation.
 func (auth *gitHubAppAuth) fetchInstallToken(ctx context.Context, id int64) (string, time.Time, error) {
@@ -303,6 +308,7 @@ func (auth *gitHubInstallAuth) RoundTrip(req *http.Request) (*http.Response, err
 	req2.Header = cloneHeaders(req.Header)
 	req2.Header.Set("Authorization", "token "+tok)
 	req2.Header.Set("Accept", installationAuthAccept)
+	req2.Header.Set("Accept", checkrunAccept)
 	forwarded = true
 	return auth.app.base.RoundTrip(req2)
 }

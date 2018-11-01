@@ -20,15 +20,21 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v18/github"
 )
 
-const userAgent = "google/go-cloud Contribute Bot"
+const (
+	userAgent = "google/go-cloud Contribute Bot"
+	cloneURL  = "https://github.com/google/go-cloud.git"
+)
 
 type flagConfig struct {
 	project      string
@@ -90,6 +96,8 @@ func (w *worker) receive(ctx context.Context) error {
 			handleErr = w.receiveIssueEvent(ctx, event)
 		case *github.PullRequestEvent:
 			handleErr = w.receivePullRequestEvent(ctx, event)
+		case *github.CheckRunEvent:
+			handleErr = w.receiveCheckRunEvent(ctx, event)
 		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
 			// No-op.
 		default:
@@ -133,12 +141,14 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 }
 
 func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
+	owner := e.GetRepo().GetOwner().GetLogin()
+	repo := e.GetRepo().GetName()
 
 	// Pull out the interesting data from the event.
 	data := &pullRequestData{
 		Action:      e.GetAction(),
-		OwnerLogin:  e.GetRepo().GetOwner().GetLogin(),
-		Repo:        e.GetRepo().GetName(),
+		OwnerLogin:  owner,
+		Repo:        repo,
 		PullRequest: e.GetPullRequest(),
 		Change:      e.GetChanges(),
 	}
@@ -151,10 +161,98 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	}
 	data.PullRequest = pr
 
+	// Fetch the latest commit of the pull request.
+	commits, _, err := client.PullRequests.ListCommits(ctx, data.OwnerLogin, data.Repo, e.GetNumber(), nil)
+	if err != nil {
+		return err
+	}
+	latest, _, err := client.Repositories.GetCommit(ctx, owner, repo, commits[len(commits)-1].GetSHA())
+	if err != nil {
+		return err
+	}
+
+	// Fetch the check runs for the commit.
+	runs, _, err := client.Checks.ListCheckRunsForRef(ctx, owner, repo, latest.GetSHA(), nil)
+	if err != nil {
+		return err
+	}
+	createCheck := true
+	for _, r := range runs.CheckRuns {
+		if r.GetHeadSHA() == latest.GetSHA() {
+			createCheck = false
+		}
+	}
+	if createCheck {
+		if _, _, err := client.Checks.CreateCheckRun(ctx, owner, repo, github.CreateCheckRunOptions{
+			Name:      licenseHeaderCheck,
+			HeadSHA:   latest.GetSHA(),
+			Status:    github.String("in_progress"),
+			StartedAt: &github.Timestamp{Time: time.Now()},
+		}); err != nil {
+			return err
+		}
+	}
+
 	// Process the pull request, deciding what actions to take (if any).
 	edits := processPullRequestEvent(data)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
+}
+
+const licenseHeaderCheck = "license-header-check"
+
+func (w *worker) receiveCheckRunEvent(ctx context.Context, e *github.CheckRunEvent) error {
+	owner := e.GetRepo().GetOwner().GetLogin()
+	repo := e.GetRepo().GetName()
+	cr := e.GetCheckRun()
+	if cr.GetStatus() != "in_progress" || cr.GetName() != licenseHeaderCheck {
+		return nil
+	}
+	local, err := fetchCode(ctx, cr.GetHeadSHA())
+	if err != nil {
+		return err
+	}
+	fmt.Println("Temp code directory:", local)
+	defer os.RemoveAll(local)
+
+	// When receiving an "in_progress" check run, get the commit from the SHA and the files.
+	data := &checkRunData{
+		CheckRun:   e.GetCheckRun(),
+		OwnerLogin: owner,
+		Repo:       repo,
+		CodeDir:    local,
+	}
+	client := w.ghClient(e.GetInstallation().GetID())
+	if data.Commit, _, err = client.Repositories.GetCommit(ctx, owner, repo, cr.GetHeadSHA()); err != nil {
+		return err
+	}
+
+	updates, err := processCheckRunEvent(data)
+	if err != nil {
+		return err
+	}
+	return updates.Execute(ctx, client, data)
+}
+
+// fetchCode fetches the repo for a specific SHA.
+func fetchCode(ctx context.Context, sha string) (string, error) {
+	dir, err := ioutil.TempDir(os.TempDir(), "repo")
+	if err != nil {
+		return "", err
+	}
+	cmds := []*exec.Cmd{
+		exec.CommandContext(ctx, "git", "init"),
+		exec.CommandContext(ctx, "git", "remote", "add", "origin", cloneURL),
+		exec.CommandContext(ctx, "git", "fetch", "origin", sha),
+		exec.CommandContext(ctx, "git", "reset", "--hard", "FETCH_HEAD"),
+	}
+	for _, cmd := range cmds {
+		cmd.Dir = dir
+		if err := cmd.Run(); err != nil {
+			return "", fmt.Errorf("%s: %v", cmd.Args, err)
+		}
+	}
+	return dir, nil
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.

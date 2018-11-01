@@ -15,14 +15,21 @@
 # This Dockerfile expects to have the context of the whole repository.
 
 # Step 1: Build Go binary.
-FROM golang:1.11beta3 as build
+FROM golang:1.11 as build
 ENV GO111MODULE on
 COPY . /go/src/go-cloud
 WORKDIR /go/src/go-cloud/internal/contributebot
 RUN go build
 
 # Step 2: Create image with built Go binary.
-FROM gcr.io/distroless/base
+FROM debian:stretch
+
+RUN apt-get update \
+    && apt-get install -y \
+       git \
+       --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /go/src/go-cloud/internal/contributebot/contributebot /
 # Expose 8080 for health checks
 EXPOSE 8080

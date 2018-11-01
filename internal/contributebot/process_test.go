@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v18/github"
 )
 
 func TestProcessIssueEvent(t *testing.T) {
@@ -256,6 +256,61 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			}
 			got := processPullRequestEvent(data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestProcessCheckEvent(t *testing.T) {
+	tests := []struct {
+		description string
+		filename    string
+		want        string
+	}{
+		{
+			description: "A Go source file with license header -> success",
+			filename:    "with-license.go",
+			want:        "success",
+		},
+		{
+			description: "A Go source file without license header -> failure",
+			filename:    "without-license.go",
+			want:        "failure",
+		},
+		{
+			description: "A generated Go source file -> success",
+			filename:    "gen.go",
+			want:        "success",
+		},
+		{
+			description: "A dockerfile without license header -> failure",
+			filename:    "dockerfile",
+			want:        "failure",
+		},
+		{
+			description: "A source file under testdata -> success",
+			filename:    "testdata/testdata.go",
+			want:        "success",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			data := &checkRunData{
+				Commit: &github.RepositoryCommit{
+					Files: []github.CommitFile{
+						{
+							Filename: github.String(tc.filename),
+						},
+					},
+				},
+				CodeDir: "testdata/licensetests",
+			}
+			got, err := processCheckRunEvent(data)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tc.want, got.Conclusion); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
 			}
 		})

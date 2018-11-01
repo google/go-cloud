@@ -15,25 +15,33 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v18/github"
 )
 
 const (
-	inProgressLabel            = "in progress"
-	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
-	pullRequestTitleComment    = "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
-	branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+	inProgressLabel             = "in progress"
+	issueTitleComment           = "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
+	pullRequestTitleComment     = "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
+	branchesInForkCloseComment  = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+	missingLicenseHeaderComment = "Missing license header"
 )
 
 var (
-	issueTitleRegexp       = regexp.MustCompile(`^[a-z0-9./-]+: .*$`)
-	pullRequestTitleRegexp = issueTitleRegexp
+	issueTitleRegexp           = regexp.MustCompile(`^[a-z0-9./-]+: .*$`)
+	pullRequestTitleRegexp     = issueTitleRegexp
+	checkLicenseFilenameRegexp = regexp.MustCompile(`^([a-z0-9.-]+).(go|tf|sh|sql|yaml)$`)
+	generatedFileHeaderRegexp  = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
+	licenseHeaderRegexp        = regexp.MustCompile(`Copyright ([0-9]+) The Go Cloud Authors$`)
 )
 
 // issueData is information about an issue event.
@@ -248,4 +256,82 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 		}
 	}
 	return nil
+}
+
+type checkRunData struct {
+	CheckRun   *github.CheckRun
+	OwnerLogin string
+	Repo       string
+	Commit     *github.RepositoryCommit
+
+	CodeDir string
+}
+
+func processCheckRunEvent(data *checkRunData) (*checkRunUpdates, error) {
+	updates := &checkRunUpdates{
+		Conclusion: "success",
+		Output: &github.CheckRunOutput{
+			Title:   github.String("Check passed"),
+			Summary: github.String("All changed source files have valid license header."),
+		},
+	}
+	for _, f := range data.Commit.Files {
+		// Checks all source code, excludes testdata.
+		if strings.Contains("/"+f.GetFilename(), "/testdata/") ||
+			!checkLicenseFilenameRegexp.MatchString(filepath.Base(f.GetFilename())) &&
+				!strings.EqualFold(filepath.Base(f.GetFilename()), "dockerfile") {
+			continue
+		}
+		a, err := checkLicenseHeader(data.CodeDir, &f)
+		if err != nil {
+			return nil, err
+		}
+		if a != nil {
+			updates.Output.Annotations = append(updates.Output.Annotations, a)
+			if updates.Conclusion != "failure" {
+				updates.Conclusion = a.GetAnnotationLevel()
+			}
+		}
+	}
+	if updates.Conclusion == "failure" {
+		updates.Output.Title = github.String("Check failed")
+		updates.Output.Summary = github.String("All changed source files need to have a valid license header.")
+	}
+	return updates, nil
+}
+
+func checkLicenseHeader(dir string, cf *github.CommitFile) (*github.CheckRunAnnotation, error) {
+	file, err := os.Open(filepath.Join(dir, cf.GetFilename()))
+	if err != nil {
+		return nil, fmt.Errorf("check cannot open file %s: %v", cf.GetFilename(), err)
+	}
+	scanner := bufio.NewScanner(file)
+	if !scanner.Scan() || !licenseHeaderRegexp.Match(scanner.Bytes()) &&
+		!generatedFileHeaderRegexp.Match(scanner.Bytes()) {
+		return &github.CheckRunAnnotation{
+			Path:            cf.Filename,
+			StartLine:       github.Int(1),
+			EndLine:         github.Int(1),
+			AnnotationLevel: github.String("failure"),
+			Message:         github.String(missingLicenseHeaderComment),
+		}, nil
+	}
+	return nil, nil
+}
+
+type checkRunUpdates struct {
+	Conclusion string
+	Output     *github.CheckRunOutput
+}
+
+func (u *checkRunUpdates) Execute(ctx context.Context, client *github.Client, data *checkRunData) error {
+	_, _, err := client.Checks.UpdateCheckRun(ctx, data.OwnerLogin, data.Repo, data.CheckRun.GetID(),
+		github.UpdateCheckRunOptions{
+			Name:        licenseHeaderCheck,
+			Status:      github.String("completed"),
+			Conclusion:  github.String(u.Conclusion),
+			CompletedAt: &github.Timestamp{Time: time.Now()},
+			Output:      u.Output,
+		})
+	return err
 }

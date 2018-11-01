@@ -49,11 +49,13 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 	v := healthChecks(mainWorker)
 	exporter := _wireExporterValue
 	sampler := trace.NeverSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         logger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	mainWorkerAndServer := workerAndServer{
@@ -67,9 +69,10 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 }
 
 var (
-	_wireRoundTripperValue = http.DefaultTransport
-	_wireLoggerValue       = (requestlog.Logger)(nil)
-	_wireExporterValue     = (trace.Exporter)(nil)
+	_wireRoundTripperValue  = http.DefaultTransport
+	_wireLoggerValue        = (requestlog.Logger)(nil)
+	_wireExporterValue      = (trace.Exporter)(nil)
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // setup.go:
@@ -96,7 +99,7 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 		*(val.(**rsa.PrivateKey)) = key
 		return nil
 	})
-	v, err := filevar.NewVariable(cfg.keyPath, d, nil)
+	v, err := filevar.New(cfg.keyPath, d, nil)
 	if err != nil {
 		return nil, nil, err
 	}
