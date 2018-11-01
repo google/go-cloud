@@ -472,7 +472,7 @@ func NewTopic(d driver.Topic, batchSize int, sendWait time.Duration) *Topic {
     }
     go func() {
         for {
-            batch := make([]*Message, 0, batchSize)
+            batch := make([]*driver.Message, 0, batchSize)
             timeout := time.After(sendWait)
             for i := 0; i < batchSize; i++ {
                 select {
@@ -485,7 +485,12 @@ func NewTopic(d driver.Topic, batchSize int, sendWait time.Duration) *Topic {
                         // This message's Send call was cancelled, so just skip
                         // over it.
                     default:
-                        batch = append(batch, m.msg)
+                        dm := &driver.Message{
+                            Body: m.msg.Body,
+                            Attributes: m.msg.Attributes,
+                            AckID: m.msg.AckID,
+                        }
+                        batch = append(batch, dm)
                     }
                 case <-t.doneChan:
                     return
