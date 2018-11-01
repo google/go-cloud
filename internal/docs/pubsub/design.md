@@ -545,7 +545,6 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
                     s.q = msgs
                     break
                 }
-                time.Sleep(s.opts.PollSleep)
             }
         }
     }
