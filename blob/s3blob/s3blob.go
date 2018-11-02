@@ -46,8 +46,11 @@ import (
 
 const defaultPageSize = 1000
 
+// Options sets options for constructing a *blob.Bucket backed by fileblob.
+type Options struct{}
+
 // OpenBucket returns an S3 Bucket.
-func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
+func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (*blob.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}

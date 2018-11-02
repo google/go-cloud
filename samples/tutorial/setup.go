@@ -67,5 +67,5 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 		Credentials: credentials.NewEnvCredentials(),
 	}
 	s := session.Must(session.NewSession(c))
-	return s3blob.OpenBucket(ctx, s, bucket)
+	return s3blob.OpenBucket(ctx, bucket, s, nil)
 }
