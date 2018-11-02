@@ -38,7 +38,7 @@ func Example() {
 		User:      "myrole",
 		Database:  "test",
 	}
-	db, err := cloudmysql.Open(ctx, cloudmysql.NewCertSource(&authClient), params, nil)
+	db, err := cloudmysql.Open(ctx, cloudmysql.NewCertSource(&authClient), params)
 	if err != nil {
 		panic(err)
 	}
