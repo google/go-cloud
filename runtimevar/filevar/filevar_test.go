@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/google/go-cloud/runtimevar"
+	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cloud/runtimevar/drivertest"
 )
 
@@ -42,9 +43,9 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func (h *harness) MakeVar(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (*runtimevar.Variable, error) {
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
 	path := filepath.Join(h.dir, name)
-	return NewVariable(path, decoder, &WatchOptions{WaitTime: wait})
+	return newWatcher(path, decoder, &Options{WaitDuration: wait})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {

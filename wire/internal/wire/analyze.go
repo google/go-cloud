@@ -20,6 +20,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/types/typeutil"
@@ -122,6 +123,7 @@ func solve(fset *token.FileSet, out types.Type, given []types.Type, set *Provide
 	type frame struct {
 		t    types.Type
 		from types.Type
+		up   *frame
 	}
 	stk := []frame{{t: out}}
 dfs:
@@ -135,12 +137,16 @@ dfs:
 		switch pv := set.For(curr.t); {
 		case pv.IsNil():
 			if curr.from == nil {
-				ec.add(fmt.Errorf("no provider found for %s (output of injector)", types.TypeString(curr.t, nil)))
+				ec.add(fmt.Errorf("no provider found for %s, output of injector", types.TypeString(curr.t, nil)))
 				index.Set(curr.t, errAbort)
 				continue
 			}
-			// TODO(light): Give name of provider.
-			ec.add(fmt.Errorf("no provider found for %s (required by provider of %s)", types.TypeString(curr.t, nil), types.TypeString(curr.from, nil)))
+			sb := new(strings.Builder)
+			fmt.Fprintf(sb, "no provider found for %s", types.TypeString(curr.t, nil))
+			for f := curr.up; f != nil; f = f.up {
+				fmt.Fprintf(sb, "\nneeded by %s in %s", types.TypeString(f.t, nil), set.srcMap.At(f.t).(*providerSetSrc).description(fset, f.t))
+			}
+			ec.add(errors.New(sb.String()))
 			index.Set(curr.t, errAbort)
 			continue
 		case pv.IsProvider():
@@ -151,7 +157,7 @@ dfs:
 				// Interface binding.  Don't create a call ourselves.
 				i := index.At(concrete)
 				if i == nil {
-					stk = append(stk, curr, frame{t: concrete, from: curr.t})
+					stk = append(stk, curr, frame{t: concrete, from: curr.t, up: &curr})
 					continue
 				}
 				index.Set(curr.t, i)
@@ -169,7 +175,7 @@ dfs:
 						stk = append(stk, curr)
 						visitedArgs = false
 					}
-					stk = append(stk, frame{t: a.Type, from: curr.t})
+					stk = append(stk, frame{t: a.Type, from: curr.t, up: &curr})
 				}
 			}
 			if !visitedArgs {
@@ -208,7 +214,7 @@ dfs:
 				// Interface binding.  Don't create a call ourselves.
 				i := index.At(v.Out)
 				if i == nil {
-					stk = append(stk, curr, frame{t: v.Out, from: curr.t})
+					stk = append(stk, curr, frame{t: v.Out, from: curr.t, up: &curr})
 					continue
 				}
 				index.Set(curr.t, i)
@@ -377,7 +383,10 @@ func verifyAcyclic(providerMap *typeutil.Map, hasher typeutil.Hasher) []error {
 	visited := new(typeutil.Map) // to bool
 	visited.SetHasher(hasher)
 	ec := new(errorCollector)
-	for _, root := range providerMap.Keys() {
+	// Sort output types so that errors about cycles are consistent.
+	outputs := providerMap.Keys()
+	sort.Slice(outputs, func(i, j int) bool { return types.TypeString(outputs[i], nil) < types.TypeString(outputs[j], nil) })
+	for _, root := range outputs {
 		// Depth-first search using a stack of trails through the provider map.
 		stk := [][]types.Type{{root}}
 		for len(stk) > 0 {
@@ -437,8 +446,8 @@ func bindingConflictError(fset *token.FileSet, typ types.Type, set *ProviderSet,
 	} else {
 		fmt.Fprintf(sb, set.VarName)
 	}
-	fmt.Fprintf(sb, " has multiple bindings for %s (", types.TypeString(typ, nil))
-	fmt.Fprintf(sb, "current binding: %s", strings.Join(cur.trace(fset, typ), " <- "))
-	fmt.Fprintf(sb, "; previous binding: %s", strings.Join(prev.trace(fset, typ), " <- "))
+	fmt.Fprintf(sb, " has multiple bindings for %s\n", types.TypeString(typ, nil))
+	fmt.Fprintf(sb, "current:\n<- %s\n", strings.Join(cur.trace(fset, typ), "\n<- "))
+	fmt.Fprintf(sb, "previous:\n<- %s", strings.Join(prev.trace(fset, typ), "\n<- "))
 	return notePosition(fset.Position(set.Pos), errors.New(sb.String()))
 }

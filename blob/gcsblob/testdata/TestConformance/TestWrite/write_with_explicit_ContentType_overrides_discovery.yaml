@@ -2,8 +2,8 @@
 version: 1
 interactions:
 - request:
-    body: "--0253ef150b5f9699f96ded6273b9fa982c2642ca6ade07f8a087a1c65c8c\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"application/json\",\"name\":\"blob-for-reading\"}\n\r\n--0253ef150b5f9699f96ded6273b9fa982c2642ca6ade07f8a087a1c65c8c\r\nContent-Type:
+    body: "--37e067702c3a9247748f9704c61fce673a490b5ac5bb368325c4e8f3c1b7\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"application/json\",\"name\":\"blob-for-reading\"}\n\r\n--37e067702c3a9247748f9704c61fce673a490b5ac5bb368325c4e8f3c1b7\r\nContent-Type:
       application/json\r\n\r\n<!DOCTYPE html><html lang=\"en\">\n<head profile=\"http://a9.com/-/spec/opensearch/1.1/\">\n
       \ <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,
       initial-scale=1.0\">\n  <link href=\"/-/bootstrap.min.css?v=8bec1bba3e23ecba22cffb197a2d440af410b15d\"
@@ -74,113 +74,32 @@ interactions:
       \         <button type=\"button\" class=\"btn\" data-dismiss=\"modal\">Close</button>\n
       \     </div>\n    </div>\n  </div>\n</div>\n<script src=\"/-/jquery-2.0.3.min.js?v=fbf9c77d0c4e3c34a485980c1e5316b6212160c8\"></script>\n<script
       src=\"/-/bootstrap.min.js?v=5ada7c103fc1deabc925cc1fdbbb6e451c21fc70\"></script>\n<script
-      src=\"/-/site.js?v=371de731c18d91c499d90b1ab0bf39ecf66d6cf7\"></script>\n</body>\n</html>\r\n--0253ef150b5f9699f96ded6273b9fa982c2642ca6ade07f8a087a1c65c8c--\r\n"
+      src=\"/-/site.js?v=371de731c18d91c499d90b1ab0bf39ecf66d6cf7\"></script>\n</body>\n</html>\r\n--37e067702c3a9247748f9704c61fce673a490b5ac5bb368325c4e8f3c1b7--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=0253ef150b5f9699f96ded6273b9fa982c2642ca6ade07f8a087a1c65c8c
+      - multipart/related; boundary=37e067702c3a9247748f9704c61fce673a490b5ac5bb368325c4e8f3c1b7
       User-Agent:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
       - gl-go/1.11.0-rc2 gccl/20180226
-    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&projection=full&uploadType=multipart
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
     method: POST
   response:
-    body: |
-      {
-       "kind": "storage#object",
-       "id": "go-cloud-blob-test-bucket/blob-for-reading/1537380232032531",
-       "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading",
-       "name": "blob-for-reading",
-       "bucket": "go-cloud-blob-test-bucket",
-       "generation": "1537380232032531",
-       "metageneration": "1",
-       "contentType": "application/json",
-       "timeCreated": "2018-09-19T18:03:52.032Z",
-       "updated": "2018-09-19T18:03:52.032Z",
-       "storageClass": "REGIONAL",
-       "timeStorageClassUpdated": "2018-09-19T18:03:52.032Z",
-       "size": "6354",
-       "md5Hash": "D2p8n/PT13C49/oZwq4Z0A==",
-       "mediaLink": "https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading?generation=1537380232032531&alt=media",
-       "acl": [
-        {
-         "kind": "storage#objectAccessControl",
-         "id": "go-cloud-blob-test-bucket/blob-for-reading/1537380232032531/project-owners-892942638129",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-owners-892942638129",
-         "bucket": "go-cloud-blob-test-bucket",
-         "object": "blob-for-reading",
-         "generation": "1537380232032531",
-         "entity": "project-owners-892942638129",
-         "role": "OWNER",
-         "projectTeam": {
-          "projectNumber": "892942638129",
-          "team": "owners"
-         },
-         "etag": "CJPi9dTTx90CEAE="
-        },
-        {
-         "kind": "storage#objectAccessControl",
-         "id": "go-cloud-blob-test-bucket/blob-for-reading/1537380232032531/project-editors-892942638129",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-editors-892942638129",
-         "bucket": "go-cloud-blob-test-bucket",
-         "object": "blob-for-reading",
-         "generation": "1537380232032531",
-         "entity": "project-editors-892942638129",
-         "role": "OWNER",
-         "projectTeam": {
-          "projectNumber": "892942638129",
-          "team": "editors"
-         },
-         "etag": "CJPi9dTTx90CEAE="
-        },
-        {
-         "kind": "storage#objectAccessControl",
-         "id": "go-cloud-blob-test-bucket/blob-for-reading/1537380232032531/project-viewers-892942638129",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-viewers-892942638129",
-         "bucket": "go-cloud-blob-test-bucket",
-         "object": "blob-for-reading",
-         "generation": "1537380232032531",
-         "entity": "project-viewers-892942638129",
-         "role": "READER",
-         "projectTeam": {
-          "projectNumber": "892942638129",
-          "team": "viewers"
-         },
-         "etag": "CJPi9dTTx90CEAE="
-        },
-        {
-         "kind": "storage#objectAccessControl",
-         "id": "go-cloud-blob-test-bucket/blob-for-reading/1537380232032531/user-rvangent@google.com",
-         "selfLink": "https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/user-rvangent@google.com",
-         "bucket": "go-cloud-blob-test-bucket",
-         "object": "blob-for-reading",
-         "generation": "1537380232032531",
-         "entity": "user-rvangent@google.com",
-         "role": "OWNER",
-         "email": "rvangent@google.com",
-         "etag": "CJPi9dTTx90CEAE="
-        }
-       ],
-       "owner": {
-        "entity": "user-rvangent@google.com"
-       },
-       "crc32c": "tdwrgQ==",
-       "etag": "CJPi9dTTx90CEAE="
-      }
+    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/blob-for-reading/1540594594257235","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading","name":"blob-for-reading","bucket":"go-cloud-blob-test-bucket","generation":"1540594594257235","metageneration":"1","contentType":"application/json","timeCreated":"2018-10-26T22:56:34.257Z","updated":"2018-10-26T22:56:34.257Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-10-26T22:56:34.257Z","size":"6354","md5Hash":"D2p8n/PT13C49/oZwq4Z0A==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading?generation=1540594594257235&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-reading/1540594594257235/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-reading","generation":"1540594594257235","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CNOyooyapd4CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-reading/1540594594257235/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-reading","generation":"1540594594257235","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CNOyooyapd4CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-reading/1540594594257235/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-reading","generation":"1540594594257235","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CNOyooyapd4CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-reading/1540594594257235/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"blob-for-reading","generation":"1540594594257235","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CNOyooyapd4CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"tdwrgQ==","etag":"CNOyooyapd4CEAE="}'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
       Cache-Control:
       - no-cache, no-store, max-age=0, must-revalidate
       Content-Length:
-      - "3115"
+      - "2776"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 19 Sep 2018 18:03:52 GMT
+      - Fri, 26 Oct 2018 22:56:34 GMT
       Etag:
-      - CJPi9dTTx90CEAE=
+      - CNOyooyapd4CEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -190,35 +109,6 @@ interactions:
       Vary:
       - Origin
       - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1537380531000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "61688748495"
-      X-Google-Backends:
-      - hglaxaag3:4020,/bns/hg/borg/hg/bns/blobstore2/bitpusher/18.scotty,acsfoi11:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=h4-iW5zJO6qYxgP4n7qgDw
-      X-Google-Gfe-Cloud-Project-Number:
-      - "892942638129"
-      X-Google-Gfe-Request-Trace:
-      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/18.scotty,acsfoi11:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/18:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCbWQyYXlNUm45eEd5T25wVnhpZDZPSktmQzJrNk9WN242SjZlSlNwLTRPMnRDd1F6Yko4LVhKUlYyODRDanNhSDZsbmdvQWtKNVJoczdQaGotaE5tTkRIYURpZUV4SVIyY2tzVmZySDFCR1BlTl9qcTdDTkVOVjNRdzAEOg0xL2pEbkFzZkxEUV9-
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
       X-Guploader-Customer:
       - apiary_cloudstorage_single_post_uploads
       X-Guploader-Request-Result:
@@ -226,7 +116,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UoHGXmlwrfmFZZkDPgTfMvUOuZu8mhZIU-tlDkzYo1nj9igfmowmcFLUUz8XxFVtkb8ip0FX-JNJHsrZJ5yqroj88gKUA
+      - AEnB2Uow6qzX53H77LhHGqlNzXsfOh5Ts2iO7Wyv-dZpSiUT-OkiSu8dLiHlQryerOeTYYceQ1W0Bd5PqssZfeZpVU-jCz8KVQ
     status: 200 OK
     code: 200
     duration: ""
@@ -320,17 +210,17 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 19 Sep 2018 18:03:52 GMT
+      - Fri, 26 Oct 2018 22:56:34 GMT
       Etag:
       - '"0f6a7c9ff3d3d770b8f7fa19c2ae19d0"'
       Expires:
-      - Wed, 19 Sep 2018 18:03:52 GMT
+      - Fri, 26 Oct 2018 22:56:34 GMT
       Last-Modified:
-      - Wed, 19 Sep 2018 18:03:52 GMT
+      - Fri, 26 Oct 2018 22:56:34 GMT
       Server:
       - UploadServer
       X-Goog-Generation:
-      - "1537380232032531"
+      - "1540594594257235"
       X-Goog-Hash:
       - crc32c=tdwrgQ==
       - md5=D2p8n/PT13C49/oZwq4Z0A==
@@ -342,30 +232,6 @@ interactions:
       - identity
       X-Goog-Stored-Content-Length:
       - "6354"
-      X-Google-Backends:
-      - /bns/hh/borg/hh/bns/cloud-storage/prod-cloud-storage-frontend.frontend/49,/bns/hh/borg/hh/bns/blobstore2/bitpusher/2.scotty,acsfob19:443
-      X-Google-Cache-Control:
-      - no-cache, no-store, max-age=0, must-revalidate
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=iI-iW-yAA8O4xgPBkrDQBw
-      X-Google-Gfe-Cloud-Project-Number:
-      - "892942638129"
-      X-Google-Gfe-Request-Trace:
-      - acsfob19:443,/bns/hh/borg/hh/bns/blobstore2/bitpusher/2.scotty,acsfob19:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-cloud-storage
-      X-Google-Netmon-Label:
-      - /bns/hh/borg/hh/bns/blobstore2/bitpusher/2:caf3
-      X-Google-Service:
-      - bitpusher-cloud-storage
-      X-Google-Shellfish-Status:
-      - CA0gBEBJ
-      X-Google-Storage-Location:
-      - US-WEST2
       X-Guploader-Customer:
       - cloud-storage
       X-Guploader-Request-Result:
@@ -373,7 +239,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UrwB9aucoLclTFhBYNjR-LEqCBwAUHQWepoSksNTKRYl3xS2MwngOHyGYAmQLcRkbTbd1bW7Ehv1dk3G4rCiLZo2XY0_A
+      - AEnB2Up4z9gyofo2TJfYfUcmh5tNFtGv1zVK8PO6MgMyavVIOJRoutJWHEA_C2NYHYd_PARrwJ5dyo6K5MEFTZ-txndEgkNCeQ
     status: 200 OK
     code: 200
     duration: ""
@@ -385,7 +251,7 @@ interactions:
       - google-api-go-client/0.5
       X-Goog-Api-Client:
       - gl-go/1.11.0-rc2 gccl/20180226
-    url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading?alt=json
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-reading?alt=json&prettyPrint=false
     method: DELETE
   response:
     body: ""
@@ -399,7 +265,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 19 Sep 2018 18:03:52 GMT
+      - Fri, 26 Oct 2018 22:56:34 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -409,33 +275,6 @@ interactions:
       Vary:
       - Origin
       - X-Origin
-      X-Google-Apiary-Auth-Expires:
-      - "1537380531000"
-      X-Google-Apiary-Auth-Scopes:
-      - https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.full_control
-        https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/devstorage.write_only
-      X-Google-Apiary-Auth-User:
-      - "61688748495"
-      X-Google-Backends:
-      - hglaxaay12:4147,/bns/hg/borg/hg/bns/blobstore2/bitpusher/33.scotty,acsfoi11:443
-      X-Google-Dos-Service-Trace:
-      - main:apps-upload-cloud-storage-unified
-      X-Google-Gfe-Backend-Request-Info:
-      - eid=iI-iW_zeBqGWxgO4n7e4BA
-      X-Google-Gfe-Request-Trace:
-      - acsfoi11:443,/bns/hg/borg/hg/bns/blobstore2/bitpusher/33.scotty,acsfoi11:443
-      X-Google-Gfe-Response-Code-Details-Trace:
-      - response_code_set_by_backend
-      X-Google-Gfe-Service-Trace:
-      - bitpusher-gcs-apiary
-      X-Google-Netmon-Label:
-      - /bns/hg/borg/hg/bns/blobstore2/bitpusher/33:caf3
-      X-Google-Service:
-      - bitpusher-gcs-apiary
-      X-Google-Session-Info:
-      - CM-zvuflARoCGAY6fAoSY2xvdWQtc3RvcmFnZS1yb3N5EghiaWdzdG9yZRiKyM-4nhYiSDc2NDA4NjA1MTg1MC02cXI0cDZncGk2aG41MDZwdDhlanVxODNkaTM0MWh1ci5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbTCQlgIw4Csw4Ssw4ytKlwESgwF5YTI5Lkdsd2RCbWQyYXlNUm45eEd5T25wVnhpZDZPSktmQzJrNk9WN242SjZlSlNwLTRPMnRDd1F6Yko4LVhKUlYyODRDanNhSDZsbmdvQWtKNVJoczdQaGotaE5tTkRIYURpZUV4SVIyY2tzVmZySDFCR1BlTl9qcTdDTkVOVjNRdzAEOg0xL2pEbkFzZkxEUV9-
-      X-Google-Shellfish-Status:
-      - CA0gBEBG
       X-Guploader-Customer:
       - apiary_cloudstorage_metadata
       X-Guploader-Request-Result:
@@ -443,7 +282,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UqQW2g3lBxHBPcnXA-CnGdWfCypH9huQ0d0rlZSMd9sTuHr_P1KGQSLLy2TtRfF4Y1eMtDkMacfNmpWJbDIjT3oEDFWwA
+      - AEnB2Up_HC4ApSeCuDiMpFPfsdcaLWImlXt-woyeL33Rme_GEssFX6r3EuPAJJ6ysPmm0SC0QsJqOZfW3CSkZ8I1f-F3-Vkyrw
     status: 204 No Content
     code: 204
     duration: ""

@@ -28,11 +28,19 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+// Options sets options.
+// It is provided for future extensibility.
+type Options struct{}
+
 // New constructs a runtimevar.Variable object that uses client to watch
 // variables in etcd.
 // Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runtimevar.Variable, error) {
+func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
+	return runtimevar.New(newWatcher(name, cli, decoder)), nil
+}
+
+func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) *watcher {
 	// Create a ctx for the background goroutine that does all of the reading.
 	// The cancel function will be used to shut it down during Close.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -42,7 +50,7 @@ func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) (*runti
 		shutdown: cancel,
 	}
 	go w.watch(ctx, cli, name, decoder)
-	return runtimevar.New(w), nil
+	return w
 }
 
 // state implements driver.State.

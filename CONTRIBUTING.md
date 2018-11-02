@@ -37,7 +37,7 @@ your current agreements on file or to sign a new one.
 As a personal contributor, you only need to sign the Google CLA once across all Google projects. If you've already signed the CLA, there is no need to do it again. If you are submitting code on behalf of your employer, there's [a separate corporate CLA that your employer manages for you](https://opensource.google.com/docs/cla/#external-contributors).
 
 ### A Warning About Tests
-Tests that interact with cloud providers are written using a replay method, where the test is run and actually performs the operations, and the requests/results of the operations are stored in a replay file. This replay file is then read back in unit tests on Travis, so the tests get to operate with real data. Unfortunately, while the Go Cloud can generate these replay files against our test cloud infrastructure, it is not yet possible for external contributors to do the same. We want to improve this process in the future and are researching how we can do this. If you have any ideas, please file an issue!
+Tests that interact with cloud providers are written using a replay method, where the test is run and actually performs the operations, and the requests/results of the operations are stored in a replay file. This replay file is then read back in unit tests on Travis, so the tests get to operate with real data. Unfortunately, while the Go Cloud team can generate these replay files against our test cloud infrastructure, it is not yet possible for external contributors to do the same. We want to improve this process in the future and are researching how we can do this. If you have any ideas, please file an issue!
 
 
 #### Writing and running tests against a cloud environment

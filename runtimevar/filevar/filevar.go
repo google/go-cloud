@@ -33,7 +33,6 @@ package filevar
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,22 +44,20 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// defaultWait is the default value for WatchOptions.WaitTime.
-const defaultWait = 30 * time.Second
-
-// NewVariable constructs a runtimevar.Variable object with this package as the driver
+// New constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
-	if opts == nil {
-		opts = &WatchOptions{}
+func New(file string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(file, decoder, opts)
+	if err != nil {
+		return nil, err
 	}
-	waitTime := opts.WaitTime
-	switch {
-	case waitTime == 0:
-		waitTime = defaultWait
-	case waitTime < 0:
-		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
+	return runtimevar.New(w), nil
+}
+
+func newWatcher(file string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+	if opts == nil {
+		opts = &Options{}
 	}
 
 	// Use absolute file path.
@@ -85,8 +82,8 @@ func NewVariable(file string, decoder *runtimevar.Decoder, opts *WatchOptions) (
 		closeCh:  make(chan error),
 		shutdown: cancel,
 	}
-	go w.watch(ctx, notifier, file, decoder, waitTime)
-	return runtimevar.New(w), nil
+	go w.watch(ctx, notifier, file, decoder, driver.WaitDuration(opts.WaitDuration))
+	return w, nil
 }
 
 // state implements driver.State.
@@ -151,10 +148,10 @@ func (w *watcher) updateState(s, prev *state) *state {
 
 // watch is run by a background goroutine.
 // It watches file using notifier, and writes new states to w.ch.
-// If it can't read or watch the file, it re-checks every waitTime.
+// If it can't read or watch the file, it re-checks every wait.
 // It exits when ctx is canceled, and writes any shutdown errors (or
 // nil if there weren't any) to w.closeCh.
-func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file string, decoder *runtimevar.Decoder, waitTime time.Duration) {
+func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file string, decoder *runtimevar.Decoder, wait time.Duration) {
 	// addedToNotifier is true iff file has been added to the notifier.
 	addedToNotifier := false
 	var cur *state
@@ -168,7 +165,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 			case <-ctx.Done():
 				w.closeCh <- notifier.Close()
 				return
-			case <-time.After(waitTime):
+			case <-time.After(wait):
 			}
 		}
 
@@ -228,11 +225,11 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 	}
 }
 
-// WatchOptions allows the specification of various options to a watcher.
-type WatchOptions struct {
-	// WaitTime controls the frequency of retries after an error. For example,
+// Options sets options.
+type Options struct {
+	// WaitDuration controls the frequency of retries after an error. For example,
 	// if the file does not exist. Defaults to 30 seconds.
-	WaitTime time.Duration
+	WaitDuration time.Duration
 }
 
 // Close implements driver.WatchVariable.

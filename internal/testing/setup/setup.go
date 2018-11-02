@@ -26,12 +26,15 @@ var Record = flag.Bool("record", false, "whether to run tests against cloud reso
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
-func NewAWSSession(t *testing.T, region string) (sess *session.Session, done func()) {
+func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
 	awsMatcher := &replay.ProviderMatcher{
+		URLScrubbers: []*regexp.Regexp{
+			regexp.MustCompile(`X-Amz-(Credential|Signature)=[^?]*`),
+		},
 		Headers: []string{"X-Amz-Target"},
 	}
 	r, done, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
@@ -39,9 +42,7 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: r,
-	}
+	client := &http.Client{Transport: r}
 
 	// Provide fake creds if running in replay mode.
 	var creds *awscreds.Credentials
@@ -59,7 +60,7 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 		t.Fatal(err)
 	}
 
-	return sess, done
+	return sess, r, done
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
@@ -67,13 +68,24 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, done fun
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
-func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, done func()) {
+func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
 
+	// GFEs scrub X-Google- and X-GFE- headers from requests and responses.
+	// Drop them from recordings made by users inside Google.
+	// http://g3doc/gfe/g3doc/gfe3/design/http_filters/google_header_filter
+	// (internal Google documentation).
+	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
+
 	gcpMatcher := &replay.ProviderMatcher{
+		DropRequestHeaders: gfeDroppedHeaders,
+		DropResponseHeaders: gfeDroppedHeaders,
+		URLScrubbers: []*regexp.Regexp{
+			regexp.MustCompile(`Expires=[^?]*`),
+		},
 		BodyScrubbers: []*regexp.Regexp{regexp.MustCompile(`(?m)^\s*--.*$`)},
 	}
 	r, done, err := replay.NewRecorder(t, mode, gcpMatcher, t.Name())
@@ -93,7 +105,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, do
 	} else {
 		client = &gcp.HTTPClient{Client: http.Client{Transport: r}}
 	}
-	return client, done
+	return client, r, done
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.

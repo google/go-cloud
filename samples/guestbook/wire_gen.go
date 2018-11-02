@@ -63,11 +63,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	serverOptions := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(serverOptions)
 	bucket, err := awsBucket(ctx, sessionSession, flags)
@@ -94,8 +96,9 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue  = http.DefaultClient
-	_wireOptionsValue = session.Options{}
+	_wireClientValue        = http.DefaultClient
+	_wireOptionsValue       = session.Options{}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
@@ -129,11 +132,13 @@ func setupGCP(ctx context.Context, flags *cliFlags, traceOpt ocsql.TraceOption) 
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         stackdriverLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
@@ -172,11 +177,13 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 	v, cleanup := appHealthChecks(db)
 	exporter := _wireExporterValue
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         logger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	bucket, err := localBucket(flags)
@@ -204,7 +211,7 @@ var (
 // inject_aws.go:
 
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, cp, flags.bucket)
+	return s3blob.OpenBucket(ctx, flags.bucket, cp, nil)
 }
 
 func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
@@ -217,15 +224,15 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 }
 
 func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 }
 
 // inject_gcp.go:
 
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, flags.bucket, client2)
+	return gcsblob.OpenBucket(ctx, flags.bucket, client2, nil)
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
@@ -252,8 +259,8 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err
@@ -264,7 +271,7 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 // inject_local.go:
 
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.NewBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket, nil)
 }
 
 func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
@@ -280,8 +287,8 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 }
 
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.NewVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err
