@@ -22,7 +22,7 @@
 // - region: The AWS region for requests; sets aws.Config.Region.
 // Example URL: blob.Open("s3://mybucket?region=us-east-1")
 //
-// It exposes the following types for As:
+// s3blob exposes the following types for As:
 // Bucket: *s3.S3
 // ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
