@@ -69,7 +69,7 @@ func init() {
 		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
 			pk, err := ioutil.ReadFile(keyPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("failed to read private key: %v", err)
+				return nil, fmt.Errorf("reading private key: %v", err)
 			}
 			opts.PrivateKey = pk
 		}
@@ -84,11 +84,11 @@ func init() {
 		} else {
 			jsonCreds, err := ioutil.ReadFile(credPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("failed to read credentials: %v", err)
+				return nil, fmt.Errorf("reading credentials: %v", err)
 			}
 			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load credentials: %v", err)
+				return nil, fmt.Errorf("loading credentials: %v", err)
 			}
 		}
 

@@ -16,8 +16,10 @@
 //
 // For blob.Open URLs, s3blob registers for the "s3" protocol.
 // The URL's Host is used as the bucket name.
+// The AWS session is created as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
 // The following query options are supported:
-// - region: The AWS region for requests.
+// - region: The AWS region for requests; sets aws.Config.Region.
 // Example URL: blob.Open("s3://mybucket?region=us-east-1")
 //
 // It exposes the following types for As:
