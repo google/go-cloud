@@ -55,17 +55,11 @@ type Params struct {
 	User      string
 	Password  string // may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
 	Database  string
+	TraceOpts ocsql.TraceOption
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ocsql.TraceOption) (*sql.DB, error) {
-	if os.Getenv("GAE_ENV") == "standard" {
-		return openGAE(ctx, params, traceOpts)
-	}
-	return open(ctx, certSource, params, traceOpts)
-}
-
-func open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ocsql.TraceOption) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -86,17 +80,7 @@ func open(ctx context.Context, certSource proxy.CertSource, params *Params, trac
 	}
 	var c connector
 	c.dsn = cfg.FormatDSN()
-	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, traceOpts)
-	return sql.OpenDB(c), nil
-}
-
-// openGAE opens a connection to a cloudmysql instance via a unix
-// socket at /cloudsql/<instance>.
-func openGAE(ctx context.Context, p *Params, traceOpts ocsql.TraceOption) (*sql.DB, error) {
-	cfg := &mysql.Config{User: p.User, Passwd: p.Password, Net: "unix", Addr: "/cloudsql/" + p.Instance, DBName: p.Database, AllowNativePasswords: true}
-	var c connector
-	c.dsn = cfg.FormatDSN()
-	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, traceOpts)
+	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, params.TraceOpts)
 	return sql.OpenDB(c), nil
 }
 
