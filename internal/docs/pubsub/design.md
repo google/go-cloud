@@ -144,14 +144,14 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	defer s.Close(ctx)
+	defer s.Close()
 
 	// Handle ctrl-C.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			err := s.Close(ctx)
+			err := s.Close()
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -209,14 +209,14 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	defer s.Close(ctx)
+	defer s.Close()
 
 	// Handle ctrl-C.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			if err := s.Close(ctx); err != nil {
+			if err := s.Close(); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -732,14 +732,14 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	defer s.Close(ctx)
+	defer s.Close()
 
 	// Handle ctrl-C.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			err := s.Close(ctx)
+			err := s.Close()
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -806,14 +806,14 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	defer s.Close(ctx)
+	defer s.Close()
 
 	// Handle ctrl-C.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		for sig := range c {
-			if err := s.Close(ctx); err != nil {
+			if err := s.Close(); err != nil {
 				log.Fatal(err)
 			}
 		}
