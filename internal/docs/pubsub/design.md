@@ -344,7 +344,7 @@ func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
 	// ...
 }
 
-func (t *topic) Close(ctx context.Context) error {
+func (t *topic) Close() error {
 	// ...
 }
 
@@ -372,7 +372,7 @@ func (s *subscription) SendAcks(ctx context.Context, []pubsub.AckID) error {
 	// ...
 }
 
-func (s *subscription) Close(ctx context.Context) error {
+func (s *subscription) Close() error {
 	// ...
 }
 ```
