@@ -60,9 +60,12 @@ const defaultPageSize = 1000
 
 func init() {
 	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return openBucket(u.Host + u.Path)
+		return openBucket(u.Host+u.Path, nil)
 	})
 }
+
+// Options sets options for constructing a *blob.Bucket backed by fileblob.
+type Options struct{}
 
 type bucket struct {
 	dir string
@@ -70,7 +73,7 @@ type bucket struct {
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
-func openBucket(dir string) (driver.Bucket, error) {
+func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
@@ -84,8 +87,8 @@ func openBucket(dir string) (driver.Bucket, error) {
 
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
 // dir must exist.
-func OpenBucket(dir string) (*blob.Bucket, error) {
-	drv, err := openBucket(dir)
+func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(dir, opts)
 	if err != nil {
 		return nil, err
 	}

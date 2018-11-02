@@ -66,12 +66,15 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		return openBucket(ctx, sess, u.Host)
+		return openBucket(ctx, u.Host, sess, nil)
 	})
 }
 
+// Options sets options for constructing a *blob.Bucket backed by fileblob.
+type Options struct{}
+
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (driver.Bucket, error) {
+func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (driver.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
@@ -83,8 +86,8 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 }
 
 // OpenBucket returns an S3 Bucket.
-func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
-	drv, err := openBucket(ctx, sess, bucketName)
+func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, bucketName, sess, opts)
 	if err != nil {
 		return nil, err
 	}

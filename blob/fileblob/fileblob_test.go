@@ -48,7 +48,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(h.dir)
+	return openBucket(h.dir, nil)
 }
 
 func (h *harness) Close() {
@@ -67,7 +67,7 @@ func TestNewBucket(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer os.RemoveAll(dir)
-		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"))
+		_, gotErr := OpenBucket(filepath.Join(dir, "notfound"), nil)
 		if gotErr == nil {
 			t.Errorf("want error, got nil")
 		}
@@ -78,7 +78,7 @@ func TestNewBucket(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		_, gotErr := OpenBucket(f.Name())
+		_, gotErr := OpenBucket(f.Name(), nil)
 		if gotErr == nil {
 			t.Error("want error, got nil")
 		}
