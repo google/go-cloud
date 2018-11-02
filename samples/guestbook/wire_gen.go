@@ -59,11 +59,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	serverOptions := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(serverOptions)
 	bucket, err := awsBucket(ctx, sessionSession, flags)
@@ -90,8 +92,9 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue  = http.DefaultClient
-	_wireOptionsValue = session.Options{}
+	_wireClientValue        = http.DefaultClient
+	_wireOptionsValue       = session.Options{}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
@@ -125,11 +128,13 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         stackdriverLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
@@ -168,11 +173,13 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 	v, cleanup := appHealthChecks(db)
 	exporter := _wireExporterValue
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         logger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	bucket, err := localBucket(flags)
@@ -200,7 +207,7 @@ var (
 // inject_aws.go:
 
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, cp, flags.bucket)
+	return s3blob.OpenBucket(ctx, flags.bucket, cp, nil)
 }
 
 func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
@@ -253,7 +260,7 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 // inject_local.go:
 
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.OpenBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket, nil)
 }
 
 func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
