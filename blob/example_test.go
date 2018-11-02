@@ -38,7 +38,7 @@ func ExampleBucket_NewReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func ExampleBucket_NewRangeReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,21 +98,18 @@ func ExampleBucket_NewWriter() {
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
 	defer cleanup()
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Open a writer using the key "foo.txt" and the default options.
 	ctx := context.Background()
-	// fileblob doesn't support custom content-type yet, see
-	// https://github.com/google/go-cloud/issues/111.
-	w, err := bucket.NewWriter(ctx, "foo.txt", &blob.WriterOptions{
-		ContentType: "application/octet-stream",
-	})
+	w, err := bucket.NewWriter(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// The blob writer implements io.Writer, so we can use any function that
 	// accepts an io.Writer. A writer must always be closed.
 	_, printErr := fmt.Fprintln(w, "Hello, World!")
@@ -132,9 +129,13 @@ func ExampleBucket_NewWriter() {
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		log.Fatal(err)
 	}
+	// Since we didn't specify a WriterOptions.ContentType for NewWriter, blob
+	// auto-determined one using http.DetectContentType.
+	fmt.Println(r.ContentType())
 
 	// Output:
 	// Hello, World!
+	// text/plain; charset=utf-8
 }
 
 func ExampleBucket_ReadAll() {
@@ -144,7 +145,7 @@ func ExampleBucket_ReadAll() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,7 +174,7 @@ func ExampleBucket_List() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func ExampleBucket_List_withDelimiter() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -282,7 +283,7 @@ func ExampleBucket_As() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
