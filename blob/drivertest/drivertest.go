@@ -271,17 +271,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		count := 0
-		for {
-			_, err := iter.Next(ctx)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			count++
-		}
+		count := countItems(ctx, t, iter)
 		if count != 3 {
 			for i := 0; i < 3; i++ {
 				if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
@@ -700,17 +690,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		count := 0
-		for {
-			_, err := iter.Next(ctx)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			count++
-		}
+		count := countItems(ctx, t, iter)
 		if count != len(keys) {
 			for _, key := range keys {
 				if err := b.WriteAll(ctx, prefix+strings.Join(key, delim), content, nil); err != nil {
@@ -794,6 +774,19 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			}
 		})
 	}
+}
+
+func countItems(ctx context.Context, t *testing.T, iter *blob.ListIterator) int {
+	count := 0
+	for {
+		if _, err := iter.Next(ctx); err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		count++
+	}
+	return count
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
