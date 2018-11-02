@@ -14,7 +14,15 @@
 
 // Package s3blob provides an implementation of blob using S3.
 //
-// It exposes the following types for As:
+// For blob.Open URLs, s3blob registers for the "s3" protocol.
+// The URL's Host is used as the bucket name.
+// The AWS session is created as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// The following query options are supported:
+// - region: The AWS region for requests; sets aws.Config.Region.
+// Example URL: blob.Open("s3://mybucket?region=us-east-1")
+//
+// s3blob exposes the following types for As:
 // Bucket: *s3.S3
 // ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
@@ -30,6 +38,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -40,25 +49,51 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const defaultPageSize = 1000
 
+func init() {
+	blob.Register("s3", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+		q := u.Query()
+		cfg := &aws.Config{}
+
+		if region := q["region"]; len(region) > 0 {
+			cfg.Region = aws.String(region[0])
+		}
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return openBucket(ctx, u.Host, sess, nil)
+	})
+}
+
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct{}
 
-// OpenBucket returns an S3 Bucket.
-func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (*blob.Bucket, error) {
+// openBucket returns an S3 Bucket.
+func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (driver.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
-	return blob.NewBucket(&bucket{
+	return &bucket{
 		name:   bucketName,
 		sess:   sess,
 		client: s3.New(sess),
-	}), nil
+	}, nil
+}
+
+// OpenBucket returns an S3 Bucket.
+func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, bucketName, sess, opts)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
