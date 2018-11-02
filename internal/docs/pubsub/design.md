@@ -419,8 +419,20 @@ type Subscription interface {
 	// returns only after all the ackIDs are sent.
 	SendAcks(ctx context.Context, ackIDs []interface{}) error
 
+	// Update applies configuration updates from the non-nil fields of u to the
+	// subscription on the server.
+	Update(ctx context.Context, u SubscriptionUpdate) error
+
 	// Close disconnects the Subscription.
 	Close() error
+}
+
+// SubscriptionUpdate contains updates to be applied to a subscription on the
+// server via Subscription.Update.
+type SubscriptionUpdate struct {
+	// AckDeadline tells how long the server should wait before assuming a received
+	// message has failed to be processed.
+	AckDeadline *time.Duration
 }
 ```
 
@@ -543,7 +555,8 @@ type Subscription struct {
 	q []*Message
 }
 
-// SubscriptionOptions contains configuration for Subscriptions.
+// SubscriptionOptions contains configuration for Subscriptions
+// on the client.
 type SubscriptionOptions struct {
 	// AckDelay tells the max duration to wait before sending the next batch
 	// of acknowledgements back to the server.
@@ -553,10 +566,11 @@ type SubscriptionOptions struct {
 	// the server in a batch.
 	AckBatchSize int
 
-	// AckDeadline tells how long the server should wait before assuming a
-	// received message has failed to be processed.
-	AckDeadline time.Duration
 }
+
+// SubscriptionUpdate contains updates to be applied to a subscription on the
+// server via Subscription.Update.
+type SubscriptionUpdate driver.SubscriptionUpdate
 
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking if none are available. This method can be called concurrently from
@@ -571,6 +585,10 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	m := s.q[0]
 	s.q = s.q[1:]
 	return m, nil
+}
+
+func (s *Subscription) Update(ctx context.Context, u SubscriptionUpdate) error {
+	return s.driver.Update(ctx, driver.SubscriptionUpdate(u))
 }
 
 // Close disconnects the Subscription.
