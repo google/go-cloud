@@ -552,10 +552,6 @@ type SubscriptionOptions struct {
 	// AckBatchSize is the maximum number of acks that should be sent to
 	// the server in a batch.
 	AckBatchSize int
-
-	// AckDeadline tells how long the server should wait before assuming a
-	// received message has failed to be processed.
-	AckDeadline time.Duration
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
