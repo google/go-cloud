@@ -19,7 +19,9 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
@@ -56,7 +58,7 @@ type Params struct {
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ...ocsql.TraceOption) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -67,7 +69,6 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	}
 	dialerName := fmt.Sprintf("github.com/google/go-cloud/mysql/gcpmysql/%d", dialerNum)
 	mysql.RegisterDial(dialerName, client.Dial)
-
 	cfg := &mysql.Config{
 		AllowNativePasswords: true,
 		Net:                  dialerName,
@@ -76,7 +77,29 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		Passwd:               params.Password,
 		DBName:               params.Database,
 	}
-	return sql.OpenDB(connector(cfg.FormatDSN())), nil
+	var c connector
+	c.dsn = cfg.FormatDSN()
+	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, traceOpts...)
+	return sql.OpenDB(c), nil
+}
+
+// ParamsFromEnv constructs a Params struct from environment variables:
+// $DB_USER, $DB_DATABASE, $DB_INSTANCE, and $DB_PASSWORD.
+func ParamsFromEnv() (*Params, error) {
+	p := &Params{}
+	if p.User = os.Getenv("DB_USER"); p.User == "" {
+		return nil, errors.New("$DB_USER is undefined")
+	}
+	if p.Database = os.Getenv("DB_DATABASE"); p.Database == "" {
+		return nil, errors.New("$DB_DATABASE is undefined")
+	}
+	if p.Instance = os.Getenv("DB_INSTANCE"); p.Instance == "" {
+		return nil, errors.New("$DB_INSTANCE is undefined")
+	}
+	if p.Password = os.Getenv("DB_PASSWORD"); p.Password == "" {
+		return nil, errors.New("$DB_PASSWORD is undefined")
+	}
+	return p, nil
 }
 
 var dialerCounter struct {
@@ -84,13 +107,15 @@ var dialerCounter struct {
 	n  int
 }
 
-type connector string
+type connector struct {
+	dsn      string
+	dbDriver driver.Driver
+}
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
-	dsn := string(c)
-	return mysql.MySQLDriver{}.Open(dsn)
+	return c.Driver().Open(c.dsn)
 }
 
 func (c connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
+	return c.dbDriver
 }
