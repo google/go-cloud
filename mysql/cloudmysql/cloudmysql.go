@@ -55,11 +55,10 @@ type Params struct {
 	User      string
 	Password  string // may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
 	Database  string
-	TraceOpts ocsql.TraceOption
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ...ocsql.TraceOption) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -80,7 +79,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	}
 	var c connector
 	c.dsn = cfg.FormatDSN()
-	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, params.TraceOpts)
+	c.dbDriver = ocsql.Wrap(mysql.MySQLDriver{}, traceOpts...)
 	return sql.OpenDB(c), nil
 }
 
