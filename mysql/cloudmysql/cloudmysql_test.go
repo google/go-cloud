@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package cloudmysql
 
 import (
@@ -20,17 +21,8 @@ import (
 
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/terraform"
-	"github.com/google/go-cloud/mysql/cloudmysql"
 )
 
-func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
-	ctx := context.Background()
-	_, err := Open(ctx, nil, &Params{})
-	if err != nil {
-		t.Error(err.Error())
-  }
-}
-    
 func TestOpen(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
 	// Before running go test, run in this directory:
