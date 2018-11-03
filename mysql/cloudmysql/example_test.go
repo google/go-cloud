@@ -30,14 +30,15 @@ func Example() {
 		panic(err)
 	}
 	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, err := cloudmysql.Open(ctx, cloudmysql.NewCertSource(&authClient), &cloudmysql.Params{
+	params := &cloudmysql.Params{
 		// Replace these with your actual settings.
 		ProjectID: "example-project",
 		Region:    "us-central1",
 		Instance:  "my-instance01",
 		User:      "myrole",
 		Database:  "test",
-	})
+	}
+	db, err := cloudmysql.Open(ctx, cloudmysql.NewCertSource(&authClient), params)
 	if err != nil {
 		panic(err)
 	}

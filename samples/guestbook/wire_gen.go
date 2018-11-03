@@ -8,8 +8,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"log"
+	"net/http"
+	"os"
+
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/basvanbeek/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/fileblob"
@@ -27,7 +32,6 @@ import (
 	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/go-cloud/server/xrayserver"
 	"go.opencensus.io/trace"
-	"net/http"
 )
 
 // Injectors from inject_aws.go:
@@ -99,7 +103,7 @@ var (
 
 // Injectors from inject_gcp.go:
 
-func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupGCP(ctx context.Context, flags *cliFlags, traceOpt ocsql.TraceOption) (*application, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
 	roundTripper := gcp.DefaultTransport()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -117,7 +121,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, err := cloudmysql.Open(ctx, remoteCertSource, params, traceOpt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -232,6 +236,13 @@ func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*
 }
 
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
+	if os.Getenv("GAE_ENV") == "standard" {
+		p, err := cloudmysql.ParamsFromEnv()
+		if err != nil {
+			log.Fatalf("Failed to get cloudsql params from env: %v", err)
+		}
+		return p
+	}
 	return &cloudmysql.Params{
 		ProjectID: string(id),
 		Region:    flags.cloudSQLRegion,

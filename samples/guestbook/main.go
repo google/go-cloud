@@ -21,15 +21,18 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/basvanbeek/ocsql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/health/sqlhealth"
@@ -75,15 +78,22 @@ func main() {
 	var app *application
 	var cleanup func()
 	var err error
-	switch envFlag {
-	case "gcp":
-		app, cleanup, err = setupGCP(ctx, cf)
-	case "aws":
+	traceOpt := ocsql.WithOptions(ocsql.TraceOptions{})
+
+	switch {
+	case os.Getenv("GAE_ENV") == "standard":
+		if cf.bucket = os.Getenv("GUESTBOOK_BUCKET"); cf.bucket == "" {
+			log.Fatal("$GUESTBOOK_BUCKET is undefined, should be set to the GCS bucket for the guestbook")
+		}
+		app, cleanup, err = setupGCP(ctx, cf, traceOpt)
+	case envFlag == "gcp":
+		app, cleanup, err = setupGCP(ctx, cf, traceOpt)
+	case envFlag == "aws":
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
 		app, cleanup, err = setupAWS(ctx, cf)
-	case "local":
+	case envFlag == "local":
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
 		}
@@ -98,6 +108,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer cleanup()
+
+	if cf.bucket == "" {
+		log.Fatal("bucket name is empty")
+	}
 
 	// Set up URL routes.
 	r := mux.NewRouter()
@@ -172,14 +186,17 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	app.mu.RLock()
 	data.MOTD = app.motd
 	app.mu.RUnlock()
-	switch envFlag {
-	case "gcp":
+	switch {
+	case os.Getenv("GAE_ENV") == "standard":
+		data.Env = "GAE"
+		data.BannerSrc = "/blob/gae.png"
+	case envFlag == "gcp":
 		data.Env = "GCP"
 		data.BannerSrc = "/blob/gcp.png"
-	case "aws":
+	case envFlag == "aws":
 		data.Env = "AWS"
 		data.BannerSrc = "/blob/aws.png"
-	case "local":
+	case envFlag == "local":
 		data.Env = "Local"
 		data.BannerSrc = "/blob/gophers.jpg"
 	}
@@ -188,7 +205,8 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	q, err := app.db.QueryContext(r.Context(), query)
 	if err != nil {
 		log.Println("main page SQL error:", err)
-		http.Error(w, "could not load greetings", http.StatusInternalServerError)
+		msg := fmt.Sprintf("could not load greetings: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 	defer q.Close()
@@ -288,7 +306,8 @@ func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 		// TODO(light): Distinguish 404.
 		// https://github.com/google/go-cloud/issues/2
 		log.Println("serve blob:", err)
-		http.Error(w, "blob read error", http.StatusInternalServerError)
+		msg := fmt.Sprintf("blob read error: %v", err)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 	// TODO(light): Get content type from blob storage.
