@@ -31,8 +31,8 @@ var GCP = wire.NewSet(Services, gcp.DefaultIdentity)
 // Google Cloud Platform services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
 var Services = wire.NewSet(
-	cloudmysql.Open,
 	cloudmysql.CertSourceSet,
+	cloudmysql.Open,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
 	runtimeconfigurator.Set,
