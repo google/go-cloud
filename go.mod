@@ -20,6 +20,7 @@ require (
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181009230506-ac834ce67862
 	github.com/aws/aws-sdk-go v1.15.57
+	github.com/basvanbeek/ocsql v0.1.1
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
 	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
