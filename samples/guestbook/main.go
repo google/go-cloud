@@ -32,7 +32,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/basvanbeek/ocsql"
+	"github.com/opencensus-integrations/ocsql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/health/sqlhealth"

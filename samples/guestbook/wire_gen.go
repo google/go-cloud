@@ -14,7 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/basvanbeek/ocsql"
+	"github.com/opencensus-integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/fileblob"

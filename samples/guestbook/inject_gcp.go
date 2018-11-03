@@ -21,7 +21,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/basvanbeek/ocsql"
+	"github.com/opencensus-integrations/ocsql"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/gcsblob"
 	"github.com/google/go-cloud/gcp"
