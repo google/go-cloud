@@ -151,6 +151,7 @@ func TestWire(t *testing.T) {
 
 func goBuildCheck(goToolPath, gopath string, test *testCase) error {
 	// Write go.mod files for example.com and the wire package.
+	// TODO(#78): Move this to happen in materialize() once modules work.
 	if err := writeGoMod(gopath); err != nil {
 		return err
 	}
