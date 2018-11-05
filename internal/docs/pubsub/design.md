@@ -494,8 +494,8 @@ type msgCtx struct {
 }
 
 // Send publishes a message. It only returns after the message has been
-// sent, or failed to be sent. Send can be called from multiple goroutines
-// at once.
+// sent, or failed to be sent. The call will fail if ctx is canceled.
+// Send can be called from multiple goroutines at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
 	t.mcChan <- msgCtx{m, ctx}
 	// Wait for the batch including this message to be sent to the server.
