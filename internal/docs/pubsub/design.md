@@ -159,14 +159,13 @@ func receive() error {
 	}()
 
 	// Process messages until the user hits ctrl-C.
-Loop:
 	for {
 		msg, err := s.Receive(ctx)
 		switch err {
 		// s.Close() causes io.EOF to be returned from s.Receive().
 		case io.EOF:
 			log.Printf("Got ctrl-C. Exiting.")
-			break Loop
+			return nil
 		case nil:
 		default:
 			return err
@@ -226,14 +225,13 @@ func receive() error {
 	const poolSize = 10
 	// Use a buffered channel as a semaphore.
 	sem := make(chan token, poolSize)
-Loop:
 	for {
 		msg, err := s.Receive(ctx)
 		switch err {
 		// s.Close() causes io.EOF to be returned from s.Receive().
 		case io.EOF:
 			log.Printf("Got ctrl-C. Exiting.")
-			break Loop
+			return nil
 		case nil:
 		default:
 			return err
@@ -725,14 +723,13 @@ func receive() error {
 	}()
 
 	// Process messages until the user hits ctrl-C.
-Loop:
 	for {
 		msgs, err := s.Receive(ctx, batchSize)
 		switch err {
 		// s.Close() causes io.EOF to be returned from s.Receive().
 		case io.EOF:
 			log.Printf("Got ctrl-C. Exiting.")
-			break Loop
+			return nil
 		case nil:
 		default:
 			return err
