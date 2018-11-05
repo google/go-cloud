@@ -89,7 +89,7 @@ func TestWire(t *testing.T) {
 			if len(errs) > 0 {
 				gotErrStrings := make([]string, len(errs))
 				for i, e := range errs {
-					t.Log(gotErrStrings[i])
+					t.Log(e.Error())
 					gotErrStrings[i] = scrubError(gopath, e.Error())
 				}
 				if !test.wantWireError {
