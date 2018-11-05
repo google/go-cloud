@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cloud/server"
 	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/go-cloud/server/xrayserver"
+	"github.com/opencensus-integrations/ocsql"
 	"go.opencensus.io/trace"
 	"net/http"
 )
@@ -117,11 +118,12 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	v := _wireValue
+	db, err := cloudmysql.Open(ctx, remoteCertSource, params, v)
 	if err != nil {
 		return nil, nil, err
 	}
-	v, cleanup := appHealthChecks(db)
+	v2, cleanup := appHealthChecks(db)
 	exporter, err := sdserver.NewExporter(projectID, tokenSource)
 	if err != nil {
 		cleanup()
@@ -131,7 +133,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         stackdriverLogger,
-		HealthChecks:          v,
+		HealthChecks:          v2,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
@@ -161,6 +163,10 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 	}, nil
 }
+
+var (
+	_wireValue = []ocsql.TraceOption(nil)
+)
 
 // Injectors from inject_local.go:
 

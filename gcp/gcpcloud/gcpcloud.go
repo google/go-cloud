@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/go-cloud/wire"
+	"github.com/opencensus-integrations/ocsql"
 )
 
 // GCP is a Wire provider set that includes all Google Cloud Platform services
@@ -35,5 +36,6 @@ var Services = wire.NewSet(
 	cloudmysql.Open,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
+	wire.Value([]ocsql.TraceOption(nil)),
 	runtimeconfigurator.Set,
 	sdserver.Set)
