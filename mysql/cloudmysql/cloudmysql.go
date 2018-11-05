@@ -88,7 +88,7 @@ type connector string
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
 	dsn := string(c)
-	return mysql.MySQLDriver{}.Open(dsn)
+	return c.Driver().Open(dsn)
 }
 
 func (c connector) Driver() driver.Driver {
