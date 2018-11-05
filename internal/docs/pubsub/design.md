@@ -58,7 +58,7 @@ func serve() error {
 	}
 	defer t.Close()
 	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-		err := t.Send(ctx, pubsub.Message{Body: []byte("Someone signed up")})
+		err := t.Send(r.Context(), pubsub.Message{Body: []byte("Someone signed up")})
 		if err != nil {
 			log.Println(err)
 		}
@@ -616,7 +616,7 @@ func serve() error {
 	}
 	defer t.Close()
 	http.HandleFunc("/signup", func(w http.ResponseWriter, r *http.Request) {
-		err := t.Send(ctx, []pubsub.Message{{Body: []byte("Someone signed up")}})
+		err := t.Send(r.Context(), []pubsub.Message{{Body: []byte("Someone signed up")}})
 		if err != nil {
 			log.Println(err)
 		}
@@ -674,7 +674,7 @@ func sendBatches(ctx context.Context, t *pubsub.Topic, c chan *pubsub.Message) {
 	}
 }
 ```
-This shows how the complexity of batching has been pushed onto the application code.
+This shows how the complexity of batching has been pushed onto the application code. Removing messages from the batch when HTTP/2 requests are canceled would require the application code to be even more complex, adding more risk of bugs.
 
 In this API, the application code has to either request batches of size 1, meaning more
 network traffic, or it has to explicitly manage the batches of messages it receives.
