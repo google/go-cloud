@@ -26,7 +26,6 @@ import (
 	"github.com/google/go-cloud/server"
 	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/go-cloud/server/xrayserver"
-	"github.com/opencensus-integrations/ocsql"
 	"go.opencensus.io/trace"
 	"net/http"
 )
@@ -40,13 +39,14 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Client: client,
 	}
 	params := awsSQLParams(flags)
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
+	options := _wireOptionsValue
+	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params, options)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	options := _wireOptionsValue
-	sessionSession, err := session.NewSessionWithOptions(options)
+	sessionOptions := _wireSessionOptionsValue
+	sessionSession, err := session.NewSessionWithOptions(sessionOptions)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -93,9 +93,10 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue        = http.DefaultClient
-	_wireOptionsValue       = session.Options{}
-	_wireDefaultDriverValue = &server.DefaultDriver{}
+	_wireClientValue         = http.DefaultClient
+	_wireOptionsValue        = (*rdsmysql.Options)(nil)
+	_wireSessionOptionsValue = session.Options{}
+	_wireDefaultDriverValue  = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
@@ -118,12 +119,12 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	v := _wireValue
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params, v)
+	options := _wireCloudmysqlOptionsValue
+	db, err := cloudmysql.Open(ctx, remoteCertSource, params, options)
 	if err != nil {
 		return nil, nil, err
 	}
-	v2, cleanup := appHealthChecks(db)
+	v, cleanup := appHealthChecks(db)
 	exporter, err := sdserver.NewExporter(projectID, tokenSource)
 	if err != nil {
 		cleanup()
@@ -131,14 +132,14 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
-	options := &server.Options{
+	serverOptions := &server.Options{
 		RequestLogger:         stackdriverLogger,
-		HealthChecks:          v2,
+		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(serverOptions)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
@@ -165,7 +166,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireValue = []ocsql.TraceOption(nil)
+	_wireCloudmysqlOptionsValue = (*cloudmysql.Options)(nil)
 )
 
 // Injectors from inject_local.go:
