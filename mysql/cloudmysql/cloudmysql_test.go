@@ -21,7 +21,24 @@ import (
 
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/terraform"
+	"github.com/opencensus-integrations/ocsql"
 )
+
+func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
+	ctx := context.Background()
+	_, err := Open(ctx, nil, &Params{})
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+}
+
+func TestTraceOptionsCanBeGiven(t *testing.T) {
+	ctx := context.Background()
+	_, err := Open(ctx, nil, &Params{}, ocsql.WithAllTraceOptions)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+}
 
 func TestOpen(t *testing.T) {
 	// This test will be skipped unless the project is set up with Terraform.
