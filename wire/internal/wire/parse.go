@@ -191,9 +191,9 @@ type Value struct {
 	info *types.Info
 }
 
-// Load finds all the provider sets in the given packages, as well as
-// the provider sets' transitive dependencies. It may return both errors
-// and Info.
+// Load finds all the provider sets in the packages that match the given
+// patterns, as well as the provider sets' transitive dependencies. It may
+// return both errors and Info.
 //
 // wd is the working directory and env is the set of environment
 // variables to use when loading the packages specified by patterns. If
@@ -282,8 +282,8 @@ func Load(ctx context.Context, wd string, env []string, patterns []string) (*Inf
 	return info, ec.errors
 }
 
-// load typechecks the packages, including function body type checking
-// for the packages directly named.
+// load typechecks the packages that match the given patterns, including
+// function body type checking for the packages that directly match.
 //
 // wd is the working directory and env is the set of environment
 // variables to use when loading the packages specified by patterns. If

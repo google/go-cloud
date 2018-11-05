@@ -341,6 +341,11 @@ func isIdent(s string) bool {
 	return true
 }
 
+// scrubError rewrites the given string to remove occurrences of GOPATH/src,
+// rewrites OS-specific path separators to slashes, and any line/column
+// information to a fixed ":x:y". For example, if the gopath parameter is
+// "C:\GOPATH" and running on Windows, the string
+// "C:\GOPATH\src\foo\bar.go:15:4" would be rewritten to "foo/bar.go:x:y".
 func scrubError(gopath string, s string) string {
 	sb := new(strings.Builder)
 	query := gopath + string(os.PathSeparator) + "src" + string(os.PathSeparator)

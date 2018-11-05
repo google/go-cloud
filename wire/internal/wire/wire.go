@@ -38,7 +38,7 @@ import (
 	"golang.org/x/tools/go/loader"
 )
 
-// A GeneratedFile stores the content of a call to Generate and the
+// GeneratedFile stores the content of a call to Generate and the
 // desired on-disk location of the file.
 type GeneratedFile struct {
 	Path    string
