@@ -55,8 +55,19 @@ type Params struct {
 	Database  string
 }
 
+type Options struct {
+	TraceOpts []ocsql.TraceOption
+}
+
+const defaultOptions = Options{
+	TraceOpts: nil,
+}
+
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ...ocsql.TraceOption) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params, opts *Options) (*sql.DB, error) {
+	if opts == nil {
+		opts = &defaultOptions
+	}
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -76,7 +87,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params, trac
 		Passwd:               params.Password,
 		DBName:               params.Database,
 	}
-	return sql.OpenDB(connector{cfg.FormatDSN(), traceOpts}), nil
+	return sql.OpenDB(connector{cfg.FormatDSN(), opts.TraceOpts}), nil
 }
 
 var dialerCounter struct {
