@@ -56,7 +56,7 @@ type Params struct {
 }
 
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params, traceOpts ...ocsql.TraceOption) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n

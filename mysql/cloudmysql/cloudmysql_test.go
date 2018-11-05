@@ -34,7 +34,7 @@ func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
 
 func TestTraceOptionsCanBeGiven(t *testing.T) {
 	ctx := context.Background()
-	_, err := Open(ctx, nil, &Params{}, ocsql.WithAllTraceOptions)
+	_, err := Open(ctx, nil, &Params{}, ocsql.WithAllTraceOptions())
 	if err != nil {
 		t.Errorf("%v", err)
 	}
