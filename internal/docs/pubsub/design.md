@@ -146,28 +146,10 @@ func receive() error {
 	}
 	defer s.Close()
 
-	// Handle ctrl-C.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for sig := range c {
-			err := s.Close()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}()
-
-	// Process messages until the user hits ctrl-C.
+	// Process messages.
 	for {
 		msg, err := s.Receive(ctx)
-		switch err {
-		// s.Close() causes io.EOF to be returned from s.Receive().
-		case io.EOF:
-			log.Printf("Got ctrl-C. Exiting.")
-			return nil
-		case nil:
-		default:
+		if err {
 			return err
 		}
 		log.Printf("Got message: %s\n", msg.Body)
@@ -210,33 +192,15 @@ func receive() error {
 	}
 	defer s.Close()
 
-	// Handle ctrl-C.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for sig := range c {
-			if err := s.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}
-	}()
-
-	// Process messages until the user hits ctrl-C.
+	// Process messages.
 	const poolSize = 10
 	// Use a buffered channel as a semaphore.
 	sem := make(chan token, poolSize)
 	for {
 		msg, err := s.Receive(ctx)
-		switch err {
-		// s.Close() causes io.EOF to be returned from s.Receive().
-		case io.EOF:
-			log.Printf("Got ctrl-C. Exiting.")
-			return nil
-		case nil:
-		default:
+		if err {
 			return err
 		}
-
 		sem <- token{}
 		go func() {
 			log.Printf("Got message: %s", msg.Body)
@@ -710,28 +674,10 @@ func receive() error {
 	}
 	defer s.Close()
 
-	// Handle ctrl-C.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for sig := range c {
-			err := s.Close()
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}()
-
-	// Process messages until the user hits ctrl-C.
+	// Process messages.
 	for {
 		msgs, err := s.Receive(ctx, batchSize)
-		switch err {
-		// s.Close() causes io.EOF to be returned from s.Receive().
-		case io.EOF:
-			log.Printf("Got ctrl-C. Exiting.")
-			return nil
-		case nil:
-		default:
+		if err {
 			return err
 		}
 		acks := make([]pubsub.AckID, 0, batchSize)
@@ -783,29 +729,13 @@ func receive() error {
 	}
 	defer s.Close()
 
-	// Handle ctrl-C.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for sig := range c {
-			if err := s.Close(); err != nil {
-				log.Fatal(err)
-			}
-		}
-	}()
-
 	// Receive the messages and forward them to a chan.
 	msgsChan := make(chan *pubsub.Message)
 	go func() {
 		for {
 			msgs, err := s.Receive(ctx, batchSize)
-			// Shut down if s.Close was called.
-			if err == io.EOF {
-				log.Println("Got ctrl-C. Exiting")
-				os.Exit(0)
-			}
-			if err != nil {
-				/* handle err */
+			if err {
+				log.Fatal(err)
 			}
 			for _, m := range msgs {
 				msgsChan <- m
@@ -828,7 +758,6 @@ func receive() error {
 		}
 	}
 
-	// Process messages until the user hits ctrl-C.
 	// Use a buffered channel as a semaphore.
 	sem := make(chan token, poolSize)
 	for msg := range msgsChan {
