@@ -59,7 +59,7 @@ type Options struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-const defaultOptions = Options{
+var defaultOptions = Options{
 	TraceOpts: nil,
 }
 
