@@ -30,4 +30,3 @@ for path in "." "./internal/contributebot" "./samples/appengine"; do
   go mod download
   popd
 done
-

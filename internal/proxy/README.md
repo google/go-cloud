@@ -20,18 +20,31 @@ dependency to the proxy:
 2.  Add the dependency to the GCS bucket:
 
 ```bash
-go clean -modcache
+# Create a temporary directory where we'll create a module download cache.
+tgp=$(mktemp -d)
 
 # Run this command in the master branch.
-# Run it again in your branch that's adding a new dependency.
-./internal/proxy/makeproxy.sh proxy
+# It runs "go mod download" in every module that we have in our repo,
+# filling the cache with all of the module dependencies we need.
+GOPROXY=file://$GOPATH/pkg/mod/cache/download GOPATH=$tgp ./internal/proxy/makeproxy.sh
 
-# Synchronize your cache to the proxy.
+# Run the above command again in your branch that's adding a new dependency,
+# to ensure the cache has any new dependencies.
+
+# Move the temporary cache to modvendor/.
+rm -rf modvendor
+cp -rp $GOPATH/pkg/mod/cache/download/ modvendor
+
+# Clean up the temporary cache.
+GOPATH=$tgp go clean -modcache
+rm -rf $tgp
+
+# Synchronize modvendor to the proxy.
 
 # -n: preview only
 # -r: recurse directories
 # -c: compare checksums not write times
-gsutil rsync -n -r -c ${GOPATH}/pkg/mod/cache/download gs://go-cloud-modules
+gsutil rsync -n -r -c modvendor gs://go-cloud-modules
 # If the set of packages being looks good, repeat without the -n.
 
 # Optionally, you can run with -d, which deletes remote files that aren't
