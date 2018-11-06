@@ -1,7 +1,6 @@
 os:
   - linux
   - osx
-  - windows
 
 language: go
 go_import_path: github.com/google/go-cloud
@@ -15,7 +14,7 @@ before_install:
   # grep is similar: it's not GNU grep, which means commands aren't portable.
   # Homebrew installs grep as ggrep if you don't build from source, so it needs
   # moving so it takes precedence in the PATH.
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
       HOMEBREW_NO_AUTO_UPDATE=1 brew install bash grep;
       mv $(brew --prefix)/bin/ggrep $(brew --prefix)/bin/grep;
     fi
