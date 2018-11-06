@@ -28,7 +28,7 @@ func Example() {
 		User:     "myrole",
 		Password: "swordfish",
 		Database: "test",
-	})
+	}, nil)
 	if err != nil {
 		panic(err)
 	}
