@@ -18,10 +18,11 @@
 # See https://github.com/google/go-cloud/issues/28 for solving the
 # general case.
 
-set -o pipefail
+# https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
+set -euxo pipefail
 
 if [[ $# -gt 0 ]]; then
-  echo "usage: allchecks.sh" 1>&2
+  echo "usage: runchecks.sh" 1>&2
   exit 64
 fi
 
@@ -29,16 +30,14 @@ module="github.com/google/go-cloud"
 
 # Run Go tests for each module.
 for path in "." "./internal/contributebot" "./samples/appengine"; do
-  echo Running tests in \"${path}\"
   pushd ${path}
-  go test -race ./... || exit 1
+  go test -race ./...
   popd
 done
 
 # Wire checks.
-go mod vendor || exit 1
-mapfile -t all_pkgs < <( go list "$module/..." ) || exit 1
+go mod vendor
+mapfile -t all_pkgs < <( go list "$module/..." )
 # TODO(light): Find out why the GO111MODULE=off override is necessary
 # and then remove it.
-echo "Running wire check on ${all_pkgs[@]}"
-GO111MODULE=off wire check "${all_pkgs[@]}" || exit 1
+GO111MODULE=off wire check "${all_pkgs[@]}"
