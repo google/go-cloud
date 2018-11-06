@@ -515,6 +515,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 func (test *testCase) materialize(gopath string) error {
 	for name, content := range test.goFiles {
 		dst := filepath.Join(gopath, "src", filepath.FromSlash(name))
+		fmt.Fprintln(os.Stderr, "Materializing", dst)
 		if err := os.MkdirAll(filepath.Dir(dst), 0777); err != nil {
 			return fmt.Errorf("materialize GOPATH: %v", err)
 		}
@@ -527,7 +528,7 @@ func (test *testCase) materialize(gopath string) error {
 	const importPath = "example.com"
 	const depPath = "github.com/google/go-cloud"
 	depLoc := filepath.Join(gopath, "src", filepath.FromSlash(depPath))
-	example := fmt.Sprintf("module %s\n\nreplace %s => %s\n", importPath, depPath, depLoc)
+	example := fmt.Sprintf("module %q\n\nreplace %q => %q\n", importPath, depPath, depLoc)
 	gomod := filepath.Join(gopath, "src", filepath.FromSlash(importPath), "go.mod")
 	if err := ioutil.WriteFile(gomod, []byte(example), 0666); err != nil {
 		return fmt.Errorf("generate go.mod for %s: %v", gomod, err)
