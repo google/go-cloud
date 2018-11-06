@@ -31,7 +31,9 @@ go clean -modcache
 # -n: preview only
 # -r: recurse directories
 # -c: compare checksums not write times
-# -d: delete remote files that are not present locally
-gsutil rsync -n -r -c -d ${GOPATH}/pkg/mod/cache/download gs://go-cloud-modules
-# If it looks good, repeat without the -n.
+gsutil rsync -n -r -c ${GOPATH}/pkg/mod/cache/download gs://go-cloud-modules
+# If the set of packages being looks good, repeat without the -n.
+
+# Optionally, you can run with -d, which deletes remote files that aren't
+# present locally. We should do this periodically to trim our proxy bucket.
 ```
