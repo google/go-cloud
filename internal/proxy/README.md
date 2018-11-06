@@ -17,9 +17,12 @@ dependency to the proxy:
 1.  Ensure that the new dependency is covered under one of the `notice`,
     `permissive`, or `unencumbered` licences under the categories defined by
     [Google Open Source](https://opensource.google.com/docs/thirdparty/licenses/).
-2.  Add the dependency to the GCS bucket:
+2.  Gather the new set of dependencies and sync them to the GCS bucket.
 
 ```bash
+# This approach was suggested by:
+# https://github.com/go-modules-by-example/index/tree/master/012_modvendor
+
 # Create a temporary directory where we'll create a module download cache.
 tgp=$(mktemp -d)
 
