@@ -52,4 +52,7 @@ gsutil rsync -n -r -c modvendor gs://go-cloud-modules
 
 # Optionally, you can run with -d, which deletes remote files that aren't
 # present locally. We should do this periodically to trim our proxy bucket.
+
+# Once you are done...
+rm -rf modvendor
 ```
