@@ -20,13 +20,18 @@ dependency to the proxy:
 2.  Add the dependency to the GCS bucket:
 
 ```bash
+go clean -modcache
+
+# Run this command in the master branch.
+# Run it again in your branch that's adding a new dependency.
 ./internal/proxy/makeproxy.sh proxy
+
+# Synchronize your cache to the proxy.
 
 # -n: preview only
 # -r: recurse directories
 # -c: compare checksums not write times
-# -d: source directory; value should match what you passed to makeproxy.sh
-$ gsutil rsync -n -r -c -d proxy gs://go-cloud-modules
-...
+# -d: delete remote files that are not present locally
+gsutil rsync -n -r -c -d ${GOPATH}/pkg/mod/cache/download gs://go-cloud-modules
 # If it looks good, repeat without the -n.
 ```
