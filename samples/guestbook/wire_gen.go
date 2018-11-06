@@ -39,13 +39,14 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Client: client,
 	}
 	params := awsSQLParams(flags)
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
+	options := _wireOptionsValue
+	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params, options)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	options := _wireOptionsValue
-	sessionSession, err := session.NewSessionWithOptions(options)
+	sessionOptions := _wireSessionOptionsValue
+	sessionSession, err := session.NewSessionWithOptions(sessionOptions)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -92,9 +93,10 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue        = http.DefaultClient
-	_wireOptionsValue       = session.Options{}
-	_wireDefaultDriverValue = &server.DefaultDriver{}
+	_wireClientValue         = http.DefaultClient
+	_wireOptionsValue        = (*rdsmysql.Options)(nil)
+	_wireSessionOptionsValue = session.Options{}
+	_wireDefaultDriverValue  = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
@@ -117,7 +119,8 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	options := _wireCloudmysqlOptionsValue
+	db, err := cloudmysql.Open(ctx, remoteCertSource, params, options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,14 +132,14 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
-	options := &server.Options{
+	serverOptions := &server.Options{
 		RequestLogger:         stackdriverLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(serverOptions)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
@@ -161,6 +164,10 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 	}, nil
 }
+
+var (
+	_wireCloudmysqlOptionsValue = (*cloudmysql.Options)(nil)
+)
 
 // Injectors from inject_local.go:
 

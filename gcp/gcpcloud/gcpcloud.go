@@ -35,5 +35,6 @@ var Services = wire.NewSet(
 	cloudmysql.Open,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
+	wire.Value((*cloudmysql.Options)(nil)),
 	runtimeconfigurator.Set,
 	sdserver.Set)
