@@ -54,7 +54,9 @@ func (gen GeneratedFile) Commit() error {
 }
 
 // Generate performs dependency injection for a single package,
-// returning the gofmt'd Go source code.
+// returning the gofmt'd Go source code. The package pattern is defined
+// by the underlying build system. For the go tool, this is described at
+// https://golang.org/cmd/go/#hdr-Package_lists_and_patterns
 //
 // wd is the working directory and env is the set of environment
 // variables to use when loading the package specified by pkgPattern. If

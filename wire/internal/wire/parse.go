@@ -192,8 +192,10 @@ type Value struct {
 }
 
 // Load finds all the provider sets in the packages that match the given
-// patterns, as well as the provider sets' transitive dependencies. It may
-// return both errors and Info.
+// patterns, as well as the provider sets' transitive dependencies. It
+// may return both errors and Info. The patterns are defined by the
+// underlying build system. For the go tool, this is described at
+// https://golang.org/cmd/go/#hdr-Package_lists_and_patterns
 //
 // wd is the working directory and env is the set of environment
 // variables to use when loading the packages specified by patterns. If
@@ -283,7 +285,10 @@ func Load(ctx context.Context, wd string, env []string, patterns []string) (*Inf
 }
 
 // load typechecks the packages that match the given patterns, including
-// function body type checking for the packages that directly match.
+// function body type checking for the packages that directly match. The
+// patterns are defined by the underlying build system. For the go tool,
+// this is described at
+// https://golang.org/cmd/go/#hdr-Package_lists_and_patterns
 //
 // wd is the working directory and env is the set of environment
 // variables to use when loading the packages specified by patterns. If
