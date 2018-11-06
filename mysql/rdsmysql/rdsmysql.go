@@ -40,6 +40,7 @@ var Set = wire.NewSet(
 	Open,
 	CertFetcher{},
 	wire.Bind((*CertPoolProvider)(nil), (*CertFetcher)(nil)),
+	wire.Value((*Options)(nil)),
 )
 
 // Params specifies how to connect to an RDS database.
@@ -61,11 +62,15 @@ type CertPoolProvider interface {
 	RDSCertPool(context.Context) (*x509.CertPool, error)
 }
 
+type Options struct {
+	// This is only a placeholder so far.
+}
+
 // Open opens an encrypted connection to an RDS MySQL database.
 //
 // The second return value is a Wire cleanup function that calls Close on the
 // database and ignores the error.
-func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.DB, func(), error) {
+func Open(ctx context.Context, provider CertPoolProvider, params *Params, opts *Options) (*sql.DB, func(), error) {
 	if params.Endpoint == "" {
 		return nil, nil, fmt.Errorf("open RDS: endpoint empty")
 	}
