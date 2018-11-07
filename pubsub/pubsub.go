@@ -110,6 +110,7 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 			select {
 			case <-t.doneChan:
 				return
+			default:
 			}
 			if len(batch) > 0 {
 				err := t.driver.SendBatch(ctx, batch)
