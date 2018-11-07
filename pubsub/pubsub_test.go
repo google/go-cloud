@@ -14,6 +14,9 @@ type driverTopic struct {
 }
 
 func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
+	for _, s := range t.subs {
+		s.q = append(s.q, ms...)
+	}
 	return nil
 }
 
@@ -26,7 +29,9 @@ type driverSub struct {
 }
 
 func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	return nil, nil
+	ms := s.q
+	s.q = nil
+	return ms, nil
 }
 
 func (s *driverSub) SendAcks(ctx context.Context, ackIDs []interface{}) error {
