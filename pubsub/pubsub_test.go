@@ -71,9 +71,6 @@ func TestPubSubHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m2.Ack(ctx); err != nil {
-		t.Fatal(err)
-	}
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
