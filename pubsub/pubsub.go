@@ -203,7 +203,6 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 
 // getNextBatch gets the next batch of messages from the server.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
-	fmt.Println("Subscription.getNextBatch")
 	msgs, err := s.driver.ReceiveBatch(ctx)
 	if err != nil {
 		return err
@@ -212,7 +211,6 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		fmt.Printf("  received batch: %v\n", msgs)
 		if len(msgs) == 0 {
 			return errors.New("subscription driver bug: received empty batch")
 		}
