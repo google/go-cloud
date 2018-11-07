@@ -41,7 +41,7 @@ func (m *Message) Ack(ctx context.Context) error {
 	case err := <-m.sub.ackErrChan:
 		return err
 	case <-ctx.Done():
-		return nil
+		return ctx.Err()
 	}
 }
 
@@ -77,9 +77,13 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 		return fmt.Errorf("send attempted on uninitialized topic: %+v", t)
 	}
 	m.errChan = make(chan error)
-	t.mcChan <- msgCtx{m, ctx}
-	// Wait for the batch including this message to be sent to the server.
-	return <-m.errChan
+	select {
+	case t.mcChan <- msgCtx{m, ctx}:
+		// Wait for the batch including this message to be sent to the server.
+		return <-m.errChan
+	case <-ctx.Done():
+	}
+	return nil
 }
 
 // Close disconnects the Topic.
@@ -102,31 +106,10 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		// batch whenever it is large enough or enough time has elapsed since
 		// the last send.
 		for {
-			batch := make([]*driver.Message, 0, opts.BatchSize)
-			timeout := time.After(opts.SendDelay)
-		Loop:
-			for i := 0; i < opts.BatchSize; i++ {
-				select {
-				case <-timeout:
-					// Time to send the batch, even if it isn't full.
-					break Loop
-				case mc := <-t.mcChan:
-					select {
-					case <-mc.ctx.Done():
-						// This message's Send call was cancelled, so just skip
-						// over it.
-					default:
-						dm := &driver.Message{
-							Body:       mc.msg.Body,
-							Attributes: mc.msg.Attributes,
-							AckID:      mc.msg.ackID,
-							ErrChan:    mc.msg.errChan,
-						}
-						batch = append(batch, dm)
-					}
-				case <-t.doneChan:
-					return
-				}
+			batch := t.gatherBatch(ctx, opts)
+			select {
+			case <-t.doneChan:
+				return
 			}
 			if len(batch) > 0 {
 				err := t.driver.SendBatch(ctx, batch)
@@ -139,6 +122,35 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 	return t
 }
 
+func (t *Topic) gatherBatch(ctx context.Context, opts TopicOptions) []*driver.Message {
+	timeout := time.After(opts.SendDelay)
+	batch := make([]*driver.Message, 0, opts.BatchSize)
+	for len(batch) < opts.BatchSize {
+		select {
+		case <-timeout:
+			// Time to send the batch, even if it isn't full.
+			return batch
+		case mc := <-t.mcChan:
+			select {
+			case <-mc.ctx.Done():
+				// This message's Send call was cancelled, so just skip
+				// over it.
+			default:
+				dm := &driver.Message{
+					Body:       mc.msg.Body,
+					Attributes: mc.msg.Attributes,
+					AckID:      mc.msg.ackID,
+					ErrChan:    mc.msg.errChan,
+				}
+				batch = append(batch, dm)
+			}
+		case <-t.doneChan:
+			return nil
+		}
+	}
+	return batch
+}
+
 // Subscription receives published messages.
 type Subscription struct {
 	driver driver.Subscription
@@ -149,7 +161,7 @@ type Subscription struct {
 	// ackErrChan reports errors back to Message.Ack.
 	ackErrChan chan error
 
-	// doneChan tells the goroutine from startAckBatcher to finish.
+	// doneChan tells the goroutine from NewSubscription to finish.
 	doneChan chan struct{}
 
 	// q is the local queue of messages downloaded from the server.
