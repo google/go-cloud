@@ -422,13 +422,7 @@ type AckID interface{}
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
 	// Send the ack ID back to the subscriber for batching.
-	m.sub.ackChan <- m.ackID
-	select {
-	case err := <-m.sub.ackErrChan:
-		return err
-	case <-ctx.Done():
-		return nil
-	}
+        // ...
 }
 
 // Topic publishes messages to all its subscribers.
@@ -459,9 +453,9 @@ type msgCtx struct {
 // sent, or failed to be sent. The call will fail if ctx is canceled.
 // Send can be called from multiple goroutines at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
-	t.mcChan <- msgCtx{m, ctx}
-	// Wait for the batch including this message to be sent to the server.
-	return <-m.errChan
+        // Send this message over t.mcChan and then wait for the batch including
+        // this message to be sent to the server.
+        // ...
 }
 
 // Close disconnects the Topic.
