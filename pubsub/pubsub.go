@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/go-cloud/pubsub/driver"
@@ -72,6 +73,9 @@ type msgCtx struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
+	if t.mcChan == nil {
+		return fmt.Errorf("send attempted on uninitialized topic: %+v", t)
+	}
 	t.mcChan <- msgCtx{m, ctx}
 	// Wait for the batch including this message to be sent to the server.
 	return <-m.errChan
