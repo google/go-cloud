@@ -32,9 +32,12 @@
 // aren't visible using fileblob.
 //
 // For blob.Open URLs, fileblob registers for the "file" scheme.
-// The URL's Host and Path are concatenated and used as the root directory.
-// For example, blob.Open("file:///a/directory") is equivalent to
-// fileblob.OpenBucket("/a/directory"). No query options are supported.
+// The URL's Path is used as the root directory; the URL's Host is ignored.
+// If os.PathSeparator != "/", any leading "/" from the Path is dropped.
+// No query options are supported. Examples:
+// -- file:///a/directory passes "/a/directory" to OpenBucket.
+// -- file://localhost/a/directory also passes "/a/directory".
+// -- file:///c:/foo/bar passes "c:/foo/bar".
 //
 // fileblob does not support any types for As.
 package fileblob
@@ -60,7 +63,11 @@ const defaultPageSize = 1000
 
 func init() {
 	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return openBucket(u.Host+u.Path, nil)
+		path := u.Path
+		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
+			path = path[1:]
+		}
+		return openBucket(path, nil)
 	})
 }
 

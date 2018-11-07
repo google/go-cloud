@@ -962,8 +962,6 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
 	}
-	defer r.Close()
-
 	if a.ContentType != contentType {
 		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
 	}
@@ -976,6 +974,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if r.Size() != int64(len(content)) {
 		t.Errorf("got Reader.Size() %d want %d", r.Size(), len(content))
 	}
+	r.Close()
 
 	t1 := a.ModTime
 	if err := b.WriteAll(ctx, key, content, nil); err != nil {
@@ -1214,7 +1213,7 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			// A Read of the same key should fail; the write was aborted
 			// so the blob shouldn't exist.
 			if _, err := b.NewReader(ctx, key); err == nil {
-				t.Error("wanted NewReturn to return an error when write was canceled")
+				t.Error("wanted NewReader to return an error when write was canceled")
 			}
 		})
 	}
@@ -1404,7 +1403,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 		},
 		{
 			description: "punctuation",
-			key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",./<>?",
+			key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
 		},
 		{
 			description: "unicode",
