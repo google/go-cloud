@@ -47,11 +47,10 @@ rm -rf $tgp
 # -n: preview only
 # -r: recurse directories
 # -c: compare checksums not write times
-gsutil rsync -n -r -c modvendor gs://go-cloud-modules
-# If the set of packages being looks good, repeat without the -n.
-
-# Optionally, you can run with -d, which deletes remote files that aren't
-# present locally. We should do this periodically to trim our proxy bucket.
+# -d: delete remote files that aren't present locally
+gsutil rsync -n -r -c -d modvendor gs://go-cloud-modules
+# If the set of packages being added and removed looks good,
+# repeat without the -n.
 
 # Once you are done...
 rm -rf modvendor
