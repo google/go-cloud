@@ -238,9 +238,17 @@ func (s *Subscription) Close() error {
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
-func NewSubscription(s driver.Subscription, opts SubscriptionOptions) *Subscription {
+func NewSubscription(ctx context.Context, d driver.Subscription, opts SubscriptionOptions) *Subscription {
 	// Details similar to the body of NewTopic should go here.
-	return &Subscription{
-		driver: s,
+	s := &Subscription{
+		driver:     d,
+		ackChan:    make(chan AckID),
+		ackErrChan: make(chan error),
 	}
+	go func() {
+		for id := range s.ackChan {
+			s.ackErrChan <- d.SendAcks(ctx, []driver.AckID{id})
+		}
+	}()
+	return s
 }

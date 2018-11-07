@@ -41,7 +41,7 @@ func TestAckTriggersDriverSendAcks(t *testing.T) {
 		q:        []*driver.Message{m},
 		sendAcks: f,
 	}
-	sub := pubsub.NewSubscription(ds, pubsub.SubscriptionOptions{})
+	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +50,7 @@ func TestAckTriggersDriverSendAcks(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(sentAcks) != 1 {
-		t.Errorf("len(sentAcks) = %d, want exactly 1", len(sentAcks))
+		t.Fatalf("len(sentAcks) = %d, want exactly 1", len(sentAcks))
 	}
 	if sentAcks[0] != id {
 		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], id)

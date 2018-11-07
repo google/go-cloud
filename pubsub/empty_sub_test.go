@@ -28,7 +28,7 @@ func (s *emptyDriverSub) Close() error {
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &emptyDriverSub{}
-	sub := pubsub.NewSubscription(ds, pubsub.SubscriptionOptions{})
+	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
 	_, err := sub.Receive(ctx)
 	if err == nil {
 		t.Error("error expected for Receive with buggy driver")

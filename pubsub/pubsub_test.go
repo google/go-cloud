@@ -59,7 +59,7 @@ func TestSendReceive(t *testing.T) {
 	}
 
 	subOpts := pubsub.SubscriptionOptions{}
-	sub := pubsub.NewSubscription(ds, subOpts)
+	sub := pubsub.NewSubscription(ctx, ds, subOpts)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
