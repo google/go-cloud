@@ -29,14 +29,14 @@ tgp=$(mktemp -d)
 # Run this command in the master branch.
 # It runs "go mod download" in every module that we have in our repo,
 # filling the cache with all of the module dependencies we need.
-GOPROXY=file://$GOPATH/pkg/mod/cache/download GOPATH=$tgp ./internal/proxy/makeproxy.sh
+./internal/proxy/makeproxy.sh $tgp
 
 # Run the above command again in your branch that's adding a new dependency,
 # to ensure the cache has any new dependencies.
 
 # Move the temporary cache to modvendor/.
 rm -rf modvendor
-cp -rp $GOPATH/pkg/mod/cache/download/ modvendor
+cp -rp $tgp/pkg/mod/cache/download/ modvendor
 
 # Clean up the temporary cache.
 GOPATH=$tgp go clean -modcache

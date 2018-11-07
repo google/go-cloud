@@ -19,10 +19,12 @@
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euxo pipefail
 
-if [[ $# -gt 0 ]]; then
-  echo "usage: makeproxy.sh" 1>&2
+if [[ $# -ne 1 ]]; then
+  echo "usage: makeproxy.sh <dir>" 1>&2
   exit 64
 fi
+
+GOPATH="$1"
 
 # Download modules for each of the modules in our repo.
 for path in "." "./internal/contributebot" "./samples/appengine"; do
