@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -340,7 +341,7 @@ func ExampleOpen() {
 	// Host field, so URLs should always start with "file:///". On
 	// Windows, the leading "/" will be stripped, so "file:///c:/foo"
 	// will refer to c:/foo.
-	urlpath := filepath.ToSlash(dir)
+	urlpath := url.PathEscape(filepath.ToSlash(dir))
 	if !strings.HasPrefix(urlpath, "/") {
 		urlpath = "/" + urlpath
 	}
