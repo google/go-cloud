@@ -8,6 +8,7 @@ go: "1.11.x"
 
 before_install:
   - "df -k"
+  - 'echo "$TMPDIR"'
   # The Bash that comes with OS X is ancient.
   # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
   # customers as checkpr.sh is only for running on Travis.
