@@ -14,6 +14,10 @@ type Message struct {
 	// AckID identifies the message on the server.
 	// It can be used to ack the message after it has been received.
 	AckID AckID
+
+	// errChan relays back an error or nil as the result of sending the
+	// batch that includes this message.
+	ErrChan chan error
 }
 
 // Topic publishes messages.
