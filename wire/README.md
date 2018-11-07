@@ -20,7 +20,7 @@ Install Wire by running:
 go get github.com/google/go-cloud/wire/cmd/wire
 ```
 
-and ensure that `$GOPATH/bin` is added to your `$PATH`.
+and ensuring that `$GOPATH/bin` is added to your `$PATH`.
 
 ## Basics
 
