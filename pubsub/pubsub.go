@@ -264,6 +264,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 			timeout := time.After(opts.AckDelay)
 			batch := make([]driver.AckID, 0, opts.AckBatchSize)
 			chans := make([]chan error, 0, opts.AckBatchSize)
+		Loop:
 			for len(batch) < opts.AckBatchSize {
 				log.Printf("waiting on s.msgChan")
 				select {
@@ -272,6 +273,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 					batch = append(batch, m.ackID)
 					chans = append(chans, m.ackErrChan)
 				case <-timeout:
+					break Loop
 				}
 			}
 			if len(batch) > 0 {
