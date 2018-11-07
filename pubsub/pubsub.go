@@ -76,6 +76,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	if t.mcChan == nil {
 		return fmt.Errorf("send attempted on uninitialized topic: %+v", t)
 	}
+	m.errChan = make(chan error)
 	t.mcChan <- msgCtx{m, ctx}
 	// Wait for the batch including this message to be sent to the server.
 	return <-m.errChan
@@ -227,5 +228,7 @@ func (s *Subscription) Close() error {
 // periodically send them to the server.
 func NewSubscription(s driver.Subscription, opts SubscriptionOptions) *Subscription {
 	// Details similar to the body of NewTopic should go here.
-	return nil
+	return &Subscription{
+		driver: s,
+	}
 }
