@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/fileblob"
@@ -335,7 +336,15 @@ func ExampleOpen() {
 	}
 	fmt.Println("Got expected error opening a nonexistent path")
 
-	if _, err := blob.Open(ctx, "file://"+dir); err != nil {
+	// Ensure the path has a leading slash; fileblob ignores the URL's
+	// Host field, so URLs should always start with "file:///". On
+	// Windows, the leading "/" will be stripped, so "file:///c:/foo"
+	// will refer to c:/foo.
+	urlpath := filepath.ToSlash(dir)
+	if !strings.HasPrefix(urlpath, "/") {
+		urlpath = "/" + urlpath
+	}
+	if _, err := blob.Open(ctx, "file://"+urlpath); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Got a bucket for valid path")
