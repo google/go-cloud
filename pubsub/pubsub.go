@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/go-cloud/pubsub/driver"
@@ -25,6 +26,10 @@ type Message struct {
 	// batch that includes this message.
 	errChan chan error
 
+	// ackErrChan relays back an error or nil as the result of sending the
+	// batch of acks that includes this message's ackID.
+	ackErrChan chan error
+
 	// sub is the Subscription this message was received from.
 	sub *Subscription
 }
@@ -37,9 +42,10 @@ type AckID interface{}
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
 	// Send the message back to the subscriber for ack batching.
+	m.ackErrChan = make(chan error)
 	m.sub.msgChan <- m
 	select {
-	case err := <-m.errChan:
+	case err := <-m.ackErrChan:
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
@@ -255,16 +261,26 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 	// Start the ack batching goroutine.
 	go func() {
 		for {
+			timeout := time.After(opts.AckDelay)
 			batch := make([]driver.AckID, 0, opts.AckBatchSize)
-			errChans := make([]chan error, 0, opts.AckBatchSize)
+			chans := make([]chan error, 0, opts.AckBatchSize)
 			for len(batch) < opts.AckBatchSize {
-				m := <-s.msgChan
-				batch = append(batch, m.ackID)
-				errChans = append(errChans, m.errChan)
+				log.Printf("waiting on s.msgChan")
+				select {
+				case m := <-s.msgChan:
+					log.Printf("got msg from s.msgChan: %+v", m)
+					batch = append(batch, m.ackID)
+					chans = append(chans, m.ackErrChan)
+				case <-timeout:
+				}
 			}
-			err := d.SendAcks(ctx, batch)
-			for _, c := range errChans {
-				c <- err
+			if len(batch) > 0 {
+				err := d.SendAcks(ctx, batch)
+
+				// Send the error result back to all the Message.Ack calls.
+				for _, c := range chans {
+					c <- err
+				}
 			}
 		}
 	}()

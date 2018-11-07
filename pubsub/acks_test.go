@@ -2,6 +2,7 @@ package pubsub_test
 
 import (
 	"context"
+	"log"
 	"sync"
 	"testing"
 
@@ -73,9 +74,11 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
 
 	// Receive and ack the messages concurrently.
+	log.Printf("acking msgs")
 	var wg sync.WaitGroup
 	recv := func() {
 		mr, err := sub.Receive(ctx)
+		log.Printf("sub.Receive returned %+v", mr)
 		if err != nil {
 			t.Fatal(err)
 		}
