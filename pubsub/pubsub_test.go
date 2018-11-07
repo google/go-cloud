@@ -2,6 +2,8 @@ package pubsub_test
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ type driverTopic struct {
 }
 
 func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
+	log.Printf("driverTopic.SendBatch: %v\n", ms)
 	for _, s := range t.subs {
 		s.q = append(s.q, ms...)
 	}
@@ -43,6 +46,7 @@ func (s *driverSub) Close() error {
 }
 
 func TestPubSubHappyPath(t *testing.T) {
+	fmt.Println("TestPubSubHappyPath")
 	ctx := context.Background()
 	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
 	ds := &driverSub{}
@@ -50,16 +54,19 @@ func TestPubSubHappyPath(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(ctx, dt, topicOpts)
+	fmt.Println("sending")
+	m := &pubsub.Message{Body: []byte("user signed up")}
+	if err := topic.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+
 	subOpts := pubsub.SubscriptionOptions{
 		AckDelay:     time.Millisecond,
 		AckBatchSize: 10,
 		AckDeadline:  time.Millisecond,
 	}
 	sub := pubsub.NewSubscription(ds, subOpts)
-	m := &pubsub.Message{Body: []byte("user signed up")}
-	if err := topic.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
+	fmt.Println("receiving")
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)

@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -185,10 +186,10 @@ type SubscriptionOptions struct {
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
-// blocking if none are available. This method can be called concurrently from
-// multiple goroutines. On systems that support acks, the Ack() method of the
-// returned Message has to be called once the message has been processed, to
-// prevent it from being received again.
+// blocking and polling if none are available. This method can be called
+// concurrently from multiple goroutines. On systems that support acks, the
+// Ack() method of the returned Message has to be called once the message has
+// been processed, to prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
@@ -202,27 +203,27 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 
 // getNextBatch gets the next batch of messages from the server.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
-	for {
-		msgs, err := s.driver.ReceiveBatch(ctx)
-		if err != nil {
-			return err
+	fmt.Println("Subscription.getNextBatch")
+	msgs, err := s.driver.ReceiveBatch(ctx)
+	if err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		fmt.Printf("  received batch: %v\n", msgs)
+		if len(msgs) == 0 {
+			return errors.New("subscription driver bug: received empty batch")
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			if len(msgs) > 0 {
-				s.q = make([]*Message, len(msgs))
-				for i, m := range msgs {
-					s.q[i] = &Message{
-						Body:       m.Body,
-						Attributes: m.Attributes,
-						ackID:      m.AckID,
-						errChan:    m.ErrChan,
-						sub:        s,
-					}
-				}
-				return nil
+		s.q = make([]*Message, len(msgs))
+		for i, m := range msgs {
+			s.q[i] = &Message{
+				Body:       m.Body,
+				Attributes: m.Attributes,
+				ackID:      m.AckID,
+				errChan:    m.ErrChan,
+				sub:        s,
 			}
 		}
 	}
