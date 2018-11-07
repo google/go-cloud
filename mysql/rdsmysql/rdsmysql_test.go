@@ -47,7 +47,7 @@ func TestOpen(t *testing.T) {
 		User:     username,
 		Password: password,
 		Database: databaseName,
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
