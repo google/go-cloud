@@ -37,7 +37,7 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	return ms, nil
 }
 
-func (s *driverSub) SendAcks(ctx context.Context, ackIDs []interface{}) error {
+func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
 
@@ -66,15 +66,5 @@ func TestSendReceive(t *testing.T) {
 	}
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
-	}
-}
-
-func TestAckTriggersDriverSendAcks(t *testing.T) {
-	ctx := context.Background()
-	ds := &emptyDriverSub{}
-	sub := pubsub.NewSubscription(ds, pubsub.SubscriptionOptions{})
-	_, err := sub.Receive(ctx)
-	if err == nil {
-		t.Error("error expected for Receive with buggy driver")
 	}
 }

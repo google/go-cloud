@@ -17,7 +17,7 @@ func (s *emptyDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, e
 	return nil, nil
 }
 
-func (s *emptyDriverSub) SendAcks(ctx context.Context, ackIDs []interface{}) error {
+func (s *emptyDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
 

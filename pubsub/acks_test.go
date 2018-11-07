@@ -11,7 +11,7 @@ import (
 
 type ackingDriverSub struct {
 	q        []*driver.Message
-	sendAcks func(context.Context, []AckID) error
+	sendAcks func(context.Context, []driver.AckID) error
 }
 
 func (s *ackingDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
@@ -20,7 +20,7 @@ func (s *ackingDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, 
 	return ms, nil
 }
 
-func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []interface{}) error {
+func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return s.sendAcks(ctx, ackIDs)
 }
 
@@ -30,14 +30,15 @@ func (s *ackingDriverSub) Close() error {
 
 func TestAckTriggersDriverSendAcks(t *testing.T) {
 	ctx := context.Background()
-	var sentAcks []AckID
-	f := func(ctx context.Context, ackIDs []AckID) error {
+	var sentAcks []driver.AckID
+	f := func(ctx context.Context, ackIDs []driver.AckID) error {
 		sentAcks = ackIDs
+		return nil
 	}
 	id := rand.Int()
 	m := &driver.Message{AckID: id}
 	ds := &ackingDriverSub{
-		q:        []*pubsub.Message{m},
+		q:        []*driver.Message{m},
 		sendAcks: f,
 	}
 	sub := pubsub.NewSubscription(ds, pubsub.SubscriptionOptions{})
