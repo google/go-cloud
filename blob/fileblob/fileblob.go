@@ -67,7 +67,7 @@ func init() {
 		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
 			path = path[1:]
 		}
-		return openBucket(u.Host+u.Path, nil)
+		return openBucket(path, nil)
 	})
 }
 
