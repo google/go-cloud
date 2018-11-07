@@ -2,7 +2,6 @@ package pubsub_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -28,6 +27,7 @@ func (t *driverTopic) Close() error {
 }
 
 type driverSub struct {
+	// Normally the queue would live on a separate server in the cloud.
 	q []*driver.Message
 }
 
@@ -45,8 +45,7 @@ func (s *driverSub) Close() error {
 	return nil
 }
 
-func TestPubSubHappyPath(t *testing.T) {
-	fmt.Println("TestPubSubHappyPath")
+func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
 	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
 	ds := &driverSub{}
@@ -54,19 +53,13 @@ func TestPubSubHappyPath(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(ctx, dt, topicOpts)
-	fmt.Println("sending")
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
-	subOpts := pubsub.SubscriptionOptions{
-		AckDelay:     time.Millisecond,
-		AckBatchSize: 10,
-		AckDeadline:  time.Millisecond,
-	}
+	subOpts := pubsub.SubscriptionOptions{}
 	sub := pubsub.NewSubscription(ds, subOpts)
-	fmt.Println("receiving")
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
