@@ -2,6 +2,7 @@ package pubsub_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/golang/go/src/pkg/math/rand"
@@ -28,7 +29,7 @@ func (s *ackingDriverSub) Close() error {
 	return nil
 }
 
-func TestAckTriggersDriverSendAcks(t *testing.T) {
+func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var sentAcks []driver.AckID
 	f := func(ctx context.Context, ackIDs []driver.AckID) error {
@@ -55,6 +56,52 @@ func TestAckTriggersDriverSendAcks(t *testing.T) {
 	if sentAcks[0] != id {
 		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], id)
 	}
+}
+
+func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
+	ctx := context.Background()
+	var sentAcks []driver.AckID
+	f := func(ctx context.Context, ackIDs []driver.AckID) error {
+		sentAcks = ackIDs
+		return nil
+	}
+	ids := []int{rand.Int(), rand.Int()}
+	ds := &ackingDriverSub{
+		q:        []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
+		sendAcks: f,
+	}
+	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+
+	// Receive and ack the messages concurrently.
+	var wg sync.WaitGroup
+	recv := func() {
+		mr, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := mr.Ack(ctx); err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+	wg.Add(2)
+	go recv()
+	go recv()
+	wg.Wait()
+
+	if len(sentAcks) != 2 {
+		t.Fatalf("len(sentAcks) = %d, want exactly 2", len(sentAcks))
+	}
+	if sentAcks[0] != ids[0] {
+		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], ids[0])
+	}
+	if sentAcks[1] != ids[1] {
+		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[1], ids[1])
+	}
+}
+
+func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
+
 }
 
 func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {

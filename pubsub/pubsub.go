@@ -36,10 +36,10 @@ type AckID interface{}
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
-	// Send the ack ID back to the subscriber for batching.
-	m.sub.ackChan <- m.ackID
+	// Send the message back to the subscriber for ack batching.
+	m.sub.msgChan <- m
 	select {
-	case err := <-m.sub.ackErrChan:
+	case err := <-m.errChan:
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
@@ -157,11 +157,11 @@ func (t *Topic) gatherBatch(ctx context.Context, opts TopicOptions) []*driver.Me
 type Subscription struct {
 	driver driver.Subscription
 
-	// ackChan conveys AckIDs from Message.Ack to the ack batcher goroutine.
-	ackChan chan AckID
-
-	// ackErrChan reports errors back to Message.Ack.
-	ackErrChan chan error
+	// msgChan conveys messages from Message.Ack to the ack batching
+	// goroutine. Their ack IDs are batched and sent off and then
+	// the result of the batch send calls are sent back on the message
+	// errChan fields.
+	msgChan chan *Message
 
 	// doneChan tells the goroutine from NewSubscription to finish.
 	doneChan chan struct{}
@@ -239,15 +239,33 @@ func (s *Subscription) Close() error {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 func NewSubscription(ctx context.Context, d driver.Subscription, opts SubscriptionOptions) *Subscription {
+	// Fill in defaults for zeros in the opts.
+	if opts.AckDelay == 0 {
+		opts.AckDelay = time.Millisecond
+	}
+	if opts.AckBatchSize == 0 {
+		opts.AckBatchSize = 100
+	}
+
 	// Details similar to the body of NewTopic should go here.
 	s := &Subscription{
-		driver:     d,
-		ackChan:    make(chan AckID),
-		ackErrChan: make(chan error),
+		driver:  d,
+		msgChan: make(chan *Message),
 	}
+	// Start the ack batching goroutine.
 	go func() {
-		for id := range s.ackChan {
-			s.ackErrChan <- d.SendAcks(ctx, []driver.AckID{id})
+		for {
+			batch := make([]driver.AckID, 0, opts.AckBatchSize)
+			errChans := make([]chan error, 0, opts.AckBatchSize)
+			for len(batch) < opts.AckBatchSize {
+				m := <-s.msgChan
+				batch = append(batch, m.ackID)
+				errChans = append(errChans, m.errChan)
+			}
+			err := d.SendAcks(ctx, batch)
+			for _, c := range errChans {
+				c <- err
+			}
 		}
 	}()
 	return s
