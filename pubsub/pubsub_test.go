@@ -69,24 +69,7 @@ func TestSendReceive(t *testing.T) {
 	}
 }
 
-// emptyDriverSub is an intentionally buggy subscription driver. Such drivers should
-// wait until some messages are available and then return a non-empty batch. This
-// driver mischeviously always returns an empty batch.
-type emptyDriverSub struct{}
-
-func (s *emptyDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	return nil, nil
-}
-
-func (s *emptyDriverSub) SendAcks(ctx context.Context, ackIDs []interface{}) error {
-	return nil
-}
-
-func (s *emptyDriverSub) Close() error {
-	return nil
-}
-
-func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
+func TestAckTriggersDriverSendAcks(t *testing.T) {
 	ctx := context.Background()
 	ds := &emptyDriverSub{}
 	sub := pubsub.NewSubscription(ds, pubsub.SubscriptionOptions{})
@@ -94,8 +77,4 @@ func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	if err == nil {
 		t.Error("error expected for Receive with buggy driver")
 	}
-}
-
-func TestAckTriggersDriverSendAcks(t *testing.T) {
-
 }
