@@ -78,6 +78,10 @@ func TestWire(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.RemoveAll(gopath)
+			gopath, err = filepath.EvalSymlinks(gopath)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if err := test.materialize(gopath); err != nil {
 				t.Fatal(err)
 			}
@@ -512,7 +516,6 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 func (test *testCase) materialize(gopath string) error {
 	for name, content := range test.goFiles {
 		dst := filepath.Join(gopath, "src", filepath.FromSlash(name))
-		fmt.Fprintln(os.Stderr, "Materializing", dst)
 		if err := os.MkdirAll(filepath.Dir(dst), 0777); err != nil {
 			return fmt.Errorf("materialize GOPATH: %v", err)
 		}
