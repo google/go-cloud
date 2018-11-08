@@ -67,4 +67,10 @@ func TestSendReceive(t *testing.T) {
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
+	if err := topic.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
