@@ -27,8 +27,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Attributes has key/value metadata for the message.
-	Attributes map[string]string
+	// Metadata has key/value pairs describing the message.
+	Metadata map[string]string
 
 	// AckID identifies the message on the server. It can be used to ack
 	// the message after it has been received.
