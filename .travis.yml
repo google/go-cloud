@@ -1,6 +1,5 @@
 os:
-  - linux
-  - osx
+  - windows
 
 language: go
 go_import_path: github.com/google/go-cloud
@@ -20,6 +19,10 @@ before_install:
     fi
 
 install:
+  - "git config --global core.autocrlf input"
+  - "ls"
+  - "git clone --depth=50 https://github.com/google/go-cloud.git .
+  - "ls"
   - "go install ./wire/cmd/wire"
 
 script:
