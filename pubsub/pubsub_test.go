@@ -2,6 +2,7 @@ package pubsub_test
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,7 +16,9 @@ type driverTopic struct {
 
 func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	for _, s := range t.subs {
+		<-s.sem
 		s.q = append(s.q, ms...)
+		s.sem <- struct{}{}
 	}
 	return nil
 }
@@ -25,14 +28,36 @@ func (t *driverTopic) Close() error {
 }
 
 type driverSub struct {
+	sem chan struct{}
 	// Normally this queue would live on a separate server in the cloud.
 	q []*driver.Message
 }
 
+func NewDriverSub() *driverSub {
+	ds := &driverSub{
+		sem: make(chan struct{}, 1),
+	}
+	ds.sem <- struct{}{}
+	return ds
+}
+
 func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	ms := s.q
-	s.q = nil
-	return ms, nil
+	select {
+	case <-s.sem:
+		for {
+			if len(s.q) > 0 {
+				ms := s.q
+				s.q = nil
+				s.sem <- struct{}{}
+				return ms, nil
+			}
+			s.sem <- struct{}{}
+			time.Sleep(time.Millisecond)
+			<-s.sem
+		}
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
@@ -46,7 +71,7 @@ func (s *driverSub) Close() error {
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
 	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
-	ds := &driverSub{}
+	ds := NewDriverSub()
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
@@ -72,3 +97,55 @@ func TestSendReceive(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
+	howManyToSend := int(1e3)
+	ctx := context.Background()
+	dt := &driverTopic{}
+
+	// Make subscriptions and start goroutines to receive from them.
+	var subs []*pubsub.Subscription
+	nSubs := 100
+	var wg sync.WaitGroup
+	for i := 0; i < nSubs; i++ {
+		ds := NewDriverSub()
+		dt.subs = append(dt.subs, ds)
+		s := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+		subs = append(subs, s)
+		wg.Add(howManyToSend)
+		go func() {
+			for j := 0; j < howManyToSend; j++ {
+				_, err := s.Receive(ctx)
+				if err != nil {
+					panic(err)
+				}
+				wg.Done()
+			}
+		}()
+	}
+
+	// Send messages.
+	topic := pubsub.NewTopic(ctx, dt, pubsub.TopicOptions{})
+	for i := 0; i < howManyToSend; i++ {
+		m := &pubsub.Message{Body: []byte("user signed up")}
+		if err := topic.Send(ctx, m); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Wait for all the goroutines to finish processing all the messages.
+	wg.Wait()
+
+	// Clean up.
+	if err := topic.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range subs {
+		if err := s.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// TODO: Test making lots of subscribers, sending lots of messages to the topic, and
+// processing the messages using an inverted worker pool.
