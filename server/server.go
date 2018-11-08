@@ -53,12 +53,23 @@ type Server struct {
 
 // Options is the set of optional parameters.
 type Options struct {
+	// RequestLogger specifies the logger that will be used to log requests.
 	RequestLogger requestlog.Logger
-	HealthChecks  []health.Checker
 
-	TraceExporter         trace.Exporter
+	// HealthChecks specifies the health checks to be run when the
+	// /healthz/readiness endpoint is requested.
+	HealthChecks []health.Checker
+
+	// TraceExporter exports sampled trace spans.
+	TraceExporter trace.Exporter
+
+	// DefaultSamplingPolicy is a function that takes a
+	// trace.SamplingParameters struct and returns a true or false decision about
+	// whether it should be sampled and exported.
 	DefaultSamplingPolicy trace.Sampler
-	Driver                driver.Server
+
+	// Driver serves HTTP requests.
+	Driver driver.Server
 }
 
 // New creates a new server. New(nil) is the same as new(Server).

@@ -56,7 +56,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 // localBucket is a Wire provider function that returns a directory-based bucket
 // based on the command-line flags.
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
-	return fileblob.OpenBucket(flags.bucket)
+	return fileblob.OpenBucket(flags.bucket, nil)
 }
 
 // dialLocalSQL is a Wire provider function that connects to a MySQL database
@@ -76,8 +76,8 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 // localRuntimeVar is a Wire provider function that returns the Message of the
 // Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.WatchOptions{
-		WaitTime: flags.motdVarWaitTime,
+	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
 		return nil, nil, err

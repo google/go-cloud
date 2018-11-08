@@ -19,6 +19,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -138,6 +139,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
+	t.Run("TestListDelimiters", func(t *testing.T) {
+		testListDelimiters(t, newHarness)
+	})
 	t.Run("TestRead", func(t *testing.T) {
 		testRead(t, newHarness)
 	})
@@ -155,6 +159,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
+	})
+	t.Run("TestKeys", func(t *testing.T) {
+		testKeys(t, newHarness)
 	})
 	t.Run("TestSignedURL", func(t *testing.T) {
 		testSignedURL(t, newHarness)
@@ -174,16 +181,25 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 
 // testList tests the functionality of List.
 func testList(t *testing.T, newHarness HarnessMaker) {
-	// TODO(Issue #541): Add tests for slash-separated paths.
 	const keyPrefix = "blob-for-list"
 	content := []byte("hello")
 
 	keyForIndex := func(i int) string { return fmt.Sprintf("%s-%d", keyPrefix, i) }
-	indexFromKey := func(key string) (int, error) {
-		if !strings.HasPrefix(key, keyPrefix) {
-			return 0, fmt.Errorf("got name %q, expected it to have prefix %q", key, keyPrefix)
+	gotIndices := func(t *testing.T, objs []*driver.ListObject) []int {
+		var got []int
+		for _, obj := range objs {
+			if !strings.HasPrefix(obj.Key, keyPrefix) {
+				t.Errorf("got name %q, expected it to have prefix %q", obj.Key, keyPrefix)
+				continue
+			}
+			i, err := strconv.Atoi(obj.Key[len(keyPrefix)+1:])
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+			got = append(got, i)
 		}
-		return strconv.Atoi(key[len(keyPrefix)+1:])
+		return got
 	}
 
 	tests := []struct {
@@ -238,8 +254,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 	// Creates blobs for sub-tests below.
 	// We only create the blobs once, for efficiency and because there's
 	// no guarantee that after we create them they will be immediately returned
-	// from List/ListPaged. The very first time the test is run against a
-	// Bucket, it may be flaky due to this race.
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
 	init := func(t *testing.T) (driver.Bucket, func()) {
 		h, err := newHarness(ctx, t)
 		if err != nil {
@@ -255,17 +271,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		count := 0
-		for {
-			obj, err := iter.Next(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if obj == nil {
-				break
-			}
-			count++
-		}
+		count := countItems(ctx, t, iter)
 		if count != 3 {
 			for i := 0; i < 3; i++ {
 				if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
@@ -293,16 +299,8 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				var gotThisPage []int
-				for _, obj := range page.Objects {
-					i, err := indexFromKey(obj.Key)
-					if err != nil {
-						t.Error(err)
-						continue
-					}
-					got = append(got, i)
-					gotThisPage = append(gotThisPage, i)
-				}
+				gotThisPage := gotIndices(t, page.Objects)
+				got = append(got, gotThisPage...)
 				gotPages = append(gotPages, gotThisPage)
 				if len(page.NextPageToken) == 0 {
 					break
@@ -317,6 +315,478 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			}
 		})
 	}
+
+	// Verify pagination works when inserting in a retrieved page.
+	t.Run("PaginationConsistencyAfterInsert", func(t *testing.T) {
+		drv, done := init(t)
+		defer done()
+
+		// Fetch a page of 2 results: 0, 1.
+		page, err := drv.ListPaged(ctx, &driver.ListOptions{
+			PageSize: 2,
+			Prefix:   keyPrefix,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := gotIndices(t, page.Objects)
+		want := []int{0, 1}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+
+		// Insert a key "0a" in the middle of the page we already retrieved.
+		b := blob.NewBucket(drv)
+		key := page.Objects[0].Key + "a"
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = b.Delete(ctx, key)
+		}()
+
+		// Fetch the next page. It should not include 0, 0a, or 1, and it should
+		// include 2.
+		page, err = drv.ListPaged(ctx, &driver.ListOptions{
+			Prefix:    keyPrefix,
+			PageToken: page.NextPageToken,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = gotIndices(t, page.Objects)
+		want = []int{2}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+	})
+
+	// Verify pagination works when deleting in a retrieved page.
+	t.Run("PaginationConsistencyAfterDelete", func(t *testing.T) {
+		drv, done := init(t)
+		defer done()
+
+		// Fetch a page of 2 results: 0, 1.
+		page, err := drv.ListPaged(ctx, &driver.ListOptions{
+			PageSize: 2,
+			Prefix:   keyPrefix,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := gotIndices(t, page.Objects)
+		want := []int{0, 1}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+
+		// Delete key "1".
+		b := blob.NewBucket(drv)
+		key := page.Objects[1].Key
+		if err := b.Delete(ctx, key); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			_ = b.WriteAll(ctx, key, content, nil)
+		}()
+
+		// Fetch the next page. It should not include 0 or 1, and it should
+		// include 2.
+		page, err = drv.ListPaged(ctx, &driver.ListOptions{
+			Prefix:    keyPrefix,
+			PageToken: page.NextPageToken,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = gotIndices(t, page.Objects)
+		want = []int{2}
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+		}
+	})
+}
+
+// listResult is a recursive view of the hierarchy. It's used to verify List
+// using Delimiter.
+type listResult struct {
+	Key   string
+	IsDir bool
+	// If IsDir is true and recursion is enabled, the recursive listing of the directory.
+	Sub []listResult
+}
+
+// doList lists b using prefix and delim.
+// If recurse is true, it recurses into directories filling in listResult.Sub.
+func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse bool) ([]listResult, error) {
+	iter, err := b.List(ctx, &blob.ListOptions{
+		Prefix:    prefix,
+		Delimiter: delim,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var retval []listResult
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			if obj != nil {
+				return nil, errors.New("obj is not nil on EOF")
+			}
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var sub []listResult
+		if obj.IsDir && recurse {
+			sub, err = doList(ctx, b, obj.Key, delim, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+		retval = append(retval, listResult{
+			Key:   obj.Key,
+			IsDir: obj.IsDir,
+			Sub:   sub,
+		})
+	}
+	return retval, nil
+}
+
+// testListDelimiters tests the functionality of List using Delimiters.
+func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "blob-for-delimiters-"
+	content := []byte("hello")
+
+	// The set of files to use for these tests. The strings in each entry will
+	// be joined using delim, so the result is a directory structure like this
+	// (using / as delimiter):
+	// dir1/a.txt
+	// dir1/b.txt
+	// dir1/subdir/c.txt
+	// dir1/subdir/d.txt
+	// dir2/e.txt
+	// f.txt
+	keys := [][]string{
+		[]string{"dir1", "a.txt"},
+		[]string{"dir1", "b.txt"},
+		[]string{"dir1", "subdir", "c.txt"},
+		[]string{"dir1", "subdir", "d.txt"},
+		[]string{"dir2", "e.txt"},
+		[]string{"f.txt"},
+	}
+
+	// Test with several different delimiters.
+	tests := []struct {
+		name, delim string
+		// Expected result of doList with an empty delimiter.
+		// All keys should be listed at the top level, with no directories.
+		wantFlat []listResult
+		// Expected result of doList with delimiter and recurse = true.
+		// All keys should be listed, with keys in directories in the Sub field
+		// of their directory.
+		wantRecursive []listResult
+		// Expected result of repeatedly calling driver.ListPaged with delimiter
+		// and page size = 1.
+		wantPaged []listResult
+		// expected result of doList with delimiter and recurse = false
+		// after dir2/e.txt is deleted
+		// dir1/ and f.txt should be listed; dir2/ should no longer be present
+		// because there are no keys in it.
+		wantAfterDel []listResult
+	}{
+		{
+			name:  "fwdslash",
+			delim: "/",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "/dir1/a.txt"},
+				listResult{Key: keyPrefix + "/dir1/b.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+				listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+				listResult{Key: keyPrefix + "/dir2/e.txt"},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+			wantRecursive: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir1/a.txt"},
+						listResult{Key: keyPrefix + "/dir1/b.txt"},
+						listResult{
+							Key:   keyPrefix + "/dir1/subdir/",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
+								listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "/dir2/",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "/dir2/e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "/dir2/",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "/dir1/",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "/f.txt"},
+			},
+		},
+		{
+			name:  "backslash",
+			delim: "\\",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantRecursive: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+						listResult{
+							Key:   keyPrefix + "\\dir1\\subdir\\",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+		},
+		{
+			name:  "abc",
+			delim: "abc",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "abcdir1abca.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+				listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+				listResult{Key: keyPrefix + "abcdir2abce.txt"},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			wantRecursive: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir1abca.txt"},
+						listResult{Key: keyPrefix + "abcdir1abcb.txt"},
+						listResult{
+							Key:   keyPrefix + "abcdir1abcsubdirabc",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+								listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+							},
+						},
+					},
+				},
+				listResult{
+					Key:   keyPrefix + "abcdir2abc",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "abcdir2abce.txt"},
+					},
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "abcdir2abc",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "abcdir1abc",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "abcf.txt"},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
+	init := func(t *testing.T, delim string) (driver.Bucket, *blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+
+		// See if the blobs are already there.
+		prefix := keyPrefix + delim
+		iter, err := b.List(ctx, &blob.ListOptions{Prefix: prefix})
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := countItems(ctx, t, iter)
+		if count != len(keys) {
+			for _, key := range keys {
+				if err := b.WriteAll(ctx, prefix+strings.Join(key, delim), content, nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return drv, b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			drv, b, done := init(t, tc.delim)
+			defer done()
+
+			// Fetch without using delimiter.
+			got, err := doList(ctx, b, keyPrefix+tc.delim, "", true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantFlat); diff != "" {
+				t.Errorf("with no delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantFlat, diff)
+			}
+
+			// Fetch using delimiter, recursively.
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantRecursive); diff != "" {
+				t.Errorf("with delimiter, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantRecursive, diff)
+			}
+
+			// Test pagination via driver.ListPaged.
+			var nextPageToken []byte
+			got = nil
+			for {
+				page, err := drv.ListPaged(ctx, &driver.ListOptions{
+					Prefix:    keyPrefix + tc.delim,
+					Delimiter: tc.delim,
+					PageSize:  1,
+					PageToken: nextPageToken,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(page.Objects) > 1 {
+					t.Errorf("got %d objects on a page, want 0 or 1", len(page.Objects))
+				}
+				for _, obj := range page.Objects {
+					got = append(got, listResult{
+						Key:   obj.Key,
+						IsDir: obj.IsDir,
+					})
+				}
+				if len(page.NextPageToken) == 0 {
+					break
+				}
+				nextPageToken = page.NextPageToken
+			}
+			if diff := cmp.Diff(got, tc.wantPaged); diff != "" {
+				t.Errorf("paged got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantPaged, diff)
+			}
+
+			// Delete dir2/e.txt and verify that dir2/ is no longer returned.
+			key := strings.Join(append([]string{keyPrefix}, "dir2", "e.txt"), tc.delim)
+			if err := b.Delete(ctx, key); err != nil {
+				t.Fatal(err)
+			}
+			// Attempt to restore dir2/e.txt at the end of the test for the next run.
+			defer func() {
+				_ = b.WriteAll(ctx, key, content, nil)
+			}()
+
+			got, err = doList(ctx, b, keyPrefix+tc.delim, tc.delim, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, tc.wantAfterDel); diff != "" {
+				t.Errorf("after delete, got\n%v\nwant\n%v\ndiff\n%s", got, tc.wantAfterDel, diff)
+			}
+		})
+	}
+}
+
+func countItems(ctx context.Context, t *testing.T, iter *blob.ListIterator) int {
+	count := 0
+	for {
+		if _, err := iter.Next(ctx); err == io.EOF {
+			break
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		count++
+	}
+	return count
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
@@ -492,8 +962,6 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
 	}
-	defer r.Close()
-
 	if a.ContentType != contentType {
 		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
 	}
@@ -506,6 +974,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	if r.Size() != int64(len(content)) {
 		t.Errorf("got Reader.Size() %d want %d", r.Size(), len(content))
 	}
+	r.Close()
 
 	t1 := a.ModTime
 	if err := b.WriteAll(ctx, key, content, nil); err != nil {
@@ -536,12 +1005,15 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 	smallText := loadTestData(t, "test-small.txt")
 	mediumHTML := loadTestData(t, "test-medium.html")
 	largeJpg := loadTestData(t, "test-large.jpg")
+	helloWorld := []byte("hello world")
+	helloWorldMD5 := md5.Sum(helloWorld)
 
 	tests := []struct {
 		name            string
 		key             string
 		content         []byte
 		contentType     string
+		contentMD5      []byte
 		firstChunk      int
 		wantContentType string
 		wantErr         bool
@@ -572,6 +1044,19 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			content:         mediumHTML,
 			contentType:     "application/json",
 			wantContentType: "application/json",
+		},
+		{
+			name:       "Content md5 match",
+			key:        key,
+			content:    helloWorld,
+			contentMD5: helloWorldMD5[:],
+		},
+		{
+			name:       "Content md5 did not match",
+			key:        key,
+			content:    []byte("not hello world"),
+			contentMD5: helloWorldMD5[:],
+			wantErr:    true,
 		},
 		{
 			name:            "a small text file",
@@ -621,6 +1106,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			// Write the content.
 			opts := &blob.WriterOptions{
 				ContentType: tc.contentType,
+				ContentMD5:  tc.contentMD5[:],
 			}
 			w, err := b.NewWriter(ctx, tc.key, opts)
 			if err == nil {
@@ -727,7 +1213,7 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			// A Read of the same key should fail; the write was aborted
 			// so the blob shouldn't exist.
 			if _, err := b.NewReader(ctx, key); err == nil {
-				t.Error("wanted NewReturn to return an error when write was canceled")
+				t.Error("wanted NewReader to return an error when write was canceled")
 			}
 		})
 	}
@@ -894,6 +1380,89 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
+// testKeys tests a variety of weird keys.
+func testKeys(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "weird-keys"
+	content := []byte("hello")
+
+	tests := []struct {
+		description string
+		key         string
+	}{
+		{
+			description: "fwdslashes",
+			key:         "foo/bar/baz",
+		},
+		{
+			description: "backslashes",
+			key:         "foo\\bar\\baz",
+		},
+		{
+			description: "quote",
+			key:         "foo\"bar\"baz",
+		},
+		{
+			description: "punctuation",
+			key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
+		},
+		{
+			description: "unicode",
+			key:         strings.Repeat("☺", 10),
+		},
+	}
+
+	ctx := context.Background()
+
+	// Creates the blob.
+	// We don't delete the blob, because there's no guarantee that after we
+	// create it that it will be immediately returned from List. The very first
+	// time the test is run against a Bucket, it may be flaky due to this race.
+	init := func(t *testing.T, key string) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		if err := b.WriteAll(ctx, key, content, nil); err != nil {
+			t.Fatal(err)
+		}
+		return b, func() { h.Close() }
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.description, func(t *testing.T) {
+			key := keyPrefix + tc.key
+			b, done := init(t, key)
+			defer done()
+
+			// Verify read works.
+			gotContent, err := b.ReadAll(ctx, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(gotContent, content) {
+				t.Errorf("got %q want %q", string(gotContent), string(content))
+			}
+			// Verify List returns the key.
+			iter, err := b.List(ctx, &blob.ListOptions{Prefix: key})
+			if err != nil {
+				t.Fatal(err)
+			}
+			obj, err := iter.Next(ctx)
+			if err != nil && err != io.EOF {
+				t.Fatal(err)
+			}
+			if err == io.EOF || obj.Key != key {
+				t.Error("key not returned from List")
+			}
+		})
+	}
+}
+
 // testSignedURL tests the functionality of SignedURL.
 func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-signing"
@@ -1010,11 +1579,11 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	for {
 		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Fatal(err)
-		}
-		if obj == nil {
-			break
 		}
 		if err := st.ListObjectCheck(obj); err != nil {
 			t.Error(err)

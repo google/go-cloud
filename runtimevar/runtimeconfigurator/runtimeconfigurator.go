@@ -47,8 +47,6 @@ var Set = wire.NewSet(
 const (
 	// endpoint is the address of the GCP Runtime Configurator API.
 	endPoint = "runtimeconfig.googleapis.com:443"
-	// defaultWait is the default value for WatchOptions.WaitTime.
-	defaultWait = 30 * time.Second
 )
 
 // Dial opens a gRPC connection to the Runtime Configurator API.
@@ -79,7 +77,7 @@ func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (*runtimevar.Variable, error) {
+func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := c.newWatcher(name, decoder, opts)
 	if err != nil {
 		return nil, err
@@ -87,22 +85,15 @@ func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opt
 	return runtimevar.New(w), nil
 }
 
-func (c *Client) newWatcher(name ResourceName, decoder *runtimevar.Decoder, opts *WatchOptions) (driver.Watcher, error) {
+func (c *Client) newWatcher(name ResourceName, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
 	if opts == nil {
-		opts = &WatchOptions{}
-	}
-	waitTime := opts.WaitTime
-	switch {
-	case waitTime == 0:
-		waitTime = defaultWait
-	case waitTime < 0:
-		return nil, fmt.Errorf("cannot have negative WaitTime option value: %v", waitTime)
+		opts = &Options{}
 	}
 	return &watcher{
-		client:   c.client,
-		waitTime: waitTime,
-		name:     name.String(),
-		decoder:  decoder,
+		client:  c.client,
+		wait:    driver.WaitDuration(opts.WaitDuration),
+		name:    name.String(),
+		decoder: decoder,
 	}, nil
 }
 
@@ -122,10 +113,10 @@ func (r ResourceName) String() string {
 	return fmt.Sprintf("%s/variables/%s", r.configPath(), r.Variable)
 }
 
-// WatchOptions provide optional configurations to the Watcher.
-type WatchOptions struct {
-	// WaitTime controls how quickly Watch polls. Defaults to 30 seconds.
-	WaitTime time.Duration
+// Options sets options.
+type Options struct {
+	// WaitDuration controls how quickly Watch polls. Defaults to 30 seconds.
+	WaitDuration time.Duration
 }
 
 // state implements driver.State.
@@ -169,10 +160,10 @@ func errorState(err error, prevS driver.State) driver.State {
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator
 // service.
 type watcher struct {
-	client   pb.RuntimeConfigManagerClient
-	waitTime time.Duration
-	name     string
-	decoder  *runtimevar.Decoder
+	client  pb.RuntimeConfigManagerClient
+	wait    time.Duration
+	name    string
+	decoder *runtimevar.Decoder
 }
 
 // Close implements driver.Close.
@@ -185,25 +176,25 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	// Get the variable from the backend.
 	vpb, err := w.client.GetVariable(ctx, &pb.GetVariableRequest{Name: w.name})
 	if err != nil {
-		return errorState(err, prev), w.waitTime
+		return errorState(err, prev), w.wait
 	}
 	updateTime, err := parseUpdateTime(vpb)
 	if err != nil {
-		return errorState(err, prev), w.waitTime
+		return errorState(err, prev), w.wait
 	}
 	// See if it's the same raw bytes as before.
 	b := bytesFromProto(vpb)
 	if prev != nil && bytes.Equal(b, prev.(*state).raw) {
 		// No change!
-		return nil, w.waitTime
+		return nil, w.wait
 	}
 
 	// Decode the value.
 	val, err := w.decoder.Decode(b)
 	if err != nil {
-		return errorState(err, prev), w.waitTime
+		return errorState(err, prev), w.wait
 	}
-	return &state{val: val, updateTime: updateTime, raw: b}, w.waitTime
+	return &state{val: val, updateTime: updateTime, raw: b}, w.wait
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {

@@ -37,7 +37,7 @@ func Example() {
 		Instance:  "my-instance01",
 		User:      "myrole",
 		Database:  "test",
-	})
+	}, nil)
 	if err != nil {
 		panic(err)
 	}

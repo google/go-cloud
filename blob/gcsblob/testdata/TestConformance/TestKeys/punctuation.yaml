@@ -1,0 +1,149 @@
+---
+version: 1
+interactions:
+- request:
+    body: "--2fad0ac26554b0b59f442812036e920d35ded688bf4a278789f1b01662b3\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"weird-keys~!@#$%^\\u0026*()_+`-=[]{}\\\\|;':\\\",/.\\u003c\\u003e?\"}\n\r\n--2fad0ac26554b0b59f442812036e920d35ded688bf4a278789f1b01662b3\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nhello\r\n--2fad0ac26554b0b59f442812036e920d35ded688bf4a278789f1b01662b3--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=2fad0ac26554b0b59f442812036e920d35ded688bf4a278789f1b01662b3
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F","name":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","bucket":"go-cloud-blob-test-bucket","generation":"1541630572600748","metageneration":"1","contentType":"text/plain;
+      charset=utf-8","timeCreated":"2018-11-07T22:42:52.600Z","updated":"2018-11-07T22:42:52.600Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-11-07T22:42:52.600Z","size":"5","md5Hash":"XUFAKrxLKna5cZ2REBfFkg==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F?generation=1541630572600748&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CKy7nrWtw94CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"mnG7TA==","etag":"CKy7nrWtw94CEAE="}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "3510"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 07 Nov 2018 22:42:52 GMT
+      Etag:
+      - CKy7nrWtw94CEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2UrJK13vCrO5Vy3gOIMtughJY1aifI29ur1ts2XtEj_H0eTYYrliyKNShvgI5IrH8UUVw0ZHmgC9S4MiPQlr1aGS50KkYg
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers: {}
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%5C%7C;%27:%22,/.%3C%3E%3F
+    method: GET
+  response:
+    body: hello
+    headers:
+      Accept-Ranges:
+      - bytes
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Wed, 07 Nov 2018 22:42:52 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Expires:
+      - Wed, 07 Nov 2018 22:42:52 GMT
+      Last-Modified:
+      - Wed, 07 Nov 2018 22:42:52 GMT
+      Server:
+      - UploadServer
+      X-Goog-Generation:
+      - "1541630572600748"
+      X-Goog-Hash:
+      - crc32c=mnG7TA==
+      - md5=XUFAKrxLKna5cZ2REBfFkg==
+      X-Goog-Metageneration:
+      - "1"
+      X-Goog-Storage-Class:
+      - REGIONAL
+      X-Goog-Stored-Content-Encoding:
+      - identity
+      X-Goog-Stored-Content-Length:
+      - "5"
+      X-Guploader-Customer:
+      - cloud-storage
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2Uron6BFG53D_AJm535qyo8Jcnuf0kHV2CTgFOc7HDj89TuGJ5Qf1o4yPQw8FaIoIwSrpPqJ5HQFY0mi7GOa2NfRqOyXQg
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&delimiter=&maxResults=1000&pageToken=&prefix=weird-keys~%21%40%23%24%25%5E%26%2A%28%29_%2B%60-%3D%5B%5D%7B%7D%5C%7C%3B%27%3A%22%2C%2F.%3C%3E%3F&prettyPrint=false&projection=full&versions=false
+    method: GET
+  response:
+    body: '{"kind":"storage#objects","items":[{"kind":"storage#object","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F","name":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","bucket":"go-cloud-blob-test-bucket","generation":"1541630572600748","metageneration":"1","contentType":"text/plain;
+      charset=utf-8","timeCreated":"2018-11-07T22:42:52.600Z","updated":"2018-11-07T22:42:52.600Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-11-07T22:42:52.600Z","size":"5","md5Hash":"XUFAKrxLKna5cZ2REBfFkg==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F?generation=1541630572600748&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CKy7nrWtw94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?/1541630572600748/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/weird-keys~!@%23$%25%5E&*()_%2B%60-=%5B%5D%7B%7D%5C%7C;'':%22,%2F.%3C%3E%3F/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"weird-keys~!@#$%^&*()_+`-=[]{}\\|;'':\",/.\u003c\u003e?","generation":"1541630572600748","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CKy7nrWtw94CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"mnG7TA==","etag":"CKy7nrWtw94CEAE="}]}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0, must-revalidate, no-transform
+      Content-Length:
+      - "3547"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 07 Nov 2018 22:42:53 GMT
+      Expires:
+      - Wed, 07 Nov 2018 22:42:53 GMT
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_metadata
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2Uo1OR9GcN_X3ZfYrkKRWzgIrdhUTyNSsAthwftez0-7s6BQ2JCNKpvXyyhaddQDRBW3gylrIU35CRqPj7zk5ql7dzoTwA
+    status: 200 OK
+    code: 200
+    duration: ""

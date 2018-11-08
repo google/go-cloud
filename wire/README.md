@@ -20,6 +20,8 @@ Install Wire by running:
 go get github.com/google/go-cloud/wire/cmd/wire
 ```
 
+and ensuring that `$GOPATH/bin` is added to your `$PATH`.
+
 ## Basics
 
 Wire has two core concepts: providers and injectors.
@@ -327,9 +329,13 @@ The generated injector would look like this:
 
 ```go
 func injectFoo() Foo {
-    foo := Foo{X: 42}
+    foo := _wireFooValue
     return foo
 }
+
+var (
+    _wireFooValue = Foo{X: 42}
+)
 ```
 
 It's important to note that the expression will be copied to the injector's
