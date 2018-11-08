@@ -68,6 +68,8 @@ type TopicOptions struct {
 	BatchSize int
 }
 
+const SendDelayDefault = time.Millisecond
+
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
@@ -115,8 +117,14 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		}
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = opts.SendDelay
-	b.BundleCountThreshold = opts.BatchSize
+	if opts.SendDelay == 0 {
+		b.DelayThreshold = SendDelayDefault
+	} else {
+		b.DelayThreshold = opts.SendDelay
+	}
+	if opts.BatchSize != 0 {
+		b.BundleCountThreshold = opts.BatchSize
+	}
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -150,6 +158,8 @@ type SubscriptionOptions struct {
 	// received message has failed to be processed.
 	AckDeadline time.Duration
 }
+
+const AckDelayDefault = time.Millisecond
 
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking and polling if none are available. This method can be called
@@ -225,8 +235,14 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 		}
 	}
 	ab := bundler.NewBundler(msgErrChan{}, handler)
-	ab.DelayThreshold = opts.AckDelay
-	ab.BundleCountThreshold = opts.AckBatchSize
+	if opts.AckDelay == 0 {
+		ab.DelayThreshold = AckDelayDefault
+	} else {
+		ab.DelayThreshold = opts.AckDelay
+	}
+	if opts.AckBatchSize != 0 {
+		ab.BundleCountThreshold = opts.AckBatchSize
+	}
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang/go/src/pkg/math/rand"
 	"github.com/google/go-cloud/pubsub"
@@ -72,6 +73,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	}
 	sopts := pubsub.SubscriptionOptions{
 		AckBatchSize: 2,
+		AckDelay:     time.Millisecond,
 	}
 	sub := pubsub.NewSubscription(ctx, ds, sopts)
 
