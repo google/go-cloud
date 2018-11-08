@@ -46,6 +46,7 @@ func (s *driverSub) Close() error {
 }
 
 func TestSendReceive(t *testing.T) {
+	log.Printf("TestSendReceive")
 	ctx := context.Background()
 	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
 	ds := &driverSub{}

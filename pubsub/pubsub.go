@@ -100,7 +100,7 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
 		}
-		dms := make([]*driver.Message, len(mecs))
+		dms := make([]*driver.Message, 0, len(mecs))
 		for _, mec := range mecs {
 			m := mec.msg
 			dm := &driver.Message{
@@ -223,7 +223,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
 		}
-		ids := make([]driver.AckID, len(mecs))
+		ids := make([]driver.AckID, 0, len(mecs))
 		for _, mec := range mecs {
 			m := mec.msg
 			id := m.ackID
