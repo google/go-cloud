@@ -18,6 +18,7 @@ package driver
 
 import "context"
 
+// AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
 type Message struct {
