@@ -30,8 +30,9 @@ type Message struct {
 	// Metadata has key/value pairs describing the message.
 	Metadata map[string]string
 
-	// AckID identifies the message on the server. It can be used to ack
-	// the message after it has been received.
+	// AckID should be set to something identifying the message on the
+	// server.  It may be passed to Subscription.SendAcks() to acknowledge
+	// the message.
 	AckID AckID
 }
 
