@@ -116,9 +116,11 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 			mec.errChan <- err
 		}
 	}
+	b := bundler.NewBundler(msgErrChan{}, handler)
+	b.DelayThreshold = time.Millisecond
 	t := &Topic{
 		driver:  d,
-		batcher: bundler.NewBundler(msgErrChan{}, handler),
+		batcher: b,
 	}
 	return t
 }
@@ -185,6 +187,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 		}
 		s.q = make([]*Message, len(msgs))
 		for i, m := range msgs {
+			log.Printf("putting message on queue: %+v", m)
 			s.q[i] = &Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
@@ -234,9 +237,11 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 	}
 
 	// Details similar to the body of NewTopic should go here.
+	ab := bundler.NewBundler(msgErrChan{}, handler)
+	ab.DelayThreshold = time.Millisecond
 	s := &Subscription{
 		driver:     d,
-		ackBatcher: bundler.NewBundler(msgErrChan{}, handler),
+		ackBatcher: ab,
 	}
 	return s
 }
