@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/google/go-cloud/pubsub/driver"
@@ -130,7 +131,8 @@ type Subscription struct {
 	ackBatcher *bundler.Bundler
 
 	// q is the local queue of messages downloaded from the server.
-	q []*Message
+	mu sync.Mutex
+	q  []*Message
 }
 
 // SubscriptionOptions contains configuration for Subscriptions.
@@ -154,6 +156,10 @@ type SubscriptionOptions struct {
 // Ack() method of the returned Message has to be called once the message has
 // been processed, to prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
+	// FIXME: Use light's semaphore idea to lock in a way that respects
+	// cancellation on ctx.
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
 			return nil, err
@@ -179,7 +185,6 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 		}
 		s.q = make([]*Message, len(msgs))
 		for i, m := range msgs {
-			log.Printf("putting message %+v on the queue", m)
 			s.q[i] = &Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
