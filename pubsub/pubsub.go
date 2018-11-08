@@ -3,11 +3,11 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/google/go-cloud/pubsub/driver"
+	"google.golang.org/api/support/bundler"
 )
 
 // Message contains data to be published.
@@ -15,20 +15,12 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Attributes has key/value metadata for the message.
-	Attributes map[string]string
+	// Metadata has key/value metadata for the message.
+	Metadata map[string]string
 
 	// AckID identifies the message on the server.
 	// It can be used to ack the message after it has been received.
 	ackID AckID
-
-	// errChan relays back an error or nil as the result of sending the
-	// batch that includes this message.
-	errChan chan error
-
-	// ackErrChan relays back an error or nil as the result of sending the
-	// batch of acks that includes this message's ackID.
-	ackErrChan chan error
 
 	// sub is the Subscription this message was received from.
 	sub *Subscription
@@ -42,21 +34,28 @@ type AckID interface{}
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
 	// Send the message back to the subscriber for ack batching.
-	m.ackErrChan = make(chan error)
-	m.sub.msgChan <- m
+	mec := msgErrChan{
+		msg:     m,
+		errChan: make(chan error),
+	}
+	m.sub.mchan <- mec
 	select {
-	case err := <-m.ackErrChan:
+	case err := <-mec.errChan:
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
+type msgErrChan struct {
+	msg     *Message
+	errChan chan error
+}
+
 // Topic publishes messages to all its subscribers.
 type Topic struct {
-	driver   driver.Topic
-	mcChan   chan msgCtx
-	doneChan chan struct{}
+	driver  driver.Topic
+	batcher bundler.Bundler
 }
 
 // TopicOptions contains configuration for Topics.
@@ -70,32 +69,23 @@ type TopicOptions struct {
 	BatchSize int
 }
 
-// msgCtx pairs a Message with the Context of its Send call.
-type msgCtx struct {
-	msg *Message
-	ctx context.Context
-}
-
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
-	if t.mcChan == nil {
-		return fmt.Errorf("send attempted on uninitialized topic: %+v", t)
+	mec := msgErrChan{
+		msg:     m,
+		errChan: make(chan error),
 	}
-	m.errChan = make(chan error)
-	select {
-	case t.mcChan <- msgCtx{m, ctx}:
-		// Wait for the batch including this message to be sent to the server.
-		return <-m.errChan
-	case <-ctx.Done():
-	}
+	// FIXME: add sizes of attributes
+	size := len(m.Body)
+	t.batcher.AddWait(ctx, mec, size)
 	return nil
 }
 
 // Close disconnects the Topic.
 func (t *Topic) Close() error {
-	close(t.doneChan)
+	t.batcher.Flush()
 	return t.driver.Close()
 }
 
@@ -103,71 +93,42 @@ func (t *Topic) Close() error {
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
 func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
+	hander := func(item interface{}) {
+		mecs, ok := item.([]msgErrChan)
+		if !ok {
+			panic("failed conversion to []msgErrChan in bundler handler")
+		}
+		dms := make([]*driver.Message, len(mecs))
+		for _, mec := range mecs {
+			m := mec.msg
+			dm := &driver.Message{
+				Body:     m.Body,
+				Metadata: m.Metadata,
+				AckID:    m.ackID,
+			}
+			dms = append(dms, dm)
+		}
+		err := t.d.SendBatch(ctx, dms)
+		for _, mec := range mecs {
+			mec.errChan <- err
+		}
+	}
 	t := &Topic{
-		driver:   d,
-		mcChan:   make(chan msgCtx),
-		doneChan: make(chan struct{}),
+		driver:  d,
+		batcher: bundler.NewBundler(msgErrChan{}, handler),
 	}
-	go func() {
-		// Pull messages from t.mcChan and put them in batches. Send the current
-		// batch whenever it is large enough or enough time has elapsed since
-		// the last send.
-		for {
-			batch := t.gatherBatch(ctx, opts)
-			select {
-			case <-t.doneChan:
-				return
-			default:
-			}
-			if len(batch) > 0 {
-				err := t.driver.SendBatch(ctx, batch)
-				for _, m := range batch {
-					m.ErrChan <- err
-				}
-			}
-		}
-	}()
 	return t
-}
-
-func (t *Topic) gatherBatch(ctx context.Context, opts TopicOptions) []*driver.Message {
-	timeout := time.After(opts.SendDelay)
-	batch := make([]*driver.Message, 0, opts.BatchSize)
-	for len(batch) < opts.BatchSize {
-		select {
-		case <-timeout:
-			// Time to send the batch, even if it isn't full.
-			return batch
-		case mc := <-t.mcChan:
-			select {
-			case <-mc.ctx.Done():
-				// This message's Send call was cancelled, so just skip
-				// over it.
-			default:
-				dm := &driver.Message{
-					Body:       mc.msg.Body,
-					Attributes: mc.msg.Attributes,
-					AckID:      mc.msg.ackID,
-					ErrChan:    mc.msg.errChan,
-				}
-				batch = append(batch, dm)
-			}
-		case <-t.doneChan:
-			return nil
-		}
-	}
-	return batch
 }
 
 // Subscription receives published messages.
 type Subscription struct {
 	driver driver.Subscription
 
-	// msgChan conveys messages from Message.Ack to the ack batching
-	// goroutine. Their ack IDs are batched and sent off and then
-	// the result of the batch send calls are sent back on the message
-	// errChan fields.
-	msgChan chan *Message
+	// mchan conveys messages with associated errChans from Message.Ack
+	// to the ack batching goroutine. The messages' ack IDs are batched and
+	// sent off and then the result of the batch send calls are sent back
+	// on the err chans.
+	mchan chan msgErrChan
 
 	// doneChan tells the goroutine from NewSubscription to finish.
 	doneChan chan struct{}
@@ -255,8 +216,8 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 
 	// Details similar to the body of NewTopic should go here.
 	s := &Subscription{
-		driver:  d,
-		msgChan: make(chan *Message),
+		driver: d,
+		mchan:  make(chan msgErrChan),
 	}
 	// Start the ack batching goroutine.
 	go func() {
@@ -268,10 +229,10 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 			for len(batch) < opts.AckBatchSize {
 				log.Printf("waiting on s.msgChan")
 				select {
-				case m := <-s.msgChan:
+				case mec := <-s.mchan:
 					log.Printf("got msg from s.msgChan: %+v", m)
-					batch = append(batch, m.ackID)
-					chans = append(chans, m.ackErrChan)
+					batch = append(batch, mec.msg.ackID)
+					chans = append(chans, mec.errChan)
 				case <-timeout:
 					break Loop
 				}
