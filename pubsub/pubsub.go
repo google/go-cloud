@@ -46,12 +46,11 @@ type AckID interface{}
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
-	// Send the message back to the subscriber for ack batching.
+	// Send the message back to the subscription for ack batching.
 	mec := msgErrChan{
 		msg:     m,
 		errChan: make(chan error),
 	}
-	// FIXME: Figure out the real size of the ackIDs.
 	size := 8
 	if err := m.sub.ackBatcher.AddWait(ctx, mec, size); err != nil {
 		return err
@@ -97,8 +96,11 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 		msg:     m,
 		errChan: make(chan error),
 	}
-	// FIXME: add sizes of Metadata
 	size := len(m.Body)
+	for k, v := range m.Metadata {
+		size += len(k)
+		size += len(v)
+	}
 	if err := t.batcher.AddWait(ctx, mec, size); err != nil {
 		return err
 	}
