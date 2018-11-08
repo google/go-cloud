@@ -4,7 +4,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/golang/go/src/pkg/math/rand"
 	"github.com/google/go-cloud/pubsub"
@@ -73,7 +72,6 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	}
 	sopts := pubsub.SubscriptionOptions{
 		AckBatchSize: 2,
-		AckDelay:     time.Millisecond,
 	}
 	sub := pubsub.NewSubscription(ctx, ds, sopts)
 
@@ -113,6 +111,25 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 
 }
 
-func TestAckIsCancellable(t *testing.T) {
-
+func TestCancelAck(t *testing.T) {
+	ctx, _ := context.WithCancel(context.Background())
+	f := func(ctx context.Context, ackIDs []driver.AckID) error {
+		// Hang.
+		c := make(chan struct{})
+		<-c
+		return nil
+	}
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q:        []*driver.Message{m},
+		sendAcks: f,
+	}
+	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mr.Ack(ctx); err == nil {
+		t.Error("got nil, want cancellation error")
+	}
 }
