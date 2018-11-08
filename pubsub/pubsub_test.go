@@ -2,7 +2,6 @@ package pubsub_test
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
@@ -15,7 +14,6 @@ type driverTopic struct {
 }
 
 func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
-	log.Printf("driverTopic.SendBatch: %v\n", ms)
 	for _, s := range t.subs {
 		s.q = append(s.q, ms...)
 	}
@@ -46,7 +44,6 @@ func (s *driverSub) Close() error {
 }
 
 func TestSendReceive(t *testing.T) {
-	log.Printf("TestSendReceive")
 	ctx := context.Background()
 	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
 	ds := &driverSub{}

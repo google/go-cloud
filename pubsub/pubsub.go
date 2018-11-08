@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 
@@ -110,7 +109,6 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 			}
 			dms = append(dms, dm)
 		}
-		log.Printf("sending off %d messages", len(dms))
 		err := d.SendBatch(ctx, dms)
 		for _, mec := range mecs {
 			mec.errChan <- err
@@ -187,7 +185,6 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 		}
 		s.q = make([]*Message, len(msgs))
 		for i, m := range msgs {
-			log.Printf("putting message on queue: %+v", m)
 			s.q[i] = &Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
@@ -229,7 +226,6 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 			id := m.ackID
 			ids = append(ids, id)
 		}
-		log.Printf("sending off %d ack ids", len(ids))
 		err := d.SendAcks(ctx, ids)
 		for _, mec := range mecs {
 			mec.errChan <- err
