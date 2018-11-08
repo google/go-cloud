@@ -166,8 +166,6 @@ const AckDelayDefault = time.Millisecond
 // Ack() method of the returned Message has to be called once the message has
 // been processed, to prevent it from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
-	// FIXME: Use light's semaphore idea to lock in a way that respects
-	// cancellation on ctx.
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
