@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/google/go-cloud/pubsub/driver"
@@ -140,8 +139,8 @@ type Subscription struct {
 	ackBatcher *bundler.Bundler
 
 	// q is the local queue of messages downloaded from the server.
-	mu sync.Mutex
-	q  []*Message
+	sem chan struct{}
+	q   []*Message
 }
 
 // SubscriptionOptions contains configuration for Subscriptions.
@@ -169,8 +168,10 @@ const AckDelayDefault = time.Millisecond
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	// FIXME: Use light's semaphore idea to lock in a way that respects
 	// cancellation on ctx.
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	<-s.sem
+	defer func() {
+		s.sem <- struct{}{}
+	}()
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
 			return nil, err
@@ -246,6 +247,8 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,
+		sem:        make(chan struct{}, 1),
 	}
+	s.sem <- struct{}{}
 	return s
 }
