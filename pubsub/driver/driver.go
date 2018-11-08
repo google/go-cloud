@@ -55,7 +55,7 @@ type Subscription interface {
 	// server so that they will not be received again for this
 	// subscription. This method returns only after all the ackIDs are
 	// sent.
-	SendAcks(ctx context.Context, ackIDs []interface{}) error
+	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close disconnects the Subscription.
 	Close() error
