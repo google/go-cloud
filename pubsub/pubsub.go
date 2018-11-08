@@ -208,13 +208,6 @@ func (s *Subscription) Close() error {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 func NewSubscription(ctx context.Context, d driver.Subscription, opts SubscriptionOptions) *Subscription {
-	// Fill in defaults for zeros in the opts.
-	if opts.AckDelay == 0 {
-		opts.AckDelay = time.Millisecond
-	}
-	if opts.AckBatchSize == 0 {
-		opts.AckBatchSize = 100
-	}
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {

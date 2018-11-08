@@ -70,7 +70,10 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		q:        []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
 		sendAcks: f,
 	}
-	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	sopts := pubsub.SubscriptionOptions{
+		AckBatchSize: 2,
+	}
+	sub := pubsub.NewSubscription(ctx, ds, sopts)
 
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
