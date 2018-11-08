@@ -21,6 +21,8 @@ import "context"
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
+// Message is data to be published (sent) to a topic and later received from
+// subscriptions on that topic.
 type Message struct {
 	// Body contains the content of the message.
 	Body []byte
