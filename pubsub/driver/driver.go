@@ -31,7 +31,7 @@ type Message struct {
 	Metadata map[string]string
 
 	// AckID should be set to something identifying the message on the
-	// server.  It may be passed to Subscription.SendAcks() to acknowledge
+	// server. It may be passed to Subscription.SendAcks() to acknowledge
 	// the message.
 	AckID AckID
 }
@@ -48,7 +48,8 @@ type Topic interface {
 // Subscription receives published messages.
 type Subscription interface {
 	// ReceiveBatch returns a batch of messages that have queued up for the
-	// subscription on the server.
+	// subscription on the server. If no messages are available yet, it
+	// must block until there are some.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
 	// SendAcks acknowledges the messages with the given ackIDs on the
