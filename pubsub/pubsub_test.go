@@ -16,9 +16,13 @@ type driverTopic struct {
 
 func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	for _, s := range t.subs {
-		<-s.sem
-		s.q = append(s.q, ms...)
-		s.sem <- struct{}{}
+		select {
+		case <-s.sem:
+			s.q = append(s.q, ms...)
+			s.sem <- struct{}{}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 	return nil
 }
@@ -147,5 +151,25 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 	}
 }
 
-// TODO: Test making lots of subscribers, sending lots of messages to the topic, and
-// processing the messages using an inverted worker pool.
+func TestCancelSend(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ds := NewDriverSub()
+	dt := &driverTopic{
+		subs: []*driverSub{ds},
+	}
+	topic := pubsub.NewTopic(ctx, dt, pubsub.TopicOptions{})
+	m := &pubsub.Message{}
+
+	// Intentionally break the driver subscription by acquiring its semaphore.
+	// Now topic.Send will have to wait for cancellation.
+	<-ds.sem
+
+	cancel()
+	if err := topic.Send(ctx, m); err == nil {
+		t.Fatal("got nil, want cancellation error")
+	}
+}
+
+func TestCancelReceive(t *testing.T) {
+
+}
