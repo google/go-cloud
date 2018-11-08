@@ -38,6 +38,7 @@ type Message struct {
 	sub *Subscription
 }
 
+// AckID identifies a message for acknowledgement.
 type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
@@ -85,6 +86,7 @@ type TopicOptions struct {
 	BatchSize int
 }
 
+// SendDelayDefault is the value for TopicOptions.SendDelay if it is not set.
 const SendDelayDefault = time.Millisecond
 
 // Send publishes a message. It only returns after the message has been
@@ -176,6 +178,7 @@ type SubscriptionOptions struct {
 	AckDeadline time.Duration
 }
 
+// AckDelayDefault is the value for SubscriptionOptions.AckDelay if it is not set.
 const AckDelayDefault = time.Millisecond
 
 // Receive receives and returns the next message from the Subscription's queue,
