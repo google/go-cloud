@@ -168,7 +168,11 @@ const AckDelayDefault = time.Millisecond
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	// FIXME: Use light's semaphore idea to lock in a way that respects
 	// cancellation on ctx.
-	<-s.sem
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-s.sem:
+	}
 	defer func() {
 		s.sem <- struct{}{}
 	}()

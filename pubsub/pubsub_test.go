@@ -174,6 +174,7 @@ func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
 	s := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	go s.Receive(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
