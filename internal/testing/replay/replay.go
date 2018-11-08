@@ -31,9 +31,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+// ProviderMatcher allows providers to customize how HTTP requests are
+// matched and recorded.
 type ProviderMatcher struct {
 	// Headers is a slice of HTTP request headers that will be verified to match.
 	Headers []string
+	// DropRequestHeaders causes all HTTP request headers that match the given
+	// regular expression to be dropped from the recording.
+	// There should be no overlap with Headers.
+	// In addition, the "Authorization" header is always dropped.
+	DropRequestHeaders *regexp.Regexp
+	// DropResponseHeaders causes all HTTP response headers that match the given
+	// regular expression to be dropped from the recording.
+	// In addition, the "Duration" header is always dropped.
+	DropResponseHeaders *regexp.Regexp
 	// URLScrubbers is a slice of regular expressions that will be used to
 	// scrub the URL before matching, via ReplaceAllString.
 	URLScrubbers []*regexp.Regexp
@@ -108,6 +119,9 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 			gotBody = re.ReplaceAllString(gotBody, "")
 			wantBody = re.ReplaceAllString(wantBody, "")
 		}
+		if gotBody != wantBody {
+			t.Fatalf("mismatched HTTP body at request #%d", cur)
+		}
 
 		// We've got a match!
 		t.Logf("matched request #%d (%s %s)", cur, i.Method, i.URL)
@@ -120,7 +134,7 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 			fmt.Println(err)
 		}
 		if mode == recorder.ModeRecording {
-			if err := scrubRecording(path); err != nil {
+			if err := scrubRecording(path, matcher.DropRequestHeaders, matcher.DropResponseHeaders); err != nil {
 				t.Errorf("failed to scrub recording: %v", err)
 			}
 		}
@@ -128,7 +142,7 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 }
 
 // scrubRecording scrubs the Authorization header.
-func scrubRecording(filepath string) error {
+func scrubRecording(filepath string, dropRequestHeaders, dropResponseHeaders *regexp.Regexp) error {
 	c, err := cassette.Load(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -146,8 +160,26 @@ func scrubRecording(filepath string) error {
 			// to drop these for the replay.
 			continue
 		}
+		// Always drop the Authorization request header and the Duration
+		// response header.
 		action.Request.Headers.Del("Authorization")
-		action.Response.Duration = ""
+		action.Response.Headers.Del("Duration")
+
+		// Drop custom headers.
+		if dropRequestHeaders != nil {
+			for header := range action.Request.Headers {
+				if dropRequestHeaders.MatchString(header) {
+					action.Request.Headers.Del(header)
+				}
+			}
+		}
+		if dropResponseHeaders != nil {
+			for header := range action.Response.Headers {
+				if dropResponseHeaders.MatchString(header) {
+					action.Response.Headers.Del(header)
+				}
+			}
+		}
 		keep = append(keep, action)
 	}
 	c.Interactions = keep

@@ -14,6 +14,17 @@
 
 // Package gcsblob provides an implementation of blob that uses GCS.
 //
+// For blob.Open URLs, gcsblob registers for the "gs" protocol.
+// The URL's Host is used as the bucket name.
+// The following query options are supported:
+// - cred_path: Sets path to the Google credentials file. If unset, default
+//       credentials are loaded.
+//       See https://cloud.google.com/docs/authentication/production.
+// - access_id: Sets Options.GoogleAccessID.
+// - private_key_path: Sets path to a private key, which is read and used
+//       to set Options.PrivateKey.
+// Example URL: blob.Open("gs://mybucket")
+//
 // It exposes the following types for As:
 // Bucket: *storage.Client
 // ListObject: storage.ObjectAttrs
@@ -28,6 +39,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,12 +49,56 @@ import (
 	"github.com/google/go-cloud/gcp"
 
 	"cloud.google.com/go/storage"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 const defaultPageSize = 1000
+
+func init() {
+	blob.Register("gs", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+		q := u.Query()
+		opts := &Options{}
+
+		if accessID := q["access_id"]; len(accessID) > 0 {
+			opts.GoogleAccessID = accessID[0]
+		}
+
+		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
+			pk, err := ioutil.ReadFile(keyPath[0])
+			if err != nil {
+				return nil, fmt.Errorf("reading private key: %v", err)
+			}
+			opts.PrivateKey = pk
+		}
+
+		var creds *google.Credentials
+		if credPath := q["cred_path"]; len(credPath) == 0 {
+			var err error
+			creds, err = gcp.DefaultCredentials(ctx)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			jsonCreds, err := ioutil.ReadFile(credPath[0])
+			if err != nil {
+				return nil, fmt.Errorf("reading credentials: %v", err)
+			}
+			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
+			if err != nil {
+				return nil, fmt.Errorf("loading credentials: %v", err)
+			}
+		}
+
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+		if err != nil {
+			return nil, err
+		}
+		return openBucket(ctx, u.Host, client, opts)
+	})
+}
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
 type Options struct {
@@ -61,8 +118,8 @@ type Options struct {
 	SignBytes func([]byte) ([]byte, error)
 }
 
-// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
-func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
+// openBucket returns a GCS Bucket that communicates using the given HTTP client.
+func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (driver.Bucket, error) {
 	if client == nil {
 		return nil, fmt.Errorf("OpenBucket requires an HTTP client")
 	}
@@ -73,7 +130,16 @@ func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, 
 	if opts == nil {
 		opts = &Options{}
 	}
-	return blob.NewBucket(&bucket{name: bucketName, client: c, opts: opts}), nil
+	return &bucket{name: bucketName, client: c, opts: opts}, nil
+}
+
+// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
+func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, bucketName, client, opts)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 // bucket represents a GCS bucket, which handles read, write and delete operations
@@ -116,10 +182,13 @@ func (r *reader) As(i interface{}) bool {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
-	query := &storage.Query{Prefix: opt.Prefix}
-	if opt.BeforeList != nil {
+	query := &storage.Query{
+		Prefix:    opts.Prefix,
+		Delimiter: opts.Delimiter,
+	}
+	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Query)
 			if !ok {
@@ -128,16 +197,16 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			*p = query
 			return true
 		}
-		if err := opt.BeforeList(asFunc); err != nil {
+		if err := opts.BeforeList(asFunc); err != nil {
 			return nil, err
 		}
 	}
-	pageSize := opt.PageSize
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
 	iter := bkt.Objects(ctx, query)
-	pager := iterator.NewPager(iter, pageSize, string(opt.PageToken))
+	pager := iterator.NewPager(iter, pageSize, string(opts.PageToken))
 	var objects []*storage.ObjectAttrs
 	nextPageToken, err := pager.NextPage(&objects)
 	if err != nil {
@@ -147,20 +216,35 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if len(objects) > 0 {
 		page.Objects = make([]*driver.ListObject, len(objects))
 		for i, obj := range objects {
-			page.Objects[i] = &driver.ListObject{
-				Key:     obj.Name,
-				ModTime: obj.Updated,
-				Size:    obj.Size,
-				AsFunc: func(i interface{}) bool {
-					p, ok := i.(*storage.ObjectAttrs)
-					if !ok {
-						return false
-					}
-					*p = *obj
-					return true
-				},
+			asFunc := func(i interface{}) bool {
+				p, ok := i.(*storage.ObjectAttrs)
+				if !ok {
+					return false
+				}
+				*p = *obj
+				return true
+			}
+			if obj.Prefix == "" {
+				// Regular blob.
+				page.Objects[i] = &driver.ListObject{
+					Key:     obj.Name,
+					ModTime: obj.Updated,
+					Size:    obj.Size,
+					AsFunc:  asFunc,
+				}
+			} else {
+				// "Directory".
+				page.Objects[i] = &driver.ListObject{
+					Key:    obj.Prefix,
+					IsDir:  true,
+					AsFunc: asFunc,
+				}
 			}
 		}
+		// GCS always returns "directories" at the end; sort them.
+		sort.Slice(page.Objects, func(i, j int) bool {
+			return page.Objects[i].Key < page.Objects[j].Key
+		})
 	}
 	return &page, nil
 }
@@ -231,11 +315,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
 	w.ContentType = contentType
-	if opts != nil {
-		w.ChunkSize = bufferSize(opts.BufferSize)
-		w.Metadata = opts.Metadata
-	}
-	if opts != nil && opts.BeforeWrite != nil {
+	w.ChunkSize = bufferSize(opts.BufferSize)
+	w.Metadata = opts.Metadata
+	w.MD5 = opts.ContentMD5
+	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**storage.Writer)
 			if !ok {

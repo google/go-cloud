@@ -22,6 +22,7 @@ import (
 )
 
 func injectedMessage() string {
+	// Fails because bar.Value references unexported bar.privateMsg.
 	wire.Build(bar.Value)
 	return ""
 }

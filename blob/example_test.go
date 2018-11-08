@@ -38,7 +38,7 @@ func ExampleBucket_NewReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func ExampleBucket_NewRangeReader() {
 		log.Fatal(err)
 	}
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,21 +98,18 @@ func ExampleBucket_NewWriter() {
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
 	defer cleanup()
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Open a writer using the key "foo.txt" and the default options.
 	ctx := context.Background()
-	// fileblob doesn't support custom content-type yet, see
-	// https://github.com/google/go-cloud/issues/111.
-	w, err := bucket.NewWriter(ctx, "foo.txt", &blob.WriterOptions{
-		ContentType: "application/octet-stream",
-	})
+	w, err := bucket.NewWriter(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// The blob writer implements io.Writer, so we can use any function that
 	// accepts an io.Writer. A writer must always be closed.
 	_, printErr := fmt.Fprintln(w, "Hello, World!")
@@ -132,9 +129,13 @@ func ExampleBucket_NewWriter() {
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		log.Fatal(err)
 	}
+	// Since we didn't specify a WriterOptions.ContentType for NewWriter, blob
+	// auto-determined one using http.DetectContentType.
+	fmt.Println(r.ContentType())
 
 	// Output:
 	// Hello, World!
+	// text/plain; charset=utf-8
 }
 
 func ExampleBucket_ReadAll() {
@@ -144,7 +145,7 @@ func ExampleBucket_ReadAll() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -173,14 +174,18 @@ func ExampleBucket_List() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
-	createListableFiles(ctx, bucket)
+	for i := 0; i < 5; i++ {
+		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
@@ -191,11 +196,11 @@ func ExampleBucket_List() {
 	}
 	for {
 		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			log.Fatal(err)
-		}
-		if obj == nil {
-			break
 		}
 		fmt.Println(obj.Key)
 	}
@@ -208,6 +213,69 @@ func ExampleBucket_List() {
 	// foo4.txt
 }
 
+func ExampleBucket_List_withDelimiter() {
+	// Connect to a bucket when your program starts up.
+	// This example uses the file-based implementation.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	// Create the file-based bucket.
+	bucket, err := fileblob.OpenBucket(dir, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create some blob objects in a hierarchy.
+	ctx := context.Background()
+	for _, key := range []string{
+		"dir1/subdir/a.txt",
+		"dir1/subdir/b.txt",
+		"dir2/c.txt",
+		"d.txt",
+	} {
+		if err := bucket.WriteAll(ctx, key, []byte("Go Cloud"), nil); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// list lists files in b starting with prefix. It uses the delimiter "/",
+	// and recurses into "directories", adding 2 spaces to indent each time.
+	// It will list the blobs created above because fileblob is strongly
+	// consistent, but is not guaranteed to work on all providers.
+	var list func(context.Context, *blob.Bucket, string, string)
+	list = func(ctx context.Context, b *blob.Bucket, prefix, indent string) {
+		iter, err := b.List(ctx, &blob.ListOptions{
+			Delimiter: "/",
+			Prefix:    prefix,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		for {
+			obj, err := iter.Next(ctx)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%s%s\n", indent, obj.Key)
+			if obj.IsDir {
+				list(ctx, b, obj.Key, indent+"  ")
+			}
+		}
+	}
+	list(ctx, bucket, "", "")
+
+	// Output:
+	// d.txt
+	// dir1/
+	//   dir1/subdir/
+	//     dir1/subdir/a.txt
+	//     dir1/subdir/b.txt
+	// dir2/
+	//   dir2/c.txt
+}
 func ExampleBucket_As() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
@@ -215,7 +283,7 @@ func ExampleBucket_As() {
 	defer cleanup()
 
 	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -254,13 +322,27 @@ func ExampleBucket_As() {
 	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
 }
 
-func createListableFiles(ctx context.Context, b *blob.Bucket) error {
-	for i := 0; i < 5; i++ {
-		if err := b.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
-			return err
-		}
+func ExampleOpen() {
+	// Connect to a bucket using a URL.
+	// This example uses the file-based implementation, which registers for
+	// the "file" scheme.
+	dir, cleanup := newTempDir()
+	defer cleanup()
+
+	ctx := context.Background()
+	if _, err := blob.Open(ctx, "file:///nonexistentpath"); err == nil {
+		log.Fatal("Expected an error opening nonexistent path")
 	}
-	return nil
+	fmt.Println("Got expected error opening a nonexistent path")
+
+	if _, err := blob.Open(ctx, "file://"+dir); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Got a bucket for valid path")
+
+	// Output:
+	// Got expected error opening a nonexistent path
+	// Got a bucket for valid path
 }
 
 func newTempDir() (string, func()) {

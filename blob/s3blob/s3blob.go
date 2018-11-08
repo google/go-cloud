@@ -14,9 +14,17 @@
 
 // Package s3blob provides an implementation of blob using S3.
 //
-// It exposes the following types for As:
+// For blob.Open URLs, s3blob registers for the "s3" protocol.
+// The URL's Host is used as the bucket name.
+// The AWS session is created as described in
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
+// The following query options are supported:
+// - region: The AWS region for requests; sets aws.Config.Region.
+// Example URL: blob.Open("s3://mybucket?region=us-east-1")
+//
+// s3blob exposes the following types for As:
 // Bucket: *s3.S3
-// ListObject: s3.Object
+// ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
 // Attributes: s3.HeadObjectOutput
@@ -25,10 +33,13 @@ package s3blob
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -38,22 +49,51 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 const defaultPageSize = 1000
 
-// OpenBucket returns an S3 Bucket.
-func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string) (*blob.Bucket, error) {
+func init() {
+	blob.Register("s3", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+		q := u.Query()
+		cfg := &aws.Config{}
+
+		if region := q["region"]; len(region) > 0 {
+			cfg.Region = aws.String(region[0])
+		}
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return openBucket(ctx, u.Host, sess, nil)
+	})
+}
+
+// Options sets options for constructing a *blob.Bucket backed by fileblob.
+type Options struct{}
+
+// openBucket returns an S3 Bucket.
+func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (driver.Bucket, error) {
 	if sess == nil {
 		return nil, errors.New("sess must be provided to get bucket")
 	}
-	return blob.NewBucket(&bucket{
+	return &bucket{
 		name:   bucketName,
 		sess:   sess,
 		client: s3.New(sess),
-	}), nil
+	}, nil
+}
+
+// OpenBucket returns an S3 Bucket.
+func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, bucketName, sess, opts)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(drv), nil
 }
 
 var emptyBody = ioutil.NopCloser(strings.NewReader(""))
@@ -164,8 +204,8 @@ type bucket struct {
 }
 
 // ListPaged implements driver.ListPaged.
-func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*driver.ListPage, error) {
-	pageSize := opt.PageSize
+func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
@@ -173,13 +213,16 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 		Bucket:  aws.String(b.name),
 		MaxKeys: aws.Int64(int64(pageSize)),
 	}
-	if len(opt.PageToken) > 0 {
-		in.ContinuationToken = aws.String(string(opt.PageToken))
+	if len(opts.PageToken) > 0 {
+		in.ContinuationToken = aws.String(string(opts.PageToken))
 	}
-	if opt.Prefix != "" {
-		in.Prefix = aws.String(opt.Prefix)
+	if opts.Prefix != "" {
+		in.Prefix = aws.String(opts.Prefix)
 	}
-	if opt.BeforeList != nil {
+	if opts.Delimiter != "" {
+		in.Delimiter = aws.String(opts.Delimiter)
+	}
+	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3.ListObjectsV2Input)
 			if !ok {
@@ -188,7 +231,7 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 			*p = in
 			return true
 		}
-		if err := opt.BeforeList(asFunc); err != nil {
+		if err := opts.BeforeList(asFunc); err != nil {
 			return nil, err
 		}
 	}
@@ -200,8 +243,8 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 	if resp.NextContinuationToken != nil {
 		page.NextPageToken = []byte(*resp.NextContinuationToken)
 	}
-	if len(resp.Contents) > 0 {
-		page.Objects = make([]*driver.ListObject, len(resp.Contents))
+	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
+		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
 			page.Objects[i] = &driver.ListObject{
 				Key:     *obj.Key,
@@ -216,6 +259,26 @@ func (b *bucket) ListPaged(ctx context.Context, opt *driver.ListOptions) (*drive
 					return true
 				},
 			}
+		}
+		for i, prefix := range resp.CommonPrefixes {
+			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
+				Key:   *prefix.Prefix,
+				IsDir: true,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.CommonPrefix)
+					if !ok {
+						return false
+					}
+					*p = *prefix
+					return true
+				},
+			}
+		}
+		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
+			// S3 gives us blobs and "directories" in separate lists; sort them.
+			sort.Slice(page.Objects, func(i, j int) bool {
+				return page.Objects[i].Key < page.Objects[j].Key
+			})
 		}
 	}
 	return &page, nil
@@ -318,12 +381,12 @@ func getSize(resp *s3.GetObjectOutput) int64 {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
-		if opts != nil {
+		if opts.BufferSize != 0 {
 			u.PartSize = int64(opts.BufferSize)
 		}
 	})
 	var metadata map[string]*string
-	if opts != nil && len(opts.Metadata) > 0 {
+	if len(opts.Metadata) > 0 {
 		metadata = make(map[string]*string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
 			metadata[k] = aws.String(v)
@@ -335,7 +398,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		Key:         aws.String(key),
 		Metadata:    metadata,
 	}
-	if opts != nil && opts.BeforeWrite != nil {
+	if len(opts.ContentMD5) > 0 {
+		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))
+	}
+	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
 			p, ok := i.(**s3manager.UploadInput)
 			if !ok {

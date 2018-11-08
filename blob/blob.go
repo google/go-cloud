@@ -21,10 +21,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -111,7 +115,7 @@ type Writer struct {
 	ctx    context.Context
 	bucket driver.Bucket
 	key    string
-	opt    *driver.WriterOptions
+	opts   *driver.WriterOptions
 	buf    *bytes.Buffer
 }
 
@@ -161,22 +165,33 @@ func (w *Writer) Close() error {
 // open tries to detect the MIME type of p and write it to the blob.
 func (w *Writer) open(p []byte) (n int, err error) {
 	ct := http.DetectContentType(p)
-	if w.w, err = w.bucket.NewTypedWriter(w.ctx, w.key, ct, w.opt); err != nil {
+	if w.w, err = w.bucket.NewTypedWriter(w.ctx, w.key, ct, w.opts); err != nil {
 		return 0, err
 	}
 	w.buf = nil
 	w.ctx = nil
 	w.key = ""
-	w.opt = nil
+	w.opts = nil
 	return w.w.Write(p)
 }
 
 // ListOptions sets options for listing objects.
-// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
 	Prefix string
+	// Delimiter sets the delimiter used to define a hierarchical namespace,
+	// like a filesystem with "directories".
+	//
+	// An empty delimiter means that the bucket is treated as a single flat
+	// namespace.
+	//
+	// A non-empty delimiter means that any result with the delimiter in its key
+	// after Prefix is stripped will be returned with ListObject.IsDir = true,
+	// ListObject.Key truncated after the delimiter, and zero values for other
+	// ListObject fields. These results represent "directories". Multiple results
+	// in a "directory" are returned as a single result.
+	Delimiter string
 
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
@@ -188,12 +203,12 @@ type ListOptions struct {
 // ListIterator is used to iterate over List results.
 type ListIterator struct {
 	b       *Bucket
-	opt     *driver.ListOptions
+	opts    *driver.ListOptions
 	page    *driver.ListPage
 	nextIdx int
 }
 
-// Next returns the next object. It returns nil if there are
+// Next returns the next object. It returns (nil, io.EOF) if there are
 // no more objects.
 func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	if i.page != nil {
@@ -206,18 +221,19 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 				Key:     dobj.Key,
 				ModTime: dobj.ModTime,
 				Size:    dobj.Size,
+				IsDir:   dobj.IsDir,
 				asFunc:  dobj.AsFunc,
 			}, nil
 		}
 		if len(i.page.NextPageToken) == 0 {
-			// Done with current page, and there are no more; return nil.
-			return nil, nil
+			// Done with current page, and there are no more; return io.EOF.
+			return nil, io.EOF
 		}
 		// We need to load the next page.
-		i.opt.PageToken = i.page.NextPageToken
+		i.opts.PageToken = i.page.NextPageToken
 	}
 	// Loading a new page.
-	p, err := i.b.b.ListPaged(ctx, i.opt)
+	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +250,11 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// IsDir indicates that this result represents a "directory" in the
+	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
+	// passed as ListOptions.Prefix to list items in the "directory".
+	// Fields other than Key and IsDir will not be set if IsDir is true.
+	IsDir bool
 
 	asFunc func(interface{}) bool
 }
@@ -254,6 +275,7 @@ type Bucket struct {
 }
 
 // NewBucket creates a new Bucket for a group of objects for a blob service.
+// It is for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
@@ -294,15 +316,16 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 //
 // List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
-func (b *Bucket) List(ctx context.Context, opt *ListOptions) (*ListIterator, error) {
-	if opt == nil {
-		opt = &ListOptions{}
+func (b *Bucket) List(ctx context.Context, opts *ListOptions) (*ListIterator, error) {
+	if opts == nil {
+		opts = &ListOptions{}
 	}
-	dopt := &driver.ListOptions{
-		Prefix:     opt.Prefix,
-		BeforeList: opt.BeforeList,
+	dopts := &driver.ListOptions{
+		Prefix:     opts.Prefix,
+		Delimiter:  opts.Delimiter,
+		BeforeList: opts.BeforeList,
 	}
-	return &ListIterator{b: b, opt: dopt}, nil
+	return &ListIterator{b: b, opts: dopts}, nil
 }
 
 // Attributes reads attributes for the given key.
@@ -360,8 +383,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
-func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *WriterOptions) error {
-	w, err := b.NewWriter(ctx, key, opt)
+func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) error {
+	w, err := b.NewWriter(ctx, key, opts)
 	if err != nil {
 		return err
 	}
@@ -384,46 +407,48 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opt *Writer
 //
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
-func (b *Bucket) NewWriter(ctx context.Context, key string, opt *WriterOptions) (*Writer, error) {
-	var dopt *driver.WriterOptions
+func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (*Writer, error) {
+	var dopts *driver.WriterOptions
 	var w driver.Writer
-	if opt != nil {
-		dopt = &driver.WriterOptions{
-			BufferSize:  opt.BufferSize,
-			BeforeWrite: opt.BeforeWrite,
-		}
-		if len(opt.Metadata) > 0 {
-			// Providers are inconsistent, but at least some treat keys
-			// as case-insensitive. To make the behavior consistent, we
-			// force-lowercase them when writing and reading.
-			md := make(map[string]string, len(opt.Metadata))
-			for k, v := range opt.Metadata {
-				if k == "" {
-					return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
-				}
-				lowerK := strings.ToLower(k)
-				if _, found := md[lowerK]; found {
-					return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
-				}
-				md[lowerK] = v
+	if opts == nil {
+		opts = &WriterOptions{}
+	}
+	dopts = &driver.WriterOptions{
+		ContentMD5:  opts.ContentMD5,
+		BufferSize:  opts.BufferSize,
+		BeforeWrite: opts.BeforeWrite,
+	}
+	if len(opts.Metadata) > 0 {
+		// Providers are inconsistent, but at least some treat keys
+		// as case-insensitive. To make the behavior consistent, we
+		// force-lowercase them when writing and reading.
+		md := make(map[string]string, len(opts.Metadata))
+		for k, v := range opts.Metadata {
+			if k == "" {
+				return nil, errors.New("WriterOptions.Metadata keys may not be empty strings")
 			}
-			dopt.Metadata = md
-		}
-		if opt.ContentType != "" {
-			t, p, err := mime.ParseMediaType(opt.ContentType)
-			if err != nil {
-				return nil, err
+			lowerK := strings.ToLower(k)
+			if _, found := md[lowerK]; found {
+				return nil, fmt.Errorf("duplicate case-insensitive metadata key %q", lowerK)
 			}
-			ct := mime.FormatMediaType(t, p)
-			w, err = b.b.NewTypedWriter(ctx, key, ct, dopt)
-			return &Writer{w: w}, err
+			md[lowerK] = v
 		}
+		dopts.Metadata = md
+	}
+	if opts.ContentType != "" {
+		t, p, err := mime.ParseMediaType(opts.ContentType)
+		if err != nil {
+			return nil, err
+		}
+		ct := mime.FormatMediaType(t, p)
+		w, err = b.b.NewTypedWriter(ctx, key, ct, dopts)
+		return &Writer{w: w}, err
 	}
 	return &Writer{
 		ctx:    ctx,
 		bucket: b.b,
 		key:    key,
-		opt:    dopt,
+		opts:   dopts,
 		buf:    bytes.NewBuffer([]byte{}),
 	}, nil
 }
@@ -484,6 +509,10 @@ type WriterOptions struct {
 	// http://mimesniff.spec.whatwg.org/
 	ContentType string
 
+	// ContentMD5 may be used as a message integrity check (MIC).
+	// https://tools.ietf.org/html/rfc1864
+	ContentMD5 []byte
+
 	// Metadata are key/value strings to be associated with the blob, or nil.
 	// Keys may not be empty, and are lowercased before being written.
 	// Duplicate case-insensitive keys (e.g., "foo" and "FOO") are an error.
@@ -496,6 +525,67 @@ type WriterOptions struct {
 	// asFunc converts its argument to provider-specific types.
 	// See Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
+}
+
+// FromURLFunc is for use by provider implementations.
+// It allows providers to convert a parsed URL from Open to a driver.Bucket.
+type FromURLFunc func(context.Context, *url.URL) (driver.Bucket, error)
+
+var (
+	// registry maps scheme strings to provider-specific instantiation functions.
+	registry = map[string]FromURLFunc{}
+	// registryMu protected registry.
+	registryMu sync.Mutex
+)
+
+// Register is for use by provider implementations. It allows providers to
+// register an instantiation function for URLs with the given scheme. It is
+// expected to be called from the provider implementation's package init
+// function.
+//
+// fn will be called from Open, with a bucket name and options parsed from
+// the URL. All option keys will be lowercased.
+//
+// Register panics if a provider has already registered for scheme.
+func Register(scheme string, fn FromURLFunc) {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	if _, found := registry[scheme]; found {
+		log.Fatalf("a provider has already registered for scheme %q", scheme)
+	}
+	registry[scheme] = fn
+}
+
+// fromRegistry looks up the registered function for scheme.
+// It returns nil if scheme has not been registered for.
+func fromRegistry(scheme string) FromURLFunc {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+
+	return registry[scheme]
+}
+
+// Open creates a *Bucket from a URL.
+// See provider documentation for more details on supported scheme(s) and
+// option(s).
+func Open(ctx context.Context, urlstr string) (*Bucket, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("invalid URL %q, missing scheme", urlstr)
+	}
+	fn := fromRegistry(u.Scheme)
+	if fn == nil {
+		return nil, fmt.Errorf("no provider registered for scheme %q", u.Scheme)
+	}
+	drv, err := fn(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	return NewBucket(drv), nil
 }
 
 // IsNotExist returns true iff err indicates that the referenced blob does not exist.

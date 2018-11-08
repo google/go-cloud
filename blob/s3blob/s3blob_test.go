@@ -59,7 +59,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return &bucket{name: bucketName, sess: h.session, client: s3.New(h.session)}, nil
+	return openBucket(ctx, bucketName, h.session, nil)
 }
 
 func (h *harness) Close() {
