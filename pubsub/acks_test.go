@@ -2,6 +2,8 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -108,7 +110,28 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 }
 
 func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
-
+	ctx := context.Background()
+	e := fmt.Sprintf("%d", rand.Int())
+	f := func(ctx context.Context, ackIDs []driver.AckID) error {
+		return errors.New(e)
+	}
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q:        []*driver.Message{m},
+		sendAcks: f,
+	}
+	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = mr.Ack(ctx)
+	if err == nil {
+		t.Fatal("got nil, want error")
+	}
+	if err.Error() != e {
+		t.Errorf("got error %q, want %q", err.Error(), e)
+	}
 }
 
 func TestCancelAck(t *testing.T) {
