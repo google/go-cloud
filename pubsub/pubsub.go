@@ -90,7 +90,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	return <-mec.errChan
 }
 
-// Close disconnects the Topic.
+// Close flushes pending message sends and disconnects the Topic.
 func (t *Topic) Close() error {
 	t.batcher.Flush()
 	return t.driver.Close()
@@ -215,7 +215,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	return nil
 }
 
-// Close disconnects the Subscription.
+// Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Close() error {
 	s.ackBatcher.Flush()
 	return s.driver.Close()
