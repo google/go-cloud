@@ -115,7 +115,8 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		}
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = time.Millisecond
+	b.DelayThreshold = opts.SendDelay
+	b.BundleCountThreshold = opts.BatchSize
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -214,7 +215,6 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 	if opts.AckBatchSize == 0 {
 		opts.AckBatchSize = 100
 	}
-
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
@@ -231,10 +231,9 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 			mec.errChan <- err
 		}
 	}
-
-	// Details similar to the body of NewTopic should go here.
 	ab := bundler.NewBundler(msgErrChan{}, handler)
-	ab.DelayThreshold = time.Millisecond
+	ab.DelayThreshold = opts.AckDelay
+	ab.BundleCountThreshold = opts.AckBatchSize
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,
