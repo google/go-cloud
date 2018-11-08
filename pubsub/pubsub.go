@@ -42,7 +42,12 @@ func (m *Message) Ack(ctx context.Context) error {
 	if err := m.sub.ackBatcher.AddWait(ctx, mec, size); err != nil {
 		return err
 	}
-	return <-mec.errChan
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-mec.errChan:
+		return err
+	}
 }
 
 type msgErrChan struct {
