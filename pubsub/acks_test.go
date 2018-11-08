@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -106,6 +107,46 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 }
 
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
+	ctx := context.Background()
+	var sentAckBatches [][]driver.AckID
+	f := func(ctx context.Context, ackIDs []driver.AckID) error {
+		sentAckBatches = append(sentAckBatches, ackIDs)
+		return nil
+	}
+	ids := []int{rand.Int(), rand.Int()}
+	ds := &ackingDriverSub{
+		q:        []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
+		sendAcks: f,
+	}
+	sopts := pubsub.SubscriptionOptions{
+		AckBatchSize: 1,
+	}
+	sub := pubsub.NewSubscription(ctx, ds, sopts)
+
+	// Receive and ack the messages concurrently.
+	var wg sync.WaitGroup
+	recv := func() {
+		mr, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := mr.Ack(ctx); err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+	wg.Add(2)
+	go recv()
+	go recv()
+	wg.Wait()
+
+	want := [][]driver.AckID{
+		{ids[0]},
+		{ids[1]},
+	}
+	if !reflect.DeepEqual(sentAckBatches, want) {
+		t.Errorf("got %v, want %v", sentAckBatches, want)
+	}
 
 }
 
