@@ -62,18 +62,26 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	for {
 		select {
 		case <-s.sem:
-			defer func() { s.sem <- struct{}{} }()
-			if len(s.q) > 0 {
-				ms := s.q
-				s.q = nil
+			ms := s.stealQueue()
+			if len(ms) != 0 {
 				return ms, nil
 			}
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(time.Microsecond)
 	}
+}
+
+func (s *driverSub) stealQueue() []*driver.Message {
+	defer func() { s.sem <- struct{}{} }()
+	if len(s.q) > 0 {
+		ms := s.q
+		s.q = nil
+		return ms
+	}
+	return nil
 }
 
 func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
