@@ -195,13 +195,13 @@ func receive() error {
 	// Process messages.
 	const poolSize = 10
 	// Use a buffered channel as a semaphore.
-	sem := make(chan token, poolSize)
+	sem := make(chan struct{}, poolSize)
 	for {
 		msg, err := s.Receive(ctx)
 		if err {
 			return err
 		}
-		sem <- token{}
+		sem <- struct{}{}
 		go func() {
 			log.Printf("Got message: %s", msg.Body)
 			if err := msg.Ack(ctx); err != nil {
@@ -211,7 +211,7 @@ func receive() error {
 		}()
 	}
 	for n := poolSize; n > 0; n-- {
-		sem <- token{}
+		sem <- struct{}{}
 	}
 }
 ```
@@ -753,9 +753,9 @@ func receive() error {
 	}
 
 	// Use a buffered channel as a semaphore.
-	sem := make(chan token, poolSize)
+	sem := make(chan struct{}, poolSize)
 	for msg := range msgsChan {
-		sem <- token{}
+		sem <- struct{}{}
 		go func(msg *pubsub.Message) {
 			log.Printf("Got message: %s", msg.Body)
 			acksChan <- msg.AckID
@@ -763,7 +763,7 @@ func receive() error {
 		}(msg)
 	}
 	for n := poolSize; n > 0; n-- {
-		sem <- token{}
+		sem <- struct{}{}
 	}
 }
 ```
