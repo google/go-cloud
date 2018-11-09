@@ -156,9 +156,12 @@ type Subscription struct {
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher *bundler.Bundler
 
-	// q is the local queue of messages downloaded from the server.
+	// sem is a semaphore guarding q. It is used instead of a mutex to work
+	// with context cancellation.
 	sem chan struct{}
-	q   []*Message
+
+	// q is the local queue of messages downloaded from the server.
+	q []*Message
 }
 
 // SubscriptionOptions contains configuration for Subscriptions.
