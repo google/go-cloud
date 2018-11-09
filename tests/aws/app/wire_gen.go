@@ -34,11 +34,13 @@ func initialize(ctx context.Context, cfg *appConfig) (*server.Server, func(), er
 		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	serverOptions := &server.Options{
 		RequestLogger:         ncsaLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(serverOptions)
 	return serverServer, func() {
@@ -47,7 +49,8 @@ func initialize(ctx context.Context, cfg *appConfig) (*server.Server, func(), er
 }
 
 var (
-	_wireValue = []health.Checker{connection}
+	_wireValue              = []health.Checker{connection}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // inject.go:
