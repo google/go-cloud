@@ -15,7 +15,6 @@
 package wire
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -454,13 +453,13 @@ type testCase struct {
 //
 func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	name := filepath.Base(root)
-	pkg, err := readFile(filepath.Join(root, "pkg"))
+	pkg, err := ioutil.ReadFile(filepath.Join(root, "pkg"))
 	if err != nil {
 		return nil, fmt.Errorf("load test case %s: %v", name, err)
 	}
 	var wantProgramOutput []byte
 	var wantWireOutput []byte
-	wireErrb, err := readFile(filepath.Join(root, "want", "wire_errs.txt"))
+	wireErrb, err := ioutil.ReadFile(filepath.Join(root, "want", "wire_errs.txt"))
 	wantWireError := err == nil
 	var wantWireErrorStrings []string
 	if wantWireError {
@@ -470,12 +469,12 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		}
 	} else {
 		if !*setup.Record {
-			wantWireOutput, err = readFile(filepath.Join(root, "want", "wire_gen.go"))
+			wantWireOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
 			if err != nil {
 				return nil, fmt.Errorf("load test case %s: %v, if this is a new testcase, run with -record to generate the wire_gen.go file", name, err)
 			}
 		}
-		wantProgramOutput, err = readFile(filepath.Join(root, "want", "program_out.txt"))
+		wantProgramOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "program_out.txt"))
 		if err != nil {
 			return nil, fmt.Errorf("load test case %s: %v", name, err)
 		}
@@ -498,7 +497,7 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 		if !info.Mode().IsRegular() || filepath.Ext(src) != ".go" {
 			return nil
 		}
-		data, err := readFile(src)
+		data, err := ioutil.ReadFile(src)
 		if err != nil {
 			return err
 		}
@@ -545,24 +544,4 @@ func (test *testCase) materialize(gopath string) error {
 		return fmt.Errorf("generate go.mod for %s: %v", depPath, err)
 	}
 	return nil
-}
-
-// readFile reads data from path. It uses io.Scanner to read the lines of
-// the file, ensuring that they are separated only by "\n".
-// Otherwise, on Windows, file lines that end with "\r\n" cause spurious
-// diffs.
-func readFile(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	var out bytes.Buffer
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		fmt.Fprintln(&out, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
 }
