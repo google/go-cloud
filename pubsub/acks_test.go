@@ -52,7 +52,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	m := &driver.Message{AckID: id}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
-		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			sentAcks = ackIDs
 			return nil
 		},
@@ -82,7 +82,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	ids := []int{rand.Int(), rand.Int()}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
-		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			for _, id := range ackIDs {
 				sentAcks[id]++
 			}
@@ -131,7 +131,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	ids := []int{rand.Int(), rand.Int()}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
-		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			sentAckBatches = append(sentAckBatches, ackIDs)
 			return nil
 		},
@@ -176,7 +176,7 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
-		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			return errors.New(e)
 		},
 	}
@@ -202,7 +202,7 @@ func TestCancelAck(t *testing.T) {
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
-		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			<-ctx.Done()
 			return ctx.Err()
 		},
