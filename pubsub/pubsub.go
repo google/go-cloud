@@ -48,7 +48,8 @@ func (m *Message) Ack(ctx context.Context) error {
 		msg:     m,
 		errChan: make(chan error),
 	}
-	size := 8
+	// size is an estimate of the size of a single AckID in bytes.
+	const size = 8
 	if err := m.sub.ackBatcher.AddWait(ctx, mec, size); err != nil {
 		return err
 	}
