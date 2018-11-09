@@ -134,14 +134,14 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 		dt.subs = append(dt.subs, ds)
 		s := pubsub.NewSubscription(ctx, ds, nil)
 		subs = append(subs, s)
-		wg.Add(howManyToSend)
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for j := 0; j < howManyToSend; j++ {
 				_, err := s.Receive(ctx)
 				if err != nil {
 					panic(err)
 				}
-				wg.Done()
 			}
 		}()
 	}
