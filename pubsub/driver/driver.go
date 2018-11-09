@@ -38,7 +38,9 @@ type Message struct {
 
 // Topic publishes messages.
 type Topic interface {
-	// SendBatch publishes all the messages in ms.
+	// SendBatch publishes all the messages in ms. This method should
+	// return only after all the messages are sent, an error occurs,
+	// or the context is cancelled.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// Close disconnects the Topic.
@@ -54,8 +56,8 @@ type Subscription interface {
 
 	// SendAcks acknowledges the messages with the given ackIDs on the
 	// server so that they will not be received again for this
-	// subscription. This method returns only after all the ackIDs are
-	// sent.
+	// subscription. This method should return only after all the ackIDs
+	// are sent, an error occurs, or the context is cancelled.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close disconnects the Subscription.
