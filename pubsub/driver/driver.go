@@ -49,7 +49,7 @@ type Topic interface {
 type Subscription interface {
 	// ReceiveBatch returns a batch of messages that have queued up for the
 	// subscription on the server. If no messages are available yet, it
-	// must block until there are some.
+	// must block until there is at least one, or the context is done.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
 	// SendAcks acknowledges the messages with the given ackIDs on the
