@@ -59,21 +59,20 @@ func NewDriverSub() *driverSub {
 }
 
 func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	select {
-	case <-s.sem:
-		for {
+	for {
+		select {
+		case <-s.sem:
+			defer func() { s.sem <- struct{}{} }()
 			if len(s.q) > 0 {
 				ms := s.q
 				s.q = nil
 				s.sem <- struct{}{}
 				return ms, nil
 			}
-			s.sem <- struct{}{}
-			time.Sleep(time.Millisecond)
-			<-s.sem
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
-	case <-ctx.Done():
-		return nil, ctx.Err()
+		time.Sleep(time.Millisecond)
 	}
 }
 
