@@ -32,14 +32,11 @@ type Message struct {
 
 	// AckID identifies the message on the server.
 	// It can be used to ack the message after it has been received.
-	ackID AckID
+	ackID driver.AckID
 
 	// sub is the Subscription this message was received from.
 	sub *Subscription
 }
-
-// AckID identifies a message for acknowledgement.
-type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
 // be sent again to the associated Subscription. This method blocks until
