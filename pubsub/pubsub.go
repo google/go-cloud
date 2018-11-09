@@ -122,15 +122,14 @@ func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
 		}
-		var dms []*driver.Message
-		for _, mec := range mecs {
+		dms := make([]*driver.Message, len(mecs))
+		for i, mec := range mecs {
 			m := mec.msg
-			dm := &driver.Message{
+			dms[i] = &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
 				AckID:    m.ackID,
 			}
-			dms = append(dms, dm)
 		}
 		err := d.SendBatch(ctx, dms)
 		for _, mec := range mecs {
