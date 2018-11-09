@@ -207,27 +207,23 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	return m, nil
 }
 
-// getNextBatch gets the next batch of messages from the server.
+// getNextBatch gets the next batch of messages from the server and saves it in
+// s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
 	msgs, err := s.driver.ReceiveBatch(ctx)
 	if err != nil {
 		return err
 	}
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		if len(msgs) == 0 {
-			return errors.New("subscription driver bug: received empty batch")
-		}
-		s.q = make([]*Message, len(msgs))
-		for i, m := range msgs {
-			s.q[i] = &Message{
-				Body:     m.Body,
-				Metadata: m.Metadata,
-				ackID:    m.AckID,
-				sub:      s,
-			}
+	if len(msgs) == 0 {
+		return errors.New("subscription driver bug: received empty batch")
+	}
+	s.q = make([]*Message, len(msgs))
+	for i, m := range msgs {
+		s.q[i] = &Message{
+			Body:     m.Body,
+			Metadata: m.Metadata,
+			ackID:    m.AckID,
+			sub:      s,
 		}
 	}
 	return nil
