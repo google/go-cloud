@@ -57,6 +57,10 @@ func (m *Message) Ack(ctx context.Context) error {
 	}
 	select {
 	case <-ctx.Done():
+		// Spin up a goroutine to receive the err result from the
+		// message errChan. Otherwise the bundler handler could hang
+		// while trying to send to it.
+		go func() { <-mec.errChan }()
 		return ctx.Err()
 	case err := <-mec.errChan:
 		return err
