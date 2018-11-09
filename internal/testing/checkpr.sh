@@ -44,13 +44,13 @@ if ! has_files '\.go$\|^go\.mod$\|/testdata/'; then
 fi
 
 # Run the non-Wire tests.
-#mapfile -t non_wire_pkgs < <( go list "$module/..." | grep -F -v "$module/wire" ) || exit 1
-#go test "${testflags[@]}" "${non_wire_pkgs[@]}" || exit 1
+mapfile -t non_wire_pkgs < <( go list "$module/..." | grep -F -v "$module/wire" ) || exit 1
+go test "${testflags[@]}" "${non_wire_pkgs[@]}" || exit 1
 
 # Run Wire tests if the branch made changes under wire/.
-#if has_files '^wire/'; then
-go test "${testflags[@]}" "$module/wire/..." || exit 1
-#fi
+if has_files '^wire/'; then
+  go test "${testflags[@]}" "$module/wire/..." || exit 1
+fi
 
 # Run Wire checks.
 internal/testing/wirecheck.sh || exit 1

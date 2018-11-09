@@ -1,5 +1,6 @@
 os:
-  - windows
+  - linux
+  - osx
 
 language: go
 go_import_path: github.com/google/go-cloud
@@ -19,6 +20,8 @@ before_install:
     fi
 
 install:
+  # Re-checkout files preserving line feeds. This prevents Windows builds from
+  # converting \n to \r\n.
   - "git config --global core.autocrlf input"
   - "git checkout -- ."
   - "go install ./wire/cmd/wire"
