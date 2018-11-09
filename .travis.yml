@@ -7,7 +7,6 @@ go: "1.11.x"
 
 before_install:
   - "df -k"
-  - "git config --global core.autocrlf input"
   # The Bash that comes with OS X is ancient.
   # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
   # customers as checkpr.sh is only for running on Travis.
@@ -20,7 +19,9 @@ before_install:
     fi
 
 install:
-  - "git clone --depth=50 https://github.com/google/go-cloud.git google/go-cloud"
+  - "git config --global core.autocrlf input"
+  - "git clone --depth=50 https://github.com/google/go-cloud.git .
+  - "ls"
   - "go install ./wire/cmd/wire"
 
 script:
