@@ -119,7 +119,10 @@ func (t *Topic) Close() error {
 // to bundle messages into batches and send them to the server.
 func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 	handler := func(item interface{}) {
-		mecs := item.([]msgErrChan)
+		mecs, ok := item.([]msgErrChan)
+		if !ok {
+			panic("failed conversion to []msgErrChan in bundler handler")
+		}
 		var dms []*driver.Message
 		for _, mec := range mecs {
 			m := mec.msg
