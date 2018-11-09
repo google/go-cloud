@@ -213,8 +213,8 @@ func TestCancelAck(t *testing.T) {
 		t.Fatal(err)
 	}
 	cancel()
-	if err := mr.Ack(ctx); err == nil {
-		t.Error("got nil, want cancellation error")
+	if err := mr.Ack(ctx); err != context.Canceled {
+		t.Errorf("got %v, want cancellation error", err)
 	}
 	if err := sub.Close(); err != nil {
 		t.Fatal(err)
