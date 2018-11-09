@@ -83,6 +83,11 @@ type TopicOptions struct {
 // SendDelayDefault is the value for TopicOptions.SendDelay if it is not set.
 const SendDelayDefault = time.Millisecond
 
+var DefaultTopicOptions = TopicOptions{
+	SendDelay: time.Millisecond,
+	BatchSize: bundler.DefaultBundleCountThreshold,
+}
+
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
@@ -112,7 +117,7 @@ func (t *Topic) Close() error {
 // NewTopic makes a pubsub.Topic from a driver.Topic and opts to
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
-func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
+func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
@@ -134,14 +139,11 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		}
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
-	if opts.SendDelay == 0 {
-		b.DelayThreshold = SendDelayDefault
-	} else {
-		b.DelayThreshold = opts.SendDelay
+	if opts == nil {
+		opts = &DefaultTopicOptions
 	}
-	if opts.BatchSize != 0 {
-		b.BundleCountThreshold = opts.BatchSize
-	}
+	b.DelayThreshold = opts.SendDelay
+	b.BundleCountThreshold = opts.BatchSize
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -170,10 +172,11 @@ type SubscriptionOptions struct {
 	// AckBatchSize is the maximum number of acks that should be sent to
 	// the server in a batch.
 	AckBatchSize int
+}
 
-	// AckDeadline tells how long the server should wait before assuming a
-	// received message has failed to be processed.
-	AckDeadline time.Duration
+var DefaultSubscriptionOptions = SubscriptionOptions{
+	AckDelay:     time.Millisecond,
+	AckBatchSize: bundler.DefaultBundleCountThreshold,
 }
 
 // AckDelayDefault is the value for SubscriptionOptions.AckDelay if it is not set.
@@ -239,7 +242,7 @@ func (s *Subscription) Close() error {
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
-func NewSubscription(ctx context.Context, d driver.Subscription, opts SubscriptionOptions) *Subscription {
+func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
 		var ids []driver.AckID
@@ -254,14 +257,11 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 		}
 	}
 	ab := bundler.NewBundler(msgErrChan{}, handler)
-	if opts.AckDelay == 0 {
-		ab.DelayThreshold = AckDelayDefault
-	} else {
-		ab.DelayThreshold = opts.AckDelay
+	if opts == nil {
+		opts = &DefaultSubscriptionOptions
 	}
-	if opts.AckBatchSize != 0 {
-		ab.BundleCountThreshold = opts.AckBatchSize
-	}
+	ab.DelayThreshold = opts.AckDelay
+	ab.BundleCountThreshold = opts.AckBatchSize
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,

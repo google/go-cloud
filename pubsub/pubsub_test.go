@@ -94,19 +94,17 @@ func (s *driverSub) Close() error {
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
-	topicOpts := pubsub.TopicOptions{SendDelay: time.Millisecond, BatchSize: 10}
 	ds := NewDriverSub()
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(ctx, dt, topicOpts)
+	topic := pubsub.NewTopic(ctx, dt, nil)
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
-	subOpts := pubsub.SubscriptionOptions{}
-	sub := pubsub.NewSubscription(ctx, ds, subOpts)
+	sub := pubsub.NewSubscription(ctx, ds, nil)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +132,7 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 	for i := 0; i < nSubs; i++ {
 		ds := NewDriverSub()
 		dt.subs = append(dt.subs, ds)
-		s := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+		s := pubsub.NewSubscription(ctx, ds, nil)
 		subs = append(subs, s)
 		wg.Add(howManyToSend)
 		go func() {
@@ -149,7 +147,7 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 	}
 
 	// Send messages.
-	topic := pubsub.NewTopic(ctx, dt, pubsub.TopicOptions{})
+	topic := pubsub.NewTopic(ctx, dt, nil)
 	for i := 0; i < howManyToSend; i++ {
 		m := &pubsub.Message{Body: []byte("user signed up")}
 		if err := topic.Send(ctx, m); err != nil {
@@ -177,7 +175,7 @@ func TestCancelSend(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(ctx, dt, pubsub.TopicOptions{})
+	topic := pubsub.NewTopic(ctx, dt, nil)
 	m := &pubsub.Message{}
 
 	// Intentionally break the driver subscription by acquiring its semaphore.
@@ -196,7 +194,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	s := pubsub.NewSubscription(ctx, ds, nil)
 	go s.Receive(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.

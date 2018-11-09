@@ -57,7 +57,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	sub := pubsub.NewSubscription(ctx, ds, nil)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -89,10 +89,9 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sopts := pubsub.SubscriptionOptions{
-		AckBatchSize: 2,
-	}
-	sub := pubsub.NewSubscription(ctx, ds, sopts)
+	sopts := pubsub.DefaultSubscriptionOptions
+	sopts.AckBatchSize = 2
+	sub := pubsub.NewSubscription(ctx, ds, &sopts)
 
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
@@ -137,10 +136,9 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			return nil
 		},
 	}
-	sopts := pubsub.SubscriptionOptions{
-		AckBatchSize: 1,
-	}
-	sub := pubsub.NewSubscription(ctx, ds, sopts)
+	sopts := pubsub.DefaultSubscriptionOptions
+	sopts.AckBatchSize = 1
+	sub := pubsub.NewSubscription(ctx, ds, &sopts)
 
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
@@ -182,7 +180,7 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 			return errors.New(e)
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	sub := pubsub.NewSubscription(ctx, ds, nil)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +207,7 @@ func TestCancelAck(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, pubsub.SubscriptionOptions{})
+	sub := pubsub.NewSubscription(ctx, ds, nil)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
