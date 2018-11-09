@@ -181,9 +181,9 @@ const AckDelayDefault = time.Millisecond
 
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking and polling if none are available. This method can be called
-// concurrently from multiple goroutines. On systems that support acks, the
-// Ack() method of the returned Message has to be called once the message has
-// been processed, to prevent it from being received again.
+// concurrently from multiple goroutines. The Ack() method of the returned
+// Message has to be called once the message has been processed, to prevent it
+// from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	select {
 	case <-ctx.Done():
