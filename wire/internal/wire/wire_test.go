@@ -41,7 +41,7 @@ func TestWire(t *testing.T) {
 	}
 	// The marker function package source is needed to have the test cases
 	// type check. loadTestCase places this file at the well-known import path.
-	wireGo, err := readFile(filepath.Join("..", "..", "wire.go"))
+	wireGo, err := ioutil.ReadFile(filepath.Join("..", "..", "wire.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,9 +464,6 @@ func loadTestCase(root string, wireGoSrc []byte) (*testCase, error) {
 	var wantWireErrorStrings []string
 	if wantWireError {
 		wantWireErrorStrings = strings.Split(string(wireErrb), "\n\n")
-		for i, s := range wantWireErrorStrings {
-			wantWireErrorStrings[i] = strings.TrimSpace(s)
-		}
 	} else {
 		if !*setup.Record {
 			wantWireOutput, err = ioutil.ReadFile(filepath.Join(root, "want", "wire_gen.go"))
