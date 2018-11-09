@@ -206,10 +206,8 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 func TestCancelAck(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	f := func(ctx context.Context, ackIDs []driver.AckID) error {
-		// Hang.
-		c := make(chan struct{})
-		<-c
-		return nil
+		<-ctx.Done()
+		return ctx.Err()
 	}
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
