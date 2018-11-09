@@ -66,11 +66,11 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 			if len(s.q) > 0 {
 				ms := s.q
 				s.q = nil
-				s.sem <- struct{}{}
 				return ms, nil
 			}
 		case <-ctx.Done():
 			return nil, ctx.Err()
+		default:
 		}
 		time.Sleep(time.Millisecond)
 	}
