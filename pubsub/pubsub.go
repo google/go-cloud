@@ -250,10 +250,7 @@ func (s *Subscription) Close() error {
 // periodically send them to the server.
 func NewSubscription(ctx context.Context, d driver.Subscription, opts SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
-		mecs, ok := item.([]msgErrChan)
-		if !ok {
-			panic("failed conversion to []msgErrChan in bundler handler")
-		}
+		mecs := item.([]msgErrChan)
 		var ids []driver.AckID
 		for _, mec := range mecs {
 			m := mec.msg
