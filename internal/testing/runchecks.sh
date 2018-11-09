@@ -32,12 +32,6 @@ module="github.com/google/go-cloud"
 for path in "." "./internal/contributebot" "./samples/appengine"; do
   pushd ${path}
   go test -race ./...
+  wire check ./...
   popd
 done
-
-# Wire checks.
-go mod vendor
-mapfile -t all_pkgs < <( go list "$module/..." )
-# TODO(light): Find out why the GO111MODULE=off override is necessary
-# and then remove it.
-GO111MODULE=off wire check "${all_pkgs[@]}"
