@@ -125,21 +125,18 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 	ctx := context.Background()
 	dt := &driverTopic{}
 
-	// Make subscriptions and start goroutines to receive from them.
-	var subs []*pubsub.Subscription
-	nSubs := 100
+	// Make a subscription and start goroutines to receive from it.
 	var wg sync.WaitGroup
-	for i := 0; i < nSubs; i++ {
-		ds := NewDriverSub()
-		dt.subs = append(dt.subs, ds)
-		s := pubsub.NewSubscription(ctx, ds, nil)
-		subs = append(subs, s)
+	ds := NewDriverSub()
+	dt.subs = append(dt.subs, ds)
+	s := pubsub.NewSubscription(ctx, ds, nil)
+	ng := 10
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < howManyToSend; j++ {
-				_, err := s.Receive(ctx)
-				if err != nil {
+			for j := 0; j < howManyToSend/ng; j++ {
+				if _, err := s.Receive(ctx); err != nil {
 					panic(err)
 				}
 			}
@@ -162,10 +159,8 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 	if err := topic.Close(); err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range subs {
-		if err := s.Close(); err != nil {
-			t.Fatal(err)
-		}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
