@@ -120,7 +120,7 @@ func (t *Topic) Close() error {
 func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
-		dms := make([]*driver.Message, 0, len(mecs))
+		var dms []*driver.Message
 		for _, mec := range mecs {
 			m := mec.msg
 			dm := &driver.Message{
@@ -247,7 +247,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts Subscripti
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
 		}
-		ids := make([]driver.AckID, 0, len(mecs))
+		var ids []driver.AckID
 		for _, mec := range mecs {
 			m := mec.msg
 			id := m.ackID
