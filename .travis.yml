@@ -19,6 +19,7 @@ before_install:
     fi
 
 install:
+  - "ls"
   - "git config --global core.autocrlf input"
   - "git clone --depth=50 https://github.com/google/go-cloud.git .
   - "ls"
