@@ -27,8 +27,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Metadata has key/value pairs describing the message.
-	Metadata map[string]string
+	// Attributes has key/value pairs describing the message.
+	Attributes map[string]string
 
 	// AckID should be set to something identifying the message on the
 	// server. It may be passed to Subscription.SendAcks() to acknowledge

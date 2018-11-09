@@ -27,8 +27,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Metadata has key/value metadata for the message.
-	Metadata map[string]string
+	// Attributes has key/value metadata for the message.
+	Attributes map[string]string
 
 	// AckID identifies the message on the server.
 	// It can be used to ack the message after it has been received.
@@ -97,7 +97,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 		errChan: make(chan error),
 	}
 	size := len(m.Body)
-	for k, v := range m.Metadata {
+	for k, v := range m.Attributes {
 		size += len(k)
 		size += len(v)
 	}
@@ -127,7 +127,7 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 			m := mec.msg
 			dm := &driver.Message{
 				Body:     m.Body,
-				Metadata: m.Metadata,
+				Attributes: m.Attributes,
 				AckID:    m.ackID,
 			}
 			dms = append(dms, dm)
@@ -224,7 +224,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 		for i, m := range msgs {
 			s.q[i] = &Message{
 				Body:     m.Body,
-				Metadata: m.Metadata,
+				Attributes: m.Attributes,
 				ackID:    m.AckID,
 				sub:      s,
 			}
