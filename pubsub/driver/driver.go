@@ -27,8 +27,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Attributes has key/value pairs describing the message.
-	Attributes map[string]string
+	// Metadata has key/value pairs describing the message.
+	Metadata map[string]string
 
 	// AckID should be set to something identifying the message on the
 	// server. It may be passed to Subscription.SendAcks() to acknowledge
@@ -38,7 +38,15 @@ type Message struct {
 
 // Topic publishes messages.
 type Topic interface {
-	// SendBatch publishes all the messages in ms.
+	// SendBatch publishes all the messages in ms. This method should
+	// return only after all the messages are sent, an error occurs, or the
+	// context is cancelled.
+	//
+	// Only one RPC should be made to send the messages, and the returned
+	// error should be based on the result of that RPC.  Implementations
+	// that send only one message at a time should return a non-nil error
+	// if len(ms) != 1. Such implementations should set
+	// TopicOptions.BatchSize = 1 in the OpenTopic func for their package.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// Close disconnects the Topic.
@@ -54,8 +62,15 @@ type Subscription interface {
 
 	// SendAcks acknowledges the messages with the given ackIDs on the
 	// server so that they will not be received again for this
-	// subscription. This method returns only after all the ackIDs are
-	// sent.
+	// subscription. This method should return only after all the ackIDs
+	// are sent, an error occurs, or the context is cancelled.
+	//
+	// Only one RPC should be made to send the messages, and the returned
+	// error should be based on the result of that RPC.  Implementations
+	// that send only one ack at a time should return a non-nil error if
+	// len(ackIDs) != 1. Such implementations should set
+	// SubscriptionOptions.AckBatchSize = 1 in the OpenSubscription func
+	// for their package.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close disconnects the Subscription.
