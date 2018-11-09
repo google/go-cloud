@@ -17,11 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"sync"
 	"testing"
 
-	"github.com/golang/go/src/pkg/math/rand"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/driver"
 )
