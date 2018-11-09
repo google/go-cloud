@@ -76,9 +76,11 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 
 func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	ctx := context.Background()
-	var sentAcks []driver.AckID
+	sentAcks := make(map[driver.AckID]int)
 	f := func(ctx context.Context, ackIDs []driver.AckID) error {
-		sentAcks = ackIDs
+		for _, id := range ackIDs {
+			sentAcks[id]++
+		}
 		return nil
 	}
 	ids := []int{rand.Int(), rand.Int()}
@@ -111,13 +113,12 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	wg.Wait()
 
 	if len(sentAcks) != 2 {
-		t.Fatalf("len(sentAcks) = %d, want exactly 2", len(sentAcks))
+		t.Errorf("len(sentAcks) = %d, want exactly 2", len(sentAcks))
 	}
-	if sentAcks[0] != ids[0] {
-		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], ids[0])
-	}
-	if sentAcks[1] != ids[1] {
-		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[1], ids[1])
+	for _, id := range ids {
+		if sentAcks[id] != 1 {
+			t.Errorf("sentAcks[%v] = %d, want 1", id, sentAcks[id])
+		}
 	}
 }
 
