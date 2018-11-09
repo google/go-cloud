@@ -114,6 +114,7 @@ func (t *Topic) Close() error {
 // NewTopic makes a pubsub.Topic from a driver.Topic and opts to
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
+// It is for use by provider implementations.
 func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
@@ -239,6 +240,7 @@ func (s *Subscription) Close() error {
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
+// It is for use by provider implementations.
 func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
