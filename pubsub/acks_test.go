@@ -94,14 +94,16 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
 	recv := func() {
+		defer wg.Done()
 		mr, err := sub.Receive(ctx)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
 		if err := mr.Ack(ctx); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
-		wg.Done()
 	}
 	wg.Add(2)
 	go recv()
