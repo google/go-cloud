@@ -72,6 +72,9 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	if sentAcks[0] != id {
 		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], id)
 	}
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
@@ -120,6 +123,9 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			t.Errorf("sentAcks[%v] = %d, want 1", id, sentAcks[id])
 		}
 	}
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
@@ -164,6 +170,9 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		t.Errorf("got %v, want %v", sentAckBatches, want)
 	}
 
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
@@ -189,6 +198,9 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 	if err.Error() != e {
 		t.Errorf("got error %q, want %q", err.Error(), e)
 	}
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCancelAck(t *testing.T) {
@@ -212,5 +224,8 @@ func TestCancelAck(t *testing.T) {
 	cancel()
 	if err := mr.Ack(ctx); err == nil {
 		t.Error("got nil, want cancellation error")
+	}
+	if err := sub.Close(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -181,6 +181,9 @@ func TestCancelSend(t *testing.T) {
 	if err := topic.Send(ctx, m); err == nil {
 		t.Error("got nil, want cancellation error")
 	}
+	if err := topic.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestCancelReceive(t *testing.T) {
@@ -192,5 +195,8 @@ func TestCancelReceive(t *testing.T) {
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
 		t.Error("got nil, want cancellation error")
+	}
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
