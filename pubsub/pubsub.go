@@ -108,6 +108,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 }
 
 // Close flushes pending message sends and disconnects the Topic.
+// It only returns after all pending messages have been sent.
 func (t *Topic) Close() error {
 	t.batcher.Flush()
 	return t.driver.Close()
@@ -126,9 +127,9 @@ func NewTopic(ctx context.Context, d driver.Topic, opts TopicOptions) *Topic {
 		for _, mec := range mecs {
 			m := mec.msg
 			dm := &driver.Message{
-				Body:     m.Body,
+				Body:       m.Body,
 				Attributes: m.Attributes,
-				AckID:    m.ackID,
+				AckID:      m.ackID,
 			}
 			dms = append(dms, dm)
 		}
@@ -223,10 +224,10 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 		s.q = make([]*Message, len(msgs))
 		for i, m := range msgs {
 			s.q[i] = &Message{
-				Body:     m.Body,
+				Body:       m.Body,
 				Attributes: m.Attributes,
-				ackID:    m.AckID,
-				sub:      s,
+				ackID:      m.AckID,
+				sub:        s,
 			}
 		}
 	}
