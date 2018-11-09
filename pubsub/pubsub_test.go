@@ -62,7 +62,7 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	for {
 		select {
 		case <-s.sem:
-			ms := s.stealQueue()
+			ms := s.grabQueue()
 			if len(ms) != 0 {
 				return ms, nil
 			}
@@ -74,7 +74,7 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	}
 }
 
-func (s *driverSub) stealQueue() []*driver.Message {
+func (s *driverSub) grabQueue() []*driver.Message {
 	defer func() { s.sem <- struct{}{} }()
 	if len(s.q) > 0 {
 		ms := s.q
