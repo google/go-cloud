@@ -243,11 +243,11 @@ func (s *Subscription) Close() error {
 func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
-		var ids []driver.AckID
-		for _, mec := range mecs {
+		ids := make([]driver.AckID, len(mecs))
+		for i, mec := range mecs {
 			m := mec.msg
 			id := m.ackID
-			ids = append(ids, id)
+			ids[i] = id
 		}
 		err := d.SendAcks(ctx, ids)
 		for _, mec := range mecs {
