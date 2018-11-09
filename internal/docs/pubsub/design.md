@@ -395,8 +395,8 @@ The concrete API will be located at `github.com/google/go-cloud/pubsub` and will
 package pubsub
 
 import (
-    "context"
-    "github.com/google/go-cloud/pubsub/driver"
+	"context"
+	"github.com/google/go-cloud/pubsub/driver"
 )
 
 // Message contains data to be published.
@@ -421,32 +421,32 @@ type AckID interface{}
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs.
 func (m *Message) Ack(ctx context.Context) error {
-    // Send the ack ID back to the subscriber for batching.
-    // ...
+	// Send the ack ID back to the subscriber for batching.
+        // ...
 }
 
 // Topic publishes messages to all its subscribers.
 type Topic struct {
-    driver   driver.Topic
-    mcChan   chan msgCtx
-    doneChan chan struct{}
+	driver   driver.Topic
+	mcChan   chan msgCtx
+	doneChan chan struct{}
 }
 
 // TopicOptions contains configuration for Topics.
 type TopicOptions struct {
-    // SendDelay tells the max duration to wait before sending the next batch of
-    // messages to the server.
-    SendDelay time.Duration
+	// SendDelay tells the max duration to wait before sending the next batch of
+	// messages to the server.
+	SendDelay time.Duration
 
-    // BatchSize specifies the maximum number of messages that can go in a batch
-    // for sending.
-    BatchSize int
+	// BatchSize specifies the maximum number of messages that can go in a batch
+	// for sending.
+	BatchSize int
 }
 
 // msgCtx pairs a Message with the Context of its Send call.
 type msgCtx struct {
-    msg *Message
-    ctx context.Context
+	msg *Message
+	ctx context.Context
 }
 
 // Send publishes a message. It only returns after the message has been
