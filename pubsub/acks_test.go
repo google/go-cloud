@@ -79,7 +79,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	ctx := context.Background()
 	sentAcks := make(map[driver.AckID]int)
-	ids := []int{rand.Int(), rand.Int()}
+	ids := []int{1, 2}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
