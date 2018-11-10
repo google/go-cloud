@@ -118,7 +118,7 @@ func TestSendReceive(t *testing.T) {
 	}
 }
 
-func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
+func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	howManyToSend := int(1e3)
 	ctx := context.Background()
 	dt := &driverTopic{}
@@ -135,7 +135,7 @@ func TestLotsOfMessagesAndSubscriptions(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < howManyToSend/ng; j++ {
 				if _, err := s.Receive(ctx); err != nil {
-					panic(err)
+					t.Error(err)
 				}
 			}
 		}()
