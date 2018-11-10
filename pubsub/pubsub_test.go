@@ -99,24 +99,20 @@ func TestSendReceive(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(ctx, dt, nil)
+	defer topic.Close()
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
 	sub := pubsub.NewSubscription(ctx, ds, nil)
+	defer sub.Close()
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
-	}
-	if err := topic.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -131,6 +127,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ctx, ds, nil)
+	defer s.Close()
 	receivedMsgs := make(map[string]int)
 	for i := 0; i < 10; i++ {
 		go func() {
@@ -150,6 +147,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Send messages.
 	topic := pubsub.NewTopic(ctx, dt, nil)
+	defer topic.Close()
 	sentMsgs := make(map[string]int)
 	for i := 0; i < howManyToSend; i++ {
 		bod := fmt.Sprintf("%d", rand.Int())
@@ -178,14 +176,6 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 			t.Errorf("got %d for %q, want %d", v2, k, v)
 		}
 	}
-
-	// Clean up.
-	if err := topic.Close(); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.Close(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestCancelSend(t *testing.T) {
@@ -195,6 +185,7 @@ func TestCancelSend(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(ctx, dt, nil)
+	defer topic.Close()
 	m := &pubsub.Message{}
 
 	// Intentionally break the driver subscription by acquiring its semaphore.
@@ -205,21 +196,16 @@ func TestCancelSend(t *testing.T) {
 	if err := topic.Send(ctx, m); err == nil {
 		t.Error("got nil, want cancellation error")
 	}
-	if err := topic.Close(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
 	s := pubsub.NewSubscription(ctx, ds, nil)
+	defer s.Close()
 	cancel()
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
 		t.Error("got nil, want cancellation error")
-	}
-	if err := s.Close(); err != nil {
-		t.Fatal(err)
 	}
 }

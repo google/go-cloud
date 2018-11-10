@@ -58,6 +58,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ctx, ds, nil)
+	defer sub.Close()
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -70,9 +71,6 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	}
 	if sentAcks[0] != id {
 		t.Errorf("sentAcks[0] = %d, want %d", sentAcks[0], id)
-	}
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -92,6 +90,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	sopts := pubsub.DefaultSubscriptionOptions
 	sopts.AckBatchSize = 2
 	sub := pubsub.NewSubscription(ctx, ds, &sopts)
+	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
@@ -120,9 +119,6 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			t.Errorf("sentAcks[%v] = %d, want 1", id, sentAcks[id])
 		}
 	}
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
@@ -139,6 +135,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	sopts := pubsub.DefaultSubscriptionOptions
 	sopts.AckBatchSize = 1
 	sub := pubsub.NewSubscription(ctx, ds, &sopts)
+	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
 	var wg sync.WaitGroup
@@ -164,10 +161,6 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	if !reflect.DeepEqual(sentAckBatches, want) {
 		t.Errorf("got %v, want %v", sentAckBatches, want)
 	}
-
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
@@ -181,6 +174,7 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ctx, ds, nil)
+	defer sub.Close()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -191,9 +185,6 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 	}
 	if err.Error() != e {
 		t.Errorf("got error %q, want %q", err.Error(), e)
-	}
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
 
@@ -208,6 +199,7 @@ func TestCancelAck(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ctx, ds, nil)
+	defer sub.Close()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -215,8 +207,5 @@ func TestCancelAck(t *testing.T) {
 	cancel()
 	if err := mr.Ack(ctx); err != context.Canceled {
 		t.Errorf("got %v, want cancellation error", err)
-	}
-	if err := sub.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
