@@ -1477,8 +1477,10 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			if err != nil && err != io.EOF {
 				t.Fatal(err)
 			}
-			if err == io.EOF || obj.Key != key {
-				t.Error("key not returned from List")
+			if err == io.EOF {
+				t.Errorf("key not returned from List")
+			} else if obj.Key != key {
+				t.Errorf("wrong key returned from List, got %v want %v", obj.Key, key)
 			}
 		})
 	}
