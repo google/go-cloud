@@ -27,10 +27,7 @@ install:
   - "go install ./wire/cmd/wire"
 
 script:
-  # TRAVIS_PULL_REQUEST is set to "false" for branch builds, and the PR number
-  # for pull request builds. Branch builds should test everything.
-  - 'if [[ "$TRAVIS_PULL_REQUEST" != false ]]; then internal/testing/checkpr.sh -short -race; else go test -short -race ./...; fi'
-  - '[[ "$TRAVIS_PULL_REQUEST" != false ]] || internal/testing/wirecheck.sh'
+  - 'internal/testing/runchecks.sh'
 
 env:
   global:

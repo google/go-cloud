@@ -1154,10 +1154,12 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-canceled-write"
 	content := []byte("hello world")
+	cancelContent := []byte("going to cancel")
 
 	tests := []struct {
 		description string
 		contentType string
+		exists      bool
 	}{
 		{
 			// The write will be buffered in the concrete type as part of
@@ -1169,6 +1171,10 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			// internal buffering.
 			description: "NonEmptyContentType",
 			contentType: "text/plain",
+		},
+		{
+			description: "BlobExists",
+			exists:      true,
 		},
 		// TODO(issue #482): Find a way to test that a chunked upload that's interrupted
 		// after some chunks are uploaded cancels correctly.
@@ -1189,17 +1195,24 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			}
 			b := blob.NewBucket(drv)
 
-			// Create a writer with the context that we're going
-			// to cancel.
 			opts := &blob.WriterOptions{
 				ContentType: test.contentType,
 			}
+			// If the test wants the blob to already exist, write it.
+			if test.exists {
+				if err := b.WriteAll(ctx, key, content, opts); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Create a writer with the context that we're going
+			// to cancel.
 			w, err := b.NewWriter(cancelCtx, key, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
 			// Write the content.
-			if _, err := w.Write(content); err != nil {
+			if _, err := w.Write(cancelContent); err != nil {
 				t.Fatal(err)
 			}
 			// Cancel the context to abort the write.
@@ -1210,10 +1223,18 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			if err := w.Close(); err == nil {
 				t.Errorf("got Close error %v want canceled ctx error", err)
 			}
-			// A Read of the same key should fail; the write was aborted
-			// so the blob shouldn't exist.
-			if _, err := b.NewReader(ctx, key); err == nil {
-				t.Error("wanted NewReader to return an error when write was canceled")
+			got, err := b.ReadAll(ctx, key)
+			if test.exists {
+				// The previous content should still be there.
+				if !cmp.Equal(got, content) {
+					t.Errorf("after canceled write, got %q want %q", string(got), string(content))
+				}
+			} else {
+				// The read should fail; the write was aborted so the
+				// blob shouldn't exist.
+				if err == nil {
+					t.Error("wanted read to return an error when write was canceled")
+				}
 			}
 		})
 	}
@@ -1456,8 +1477,10 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			if err != nil && err != io.EOF {
 				t.Fatal(err)
 			}
-			if err == io.EOF || obj.Key != key {
-				t.Error("key not returned from List")
+			if err == io.EOF {
+				t.Errorf("key not returned from List")
+			} else if obj.Key != key {
+				t.Errorf("wrong key returned from List, got %v want %v", obj.Key, key)
 			}
 		})
 	}
