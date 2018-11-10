@@ -1,0 +1,107 @@
+---
+version: 1
+interactions:
+- request:
+    body: "--db81fe696e57e5590899d99b18676a4d586ad10d1c222e8275bb5c8f1319\r\nContent-Type:
+      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
+      charset=utf-8\",\"name\":\"blob-for-canceled-write\"}\n\r\n--db81fe696e57e5590899d99b18676a4d586ad10d1c222e8275bb5c8f1319\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nhello world\r\n--db81fe696e57e5590899d99b18676a4d586ad10d1c222e8275bb5c8f1319--\r\n"
+    form: {}
+    headers:
+      Content-Type:
+      - multipart/related; boundary=db81fe696e57e5590899d99b18676a4d586ad10d1c222e8275bb5c8f1319
+      User-Agent:
+      - google-api-go-client/0.5
+      X-Goog-Api-Client:
+      - gl-go/1.11.0-rc2 gccl/20180226
+    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
+    method: POST
+  response:
+    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/blob-for-canceled-write/1541634822518610","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write","name":"blob-for-canceled-write","bucket":"go-cloud-blob-test-bucket","generation":"1541634822518610","metageneration":"1","contentType":"text/plain;
+      charset=utf-8","timeCreated":"2018-11-07T23:53:42.518Z","updated":"2018-11-07T23:53:42.518Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-11-07T23:53:42.518Z","size":"11","md5Hash":"XrY7u+Ae7tCTyyK7j1rNww==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write?generation=1541634822518610&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-canceled-write/1541634822518610/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-canceled-write","generation":"1541634822518610","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CNLu4J+9w94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-canceled-write/1541634822518610/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-canceled-write","generation":"1541634822518610","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CNLu4J+9w94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-canceled-write/1541634822518610/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-canceled-write","generation":"1541634822518610","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CNLu4J+9w94CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-canceled-write/1541634822518610/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-canceled-write/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"blob-for-canceled-write","generation":"1541634822518610","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CNLu4J+9w94CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"yZRlqg==","etag":"CNLu4J+9w94CEAE="}'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - no-cache, no-store, max-age=0, must-revalidate
+      Content-Length:
+      - "2895"
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 07 Nov 2018 23:53:42 GMT
+      Etag:
+      - CNLu4J+9w94CEAE=
+      Expires:
+      - Mon, 01 Jan 1990 00:00:00 GMT
+      Pragma:
+      - no-cache
+      Server:
+      - UploadServer
+      Vary:
+      - Origin
+      - X-Origin
+      X-Guploader-Customer:
+      - apiary_cloudstorage_single_post_uploads
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2UpekcGOb0NMEu_OQwK9nA6ZKxOAWQVSeBKYoHU5vMTvk-UKcQDFrR9Ct8-0l95AQ0SQ2ePp0R844C0osuNDERRfCxJjfA
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers: {}
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-canceled-write
+    method: GET
+  response:
+    body: hello world
+    headers:
+      Accept-Ranges:
+      - bytes
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Wed, 07 Nov 2018 23:53:42 GMT
+      Etag:
+      - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
+      Expires:
+      - Wed, 07 Nov 2018 23:53:42 GMT
+      Last-Modified:
+      - Wed, 07 Nov 2018 23:53:42 GMT
+      Server:
+      - UploadServer
+      X-Goog-Generation:
+      - "1541634822518610"
+      X-Goog-Hash:
+      - crc32c=yZRlqg==
+      - md5=XrY7u+Ae7tCTyyK7j1rNww==
+      X-Goog-Metageneration:
+      - "1"
+      X-Goog-Storage-Class:
+      - REGIONAL
+      X-Goog-Stored-Content-Encoding:
+      - identity
+      X-Goog-Stored-Content-Length:
+      - "11"
+      X-Guploader-Customer:
+      - cloud-storage
+      X-Guploader-Request-Result:
+      - success
+      X-Guploader-Upload-Result:
+      - success
+      X-Guploader-Uploadid:
+      - AEnB2Uobg7WiPIH2j6iK36PAgW_OXJynS6GjPYrqwmmNMJdlRVJhxKIQVXoTOaEC0AKQugvPT9lnlgcrxjtmj7saXtG1YFZJ_Q
+    status: 200 OK
+    code: 200
+    duration: ""
