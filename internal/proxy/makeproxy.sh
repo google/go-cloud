@@ -16,40 +16,19 @@
 # This script downloads and arranges packages in a structure for a
 # Go Modules proxy.
 
-set -o pipefail
+# https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
+set -euxo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "usage: makeproxy.sh OUTDIR" 1>&2
+  echo "usage: makeproxy.sh <dir>" 1>&2
   exit 64
 fi
 
-export GO111MODULE=on
-GO="${GO:-go}"  # allows user customization of which Go command to use.
+GOPATH="$1"
 
-# Create destination directory if it doesn't exist.
-dest="$1"
-mkdir -p "$dest" || exit 1
-
-# Download modules.
-downloadpath="$( $GO env GOPATH | sed -e 's/:.*$//' )/pkg/mod/cache/download" || exit 1
-$GO mod download || exit 1
-
-# Iterate through all modules used.
-mapfile -t all_mods < <( $GO list -m -f '{{.Path}}' all | sed -e '1d' ) || exit 1
-for name in "${all_mods[@]}"; do
-  # Compute on-disk path to cache. Capital letter 'A' is translated to '!a'.
-  version="$( $GO list -m -f '{{.Version}}' "$name" )" || exit 1
-  # shellcheck disable=SC2018,SC2019
-  dname="$( echo "$name" | sed -e 's:[A-Z]:!\0:g' | tr 'A-Z' 'a-z' )" || exit 1
-
-  # Create destination directory.
-  mkdir -p "$dest/$dname/@v" || exit 1
-
-  # Copy individual cache files.
-  cp "$downloadpath/$dname/@v/${version}."{info,mod,zip,ziphash} "$dest/$dname/@v" || exit 1
-
-  # Add version to listing.
-  echo "$version" >> "$dest/$dname/@v/list" || exit 1
-  sort "$dest/$dname/@v/list" | uniq > "$dest/$dname/@v/list.sorted" || exit 1
-  mv "$dest/$dname/@v/list.sorted" "$dest/$dname/@v/list" || exit 1
+# Download modules for each of the modules in our repo.
+for path in "." "./internal/contributebot" "./samples/appengine"; do
+  pushd ${path}
+  go mod download
+  popd
 done
