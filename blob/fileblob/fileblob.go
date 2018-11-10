@@ -501,11 +501,17 @@ func (w writer) Close() error {
 	if err != nil {
 		return err
 	}
-	// If the write was cancelled, delete the temp file.
-	if err := w.ctx.Err(); err != nil {
+	// Always delete the temp file. On success, it will have been renamed so
+	// the Remove will fail.
+	defer func() {
 		_ = os.Remove(w.f.Name())
+	}()
+
+	// Check if the write was cancelled.
+	if err := w.ctx.Err(); err != nil {
 		return err
 	}
+
 	// Check MD5 hash if necessary.
 	if w.md5hash != nil {
 		md5sum := w.md5hash.Sum(nil)
@@ -517,15 +523,14 @@ func (w writer) Close() error {
 			)
 		}
 	}
-	// Rename the temp file to path.
-	if err := os.Rename(w.f.Name(), w.path); err != nil {
-		_ = os.Remove(w.f.Name())
-		return fmt.Errorf("rename during Close: %v", err)
-	}
 	// Write the attributes file.
 	if err := setAttrs(w.path, w.attrs); err != nil {
-		_ = os.Remove(w.path)
 		return fmt.Errorf("write blob attributes: %v", err)
+	}
+	// Rename the temp file to path.
+	if err := os.Rename(w.f.Name(), w.path); err != nil {
+		_ = os.Remove(w.path + attrsExt)
+		return fmt.Errorf("rename during Close: %v", err)
 	}
 	return nil
 }
