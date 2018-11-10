@@ -17,7 +17,6 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/driver"
@@ -70,7 +69,6 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 			return nil, ctx.Err()
 		default:
 		}
-		time.Sleep(time.Microsecond)
 	}
 }
 
