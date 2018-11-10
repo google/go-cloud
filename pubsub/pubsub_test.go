@@ -15,6 +15,8 @@ package pubsub_test
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"sync"
 	"testing"
 
@@ -120,7 +122,7 @@ func TestSendReceive(t *testing.T) {
 
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	howManyToSend := int(1e3)
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	dt := &driverTopic{}
 
 	// Make a subscription and start goroutines to receive from it.
@@ -129,15 +131,18 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ctx, ds, nil)
+	receivedMsgs := make(map[string]int)
 	for i := 0; i < 10; i++ {
 		go func() {
 			for {
-				if _, err := s.Receive(ctx); err != nil {
+				m, err := s.Receive(ctx)
+				if err != nil {
 					if err == context.Canceled {
 						return
 					}
 					t.Error(err)
 				}
+				receivedMsgs[string(m.Body)]++
 				wg.Done()
 			}
 		}()
@@ -145,8 +150,11 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Send messages.
 	topic := pubsub.NewTopic(ctx, dt, nil)
+	sentMsgs := make(map[string]int)
 	for i := 0; i < howManyToSend; i++ {
-		m := &pubsub.Message{Body: []byte("user signed up")}
+		bod := fmt.Sprintf("%d", rand.Int())
+		m := &pubsub.Message{Body: []byte(bod)}
+		sentMsgs[string(m.Body)]++
 		if err := topic.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
@@ -154,6 +162,22 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Wait for all the goroutines to finish processing all the messages.
 	wg.Wait()
+	cancel()
+
+	// Check that all the messages were received.
+	sum := 0
+	for _, n := range receivedMsgs {
+		sum += n
+	}
+	if sum != howManyToSend {
+		t.Errorf("received %d messages, want %d", sum, howManyToSend)
+	}
+	for k, v := range sentMsgs {
+		v2 := receivedMsgs[k]
+		if v2 != v {
+			t.Errorf("got %d for %q, want %d", v2, k, v)
+		}
+	}
 
 	// Clean up.
 	if err := topic.Close(); err != nil {
