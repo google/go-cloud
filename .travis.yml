@@ -21,6 +21,7 @@ before_install:
 
 install:
   - "go install ./wire/cmd/wire"
+  - "go install github.com/mattn/goveralls"
 
 script:
   - 'internal/testing/runchecks.sh'

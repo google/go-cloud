@@ -31,7 +31,8 @@ module="github.com/google/go-cloud"
 # Run Go tests for each module.
 for path in "." "./internal/contributebot" "./samples/appengine"; do
   pushd ${path}
-  go test -race ./...
+  go mod download
+  goveralls -race -service=travis-ci
   wire check ./...
   popd
 done
