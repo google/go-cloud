@@ -53,11 +53,10 @@ type Topic interface {
 	// to 1 in the call to pubsub.NewTopic from the OpenTopic func for
 	// their package.
 	//
-	// SendBatch is called sequentially for each batch, not concurrently,
-	// so it does not have to be safe to call from multiple goroutines.
-	//
 	// The slice ms should not be retained past the end of the call to
 	// SendBatch.
+	//
+	// SendBatch is only called sequentially for individual Topics.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// Close should disconnect the Topic.
@@ -78,12 +77,16 @@ type Subscription interface {
 	// for the subscription on the server. If no messages are available
 	// yet, it must block until there is at least one, or the context is
 	// done.
+	//
+	// ReceiveBatch is only called sequentially for individual
+	// Subscriptions.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
-	// subscription. This method should return only after all the ackIDs
-	// are sent, an error occurs, or the context is cancelled.
+	// subscription if the server gets the acks before their deadlines.
+	// This method should return only after all the ackIDs are sent, an
+	// error occurs, or the context is cancelled.
 	//
 	// Only one RPC should be made to send the messages, and the returned
 	// error should be based on the result of that RPC.  Implementations
@@ -91,6 +94,8 @@ type Subscription interface {
 	// len(ackIDs) != 1. Such implementations should set AckBatchCountThreshold to
 	// 1 in the call to pubsub.NewSubscription in the OpenSubscription
 	// func for their package.
+	//
+	// SendAcks is only called sequentially for individual Subscriptions.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close should disconnect the Subscription.
