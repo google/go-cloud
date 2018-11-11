@@ -73,9 +73,9 @@ type TopicOptions struct {
 	// messages to the server.
 	SendDelay time.Duration
 
-	// BatchSize specifies the maximum number of messages that can go in a batch
+	// BatchCountThreshold specifies the maximum number of messages that can go in a batch
 	// for sending.
-	BatchSize int
+	BatchCountThreshold int
 }
 
 // SendDelayDefault is the value for TopicOptions.SendDelay if it is not set.
@@ -83,7 +83,7 @@ const SendDelayDefault = time.Millisecond
 
 var DefaultTopicOptions = TopicOptions{
 	SendDelay: time.Millisecond,
-	BatchSize: bundler.DefaultBundleCountThreshold,
+	BatchCountThreshold: bundler.DefaultBundleCountThreshold,
 }
 
 // Send publishes a message. It only returns after the message has been
@@ -141,7 +141,7 @@ func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 		opts = &DefaultTopicOptions
 	}
 	b.DelayThreshold = opts.SendDelay
-	b.BundleCountThreshold = opts.BatchSize
+	b.BundleCountThreshold = opts.BatchCountThreshold
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -170,14 +170,14 @@ type SubscriptionOptions struct {
 	// of acknowledgements back to the server.
 	AckDelay time.Duration
 
-	// AckBatchSize is the maximum number of acks that should be sent to
+	// AckBatchCountThreshold is the maximum number of acks that should be sent to
 	// the server in a batch.
-	AckBatchSize int
+	AckBatchCountThreshold int
 }
 
 var DefaultSubscriptionOptions = SubscriptionOptions{
 	AckDelay:     time.Millisecond,
-	AckBatchSize: bundler.DefaultBundleCountThreshold,
+	AckBatchCountThreshold: bundler.DefaultBundleCountThreshold,
 }
 
 // AckDelayDefault is the value for SubscriptionOptions.AckDelay if it is not set.
@@ -259,7 +259,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts *Subscript
 		opts = &DefaultSubscriptionOptions
 	}
 	ab.DelayThreshold = opts.AckDelay
-	ab.BundleCountThreshold = opts.AckBatchSize
+	ab.BundleCountThreshold = opts.AckBatchCountThreshold
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,

@@ -88,7 +88,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		},
 	}
 	sopts := pubsub.DefaultSubscriptionOptions
-	sopts.AckBatchSize = 2
+	sopts.AckBatchCountThreshold = 2
 	sub := pubsub.NewSubscription(ctx, ds, &sopts)
 	defer sub.Close()
 
@@ -133,7 +133,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		},
 	}
 	sopts := pubsub.DefaultSubscriptionOptions
-	sopts.AckBatchSize = 1
+	sopts.AckBatchCountThreshold = 1
 	sub := pubsub.NewSubscription(ctx, ds, &sopts)
 	defer sub.Close()
 

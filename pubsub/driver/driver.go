@@ -88,7 +88,7 @@ type Subscription interface {
 	// Only one RPC should be made to send the messages, and the returned
 	// error should be based on the result of that RPC.  Implementations
 	// that send only one ack at a time should return a non-nil error if
-	// len(ackIDs) != 1. Such implementations should set AckBatchSize to
+	// len(ackIDs) != 1. Such implementations should set AckBatchCountThreshold to
 	// 1 in the call to pubsub.NewSubscription in the OpenSubscription
 	// func for their package.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
