@@ -32,7 +32,8 @@ type Message struct {
 
 	// AckID should be set to something identifying the message on the
 	// server. It may be passed to Subscription.SendAcks() to acknowledge
-	// the message.
+	// the message. This field should only be set by methods implementing
+	// Subscription.ReceiveBatch.
 	AckID AckID
 }
 
@@ -42,27 +43,37 @@ type Topic interface {
 	// return only after all the messages are sent, an error occurs, or the
 	// context is cancelled.
 	//
+	// Only the Body and (optionally) Metadata fields of the Messages in ms
+	// should be set by the caller of SendBatch.
+	//
 	// Only one RPC should be made to send the messages, and the returned
-	// error should be based on the result of that RPC.  Implementations
+	// error should be based on the result of that RPC. Implementations
 	// that send only one message at a time should return a non-nil error
 	// if len(ms) != 1. Such implementations should set the batch size
 	// to 1 in the call to pubsub.NewTopic from the OpenTopic func for
 	// their package.
+	//
+	// SendBatch is called sequentially for each batch, not concurrently,
+	// so it does not have to be safe to call from multiple goroutines.
+	//
+	// The slice ms should not be retained past the end of the call to
+	// SendBatch.
 	SendBatch(ctx context.Context, ms []*Message) error
 
-	// Close disconnects the Topic.
+	// Close should disconnect the Topic.
 	Close() error
 }
 
 // Subscription receives published messages.
 type Subscription interface {
-	// ReceiveBatch returns a batch of messages that have queued up for the
-	// subscription on the server. If no messages are available yet, it
-	// must block until there is at least one, or the context is done.
+	// ReceiveBatch should return a batch of messages that have queued up
+	// for the subscription on the server. If no messages are available
+	// yet, it must block until there is at least one, or the context is
+	// done.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
-	// SendAcks acknowledges the messages with the given ackIDs on the
-	// server so that they will not be received again for this
+	// SendAcks should acknowledge the messages with the given ackIDs on
+	// the server so that they will not be received again for this
 	// subscription. This method should return only after all the ackIDs
 	// are sent, an error occurs, or the context is cancelled.
 	//
@@ -74,6 +85,6 @@ type Subscription interface {
 	// func for their package.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
-	// Close disconnects the Subscription.
+	// Close should disconnect the Subscription.
 	Close() error
 }
