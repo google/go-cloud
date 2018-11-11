@@ -82,7 +82,7 @@ type TopicOptions struct {
 const SendDelayDefault = time.Millisecond
 
 var DefaultTopicOptions = TopicOptions{
-	SendDelay: time.Millisecond,
+	SendDelay:           time.Millisecond,
 	BatchCountThreshold: bundler.DefaultBundleCountThreshold,
 }
 
@@ -176,7 +176,7 @@ type SubscriptionOptions struct {
 }
 
 var DefaultSubscriptionOptions = SubscriptionOptions{
-	AckDelay:     time.Millisecond,
+	AckDelay:               time.Millisecond,
 	AckBatchCountThreshold: bundler.DefaultBundleCountThreshold,
 }
 
