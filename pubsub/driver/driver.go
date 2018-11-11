@@ -61,6 +61,14 @@ type Topic interface {
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// Close should disconnect the Topic.
+	//
+	// If Close is called after a call to SendBatch begins but before it
+	// ends, then the call to Close should wait for the SendBatch call to
+	// end, and then Close should finish.
+	//
+	// If Close is called and SendBatch is called before Close finishes,
+	// then the call to Close should proceed and the call to SendBatch
+	// should fail immediately after Close returns.
 	Close() error
 }
 
@@ -86,5 +94,13 @@ type Subscription interface {
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close should disconnect the Subscription.
+	//
+	// If Close is called after a call to ReceiveBatch/SendAcks begins but
+	// before it ends, then the call to Close should wait for the other
+	// call to end, and then Close should finish.
+	//
+	// If Close is called and ReceiveBatch/SendAcks is called before Close
+	// finishes, then the call to Close should proceed and the other call
+	// should fail immediately after Close returns.
 	Close() error
 }
