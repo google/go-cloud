@@ -128,6 +128,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ctx, ds, nil)
 	defer s.Close()
+	var mu sync.Mutex
 	receivedMsgs := make(map[string]int)
 	for i := 0; i < 10; i++ {
 		go func() {
@@ -139,7 +140,9 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					}
 					t.Error(err)
 				}
+				mu.Lock()
 				receivedMsgs[string(m.Body)]++
+				mu.Unlock()
 				wg.Done()
 			}
 		}()
