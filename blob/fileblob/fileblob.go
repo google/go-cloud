@@ -50,6 +50,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -447,7 +448,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
-	f, err := os.Create(path)
+	f, err := ioutil.TempFile("", "fileblob")
 	if err != nil {
 		return nil, fmt.Errorf("open file blob %s: %v", key, err)
 	}
@@ -466,7 +467,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}
 	w := &writer{
 		ctx:   ctx,
-		w:     f,
+		f:     f,
 		path:  path,
 		attrs: attrs,
 	}
@@ -479,7 +480,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 
 type writer struct {
 	ctx        context.Context
-	w          io.WriteCloser
+	f          *os.File
 	path       string
 	attrs      xattrs
 	contentMD5 []byte
@@ -492,22 +493,26 @@ func (w writer) Write(p []byte) (n int, err error) {
 			return 0, fmt.Errorf("updating md5 hash: %v", err)
 		}
 	}
-	return w.w.Write(p)
+	return w.f.Write(p)
 }
 
 func (w writer) Close() error {
-	// If the write was cancelled, delete the file.
-	if err := w.ctx.Err(); err != nil {
-		_ = os.Remove(w.path)
-		return err
-	}
-	if err := setAttrs(w.path, w.attrs); err != nil {
-		return fmt.Errorf("write blob attributes: %v", err)
-	}
-	err := w.w.Close()
+	err := w.f.Close()
 	if err != nil {
 		return err
 	}
+	// Always delete the temp file. On success, it will have been renamed so
+	// the Remove will fail.
+	defer func() {
+		_ = os.Remove(w.f.Name())
+	}()
+
+	// Check if the write was cancelled.
+	if err := w.ctx.Err(); err != nil {
+		return err
+	}
+
+	// Check MD5 hash if necessary.
 	if w.md5hash != nil {
 		md5sum := w.md5hash.Sum(nil)
 		if !bytes.Equal(md5sum, w.contentMD5) {
@@ -517,6 +522,15 @@ func (w writer) Close() error {
 				base64.StdEncoding.EncodeToString(w.contentMD5),
 			)
 		}
+	}
+	// Write the attributes file.
+	if err := setAttrs(w.path, w.attrs); err != nil {
+		return fmt.Errorf("write blob attributes: %v", err)
+	}
+	// Rename the temp file to path.
+	if err := os.Rename(w.f.Name(), w.path); err != nil {
+		_ = os.Remove(w.path + attrsExt)
+		return fmt.Errorf("rename during Close: %v", err)
 	}
 	return nil
 }
