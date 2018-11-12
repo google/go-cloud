@@ -29,8 +29,8 @@ fi
 result=0
 
 # Run Go tests for the root, including coverage.
-( exec go test -v -covermode=count -coverprofile=coverage.out ./... && exec goveralls -coverprofile=coverage.out -service=travis-ci) || result=1
-( exec wire check ./... ) || result=1
+go test -v -covermode=count -coverprofile=coverage.out ./... && goveralls -coverprofile=coverage.out -service=travis-ci || result=1
+wire check ./... || result=1
 
 # Run Go tests for each additional module, without coverage.
 for path in "./internal/contributebot" "./samples/appengine"; do
