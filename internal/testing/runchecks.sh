@@ -26,10 +26,15 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-# Run Go tests for each module.
 result=0
-for path in "." "./internal/contributebot" "./samples/appengine"; do
-  ( cd "$path" && exec go test -v -covermode=count -coverprofile=coverage.out ./... && goveralls -coverprofile=coverage.out -service=travis-ci) || result=1
+
+# Run Go tests for the root, including coverage.
+( exec go test -v -covermode=count -coverprofile=coverage.out ./... && goveralls -coverprofile=coverage.out -service=travis-ci) || result=1
+( exec wire check ./... ) || result=1
+
+# Run Go tests for each additional module, without coverage.
+for path in "./internal/contributebot" "./samples/appengine"; do
+  ( cd "$path" && exec go test -v ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
 done
 exit $result
