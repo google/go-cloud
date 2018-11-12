@@ -18,7 +18,12 @@ before_install:
     fi
 
 install:
+  # Re-checkout files preserving line feeds. This prevents Windows builds from
+  # converting \n to \r\n.
+  - "git config --global core.autocrlf input"
+  - "git checkout -- ."
   - "go install ./wire/cmd/wire"
+  - "go install github.com/mattn/goveralls"
 
 script:
   - 'internal/testing/runchecks.sh'
