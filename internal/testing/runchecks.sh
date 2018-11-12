@@ -26,12 +26,10 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-module="github.com/google/go-cloud"
-
 # Run Go tests for each module.
+result=0
 for path in "." "./internal/contributebot" "./samples/appengine"; do
-  pushd ${path}
-  go test -race ./...
-  wire check ./...
-  popd
+  ( cd "$path" && exec go test -race ./... ) || result=1
+  ( cd "$path" && exec wire check ./... ) || result=1
 done
+exit $result
