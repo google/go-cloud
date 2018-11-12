@@ -205,7 +205,7 @@ func TestCancelAck(t *testing.T) {
 		t.Fatal(err)
 	}
 	cancel()
-	if err := mr.Ack(ctx); err != context.Canceled {
-		t.Errorf("got %v, want cancellation error", err)
+	if err := mr.Ack(ctx); err == nil {
+		t.Errorf("got nil, want error")
 	}
 }
