@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/server"
@@ -28,21 +29,25 @@ func initialize(ctx context.Context) (*server.Server, error) {
 		return nil, err
 	}
 	tokenSource := gcp.CredentialsTokenSource(credentials)
-	exporter, err := sdserver.NewExporter(projectID, tokenSource)
+	monitoredresourceInterface := monitoredresource.Autodetect()
+	exporter, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
 	if err != nil {
 		return nil, err
 	}
 	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
 		RequestLogger:         stackdriverLogger,
 		HealthChecks:          v,
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
 	return serverServer, nil
 }
 
 var (
-	_wireValue = []health.Checker{connection}
+	_wireValue              = []health.Checker{connection}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )

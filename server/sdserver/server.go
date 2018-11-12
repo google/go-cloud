@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cloud/wire"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"go.opencensus.io/trace"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
@@ -36,18 +37,20 @@ import (
 var Set = wire.NewSet(
 	server.Set,
 	NewExporter,
+	monitoredresource.Autodetect,
 	wire.Bind((*trace.Exporter)(nil), (*stackdriver.Exporter)(nil)),
 	NewRequestLogger,
 	wire.Bind((*requestlog.Logger)(nil), (*requestlog.StackdriverLogger)(nil)),
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.
-func NewExporter(id gcp.ProjectID, ts gcp.TokenSource) (*stackdriver.Exporter, error) {
+func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, error) {
 	tokOpt := option.WithTokenSource(oauth2.TokenSource(ts))
 	return stackdriver.NewExporter(stackdriver.Options{
 		ProjectID:               string(id),
 		MonitoringClientOptions: []option.ClientOption{tokOpt},
 		TraceClientOptions:      []option.ClientOption{tokOpt},
+		MonitoredResource:       mr,
 	})
 }
 
