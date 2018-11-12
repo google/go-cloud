@@ -122,14 +122,15 @@ func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
 		}
-		dms := make([]*driver.Message, len(mecs))
-		for i, mec := range mecs {
+		var dms []*driver.Message
+		for _, mec := range mecs {
 			m := mec.msg
-			dms[i] = &driver.Message{
+			dm := &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
 				AckID:    m.ackID,
 			}
+			dms = append(dms, dm)
 		}
 		err := d.SendBatch(ctx, dms)
 		for _, mec := range mecs {
@@ -217,14 +218,15 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	if len(msgs) == 0 {
 		return errors.New("subscription driver bug: received empty batch")
 	}
-	s.q = make([]*Message, len(msgs))
-	for i, m := range msgs {
-		s.q[i] = &Message{
+	s.q = nil
+	for _, m := range msgs {
+		m := &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ackID:    m.AckID,
 			sub:      s,
 		}
+		s.q = append(s.q, m)
 	}
 	return nil
 }
@@ -243,11 +245,11 @@ func (s *Subscription) Close() error {
 func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
-		ids := make([]driver.AckID, len(mecs))
-		for i, mec := range mecs {
+		var ids []driver.AckID
+		for _, mec := range mecs {
 			m := mec.msg
 			id := m.ackID
-			ids[i] = id
+			ids = append(ids, id)
 		}
 		err := d.SendAcks(ctx, ids)
 		for _, mec := range mecs {
