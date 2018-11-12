@@ -424,7 +424,7 @@ func NewGreeter(ctx context.Context, opts *Options) (*Greeter, error) {
 var GreeterSet = wire.NewSet(Options{}, NewGreeter)
 ```
 
-### Evolving Provider Sets
+### Provider Sets in Libraries
 
 When creating a provider set for use in a library, the only changes you can make
 without breaking compatibility are:
@@ -479,6 +479,17 @@ You may not:
     `*Greeter` will be broken.
 -   Add a provider for `io.Writer` to `GreeterSet`. Injectors might already have
     a provider for `io.Writer` which might conflict with this one.
+
+As such, you should pick the output types in a library provider set carefully.
+In general, prefer small provider sets in a library. For example, it is common
+for a library provider set to contain a single provider function along with a
+`wire.Bind` to the interface the return type implements. Avoiding larger
+provider sets reduces the likelihood that applications will encounter conflicts.
+To illustrate, imagine your library provides a client for a web service. While
+it may be tempting to bundle a provider for `*http.Client` in a provider set for
+your library's client, doing so would cause conflicts if every library did the
+same. Instead, the library's provider set should only include the provider for
+the API client, and let `*http.Client` be an input of the provider set.
 
 ### Mocking
 
