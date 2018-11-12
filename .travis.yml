@@ -9,8 +9,6 @@ go: "1.11.x"
 before_install:
   - "df -k"
   # The Bash that comes with OS X is ancient.
-  # checkpr.sh needs Bash 4. It's OK to not worry about this issue for
-  # customers as checkpr.sh is only for running on Travis.
   # grep is similar: it's not GNU grep, which means commands aren't portable.
   # Homebrew installs grep as ggrep if you don't build from source, so it needs
   # moving so it takes precedence in the PATH.
@@ -20,6 +18,10 @@ before_install:
     fi
 
 install:
+  # Re-checkout files preserving line feeds. This prevents Windows builds from
+  # converting \n to \r\n.
+  - "git config --global core.autocrlf input"
+  - "git checkout -- ."
   - "go install ./wire/cmd/wire"
 
 script:
