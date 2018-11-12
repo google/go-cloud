@@ -29,9 +29,6 @@ fi
 # Run Go tests for each module.
 result=0
 for path in "." "./internal/contributebot" "./samples/appengine"; do
-  goveralls -race -service=travis-ci
-  wire check ./...
-=======
   ( cd "$path" && exec go test -v -race -covermode=count -coverprofile=coverage.out ./... && goveralls -coverprofile=coverage.out -service=travis-ci) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
 done
