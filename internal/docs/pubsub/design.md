@@ -478,12 +478,10 @@ func NewSubscription(s driver.Subscription) *Subscription {
 }
 ```
 
-Topics will gather messages into batches for sending, using the
-existing [bundler](https://godoc.org/google.golang.org/api/support/bundler)
-package. The batch size will be dynamically tuned according to the number of
-messages being sent per second.
+Topics will gather messages into batches for sending. The batch size will be
+dynamically tuned according to how many messages are being sent concurrently.
 
-Subscribers will gather message acks into batches the same way, also
+Subscriptions will gather message acks into batches the same way, also
 dynamically tuning the batch size.
 
 ## Alternative designs considered
