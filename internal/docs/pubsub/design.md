@@ -267,7 +267,7 @@ type SubscriptionOptions struct {
 
 // OpenSubscription opens an existing subscription on the server and returns a
 // Subscription that can be used to receive messages.
-func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) {
+func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
 	rs, err := c.rawclient.Subscription(ctx, subscriptionName)
 	if err != nil {
 		return err
