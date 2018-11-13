@@ -67,25 +67,6 @@ type Topic struct {
 	batcher *bundler.Bundler
 }
 
-// TopicOptions contains configuration for Topics.
-type TopicOptions struct {
-	// SendDelay tells the max duration to wait before sending the next batch of
-	// messages to the server.
-	SendDelay time.Duration
-
-	// BatchCountThreshold specifies the maximum number of messages that can go in a batch
-	// for sending.
-	BatchCountThreshold int
-}
-
-// SendDelayDefault is the value for TopicOptions.SendDelay if it is not set.
-const SendDelayDefault = time.Millisecond
-
-var DefaultTopicOptions = TopicOptions{
-	SendDelay:           time.Millisecond,
-	BatchCountThreshold: bundler.DefaultBundleCountThreshold,
-}
-
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
@@ -116,7 +97,7 @@ func (t *Topic) Close() error {
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
 // It is for use by provider implementations.
-func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
+func NewTopic(ctx context.Context, d driver.Topic) *Topic {
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
@@ -138,11 +119,7 @@ func NewTopic(ctx context.Context, d driver.Topic, opts *TopicOptions) *Topic {
 		}
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
-	if opts == nil {
-		opts = &DefaultTopicOptions
-	}
-	b.DelayThreshold = opts.SendDelay
-	b.BundleCountThreshold = opts.BatchCountThreshold
+	b.DelayThreshold = 5 * time.Millisecond
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -164,25 +141,6 @@ type Subscription struct {
 	// q is the local queue of messages downloaded from the server.
 	q []*Message
 }
-
-// SubscriptionOptions contains configuration for Subscriptions.
-type SubscriptionOptions struct {
-	// AckDelay tells the max duration to wait before sending the next batch
-	// of acknowledgements back to the server.
-	AckDelay time.Duration
-
-	// AckBatchCountThreshold is the maximum number of acks that should be sent to
-	// the server in a batch.
-	AckBatchCountThreshold int
-}
-
-var DefaultSubscriptionOptions = SubscriptionOptions{
-	AckDelay:               time.Millisecond,
-	AckBatchCountThreshold: bundler.DefaultBundleCountThreshold,
-}
-
-// AckDelayDefault is the value for SubscriptionOptions.AckDelay if it is not set.
-const AckDelayDefault = time.Millisecond
 
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking and polling if none are available. This method can be called
@@ -242,7 +200,7 @@ func (s *Subscription) Close() error {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 // It is for use by provider implementations.
-func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
+func NewSubscription(ctx context.Context, d driver.Subscription) *Subscription {
 	handler := func(item interface{}) {
 		mecs := item.([]msgErrChan)
 		var ids []driver.AckID
@@ -257,11 +215,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts *Subscript
 		}
 	}
 	ab := bundler.NewBundler(msgErrChan{}, handler)
-	if opts == nil {
-		opts = &DefaultSubscriptionOptions
-	}
-	ab.DelayThreshold = opts.AckDelay
-	ab.BundleCountThreshold = opts.AckBatchCountThreshold
+	ab.DelayThreshold = 5 * time.Millisecond
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,
