@@ -27,7 +27,6 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/google/go-cloud/wire"
 	"github.com/opencensus-integrations/ocsql"
 
 	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
