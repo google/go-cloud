@@ -18,7 +18,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 	"google.golang.org/api/support/bundler"
 )
 
