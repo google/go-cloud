@@ -51,6 +51,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0
+	github.com/mattn/goveralls v0.0.2 // indirect
 	github.com/opencensus-integrations/ocsql v0.1.1
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/prometheus/client_golang v0.9.0 // indirect
