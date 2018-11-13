@@ -98,4 +98,4 @@ function isRelated(elem) {
 		return true;
 	}
 }
-##//you just need to change the classes and variables and you are ready to go
+//you just need to change the classes and variables and you are ready to go
