@@ -353,10 +353,12 @@ type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
 // be sent again to the associated Subscription. This method returns
-// immediately and the ack is sent to the server in a separate goroutine
-// managed by the Subscription from which this message was received.
+// immediately.
 func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
+        // The ack is sent to the server in a separate goroutine
+        // managed by the Subscription from which this message was
+        // received.
         // ...
 }
 
@@ -388,9 +390,7 @@ func (t *Topic) Close() error {
 	return t.driver.Close()
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic. Behind the scenes,
-// NewTopic spins up a goroutine to bundle messages into batches and send
-// them to the server.
+// NewTopic makes a pubsub.Topic from a driver.Topic.
 func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:   d,
@@ -453,12 +453,10 @@ func NewSubscription(s driver.Subscription) *Subscription {
 }
 ```
 
-Topics will gather messages into batches for sending, using the
-existing [bundler](https://godoc.org/google.golang.org/api/support/bundler)
-package. The batch size will be dynamically tuned according to the number of
-messages being sent per second.
+Topics will gather messages into batches for sending. The batch size will be
+dynamically tuned according to how many messages are being sent concurrently.
 
-Subscribers will gather message acks into batches the same way, also
+Subscriptions will gather message acks into batches the same way, also
 dynamically tuning the batch size.
 
 ## Alternative designs considered
