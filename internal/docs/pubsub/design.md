@@ -216,8 +216,8 @@ Adding support for a new pubsub system involves the following steps, continuing 
 1. Add a new package called `acmepubsub`.
 2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
 3. (Usually) add a `Client` type to `acmepubsub` with an associated `NewClient` func that connects to the relevant service, and the following methods:
-	* `func (c *Client) OpenTopic(ctx, topicName)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
-	* `func (c *Client) OpenSubscription(ctx, subscriptionName)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
+	* `func (c *Client) OpenTopic(ctx, topicName, opts)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
+	* `func (c *Client) OpenSubscription(ctx, subscriptionName, opts)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
 
 Here is a sketch of what the `acmepubsub` package could look like:
 ```go
@@ -246,9 +246,13 @@ func NewClient(ctx, projectName string) (*Client, error) {
 	return &Client{ rawclient: c }, nil
 }
 
+type TopicOptions struct {
+	// ...
+}
+
 // OpenTopic opens an existing topic on the pubsub server and returns a Topic
 // that can be used to send messages to that topic.
-func (c *Client) OpenTopic(ctx context.Context, topicName string) (*pubsub.Topic, error) {
+func (c *Client) OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
 	rt, err := c.rawclient.Topic(ctx, topicName)
 	if err != nil {
 		return err
@@ -257,9 +261,13 @@ func (c *Client) OpenTopic(ctx context.Context, topicName string) (*pubsub.Topic
 	return pubsub.NewTopic(t)
 }
 
+type SubscriptionOptions struct {
+	// ...
+}
+
 // OpenSubscription opens an existing subscription on the server and returns a
 // Subscription that can be used to receive messages.
-func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string) {
+func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) {
 	rs, err := c.rawclient.Subscription(ctx, subscriptionName)
 	if err != nil {
 		return err
