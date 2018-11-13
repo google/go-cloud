@@ -17,8 +17,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 // emptyDriverSub is an intentionally buggy subscription driver. Such drivers should
