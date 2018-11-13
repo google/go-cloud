@@ -376,10 +376,12 @@ type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
 // be sent again to the associated Subscription. This method returns
-// immediately and the ack is sent to the server in a separate goroutine
-// managed by the Subscription from which this message was received.
+// immediately.
 func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
+        // The ack is sent to the server in a separate goroutine
+        // managed by the Subscription from which this message was
+        // received.
         // ...
 }
 
