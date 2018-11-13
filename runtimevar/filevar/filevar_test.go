@@ -55,10 +55,11 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 	if err != nil {
 		return err
 	}
-	defer tmp.Close()
 	if _, err := tmp.Write(val); err != nil {
+		tmp.Close()
 		return err
 	}
+	tmp.Close()
 	return os.Rename(tmp.Name(), filepath.Join(h.dir, name))
 }
 
