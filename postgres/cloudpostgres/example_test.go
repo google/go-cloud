@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudmysql_test
+package cloudpostgres_test
 
 import (
 	"context"
 
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/google/go-cloud/mysql/cloudmysql"
+	"github.com/google/go-cloud/postgres/cloudpostgres"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -31,14 +31,13 @@ func Example() {
 		panic(err)
 	}
 	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, err := cloudmysql.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudmysql.Params{
+	db, err := cloudpostgres.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudpostgres.Params{
 		// Replace these with your actual settings.
 		ProjectID: "example-project",
 		Region:    "us-central1",
 		Instance:  "my-instance01",
-		User:      "myrole",
-		Database:  "test",
-	}, nil)
+		PQConn:    "dbname=test user=myrole",
+	})
 	if err != nil {
 		panic(err)
 	}

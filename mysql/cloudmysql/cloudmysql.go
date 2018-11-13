@@ -26,7 +26,7 @@ import (
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/go-cloud/gcp/cloudsql"
 	"github.com/opencensus-integrations/ocsql"
 
 	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
@@ -35,14 +35,16 @@ import (
 
 // CertSourceSet is a Wire provider set that binds a Cloud SQL proxy
 // certificate source from an GCP-authenticated HTTP client.
-var CertSourceSet = wire.NewSet(
-	NewCertSource,
-	wire.Bind((*proxy.CertSource)(nil), (*certs.RemoteCertSource)(nil)))
+//
+// Deprecated: Use cloudsql.CertSourceSet.
+var CertSourceSet = cloudsql.CertSourceSet
 
 // NewCertSource creates a local certificate source that uses the given
 // HTTP client. The client is assumed to make authenticated requests.
+//
+// Deprecated: Use cloudsql.NewCertSource.
 func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
-	return certs.NewCertSourceOpts(&c.Client, certs.RemoteOpts{})
+	return cloudsql.NewCertSource(c)
 }
 
 // Params specifies how to connect to a Cloud SQL database.
