@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // Package cloudpostgres provides connections to managed PostgreSQL Cloud SQL instances.
+// See https://cloud.google.com/sql/docs/postgres/ for more information.
 package cloudpostgres
 
 import (
