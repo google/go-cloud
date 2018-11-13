@@ -107,9 +107,7 @@ func receive() error {
 	// Do something with msg.
 	fmt.Printf("Got message: %s\n", msg.Body)
 	// Acknowledge that we handled the message.
-	if err := msg.Ack(ctx); err != nil {
-	   return err
-	}
+	msg.Ack()
 }
 ```
 
@@ -153,9 +151,7 @@ func receive() error {
 			return err
 		}
 		log.Printf("Got message: %s\n", msg.Body)
-		if err := msg.Ack(ctx); err != nil {
-			return err
-		}
+		msg.Ack()
 	}
 }
 ```
@@ -204,9 +200,7 @@ func receive() error {
 		sem <- struct{}{}
 		go func() {
 			log.Printf("Got message: %s", msg.Body)
-			if err := msg.Ack(ctx); err != nil {
-				log.Printf("Failed to ack message: %v", err)
-			}
+			msg.Ack()
 			<-sem
 		}()
 	}
@@ -222,8 +216,8 @@ Adding support for a new pubsub system involves the following steps, continuing 
 1. Add a new package called `acmepubsub`.
 2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
 3. (Usually) add a `Client` type to `acmepubsub` with an associated `NewClient` func that connects to the relevant service, and the following methods:
-	* `func (c *Client) OpenTopic(ctx, topicName)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
-	* `func (c *Client) OpenSubscription(ctx, subscriptionName)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
+	* `func (c *Client) OpenTopic(ctx, topicName, opts)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
+	* `func (c *Client) OpenSubscription(ctx, subscriptionName, opts)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
 
 Here is a sketch of what the `acmepubsub` package could look like:
 ```go
@@ -252,54 +246,38 @@ func NewClient(ctx, projectName string) (*Client, error) {
 	return &Client{ rawclient: c }, nil
 }
 
+type TopicOptions struct {
+	// ...
+}
+
 // OpenTopic opens an existing topic on the pubsub server and returns a Topic
 // that can be used to send messages to that topic.
 func (c *Client) OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-	if opts == nil {
-		opts = defaultTopicOptions
-	}
 	rt, err := c.rawclient.Topic(ctx, topicName)
 	if err != nil {
 		return err
 	}
-	t := &topic{
-		rawTopic: rt,
-		opts: opts,
-	}
-	return pubsub.NewTopic(t, opts.TopicOptions)
+	t := &topic{ rawTopic: rt }
+	return pubsub.NewTopic(t)
+}
+
+type SubscriptionOptions struct {
+	// ...
 }
 
 // OpenSubscription opens an existing subscription on the server and returns a
 // Subscription that can be used to receive messages.
 func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	if opts == nil {
-		opts = defaultSubscriptionOptions
-	}
 	rs, err := c.rawclient.Subscription(ctx, subscriptionName)
 	if err != nil {
 		return err
 	}
-	s := &subscription{
-		rawSub: rs,
-		opts: 	opts,
-	}
-	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
-}
-
-// TopicOptions contains configuration for Topics.
-type TopicOptions struct {
-	pubsub.TopicOptions
-
-	// More options go here...
-}
-
-var defaultTopicOptions = &TopicOptions {
-	// ...
+	s := &subscription{ rawSub: rs }
+	return pubsub.NewSubscription(s)
 }
 
 type topic struct {
 	rawTopic 	*rawacmepubsub.Topic
-	opts 		TopicOptions
 }
 
 func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
@@ -310,20 +288,8 @@ func (t *topic) Close() error {
 	// ...
 }
 
-// SubscriptionOptions contains configuration for Subscriptions.
-type SubscriptionOptions struct {
-	pubsub.SubscriptionOptions
-
-	// More options go here...
-}
-
-var defaultSubscriptionOptions = &SubscriptionOptions {
-	// ...
-}
-
 type subscription struct {
 	rawSub 	*rawacmepubsub.Subscription
-	opts 	SubscriptionOptions
 }
 
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*pubsub.Message, error) {
@@ -417,11 +383,13 @@ type Message struct {
 type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
-// be sent again to the associated Subscription. This method blocks until
-// the message has been confirmed as acknowledged on the server, or failure
-// occurs.
-func (m *Message) Ack(ctx context.Context) error {
+// be sent again to the associated Subscription. This method returns
+// immediately.
+func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
+        // The ack is sent to the server in a separate goroutine
+        // managed by the Subscription from which this message was
+        // received.
         // ...
 }
 
@@ -430,17 +398,6 @@ type Topic struct {
 	driver   driver.Topic
 	mcChan   chan msgCtx
 	doneChan chan struct{}
-}
-
-// TopicOptions contains configuration for Topics.
-type TopicOptions struct {
-	// SendDelay tells the max duration to wait before sending the next batch of
-	// messages to the server.
-	SendDelay time.Duration
-
-	// BatchSize specifies the maximum number of messages that can go in a batch
-	// for sending.
-	BatchSize int
 }
 
 // msgCtx pairs a Message with the Context of its Send call.
@@ -464,10 +421,8 @@ func (t *Topic) Close() error {
 	return t.driver.Close()
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
-// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
-// to bundle messages into batches and send them to the server.
-func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
+// NewTopic makes a pubsub.Topic from a driver.Topic.
+func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:   d,
 		mcChan:   make(chan msgCtx),
@@ -499,17 +454,6 @@ type Subscription struct {
 	q []*Message
 }
 
-// SubscriptionOptions contains configuration for Subscriptions.
-type SubscriptionOptions struct {
-	// AckDelay tells the max duration to wait before sending the next batch
-	// of acknowledgements back to the server.
-	AckDelay time.Duration
-
-	// AckBatchSize is the maximum number of acks that should be sent to
-	// the server in a batch.
-	AckBatchSize int
-}
-
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking if none are available. This method can be called concurrently from
 // multiple goroutines. On systems that support acks, the Ack() method of the
@@ -535,10 +479,16 @@ func (s *Subscription) Close() error {
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
-func NewSubscription(s driver.Subscription, opts SubscriptionOptions) *Subscription {
+func NewSubscription(s driver.Subscription) *Subscription {
 	// Details similar to the body of NewTopic should go here.
 }
 ```
+
+Topics will gather messages into batches for sending. The batch size will be
+dynamically tuned according to how many messages are being sent concurrently.
+
+Subscriptions will gather message acks into batches the same way, also
+dynamically tuning the batch size.
 
 ## Alternative designs considered
 
