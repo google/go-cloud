@@ -413,9 +413,7 @@ func (t *Topic) Close() error {
 	return t.driver.Close()
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic. Behind the scenes,
-// NewTopic spins up a goroutine to bundle messages into batches and send
-// them to the server.
+// NewTopic makes a pubsub.Topic from a driver.Topic.
 func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:   d,
