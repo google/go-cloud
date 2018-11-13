@@ -38,6 +38,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -48,7 +49,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "unicornvideohub", "user-signup", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -75,6 +80,7 @@ import (
 	"fmt"
 	"log"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -87,7 +93,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "unicornvideohub", "user-signup-minder", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -126,7 +136,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "unicornvideohub", "signup-minder", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := acmepubsub.OpenSubscription(ctx, client, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -166,7 +180,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "unicornvideohub", "user-signup-minder", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -214,15 +232,13 @@ import (
 	"github.com/google/go-cloud/pubsub/driver"
 )
 
-
 // OpenTopic opens an existing topic on the pubsub server and returns a Topic
 // that can be used to send messages to that topic.
-func OpenTopic(ctx context.Context, projectID, topicName string) (*pubsub.Topic, error) {
-	c, err := rawacmepubsub.NewClient(ctx, projectName)
+func OpenTopic(ctx context.Context, client *rawacmepubsub.Client, topicName string) (*pubsub.Topic, error) {
 	if err != nil {
 		return nil, err
 	}
-	rt, err := c.Topic(ctx, topicName)
+	rt, err := client.Topic(ctx, topicName)
 	if err != nil {
 		return err
 	}
@@ -232,12 +248,8 @@ func OpenTopic(ctx context.Context, projectID, topicName string) (*pubsub.Topic,
 
 // OpenSubscription opens an existing subscription on the server and returns a
 // Subscription that can be used to receive messages.
-func OpenSubscription(ctx context.Context, projectID, subscriptionName string) (*pubsub.Subscription, error) {
-	c, err := rawacmepubsub.NewClient(ctx, projectName)
-	if err != nil {
-		return nil, err
-	}
-	rs, err := c.Subscription(ctx, subscriptionName)
+func OpenSubscription(ctx context.Context, client *rawacmepubsub.Client, subscriptionName string) (*pubsub.Subscription, error) {
+	rs, err := client.Subscription(ctx, subscriptionName)
 	if err != nil {
 		return err
 	}
@@ -473,6 +485,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -483,7 +496,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "unicornvideohub", "user-signup", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -506,6 +523,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -518,7 +536,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	t, err := acmepubsub.OpenTopic(ctx, "unicornvideohub", "user-signup", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -557,6 +579,7 @@ import (
 	"os"
 	"os/signal"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -571,7 +594,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "unicornvideohub", "signup-minder", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := acmepubsub.OpenSubscription(ctx, client, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -607,6 +634,7 @@ import (
 	"os"
 	"os/signal"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -622,7 +650,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	s, err := acmepubsub.OpenSubscription(ctx, "unicornvideohub", "user-signup-minder", nil)
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
+	if err != nil {
+		return err
+	}
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
