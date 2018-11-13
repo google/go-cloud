@@ -52,7 +52,7 @@ func serve() error {
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := client.OpenTopic(ctx, "user-signup")
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := client.OpenSubscription(ctx, "user-signup-minder")
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "signup-minder", nil)
+	s, err := client.OpenSubscription(ctx, "signup-minder")
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := client.OpenSubscription(ctx, "user-signup-minder")
 	if err != nil {
 		return err
 	}
@@ -510,7 +510,7 @@ func serve() error {
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := client.OpenTopic(ctx, "user-signup")
 	if err != nil {
 		return err
 	}
@@ -549,7 +549,7 @@ func serve() error {
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := client.OpenTopic(ctx, "user-signup")
 	if err != nil {
 		return err
 	}
@@ -561,7 +561,7 @@ func serve() error {
 	})
 	return http.ListenAndServe(":8080", nil)
 }
-
+)
 func sendBatches(ctx context.Context, t *pubsub.Topic, c chan *pubsub.Message) {
 	batch := make([]*pubsub.Message, batchSize)
 	for {
@@ -606,7 +606,7 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "signup-minder", nil)
+	s, err := client.OpenSubscription(ctx, "signup-minder")
 	if err != nil {
 		return err
 	}
@@ -661,7 +661,7 @@ func receive() error {
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := client.OpenSubscription(ctx, "user-signup-minder")
 	if err != nil {
 		return err
 	}
