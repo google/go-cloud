@@ -107,9 +107,7 @@ func receive() error {
 	// Do something with msg.
 	fmt.Printf("Got message: %s\n", msg.Body)
 	// Acknowledge that we handled the message.
-	if err := msg.Ack(ctx); err != nil {
-	   return err
-	}
+	msg.Ack()
 }
 ```
 
@@ -153,9 +151,7 @@ func receive() error {
 			return err
 		}
 		log.Printf("Got message: %s\n", msg.Body)
-		if err := msg.Ack(ctx); err != nil {
-			return err
-		}
+		msg.Ack()
 	}
 }
 ```
@@ -204,9 +200,7 @@ func receive() error {
 		sem <- struct{}{}
 		go func() {
 			log.Printf("Got message: %s", msg.Body)
-			if err := msg.Ack(ctx); err != nil {
-				log.Printf("Failed to ack message: %v", err)
-			}
+			msg.Ack()
 			<-sem
 		}()
 	}
@@ -417,10 +411,10 @@ type Message struct {
 type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
-// be sent again to the associated Subscription. This method blocks until
-// the message has been confirmed as acknowledged on the server, or failure
-// occurs.
-func (m *Message) Ack(ctx context.Context) error {
+// be sent again to the associated Subscription. This method returns
+// immediately and the ack is sent to the server in a separate goroutine
+// managed by the Subscription from which this message was received.
+func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
         // ...
 }
