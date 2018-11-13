@@ -119,7 +119,7 @@ func NewTopic(ctx context.Context, d driver.Topic) *Topic {
 		}
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = 5 * time.Millisecond
+	b.DelayThreshold = time.Millisecond
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -215,7 +215,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription) *Subscription {
 		}
 	}
 	ab := bundler.NewBundler(msgErrChan{}, handler)
-	ab.DelayThreshold = 5 * time.Millisecond
+	ab.DelayThreshold = time.Millisecond
 	s := &Subscription{
 		driver:     d,
 		ackBatcher: ab,
