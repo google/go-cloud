@@ -75,11 +75,14 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	ctx := context.Background()
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 	sentAcks := make(map[driver.AckID]int)
 	ids := []int{1, 2}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			mu.Lock()
+			defer mu.Unlock()
 			for _, id := range ackIDs {
 				sentAcks[id]++
 				wg.Done()
