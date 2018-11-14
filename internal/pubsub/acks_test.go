@@ -159,15 +159,13 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	}
 }
 
-// This test just hangs and times out in case of failure.
 func TestAckDoesNotBlock(t *testing.T) {
 	ctx := context.Background()
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			c := make(chan struct{})
-			<-c
+			select {}
 			return nil
 		},
 	}
