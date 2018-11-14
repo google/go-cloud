@@ -31,10 +31,14 @@ type topic struct {
 	client *rawgcppubsub.PublisherClient
 }
 
+// Close closes the connection to the API service. The user should invoke this
+// when the client is no longer required.
 func (t *topic) Close() error {
-	return nil
+	return t.client.Close()
 }
 
+// SendBatch publishes all the messages in dms. This method returns only after
+// all the messages are sent, an error occurs, or the context is cancelled.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pubsubpb.PubsubMessage
 	for _, dm := range dms {
@@ -57,6 +61,9 @@ type subscription struct {
 	path   string
 }
 
+// ReceiveBatch returns a batch of messages that have queued up for the
+// subscription on the server. If no messages are available yet, it blocks
+// until there is at least one, or the context is done.
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
 	req := &pubsubpb.PullRequest{
 		Subscription:      s.path,
@@ -76,6 +83,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 	return ms, err
 }
 
+// SendAcks acknowledges the messages with the given ackIDs on the server so
+// that they will not be received again for this subscription if the server
+// gets the acks before their deadlines. This method returns only after all
+// the ackIDs are sent, an error occurs, or the context is cancelled.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	var ids2 []string
 	for _, id := range ids {
@@ -92,10 +103,15 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	return s.client.Acknowledge(ctx, req)
 }
 
+// Close closes the connection to the API service. The user should invoke this
+// when the client is no longer required.
 func (s *subscription) Close() error {
-	return nil
+	return s.client.Close()
 }
 
+// OpenTopic opens the topic on GCP PubSub for the given projectID and
+// topicName. If the topic does not exist then failure will occur when messages
+// are sent to it.
 func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) *pubsub.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 	dt := &topic{path, client}
@@ -103,6 +119,9 @@ func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projec
 	return t
 }
 
+// OpenSubscription opens the subscription on GCP PubSub for the given
+// projectID and subscriptionName. If the subscription does not exist then
+// failure will occur when an attempt is made to receive messages from it.
 func OpenSubscription(ctx context.Context, client *rawgcppubsub.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	ds := &subscription{client, path}
