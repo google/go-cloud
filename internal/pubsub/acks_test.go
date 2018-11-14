@@ -44,6 +44,7 @@ func (s *ackingDriverSub) Close() error {
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
+	var mu sync.Mutex
 	var sentAcks []driver.AckID
 	id := rand.Int()
 	m := &driver.Message{AckID: id}
@@ -51,6 +52,8 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			mu.Lock()
+			defer mu.Unlock()
 			sentAcks = ackIDs
 			ackChan <- struct{}{}
 			return nil
@@ -119,6 +122,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	ctx := context.Background()
+	var mu sync.Mutex
 	var wg sync.WaitGroup
 	var sentAckBatches [][]driver.AckID
 	// This value of n is chosen large enough that it should create more
@@ -132,6 +136,8 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	ds := &ackingDriverSub{
 		q: ms,
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			mu.Lock()
+			defer mu.Unlock()
 			sentAckBatches = append(sentAckBatches, ackIDs)
 			for i := 0; i < len(ackIDs); i++ {
 				wg.Done()
