@@ -27,7 +27,6 @@ import (
 )
 
 type topic struct {
-	// Format is `projects/{project}/topics/{topic}`.
 	path   string
 	client *rawgcppubsub.PublisherClient
 }
@@ -54,11 +53,27 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 }
 
 type subscription struct {
-	raw *pubsubpb.Subscription
+	client *rawgcppubsub.SubscriberClient
+	path   string
 }
 
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	return nil, nil
+	req := &pubsubpb.PullRequest{
+		Subscription:      s.path,
+		ReturnImmediately: false,
+	}
+	resp, err := s.client.Pull(ctx, req)
+	var ms []*driver.Message
+	for _, rm := range resp.ReceivedMessages {
+		rmm := rm.Message
+		m := &driver.Message{
+			Body:     rmm.Data,
+			Metadata: rmm.Attributes,
+			AckID:    rm.AckId,
+		}
+		ms = append(ms, m)
+	}
+	return ms, err
 }
 
 func (s *subscription) SendAcks(ctx context.Context, acks []driver.AckID) error {
@@ -71,17 +86,14 @@ func (s *subscription) Close() error {
 
 func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) (*pubsub.Topic, error) {
 	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	t := pubsub.NewTopic(ctx, &topic{path, client})
+	dt := &topic{path, client}
+	t := pubsub.NewTopic(ctx, dt)
 	return t, nil
 }
 
 func OpenSubscription(ctx context.Context, client *rawgcppubsub.SubscriberClient, projectID, subscriptionName string) (*pubsub.Subscription, error) {
-	req := pubsubpb.GetSubscriptionRequest{Subscription: fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)}
-	rs, err := client.GetSubscription(ctx, &req)
-	if err != nil {
-		return nil, fmt.Errorf("getting subscription named %q: %v", subscriptionName, err)
-	}
-	ds := &subscription{raw: rs}
+	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
+	ds := &subscription{client, path}
 	s := pubsub.NewSubscription(ctx, ds)
 	return s, nil
 }
