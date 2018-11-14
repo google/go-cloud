@@ -70,7 +70,8 @@ func TestWire(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+			// TODO(light): These tests should be parallelizable, but seems to flake.
+			// See https://github.com/google/go-cloud/issues/669 for details.
 
 			// Materialize a temporary GOPATH directory.
 			gopath, err := ioutil.TempDir("", "wire_test")
