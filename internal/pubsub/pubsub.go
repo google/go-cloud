@@ -46,9 +46,11 @@ func (m *Message) Ack() {
 	// Send the message back to the subscription for ack batching.
 	// size is an estimate of the size of a single AckID in bytes.
 	const size = 8
-	if err := m.sub.ackBatcher.Add(m, size); err != nil {
-		panic(err)
-	}
+	go func() {
+		if err := m.sub.ackBatcher.Add(m, size); err != nil {
+			panic(err)
+		}
+	}()
 }
 
 // Topic publishes messages to all its subscribers.
