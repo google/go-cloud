@@ -46,11 +46,7 @@ func (m *Message) Ack() {
 	// Send the message back to the subscription for ack batching.
 	// size is an estimate of the size of a single AckID in bytes.
 	const size = 8
-	go func() {
-		if err := m.sub.ackBatcher.Add(m, size); err != nil {
-			panic(err)
-		}
-	}()
+	go m.sub.ackBatcher.Add(m, size)
 }
 
 // Topic publishes messages to all its subscribers.
@@ -247,9 +243,12 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts *Subscript
 			id := m.ackID
 			ids = append(ids, id)
 		}
-		err := d.SendAcks(ctx, ids)
-		if err != nil {
-			panic(err)
+		for {
+			err := d.SendAcks(ctx, ids)
+			if err == nil {
+				break
+			}
+			time.Sleep(time.Second)
 		}
 	}
 	ab := bundler.NewBundler(&Message{}, handler)
