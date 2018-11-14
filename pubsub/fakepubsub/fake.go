@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 type topic struct {
@@ -54,10 +54,6 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-	}
-	// Catch the common mistake of publishing before any subscriptions have been created.
-	if len(t.subs) == 0 {
-		return errors.New("fakepubsub: SendBatch: no subscriptions for topic")
 	}
 	// Associate ack IDs with messages here. It would be a bit better if each subscription's
 	// messages had their own ack IDs, so we could catch one subscription using ack IDs from another,

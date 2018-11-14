@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -110,8 +110,6 @@ func TestErrors(t *testing.T) {
 	}
 
 	top := OpenTopic()
-	wantErr(top.SendBatch(ctx, nil)) // no subs for topic
-	OpenSubscription(top, time.Second)
 	top.Close()
 	wantErr(top.SendBatch(ctx, nil)) // topic closed
 
