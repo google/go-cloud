@@ -76,8 +76,20 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 	return ms, err
 }
 
-func (s *subscription) SendAcks(ctx context.Context, acks []driver.AckID) error {
-	return nil
+func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	var ids2 []string
+	for _, id := range ids {
+		id2, ok := id.(string)
+		if !ok {
+			return fmt.Errorf("gcppubsub driver bug: cast from driver.AckID to string failed on %v", id)
+		}
+		ids2 = append(ids2, id2)
+	}
+	req := &pubsubpb.AcknowledgeRequest{
+		Subscription: s.path,
+		AckIds:       ids2,
+	}
+	return s.client.Acknowledge(ctx, req)
 }
 
 func (s *subscription) Close() error {
