@@ -96,16 +96,16 @@ func (s *subscription) Close() error {
 	return nil
 }
 
-func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) (*pubsub.Topic, error) {
+func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) *pubsub.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 	dt := &topic{path, client}
 	t := pubsub.NewTopic(ctx, dt)
-	return t, nil
+	return t
 }
 
-func OpenSubscription(ctx context.Context, client *rawgcppubsub.SubscriberClient, projectID, subscriptionName string) (*pubsub.Subscription, error) {
+func OpenSubscription(ctx context.Context, client *rawgcppubsub.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	ds := &subscription{client, path}
 	s := pubsub.NewSubscription(ctx, ds)
-	return s, nil
+	return s
 }
