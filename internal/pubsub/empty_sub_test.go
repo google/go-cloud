@@ -41,7 +41,7 @@ func (s *emptyDriverSub) Close() error {
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &emptyDriverSub{}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	_, err := sub.Receive(ctx)
 	if err == nil {
