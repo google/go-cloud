@@ -39,9 +39,7 @@ type Message struct {
 }
 
 // Ack acknowledges the message, telling the server that it does not need to
-// be sent again to the associated Subscription. This method blocks until
-// the message has been confirmed as acknowledged on the server, or failure
-// occurs.
+// be sent again to the associated Subscription.
 func (m *Message) Ack() {
 	// Send the message back to the subscription for ack batching.
 	// size is an estimate of the size of a single AckID in bytes.
