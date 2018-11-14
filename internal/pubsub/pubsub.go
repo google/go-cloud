@@ -42,23 +42,13 @@ type Message struct {
 // be sent again to the associated Subscription. This method blocks until
 // the message has been confirmed as acknowledged on the server, or failure
 // occurs.
-func (m *Message) Ack(ctx context.Context) error {
+func (m *Message) Ack() {
 	// Send the message back to the subscription for ack batching.
-	mec := msgErrChan{
-		msg:     m,
-		errChan: make(chan error),
-	}
 	// size is an estimate of the size of a single AckID in bytes.
 	const size = 8
-	if err := m.sub.ackBatcher.AddWait(ctx, mec, size); err != nil {
-		return err
+	if err := m.sub.ackBatcher.Add(m, size); err != nil {
+		panic(err)
 	}
-	return <-mec.errChan
-}
-
-type msgErrChan struct {
-	msg     *Message
-	errChan chan error
 }
 
 // Topic publishes messages to all its subscribers.
@@ -84,6 +74,11 @@ const SendDelayDefault = time.Millisecond
 var DefaultTopicOptions = TopicOptions{
 	SendDelay:           time.Millisecond,
 	BatchCountThreshold: bundler.DefaultBundleCountThreshold,
+}
+
+type msgErrChan struct {
+	msg     *Message
+	errChan chan error
 }
 
 // Send publishes a message. It only returns after the message has been
@@ -244,19 +239,18 @@ func (s *Subscription) Close() error {
 // It is for use by provider implementations.
 func NewSubscription(ctx context.Context, d driver.Subscription, opts *SubscriptionOptions) *Subscription {
 	handler := func(item interface{}) {
-		mecs := item.([]msgErrChan)
+		ms := item.([]*Message)
 		var ids []driver.AckID
-		for _, mec := range mecs {
-			m := mec.msg
+		for _, m := range ms {
 			id := m.ackID
 			ids = append(ids, id)
 		}
 		err := d.SendAcks(ctx, ids)
-		for _, mec := range mecs {
-			mec.errChan <- err
+		if err != nil {
+			panic(err)
 		}
 	}
-	ab := bundler.NewBundler(msgErrChan{}, handler)
+	ab := bundler.NewBundler(&Message{}, handler)
 	if opts == nil {
 		opts = &DefaultSubscriptionOptions
 	}

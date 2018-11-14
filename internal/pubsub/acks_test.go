@@ -15,8 +15,6 @@ package pubsub_test
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"math/rand"
 	"reflect"
 	"sync"
@@ -50,10 +48,12 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	var sentAcks []driver.AckID
 	id := rand.Int()
 	m := &driver.Message{AckID: id}
+	ackChan := make(chan struct{})
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			sentAcks = ackIDs
+			ackChan <- struct{}{}
 			return nil
 		},
 	}
@@ -63,9 +63,8 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := m2.Ack(ctx); err != nil {
-		t.Fatal(err)
-	}
+	m2.Ack()
+	<-ackChan
 	if len(sentAcks) != 1 {
 		t.Fatalf("len(sentAcks) = %d, want exactly 1", len(sentAcks))
 	}
@@ -76,6 +75,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 
 func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	ctx := context.Background()
+	var wg sync.WaitGroup
 	sentAcks := make(map[driver.AckID]int)
 	ids := []int{1, 2}
 	ds := &ackingDriverSub{
@@ -83,6 +83,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			for _, id := range ackIDs {
 				sentAcks[id]++
+				wg.Done()
 			}
 			return nil
 		},
@@ -93,20 +94,15 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
-	var wg sync.WaitGroup
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			mr, err := sub.Receive(ctx)
 			if err != nil {
 				t.Error(err)
 				return
 			}
-			if err := mr.Ack(ctx); err != nil {
-				t.Error(err)
-				return
-			}
+			mr.Ack()
 		}()
 	}
 	wg.Wait()
@@ -123,12 +119,16 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	ctx := context.Background()
+	var wg sync.WaitGroup
 	var sentAckBatches [][]driver.AckID
 	ids := []int{rand.Int(), rand.Int()}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			sentAckBatches = append(sentAckBatches, ackIDs)
+			for i := 0; i < len(ackIDs); i++ {
+				wg.Done()
+			}
 			return nil
 		},
 	}
@@ -138,16 +138,12 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
-	var wg sync.WaitGroup
 	recv := func() {
 		mr, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := mr.Ack(ctx); err != nil {
-			t.Fatal(err)
-		}
-		wg.Done()
+		mr.Ack()
 	}
 	wg.Add(2)
 	go recv()
@@ -163,14 +159,16 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	}
 }
 
-func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
+// This test just hangs and times out in case of failure.
+func TestAckDoesNotBlock(t *testing.T) {
 	ctx := context.Background()
-	e := fmt.Sprintf("%d", rand.Int())
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			return errors.New(e)
+			c := make(chan struct{})
+			<-c
+			return nil
 		},
 	}
 	sub := pubsub.NewSubscription(ctx, ds, nil)
@@ -179,33 +177,5 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = mr.Ack(ctx)
-	if err == nil {
-		t.Fatal("got nil, want error")
-	}
-	if err.Error() != e {
-		t.Errorf("got error %q, want %q", err.Error(), e)
-	}
-}
-
-func TestCancelAck(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	m := &driver.Message{}
-	ds := &ackingDriverSub{
-		q: []*driver.Message{m},
-		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			<-ctx.Done()
-			return ctx.Err()
-		},
-	}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
-	defer sub.Close()
-	mr, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cancel()
-	if err := mr.Ack(ctx); err == nil {
-		t.Errorf("got nil, want error")
-	}
+	mr.Ack()
 }
