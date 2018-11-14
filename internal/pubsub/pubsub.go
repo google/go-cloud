@@ -243,13 +243,8 @@ func NewSubscription(ctx context.Context, d driver.Subscription, opts *Subscript
 			id := m.ackID
 			ids = append(ids, id)
 		}
-		for {
-			err := d.SendAcks(ctx, ids)
-			if err == nil {
-				break
-			}
-			time.Sleep(time.Second)
-		}
+		// TODO(#695): Do something sensible if SendAcks returns an error.
+		_ = d.SendAcks(ctx, ids)
 	}
 	ab := bundler.NewBundler(&Message{}, handler)
 	if opts == nil {
