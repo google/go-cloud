@@ -53,6 +53,11 @@ type Topic struct {
 	batcher *bundler.Bundler
 }
 
+type msgErrChan struct {
+	msg     *Message
+	errChan chan error
+}
+
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
@@ -197,7 +202,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription) *Subscription {
 		// TODO(#695): Do something sensible if SendAcks returns an error.
 		_ = d.SendAcks(ctx, ids)
 	}
-	ab := bundler.NewBundler(msgErrChan{}, handler)
+	ab := bundler.NewBundler(&Message{}, handler)
 	ab.DelayThreshold = time.Millisecond
 	s := &Subscription{
 		driver:     d,
