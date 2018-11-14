@@ -18,12 +18,11 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"reflect"
 	"sync"
 	"testing"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 type ackingDriverSub struct {
@@ -57,7 +56,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -87,9 +86,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sopts := pubsub.DefaultSubscriptionOptions
-	sopts.AckBatchCountThreshold = 2
-	sub := pubsub.NewSubscription(ctx, ds, &sopts)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
@@ -124,17 +121,22 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	ctx := context.Background()
 	var sentAckBatches [][]driver.AckID
-	ids := []int{rand.Int(), rand.Int()}
+	// This value of n is chosen large enough that it should create more
+	// than one batch. Admittedly, there is currently no explicit guarantee
+	// of this.
+	n := 1000
+	var ms []*driver.Message
+	for i := 0; i < n; i++ {
+		ms = append(ms, &driver.Message{AckID: i})
+	}
 	ds := &ackingDriverSub{
-		q: []*driver.Message{{AckID: ids[0]}, {AckID: ids[1]}},
+		q: ms,
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
 			sentAckBatches = append(sentAckBatches, ackIDs)
 			return nil
 		},
 	}
-	sopts := pubsub.DefaultSubscriptionOptions
-	sopts.AckBatchCountThreshold = 1
-	sub := pubsub.NewSubscription(ctx, ds, &sopts)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
@@ -149,17 +151,14 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		}
 		wg.Done()
 	}
-	wg.Add(2)
-	go recv()
-	go recv()
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go recv()
+	}
 	wg.Wait()
 
-	want := [][]driver.AckID{
-		{ids[0]},
-		{ids[1]},
-	}
-	if !reflect.DeepEqual(sentAckBatches, want) {
-		t.Errorf("got %v, want %v", sentAckBatches, want)
+	if len(sentAckBatches) < 2 {
+		t.Errorf("got %d batches, want at least 2", len(sentAckBatches))
 	}
 }
 
@@ -173,7 +172,7 @@ func TestMsgAckReturnsErrorFromSendAcks(t *testing.T) {
 			return errors.New(e)
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -198,7 +197,7 @@ func TestCancelAck(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	mr, err := sub.Receive(ctx)
 	if err != nil {

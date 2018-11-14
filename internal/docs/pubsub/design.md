@@ -29,7 +29,7 @@ There are several pubsub systems available that could be made to work with Go Cl
 
 ## Design overview
 ### Developer’s perspective
-Given a topic that has already been created on the pubsub server, messages can be sent to that topic by calling `acmepubsub.OpenTopic` and calling the `Send` method of the returned `Topic`, like this (assuming a fictional pubsub provider called "acme"): 
+Given a topic that has already been created on the pubsub server, messages can be sent to that topic by calling `acmepubsub.OpenTopic` and calling the `Send` method of the returned `Topic`, like this (assuming a fictional pubsub provider called "acme"):
 ```go
 package main
 
@@ -38,6 +38,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -48,11 +49,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -79,8 +80,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/google/go-cloud/pubsub" 
-	"github.com/google/go-cloud/pubsub/acmepubsub" 
+	rawacmepubsub "github.com/acme/pubsub"
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
@@ -91,11 +93,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -107,9 +109,7 @@ func receive() error {
 	// Do something with msg.
 	fmt.Printf("Got message: %s\n", msg.Body)
 	// Acknowledge that we handled the message.
-	if err := msg.Ack(ctx); err != nil {
-	   return err
-	}
+	msg.Ack()
 }
 ```
 
@@ -124,8 +124,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/go-cloud/pubsub" 
-	"github.com/google/go-cloud/pubsub/acmepubsub" 
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
@@ -136,11 +136,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "signup-minder", nil)
+	s, err := acmepubsub.OpenSubscription(ctx, client, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -153,9 +153,7 @@ func receive() error {
 			return err
 		}
 		log.Printf("Got message: %s\n", msg.Body)
-		if err := msg.Ack(ctx); err != nil {
-			return err
-		}
+		msg.Ack()
 	}
 }
 ```
@@ -170,8 +168,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/go-cloud/pubsub" 
-	"github.com/google/go-cloud/pubsub/acmepubsub" 
+	"github.com/google/go-cloud/pubsub"
+	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
 func main() {
@@ -182,11 +180,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -204,9 +202,7 @@ func receive() error {
 		sem <- struct{}{}
 		go func() {
 			log.Printf("Got message: %s", msg.Body)
-			if err := msg.Ack(ctx); err != nil {
-				log.Printf("Failed to ack message: %v", err)
-			}
+			msg.Ack()
 			<-sem
 		}()
 	}
@@ -217,13 +213,12 @@ func receive() error {
 ```
 
 ### Driver implementer’s perspective
-Adding support for a new pubsub system involves the following steps, continuing with the "acme" example: 
+Adding support for a new pubsub system involves the following steps, continuing with the "acme" example:
 
 1. Add a new package called `acmepubsub`.
 2. Add private `topic` and `subscription` types to `acmepubsub` implementing the corresponding interfaces in the `github.com/go-cloud/pubsub/driver` package.
-3. (Usually) add a `Client` type to `acmepubsub` with an associated `NewClient` func that connects to the relevant service, and the following methods:
-	* `func (c *Client) OpenTopic(ctx, topicName)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
-	* `func (c *Client) OpenSubscription(ctx, subscriptionName)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
+3. Add `func OpenTopic(...)` that creates an `acmepubsub.topic` and returns a concrete `pubsub.Topic` object made from it.
+4. Add `func OpenSubscription(...)` that creates an `acmepubsub.subscription` and returns a `pubsub.Subscription` object made from it.
 
 Here is a sketch of what the `acmepubsub` package could look like:
 ```go
@@ -237,69 +232,33 @@ import (
 	"github.com/google/go-cloud/pubsub/driver"
 )
 
-// Client connects to a pubsub server.
-type Client struct {
-	rawclient *rawacmepubsub.Client
-}
-
-// NewClient creates a client for the project with the given name on Acme
-// pubsub.
-func NewClient(ctx, projectName string) (*Client, error) {
-	c, err := rawacmepubsub.NewClient(ctx, projectName)
+// OpenTopic opens an existing topic on the pubsub server and returns a Topic
+// that can be used to send messages to that topic.
+func OpenTopic(ctx context.Context, client *rawacmepubsub.Client, topicName string) (*pubsub.Topic, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{ rawclient: c }, nil
-}
-
-// OpenTopic opens an existing topic on the pubsub server and returns a Topic
-// that can be used to send messages to that topic.
-func (c *Client) OpenTopic(ctx context.Context, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-	if opts == nil {
-		opts = defaultTopicOptions
-	}
-	rt, err := c.rawclient.Topic(ctx, topicName)
+	rt, err := client.Topic(ctx, topicName)
 	if err != nil {
 		return err
 	}
-	t := &topic{
-		rawTopic: rt,
-		opts: opts,
-	}
-	return pubsub.NewTopic(t, opts.TopicOptions)
+	t := &topic{ rawTopic: rt }
+	return pubsub.NewTopic(t)
 }
 
 // OpenSubscription opens an existing subscription on the server and returns a
 // Subscription that can be used to receive messages.
-func (c *Client) OpenSubscription(ctx context.Context, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	if opts == nil {
-		opts = defaultSubscriptionOptions
-	}
-	rs, err := c.rawclient.Subscription(ctx, subscriptionName)
+func OpenSubscription(ctx context.Context, client *rawacmepubsub.Client, subscriptionName string) (*pubsub.Subscription, error) {
+	rs, err := client.Subscription(ctx, subscriptionName)
 	if err != nil {
 		return err
 	}
-	s := &subscription{
-		rawSub: rs,
-		opts: 	opts,
-	}
-	return pubsub.NewSubscription(s, opts.SubscriptionOptions)
-}
-
-// TopicOptions contains configuration for Topics.
-type TopicOptions struct {
-	pubsub.TopicOptions
-
-	// More options go here...
-}
-
-var defaultTopicOptions = &TopicOptions {
-	// ...
+	s := &subscription{ rawSub: rs }
+	return pubsub.NewSubscription(s)
 }
 
 type topic struct {
 	rawTopic 	*rawacmepubsub.Topic
-	opts 		TopicOptions
 }
 
 func (t *topic) SendBatch(ctx context.Context, []*pubsub.Message) error {
@@ -310,20 +269,8 @@ func (t *topic) Close() error {
 	// ...
 }
 
-// SubscriptionOptions contains configuration for Subscriptions.
-type SubscriptionOptions struct {
-	pubsub.SubscriptionOptions
-
-	// More options go here...
-}
-
-var defaultSubscriptionOptions = &SubscriptionOptions {
-	// ...
-}
-
 type subscription struct {
 	rawSub 	*rawacmepubsub.Subscription
-	opts 	SubscriptionOptions
 }
 
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*pubsub.Message, error) {
@@ -387,7 +334,7 @@ type Subscription interface {
 ```
 
 ## Detailed design
-The developer experience of using Go Cloud pubsub involves sending, receiving and acknowledging one message at a time, all in terms of synchronous calls. Behind the scenes, the driver implementations deal with batches of messages and acks. The concrete API, to be written by the Go Cloud team, takes care of creating the batches in the case of Send or Ack, and dealing out messages one at a time in the case of Receive. 
+The developer experience of using Go Cloud pubsub involves sending, receiving and acknowledging one message at a time, all in terms of synchronous calls. Behind the scenes, the driver implementations deal with batches of messages and acks. The concrete API, to be written by the Go Cloud team, takes care of creating the batches in the case of Send or Ack, and dealing out messages one at a time in the case of Receive.
 
 The concrete API will be located at `github.com/google/go-cloud/pubsub` and will look something like this:
 
@@ -417,11 +364,13 @@ type Message struct {
 type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
-// be sent again to the associated Subscription. This method blocks until
-// the message has been confirmed as acknowledged on the server, or failure
-// occurs.
-func (m *Message) Ack(ctx context.Context) error {
+// be sent again to the associated Subscription. This method returns
+// immediately.
+func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
+        // The ack is sent to the server in a separate goroutine
+        // managed by the Subscription from which this message was
+        // received.
         // ...
 }
 
@@ -430,17 +379,6 @@ type Topic struct {
 	driver   driver.Topic
 	mcChan   chan msgCtx
 	doneChan chan struct{}
-}
-
-// TopicOptions contains configuration for Topics.
-type TopicOptions struct {
-	// SendDelay tells the max duration to wait before sending the next batch of
-	// messages to the server.
-	SendDelay time.Duration
-
-	// BatchSize specifies the maximum number of messages that can go in a batch
-	// for sending.
-	BatchSize int
 }
 
 // msgCtx pairs a Message with the Context of its Send call.
@@ -464,10 +402,8 @@ func (t *Topic) Close() error {
 	return t.driver.Close()
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
-// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
-// to bundle messages into batches and send them to the server.
-func NewTopic(d driver.Topic, opts TopicOptions) *Topic {
+// NewTopic makes a pubsub.Topic from a driver.Topic.
+func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:   d,
 		mcChan:   make(chan msgCtx),
@@ -499,17 +435,6 @@ type Subscription struct {
 	q []*Message
 }
 
-// SubscriptionOptions contains configuration for Subscriptions.
-type SubscriptionOptions struct {
-	// AckDelay tells the max duration to wait before sending the next batch
-	// of acknowledgements back to the server.
-	AckDelay time.Duration
-
-	// AckBatchSize is the maximum number of acks that should be sent to
-	// the server in a batch.
-	AckBatchSize int
-}
-
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking if none are available. This method can be called concurrently from
 // multiple goroutines. On systems that support acks, the Ack() method of the
@@ -535,10 +460,16 @@ func (s *Subscription) Close() error {
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
-func NewSubscription(s driver.Subscription, opts SubscriptionOptions) *Subscription {
+func NewSubscription(s driver.Subscription) *Subscription {
 	// Details similar to the body of NewTopic should go here.
 }
 ```
+
+Topics will gather messages into batches for sending. The batch size will be
+dynamically tuned according to how many messages are being sent concurrently.
+
+Subscriptions will gather message acks into batches the same way, also
+dynamically tuning the batch size.
 
 ## Alternative designs considered
 
@@ -552,6 +483,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -562,11 +494,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -589,6 +521,7 @@ import (
 	"log"
 	"net/http"
 
+	rawacmepubsub "github.com/acme/pubsub"
 	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
@@ -601,11 +534,11 @@ func main() {
 
 func serve() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	t, err := client.OpenTopic(ctx, "user-signup", nil)
+	t, err := acmepubsub.OpenTopic(ctx, client, "user-signup", nil)
 	if err != nil {
 		return err
 	}
@@ -644,7 +577,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/go-cloud/pubsub" 
+	rawacmepubsub "github.com/acme/pubsub"
+	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
@@ -658,11 +592,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "signup-minder", nil)
+	s, err := acmepubsub.OpenSubscription(ctx, client, "signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -698,7 +632,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/go-cloud/pubsub" 
+	rawacmepubsub "github.com/acme/pubsub"
+	"github.com/google/go-cloud/pubsub"
 	"github.com/google/go-cloud/pubsub/acmepubsub"
 )
 
@@ -713,11 +648,11 @@ func main() {
 
 func receive() error {
 	ctx := context.Background()
-	client, err := acmepubsub.NewClient(ctx, "unicornvideohub")
+	client, err := rawacmepubsub.NewClient(ctx, "unicornvideohub")
 	if err != nil {
 		return err
 	}
-	s, err := client.OpenSubscription(ctx, "user-signup-minder", nil)
+	s, err := acmepubsub.OpenSubscription(ctx, client, "user-signup-minder", nil)
 	if err != nil {
 		return err
 	}
@@ -782,7 +717,7 @@ Con:
 * Apps needing to send or receive a large volume of messages must have their own logic to create batches of size greater than 1.
 
 ### go-micro
-Here is an example of what application code could look like for a pubsub API inspired by [`go-micro`](https://github.com/micro/go-micro)'s `broker` package: 
+Here is an example of what application code could look like for a pubsub API inspired by [`go-micro`](https://github.com/micro/go-micro)'s `broker` package:
 ```go
 b := somepubsub.NewBroker(...)
 if err := b.Connect(); err != nil {

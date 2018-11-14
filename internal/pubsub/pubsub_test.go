@@ -20,8 +20,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 type driverTopic struct {
@@ -98,14 +98,14 @@ func TestSendReceive(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(ctx, dt, nil)
+	topic := pubsub.NewTopic(ctx, dt)
 	defer topic.Close()
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	wg.Add(howManyToSend)
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ctx, ds, nil)
+	s := pubsub.NewSubscription(ctx, ds)
 	defer s.Close()
 	var mu sync.Mutex
 	receivedMsgs := make(map[string]int)
@@ -149,7 +149,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	}
 
 	// Send messages.
-	topic := pubsub.NewTopic(ctx, dt, nil)
+	topic := pubsub.NewTopic(ctx, dt)
 	defer topic.Close()
 	sentMsgs := make(map[string]int)
 	for i := 0; i < howManyToSend; i++ {
@@ -187,7 +187,7 @@ func TestCancelSend(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(ctx, dt, nil)
+	topic := pubsub.NewTopic(ctx, dt)
 	defer topic.Close()
 	m := &pubsub.Message{}
 
@@ -204,7 +204,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ctx, ds, nil)
+	s := pubsub.NewSubscription(ctx, ds)
 	defer s.Close()
 	cancel()
 	// Without cancellation, this Receive would hang.

@@ -17,8 +17,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cloud/pubsub"
-	"github.com/google/go-cloud/pubsub/driver"
+	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 // emptyDriverSub is an intentionally buggy subscription driver. Such drivers should
@@ -41,7 +41,7 @@ func (s *emptyDriverSub) Close() error {
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &emptyDriverSub{}
-	sub := pubsub.NewSubscription(ctx, ds, nil)
+	sub := pubsub.NewSubscription(ctx, ds)
 	defer sub.Close()
 	_, err := sub.Receive(ctx)
 	if err == nil {
