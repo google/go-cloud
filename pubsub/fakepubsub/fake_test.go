@@ -27,8 +27,8 @@ import (
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
-	top := CreateTopic()
-	sub := CreateSubscription(top, 3*time.Second)
+	top := OpenTopic()
+	sub := OpenSubscription(top, 3*time.Second)
 	want := []*driver.Message{
 		{Body: []byte("a")},
 		{Body: []byte("b")},
@@ -49,8 +49,8 @@ func TestSendReceive(t *testing.T) {
 
 func TestReceive(t *testing.T) {
 	ctx := context.Background()
-	top := CreateTopic()
-	sub := CreateSubscription(top, 3*time.Second).(*subscription)
+	top := OpenTopic()
+	sub := OpenSubscription(top, 3*time.Second).(*subscription)
 	if err := top.SendBatch(ctx, []*driver.Message{
 		{Body: []byte("a")},
 		{Body: []byte("b")},
@@ -105,24 +105,24 @@ func TestErrors(t *testing.T) {
 	wantErr := func(err error) {
 		t.Helper()
 		if err == nil {
-			t.Errorf("want nil, got %v", err)
+			t.Error("got nil, want error")
 		}
 	}
 
-	top := CreateTopic()
+	top := OpenTopic()
 	wantErr(top.SendBatch(ctx, nil)) // no subs for topic
-	CreateSubscription(top, time.Second)
+	OpenSubscription(top, time.Second)
 	top.Close()
 	wantErr(top.SendBatch(ctx, nil)) // topic closed
 
-	top = CreateTopic()
-	sub := CreateSubscription(top, time.Second)
+	top = OpenTopic()
+	sub := OpenSubscription(top, time.Second)
 	sub.Close()
 	_, err := sub.ReceiveBatch(ctx)
 	wantErr(err) // sub closed
 }
 
-func TestCancelled(t *testing.T) {
+func TestCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	wantCanceled := func(err error) {
@@ -131,10 +131,10 @@ func TestCancelled(t *testing.T) {
 			t.Errorf("got %v, want context.Canceled", err)
 		}
 	}
-	top := CreateTopic()
+	top := OpenTopic()
 
 	wantCanceled(top.SendBatch(ctx, nil))
-	sub := CreateSubscription(top, time.Second)
+	sub := OpenSubscription(top, time.Second)
 	_, err := sub.ReceiveBatch(ctx)
 	wantCanceled(err)
 	wantCanceled(sub.SendAcks(ctx, nil))

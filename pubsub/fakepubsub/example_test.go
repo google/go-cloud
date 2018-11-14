@@ -26,9 +26,9 @@ import (
 
 func Example() {
 	ctx := context.Background()
-	dt := fakepubsub.CreateTopic()
+	dt := fakepubsub.OpenTopic()
 	topic := pubsub.NewTopic(ctx, dt, nil)
-	ds := fakepubsub.CreateSubscription(dt, 3*time.Second)
+	ds := fakepubsub.OpenSubscription(dt, 3*time.Second)
 	sub := pubsub.NewSubscription(ctx, ds, nil)
 
 	body := []byte("hello, world")
