@@ -27,15 +27,30 @@ import (
 )
 
 type topic struct {
-	raw *pubsubpb.Topic
+	// Format is `projects/{project}/topics/{topic}`.
+	path   string
+	client *rawgcppubsub.PublisherClient
 }
 
 func (t *topic) Close() error {
 	return nil
 }
 
-func (t *topic) SendBatch(context.Context, []*driver.Message) error {
-	return nil
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	var ms []*pubsubpb.PubsubMessage
+	for _, dm := range dms {
+		m := &pubsubpb.PubsubMessage{
+			Data:       dm.Body,
+			Attributes: dm.Metadata,
+		}
+		ms = append(ms, m)
+	}
+	req := &pubsubpb.PublishRequest{
+		Topic:    t.path,
+		Messages: ms,
+	}
+	_, err := t.client.Publish(ctx, req)
+	return err
 }
 
 type subscription struct {
@@ -56,13 +71,7 @@ func (s *subscription) Close() error {
 
 func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) (*pubsub.Topic, error) {
 	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	req := pubsubpb.GetTopicRequest{Topic: path}
-	rt, err := client.GetTopic(ctx, &req)
-	if err != nil {
-		return nil, fmt.Errorf("getting topic named %q: %v", topicName, err)
-	}
-	dt := &topic{raw: rt}
-	t := pubsub.NewTopic(ctx, dt)
+	t := pubsub.NewTopic(ctx, &topic{path, client})
 	return t, nil
 }
 
