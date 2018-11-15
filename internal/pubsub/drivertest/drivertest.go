@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -63,15 +62,14 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	top := openTopic(t, h)
-	sub := openSubscription(t, h)
+	top := openTopic(ctx, t, h)
+	sub := openSubscription(ctx, t, h)
 
+	// Send to the topic.
 	m := &pubsub.Message{
 		Body:     []byte(randStr()),
 		Metadata: map[string]string{randStr(): randStr()},
 	}
-
-	// Send to the topic.
 	if err := top.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
@@ -96,8 +94,13 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func TestErrors(t *testing.T) {
+func testErrors(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
 	wantErr := func(err error) {
 		t.Helper()
 		if err == nil {
@@ -105,19 +108,24 @@ func TestErrors(t *testing.T) {
 		}
 	}
 
-	top := openTopic()
+	top := openTopic(ctx, t, h)
 	top.Close()
-	wantErr(top.SendBatch(ctx, nil)) // topic closed
+	wantErr(top.Send(ctx, nil)) // topic closed
 
-	top = openTopic()
-	sub := openSubscription(top, time.Second)
+	top = openTopic(ctx, t, h)
+	sub := openSubscription(ctx, t, h)
 	sub.Close()
-	_, err := sub.ReceiveBatch(ctx)
+	_, err = sub.Receive(ctx)
 	wantErr(err) // sub closed
 }
 
-func TestCanceled(t *testing.T) {
+func testCanceled(t *testing.T, newHarness HarnessMaker) {
 	ctx, cancel := context.WithCancel(context.Background())
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
 	cancel()
 	wantCanceled := func(err error) {
 		t.Helper()
@@ -125,16 +133,16 @@ func TestCanceled(t *testing.T) {
 			t.Errorf("got %v, want context.Canceled", err)
 		}
 	}
-	top := openTopic()
+	top := openTopic(ctx, t, h)
 
-	wantCanceled(top.SendBatch(ctx, nil))
-	sub := openSubscription(top, time.Second)
-	_, err := sub.ReceiveBatch(ctx)
+	wantCanceled(top.Send(ctx, nil))
+	sub := openSubscription(ctx, t, h)
+	m, err := sub.Receive(ctx)
 	wantCanceled(err)
-	wantCanceled(sub.SendAcks(ctx, nil))
+	wantCanceled(m.Ack(ctx))
 }
 
-func openTopic(t *testing.T, h Harness) *pubsub.Topic {
+func openTopic(ctx context.Context, t *testing.T, h Harness) *pubsub.Topic {
 	t.Helper()
 	td, err := h.MakeTopicDriver(ctx)
 	if err != nil {
@@ -143,7 +151,7 @@ func openTopic(t *testing.T, h Harness) *pubsub.Topic {
 	return pubsub.NewTopic(ctx, td)
 }
 
-func openSubscription(t *testing.T, h Harness) *pubsub.Subscription {
+func openSubscription(ctx context.Context, t *testing.T, h Harness) *pubsub.Subscription {
 	t.Helper()
 	ts, err := h.MakeSubscriptionDriver(ctx)
 	if err != nil {
