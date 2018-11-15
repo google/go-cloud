@@ -33,7 +33,7 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
-const usage = "usage: wire [gen] [PKG] | wire show [...] | wire check [...]"
+const usage = "usage: wire [gen] [PKG] | wire show [...] | wire check [...] | wire diff [...]"
 
 func main() {
 	var err error
@@ -51,6 +51,10 @@ func main() {
 		err = check(".")
 	case len(os.Args) > 2 && os.Args[1] == "check":
 		err = check(os.Args[2:]...)
+	case len(os.Args) == 2 && os.Args[1] == "diff":
+		err = diff(".")
+	case len(os.Args) > 2 && os.Args[1] == "diff":
+		err = diff(os.Args[2:]...)
 	case len(os.Args) == 2:
 		err = generate(os.Args[1])
 	case len(os.Args) == 3 && os.Args[1] == "gen":
@@ -83,6 +87,33 @@ func generate(pkg string) error {
 		return nil
 	}
 	return out.Commit()
+}
+
+// diff runs the diff subcommand. Given a package, diff will generate
+// the content for the wire_gen.go file, and output the diff against the
+// existing file.
+func diff(pkgs ...string) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	for _, pkg := range pkgs {
+		fmt.Println(pkg)
+		out, errs := wire.Generate(context.Background(), wd, os.Environ(), pkg)
+		if len(errs) > 0 {
+			logErrors(errs)
+			return errors.New("generate failed")
+		}
+		if len(out.Content) == 0 {
+			// No Wire directives, don't write anything.
+			fmt.Fprintln(os.Stderr, "wire: no injector found for", pkg)
+			continue
+		}
+		if err := out.Diff(os.Stderr); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // show runs the show subcommand.

@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-cloud/blob/gcsblob"
 	"github.com/google/go-cloud/blob/s3blob"
 	"github.com/google/go-cloud/gcp"
+	"github.com/google/go-cloud/gcp/cloudsql"
 	"github.com/google/go-cloud/mysql/cloudmysql"
 	"github.com/google/go-cloud/mysql/rdsmysql"
 	"github.com/google/go-cloud/requestlog"
@@ -114,7 +115,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	if err != nil {
 		return nil, nil, err
 	}
-	remoteCertSource := cloudmysql.NewCertSource(httpClient)
+	remoteCertSource := cloudsql.NewCertSource(httpClient)
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
 		return nil, nil, err
