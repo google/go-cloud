@@ -25,11 +25,10 @@ import (
 )
 
 type harness struct {
-	ctx context.Context
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{ctx}, nil
+	return &harness{}, nil
 }
 
 func (h *harness) MakePair(ctx context.Context) (driver.Topic, driver.Subscription, error) {
