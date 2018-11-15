@@ -19,6 +19,7 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
+	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/internal/pubsub"
@@ -89,6 +90,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 		resp, err := s.client.Pull(ctx, req)
 		if err != nil {
 			// Retry.
+			time.Sleep(time.Second)
 			continue
 		}
 		var ms []*driver.Message
