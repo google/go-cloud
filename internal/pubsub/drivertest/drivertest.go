@@ -50,6 +50,12 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
+	t.Run("TestErrors", func(t *testing.T) {
+		testErrors(t, newHarness)
+	})
+	t.Run("TestCanceled", func(t *testing.T) {
+		testCanceled(t, newHarness)
+	})
 }
 
 // testSendReceive tests that a single message sent to a Topic gets received
