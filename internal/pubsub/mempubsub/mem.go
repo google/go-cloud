@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fakepubsub provides an in-memory fake pubsub implementation.
+// Package mempubsub provides an in-memory pubsub implementation.
 // This should not be used for production: it is intended for local
-// development.
+// development and testing.
 //
-// fakepubsub does not support any types for As.
-package fakepubsub
+// mempubsub does not support any types for As.
+package mempubsub
 
 import (
 	"context"
@@ -48,7 +48,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	defer t.mu.Unlock()
 	// Check for closed or canceled before doing any work.
 	if t.closed {
-		return errors.New("fakepubsub: SendBatch: topic closed")
+		return errors.New("mempubsub: SendBatch: topic closed")
 	}
 	select {
 	case <-ctx.Done():
@@ -167,7 +167,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
 	select {
 	case <-s.ctx.Done(): // subscription was closed
-		return errors.New("fakepubsub: subscription closed")
+		return errors.New("mempubsub: subscription closed")
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(dur):
