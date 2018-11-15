@@ -44,11 +44,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
-	t.Run("TestErrors1", func(t *testing.T) {
-		testErrors1(t, newHarness)
+	t.Run("TestSendError", func(t *testing.T) {
+		testSendError(t, newHarness)
 	})
-	t.Run("TestErrors2", func(t *testing.T) {
-		testErrors2(t, newHarness)
+	t.Run("TestReceiveError", func(t *testing.T) {
+		testReceiveError(t, newHarness)
 	})
 	t.Run("TestCancelSendReceive", func(t *testing.T) {
 		testCancelSendReceive(t, newHarness)
@@ -101,7 +101,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrors1(t *testing.T, newHarness HarnessMaker) {
+func testSendError(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -119,7 +119,7 @@ func testErrors1(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrors2(t *testing.T, newHarness HarnessMaker) {
+func testReceiveError(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
