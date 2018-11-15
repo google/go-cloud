@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/google/go-cloud/internal/pubsub/mempubsub"
 )
@@ -32,12 +32,10 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{ctx}, nil
 }
 
-func (h *harness) MakePair() (*pubsub.Topic, *pubsub.Subscription, error) {
+func (h *harness) MakePair() (driver.Topic, driver.Subscription, error) {
 	dt := mempubsub.OpenTopic()
 	ds := mempubsub.OpenSubscription(dt, time.Second)
-	t := pubsub.NewTopic(h.ctx, dt)
-	s := pubsub.NewSubscription(h.ctx, ds)
-	return t, s, nil
+	return dt, ds, nil
 }
 
 func (h *harness) Close() {

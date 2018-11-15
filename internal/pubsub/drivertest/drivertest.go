@@ -23,13 +23,14 @@ import (
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// MakeTopicDriver creates a Topic and associated Subscription to test.
-	MakePair() (*pubsub.Topic, *pubsub.Subscription, error)
+	MakePair() (driver.Topic, driver.Subscription, error)
 
 	// Close closes resources used by the harness.
 	Close()
@@ -67,7 +68,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, err := h.MakePair()
+	top, sub, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +109,7 @@ func testSendError(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, _, err := h.MakePair()
+	top, _, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +127,7 @@ func testReceiveError(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	_, sub, err := h.MakePair()
+	_, sub, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +144,7 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, err := h.MakePair()
+	top, sub, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +167,7 @@ func testCancelAck(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, err := h.MakePair()
+	top, sub, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,4 +190,14 @@ func testCancelAck(t *testing.T, newHarness HarnessMaker) {
 
 func randStr() string {
 	return fmt.Sprintf("%d", rand.Int())
+}
+
+func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, error) {
+	dt, ds, err := h.MakePair()
+	if err != nil {
+		return nil, nil, err
+	}
+	t := pubsub.NewTopic(ctx, dt)
+	s := pubsub.NewSubscription(ctx, ds)
+	return t, s, nil
 }
