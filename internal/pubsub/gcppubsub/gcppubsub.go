@@ -51,11 +51,10 @@ func (t *topic) Close() error {
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pb.PubsubMessage
 	for _, dm := range dms {
-		m := &pb.PubsubMessage{
+		ms = append(ms, &pb.PubsubMessage{
 			Data:       dm.Body,
 			Attributes: dm.Metadata,
-		}
-		ms = append(ms, m)
+		})
 	}
 	req := &pb.PublishRequest{
 		Topic:    t.path,
@@ -86,25 +85,32 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 		Subscription:      s.path,
 		ReturnImmediately: false,
 	}
+	var resp *pb.PullResponse
 	for {
-		resp, err := s.client.Pull(ctx, req)
-		if err != nil {
-			// Retry.
-			time.Sleep(time.Second)
-			continue
+		var err error
+		resp, err = s.client.Pull(ctx, req)
+		if err == nil {
+			break
 		}
-		var ms []*driver.Message
-		for _, rm := range resp.ReceivedMessages {
-			rmm := rm.Message
-			m := &driver.Message{
-				Body:     rmm.Data,
-				Metadata: rmm.Attributes,
-				AckID:    rm.AckId,
-			}
-			ms = append(ms, m)
+		// Retry:
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Second):
 		}
-		return ms, nil
+		continue
 	}
+	var ms []*driver.Message
+	for _, rm := range resp.ReceivedMessages {
+		rmm := rm.Message
+		m := &driver.Message{
+			Body:     rmm.Data,
+			Metadata: rmm.Attributes,
+			AckID:    rm.AckId,
+		}
+		ms = append(ms, m)
+	}
+	return ms, nil
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
