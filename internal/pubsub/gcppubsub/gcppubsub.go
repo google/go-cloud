@@ -65,18 +65,24 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 		Subscription:      s.path,
 		ReturnImmediately: false,
 	}
-	resp, err := s.client.Pull(ctx, req)
-	var ms []*driver.Message
-	for _, rm := range resp.ReceivedMessages {
-		rmm := rm.Message
-		m := &driver.Message{
-			Body:     rmm.Data,
-			Metadata: rmm.Attributes,
-			AckID:    rm.AckId,
+	for {
+		resp, err := s.client.Pull(ctx, req)
+		if err != nil {
+			// Retry.
+			continue
 		}
-		ms = append(ms, m)
+		var ms []*driver.Message
+		for _, rm := range resp.ReceivedMessages {
+			rmm := rm.Message
+			m := &driver.Message{
+				Body:     rmm.Data,
+				Metadata: rmm.Attributes,
+				AckID:    rm.AckId,
+			}
+			ms = append(ms, m)
+		}
+		return ms, nil
 	}
-	return ms, err
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
