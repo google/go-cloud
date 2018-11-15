@@ -110,7 +110,8 @@ func testErrors1(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	top.Close()
-	if err := top.Send(ctx, nil); err == nil {
+	m := &pubsub.Message{}
+	if err := top.Send(ctx, m); err == nil {
 		t.Error("top.Send returned nil, want error")
 	}
 }
@@ -151,8 +152,9 @@ func testCanceled(t *testing.T, newHarness HarnessMaker) {
 		}
 	}
 
-	wantCanceled(top.Send(ctx, nil))
-	m, err := sub.Receive(ctx)
+	m := &pubsub.Message{}
+	wantCanceled(top.Send(ctx, m))
+	_, err = sub.Receive(ctx)
 	wantCanceled(err)
 	wantCanceled(m.Ack(ctx))
 }
