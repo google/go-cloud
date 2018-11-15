@@ -29,11 +29,9 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeTopicDriver creates a Topic and associated Subscription to test.
+	// MakeTopicDriver returns a Topic and associated Subscription to test,
+	// along with a func to close them.
 	MakePair() (driver.Topic, driver.Subscription, error)
-
-	// Close closes resources used by the harness.
-	Close()
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -67,8 +65,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer h.Close()
-	top, sub, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h)
+	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,11 +106,11 @@ func testSendError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer h.Close()
-	top, _, err := makePair(ctx, h)
+	top, _, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 	top.Close()
 	m := &pubsub.Message{}
 	if err := top.Send(ctx, m); err == nil {
@@ -126,11 +124,11 @@ func testReceiveError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer h.Close()
-	_, sub, err := makePair(ctx, h)
+	_, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 	sub.Close()
 	if _, err = sub.Receive(ctx); err == nil {
 		t.Error("sub.Receive returned nil, want error")
@@ -143,11 +141,11 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer h.Close()
-	top, sub, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 
 	cancel()
 
@@ -166,11 +164,11 @@ func testCancelAck(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer h.Close()
-	top, sub, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 
 	m := &pubsub.Message{}
 	if err := top.Send(ctx, m); err != nil {
@@ -192,12 +190,16 @@ func randStr() string {
 	return fmt.Sprintf("%d", rand.Int())
 }
 
-func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, error) {
+func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
 	dt, ds, err := h.MakePair()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(ctx, dt)
 	s := pubsub.NewSubscription(ctx, ds)
-	return t, s, nil
+	cleanup := func() {
+		t.Close()
+		s.Close()
+	}
+	return t, s, cleanup, nil
 }
