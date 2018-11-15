@@ -31,7 +31,7 @@ import (
 type Harness interface {
 	// MakeTopicDriver returns a Topic and associated Subscription to test,
 	// along with a func to close them.
-	MakePair() (driver.Topic, driver.Subscription, error)
+	MakePair(ctx context.Context) (driver.Topic, driver.Subscription, error)
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -191,7 +191,7 @@ func randStr() string {
 }
 
 func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	dt, ds, err := h.MakePair()
+	dt, ds, err := h.MakePair(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

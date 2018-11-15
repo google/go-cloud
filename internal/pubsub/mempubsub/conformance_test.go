@@ -32,7 +32,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{ctx}, nil
 }
 
-func (h *harness) MakePair() (driver.Topic, driver.Subscription, error) {
+func (h *harness) MakePair(ctx context.Context) (driver.Topic, driver.Subscription, error) {
 	dt := mempubsub.OpenTopic()
 	ds := mempubsub.OpenSubscription(dt, time.Second)
 	return dt, ds, nil
