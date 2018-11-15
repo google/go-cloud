@@ -18,6 +18,8 @@ package drivertest
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub"
@@ -44,7 +46,7 @@ type Harness interface {
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
@@ -65,7 +67,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t := pubsub.NewTopic(ctx, td)
+	topic := pubsub.NewTopic(ctx, td)
 
 	// Open the subscription.
 	ts, err := h.MakeSubscriptionDriver(ctx)
@@ -74,8 +76,13 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	s := pubsub.NewSubscription(ctx, ts)
 
+	m := &pubsub.Message{
+		Body:     []byte(randStr()),
+		Metadata: map[string]string{randStr(): randStr()},
+	}
+
 	// Send to the topic.
-	if err := t.Send(ctx, m); err != nil {
+	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +94,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 
 	// Check that the received message matches the sent one.
 	if string(m2.Body) != string(m.Body) {
-		t.Errorf("received message body = %q, want %q", m2.body, m.Body)
+		t.Errorf("received message body = %q, want %q", m2.Body, m.Body)
 	}
 	if len(m2.Metadata) != len(m.Metadata) {
 		t.Errorf("got %d metadata keys, want %d", len(m2.Metadata), len(m.Metadata))
@@ -97,4 +104,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got %q for %q, want %q", m2.Metadata[k], k, v)
 		}
 	}
+}
+
+func randStr() string {
+	return fmt.Sprintf("%d", rand.Int())
 }
