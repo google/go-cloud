@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -52,6 +53,24 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
+func OpenTopic(t *testing.T, h Harness) *pubsub.Topic {
+	t.Helper()
+	td, err := h.MakeTopicDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pubsub.NewTopic(ctx, td)
+}
+
+func OpenSubscription(t *testing.T, h Harness) *pubsub.Subscription {
+	t.Helper()
+	ts, err := h.MakeSubscriptionDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := pubsub.NewSubscription(ctx, ts)
+}
+
 // testSendReceive tests that a single message sent to a Topic gets received
 // from a corresponding Subscription.
 func testSendReceive(t *testing.T, newHarness HarnessMaker) {
@@ -62,19 +81,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	// Open the topic.
-	td, err := h.MakeTopicDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	topic := pubsub.NewTopic(ctx, td)
-
-	// Open the subscription.
-	ts, err := h.MakeSubscriptionDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := pubsub.NewSubscription(ctx, ts)
+	top := OpenTopic(t, h)
+	s := OpenSubscription(t, h)
 
 	m := &pubsub.Message{
 		Body:     []byte(randStr()),
@@ -82,7 +90,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Send to the topic.
-	if err := topic.Send(ctx, m); err != nil {
+	if err := top.Send(ctx, m); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,6 +112,44 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got %q for %q, want %q", m2.Metadata[k], k, v)
 		}
 	}
+}
+
+func TestErrors(t *testing.T) {
+	ctx := context.Background()
+	wantErr := func(err error) {
+		t.Helper()
+		if err == nil {
+			t.Error("got nil, want error")
+		}
+	}
+
+	top := OpenTopic()
+	top.Close()
+	wantErr(top.SendBatch(ctx, nil)) // topic closed
+
+	top = OpenTopic()
+	sub := OpenSubscription(top, time.Second)
+	sub.Close()
+	_, err := sub.ReceiveBatch(ctx)
+	wantErr(err) // sub closed
+}
+
+func TestCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	wantCanceled := func(err error) {
+		t.Helper()
+		if err != context.Canceled {
+			t.Errorf("got %v, want context.Canceled", err)
+		}
+	}
+	top := OpenTopic()
+
+	wantCanceled(top.SendBatch(ctx, nil))
+	sub := OpenSubscription(top, time.Second)
+	_, err := sub.ReceiveBatch(ctx)
+	wantCanceled(err)
+	wantCanceled(sub.SendAcks(ctx, nil))
 }
 
 func randStr() string {
