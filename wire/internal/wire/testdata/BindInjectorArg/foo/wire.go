@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 //+build wireinject
+
 package main
 
 import (
