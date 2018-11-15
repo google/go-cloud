@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	rawgcppubsub "cloud.google.com/go/pubsub/apiv1"
+	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
@@ -28,7 +28,7 @@ import (
 
 type topic struct {
 	path   string
-	client *rawgcppubsub.PublisherClient
+	client *raw.PublisherClient
 }
 
 // Close closes the connection to the API service. The user should invoke this
@@ -57,7 +57,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 }
 
 type subscription struct {
-	client *rawgcppubsub.SubscriberClient
+	client *raw.SubscriberClient
 	path   string
 }
 
@@ -112,7 +112,7 @@ func (s *subscription) Close() error {
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
 // topicName. If the topic does not exist then failure will occur when messages
 // are sent to it.
-func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projectID, topicName string) *pubsub.Topic {
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) *pubsub.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 	dt := &topic{path, client}
 	t := pubsub.NewTopic(ctx, dt)
@@ -122,7 +122,7 @@ func OpenTopic(ctx context.Context, client *rawgcppubsub.PublisherClient, projec
 // OpenSubscription opens the subscription on GCP PubSub for the given
 // projectID and subscriptionName. If the subscription does not exist then
 // failure will occur when an attempt is made to receive messages from it.
-func OpenSubscription(ctx context.Context, client *rawgcppubsub.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	ds := &subscription{client, path}
 	s := pubsub.NewSubscription(ctx, ds)
