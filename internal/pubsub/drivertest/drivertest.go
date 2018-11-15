@@ -23,19 +23,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeTopicDriver creates a driver.Topic to test.
-	MakeTopicDriver(ctx context.Context) (driver.Topic, error)
-
-	// MakeSubscriptionDriver creates a driver.Subscription to test. This
-	// Subscription should be connected behind the scenes to the Topic
-	// returned by MakeTopicDriver.
-	MakeSubscriptionDriver(ctx context.Context) (driver.Subscription, error)
+	// MakeTopicDriver creates a Topic and associated Subscription to test.
+	MakePair() (*pubsub.Topic, *pubsub.Subscription, error)
 
 	// Close closes resources used by the harness.
 	Close()
@@ -50,8 +44,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
-	t.Run("TestErrors", func(t *testing.T) {
-		testErrors(t, newHarness)
+	t.Run("TestErrors1", func(t *testing.T) {
+		testErrors1(t, newHarness)
+	})
+	t.Run("TestErrors2", func(t *testing.T) {
+		testErrors2(t, newHarness)
 	})
 	t.Run("TestCanceled", func(t *testing.T) {
 		testCanceled(t, newHarness)
@@ -67,9 +64,10 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-
-	top := openTopic(ctx, t, h)
-	sub := openSubscription(ctx, t, h)
+	top, sub, err := h.MakePair()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Send to the topic.
 	m := &pubsub.Message{
@@ -100,29 +98,38 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrors(t *testing.T, newHarness HarnessMaker) {
+func testErrors1(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	wantErr := func(err error) {
-		t.Helper()
-		if err == nil {
-			t.Error("got nil, want error")
-		}
+	top, _, err := h.MakePair()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	top := openTopic(ctx, t, h)
 	top.Close()
-	wantErr(top.Send(ctx, nil)) // topic closed
+	if err := top.Send(ctx, nil); err == nil {
+		t.Error("top.Send returned nil, want error")
+	}
+}
 
-	top = openTopic(ctx, t, h)
-	sub := openSubscription(ctx, t, h)
+func testErrors2(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	_, sub, err := h.MakePair()
+	if err != nil {
+		t.Fatal(err)
+	}
 	sub.Close()
-	_, err = sub.Receive(ctx)
-	wantErr(err) // sub closed
+	if _, err = sub.Receive(ctx); err == nil {
+		t.Error("sub.Receive returned nil, want error")
+	}
 }
 
 func testCanceled(t *testing.T, newHarness HarnessMaker) {
@@ -132,6 +139,10 @@ func testCanceled(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
+	top, sub, err := h.MakePair()
+	if err != nil {
+		t.Fatal(err)
+	}
 	cancel()
 	wantCanceled := func(err error) {
 		t.Helper()
@@ -139,31 +150,11 @@ func testCanceled(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got %v, want context.Canceled", err)
 		}
 	}
-	top := openTopic(ctx, t, h)
 
 	wantCanceled(top.Send(ctx, nil))
-	sub := openSubscription(ctx, t, h)
 	m, err := sub.Receive(ctx)
 	wantCanceled(err)
 	wantCanceled(m.Ack(ctx))
-}
-
-func openTopic(ctx context.Context, t *testing.T, h Harness) *pubsub.Topic {
-	t.Helper()
-	td, err := h.MakeTopicDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pubsub.NewTopic(ctx, td)
-}
-
-func openSubscription(ctx context.Context, t *testing.T, h Harness) *pubsub.Subscription {
-	t.Helper()
-	ts, err := h.MakeSubscriptionDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pubsub.NewSubscription(ctx, ts)
 }
 
 func randStr() string {
