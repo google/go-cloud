@@ -50,8 +50,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestErrors2", func(t *testing.T) {
 		testErrors2(t, newHarness)
 	})
-	t.Run("TestCanceled", func(t *testing.T) {
-		testCanceled(t, newHarness)
+	t.Run("TestCancelSendReceive", func(t *testing.T) {
+		testCancelSendReceive(t, newHarness)
+	})
+	t.Run("TestCancelAck", func(t *testing.T) {
+		testCancelAck(t, newHarness)
 	})
 }
 
@@ -133,7 +136,7 @@ func testErrors2(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testCanceled(t *testing.T, newHarness HarnessMaker) {
+func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	ctx, cancel := context.WithCancel(context.Background())
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -144,19 +147,44 @@ func testCanceled(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	cancel()
-	wantCanceled := func(err error) {
-		t.Helper()
-		if err != context.Canceled {
-			t.Errorf("got %v, want context.Canceled", err)
-		}
+
+	m := &pubsub.Message{}
+	if err := top.Send(ctx, m); err != context.Canceled {
+		t.Errorf("top.Send returned %v, want context.Canceled", err)
+	}
+	if _, err := sub.Receive(ctx); err != context.Canceled {
+		t.Errorf("sub.Receive returned %v, want context.Canceled", err)
+	}
+}
+
+func testCancelAck(t *testing.T, newHarness HarnessMaker) {
+	ctx, cancel := context.WithCancel(context.Background())
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	top, sub, err := h.MakePair()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	m := &pubsub.Message{}
-	wantCanceled(top.Send(ctx, m))
-	_, err = sub.Receive(ctx)
-	wantCanceled(err)
-	wantCanceled(m.Ack(ctx))
+	if err := top.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cancel()
+
+	if err := mr.Ack(ctx); err != context.Canceled {
+		t.Errorf("mr.Ack returned %v, want context.Canceled", err)
+	}
 }
 
 func randStr() string {
