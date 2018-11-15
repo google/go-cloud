@@ -36,10 +36,16 @@ type topic struct {
 // topicName. If the topic does not exist then failure will occur when messages
 // are sent to it.
 func OpenTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) *pubsub.Topic {
-	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	dt := &topic{path, client}
+	dt := openTopic(ctx, client, projectID, topicName)
 	t := pubsub.NewTopic(ctx, dt)
 	return t
+}
+
+// openTopic returns the driver for OpenTopic. This is so the test harness can
+// get the driver interface implementation if it needs to.
+func openTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) driver.Topic {
+	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+	return &topic{path, client}
 }
 
 // Close implements driver.Topic.Close.
@@ -73,10 +79,14 @@ type subscription struct {
 // projectID and subscriptionName. If the subscription does not exist then
 // failure will occur when an attempt is made to receive messages from it.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
-	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	ds := &subscription{client, path}
+	ds := openSubscription(ctx, client, projectID, subscriptionName)
 	s := pubsub.NewSubscription(ctx, ds)
 	return s
+}
+
+func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) driver.Subscription {
+	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
+	return &subscription{client, path}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
