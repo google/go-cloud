@@ -23,7 +23,7 @@ import (
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
-	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
+	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 type topic struct {
@@ -40,15 +40,15 @@ func (t *topic) Close() error {
 // SendBatch publishes all the messages in dms. This method returns only after
 // all the messages are sent, an error occurs, or the context is cancelled.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	var ms []*pubsubpb.PubsubMessage
+	var ms []*pb.PubsubMessage
 	for _, dm := range dms {
-		m := &pubsubpb.PubsubMessage{
+		m := &pb.PubsubMessage{
 			Data:       dm.Body,
 			Attributes: dm.Metadata,
 		}
 		ms = append(ms, m)
 	}
-	req := &pubsubpb.PublishRequest{
+	req := &pb.PublishRequest{
 		Topic:    t.path,
 		Messages: ms,
 	}
@@ -65,7 +65,7 @@ type subscription struct {
 // subscription on the server. If no messages are available yet, it blocks
 // until there is at least one, or the context is done.
 func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	req := &pubsubpb.PullRequest{
+	req := &pb.PullRequest{
 		Subscription:      s.path,
 		ReturnImmediately: false,
 	}
@@ -96,7 +96,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		}
 		ids2 = append(ids2, id2)
 	}
-	req := &pubsubpb.AcknowledgeRequest{
+	req := &pb.AcknowledgeRequest{
 		Subscription: s.path,
 		AckIds:       ids2,
 	}
