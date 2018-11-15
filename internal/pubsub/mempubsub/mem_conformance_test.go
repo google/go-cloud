@@ -24,17 +24,19 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/mempubsub"
 )
 
-type harness struct{}
-
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{}, nil
+type harness struct {
+	ctx context.Context
 }
 
-func (h *harness) MakePair(ctx context.Context) (*pubsub.Topic, *pubsub.Subscription, error) {
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	return &harness{ctx}, nil
+}
+
+func (h *harness) MakePair() (*pubsub.Topic, *pubsub.Subscription, error) {
 	dt := mempubsub.OpenTopic()
-	ds := mempubsub.OpenSubscription(t, time.Second)
-	t := pubsub.NewTopic(ctx, t)
-	s := pubsub.NewSubscription(ctx, s)
+	ds := mempubsub.OpenSubscription(dt, time.Second)
+	t := pubsub.NewTopic(h.ctx, dt)
+	s := pubsub.NewSubscription(h.ctx, ds)
 	return t, s, nil
 }
 
