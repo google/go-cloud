@@ -17,6 +17,7 @@
 package drivertest
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/rand"
@@ -25,6 +26,7 @@ import (
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -44,6 +46,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
+	t.Run("TestSendReceiveWithMetadata", func(t *testing.T) {
+		testSendReceiveWithMetadata(t, newHarness)
+	})
 	t.Run("TestSendError", func(t *testing.T) {
 		testSendError(t, newHarness)
 	})
@@ -58,9 +63,46 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
-// testSendReceive tests that a single message sent to a Topic gets received
-// from a corresponding Subscription.
 func testSendReceive(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	top, sub, cleanup, err := makePair(ctx, h)
+	defer cleanup()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []*pubsub.Message{
+		{Body: []byte("a")},
+		{Body: []byte("b")},
+		{Body: []byte("c")},
+	}
+
+	for _, m := range want {
+		if err := top.Send(ctx, m); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var got []*pubsub.Message
+	for i := 0; i < 3; i++ {
+		m2, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, m2)
+	}
+
+	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
+	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func testSendReceiveWithMetadata(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
