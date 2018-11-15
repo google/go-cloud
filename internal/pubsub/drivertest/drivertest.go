@@ -74,11 +74,12 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
-	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 
 	want := []*pubsub.Message{
 		{Body: []byte("a")},
@@ -113,11 +114,12 @@ func testSendReceiveWithMetadata(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
-	defer cleanup()
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 
 	// Send to the topic.
 	m := &pubsub.Message{
@@ -152,6 +154,7 @@ func testSendError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	top, _, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +173,7 @@ func testReceiveError(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	_, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -187,6 +191,7 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -210,6 +215,7 @@ func testCancelAck(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
