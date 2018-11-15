@@ -31,6 +31,16 @@ type topic struct {
 	client *raw.PublisherClient
 }
 
+// OpenTopic opens the topic on GCP PubSub for the given projectID and
+// topicName. If the topic does not exist then failure will occur when messages
+// are sent to it.
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) *pubsub.Topic {
+	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+	dt := &topic{path, client}
+	t := pubsub.NewTopic(ctx, dt)
+	return t
+}
+
 // Close implements driver.Topic.Close.
 func (t *topic) Close() error {
 	return t.client.Close()
@@ -57,6 +67,16 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
+}
+
+// OpenSubscription opens the subscription on GCP PubSub for the given
+// projectID and subscriptionName. If the subscription does not exist then
+// failure will occur when an attempt is made to receive messages from it.
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
+	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
+	ds := &subscription{client, path}
+	s := pubsub.NewSubscription(ctx, ds)
+	return s
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -102,24 +122,4 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
 	return s.client.Close()
-}
-
-// OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName. If the topic does not exist then failure will occur when messages
-// are sent to it.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) *pubsub.Topic {
-	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	dt := &topic{path, client}
-	t := pubsub.NewTopic(ctx, dt)
-	return t
-}
-
-// OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName. If the subscription does not exist then
-// failure will occur when an attempt is made to receive messages from it.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
-	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	ds := &subscription{client, path}
-	s := pubsub.NewSubscription(ctx, ds)
-	return s
 }
