@@ -53,24 +53,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
-func OpenTopic(t *testing.T, h Harness) *pubsub.Topic {
-	t.Helper()
-	td, err := h.MakeTopicDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return pubsub.NewTopic(ctx, td)
-}
-
-func OpenSubscription(t *testing.T, h Harness) *pubsub.Subscription {
-	t.Helper()
-	ts, err := h.MakeSubscriptionDriver(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s := pubsub.NewSubscription(ctx, ts)
-}
-
 // testSendReceive tests that a single message sent to a Topic gets received
 // from a corresponding Subscription.
 func testSendReceive(t *testing.T, newHarness HarnessMaker) {
@@ -81,8 +63,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	top := OpenTopic(t, h)
-	s := OpenSubscription(t, h)
+	top := openTopic(t, h)
+	sub := openSubscription(t, h)
 
 	m := &pubsub.Message{
 		Body:     []byte(randStr()),
@@ -95,7 +77,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Receive from the subscription.
-	m2, err := s.Receive(ctx)
+	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,12 +105,12 @@ func TestErrors(t *testing.T) {
 		}
 	}
 
-	top := OpenTopic()
+	top := openTopic()
 	top.Close()
 	wantErr(top.SendBatch(ctx, nil)) // topic closed
 
-	top = OpenTopic()
-	sub := OpenSubscription(top, time.Second)
+	top = openTopic()
+	sub := openSubscription(top, time.Second)
 	sub.Close()
 	_, err := sub.ReceiveBatch(ctx)
 	wantErr(err) // sub closed
@@ -143,13 +125,31 @@ func TestCanceled(t *testing.T) {
 			t.Errorf("got %v, want context.Canceled", err)
 		}
 	}
-	top := OpenTopic()
+	top := openTopic()
 
 	wantCanceled(top.SendBatch(ctx, nil))
-	sub := OpenSubscription(top, time.Second)
+	sub := openSubscription(top, time.Second)
 	_, err := sub.ReceiveBatch(ctx)
 	wantCanceled(err)
 	wantCanceled(sub.SendAcks(ctx, nil))
+}
+
+func openTopic(t *testing.T, h Harness) *pubsub.Topic {
+	t.Helper()
+	td, err := h.MakeTopicDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pubsub.NewTopic(ctx, td)
+}
+
+func openSubscription(t *testing.T, h Harness) *pubsub.Subscription {
+	t.Helper()
+	ts, err := h.MakeSubscriptionDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pubsub.NewSubscription(ctx, ts)
 }
 
 func randStr() string {
