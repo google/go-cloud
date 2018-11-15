@@ -100,7 +100,6 @@ func (t *topic) Close() error {
 }
 
 type subscription struct {
-	name        string
 	mu          sync.Mutex
 	topic       driver.Topic
 	ackDeadline time.Duration
@@ -110,20 +109,19 @@ type subscription struct {
 }
 
 // OpenSubscription creates a new subscription for the given topic.
-func (b *Broker) OpenSubscription(ctx context.Context, subName, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
+func (b *Broker) OpenSubscription(ctx context.Context, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
 	b.mu.Lock()
 	t := b.topics[topicName]
 	b.mu.Unlock()
 	if t == nil {
 		panic(fmt.Sprintf("no topic named %s", topicName))
 	}
-	return pubsub.NewSubscription(ctx, newSubscription(subName, t, ackDeadline))
+	return pubsub.NewSubscription(ctx, newSubscription(t, ackDeadline))
 }
 
-func newSubscription(name string, t *topic, ackDeadline time.Duration) *subscription {
+func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &subscription{
-		name:        name,
 		topic:       t,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
