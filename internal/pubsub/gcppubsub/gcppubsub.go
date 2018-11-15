@@ -22,6 +22,7 @@ import (
 	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
@@ -35,16 +36,16 @@ type topic struct {
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
 // topicName. If the topic does not exist then failure will occur when messages
 // are sent to it.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) *pubsub.Topic {
-	dt := openTopic(ctx, client, projectID, topicName)
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) *pubsub.Topic {
+	dt := openTopic(ctx, client, proj, topicName)
 	t := pubsub.NewTopic(ctx, dt)
 	return t
 }
 
 // openTopic returns the driver for OpenTopic. This is so the test harness can
 // get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *raw.PublisherClient, projectID, topicName string) driver.Topic {
-	path := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
+	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	return &topic{path, client}
 }
 
