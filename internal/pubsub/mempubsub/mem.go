@@ -22,13 +22,28 @@ package mempubsub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
+type Broker struct {
+	mu     sync.Mutex
+	topics map[string]*topic
+}
+
+func NewBroker() *Broker {
+	return &Broker{
+		topics: map[string]*topic{},
+		//		subs:   map[string]*subscription{},
+	}
+}
+
 type topic struct {
+	name      string
 	mu        sync.Mutex
 	subs      []*subscription
 	nextAckID int
@@ -37,8 +52,16 @@ type topic struct {
 
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
-func OpenTopic() driver.Topic {
-	return &topic{}
+func (b *Broker) OpenTopic(ctx context.Context, name string) *pubsub.Topic {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	t := newTopic(name)
+	b.topics[name] = t
+	return pubsub.NewTopic(ctx, t)
+}
+
+func newTopic(name string) *topic {
+	return &topic{name: name}
 }
 
 // SendBatch implements driver.SendBatch.
@@ -77,6 +100,7 @@ func (t *topic) Close() error {
 }
 
 type subscription struct {
+	name        string
 	mu          sync.Mutex
 	topic       driver.Topic
 	ackDeadline time.Duration
@@ -86,20 +110,29 @@ type subscription struct {
 }
 
 // OpenSubscription creates a new subscription for the given topic.
-// Unacknowledged messages will become available for redelivery after ackDeadline.
-func OpenSubscription(t driver.Topic, ackDeadline time.Duration) driver.Subscription {
-	tt := t.(*topic)
+func (b *Broker) OpenSubscription(ctx context.Context, subName, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
+	b.mu.Lock()
+	t := b.topics[topicName]
+	b.mu.Unlock()
+	if t == nil {
+		panic(fmt.Sprintf("no topic named %s", topicName))
+	}
+	return pubsub.NewSubscription(ctx, newSubscription(subName, t, ackDeadline))
+}
+
+func newSubscription(name string, t *topic, ackDeadline time.Duration) *subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &subscription{
-		topic:       tt,
+		name:        name,
+		topic:       t,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
 		ctx:         ctx,
 		cancel:      cancel,
 	}
-	tt.mu.Lock()
-	defer tt.mu.Unlock()
-	tt.subs = append(tt.subs, s)
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.subs = append(t.subs, s)
 	return s
 }
 
