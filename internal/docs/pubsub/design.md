@@ -235,6 +235,7 @@ import (
 // OpenTopic opens an existing topic on the pubsub server and returns a Topic
 // that can be used to send messages to that topic.
 func OpenTopic(ctx context.Context, client *rawacmepubsub.Client, topicName string) (*pubsub.Topic, error) {
+	rt, err := client.Topic(ctx, topicName)
 	if err != nil {
 		return nil, err
 	}
