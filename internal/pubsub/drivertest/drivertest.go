@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
+	"github.com/google/go-cmp/cmp"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -93,10 +94,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if len(m2.Metadata) != len(m.Metadata) {
 		t.Errorf("got %d metadata keys, want %d", len(m2.Metadata), len(m.Metadata))
 	}
-	for k, v := range m.Metadata {
-		if m2.Metadata[k] != v {
-			t.Errorf("got %q for %q, want %q", m2.Metadata[k], k, v)
-		}
+	if diff := cmp.Diff(m.Metadata, m2.Metadata); diff != "" {
+		t.Errorf("Metadata differs: (-want +got)\n%s", diff)
 	}
 }
 
