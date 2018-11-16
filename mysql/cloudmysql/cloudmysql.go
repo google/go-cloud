@@ -70,22 +70,13 @@ type Params struct {
 
 	// Database is the name of the database to connect to.
 	Database string
-}
 
-type Options struct {
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
 
-var defaultOptions = Options{
-	TraceOpts: nil,
-}
-
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params, opts *Options) (*sql.DB, error) {
-	if opts == nil {
-		opts = &defaultOptions
-	}
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -105,7 +96,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params, opts
 		Passwd:               params.Password,
 		DBName:               params.Database,
 	}
-	return sql.OpenDB(connector{cfg.FormatDSN(), opts.TraceOpts}), nil
+	return sql.OpenDB(connector{cfg.FormatDSN(), params.TraceOpts}), nil
 }
 
 var dialerCounter struct {
