@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/mempubsub"
 )
 
-func ExampleSendReceive() {
+func Example_sendReceive() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
 	dt := mempubsub.OpenTopic()
@@ -51,7 +51,7 @@ func ExampleSendReceive() {
 	// Hello, world!
 }
 
-func ExampleSendReceiveMultipleMessages() {
+func Example_sendReceiveMultipleMessages() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
 	dt := mempubsub.OpenTopic()
