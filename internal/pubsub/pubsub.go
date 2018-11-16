@@ -30,12 +30,13 @@ type Message struct {
 	// Metadata has key/value metadata for the message.
 	Metadata map[string]string
 
-	// AckID identifies the message on the server.
+	// ackID identifies the message on the server.
 	// It can be used to ack the message after it has been received.
 	ackID driver.AckID
 
-	// sub is the Subscription this message was received from.
-	sub *Subscription
+	// addToAckBatcher adds a msgErrChan to the ack batcher for the
+	// subscription associated with this message.
+	addToAckBatcher func(ctx context.Context, mec msgErrChan, size int) error
 }
 
 // Ack acknowledges the message, telling the server that it does not need to
@@ -50,7 +51,7 @@ func (m *Message) Ack(ctx context.Context) error {
 	}
 	// size is an estimate of the size of a single AckID in bytes.
 	const size = 8
-	if err := m.sub.ackBatcher.AddWait(ctx, mec, size); err != nil {
+	if err := m.addToAckBatcher(ctx, mec, size); err != nil {
 		return err
 	}
 	return <-mec.errChan
@@ -182,7 +183,9 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ackID:    m.AckID,
-			sub:      s,
+			addToAckBatcher: func(ctx context.Context, mec msgErrChan, size int) error {
+				return s.ackBatcher.AddWait(ctx, mec, size)
+			},
 		}
 		s.q = append(s.q, m)
 	}
