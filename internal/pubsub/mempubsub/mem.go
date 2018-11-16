@@ -22,7 +22,6 @@ package mempubsub
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -35,10 +34,13 @@ type Broker struct {
 	topics map[string]*topic
 }
 
-func NewBroker() *Broker {
+func NewBroker(topicNames []string) *Broker {
+	topics := map[string]*topic{}
+	for _, n := range topicNames {
+		topics[n] = newTopic(n)
+	}
 	return &Broker{
-		topics: map[string]*topic{},
-		//		subs:   map[string]*subscription{},
+		topics: topics,
 	}
 }
 
@@ -52,12 +54,10 @@ type topic struct {
 
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
-func (b *Broker) OpenTopic(ctx context.Context, name string) *pubsub.Topic {
+func OpenTopic(ctx context.Context, b *Broker, name string) *pubsub.Topic {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	t := newTopic(name)
-	b.topics[name] = t
-	return pubsub.NewTopic(ctx, t)
+	return pubsub.NewTopic(ctx, b.topics[name])
 }
 
 func newTopic(name string) *topic {
@@ -109,13 +109,10 @@ type subscription struct {
 }
 
 // OpenSubscription creates a new subscription for the given topic.
-func (b *Broker) OpenSubscription(ctx context.Context, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
+func OpenSubscription(ctx context.Context, b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
 	b.mu.Lock()
 	t := b.topics[topicName]
 	b.mu.Unlock()
-	if t == nil {
-		panic(fmt.Sprintf("no topic named %s", topicName))
-	}
 	return pubsub.NewSubscription(ctx, newSubscription(t, ackDeadline))
 }
 
@@ -128,9 +125,11 @@ func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
 		ctx:         ctx,
 		cancel:      cancel,
 	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.subs = append(t.subs, s)
+	if t != nil {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		t.subs = append(t.subs, s)
+	}
 	return s
 }
 
@@ -196,6 +195,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 }
 
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
+	if s.topic == nil {
+		return errors.New("mempubsub: topic does not exist")
+	}
 	select {
 	case <-s.ctx.Done(): // subscription was closed
 		return errors.New("mempubsub: subscription closed")
