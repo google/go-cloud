@@ -54,10 +54,10 @@ type topic struct {
 
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
-func OpenTopic(ctx context.Context, b *Broker, name string) *pubsub.Topic {
+func OpenTopic(b *Broker, name string) *pubsub.Topic {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return pubsub.NewTopic(ctx, b.topics[name])
+	return pubsub.NewTopic(b.topics[name])
 }
 
 func newTopic(name string) *topic {
@@ -109,11 +109,11 @@ type subscription struct {
 }
 
 // OpenSubscription creates a new subscription for the given topic.
-func OpenSubscription(ctx context.Context, b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
+func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
 	b.mu.Lock()
 	t := b.topics[topicName]
 	b.mu.Unlock()
-	return pubsub.NewSubscription(ctx, newSubscription(t, ackDeadline))
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline))
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
