@@ -133,7 +133,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 	}
 	resp, err := s.client.Pull(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: making RPC to receive next batch of messages: %v", err)
+		return nil, err
 	}
 	var ms []*driver.Message
 	for _, rm := range resp.ReceivedMessages {
