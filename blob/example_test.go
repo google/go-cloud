@@ -192,10 +192,7 @@ func ExampleBucket_List() {
 	// Iterate over them.
 	// This will list the blobs created above because fileblob is strongly
 	// consistent, but is not guaranteed to work on all providers.
-	iter, err := bucket.List(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	iter := bucket.List(nil)
 	for {
 		obj, err := iter.Next(ctx)
 		if err == io.EOF {
@@ -246,13 +243,10 @@ func ExampleBucket_List_withDelimiter() {
 	// consistent, but is not guaranteed to work on all providers.
 	var list func(context.Context, *blob.Bucket, string, string)
 	list = func(ctx context.Context, b *blob.Bucket, prefix, indent string) {
-		iter, err := b.List(ctx, &blob.ListOptions{
+		iter := b.List(&blob.ListOptions{
 			Delimiter: "/",
 			Prefix:    prefix,
 		})
-		if err != nil {
-			log.Fatal(err)
-		}
 		for {
 			obj, err := iter.Next(ctx)
 			if err == io.EOF {
