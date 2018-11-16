@@ -152,8 +152,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	var ids2 []string
 	for _, id := range ids {
-		id2 := id.(string)
-		ids2 = append(ids2, id2)
+		ids2 = append(ids2, id.(string))
 	}
 	req := &pb.AcknowledgeRequest{
 		Subscription: s.path,
