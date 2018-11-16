@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
@@ -48,4 +49,49 @@ func ExampleSendReceive() {
 
 	// Output:
 	// Hello, world!
+}
+
+func ExampleSendReceiveMultipleMessages() {
+	// Open a topic and corresponding subscription.
+	ctx := context.Background()
+	dt := mempubsub.OpenTopic()
+	ds := mempubsub.OpenSubscription(dt, time.Second)
+	t := pubsub.NewTopic(ctx, dt)
+	s := pubsub.NewSubscription(ctx, ds)
+
+	// Send messages to the topic.
+	ms := []*pubsub.Message{
+		{Body: []byte("a")},
+		{Body: []byte("b")},
+		{Body: []byte("c")},
+	}
+	for _, m := range ms {
+		if err := t.Send(ctx, m); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// Receive messages from the subscription.
+	ms2 := []*pubsub.Message{}
+	for i := 0; i < len(ms); i++ {
+		m2, err := s.Receive(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ms2 = append(ms2, m2)
+	}
+
+	// The messages may be received in a different order than they were
+	// sent.
+	sort.Slice(ms2, func(i, j int) bool { return string(ms2[i].Body) < string(ms2[j].Body) })
+
+	// Print out the received message.
+	for _, m2 := range ms2 {
+		fmt.Printf("%s\n", m2.Body)
+	}
+
+	// Output:
+	// a
+	// b
+	// c
 }
