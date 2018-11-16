@@ -36,7 +36,8 @@ func Example() {
 		ProjectID: "example-project",
 		Region:    "us-central1",
 		Instance:  "my-instance01",
-		PQConn:    "dbname=test user=myrole",
+		User:      "myrole",
+		Database:  "test",
 	})
 	if err != nil {
 		panic(err)

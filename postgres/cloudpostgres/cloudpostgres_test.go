@@ -59,7 +59,9 @@ func TestOpen(t *testing.T) {
 		ProjectID: project,
 		Region:    region,
 		Instance:  instance,
-		PQConn:    "dbname='" + databaseName + "' user='" + username + "' password='" + password + "'",
+		Database:  databaseName,
+		User:      username,
+		Password:  password,
 	})
 	if err != nil {
 		t.Fatal(err)
