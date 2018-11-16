@@ -51,8 +51,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
-	t.Run("TestSendError", func(t *testing.T) {
-		testSendError(t, newHarness)
+	t.Run("TestErrorOnSendToClosedTopic", func(t *testing.T) {
+		testErrorOnSendToClosedTopic(t, newHarness)
 	})
 	t.Run("TestErrorOnReceiveFromClosedSubscription", func(t *testing.T) {
 		testErrorOnReceiveFromClosedSubscription(t, newHarness)
@@ -107,7 +107,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testSendError(t *testing.T, newHarness HarnessMaker) {
+func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
