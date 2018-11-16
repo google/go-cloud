@@ -18,29 +18,23 @@ package rdsmysql
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"database/sql"
 	"database/sql/driver"
-	"encoding/pem"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"sync"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/wire"
 	"github.com/opencensus-integrations/ocsql"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
 // *Params and an HTTP client.
 var Set = wire.NewSet(
 	Open,
-	CertFetcher{},
-	wire.Bind((*CertPoolProvider)(nil), (*CertFetcher)(nil)),
 	wire.Value((*Options)(nil)),
+	rds.CertFetcherSet,
 )
 
 // Params specifies how to connect to an RDS database.
@@ -55,11 +49,6 @@ type Params struct {
 	Password string
 	// Database is the MySQL database name to connect to.
 	Database string
-}
-
-// A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
-type CertPoolProvider interface {
-	RDSCertPool(context.Context) (*x509.CertPool, error)
 }
 
 type Options struct {
@@ -146,64 +135,9 @@ var tlsConfigCounter struct {
 	n  int
 }
 
-// caBundleURL is the URL to the public RDS Certificate Authority keys.
-const caBundleURL = "https://s3.amazonaws.com/rds-downloads/rds-combined-ca-bundle.pem"
+// A CertPoolProvider obtains a certificate pool that contains the RDS CA certificate.
+type CertPoolProvider = rds.CertPoolProvider
 
 // CertFetcher pulls the RDS CA certificates from Amazon's servers. The zero
 // value will fetch certificates using the default HTTP client.
-type CertFetcher struct {
-	// Client is the HTTP client used to make requests. If nil, then
-	// http.DefaultClient is used.
-	Client *http.Client
-}
-
-// RDSCertPool fetches the RDS CA certificates and places them into a pool.
-// It is safe to call from multiple goroutines.
-func (cf *CertFetcher) RDSCertPool(ctx context.Context) (*x509.CertPool, error) {
-	certs, err := cf.Fetch(ctx)
-	if err != nil {
-		return nil, err
-	}
-	certPool := x509.NewCertPool()
-	for _, c := range certs {
-		certPool.AddCert(c)
-	}
-	return certPool, nil
-}
-
-// Fetch fetches the RDS CA certificates. It is safe to call from multiple goroutines.
-func (cf *CertFetcher) Fetch(ctx context.Context) ([]*x509.Certificate, error) {
-	client := cf.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := ctxhttp.Get(ctx, client, caBundleURL)
-	if err != nil {
-		return nil, fmt.Errorf("fetch RDS certificates: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetch RDS certificates: HTTP %s", resp.Status)
-	}
-	pemData, err := ioutil.ReadAll(&io.LimitedReader{R: resp.Body, N: 1 << 20}) // limit to 1MiB
-	if err != nil {
-		return nil, fmt.Errorf("fetch RDS certificates: %v", err)
-	}
-	var certs []*x509.Certificate
-	for len(pemData) > 0 {
-		var block *pem.Block
-		block, pemData = pem.Decode(pemData)
-		if block == nil {
-			break
-		}
-		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
-			continue
-		}
-		c, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("fetch RDS certificates: %v", err)
-		}
-		certs = append(certs, c)
-	}
-	return certs, nil
-}
+type CertFetcher = rds.CertFetcher
