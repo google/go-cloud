@@ -29,6 +29,8 @@ fi
 result=0
 
 # Run Go tests for the root, including coverage.
+# Get coverage for all non-test and non-sample packages; -coverpkg requires
+# a comma-delimited list of package names.
 pkgs=$(go list ./... | grep -v test | grep -v sample | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
 go test -race -coverprofile=coverage.out ./... -coverpkg=$pkgs && goveralls -coverprofile=coverage.out -service=travis-ci || result=1
 wire check ./... || result=1
