@@ -40,11 +40,11 @@ import (
 
 // GenerateResult stores the result for a package from a call to Generate.
 type GenerateResult struct {
-	// Package is the package's name.
-	Package string
-	// Path is the path where the generated output should be written.
+	// PkgPath is the package's PkgPath.
+	PkgPath string
+	// OutputPath is the path where the generated output should be written.
 	// May be empty if there were errors.
-	Path string
+	OutputPath string
 	// Content is the gofmt'd source code that was generated. May be nil if
 	// there were errors during generation.
 	Content []byte
@@ -57,7 +57,7 @@ func (gen GenerateResult) Commit() error {
 	if len(gen.Content) == 0 {
 		return nil
 	}
-	return ioutil.WriteFile(gen.Path, gen.Content, 0666)
+	return ioutil.WriteFile(gen.OutputPath, gen.Content, 0666)
 }
 
 // Generate performs dependency injection for the packages that match the given
@@ -79,14 +79,14 @@ func Generate(ctx context.Context, wd string, env []string, patterns []string) (
 	}
 	generated := make([]*GenerateResult, len(pkgs))
 	for i, pkg := range pkgs {
-		result := &GenerateResult{Package: pkg.Name}
+		result := &GenerateResult{PkgPath: pkg.PkgPath}
 		generated[i] = result
 		outDir, err := detectOutputDir(pkg.GoFiles)
 		if err != nil {
 			result.Errs = append(result.Errs, err)
 			continue
 		}
-		result.Path = filepath.Join(outDir, "wire_gen.go")
+		result.OutputPath = filepath.Join(outDir, "wire_gen.go")
 		g := newGen(pkg)
 		injectorFiles, errs := generateInjectors(g, pkg)
 		if len(errs) > 0 {

@@ -127,9 +127,9 @@ func TestWire(t *testing.T) {
 				t.Fatal("wire succeeded; want error")
 			}
 			outPathSane := true
-			if prefix := gopath + string(os.PathSeparator) + "src" + string(os.PathSeparator); !strings.HasPrefix(gen.Path, prefix) {
+			if prefix := gopath + string(os.PathSeparator) + "src" + string(os.PathSeparator); !strings.HasPrefix(gen.OutputPath, prefix) {
 				outPathSane = false
-				t.Errorf("suggested output path = %q; want to start with %q", gen.Path, prefix)
+				t.Errorf("suggested output path = %q; want to start with %q", gen.OutputPath, prefix)
 			}
 
 			if *setup.Record {
