@@ -63,6 +63,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testSendReceive(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -106,6 +107,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 }
 
 func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -117,7 +119,10 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer cleanup()
+
 	top.Close()
+
+	// Check that sending to the closed topic fails.
 	m := &pubsub.Message{}
 	if err := top.Send(ctx, m); err == nil {
 		t.Error("top.Send returned nil, want error")
