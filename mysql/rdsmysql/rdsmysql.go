@@ -18,21 +18,15 @@ package rdsmysql
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"database/sql"
 	"database/sql/driver"
-	"encoding/pem"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"sync"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/wire"
 	"github.com/opencensus-integrations/ocsql"
-	"golang.org/x/net/context/ctxhttp"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
