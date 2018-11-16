@@ -63,6 +63,12 @@ type msgErrChan struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
+	// Check for doneness before we do any work.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 	mec := msgErrChan{
 		msg:     m,
 		errChan: make(chan error),
@@ -89,7 +95,7 @@ func (t *Topic) Close() error {
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
 // It is for use by provider implementations.
-func NewTopic(ctx context.Context, d driver.Topic) *Topic {
+func NewTopic(d driver.Topic) *Topic {
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
@@ -105,7 +111,7 @@ func NewTopic(ctx context.Context, d driver.Topic) *Topic {
 			}
 			dms = append(dms, dm)
 		}
-		err := d.SendBatch(ctx, dms)
+		err := d.SendBatch(context.TODO(), dms)
 		for _, mec := range mecs {
 			mec.errChan <- err
 		}
@@ -192,7 +198,7 @@ func (s *Subscription) Close() error {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 // It is for use by provider implementations.
-func NewSubscription(ctx context.Context, d driver.Subscription) *Subscription {
+func NewSubscription(d driver.Subscription) *Subscription {
 	handler := func(item interface{}) {
 		ms := item.([]*Message)
 		var ids []driver.AckID
@@ -201,7 +207,7 @@ func NewSubscription(ctx context.Context, d driver.Subscription) *Subscription {
 			ids = append(ids, id)
 		}
 		// TODO(#695): Do something sensible if SendAcks returns an error.
-		_ = d.SendAcks(ctx, ids)
+		_ = d.SendAcks(context.TODO(), ids)
 	}
 	ab := bundler.NewBundler(&Message{}, handler)
 	ab.DelayThreshold = time.Millisecond
