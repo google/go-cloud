@@ -83,7 +83,7 @@ func generate(pkgs ...string) error {
 	}
 	if len(outs) == 0 {
 		// No Wire directives, don't write anything.
-		fmt.Fprintln(os.Stderr, "wire: no injector found")
+		fmt.Fprintln(os.Stderr, "wire: no injectors found")
 		return nil
 	}
 	for _, out := range outs {
