@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 
-	raw2 "cloud.google.com/go/pubsub"
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 type topic struct {
@@ -50,20 +51,33 @@ func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
 func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
-	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	gcli, err := raw2.NewClient(ctx, string(proj))
+	client, err := raw.NewPublisherClient(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: making GCP client to check topic existence: %v", err)
+		return nil, fmt.Errorf("gcppubsub: creating publisher client: %v", err)
 	}
-	gt := gcli.Topic(topicName)
-	ok, err := gt.Exists(ctx)
+	ok, err := topicExists(ctx, client, topicName)
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
 	}
+	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	return &topic{path, client}, nil
+}
+
+func topicExists(ctx context.Context, client *raw.PublisherClient, topicName string) (bool, error) {
+	if topicName == "_deleted-topic_" {
+		return false, nil
+	}
+	_, err := client.GetTopic(ctx, &pb.GetTopicRequest{Topic: topicName})
+	if err == nil {
+		return true, nil
+	}
+	if grpc.Code(err) == codes.NotFound {
+		return false, nil
+	}
+	return false, err
 }
 
 // Close implements driver.Topic.Close.
@@ -109,12 +123,8 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 }
 
 func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
-	gcli, err := raw2.NewClient(ctx, string(projectID))
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: making GCP client to check subscription existence: %v", err)
-	}
-	gs := gcli.Subscription(subscriptionName)
-	ok, err := gs.Exists(ctx)
+	client, err := raw.NewSubscriberClient(ctx)
+	ok, err := subscriptionExists(ctx, client, subscriptionName)
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
 	}
@@ -123,6 +133,17 @@ func openSubscription(ctx context.Context, client *raw.SubscriberClient, project
 	}
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	return &subscription{client, path}, nil
+}
+
+func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subscriptionName string) (bool, error) {
+	_, err := client.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: subscriptionName})
+	if err == nil {
+		return true, nil
+	}
+	if grpc.Code(err) == codes.NotFound {
+		return false, nil
+	}
+	return false, err
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
