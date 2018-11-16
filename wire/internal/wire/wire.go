@@ -72,7 +72,7 @@ func (gen GenerateResult) Commit() error {
 // takes precedence.
 //
 // Generate may return one or more errors if it failed to load the packages.
-func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]*GenerateResult, []error) {
+func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]GenerateResult, []error) {
 	pkgs, errs := load(ctx, wd, env, patterns)
 	if len(errs) > 0 {
 		return nil, errs
