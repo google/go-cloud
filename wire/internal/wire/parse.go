@@ -93,10 +93,11 @@ type ProviderSet struct {
 	// variable.
 	VarName string
 
-	Providers    []*Provider
-	Bindings     []*IfaceBinding
-	Values       []*Value
-	Imports      []*ProviderSet
+	Providers []*Provider
+	Bindings  []*IfaceBinding
+	Values    []*Value
+	Imports   []*ProviderSet
+	// InjectorArgs is only filled in for wire.Build.
 	InjectorArgs *InjectorArgs
 
 	// providerMap maps from provided type to a *ProvidedType.
