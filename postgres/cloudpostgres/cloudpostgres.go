@@ -21,7 +21,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"net"
+	"net/url"
 	"time"
 
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
@@ -30,21 +32,60 @@ import (
 
 // Params specifies how to connect to a Cloud SQL database.
 type Params struct {
+	// ProjectID is the project the instance is located in.
 	ProjectID string
-	Region    string
-	Instance  string
-	PQConn    string // format is documented at https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
+	// Region is the region the instance is located in.
+	Region string
+	// Instance is the name of the instance.
+	Instance string
+
+	// User is the database user to connect as.
+	User string
+	// Password is the database user password to use.
+	// May be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
+	Password string
+	// Database is the PostgreSQL database name to connect to.
+	Database string
+
+	// Values sets additional parameters, as documented in
+	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
+	Values url.Values
 }
 
 // Open opens a Cloud SQL database.
 func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+	vals := make(url.Values)
+	for k, v := range params.Values {
+		// Only permit parameters that do not conflict with other behavior.
+		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+		}
+		vals[k] = v
+	}
+	vals.Set("sslmode", "disable")
+
+	var user *url.Userinfo
+	if params.User != "" && params.Password != "" {
+		if params.Password != "" {
+			user = url.UserPassword(params.User, params.Password)
+		} else {
+			user = url.User(params.User)
+		}
+	}
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     user,
+		Host:     "cloudsql",
+		Path:     "/" + params.Database,
+		RawQuery: vals.Encode(),
+	}
 	return sql.OpenDB(connector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: certSource,
 		},
 		instance: params.ProjectID + ":" + params.Region + ":" + params.Instance,
-		pqConn:   "sslmode=disable " + params.PQConn,
+		pqConn:   u.String(),
 	}), nil
 }
 
