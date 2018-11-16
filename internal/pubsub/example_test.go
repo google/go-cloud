@@ -47,6 +47,9 @@ func Example_sendReceive() {
 	// Print out the received message.
 	fmt.Printf("%s\n", m.Body)
 
+	// Acknowledge the message.
+	m.Ack()
+
 	// Output:
 	// Hello, world!
 }
@@ -85,9 +88,10 @@ func Example_sendReceiveMultipleMessages() {
 	// sent.
 	sort.Slice(ms2, func(i, j int) bool { return string(ms2[i].Body) < string(ms2[j].Body) })
 
-	// Print out the received message.
+	// Print out the received messages.
 	for _, m2 := range ms2 {
 		fmt.Printf("%s\n", m2.Body)
+		m2.Ack()
 	}
 
 	// Output:
