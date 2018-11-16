@@ -60,9 +60,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestCancelSendReceive", func(t *testing.T) {
 		testCancelSendReceive(t, newHarness)
 	})
-	t.Run("TestCancelAck", func(t *testing.T) {
-		testCancelAck(t, newHarness)
-	})
 }
 
 func testSendReceive(t *testing.T, newHarness HarnessMaker) {
@@ -165,35 +162,6 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	if _, err := sub.Receive(ctx); err != context.Canceled {
 		t.Errorf("sub.Receive returned %v, want context.Canceled", err)
-	}
-}
-
-func testCancelAck(t *testing.T, newHarness HarnessMaker) {
-	ctx, cancel := context.WithCancel(context.Background())
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	m := &pubsub.Message{}
-	if err := top.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
-	mr, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cancel()
-
-	if err := mr.Ack(ctx); err != context.Canceled {
-		t.Errorf("mr.Ack returned %v, want context.Canceled", err)
 	}
 }
 
