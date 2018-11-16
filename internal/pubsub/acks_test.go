@@ -59,7 +59,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds)
+	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -93,7 +93,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds)
+	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
@@ -145,7 +145,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds)
+	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
 
 	// Receive and ack the messages concurrently.
@@ -177,7 +177,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ctx, ds)
+	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
