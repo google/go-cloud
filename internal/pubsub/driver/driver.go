@@ -84,6 +84,10 @@ type Subscription interface {
 	// method should return the empty slice of messages and not attempt to
 	// retry.
 	//
+	// Implementations of ReceiveBatch should request that the underlying
+	// service wait some non-zero amount of time before returning, if there
+	// are no messages yet.
+	//
 	// ReceiveBatch is only called sequentially for individual
 	// Subscriptions.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
