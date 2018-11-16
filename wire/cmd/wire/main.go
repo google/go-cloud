@@ -82,18 +82,23 @@ func generate(pkgs ...string) error {
 		return errors.New("generate failed")
 	}
 	if len(outs) == 0 {
-		// No Wire directives, don't write anything.
-		fmt.Fprintln(os.Stderr, "wire: no injector found")
 		return nil
 	}
 	for _, out := range outs {
-		if err := out.Commit(); err != nil {
-			errs = append(errs, err)
+		if len(out.Errs) > 0 {
+			fmt.Fprintf(os.Stderr, "%s: generate failed", out.Package)
+			logErrors(out.Errs)
 		}
-	}
-	if len(errs) > 0 {
-		logErrors(errs)
-		return errors.New("some writes failed")
+		if len(out.Content) == 0 {
+			// No Wire directives, don't write anything.
+			fmt.Fprintf(os.Stderr, "%s: no injector found", out.Package)
+		} else {
+			if err := out.Commit(); err == nil {
+				fmt.Fprintf(os.Stderr, "%s: wrote %s", out.Package, out.Path)
+			} else {
+				fmt.Fprintf(os.Stderr, "%s: failed to write %s: %v", out.Package, out.Path, err)
+			}
+		}
 	}
 	return nil
 }

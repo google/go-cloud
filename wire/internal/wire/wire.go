@@ -38,16 +38,22 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// GeneratedFile stores the content of a call to Generate and the
-// desired on-disk location of the file.
-type GeneratedFile struct {
+// GenerateResult stores the result for a package from a call to Generate.
+type GenerateResult struct {
+	// Package is the package's name.
 	Package string
-	Path    string
+	// Path is the path where the generated output should be written.
+	// May be empty if there were errors.
+	Path string
+	// Content is the gofmt'd source code that was generated. May be nil if
+	// there were errors during generation.
 	Content []byte
+	// Errs is a slice of errors identified during generation.
+	Errs []error
 }
 
 // Commit writes the generated file to disk.
-func (gen GeneratedFile) Commit() error {
+func (gen GenerateResult) Commit() error {
 	if len(gen.Content) == 0 {
 		return nil
 	}
@@ -55,8 +61,8 @@ func (gen GeneratedFile) Commit() error {
 }
 
 // Generate performs dependency injection for the packages that match the given
-// patterns, returning the gofmt'd Go source code. The package pattern is defined
-// by the underlying build system. For the go tool, this is described at
+// patterns, return a GenerateResult for each package. The package pattern is
+// defined by the underlying build system. For the go tool, this is described at
 // https://golang.org/cmd/go/#hdr-Package_lists_and_patterns
 //
 // wd is the working directory and env is the set of environment
@@ -64,37 +70,42 @@ func (gen GeneratedFile) Commit() error {
 // env is nil or empty, it is interpreted as an empty set of variables.
 // In case of duplicate environment variables, the last one in the list
 // takes precedence.
-func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]GeneratedFile, []error) {
+//
+// Generate may return one or more errors if it failed to load the packages.
+func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]*GenerateResult, []error) {
 	pkgs, errs := load(ctx, wd, env, patterns)
 	if len(errs) > 0 {
 		return nil, errs
 	}
-	generated := make([]GeneratedFile, 0, len(pkgs))
-	ec := new(errorCollector)
-	for _, pkg := range pkgs {
+	generated := make([]*GenerateResult, len(pkgs))
+	for i, pkg := range pkgs {
+		result := &GenerateResult{Package: pkg.Name}
+		generated[i] = result
 		outDir, err := detectOutputDir(pkg.GoFiles)
 		if err != nil {
-			ec.add(fmt.Errorf("load %s: %v", pkg.Name, err))
+			result.Errs = append(result.Errs, err)
+			continue
 		}
-		outFname := filepath.Join(outDir, "wire_gen.go")
+		result.Path = filepath.Join(outDir, "wire_gen.go")
 		g := newGen(pkg)
 		injectorFiles, errs := generateInjectors(g, pkg)
 		if len(errs) > 0 {
-			ec.add(errs...)
+			result.Errs = errs
+			continue
 		}
 		copyNonInjectorDecls(g, injectorFiles, pkg.TypesInfo)
 		goSrc := g.frame()
 		fmtSrc, err := format.Source(goSrc)
 		if err != nil {
 			// This is likely a bug from a poorly generated source file.
-			// Add an error but also return the unformatted source.
-			ec.add(err)
+			// Add an error but also the unformatted source.
+			result.Errs = append(result.Errs, err)
 		} else {
 			goSrc = fmtSrc
 		}
-		generated = append(generated, GeneratedFile{Package: pkg.Name, Path: outFname, Content: fmtSrc})
+		result.Content = goSrc
 	}
-	return generated, ec.errors
+	return generated, nil
 }
 
 func detectOutputDir(paths []string) (string, error) {
