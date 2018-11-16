@@ -84,10 +84,12 @@ func generate(pkgs ...string) error {
 	if len(outs) == 0 {
 		return nil
 	}
+	success := true
 	for _, out := range outs {
 		if len(out.Errs) > 0 {
 			fmt.Fprintf(os.Stderr, "%s: generate failed\n", out.PkgPath)
 			logErrors(out.Errs)
+			success = false
 		}
 		if len(out.Content) == 0 {
 			// No Wire output. Maybe errors, maybe no Wire directives.
@@ -98,6 +100,9 @@ func generate(pkgs ...string) error {
 		} else {
 			fmt.Fprintf(os.Stderr, "%s: failed to write %s: %v\n", out.PkgPath, out.OutputPath, err)
 		}
+	}
+	if !success {
+		return errors.New("generate failed")
 	}
 	return nil
 }
