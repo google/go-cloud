@@ -99,10 +99,11 @@ func generate(pkgs ...string) error {
 			fmt.Fprintf(os.Stderr, "%s: wrote %s\n", out.PkgPath, out.OutputPath)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s: failed to write %s: %v\n", out.PkgPath, out.OutputPath, err)
+			success = false
 		}
 	}
 	if !success {
-		return errors.New("generate failed")
+		return errors.New("at least one generate failure")
 	}
 	return nil
 }
