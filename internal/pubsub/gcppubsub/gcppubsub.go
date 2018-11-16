@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	raw2 "cloud.google.com/go/pubsub"
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/pubsub"
@@ -36,19 +37,33 @@ type topic struct {
 type TopicOptions struct{}
 
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName. If the topic does not exist then failure will occur when messages
-// are sent to it.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
-	dt := openTopic(ctx, client, proj, topicName)
+// topicName. If the topic does not exist then an error will be returned.
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
+	dt, err := openTopic(ctx, client, proj, topicName)
+	if err != nil {
+		return nil, fmt.Errorf("opening topic: %v", err)
+	}
 	t := pubsub.NewTopic(ctx, dt)
-	return t
+	return t, nil
 }
 
-// openTopic returns the driver for OpenTopic. This is so the test harness can
-// get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
+// openTopic returns the driver for OpenTopic. This function exists so the test
+// harness can get the driver interface implementation if it needs to.
+func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	return &topic{path, client}
+	gcli, err := raw2.NewClient(ctx, string(proj))
+	if err != nil {
+		return nil, fmt.Errorf("making GCP client to check topic existence: %v", err)
+	}
+	gt := gcli.Topic(topicName)
+	ok, err := gt.Exists(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("checking existence of topic: %v", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("topic named %q does not exist", topicName)
+	}
+	return &topic{path, client}, nil
 }
 
 // Close implements driver.Topic.Close.
@@ -82,17 +97,32 @@ type subscription struct {
 type SubscriptionOptions struct{}
 
 // OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName. If the subscription does not exist then
-// failure will occur when an attempt is made to receive messages from it.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
-	ds := openSubscription(ctx, client, projectID, subscriptionName)
+// projectID and subscriptionName. If the subscription does not exist then an
+// error is returned.
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(ctx, client, proj, subscriptionName)
+	if err != nil {
+		return nil, fmt.Errorf("opening subscription: %v", err)
+	}
 	s := pubsub.NewSubscription(ctx, ds)
-	return s
+	return s, nil
 }
 
-func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) driver.Subscription {
+func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
+	gcli, err := raw2.NewClient(ctx, string(projectID))
+	if err != nil {
+		return nil, fmt.Errorf("making GCP client to check subscription existence: %v", err)
+	}
+	gs := gcli.Subscription(subscriptionName)
+	ok, err := gs.Exists(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("checking for existence of subscription: %v", err)
+	}
+	if !ok {
+		return nil, fmt.Errorf("subscription named %q does not exist", subscriptionName)
+	}
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	return &subscription{client, path}
+	return &subscription{client, path}, nil
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -129,7 +159,11 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		Subscription: s.path,
 		AckIds:       ids2,
 	}
-	return s.client.Acknowledge(ctx, req)
+	err := s.client.Acknowledge(ctx, req)
+	if err != nil {
+		return fmt.Errorf("making RPC to acknowledge messages: %v", err)
+	}
+	return nil
 }
 
 // Close implements driver.Subscription.Close.
