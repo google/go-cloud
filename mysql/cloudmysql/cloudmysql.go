@@ -49,15 +49,31 @@ func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
 
 // Params specifies how to connect to a Cloud SQL database.
 type Params struct {
+	// ProjectID specifies the GCP project associated with the
+	// CloudSQL instance.
 	ProjectID string
-	Region    string
-	Instance  string
-	User      string
-	Password  string // may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
-	Database  string
+
+	// Region is the GCP region containing the CloudSQL instance.
+	Region string
+
+	// Instance is the CloudSQL instance name. See
+	// https://cloud.google.com/sql/docs/mysql/create-instance
+	// for background.
+	Instance string
+
+	// User is the username used to connect to the database.
+	User string
+
+	// Password is the password used to connect to the database.
+	// It may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
+	Password string
+
+	// Database is the name of the database to connect to.
+	Database string
 }
 
 type Options struct {
+	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
 
