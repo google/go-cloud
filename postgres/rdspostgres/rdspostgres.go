@@ -57,9 +57,10 @@ func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*
 	vals := make(url.Values)
 	for k, v := range params.Values {
 		// Only permit parameters that do not conflict with other behavior.
-		if k != "user" && k != "password" && k != "dbname" && k != "host" && k != "port" && k != "sslmode" && k != "sslcert" && k != "sslkey" && k != "sslrootcert" {
-			vals[k] = v
+		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, nil, fmt.Errorf("rdspostgres: open: extra parameter %s not allowed; use Params fields instead", k)
 		}
+		vals[k] = v
 	}
 	vals.Set("sslmode", "disable")
 
