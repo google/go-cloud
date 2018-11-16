@@ -203,6 +203,19 @@ type bucket struct {
 	client *s3.S3
 }
 
+// IsNotExist implements driver.IsNotExist.
+func (b *bucket) IsNotExist(err error) bool {
+	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
+		return true
+	}
+	return false
+}
+
+// IsNotImplemented implements driver.IsNotImplemented.
+func (b *bucket) IsNotImplemented(err error) bool {
+	return false
+}
+
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	pageSize := opts.PageSize
@@ -302,9 +315,6 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	req, resp := b.client.HeadObjectRequest(in)
 	if err := req.Send(); err != nil {
-		if e := isErrNotExist(err); e != nil {
-			return driver.Attributes{}, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
-		}
 		return driver.Attributes{}, err
 	}
 	var md map[string]string
@@ -345,9 +355,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
-		if e := isErrNotExist(err); e != nil {
-			return nil, s3Error{bucket: b.name, key: key, msg: e.Message(), kind: driver.NotFound}
-		}
 		return nil, err
 	}
 	return &reader{
@@ -442,24 +449,4 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 	req, _ := b.client.GetObjectRequest(in)
 	return req.Presign(opts.Expiry)
-}
-
-type s3Error struct {
-	bucket, key, msg string
-	kind             driver.ErrorKind
-}
-
-func (e s3Error) Kind() driver.ErrorKind {
-	return e.kind
-}
-
-func (e s3Error) Error() string {
-	return fmt.Sprintf("s3://%s/%s: %s", e.bucket, e.key, e.msg)
-}
-
-func isErrNotExist(err error) awserr.Error {
-	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
-		return e
-	}
-	return nil
 }

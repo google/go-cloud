@@ -47,6 +47,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -239,6 +240,18 @@ func unescape(s string) (string, error) {
 	return unescaped, nil
 }
 
+// IsNotExist implements driver.IsNotExist.
+func (b *bucket) IsNotExist(err error) bool {
+	return os.IsNotExist(err)
+}
+
+var errNotImplemented = errors.New("not implemented")
+
+// IsNotImplemented implements driver.IsNotImplemented.
+func (b *bucket) IsNotImplemented(err error) bool {
+	return err == errNotImplemented
+}
+
 // forKey returns the full path, os.FileInfo, and attributes for key.
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	relpath := escape(key)
@@ -248,10 +261,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return "", nil, nil, fileError{relpath: relpath, msg: err.Error(), kind: driver.NotFound}
-		}
-		return "", nil, nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return "", nil, nil, err
 	}
 	xa, err := getAttrs(path)
 	if err != nil {
@@ -543,10 +553,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	}
 	err := os.Remove(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return fileError{relpath: key, msg: err.Error(), kind: driver.NotFound}
-		}
-		return fmt.Errorf("delete file blob %s: %v", key, err)
+		return err
 	}
 	if err = os.Remove(path + attrsExt); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("delete file blob %s: %v", key, err)
@@ -556,21 +563,5 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	// TODO(Issue #546): Implemented SignedURL for fileblob.
-	return "", fileError{msg: "SignedURL not supported (see issue #546)", kind: driver.NotImplemented}
-}
-
-type fileError struct {
-	relpath, msg string
-	kind         driver.ErrorKind
-}
-
-func (e fileError) Error() string {
-	if e.relpath == "" {
-		return fmt.Sprintf("fileblob: %s", e.msg)
-	}
-	return fmt.Sprintf("fileblob: object %s: %s", e.relpath, e.msg)
-}
-
-func (e fileError) Kind() driver.ErrorKind {
-	return e.kind
+	return "", errNotImplemented
 }

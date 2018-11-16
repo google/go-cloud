@@ -29,7 +29,7 @@ import (
 func TestListIterator(t *testing.T) {
 	ctx := context.Background()
 	want := []string{"a", "b", "c"}
-	db := &fakeBucket{pages: [][]string{
+	db := &fakeLister{pages: [][]string{
 		{"a"},
 		{},
 		{},
@@ -58,13 +58,13 @@ func TestListIterator(t *testing.T) {
 	}
 }
 
-type fakeBucket struct {
+type fakeLister struct {
 	driver.Bucket
 
 	pages [][]string
 }
 
-func (b *fakeBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	if len(b.pages) == 0 {
 		return &driver.ListPage{}, nil
 	}
@@ -75,6 +75,109 @@ func (b *fakeBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 		objs = append(objs, &driver.ListObject{Key: key})
 	}
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
+}
+
+var errFake = errors.New("fake")
+
+type fakeErrorer struct {
+	driver.Bucket
+}
+
+type fakeErrorReader struct {
+	driver.Reader
+}
+
+func (r *fakeErrorReader) Read(p []byte) (int, error) {
+	return 0, errFake
+}
+
+func (r *fakeErrorReader) Close() error {
+	return errFake
+}
+
+type fakeErrorWriter struct {
+	driver.Writer
+}
+
+func (r *fakeErrorWriter) Write(p []byte) (int, error) {
+	return 0, errFake
+}
+
+func (r *fakeErrorWriter) Close() error {
+	return errFake
+}
+
+func (b *fakeErrorer) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	return driver.Attributes{}, errFake
+}
+
+func (b *fakeErrorer) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	return nil, errFake
+}
+
+func (b *fakeErrorer) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	if key == "work" {
+		return &fakeErrorReader{}, nil
+	}
+	return nil, errFake
+}
+
+func (b *fakeErrorer) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	if key == "work" {
+		return &fakeErrorWriter{}, nil
+	}
+	return nil, errFake
+}
+
+func (b *fakeErrorer) Delete(ctx context.Context, key string) error {
+	return errFake
+}
+
+func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	return "", errFake
+}
+
+func wrapped(err error) bool {
+	_, ok := err.(*wrappedError)
+	return ok
+}
+func TestErrorsAreWrapped(t *testing.T) {
+	ctx := context.Background()
+	b := NewBucket(&fakeErrorer{})
+	if _, err := b.Attributes(ctx, ""); !wrapped(err) {
+		t.Errorf("Attributes error not wrapped: %v", err)
+	}
+	iter, _ := b.List(ctx, nil)
+	if _, err := iter.Next(ctx); !wrapped(err) {
+		t.Errorf("ListPaged error not wrapped: %v", err)
+	}
+	if _, err := b.NewRangeReader(ctx, "", 0, 1); !wrapped(err) {
+		t.Errorf("NewRangeReader error not wrapped: %v", err)
+	}
+	if _, err := b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"}); !wrapped(err) {
+		t.Errorf("NewTypedWriter error not wrapped: %v", err)
+	}
+	var buf []byte
+	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
+	if _, err := r.Read(buf); !wrapped(err) {
+		t.Errorf("Reader.Read error not wrapped: %v", err)
+	}
+	if err := r.Close(); !wrapped(err) {
+		t.Errorf("Reader.Close error not wrapped: %v", err)
+	}
+	w, _ := b.NewWriter(ctx, "work", &WriterOptions{ContentType: "foo"})
+	if _, err := w.Write(buf); !wrapped(err) {
+		t.Errorf("Writer.Write error not wrapped: %v", err)
+	}
+	if err := w.Close(); !wrapped(err) {
+		t.Errorf("Writer.Close error not wrapped: %v", err)
+	}
+	if err := b.Delete(ctx, ""); !wrapped(err) {
+		t.Errorf("Delete error not wrapped: %v", err)
+	}
+	if _, err := b.SignedURL(ctx, "", nil); !wrapped(err) {
+		t.Errorf("SignedURL error not wrapped: %v", err)
+	}
 }
 
 // TestOpen tests blob.Open.

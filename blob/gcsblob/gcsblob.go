@@ -181,6 +181,16 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
+// IsNotExist implements driver.IsNotExist.
+func (b *bucket) IsNotExist(err error) bool {
+	return err == storage.ErrObjectNotExist
+}
+
+// IsNotImplemented implements driver.IsNotImplemented.
+func (b *bucket) IsNotImplemented(err error) bool {
+	return false
+}
+
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
@@ -265,9 +275,6 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
 	if err != nil {
-		if isErrNotExist(err) {
-			return driver.Attributes{}, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-		}
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
@@ -292,9 +299,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if err != nil {
-		if isErrNotExist(err) {
-			return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-		}
 		return nil, err
 	}
 	modTime, _ := r.LastModified()
@@ -338,11 +342,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	err := obj.Delete(ctx)
-	if isErrNotExist(err) {
-		return gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-	}
-	return err
+	return obj.Delete(ctx)
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.SignedURLOptions) (string, error) {
@@ -366,21 +366,4 @@ func bufferSize(size int) int {
 		return size
 	}
 	return 0 // disable buffering
-}
-
-type gcsError struct {
-	bucket, key, msg string
-	kind             driver.ErrorKind
-}
-
-func (e gcsError) Error() string {
-	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
-}
-
-func (e gcsError) Kind() driver.ErrorKind {
-	return e.kind
-}
-
-func isErrNotExist(err error) bool {
-	return err == storage.ErrObjectNotExist
 }
