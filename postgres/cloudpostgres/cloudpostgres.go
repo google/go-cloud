@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -56,9 +57,10 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 	vals := make(url.Values)
 	for k, v := range params.Values {
 		// Only permit parameters that do not conflict with other behavior.
-		if k != "user" && k != "password" && k != "dbname" && k != "host" && k != "port" && k != "sslmode" && k != "sslcert" && k != "sslkey" && k != "sslrootcert" {
-			vals[k] = v
+		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
 		}
+		vals[k] = v
 	}
 	vals.Set("sslmode", "disable")
 
