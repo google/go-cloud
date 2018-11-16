@@ -83,25 +83,24 @@ func (gen GenerateResult) Diff() (string, error) {
 // takes precedence.
 //
 // Generate may return one or more errors if it failed to load the packages.
-func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]*GenerateResult, []error) {
+func Generate(ctx context.Context, wd string, env []string, patterns []string) ([]GenerateResult, []error) {
 	pkgs, errs := load(ctx, wd, env, patterns)
 	if len(errs) > 0 {
 		return nil, errs
 	}
-	generated := make([]*GenerateResult, len(pkgs))
+	generated := make([]GenerateResult, len(pkgs))
 	for i, pkg := range pkgs {
-		result := &GenerateResult{PkgPath: pkg.PkgPath}
-		generated[i] = result
+		generated[i].PkgPath = pkg.PkgPath
 		outDir, err := detectOutputDir(pkg.GoFiles)
 		if err != nil {
-			result.Errs = append(result.Errs, err)
+			generated[i].Errs = append(generated[i].Errs, err)
 			continue
 		}
-		result.OutputPath = filepath.Join(outDir, "wire_gen.go")
+		generated[i].OutputPath = filepath.Join(outDir, "wire_gen.go")
 		g := newGen(pkg)
 		injectorFiles, errs := generateInjectors(g, pkg)
 		if len(errs) > 0 {
-			result.Errs = errs
+			generated[i].Errs = errs
 			continue
 		}
 		copyNonInjectorDecls(g, injectorFiles, pkg.TypesInfo)
@@ -110,11 +109,11 @@ func Generate(ctx context.Context, wd string, env []string, patterns []string) (
 		if err != nil {
 			// This is likely a bug from a poorly generated source file.
 			// Add an error but also the unformatted source.
-			result.Errs = append(result.Errs, err)
+			generated[i].Errs = append(generated[i].Errs, err)
 		} else {
 			goSrc = fmtSrc
 		}
-		result.Content = goSrc
+		generated[i].Content = goSrc
 	}
 	return generated, nil
 }
