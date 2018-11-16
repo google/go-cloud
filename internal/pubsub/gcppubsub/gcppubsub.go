@@ -32,10 +32,13 @@ type topic struct {
 	client *raw.PublisherClient
 }
 
+// TopicOptions will contain configuration for topics.
+type TopicOptions struct{}
+
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
 // topicName. If the topic does not exist then failure will occur when messages
 // are sent to it.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) *pubsub.Topic {
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(ctx, client, proj, topicName)
 	t := pubsub.NewTopic(ctx, dt)
 	return t
@@ -75,10 +78,13 @@ type subscription struct {
 	path   string
 }
 
+// SubscriptionOptions will contain configuration for subscriptions.
+type SubscriptionOptions struct{}
+
 // OpenSubscription opens the subscription on GCP PubSub for the given
 // projectID and subscriptionName. If the subscription does not exist then
 // failure will occur when an attempt is made to receive messages from it.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string) *pubsub.Subscription {
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, projectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, projectID, subscriptionName)
 	s := pubsub.NewSubscription(ctx, ds)
 	return s
