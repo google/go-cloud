@@ -65,7 +65,7 @@ func (gen GenerateResult) Commit() error {
 func (gen GenerateResult) Diff() (string, error) {
 	// Assume the current file is empty if we can't read it.
 	cur, _ := ioutil.ReadFile(gen.OutputPath)
-	return difflib.GetUnifiedDiffString(out, difflib.UnifiedDiff{
+	return difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
 		A: difflib.SplitLines(string(cur)),
 		B: difflib.SplitLines(string(gen.Content)),
 	})

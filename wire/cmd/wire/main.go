@@ -112,29 +112,45 @@ func generate(pkgs ...string) error {
 	return nil
 }
 
-// diff runs the diff subcommand. Given a package, diff will generate
-// the content for the wire_gen.go file, and output the diff against the
-// existing file.
+// diff runs the diff subcommand.
+//
+// Given one or more packages, diff will generate the content for the
+// wire_gen.go file, and output the diff against the existing file.
 func diff(pkgs ...string) error {
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	for _, pkg := range pkgs {
-		fmt.Println(pkg)
-		out, errs := wire.Generate(context.Background(), wd, os.Environ(), pkg)
-		if len(errs) > 0 {
-			logErrors(errs)
-			return errors.New("generate failed")
+	outs, errs := wire.Generate(context.Background(), wd, os.Environ(), pkgs)
+	if len(errs) > 0 {
+		logErrors(errs)
+		return errors.New("generate failed")
+	}
+	if len(outs) == 0 {
+		return nil
+	}
+	success := true
+	for _, out := range outs {
+		if len(out.Errs) > 0 {
+			fmt.Fprintf(os.Stderr, "%s: generate failed\n", out.PkgPath)
+			logErrors(out.Errs)
+			success = false
 		}
 		if len(out.Content) == 0 {
-			// No Wire directives, don't write anything.
-			fmt.Fprintln(os.Stderr, "wire: no injector found for", pkg)
+			// No Wire output. Maybe errors, maybe no Wire directives.
 			continue
 		}
-		if err := out.Diff(os.Stderr); err != nil {
-			return err
+		if diff, err := out.Diff(); err == nil {
+			if diff != "" {
+				fmt.Fprintf(os.Stderr, "%s: diff from %s:\n%s", out.PkgPath, out.OutputPath, diff)
+			}
+		} else {
+			fmt.Fprintf(os.Stderr, "%s: failed to diff %s: %v\n", out.PkgPath, out.OutputPath, err)
+			success = false
 		}
+	}
+	if !success {
+		return errors.New("at least one generate failure")
 	}
 	return nil
 }
