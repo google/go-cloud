@@ -41,7 +41,7 @@ type TopicOptions struct{}
 func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
 	dt, err := openTopic(ctx, client, proj, topicName)
 	if err != nil {
-		return nil, fmt.Errorf("opening topic: %v", err)
+		return nil, fmt.Errorf("gcppubsub: opening topic: %v", err)
 	}
 	t := pubsub.NewTopic(ctx, dt)
 	return t, nil
@@ -53,15 +53,15 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	gcli, err := raw2.NewClient(ctx, string(proj))
 	if err != nil {
-		return nil, fmt.Errorf("making GCP client to check topic existence: %v", err)
+		return nil, fmt.Errorf("gcppubsub: making GCP client to check topic existence: %v", err)
 	}
 	gt := gcli.Topic(topicName)
 	ok, err := gt.Exists(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("checking existence of topic: %v", err)
+		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("topic named %q does not exist", topicName)
+		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
 	}
 	return &topic{path, client}, nil
 }
@@ -102,7 +102,7 @@ type SubscriptionOptions struct{}
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
 	ds, err := openSubscription(ctx, client, proj, subscriptionName)
 	if err != nil {
-		return nil, fmt.Errorf("opening subscription: %v", err)
+		return nil, fmt.Errorf("gcppubsub: opening subscription: %v", err)
 	}
 	s := pubsub.NewSubscription(ctx, ds)
 	return s, nil
@@ -111,15 +111,15 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
 	gcli, err := raw2.NewClient(ctx, string(projectID))
 	if err != nil {
-		return nil, fmt.Errorf("making GCP client to check subscription existence: %v", err)
+		return nil, fmt.Errorf("gcppubsub: making GCP client to check subscription existence: %v", err)
 	}
 	gs := gcli.Subscription(subscriptionName)
 	ok, err := gs.Exists(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("checking for existence of subscription: %v", err)
+		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("subscription named %q does not exist", subscriptionName)
+		return nil, fmt.Errorf("gcppubsub: subscription named %q does not exist", subscriptionName)
 	}
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	return &subscription{client, path}, nil
@@ -133,7 +133,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 	}
 	resp, err := s.client.Pull(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("making RPC to receive next batch of messages: %v", err)
+		return nil, fmt.Errorf("gcppubsub: making RPC to receive next batch of messages: %v", err)
 	}
 	var ms []*driver.Message
 	for _, rm := range resp.ReceivedMessages {
@@ -161,7 +161,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 	err := s.client.Acknowledge(ctx, req)
 	if err != nil {
-		return fmt.Errorf("making RPC to acknowledge messages: %v", err)
+		return fmt.Errorf("gcppubsub: making RPC to acknowledge messages: %v", err)
 	}
 	return nil
 }
