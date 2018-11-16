@@ -43,7 +43,7 @@ func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: opening topic: %v", err)
 	}
-	t := pubsub.NewTopic(ctx, dt)
+	t := pubsub.NewTopic(dt)
 	return t, nil
 }
 
@@ -104,7 +104,7 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: opening subscription: %v", err)
 	}
-	s := pubsub.NewSubscription(ctx, ds)
+	s := pubsub.NewSubscription(ds)
 	return s, nil
 }
 
