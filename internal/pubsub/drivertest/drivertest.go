@@ -51,14 +51,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
-	t.Run("TestSendReceiveWithMetadata", func(t *testing.T) {
-		testSendReceiveWithMetadata(t, newHarness)
-	})
 	t.Run("TestSendError", func(t *testing.T) {
 		testSendError(t, newHarness)
 	})
-	t.Run("TestReceiveError", func(t *testing.T) {
-		testReceiveError(t, newHarness)
+	t.Run("TestErrorOnReceiveFromClosedSubscription", func(t *testing.T) {
+		testErrorOnReceiveFromClosedSubscription(t, newHarness)
 	})
 	t.Run("TestCancelSendReceive", func(t *testing.T) {
 		testCancelSendReceive(t, newHarness)
@@ -81,70 +78,32 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	want := []*pubsub.Message{
-		{Body: []byte("a")},
-		{Body: []byte("b")},
-		{Body: []byte("c")},
-	}
-
-	for _, m := range want {
+	// Send to the topic.
+	ms := []*pubsub.Message{}
+	for i := 0; i < 3; i++ {
+		m := &pubsub.Message{
+			Body:     []byte(randStr()),
+			Metadata: map[string]string{randStr(): randStr()},
+		}
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
+		ms = append(ms, m)
 	}
 
-	var got []*pubsub.Message
-	for i := 0; i < 3; i++ {
+	// Receive from the subscription.
+	ms2 := []*pubsub.Message{}
+	for i := 0; i < len(ms); i++ {
 		m2, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = append(got, m2)
+		ms2 = append(ms2, m2)
 	}
 
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
-	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+	if diff := cmp.Diff(ms2, ms, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
 		t.Error(diff)
-	}
-}
-
-func testSendReceiveWithMetadata(t *testing.T, newHarness HarnessMaker) {
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	// Send to the topic.
-	m := &pubsub.Message{
-		Body:     []byte(randStr()),
-		Metadata: map[string]string{randStr(): randStr()},
-	}
-	if err := top.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
-
-	// Receive from the subscription.
-	m2, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Check that the received message matches the sent one.
-	if string(m2.Body) != string(m.Body) {
-		t.Errorf("received message body = %q, want %q", m2.Body, m.Body)
-	}
-	if len(m2.Metadata) != len(m.Metadata) {
-		t.Errorf("got %d metadata keys, want %d", len(m2.Metadata), len(m.Metadata))
-	}
-	if diff := cmp.Diff(m.Metadata, m2.Metadata); diff != "" {
-		t.Errorf("Metadata differs: (-want +got)\n%s", diff)
 	}
 }
 
@@ -167,7 +126,7 @@ func testSendError(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testReceiveError(t *testing.T, newHarness HarnessMaker) {
+func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
