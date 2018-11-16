@@ -88,7 +88,14 @@ func TestWire(t *testing.T) {
 				t.Fatal(err)
 			}
 			wd := filepath.Join(gopath, "src", "example.com")
-			gen, errs := Generate(ctx, wd, append(os.Environ(), "GOPATH="+gopath), test.pkg)
+			gens, errs := Generate(ctx, wd, append(os.Environ(), "GOPATH="+gopath), []string{test.pkg})
+			if len(gens) > 1 {
+				t.Fatalf("got %d generated files, want 0-1", len(gens))
+			}
+			var gen GeneratedFile
+			if len(gens) > 0 {
+				gen = gens[0]
+			}
 			if len(gen.Content) > 0 {
 				defer t.Logf("wire_gen.go:\n%s", gen.Content)
 			}
