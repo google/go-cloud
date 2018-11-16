@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+//
 //+build wireinject
 
 package main
@@ -20,14 +20,11 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-func injectFoo() Foo {
-	// This non-call statement makes this an invalid injector.
-	_ = 42
-	panic(wire.Build(provideFoo))
-}
-
-func injectBar() Bar {
-	// Two call statements are also invalid.
-	panic(wire.Build(provideBar))
-	panic(wire.Build(provideBar))
+func inject(foo *Foo) *Bar {
+	// Currently fails because wire.Bind can't see injector args (#547).
+	wire.Build(
+		NewBar,
+		wire.Bind(new(Fooer), &Foo{}),
+	)
+	return nil
 }

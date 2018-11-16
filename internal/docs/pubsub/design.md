@@ -235,6 +235,7 @@ import (
 // OpenTopic opens an existing topic on the pubsub server and returns a Topic
 // that can be used to send messages to that topic.
 func OpenTopic(ctx context.Context, client *rawacmepubsub.Client, topicName string) (*pubsub.Topic, error) {
+	rt, err := client.Topic(ctx, topicName)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +470,11 @@ Topics will gather messages into batches for sending. The batch size will be
 dynamically tuned according to how many messages are being sent concurrently.
 
 Subscriptions will gather message acks into batches the same way, also
-dynamically tuning the batch size.
+dynamically tuning the batch size. If sending acks back to the server fails
+transiently then it will be retried, most likely within a loop in the concrete
+API. If an unrecoverable error occurs while sending acks then a flag will be
+set on the `pubsub.Subscription` saying that the whole `Subscription` is no
+longer usable. Calls to `Receive` will fail from then on.
 
 ## Alternative designs considered
 

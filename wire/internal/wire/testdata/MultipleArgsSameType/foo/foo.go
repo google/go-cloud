@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build wireinject
-
 package main
 
 import (
-	"github.com/google/go-cloud/wire"
+	"fmt"
 )
 
-func injectFoo() Foo {
-	// This non-call statement makes this an invalid injector.
-	_ = 42
-	panic(wire.Build(provideFoo))
+func main() {
+	fmt.Println(inject("foo", "bar").A)
 }
 
-func injectBar() Bar {
-	// Two call statements are also invalid.
-	panic(wire.Build(provideBar))
-	panic(wire.Build(provideBar))
+type Foo struct {
+	A string
+}
+
+func provideFoo(a string) *Foo {
+	return &Foo{A: a}
 }

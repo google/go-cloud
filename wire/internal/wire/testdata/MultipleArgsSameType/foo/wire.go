@@ -20,14 +20,7 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-func injectFoo() Foo {
-	// This non-call statement makes this an invalid injector.
-	_ = 42
+func inject(a, b string) *Foo {
+	// fail: can't have two args of the same type.
 	panic(wire.Build(provideFoo))
-}
-
-func injectBar() Bar {
-	// Two call statements are also invalid.
-	panic(wire.Build(provideBar))
-	panic(wire.Build(provideBar))
 }

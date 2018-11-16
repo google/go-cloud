@@ -12,22 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//+build wireinject
-
-package main
+package s3blob_test
 
 import (
-	"github.com/google/go-cloud/wire"
+	"context"
+
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/google/go-cloud/blob/s3blob"
 )
 
-func injectFoo() Foo {
-	// This non-call statement makes this an invalid injector.
-	_ = 42
-	panic(wire.Build(provideFoo))
-}
+func ExampleOpenBucket() {
+	ctx := context.Background()
 
-func injectBar() Bar {
-	// Two call statements are also invalid.
-	panic(wire.Build(provideBar))
-	panic(wire.Build(provideBar))
+	// Create an AWS session.
+	// This example uses defaults for finding credentials, which region to use,
+	// etc.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+	// for more info on available options.
+	sess, err := session.NewSession()
+	if err != nil {
+		// Handle errror.
+		return
+	}
+
+	// Create a *blob.Bucket.
+	_, _ = s3blob.OpenBucket(ctx, "my-bucket", sess, nil)
+
+	// Output:
 }
