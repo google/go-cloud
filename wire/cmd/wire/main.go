@@ -33,7 +33,7 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
-const usage = "usage: wire [gen] [PKG] | wire show [...] | wire check [...] | wire diff [...]"
+const usage = "usage: wire [gen|diff|show|check] [...]"
 
 func main() {
 	var err error
