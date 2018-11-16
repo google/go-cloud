@@ -19,7 +19,6 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
-	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/gcp"
@@ -96,20 +95,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 		Subscription:      s.path,
 		ReturnImmediately: false,
 	}
-	var resp *pb.PullResponse
-	for {
-		var err error
-		resp, err = s.client.Pull(ctx, req)
-		if err == nil {
-			break
-		}
-		// Retry:
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(time.Second):
-		}
-		continue
+	resp, err := s.client.Pull(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("making RPC to receive next batch of messages: %v", err)
 	}
 	var ms []*driver.Message
 	for _, rm := range resp.ReceivedMessages {
