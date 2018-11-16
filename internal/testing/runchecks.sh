@@ -29,7 +29,12 @@ fi
 result=0
 
 # Run Go tests for the root, including coverage.
-go test -race -coverpkg=./... -coverprofile=coverage.out ./... && goveralls -coverprofile=coverage.out -service=travis-ci || result=1
+go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+if [ -f coverage.out ]; then
+  # Filter out test and sample packages.
+  grep -v test coverage.out | grep -v samples > coverage2.out
+  goveralls -coverprofile=coverage2.out -service=travis-ci
+fi
 wire check ./... || result=1
 
 # Run Go tests for each additional module, without coverage.
