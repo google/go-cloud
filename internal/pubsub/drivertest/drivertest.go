@@ -98,6 +98,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		ms2 = append(ms2, m2)
 	}
 
+	// Check that the received messages match the sent ones.
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
 	if diff := cmp.Diff(ms2, ms, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
 		t.Error(diff)
