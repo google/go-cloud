@@ -26,7 +26,7 @@ import (
 
 func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
 	ctx := context.Background()
-	_, err := Open(ctx, nil, &Params{}, nil)
+	_, err := Open(ctx, nil, &Params{})
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -34,8 +34,7 @@ func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
 
 func TestTraceOptionsCanBeGiven(t *testing.T) {
 	ctx := context.Background()
-	opts := &Options{TraceOpts: []ocsql.TraceOption{ocsql.WithAllTraceOptions()}}
-	_, err := Open(ctx, nil, &Params{}, opts)
+	_, err := Open(ctx, nil, &Params{TraceOpts: []ocsql.TraceOption{ocsql.WithAllTraceOptions()}})
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -79,7 +78,7 @@ func TestOpen(t *testing.T) {
 		User:      username,
 		Password:  password,
 		Database:  databaseName,
-	}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
