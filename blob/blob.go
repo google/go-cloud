@@ -615,9 +615,6 @@ func wrapError(b driver.Bucket, err error) error {
 	if err == io.EOF {
 		return err
 	}
-	if _, ok := err.(*wrappedError); ok {
-		panic("double-wrapped error!")
-	}
 	return &wrappedError{b: b, err: err}
 }
 

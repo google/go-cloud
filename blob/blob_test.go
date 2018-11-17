@@ -137,47 +137,53 @@ func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.Si
 	return "", errFake
 }
 
-func wrapped(err error) bool {
-	_, ok := err.(*wrappedError)
-	return ok
-}
 func TestErrorsAreWrapped(t *testing.T) {
+	// verifyWrap ensures that err is wrapped exactly once.
+	verifyWrap := func(description string, err error) {
+		if unwrapped, ok := err.(*wrappedError); !ok {
+			t.Errorf("%s: not wrapped: %v", description, err)
+		} else if du, ok := unwrapped.err.(*wrappedError); ok {
+			t.Errorf("%s: double wrapped: %v", description, du)
+		}
+	}
+
 	ctx := context.Background()
 	b := NewBucket(&fakeErrorer{})
-	if _, err := b.Attributes(ctx, ""); !wrapped(err) {
-		t.Errorf("Attributes error not wrapped: %v", err)
-	}
+	var err error
+
+	_, err = b.Attributes(ctx, "")
+	verifyWrap("Attributes", err)
+
 	iter, _ := b.List(ctx, nil)
-	if _, err := iter.Next(ctx); !wrapped(err) {
-		t.Errorf("ListPaged error not wrapped: %v", err)
-	}
-	if _, err := b.NewRangeReader(ctx, "", 0, 1); !wrapped(err) {
-		t.Errorf("NewRangeReader error not wrapped: %v", err)
-	}
-	if _, err := b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"}); !wrapped(err) {
-		t.Errorf("NewTypedWriter error not wrapped: %v", err)
-	}
+	_, err = iter.Next(ctx)
+	verifyWrap("ListPaged", err)
+
+	_, err = b.NewRangeReader(ctx, "", 0, 1)
+	verifyWrap("NewRangeReader", err)
+
+	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
+	verifyWrap("NewWriter", err)
+
 	var buf []byte
 	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
-	if _, err := r.Read(buf); !wrapped(err) {
-		t.Errorf("Reader.Read error not wrapped: %v", err)
-	}
-	if err := r.Close(); !wrapped(err) {
-		t.Errorf("Reader.Close error not wrapped: %v", err)
-	}
+	_, err = r.Read(buf)
+	verifyWrap("Reader.Read", err)
+
+	err = r.Close()
+	verifyWrap("Reader.Close", err)
+
 	w, _ := b.NewWriter(ctx, "work", &WriterOptions{ContentType: "foo"})
-	if _, err := w.Write(buf); !wrapped(err) {
-		t.Errorf("Writer.Write error not wrapped: %v", err)
-	}
-	if err := w.Close(); !wrapped(err) {
-		t.Errorf("Writer.Close error not wrapped: %v", err)
-	}
-	if err := b.Delete(ctx, ""); !wrapped(err) {
-		t.Errorf("Delete error not wrapped: %v", err)
-	}
-	if _, err := b.SignedURL(ctx, "", nil); !wrapped(err) {
-		t.Errorf("SignedURL error not wrapped: %v", err)
-	}
+	_, err = w.Write(buf)
+	verifyWrap("Writer.Write", err)
+
+	err = w.Close()
+	verifyWrap("Writer.Close", err)
+
+	err = b.Delete(ctx, "")
+	verifyWrap("Delete", err)
+
+	_, err = b.SignedURL(ctx, "", nil)
+	verifyWrap("SignedURL", err)
 }
 
 // TestOpen tests blob.Open.
