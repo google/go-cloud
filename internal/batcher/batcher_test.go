@@ -76,7 +76,7 @@ func TestBatcherSaturation(t *testing.T) {
 		return nil
 	})
 	var wg sync.WaitGroup
-	nItems := 1000
+	const nItems = 1000
 	for i := 0; i < nItems; i++ {
 		i := i
 		wg.Add(1)
