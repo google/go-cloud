@@ -29,7 +29,7 @@ import (
 func TestListIterator(t *testing.T) {
 	ctx := context.Background()
 	want := []string{"a", "b", "c"}
-	db := &fakeBucket{pages: [][]string{
+	db := &fakeLister{pages: [][]string{
 		{"a"},
 		{},
 		{},
@@ -55,13 +55,14 @@ func TestListIterator(t *testing.T) {
 	}
 }
 
-type fakeBucket struct {
+// faikeLister implements driver.Bucket. Only ListPaged is implemented,
+// returning static data from pages.
+type fakeLister struct {
 	driver.Bucket
-
 	pages [][]string
 }
 
-func (b *fakeBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	if len(b.pages) == 0 {
 		return &driver.ListPage{}, nil
 	}
@@ -72,6 +73,121 @@ func (b *fakeBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 		objs = append(objs, &driver.ListObject{Key: key})
 	}
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
+}
+
+var errFake = errors.New("fake")
+
+// fakeError implements driver.Bucket. All interface methods that return
+// errors are implemented, and return errFake.
+// In addition, when passed the key "work", NewRangedReader and NewTypedWriter
+// will return a Reader/Writer respectively, that always return errFake
+// from Read/Write and Close.
+type fakeErrorer struct {
+	driver.Bucket
+}
+
+type fakeErrorReader struct {
+	driver.Reader
+}
+
+func (r *fakeErrorReader) Read(p []byte) (int, error) {
+	return 0, errFake
+}
+
+func (r *fakeErrorReader) Close() error {
+	return errFake
+}
+
+type fakeErrorWriter struct {
+	driver.Writer
+}
+
+func (r *fakeErrorWriter) Write(p []byte) (int, error) {
+	return 0, errFake
+}
+
+func (r *fakeErrorWriter) Close() error {
+	return errFake
+}
+
+func (b *fakeErrorer) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	return driver.Attributes{}, errFake
+}
+
+func (b *fakeErrorer) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	return nil, errFake
+}
+
+func (b *fakeErrorer) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+	if key == "work" {
+		return &fakeErrorReader{}, nil
+	}
+	return nil, errFake
+}
+
+func (b *fakeErrorer) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	if key == "work" {
+		return &fakeErrorWriter{}, nil
+	}
+	return nil, errFake
+}
+
+func (b *fakeErrorer) Delete(ctx context.Context, key string) error {
+	return errFake
+}
+
+func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	return "", errFake
+}
+
+// TestErrorsAreWrapped tests that all errors returned from the driver are
+// wrapped exactly once by the concrete type.
+func TestErrorsAreWrapped(t *testing.T) {
+	ctx := context.Background()
+	b := NewBucket(&fakeErrorer{})
+
+	// verifyWrap ensures that err is wrapped exactly once.
+	verifyWrap := func(description string, err error) {
+		if unwrapped, ok := err.(*wrappedError); !ok {
+			t.Errorf("%s: not wrapped: %v", description, err)
+		} else if du, ok := unwrapped.err.(*wrappedError); ok {
+			t.Errorf("%s: double wrapped: %v", description, du)
+		}
+	}
+
+	_, err := b.Attributes(ctx, "")
+	verifyWrap("Attributes", err)
+
+	iter := b.List(nil)
+	_, err = iter.Next(ctx)
+	verifyWrap("ListIterator.Next", err)
+
+	_, err = b.NewRangeReader(ctx, "", 0, 1)
+	verifyWrap("NewRangeReader", err)
+
+	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
+	verifyWrap("NewWriter", err)
+
+	var buf []byte
+	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
+	_, err = r.Read(buf)
+	verifyWrap("Reader.Read", err)
+
+	err = r.Close()
+	verifyWrap("Reader.Close", err)
+
+	w, _ := b.NewWriter(ctx, "work", &WriterOptions{ContentType: "foo"})
+	_, err = w.Write(buf)
+	verifyWrap("Writer.Write", err)
+
+	err = w.Close()
+	verifyWrap("Writer.Close", err)
+
+	err = b.Delete(ctx, "")
+	verifyWrap("Delete", err)
+
+	_, err = b.SignedURL(ctx, "", nil)
+	verifyWrap("SignedURL", err)
 }
 
 // TestOpen tests blob.Open.
