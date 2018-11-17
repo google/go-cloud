@@ -22,26 +22,6 @@ import (
 	"time"
 )
 
-// ErrorKind is a code to indicate the kind of failure.
-type ErrorKind int
-
-const (
-	// GenericError is the default ErrorKind.
-	GenericError ErrorKind = iota
-	// NotFound indicates that the referenced key does not exist.
-	NotFound
-	// NotImplemented indicates that the provider does not support this operation.
-	NotImplemented
-)
-
-// Error is an interface that may be implemented by an error returned by
-// a driver to indicate the kind of failure.  If an error does not have the
-// Kind method, then it is assumed to be GenericError.
-type Error interface {
-	error
-	Kind() ErrorKind
-}
-
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
@@ -181,6 +161,16 @@ type ListPage struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
+	// IsNotExist should return true if err, an error returned from one
+	// of the other methods in this interface, represents a "key does not exist"
+	// error.
+	IsNotExist(err error) bool
+
+	// IsNotImplemented should return true if err, an error returned from one
+	// of the other methods in this interface, indicates that the method is not
+	// implemented for this provider.
+	IsNotImplemented(err error) bool
+
 	// As allows providers to expose provider-specific types.
 	//
 	// i will be a pointer to the type the user wants filled in.
@@ -206,8 +196,8 @@ type Bucket interface {
 	As(i interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
-	// not exist, Attributes must return an error whose Kind method returns
-	// NotFound.
+	// not exist, Attributes must return an error for which IsNotExist returns
+	// true.
 	Attributes(ctx context.Context, key string) (Attributes, error)
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
@@ -222,8 +212,8 @@ type Bucket interface {
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
 	// will read until the end of the object. If the specified object does not
-	// exist, NewRangeReader must return an error whose Kind method returns
-	// NotFound.
+	// exist, NewRangeReader must return an error for which IsNotExist returns
+	// true.
 	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
 
 	// NewTypedWriter returns Writer that writes to an object associated with key.
@@ -243,13 +233,14 @@ type Bucket interface {
 	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
-	// not exist, NewRangeReader must return an error whose Kind method
-	// returns NotFound.
+	// not exist, NewRangeReader must return an error for which IsNotExist returns
+	// true.
 	Delete(ctx context.Context, key string) error
 
 	// SignedURL returns a URL that can be used to GET the blob for the duration
 	// specified in opts.Expiry. opts is guaranteed to be non-nil.
-	// If not supported, return an error whose Kind method returns NotImplemented.
+	// If not supported, return an error for which IsNotImplemented returns
+	// true.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
 }
 
