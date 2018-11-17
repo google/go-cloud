@@ -319,8 +319,19 @@ type Topic interface {
 
 // Subscription receives published messages.
 type Subscription interface {
-	// ReceiveBatch returns a batch of messages that have queued up for the
-	// subscription on the server.
+        // ReceiveBatch should return a batch of messages that have queued up
+        // for the subscription on the server.
+        //
+        // If there is a transient failure, this method should not retry but
+        // should return a nil slice and an error. The concrete API will take
+        // care of retry logic.
+        //
+        // If the service returns no messages for some other reason, this
+        // method should return the empty slice of messages and not attempt to
+        // retry.
+        //
+        // ReceiveBatch is only called sequentially for individual
+        // Subscriptions.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
 	// SendAcks acknowledges the messages with the given ackIDs on the
