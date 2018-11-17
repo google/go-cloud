@@ -322,7 +322,7 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 //
 // List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
-func (b *Bucket) List(ctx context.Context, opts *ListOptions) (*ListIterator, error) {
+func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	if opts == nil {
 		opts = &ListOptions{}
 	}
@@ -331,7 +331,7 @@ func (b *Bucket) List(ctx context.Context, opts *ListOptions) (*ListIterator, er
 		Delimiter:  opts.Delimiter,
 		BeforeList: opts.BeforeList,
 	}
-	return &ListIterator{b: b.b, opts: dopts}, nil
+	return &ListIterator{b: b.b, opts: dopts}
 }
 
 // Attributes reads attributes for the given key.
