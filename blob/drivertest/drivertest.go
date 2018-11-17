@@ -267,10 +267,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		}
 		// See if the blobs are already there.
 		b := blob.NewBucket(drv)
-		iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
-		if err != nil {
-			t.Fatal(err)
-		}
+		iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
 		count := countItems(ctx, t, iter)
 		if count != 3 {
 			for i := 0; i < 3; i++ {
@@ -419,13 +416,10 @@ type listResult struct {
 // doList lists b using prefix and delim.
 // If recurse is true, it recurses into directories filling in listResult.Sub.
 func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse bool) ([]listResult, error) {
-	iter, err := b.List(ctx, &blob.ListOptions{
+	iter := b.List(&blob.ListOptions{
 		Prefix:    prefix,
 		Delimiter: delim,
 	})
-	if err != nil {
-		return nil, err
-	}
 	var retval []listResult
 	for {
 		obj, err := iter.Next(ctx)
@@ -686,10 +680,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 
 		// See if the blobs are already there.
 		prefix := keyPrefix + delim
-		iter, err := b.List(ctx, &blob.ListOptions{Prefix: prefix})
-		if err != nil {
-			t.Fatal(err)
-		}
+		iter := b.List(&blob.ListOptions{Prefix: prefix})
 		count := countItems(ctx, t, iter)
 		if count != len(keys) {
 			for _, key := range keys {
@@ -1469,10 +1460,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("got %q want %q", string(gotContent), string(content))
 			}
 			// Verify List returns the key.
-			iter, err := b.List(ctx, &blob.ListOptions{Prefix: key})
-			if err != nil {
-				t.Fatal(err)
-			}
+			iter := b.List(&blob.ListOptions{Prefix: key})
 			obj, err := iter.Next(ctx)
 			if err != nil && err != io.EOF {
 				t.Fatal(err)
@@ -1596,10 +1584,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify ListObject.As.
-	iter, err := b.List(ctx, &blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
-	if err != nil {
-		log.Fatal(err)
-	}
+	iter := b.List(&blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
 	for {
 		obj, err := iter.Next(ctx)
 		if err == io.EOF {
