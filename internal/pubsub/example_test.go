@@ -91,11 +91,11 @@ func Example_sendReceiveMultipleMessages() {
 
 	// The messages may be received in a different order than they were
 	// sent.
-	sort.Slice(ms2, func(i, j int) bool { return ms2[i] < ms2[j] })
+	sort.Strings(ms2)
 
 	// Print out and acknowledge the received messages.
 	for _, m2 := range ms2 {
-		fmt.Printf("%s\n", m2)
+		fmt.Println(m2)
 	}
 
 	// Output:
