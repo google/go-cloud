@@ -92,7 +92,7 @@ func Example_sendReceiveMultipleMessages() {
 	// sent.
 	sort.Slice(ms2, func(i, j int) bool { return string(ms2[i].Body) < string(ms2[j].Body) })
 
-	// Print out the received messages.
+	// Print out and acknowledge the received messages.
 	for _, m2 := range ms2 {
 		fmt.Printf("%s\n", m2.Body)
 		m2.Ack()
