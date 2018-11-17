@@ -31,7 +31,9 @@ func Example_sendReceive() {
 	dt := mempubsub.OpenTopic()
 	ds := mempubsub.OpenSubscription(dt, time.Second)
 	t := pubsub.NewTopic(ctx, dt)
+	defer t.Close()
 	s := pubsub.NewSubscription(ctx, ds)
+	defer s.Close()
 
 	// Send a message to the topic.
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello, world!")}); err != nil {
@@ -60,7 +62,9 @@ func Example_sendReceiveMultipleMessages() {
 	dt := mempubsub.OpenTopic()
 	ds := mempubsub.OpenSubscription(dt, time.Second)
 	t := pubsub.NewTopic(ctx, dt)
+	defer t.Close()
 	s := pubsub.NewSubscription(ctx, ds)
+	defer s.Close()
 
 	// Send messages to the topic.
 	ms := []*pubsub.Message{
