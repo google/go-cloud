@@ -26,7 +26,8 @@ import (
 )
 
 func TestBatcherSequential(t *testing.T) {
-	// Verify sequential calls to a batcher.
+	// Verify that sequential non-concurrent Adds to a batcher produce single-item batches.
+	// Since there is no concurrent work, the Batcher will always produce the items one at a time.
 	ctx := context.Background()
 	var got []int
 	e := errors.New("e")
@@ -47,17 +48,16 @@ func TestBatcherSequential(t *testing.T) {
 }
 
 func TestBatcherSaturation(t *testing.T) {
-	// Verify that under high load, the maximum number of handlers
-	// are running.
+	// Verify that under high load the maximum number of handlers are running.
 	ctx := context.Background()
-	const maxOutstandingHandlers = 10
+	const maxHandlers = 10
 	var (
 		mu               sync.Mutex
 		outstanding, max int             // number of handlers
 		maxBatch         int             // size of largest batch
 		count            = map[int]int{} // how many of each item the handlers observe
 	)
-	b := New(int(0), maxOutstandingHandlers, func(x interface{}) error {
+	b := New(int(0), maxHandlers, func(x interface{}) error {
 		items := x.([]int)
 		mu.Lock()
 		outstanding++
@@ -90,8 +90,8 @@ func TestBatcherSaturation(t *testing.T) {
 	}
 	wg.Wait()
 	// Check that we saturated the batcher.
-	if max != maxOutstandingHandlers {
-		t.Errorf("got %d, want %d", max, maxOutstandingHandlers)
+	if max != maxHandlers {
+		t.Errorf("max concurrent handlers = %d, want %d", max, maxHandlers)
 	}
 	// Check that at least one batch had more than one item.
 	if maxBatch <= 1 {
@@ -103,6 +103,6 @@ func TestBatcherSaturation(t *testing.T) {
 		want[i] = 1
 	}
 	if diff := cmp.Diff(count, want); diff != "" {
-		t.Error(diff)
+		t.Errorf("items: %s", diff)
 	}
 }
