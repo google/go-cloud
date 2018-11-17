@@ -79,23 +79,23 @@ func Example_sendReceiveMultipleMessages() {
 	}
 
 	// Receive messages from the subscription.
-	ms2 := []*pubsub.Message{}
+	ms2 := []string{}
 	for i := 0; i < len(ms); i++ {
 		m2, err := s.Receive(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
-		ms2 = append(ms2, m2)
+		ms2 = append(ms2, string(m2.Body))
+		m2.Ack()
 	}
 
 	// The messages may be received in a different order than they were
 	// sent.
-	sort.Slice(ms2, func(i, j int) bool { return string(ms2[i].Body) < string(ms2[j].Body) })
+	sort.Slice(ms2, func(i, j int) bool { return ms2[i] < ms2[j] })
 
 	// Print out and acknowledge the received messages.
 	for _, m2 := range ms2 {
-		fmt.Printf("%s\n", m2.Body)
-		m2.Ack()
+		fmt.Printf("%s\n", m2)
 	}
 
 	// Output:
