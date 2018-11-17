@@ -55,9 +55,10 @@ func TestListIterator(t *testing.T) {
 	}
 }
 
+// faikeLister implements driver.Bucket. Only ListPaged is implemented,
+// returning static data from pages.
 type fakeLister struct {
 	driver.Bucket
-
 	pages [][]string
 }
 
@@ -76,6 +77,11 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 
 var errFake = errors.New("fake")
 
+// fakeError implements driver.Bucket. All interface methods that return
+// errors are implemented, and return errFake.
+// In addition, when passed the key "work", NewRangedReader and NewTypedWriter
+// will return a Reader/Writer respectively, that always return errFake
+// from Read/Write and Close.
 type fakeErrorer struct {
 	driver.Bucket
 }
@@ -134,7 +140,12 @@ func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.Si
 	return "", errFake
 }
 
+// TestErrorsAreWrapped tests that all errors returned from the driver are
+// wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
+	ctx := context.Background()
+	b := NewBucket(&fakeErrorer{})
+
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
 		if unwrapped, ok := err.(*wrappedError); !ok {
@@ -144,16 +155,12 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 	}
 
-	ctx := context.Background()
-	b := NewBucket(&fakeErrorer{})
-	var err error
-
-	_, err = b.Attributes(ctx, "")
+	_, err := b.Attributes(ctx, "")
 	verifyWrap("Attributes", err)
 
-	iter, _ := b.List(ctx, nil)
+	iter := b.List(nil)
 	_, err = iter.Next(ctx)
-	verifyWrap("ListPaged", err)
+	verifyWrap("ListIterator.Next", err)
 
 	_, err = b.NewRangeReader(ctx, "", 0, 1)
 	verifyWrap("NewRangeReader", err)
