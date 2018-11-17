@@ -17,7 +17,6 @@ package batcher
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"testing"
 	"time"
@@ -72,6 +71,7 @@ func TestBatcherSaturation(t *testing.T) {
 		}
 		mu.Unlock()
 		defer func() { mu.Lock(); outstanding--; mu.Unlock() }()
+		// Sleep a little to increase the likelihood of saturation.
 		time.Sleep(10 * time.Millisecond)
 		return nil
 	})
@@ -82,9 +82,10 @@ func TestBatcherSaturation(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// Sleep a little to increase the likelihood of saturation.
 			time.Sleep(time.Millisecond)
 			if err := b.Add(ctx, i); err != nil {
-				log.Fatal(err)
+				t.Errorf("b.Add(ctx, %d) error: %v", i, err)
 			}
 		}()
 	}
