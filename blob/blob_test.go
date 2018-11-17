@@ -38,10 +38,7 @@ func TestListIterator(t *testing.T) {
 		{},
 	}}
 	b := NewBucket(db)
-	iter, err := b.List(ctx, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	iter := b.List(nil)
 	var got []string
 	for {
 		obj, err := iter.Next(ctx)
