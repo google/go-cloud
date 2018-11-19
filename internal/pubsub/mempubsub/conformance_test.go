@@ -32,12 +32,13 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-  dt := h.b.topic("t")
+	dt := h.b.topic("t")
 	return dt, nil
 }
 
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	ds := mempubsub.OpenSubscription(dt, time.Second)
+	t := dt.(*topic)
+	ds := newSubscription(t, time.Second)
 	return ds, nil
 }
 
