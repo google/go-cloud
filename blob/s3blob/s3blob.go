@@ -24,6 +24,7 @@
 //
 // s3blob exposes the following types for As:
 // Bucket: *s3.S3
+// Error: awserr.Error
 // ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
 // ListOptions.BeforeList: *s3.ListObjectsV2Input
 // Reader: s3.GetObjectOutput
@@ -305,6 +306,18 @@ func (b *bucket) As(i interface{}) bool {
 	}
 	*p = b.client
 	return true
+}
+
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case awserr.Error:
+		if p, ok := i.(*awserr.Error); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
 }
 
 // Attributes implements driver.Attributes.
