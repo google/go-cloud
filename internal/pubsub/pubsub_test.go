@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
+	"github.com/google/go-cloud/internal/retry"
 )
 
 type driverTopic struct {
@@ -145,10 +146,10 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 			for {
 				m, err := s.Receive(ctx)
 				if err != nil {
-					if err == context.Canceled {
+					if isCanceled(err) {
 						return
 					}
-					t.Error(err)
+					t.Fatal(err)
 				}
 				mu.Lock()
 				receivedMsgs[string(m.Body)]++
@@ -287,3 +288,10 @@ func (t *failSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
 func (t *failSub) IsRetryable(err error) (bool, time.Duration) { return isRetryable(err) }
 
 // TODO(jba): add a test for retry of SendAcks.
+
+func isCanceled(err error) bool {
+	if cerr, ok := err.(*retry.ContextError); ok {
+		err = cerr.CtxErr
+	}
+	return err == context.Canceled
+}
