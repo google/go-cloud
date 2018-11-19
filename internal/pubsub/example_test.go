@@ -28,11 +28,10 @@ import (
 func Example_sendReceive() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	dt := mempubsub.OpenTopic()
-	ds := mempubsub.OpenSubscription(dt, time.Second)
-	t := pubsub.NewTopic(dt)
+	b := mempubsub.NewBroker([]string{"myTopic"})
+	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
-	s := pubsub.NewSubscription(ds)
+	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Close()
 
 	// Send a message to the topic.
@@ -59,11 +58,10 @@ func Example_sendReceive() {
 func Example_sendReceiveMultipleMessages() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	dt := mempubsub.OpenTopic()
-	ds := mempubsub.OpenSubscription(dt, time.Second)
-	t := pubsub.NewTopic(dt)
+	b := mempubsub.NewBroker([]string{"myTopic"})
+	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
-	s := pubsub.NewSubscription(ds)
+	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Close()
 
 	// Send messages to the topic.

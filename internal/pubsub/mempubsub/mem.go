@@ -25,10 +25,31 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
+type Broker struct {
+	mu     sync.Mutex
+	topics map[string]*topic
+}
+
+func NewBroker(topicNames []string) *Broker {
+	topics := map[string]*topic{}
+	for _, n := range topicNames {
+		topics[n] = &topic{name: n}
+	}
+	return &Broker{topics: topics}
+}
+
+func (b *Broker) topic(name string) *topic {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.topics[name]
+}
+
 type topic struct {
+	name      string
 	mu        sync.Mutex
 	subs      []*subscription
 	nextAckID int
@@ -37,8 +58,8 @@ type topic struct {
 
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
-func OpenTopic() driver.Topic {
-	return &topic{}
+func OpenTopic(b *Broker, name string) *pubsub.Topic {
+	return pubsub.NewTopic(b.topic(name))
 }
 
 // SendBatch implements driver.SendBatch.
@@ -86,20 +107,27 @@ type subscription struct {
 }
 
 // OpenSubscription creates a new subscription for the given topic.
-// Unacknowledged messages will become available for redelivery after ackDeadline.
-func OpenSubscription(t driver.Topic, ackDeadline time.Duration) driver.Subscription {
-	tt := t.(*topic)
+func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
+	b.mu.Lock()
+	t := b.topics[topicName]
+	b.mu.Unlock()
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline))
+}
+
+func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &subscription{
-		topic:       tt,
+		topic:       t,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
 		ctx:         ctx,
 		cancel:      cancel,
 	}
-	tt.mu.Lock()
-	defer tt.mu.Unlock()
-	tt.subs = append(tt.subs, s)
+	if t != nil {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		t.subs = append(t.subs, s)
+	}
 	return s
 }
 
@@ -165,6 +193,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 }
 
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
+	if s.topic == nil {
+		return errors.New("mempubsub: topic does not exist")
+	}
 	select {
 	case <-s.ctx.Done(): // subscription was closed
 		return errors.New("mempubsub: subscription closed")
