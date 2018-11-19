@@ -132,8 +132,9 @@ func TestCallCancel(t *testing.T) {
 		if gotCount != 0 {
 			t.Errorf("retry count: got %d, want 0", gotCount)
 		}
-		if gotErr != context.Canceled {
-			t.Errorf("error: got %v, want context.Canceled", gotErr)
+		wantErr := &ContextError{CtxErr: context.Canceled}
+		if !equalContextError(gotErr, wantErr) {
+			t.Errorf("error: got %v, want %v", gotErr, wantErr)
 		}
 	})
 	t.Run("done in sleep", func(t *testing.T) {
@@ -145,15 +146,17 @@ func TestCallCancel(t *testing.T) {
 		if gotCount != 1 {
 			t.Errorf("retry count: got %d, want 1", gotCount)
 		}
-		cerr, ok := gotErr.(*ContextError)
-		if !ok {
-			t.Fatalf("got error %v, not a *ContextError", gotErr)
-		}
-		if cerr.CtxErr != context.Canceled {
-			t.Errorf("CtxErr: got %v, want context.Canceled", cerr.CtxErr)
-		}
-		if cerr.FuncErr != errRetry {
-			t.Errorf("FuncErr: got %v, want errRetry", cerr.FuncErr)
+		wantErr := &ContextError{CtxErr: context.Canceled, FuncErr: errRetry}
+		if !equalContextError(gotErr, wantErr) {
+			t.Errorf("error: got %v, want %v", gotErr, wantErr)
 		}
 	})
+}
+
+func equalContextError(got error, want *ContextError) bool {
+	cerr, ok := got.(*ContextError)
+	if !ok {
+		return false
+	}
+	return cerr.CtxErr == want.CtxErr && cerr.FuncErr == want.FuncErr
 }
