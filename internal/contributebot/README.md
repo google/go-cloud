@@ -98,6 +98,11 @@ kubectl apply -f prod/k8s
 # Send a PR with the updated .yaml file.
 ```
 
+To check that the deploy was successful, consult the contributebot-worker [Deployment Details][]
+
+[Deployment Details]: https://pantheon.corp.google.com/kubernetes/deployment/us-central1-c/contributebot-cluster/default/contributebot-worker?project=go-cloud-contribute-bot&tab=history&deployment_overview_active_revisions_tablesize=50&duration=PT1H&pod_summary_list_tablesize=20&deployment_revision_history_tablesize=50
+
+
 ### Somewhere else
 
 If you want to deploy to your own cluster, modify `k8s/contributebot.yaml` to
