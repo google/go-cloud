@@ -35,8 +35,8 @@ import (
 // duration provided by isRetryable, or the provided backoff value if that duration
 // is zero, and invokes f again.
 //
-// When the provided context is done, Retry returns with an error that
-// includes both ctx.Error() and the last error returned by f, if any.
+// When the provided context is done, Retry returns a ContextError that includes both
+// ctx.Error() and the last error returned by f, or nil if there isn't one.
 func Call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, time.Duration), f func() error) error {
 	return call(ctx, bo, isRetryable, f, gax.Sleep)
 }
@@ -46,7 +46,7 @@ func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, ti
 	sleep func(context.Context, time.Duration) error) error {
 	// Do nothing if context is done on entry.
 	if err := ctx.Err(); err != nil {
-		return err
+		return &ContextError{CtxErr: err}
 	}
 	for {
 		err := f()
@@ -67,10 +67,11 @@ func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, ti
 }
 
 // A ContextError contains both a context error (either context.Canceled or
-// context.DeadlineExceeded), and the last error from the function being retried.
+// context.DeadlineExceeded), and the last error from the function being retried,
+// or nil if the function was never called.
 type ContextError struct {
 	CtxErr  error // The error obtained from ctx.Err()
-	FuncErr error // The error obtained from the function being retried
+	FuncErr error // The error obtained from the function being retried, or nil
 }
 
 func (e *ContextError) Error() string {
