@@ -20,6 +20,7 @@ package batcher
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"sync"
 )
@@ -28,11 +29,13 @@ import (
 type Batcher struct {
 	maxHandlers   int
 	handler       func(interface{}) error
-	itemSliceZero reflect.Value // nil (zero value) for slice of items
+	itemSliceZero reflect.Value  // nil (zero value) for slice of items
+	wg            sync.WaitGroup // tracks active Add calls
 
 	mu        sync.Mutex
 	pending   []waiter // items waiting to be handled
 	nHandlers int      // number of currently running handler goroutines
+	shutdown  bool
 }
 
 type waiter struct {
@@ -59,10 +62,16 @@ func New(itemExample interface{}, maxHandlers int, handler func(interface{}) err
 
 // Add adds an item to the batcher. It blocks until the handler has
 // processed the item and reports the error that the handler returned.
+// If Shutdown has been called, Add immediately returns an error.
 func (b *Batcher) Add(ctx context.Context, item interface{}) error {
+	b.wg.Add(1)
+	defer b.wg.Done()
+	b.mu.Lock()
+	if b.shutdown {
+		return errors.New("batcher: shut down")
+	}
 	// Create a channel to receive the error from the handler.
 	c := make(chan error, 1)
-	b.mu.Lock()
 	// Add the item to the pending list.
 	b.pending = append(b.pending, waiter{item, c})
 	if b.nHandlers < b.maxHandlers {
@@ -107,4 +116,13 @@ func (b *Batcher) callHandler(batch []waiter) {
 		}
 		b.mu.Unlock()
 	}
+}
+
+// Shutdown waits for all active calls to Add to finish, then
+// returns. After Shutdown is called, all calls to Add fail.
+func (b *Batcher) Shutdown() {
+	b.mu.Lock()
+	b.shutdown = true
+	b.mu.Unlock()
+	b.wg.Wait()
 }
