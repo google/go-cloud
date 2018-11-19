@@ -19,7 +19,6 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
@@ -29,7 +28,6 @@ import (
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type topic struct {
@@ -191,26 +189,12 @@ func (s *subscription) Close() error {
 
 // IsRetryable implements driver.Topic.IsRetryable.
 func (t *topic) IsRetryable(err error) (bool, time.Duration) {
-	return isRetryable(err), 0
+	// The client handles retries.
+	return false, 0
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (s *subscription) IsRetryable(err error) (bool, time.Duration) {
-	return isRetryable(err), 0
-}
-
-// Copied from cloud.google.com/go/pubsub.
-func isRetryable(err error) bool {
-	s, ok := status.FromError(err)
-	if !ok {
-		return true
-	}
-	switch s.Code() {
-	case codes.DeadlineExceeded, codes.Internal, codes.ResourceExhausted:
-		return true
-	case codes.Unavailable:
-		return !strings.Contains(s.Message(), "Server shutdownNow invoked")
-	default:
-		return false
-	}
+	// The client handles retries.
+	return false, 0
 }
