@@ -41,7 +41,7 @@ func OpenTopic() driver.Topic {
 	return &topic{}
 }
 
-// SendBatch implements driver.SendBatch.
+// SendBatch implements driver.Topic.SendBatch.
 // It is error if the topic is closed or has no subscriptions.
 func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	t.mu.Lock()
@@ -74,6 +74,11 @@ func (t *topic) Close() error {
 	defer t.mu.Unlock()
 	t.closed = true
 	return nil
+}
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *topic) IsRetryable(err error) (bool, time.Duration) {
+	return false, 0
 }
 
 type subscription struct {
@@ -199,4 +204,9 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 func (s *subscription) Close() error {
 	s.cancel()
 	return nil
+}
+
+// IsRetryable implements driver.Subscription.IsRetryable.
+func (s *subscription) IsRetryable(err error) (bool, time.Duration) {
+	return false, 0
 }

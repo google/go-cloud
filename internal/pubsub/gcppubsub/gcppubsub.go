@@ -19,6 +19,8 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/gcp"
@@ -27,6 +29,7 @@ import (
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type topic struct {
@@ -175,18 +178,39 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	for _, id := range ids {
 		ids2 = append(ids2, id.(string))
 	}
-	req := &pb.AcknowledgeRequest{
+	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
 		Subscription: s.path,
 		AckIds:       ids2,
-	}
-	err := s.client.Acknowledge(ctx, req)
-	if err != nil {
-		return fmt.Errorf("gcppubsub: making RPC to acknowledge messages: %v", err)
-	}
-	return nil
+	})
 }
 
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
 	return s.client.Close()
+}
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *topic) IsRetryable(err error) (bool, time.Duration) {
+	return isRetryable(err), 0
+}
+
+// IsRetryable implements driver.Subscription.IsRetryable.
+func (s *subscription) IsRetryable(err error) (bool, time.Duration) {
+	return isRetryable(err), 0
+}
+
+// Copied from cloud.google.com/go/pubsub.
+func isRetryable(err error) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return true
+	}
+	switch s.Code() {
+	case codes.DeadlineExceeded, codes.Internal, codes.ResourceExhausted:
+		return true
+	case codes.Unavailable:
+		return !strings.Contains(s.Message(), "Server shutdownNow invoked")
+	default:
+		return false
+	}
 }

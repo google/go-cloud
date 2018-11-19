@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -40,6 +41,10 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 
 func (s *ackingDriverSub) Close() error {
 	return nil
+}
+
+func (s *ackingDriverSub) IsRetryable(error) (bool, time.Duration) {
+	return false, 0
 }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {

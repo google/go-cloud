@@ -15,10 +15,12 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -43,6 +45,10 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 
 func (t *driverTopic) Close() error {
 	return nil
+}
+
+func (s *driverTopic) IsRetryable(error) (bool, time.Duration) {
+	return false, 0
 }
 
 type driverSub struct {
@@ -90,6 +96,10 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 
 func (s *driverSub) Close() error {
 	return nil
+}
+
+func (s *driverSub) IsRetryable(error) (bool, time.Duration) {
+	return false, 0
 }
 
 func TestSendReceive(t *testing.T) {
@@ -212,3 +222,68 @@ func TestCancelReceive(t *testing.T) {
 		t.Error("got nil, want cancellation error")
 	}
 }
+
+func TestRetryTopic(t *testing.T) {
+	// Test that Send is retried if the driver returns a retryable error.
+	ft := &failTopic{}
+	top := pubsub.NewTopic(ft)
+	err := top.Send(context.Background(), &pubsub.Message{})
+	if err != nil {
+		t.Errorf("Send: got %v, want nil", err)
+	}
+	if got, want := ft.calls, nRetryCalls+1; got != want {
+		t.Errorf("calls: got %d, want %d", got, want)
+	}
+}
+
+var errRetry = errors.New("retry")
+
+func isRetryable(err error) (bool, time.Duration) {
+	return err == errRetry, time.Millisecond
+}
+
+const nRetryCalls = 2
+
+type failTopic struct {
+	driver.Topic
+	calls int
+}
+
+func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
+	t.calls++
+	if t.calls <= nRetryCalls {
+		return errRetry
+	}
+	return nil
+}
+
+func (t *failTopic) IsRetryable(err error) (bool, time.Duration) { return isRetryable(err) }
+
+func TestRetryReceive(t *testing.T) {
+	fs := &failSub{}
+	sub := pubsub.NewSubscription(fs)
+	_, err := sub.Receive(context.Background())
+	if err != nil {
+		t.Errorf("Receive: got %v, want nil", err)
+	}
+	if got, want := fs.calls, nRetryCalls+1; got != want {
+		t.Errorf("calls: got %d, want %d", got, want)
+	}
+}
+
+type failSub struct {
+	driver.Subscription
+	calls int
+}
+
+func (t *failSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+	t.calls++
+	if t.calls <= nRetryCalls {
+		return nil, errRetry
+	}
+	return []*driver.Message{{Body: []byte("")}}, nil
+}
+
+func (t *failSub) IsRetryable(err error) (bool, time.Duration) { return isRetryable(err) }
+
+// TODO(jba): add a test for retry of SendAcks.

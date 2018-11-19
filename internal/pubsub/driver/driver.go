@@ -16,7 +16,10 @@
 // interact with the underlying pubsub services.
 package driver
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
@@ -70,6 +73,12 @@ type Topic interface {
 	// then the call to Close should proceed and the call to SendBatch
 	// should fail immediately after Close returns.
 	Close() error
+
+	// IsRetryable should report whether err can be retried.
+	// err will always be a non-nil error returned from SendBatch.
+	// If its second return value is non-zero, it is the suggested amount
+	// of time to sleep before retrying.
+	IsRetryable(err error) (bool, time.Duration)
 }
 
 // Subscription receives published messages.
@@ -116,4 +125,10 @@ type Subscription interface {
 	// finishes, then the call to Close should proceed and the other call
 	// should fail immediately after Close returns.
 	Close() error
+
+	// IsRetryable should report whether err can be retried.
+	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
+	// If its second return value is non-zero, it is the suggested amount
+	// of time to sleep before retrying.
+	IsRetryable(err error) (bool, time.Duration)
 }
