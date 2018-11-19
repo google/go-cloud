@@ -86,10 +86,10 @@ func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
-		return nil, fmt.Errorf("open file bucket: %v", err)
+		return nil, err
 	}
 	if !info.IsDir() {
-		return nil, fmt.Errorf("open file bucket: %s is not a directory", dir)
+		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
 	return &bucket{dir}, nil
 }
@@ -257,7 +257,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	relpath := escape(key)
 	path := filepath.Join(b.dir, relpath)
 	if strings.HasSuffix(path, attrsExt) {
-		return "", nil, nil, fmt.Errorf("open file blob %s: extension %q cannot be directly read", key, attrsExt)
+		return "", nil, nil, errAttrsExt
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -265,7 +265,7 @@ func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
 	}
 	xa, err := getAttrs(path)
 	if err != nil {
-		return "", nil, nil, fmt.Errorf("open file attributes %s: %v", key, err)
+		return "", nil, nil, err
 	}
 	return path, info, &xa, nil
 }
@@ -379,6 +379,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // As implements driver.As.
 func (b *bucket) As(i interface{}) bool { return false }
 
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)
@@ -401,11 +404,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return nil, err
 	}
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
-			return nil, fmt.Errorf("open file blob %s: %v", key, err)
+			return nil, err
 		}
 	}
 	r := io.Reader(f)
@@ -453,14 +456,14 @@ func (r reader) As(i interface{}) bool { return false }
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
-		return nil, fmt.Errorf("open file blob %s: extension %q is reserved and cannot be used", key, attrsExt)
+		return nil, errAttrsExt
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return nil, err
 	}
 	f, err := ioutil.TempFile("", "fileblob")
 	if err != nil {
-		return nil, fmt.Errorf("open file blob %s: %v", key, err)
+		return nil, err
 	}
 	if opts.BeforeWrite != nil {
 		if err := opts.BeforeWrite(func(interface{}) bool { return false }); err != nil {
@@ -500,7 +503,7 @@ type writer struct {
 func (w writer) Write(p []byte) (n int, err error) {
 	if w.md5hash != nil {
 		if _, err := w.md5hash.Write(p); err != nil {
-			return 0, fmt.Errorf("updating md5 hash: %v", err)
+			return 0, err
 		}
 	}
 	return w.f.Write(p)
@@ -535,12 +538,12 @@ func (w writer) Close() error {
 	}
 	// Write the attributes file.
 	if err := setAttrs(w.path, w.attrs); err != nil {
-		return fmt.Errorf("write blob attributes: %v", err)
+		return err
 	}
 	// Rename the temp file to path.
 	if err := os.Rename(w.f.Name(), w.path); err != nil {
 		_ = os.Remove(w.path + attrsExt)
-		return fmt.Errorf("rename during Close: %v", err)
+		return err
 	}
 	return nil
 }
@@ -549,14 +552,14 @@ func (w writer) Close() error {
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	path := filepath.Join(b.dir, escape(key))
 	if strings.HasSuffix(path, attrsExt) {
-		return fmt.Errorf("delete file blob %s: extension %q cannot be directly deleted", key, attrsExt)
+		return errAttrsExt
 	}
 	err := os.Remove(path)
 	if err != nil {
 		return err
 	}
 	if err = os.Remove(path + attrsExt); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("delete file blob %s: %v", key, err)
+		return err
 	}
 	return nil
 }
