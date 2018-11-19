@@ -49,27 +49,34 @@ func NewCertSource(c *gcp.HTTPClient) *certs.RemoteCertSource {
 
 // Params specifies how to connect to a Cloud SQL database.
 type Params struct {
+	// ProjectID specifies the GCP project associated with the
+	// CloudSQL instance.
 	ProjectID string
-	Region    string
-	Instance  string
-	User      string
-	Password  string // may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
-	Database  string
-}
 
-type Options struct {
+	// Region is the GCP region containing the CloudSQL instance.
+	Region string
+
+	// Instance is the CloudSQL instance name. See
+	// https://cloud.google.com/sql/docs/mysql/create-instance
+	// for background.
+	Instance string
+
+	// User is the username used to connect to the database.
+	User string
+
+	// Password is the password used to connect to the database.
+	// It may be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
+	Password string
+
+	// Database is the name of the database to connect to.
+	Database string
+
+	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
 
-var defaultOptions = Options{
-	TraceOpts: nil,
-}
-
 // Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params, opts *Options) (*sql.DB, error) {
-	if opts == nil {
-		opts = &defaultOptions
-	}
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
 	// TODO(light): Avoid global registry once https://github.com/go-sql-driver/mysql/issues/771 is fixed.
 	dialerCounter.mu.Lock()
 	dialerNum := dialerCounter.n
@@ -89,7 +96,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params, opts
 		Passwd:               params.Password,
 		DBName:               params.Database,
 	}
-	return sql.OpenDB(connector{cfg.FormatDSN(), opts.TraceOpts}), nil
+	return sql.OpenDB(connector{cfg.FormatDSN(), params.TraceOpts}), nil
 }
 
 var dialerCounter struct {
