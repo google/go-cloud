@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mempubsub_test
+package mempubsub
 
 import (
 	"context"
@@ -21,18 +21,18 @@ import (
 
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
-	"github.com/google/go-cloud/internal/pubsub/mempubsub"
 )
 
 type harness struct {
+	b *Broker
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{}, nil
+	return &harness{b: NewBroker([]string{"t"})}, nil
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	dt := mempubsub.OpenTopic()
+  dt := h.b.topic("t")
 	return dt, nil
 }
 

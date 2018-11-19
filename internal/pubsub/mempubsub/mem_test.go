@@ -23,9 +23,10 @@ import (
 )
 
 func TestReceive(t *testing.T) {
+	b := NewBroker([]string{"t"})
 	ctx := context.Background()
-	top := OpenTopic()
-	sub := OpenSubscription(top, 3*time.Second).(*subscription)
+	top := b.topic("t")
+	sub := newSubscription(top, 3*time.Second)
 	if err := top.SendBatch(ctx, []*driver.Message{
 		{Body: []byte("a")},
 		{Body: []byte("b")},
