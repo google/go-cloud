@@ -48,6 +48,8 @@ func (m *Message) Ack() {
 type Topic struct {
 	driver  driver.Topic
 	batcher *bundler.Bundler
+	mu      sync.Mutex
+	err     error
 }
 
 type msgErrChan struct {
@@ -60,10 +62,14 @@ type msgErrChan struct {
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
 	// Check for doneness before we do any work.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	t.mu.Lock()
+	err := t.err
+	t.mu.Unlock()
+	if err != nil {
+		return err
 	}
 	mec := msgErrChan{
 		msg:     m,
@@ -84,7 +90,10 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 // It only returns after all pending messages have been sent.
 func (t *Topic) Close() error {
 	t.batcher.Flush()
-	return t.driver.Close()
+	t.mu.Lock()
+	t.err = errors.New("pubsub: Topic closed")
+	t.mu.Unlock()
+	return nil
 }
 
 // NewTopic makes a pubsub.Topic from a driver.Topic and opts to
@@ -134,7 +143,8 @@ type Subscription struct {
 	mu sync.Mutex
 
 	// q is the local queue of messages downloaded from the server.
-	q []*Message
+	q   []*Message
+	err error
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -148,6 +158,9 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.err != nil {
+		return nil, s.err
+	}
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
 			return nil, err
@@ -194,7 +207,10 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 // Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Close() error {
 	s.ackBatcher.Flush()
-	return s.driver.Close()
+	s.mu.Lock()
+	s.err = errors.New("pubsub: Subscription closed")
+	s.mu.Unlock()
+	return nil
 }
 
 // ackIDBox makes it possible to use a driver.AckID with bundler.
