@@ -41,7 +41,7 @@ type Message struct {
 type Topic interface {
 	// SendBatch publishes all the messages in ms. This method should
 	// return only after all the messages are sent, an error occurs, or the
-	// context is cancelled.
+	// context is done.
 	//
 	// Only the Body and (optionally) Metadata fields of the Messages in ms
 	// should be set by the caller of SendBatch.
@@ -49,14 +49,15 @@ type Topic interface {
 	// Only one RPC should be made to send the messages, and the returned
 	// error should be based on the result of that RPC. Implementations
 	// that send only one message at a time should return a non-nil error
-	// if len(ms) != 1. Such implementations should set the batch size
-	// to 1 in the call to pubsub.NewTopic from the OpenTopic func for
-	// their package.
+	// if len(ms) != 1.
+	//
+	// If there is a transient failure, this method should not retry but should
+	// return an error. The concrete API will take care of retry logic.
 	//
 	// The slice ms should not be retained past the end of the call to
 	// SendBatch.
 	//
-	// SendBatch is only called sequentially for individual Topics.
+	// SendBatch should be safe for concurrent access from multiple goroutines.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// Close should disconnect the Topic.
@@ -74,28 +75,35 @@ type Topic interface {
 // Subscription receives published messages.
 type Subscription interface {
 	// ReceiveBatch should return a batch of messages that have queued up
-	// for the subscription on the server. If no messages are available
-	// yet, it must block until there is at least one, or the context is
-	// done.
+	// for the subscription on the server.
 	//
-	// ReceiveBatch is only called sequentially for individual
-	// Subscriptions.
+	// If there is a transient failure, this method should not retry but
+	// should return a nil slice and an error. The concrete API will take
+	// care of retry logic.
+	//
+	// If the service returns no messages for some other reason, this
+	// method should return the empty slice of messages and not attempt to
+	// retry.
+	//
+	// Implementations of ReceiveBatch should request that the underlying
+	// service wait some non-zero amount of time before returning, if there
+	// are no messages yet.
+	//
+	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
 	ReceiveBatch(ctx context.Context) ([]*Message, error)
 
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
 	// subscription if the server gets the acks before their deadlines.
 	// This method should return only after all the ackIDs are sent, an
-	// error occurs, or the context is cancelled.
+	// error occurs, or the context is done.
 	//
 	// Only one RPC should be made to send the messages, and the returned
 	// error should be based on the result of that RPC.  Implementations
 	// that send only one ack at a time should return a non-nil error if
-	// len(ackIDs) != 1. Such implementations should set AckBatchCountThreshold to
-	// 1 in the call to pubsub.NewSubscription in the OpenSubscription
-	// func for their package.
+	// len(ackIDs) != 1.
 	//
-	// SendAcks is only called sequentially for individual Subscriptions.
+	// SendAcks should be safe for concurrent access from multiple goroutines.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// Close should disconnect the Subscription.

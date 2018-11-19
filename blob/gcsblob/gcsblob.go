@@ -27,6 +27,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
+// Error: *googleapi.Error
 // ListObject: storage.ObjectAttrs
 // ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
@@ -36,7 +37,7 @@ package gcsblob
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -69,7 +70,7 @@ func init() {
 		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
 			pk, err := ioutil.ReadFile(keyPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("reading private key: %v", err)
+				return nil, err
 			}
 			opts.PrivateKey = pk
 		}
@@ -84,11 +85,11 @@ func init() {
 		} else {
 			jsonCreds, err := ioutil.ReadFile(credPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("reading credentials: %v", err)
+				return nil, err
 			}
 			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
 			if err != nil {
-				return nil, fmt.Errorf("loading credentials: %v", err)
+				return nil, err
 			}
 		}
 
@@ -121,7 +122,7 @@ type Options struct {
 // openBucket returns a GCS Bucket that communicates using the given HTTP client.
 func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (driver.Bucket, error) {
 	if client == nil {
-		return nil, fmt.Errorf("OpenBucket requires an HTTP client")
+		return nil, errors.New("OpenBucket requires an HTTP client")
 	}
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
@@ -179,6 +180,16 @@ func (r *reader) As(i interface{}) bool {
 	}
 	*p = *r.raw
 	return true
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (b *bucket) IsNotExist(err error) bool {
+	return err == storage.ErrObjectNotExist
+}
+
+// IsNotImplemented implements driver.IsNotImplemented.
+func (b *bucket) IsNotImplemented(err error) bool {
+	return false
 }
 
 // ListPaged implements driver.ListPaged.
@@ -259,15 +270,24 @@ func (b *bucket) As(i interface{}) bool {
 	return true
 }
 
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case *googleapi.Error:
+		if p, ok := i.(**googleapi.Error); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
+}
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
 	if err != nil {
-		if isErrNotExist(err) {
-			return driver.Attributes{}, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-		}
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
@@ -292,9 +312,6 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
 	if err != nil {
-		if isErrNotExist(err) {
-			return nil, gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-		}
 		return nil, err
 	}
 	modTime, _ := r.LastModified()
@@ -338,16 +355,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	err := obj.Delete(ctx)
-	if isErrNotExist(err) {
-		return gcsError{bucket: b.name, key: key, msg: err.Error(), kind: driver.NotFound}
-	}
-	return err
+	return obj.Delete(ctx)
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.SignedURLOptions) (string, error) {
 	if b.opts.GoogleAccessID == "" || (b.opts.PrivateKey == nil && b.opts.SignBytes == nil) {
-		return "", fmt.Errorf("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
+		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
 	}
 	opts := &storage.SignedURLOptions{
 		Expires:        time.Now().Add(dopts.Expiry),
@@ -366,21 +379,4 @@ func bufferSize(size int) int {
 		return size
 	}
 	return 0 // disable buffering
-}
-
-type gcsError struct {
-	bucket, key, msg string
-	kind             driver.ErrorKind
-}
-
-func (e gcsError) Error() string {
-	return fmt.Sprintf("gcs://%s/%s: %s", e.bucket, e.key, e.msg)
-}
-
-func (e gcsError) Kind() driver.ErrorKind {
-	return e.kind
-}
-
-func isErrNotExist(err error) bool {
-	return err == storage.ErrObjectNotExist
 }

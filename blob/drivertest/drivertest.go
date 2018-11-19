@@ -60,7 +60,11 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 1. Calls BucketCheck.
 // 2. Creates a blob using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
-// 4. Creates a Reader for the blob, and calls ReaderCheck.
+// 4. Creates a Reader for the blob and calls ReaderCheck.
+// 5. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
+//    on the single list entry returned.
+// 6. Tries to read a non-existent blob, and calls ErrorCheck with the error.
+//
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
@@ -69,6 +73,8 @@ type AsTest interface {
 	Name() string
 	// BucketCheck will be called to allow verification of Bucket.As.
 	BucketCheck(b *blob.Bucket) error
+	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
+	ErrorCheck(err error) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -95,6 +101,13 @@ func (verifyAsFailsOnNil) Name() string {
 func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	if b.As(nil) {
 		return errors.New("want Bucket.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) ErrorCheck(err error) error {
+	if blob.ErrorAs(err, nil) {
+		return errors.New("want ErrorAs to return false when passed nil")
 	}
 	return nil
 }
@@ -267,10 +280,7 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		}
 		// See if the blobs are already there.
 		b := blob.NewBucket(drv)
-		iter, err := b.List(ctx, &blob.ListOptions{Prefix: keyPrefix})
-		if err != nil {
-			t.Fatal(err)
-		}
+		iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
 		count := countItems(ctx, t, iter)
 		if count != 3 {
 			for i := 0; i < 3; i++ {
@@ -419,13 +429,10 @@ type listResult struct {
 // doList lists b using prefix and delim.
 // If recurse is true, it recurses into directories filling in listResult.Sub.
 func doList(ctx context.Context, b *blob.Bucket, prefix, delim string, recurse bool) ([]listResult, error) {
-	iter, err := b.List(ctx, &blob.ListOptions{
+	iter := b.List(&blob.ListOptions{
 		Prefix:    prefix,
 		Delimiter: delim,
 	})
-	if err != nil {
-		return nil, err
-	}
 	var retval []listResult
 	for {
 		obj, err := iter.Next(ctx)
@@ -686,10 +693,7 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 
 		// See if the blobs are already there.
 		prefix := keyPrefix + delim
-		iter, err := b.List(ctx, &blob.ListOptions{Prefix: prefix})
-		if err != nil {
-			t.Fatal(err)
-		}
+		iter := b.List(&blob.ListOptions{Prefix: prefix})
 		count := countItems(ctx, t, iter)
 		if count != len(keys) {
 			for _, key := range keys {
@@ -1469,10 +1473,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("got %q want %q", string(gotContent), string(content))
 			}
 			// Verify List returns the key.
-			iter, err := b.List(ctx, &blob.ListOptions{Prefix: key})
-			if err != nil {
-				t.Fatal(err)
-			}
+			iter := b.List(&blob.ListOptions{Prefix: key})
 			obj, err := iter.Next(ctx)
 			if err != nil && err != io.EOF {
 				t.Fatal(err)
@@ -1596,20 +1597,30 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify ListObject.As.
-	iter, err := b.List(ctx, &blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
-	if err != nil {
-		log.Fatal(err)
-	}
+	iter := b.List(&blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
+	found := false
 	for {
 		obj, err := iter.Next(ctx)
 		if err == io.EOF {
 			break
 		}
+		if found {
+			t.Fatal("got a second object returned from List, only wanted one")
+		}
+		found = true
 		if err != nil {
 			log.Fatal(err)
 		}
 		if err := st.ListObjectCheck(obj); err != nil {
 			t.Error(err)
 		}
+	}
+
+	_, gotErr := b.NewReader(ctx, "key-does-not-exist")
+	if gotErr == nil {
+		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
+	}
+	if err := st.ErrorCheck(gotErr); err != nil {
+		t.Error(err)
 	}
 }

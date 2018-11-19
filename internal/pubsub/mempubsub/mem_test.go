@@ -15,42 +15,18 @@
 package mempubsub
 
 import (
-	"bytes"
 	"context"
 	"testing"
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func TestSendReceive(t *testing.T) {
-	ctx := context.Background()
-	top := OpenTopic()
-	sub := OpenSubscription(top, 3*time.Second)
-	want := []*driver.Message{
-		{Body: []byte("a")},
-		{Body: []byte("b")},
-		{Body: []byte("c")},
-	}
-	if err := top.SendBatch(ctx, want); err != nil {
-		t.Fatal(err)
-	}
-	got, err := sub.ReceiveBatch(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	less := func(x, y *driver.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
-	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less)); diff != "" {
-		t.Error(diff)
-	}
-}
-
 func TestReceive(t *testing.T) {
+	b := NewBroker([]string{"t"})
 	ctx := context.Background()
-	top := OpenTopic()
-	sub := OpenSubscription(top, 3*time.Second).(*subscription)
+	top := b.topic("t")
+	sub := newSubscription(top, 3*time.Second)
 	if err := top.SendBatch(ctx, []*driver.Message{
 		{Body: []byte("a")},
 		{Body: []byte("b")},
@@ -98,42 +74,4 @@ func TestReceive(t *testing.T) {
 	if got, want := len(msgs), 0; got != want {
 		t.Fatalf("got %d, want %d", got, want)
 	}
-}
-
-func TestErrors(t *testing.T) {
-	ctx := context.Background()
-	wantErr := func(err error) {
-		t.Helper()
-		if err == nil {
-			t.Error("got nil, want error")
-		}
-	}
-
-	top := OpenTopic()
-	top.Close()
-	wantErr(top.SendBatch(ctx, nil)) // topic closed
-
-	top = OpenTopic()
-	sub := OpenSubscription(top, time.Second)
-	sub.Close()
-	_, err := sub.ReceiveBatch(ctx)
-	wantErr(err) // sub closed
-}
-
-func TestCanceled(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	wantCanceled := func(err error) {
-		t.Helper()
-		if err != context.Canceled {
-			t.Errorf("got %v, want context.Canceled", err)
-		}
-	}
-	top := OpenTopic()
-
-	wantCanceled(top.SendBatch(ctx, nil))
-	sub := OpenSubscription(top, time.Second)
-	_, err := sub.ReceiveBatch(ctx)
-	wantCanceled(err)
-	wantCanceled(sub.SendAcks(ctx, nil))
 }
