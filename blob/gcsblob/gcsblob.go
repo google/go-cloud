@@ -27,7 +27,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
-// Error: googleapi.Error
+// Error: *googleapi.Error
 // ListObject: storage.ObjectAttrs
 // ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
@@ -274,8 +274,8 @@ func (b *bucket) As(i interface{}) bool {
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
 	case *googleapi.Error:
-		if p, ok := i.(*googleapi.Error); ok {
-			*p = *v
+		if p, ok := i.(**googleapi.Error); ok {
+			*p = v
 			return true
 		}
 	}
