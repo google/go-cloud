@@ -109,6 +109,12 @@ canonical example is `gcpkms` and `awskms`.
 
 ## Errors
 
+-- Wrap errors so that users can't peek into the provider-specific error details. Don't double-wrap.
+-- All errors should be prefixed with the package name (e.g., blob: fail); we can do this as part of the wrapping.
+-- For cases where we want to distinguish types of errors (e.g., blob has NotExists), the driver interface should have a function to do the check (e.g., IsNotExists(err error) bool. The concrete type should pass such functions the raw error that the driver generated (not a wrapped error).
+-- As
+
+
 -   The callee is expected to return `error`s with messages that include
     information about the particular call, as opposed to the caller adding this
     information. This aligns with common Go practice.
