@@ -16,10 +16,13 @@ package fileblob
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 )
 
 const attrsExt = ".attrs"
+
+var errAttrsExt = fmt.Errorf("file extension %q is reserved", attrsExt)
 
 // xattrs stores extended attributes for an object. The format is like
 // filesystem extended attributes, see
