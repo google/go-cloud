@@ -37,11 +37,15 @@ type Broker struct {
 func NewBroker(topicNames []string) *Broker {
 	topics := map[string]*topic{}
 	for _, n := range topicNames {
-		topics[n] = newTopic(n)
+		topics[n] = &topic{name: n}
 	}
-	return &Broker{
-		topics: topics,
-	}
+	return &Broker{topics: topics}
+}
+
+func (b *Broker) topic(name string) *topic {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.topics[name]
 }
 
 type topic struct {
@@ -55,13 +59,7 @@ type topic struct {
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
 func OpenTopic(b *Broker, name string) *pubsub.Topic {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return pubsub.NewTopic(b.topics[name])
-}
-
-func newTopic(name string) *topic {
-	return &topic{name: name}
+	return pubsub.NewTopic(b.topic(name))
 }
 
 // SendBatch implements driver.SendBatch.
