@@ -269,3 +269,17 @@ func TestOpen(t *testing.T) {
 		})
 	}
 }
+
+func TestCallsWithUnwrappedError(t *testing.T) {
+	errFail := errors.New("fail")
+
+	if got := IsNotExist(errFail); got {
+		t.Errorf("IsNotExist got true with unwrapped error, wanted false")
+	}
+	if got := IsNotImplemented(errFail); got {
+		t.Errorf("IsNotImplemented got true with unwrapped error, wanted false")
+	}
+	if got := ErrorAs(errFail, nil); got {
+		t.Errorf("ErrorAs got true with unwrapped error, wanted false")
+	}
+}

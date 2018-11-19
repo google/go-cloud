@@ -195,6 +195,10 @@ type Bucket interface {
 	// for more background.
 	As(i interface{}) bool
 
+	// ErrorAs allows providers to expose provider-specific types for returned
+	// errors; see Bucket.As for more details.
+	ErrorAs(error, interface{}) bool
+
 	// Attributes returns attributes for the blob. If the specified object does
 	// not exist, Attributes must return an error for which IsNotExist returns
 	// true.

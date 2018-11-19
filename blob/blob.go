@@ -302,6 +302,9 @@ func NewBucket(b driver.Bucket) *Bucket {
 // https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 // for more background.
 func (b *Bucket) As(i interface{}) bool {
+	if i == nil {
+		return false
+	}
 	return b.b.As(i)
 }
 
@@ -635,6 +638,18 @@ func IsNotExist(err error) bool {
 func IsNotImplemented(err error) bool {
 	if e, ok := err.(*wrappedError); ok {
 		return e.b.IsNotImplemented(e.err)
+	}
+	return false
+}
+
+// ErrorAs converts e to provider-specific types.
+// See Bucket.As for more details.
+func ErrorAs(err error, i interface{}) bool {
+	if err == nil || i == nil {
+		return false
+	}
+	if e, ok := err.(*wrappedError); ok {
+		return e.b.ErrorAs(e.err, i)
 	}
 	return false
 }
