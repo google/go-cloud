@@ -312,12 +312,10 @@ func (b *bucket) As(i interface{}) bool {
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
 	case awserr.Error:
-		p, ok := i.(*awserr.Error)
-		if !ok {
-			return false
+		if p, ok := i.(*awserr.Error); ok {
+			*p = v
+			return true
 		}
-		*p = v
-		return true
 	}
 	return false
 }

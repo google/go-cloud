@@ -274,12 +274,10 @@ func (b *bucket) As(i interface{}) bool {
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
 	case *googleapi.Error:
-		p, ok := i.(*googleapi.Error)
-		if !ok {
-			return false
+		if p, ok := i.(*googleapi.Error); ok {
+			*p = *v
+			return true
 		}
-		*p = *v
-		return true
 	}
 	return false
 }
