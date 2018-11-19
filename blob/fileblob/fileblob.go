@@ -379,6 +379,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // As implements driver.As.
 func (b *bucket) As(i interface{}) bool { return false }
 
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)

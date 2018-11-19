@@ -27,6 +27,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
+// Error: googleapi.Error
 // ListObject: storage.ObjectAttrs
 // ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
@@ -267,6 +268,20 @@ func (b *bucket) As(i interface{}) bool {
 	}
 	*p = b.client
 	return true
+}
+
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case *googleapi.Error:
+		p, ok := i.(*googleapi.Error)
+		if !ok {
+			return false
+		}
+		*p = *v
+		return true
+	}
+	return false
 }
 
 // Attributes implements driver.Attributes.
