@@ -20,7 +20,6 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -48,9 +47,7 @@ func (t *driverTopic) Close() error {
 	return nil
 }
 
-func (s *driverTopic) IsRetryable(error) (bool, time.Duration) {
-	return false, 0
-}
+func (s *driverTopic) IsRetryable(error) bool { return false }
 
 type driverSub struct {
 	sem chan struct{}
@@ -99,9 +96,7 @@ func (s *driverSub) Close() error {
 	return nil
 }
 
-func (s *driverSub) IsRetryable(error) (bool, time.Duration) {
-	return false, 0
-}
+func (s *driverSub) IsRetryable(error) bool { return false }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -239,8 +234,8 @@ func TestRetryTopic(t *testing.T) {
 
 var errRetry = errors.New("retry")
 
-func isRetryable(err error) (bool, time.Duration) {
-	return err == errRetry, time.Millisecond
+func isRetryable(err error) bool {
+	return err == errRetry
 }
 
 const nRetryCalls = 2
@@ -258,7 +253,7 @@ func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return nil
 }
 
-func (t *failTopic) IsRetryable(err error) (bool, time.Duration) { return isRetryable(err) }
+func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
@@ -285,7 +280,7 @@ func (t *failSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
 
-func (t *failSub) IsRetryable(err error) (bool, time.Duration) { return isRetryable(err) }
+func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
 // TODO(jba): add a test for retry of SendAcks.
 

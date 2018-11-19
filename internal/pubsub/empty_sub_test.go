@@ -16,7 +16,6 @@ package pubsub_test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -39,9 +38,7 @@ func (s *emptyDriverSub) Close() error {
 	return nil
 }
 
-func (s *emptyDriverSub) IsRetryable(error) (bool, time.Duration) {
-	return false, 0
-}
+func (s *emptyDriverSub) IsRetryable(error) bool { return false }
 
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()

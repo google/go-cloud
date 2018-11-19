@@ -18,7 +18,6 @@ package driver
 
 import (
 	"context"
-	"time"
 )
 
 // AckID is the identifier of a message for purposes of acknowledgement.
@@ -76,9 +75,7 @@ type Topic interface {
 
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from SendBatch.
-	// If its second return value is non-zero, it is the suggested amount
-	// of time to sleep before retrying.
-	IsRetryable(err error) (bool, time.Duration)
+	IsRetryable(err error) bool
 }
 
 // Subscription receives published messages.
@@ -128,7 +125,5 @@ type Subscription interface {
 
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
-	// If its second return value is non-zero, it is the suggested amount
-	// of time to sleep before retrying.
-	IsRetryable(err error) (bool, time.Duration)
+	IsRetryable(err error) bool
 }

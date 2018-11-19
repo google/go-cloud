@@ -155,8 +155,9 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-s.sem:
+	default:
 	}
+	<-s.sem
 	defer func() {
 		s.sem <- struct{}{}
 	}()
@@ -217,7 +218,8 @@ func NewSubscription(d driver.Subscription) *Subscription {
 			id := m.ackID
 			ids = append(ids, id)
 		}
-		callCtx := context.TODO()
+		// TODO: Consider providing a way to stop this call. See #766.
+		callCtx := context.Background()
 		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})

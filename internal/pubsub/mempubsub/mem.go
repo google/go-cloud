@@ -98,9 +98,7 @@ func (t *topic) Close() error {
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
-func (t *topic) IsRetryable(err error) (bool, time.Duration) {
-	return false, 0
-}
+func (t *topic) IsRetryable(error) bool { return false }
 
 type subscription struct {
 	mu          sync.Mutex
@@ -238,6 +236,4 @@ func (s *subscription) Close() error {
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(err error) (bool, time.Duration) {
-	return false, 0
-}
+func (s *subscription) IsRetryable(error) bool { return false }

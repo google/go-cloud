@@ -19,7 +19,6 @@ package gcppubsub
 import (
 	"context"
 	"fmt"
-	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/gcp"
@@ -188,13 +187,13 @@ func (s *subscription) Close() error {
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
-func (t *topic) IsRetryable(err error) (bool, time.Duration) {
+func (t *topic) IsRetryable(error) bool {
 	// The client handles retries.
-	return false, 0
+	return false
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(err error) (bool, time.Duration) {
+func (s *subscription) IsRetryable(error) bool {
 	// The client handles retries.
-	return false, 0
+	return false
 }

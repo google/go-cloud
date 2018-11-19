@@ -23,31 +23,23 @@ import (
 	gax "github.com/googleapis/gax-go"
 )
 
-// Used to indicate a duration returned from the isRetryable function.
-// gax.Backoff.Pause never returns negative durations.
-const retryDur = time.Duration(-1)
-
 // Errors to distinguish retryable and non-retryable cases.
 var (
 	errRetry   = errors.New("retry")
 	errNoRetry = errors.New("no retry")
 )
 
-func retryable(err error) (bool, time.Duration) {
-	if err == errRetry {
-		return true, retryDur
-	}
-	return false, 0
+func retryable(err error) bool {
+	return err == errRetry
 }
 
 func TestCall(t *testing.T) {
 	for _, test := range []struct {
-		desc             string
-		isRetryable      func(error) (bool, time.Duration)
-		f                func(int) error // passed the number of calls so far
-		wantErr          error           // the return value of call
-		wantCount        int             // number of times f is called
-		wantRetryableDur bool            // whether the duration comes from isRetryable or not
+		desc        string
+		isRetryable func(error) bool
+		f           func(int) error // passed the number of calls so far
+		wantErr     error           // the return value of call
+		wantCount   int             // number of times f is called
 	}{
 		{
 			desc:        "f returns nil",
@@ -72,9 +64,8 @@ func TestCall(t *testing.T) {
 				}
 				return errNoRetry
 			},
-			wantCount:        3,
-			wantErr:          errNoRetry,
-			wantRetryableDur: true,
+			wantCount: 3,
+			wantErr:   errNoRetry,
 		},
 		{
 			desc:        "f returns context error", // same as non-retryable
@@ -83,28 +74,9 @@ func TestCall(t *testing.T) {
 			wantCount:   1,
 			wantErr:     context.Canceled,
 		},
-		{
-			desc: "backoff from gax",
-			isRetryable: func(err error) (bool, time.Duration) {
-				if err == errRetry {
-					return true, 0
-				}
-				return false, 0
-			},
-			f: func(n int) error {
-				if n == 0 {
-					return errRetry
-				}
-				return errNoRetry
-			},
-			wantCount:        2,
-			wantErr:          errNoRetry,
-			wantRetryableDur: false,
-		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
-			var gotDur time.Duration
-			sleep := func(_ context.Context, dur time.Duration) error { gotDur = dur; return nil }
+			sleep := func(context.Context, time.Duration) error { return nil }
 			gotCount := 0
 			f := func() error { gotCount++; return test.f(gotCount - 1) }
 			gotErr := call(context.Background(), gax.Backoff{}, test.isRetryable, f, sleep)
@@ -113,9 +85,6 @@ func TestCall(t *testing.T) {
 			}
 			if gotCount != test.wantCount {
 				t.Errorf("retry count: got %d, want %d", gotCount, test.wantCount)
-			}
-			if (gotDur < 0) != test.wantRetryableDur {
-				t.Errorf("sleep duration: got %s, want retryable dur: %t", gotDur, test.wantRetryableDur)
 			}
 		})
 	}
