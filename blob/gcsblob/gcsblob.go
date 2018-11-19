@@ -27,6 +27,7 @@
 //
 // It exposes the following types for As:
 // Bucket: *storage.Client
+// Error: *googleapi.Error
 // ListObject: storage.ObjectAttrs
 // ListOptions.BeforeList: *storage.Query
 // Reader: storage.Reader
@@ -36,7 +37,7 @@ package gcsblob
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -69,7 +70,7 @@ func init() {
 		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
 			pk, err := ioutil.ReadFile(keyPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("reading private key: %v", err)
+				return nil, err
 			}
 			opts.PrivateKey = pk
 		}
@@ -84,11 +85,11 @@ func init() {
 		} else {
 			jsonCreds, err := ioutil.ReadFile(credPath[0])
 			if err != nil {
-				return nil, fmt.Errorf("reading credentials: %v", err)
+				return nil, err
 			}
 			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
 			if err != nil {
-				return nil, fmt.Errorf("loading credentials: %v", err)
+				return nil, err
 			}
 		}
 
@@ -121,7 +122,7 @@ type Options struct {
 // openBucket returns a GCS Bucket that communicates using the given HTTP client.
 func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (driver.Bucket, error) {
 	if client == nil {
-		return nil, fmt.Errorf("OpenBucket requires an HTTP client")
+		return nil, errors.New("OpenBucket requires an HTTP client")
 	}
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
@@ -269,6 +270,18 @@ func (b *bucket) As(i interface{}) bool {
 	return true
 }
 
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case *googleapi.Error:
+		if p, ok := i.(**googleapi.Error); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
+}
+
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	bkt := b.client.Bucket(b.name)
@@ -347,7 +360,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 
 func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.SignedURLOptions) (string, error) {
 	if b.opts.GoogleAccessID == "" || (b.opts.PrivateKey == nil && b.opts.SignBytes == nil) {
-		return "", fmt.Errorf("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
+		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
 	}
 	opts := &storage.SignedURLOptions{
 		Expires:        time.Now().Add(dopts.Expiry),
