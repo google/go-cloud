@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestBatcherSequential(t *testing.T) {
+func TestSequential(t *testing.T) {
 	// Verify that sequential non-concurrent Adds to a batcher produce single-item batches.
 	// Since there is no concurrent work, the Batcher will always produce the items one at a time.
 	ctx := context.Background()
@@ -46,7 +47,7 @@ func TestBatcherSequential(t *testing.T) {
 	}
 }
 
-func TestBatcherSaturation(t *testing.T) {
+func TestSaturation(t *testing.T) {
 	// Verify that under high load the maximum number of handlers are running.
 	ctx := context.Background()
 	const maxHandlers = 10
@@ -105,5 +106,39 @@ func TestBatcherSaturation(t *testing.T) {
 	}
 	if diff := cmp.Diff(count, want); diff != "" {
 		t.Errorf("items: %s", diff)
+	}
+}
+
+func TestShutdown(t *testing.T) {
+	ctx := context.Background()
+	var nAdds int64 // atomic
+	c := make(chan int, 10)
+	b := New(int(0), cap(c), func(x interface{}) error {
+		for range x.([]int) {
+			c <- 0
+		}
+		atomic.AddInt64(&nAdds, int64(len(x.([]int))))
+		time.Sleep(time.Second) // we want Adds to be active on Shutdown
+		return nil
+	})
+	for i := 0; i < cap(c); i++ {
+		go func() {
+			err := b.Add(ctx, 0)
+			atomic.AddInt64(&nAdds, -1)
+			if err != nil {
+				t.Errorf("b.Add error: %v", err)
+			}
+		}()
+	}
+	// Make sure all goroutines have started.
+	for i := 0; i < cap(c); i++ {
+		<-c
+	}
+	b.Shutdown()
+	if got := atomic.LoadInt64(&nAdds); got != 0 {
+		t.Fatalf("%d Adds still active after Shutdown returns", got)
+	}
+	if err := b.Add(ctx, 1); err == nil {
+		t.Error("got nil, want error from Add after Shutdown")
 	}
 }
