@@ -24,3 +24,17 @@ type Decrypter interface {
 	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 }
+
+// Encryptor encrypts a plain text message into a cipher binary. The
+// implementation of the Encryptor should hold any key information with it, for
+// example, the key name. The information should be got during the creation. If
+// user wants to encrypt a message with a different key, they would create
+// another Encryptor.
+type Encryptor interface {
+
+	// Encrypt Encrypts the plaintext and returns the cipher binary. It should
+	// handle any necessary base64 encoding/decoding based on the service provider
+	// implementation. If an RPC call or any other key information is needed, it
+	// should use those found in the Encryptor.
+	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
+}
