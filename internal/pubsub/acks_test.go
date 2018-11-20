@@ -47,6 +47,8 @@ func (s *ackingDriverSub) Close() error {
 	return nil
 }
 
+func (s *ackingDriverSub) IsRetryable(error) bool { return false }
+
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var mu sync.Mutex

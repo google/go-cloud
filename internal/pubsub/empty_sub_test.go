@@ -38,6 +38,8 @@ func (s *emptyDriverSub) Close() error {
 	return nil
 }
 
+func (s *emptyDriverSub) IsRetryable(error) bool { return false }
+
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &emptyDriverSub{}

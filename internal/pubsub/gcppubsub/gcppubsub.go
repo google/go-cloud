@@ -176,18 +176,25 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	for _, id := range ids {
 		ids2 = append(ids2, id.(string))
 	}
-	req := &pb.AcknowledgeRequest{
+	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
 		Subscription: s.path,
 		AckIds:       ids2,
-	}
-	err := s.client.Acknowledge(ctx, req)
-	if err != nil {
-		return fmt.Errorf("gcppubsub: making RPC to acknowledge messages: %v", err)
-	}
-	return nil
+	})
 }
 
 // Close implements driver.Subscription.Close.
 func (s *subscription) Close() error {
 	return s.client.Close()
+}
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *topic) IsRetryable(error) bool {
+	// The client handles retries.
+	return false
+}
+
+// IsRetryable implements driver.Subscription.IsRetryable.
+func (s *subscription) IsRetryable(error) bool {
+	// The client handles retries.
+	return false
 }
