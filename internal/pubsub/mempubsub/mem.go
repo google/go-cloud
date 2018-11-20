@@ -169,15 +169,12 @@ func (s *subscription) receiveNoWait(now time.Time, max int) []*driver.Message {
 }
 
 const (
-	// Limit on how many messages returned from one call to ReceiveBatch.
-	maxBatchSize = 100
-
 	// How often ReceiveBatch should poll.
 	pollDuration = 250 * time.Millisecond
 )
 
 // ReceiveBatch implements driver.ReceiveBatch.
-func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Check for closed or cancelled before doing any work.
 	if err := s.wait(ctx, 0); err != nil {
 		return nil, err
@@ -186,7 +183,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, err
 	// alternative would be complicated by the need to recognize expired messages
 	// promptly.
 	for {
-		if msgs := s.receiveNoWait(time.Now(), maxBatchSize); len(msgs) > 0 {
+		if msgs := s.receiveNoWait(time.Now(), maxMessages); len(msgs) > 0 {
 			return msgs, nil
 		}
 		if err := s.wait(ctx, pollDuration); err != nil {

@@ -169,7 +169,9 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	var msgs []*driver.Message
 	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 		var err error
-		msgs, err = s.driver.ReceiveBatch(ctx)
+		// TODO(#691): dynamically adjust maxMessages
+		const maxMessages = 10
+		msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
 		return err
 	})
 	if err != nil {

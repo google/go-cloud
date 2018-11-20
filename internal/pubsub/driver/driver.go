@@ -81,7 +81,7 @@ type Topic interface {
 // Subscription receives published messages.
 type Subscription interface {
 	// ReceiveBatch should return a batch of messages that have queued up
-	// for the subscription on the server.
+	// for the subscription on the server, up to maxMessages.
 	//
 	// If there is a transient failure, this method should not retry but
 	// should return a nil slice and an error. The concrete API will take
@@ -96,7 +96,7 @@ type Subscription interface {
 	// are no messages yet.
 	//
 	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
-	ReceiveBatch(ctx context.Context) ([]*Message, error)
+	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this

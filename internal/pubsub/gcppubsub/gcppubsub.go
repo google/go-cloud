@@ -147,10 +147,11 @@ func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subsc
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
-func (s *subscription) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	req := &pb.PullRequest{
 		Subscription:      s.path,
 		ReturnImmediately: false,
+		MaxMessages:       int32(maxMessages),
 	}
 	resp, err := s.client.Pull(ctx, req)
 	if err != nil {
