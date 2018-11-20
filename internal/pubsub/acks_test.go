@@ -28,9 +28,14 @@ type ackingDriverSub struct {
 	sendAcks func(context.Context, []driver.AckID) error
 }
 
-func (s *ackingDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
-	ms := s.q
-	s.q = nil
+func (s *ackingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	if len(s.q) <= maxMessages {
+		ms := s.q
+		s.q = nil
+		return ms, nil
+	}
+	ms := s.q[:maxMessages]
+	s.q = s.q[maxMessages:]
 	return ms, nil
 }
 
