@@ -59,11 +59,11 @@ func NewDriverSub() *driverSub {
 	return ds
 }
 
-func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *driverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	for {
 		select {
 		case <-s.sem:
-			ms := s.grabQueue()
+			ms := s.grabQueue(maxMessages)
 			if len(ms) != 0 {
 				return ms, nil
 			}
@@ -74,11 +74,16 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	}
 }
 
-func (s *driverSub) grabQueue() []*driver.Message {
+func (s *driverSub) grabQueue(maxMessages int) []*driver.Message {
 	defer func() { s.sem <- struct{}{} }()
 	if len(s.q) > 0 {
-		ms := s.q
-		s.q = nil
+		if len(s.q) <= maxMessages {
+			ms := s.q
+			s.q = nil
+			return ms
+		}
+		ms := s.q[:maxMessages]
+		s.q = s.q[maxMessages:]
 		return ms
 	}
 	return nil
