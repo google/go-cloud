@@ -40,8 +40,6 @@ const (
 	// 4. Download a private key to a .pem file as described here:
 	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
 	//    and pass a path to it via the --privatekey flag.
-	// TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
-	//    name from the Terraform output instead (saving a copy of it for replay).
 	topicName        = "test-topic"
 	subscriptionName = "test-subscription-1"
 	serviceAccountID = "pubsub@go-cloud-test-216917.iam.gserviceaccount.com"
