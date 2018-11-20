@@ -277,7 +277,7 @@ type failSub struct {
 	calls int
 }
 
-func (t *failSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	t.calls++
 	if t.calls <= nRetryCalls {
 		return nil, errRetry
