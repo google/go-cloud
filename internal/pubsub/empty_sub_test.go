@@ -26,7 +26,7 @@ import (
 // driver mischeviously always returns an empty batch.
 type emptyDriverSub struct{}
 
-func (s *emptyDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *emptyDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	return nil, nil
 }
 
@@ -37,6 +37,8 @@ func (s *emptyDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) er
 func (s *emptyDriverSub) Close() error {
 	return nil
 }
+
+func (s *emptyDriverSub) IsRetryable(error) bool { return false }
 
 func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()

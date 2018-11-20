@@ -16,7 +16,9 @@
 // interact with the underlying pubsub services.
 package driver
 
-import "context"
+import (
+	"context"
+)
 
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
@@ -70,12 +72,16 @@ type Topic interface {
 	// then the call to Close should proceed and the call to SendBatch
 	// should fail immediately after Close returns.
 	Close() error
+
+	// IsRetryable should report whether err can be retried.
+	// err will always be a non-nil error returned from SendBatch.
+	IsRetryable(err error) bool
 }
 
 // Subscription receives published messages.
 type Subscription interface {
 	// ReceiveBatch should return a batch of messages that have queued up
-	// for the subscription on the server.
+	// for the subscription on the server, up to maxMessages.
 	//
 	// If there is a transient failure, this method should not retry but
 	// should return a nil slice and an error. The concrete API will take
@@ -90,7 +96,7 @@ type Subscription interface {
 	// are no messages yet.
 	//
 	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
-	ReceiveBatch(ctx context.Context) ([]*Message, error)
+	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
@@ -116,4 +122,8 @@ type Subscription interface {
 	// finishes, then the call to Close should proceed and the other call
 	// should fail immediately after Close returns.
 	Close() error
+
+	// IsRetryable should report whether err can be retried.
+	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
+	IsRetryable(err error) bool
 }

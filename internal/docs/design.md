@@ -109,40 +109,50 @@ canonical example is `gcpkms` and `awskms`.
 
 ## Errors
 
--- Wrap errors so that users can't peek into the provider-specific error details. Don't double-wrap.
--- All errors should be prefixed with the package name (e.g., blob: fail); we can do this as part of the wrapping.
--- For cases where we want to distinguish types of errors (e.g., blob has NotExists), the driver interface should have a function to do the check (e.g., IsNotExists(err error) bool. The concrete type should pass such functions the raw error that the driver generated (not a wrapped error).
--- As
-
+### General
 
 -   The callee is expected to return `error`s with messages that include
     information about the particular call, as opposed to the caller adding this
     information. This aligns with common Go practice.
 
+### Drivers
+
+Driver implementations should:
+
+-   Return the raw errors from the underlying provider, and not wrap them in
+    `fmt.Errorf` calls, so that they can be exposed to end users via `ErrorAs`.
+
+### Concrete Types
+
+Concrete types should:
+
+-   Wrap errors returned from driver implementations before returning them to
+    end users, so that users can't peek into provider-specific error details
+    without using `As`. Make sure not to double-wrap.
+
+-   Prefix errors with the package name (e.g., `blob: fail`). For most errors,
+    this can be done as part of the wrapping.
+
 -   Prefer to keep details of returned `error`s unspecified. The most common
     case is that the caller will only care whether an operation succeeds or not.
 
--   If certain kinds of `error`s are interesting for the caller of a function or
-    non-interface method to distinguish, prefer to expose additional information
-    through the use of predicate functions like
+-   If certain `error`s are interesting for callers to distinguish, expose
+    predicate functions like
     [`os.IsNotExist`](https://golang.org/pkg/os/#IsNotExist). This allows the
     internal representation of the `error` to change over time while being
-    simple to use.
+    simple to use. In most cases, these predicate functions will translate into
+    a driver interface function to do the check. The concrete type must pass
+    such functions the raw error that the driver returned (not a wrapped error).
 
--   If it is important to distinguish different kinds of `error`s returned from
-    an interface method, then the `error` should implement extra methods and the
-    interface should document these assumptions. Just remember that each method
-    can be implemented independently: if one method is mutually exclusive with
-    another, it would be better to return a more complicated data type from one
-    method than to have separate methods.
+-   Expose an `ErrorAs` function to allow users to access provider-specific
+    error types.
 
--   Transient network errors should be handled by an interface's implementation
-    and not bubbled up as a distinguishable error through a generic interface.
-    Retry logic is best handled as low in the stack as possible to avoid
-    [cascading failure][]. APIs should try to surface "permanent" errors (e.g.
-    malformed request, bad permissions) where appropriate so that application
-    logic does not attempt to retry idempotent operations, but the
-    responsibility is largely on the library, not on the application.
+-   Handle transient network errors. Retry logic is best handled as low in the
+    stack as possible to avoid [cascading failure][]. APIs should try to surface
+    "permanent" errors (e.g. malformed request, bad permissions) where
+    appropriate so that application logic does not attempt to retry
+    non-idempotent operations, but the responsibility is largely on the library,
+    not on the application.
 
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
@@ -158,6 +168,7 @@ wants to access provider-specific functionality, which might consist of:
     provider might.
 1.  **Data fields**. For example, **blob** exposes a few attributes like
     ContentType and Size, but S3 and GCS both have many more.
+1.  **Errors**. For example, S3 returns `awserr.Error`.
 1.  **Options**. Different providers may support different options for
     functionality.
 
