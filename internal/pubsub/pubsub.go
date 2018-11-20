@@ -30,22 +30,15 @@ type Message struct {
 	// Metadata has key/value metadata for the message.
 	Metadata map[string]string
 
-	// AckID identifies the message on the server.
-	// It can be used to ack the message after it has been received.
-	ackID driver.AckID
-
-	// sub is the Subscription this message was received from.
-	sub *Subscription
+	// ack is a closure that queues this message for acknowledgement.
+	ack func()
 }
 
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
-	// Send the message back to the subscription for ack batching.
-	// size is an estimate of the size of a single AckID in bytes.
-	const size = 8
-	go m.sub.ackBatcher.Add(m, size)
+	go m.ack()
 }
 
 // Topic publishes messages to all its subscribers.
@@ -107,7 +100,6 @@ func NewTopic(d driver.Topic) *Topic {
 			dm := &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
-				AckID:    m.ackID,
 			}
 			dms = append(dms, dm)
 		}
@@ -178,13 +170,16 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	}
 	s.q = nil
 	for _, m := range msgs {
-		m := &Message{
+		id := m.AckID
+		// size is an estimate of the size of a single AckID in bytes.
+		const size = 8
+		s.q = append(s.q, &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
-			ackID:    m.AckID,
-			sub:      s,
-		}
-		s.q = append(s.q, m)
+			ack: func() {
+				s.ackBatcher.Add(ackIDBox{id}, size)
+			},
+		})
 	}
 	return nil
 }
@@ -195,6 +190,11 @@ func (s *Subscription) Close() error {
 	return s.driver.Close()
 }
 
+// ackIDBox makes it possible to use a driver.AckID with bundler.
+type ackIDBox struct {
+	ackID driver.AckID
+}
+
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
@@ -202,16 +202,16 @@ func (s *Subscription) Close() error {
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
 	handler := func(item interface{}) {
-		ms := item.([]*Message)
+		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
-		for _, m := range ms {
-			id := m.ackID
+		for _, box := range boxes {
+			id := box.ackID
 			ids = append(ids, id)
 		}
 		// TODO(#695): Do something sensible if SendAcks returns an error.
 		_ = d.SendAcks(context.TODO(), ids)
 	}
-	ab := bundler.NewBundler(&Message{}, handler)
+	ab := bundler.NewBundler(ackIDBox{}, handler)
 	ab.DelayThreshold = time.Millisecond
 	s := &Subscription{
 		driver:     d,
