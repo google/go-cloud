@@ -16,7 +16,6 @@ package gcppubsub
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"testing"
 
@@ -45,8 +44,6 @@ const (
 	serviceAccountID = "pubsub@go-cloud-test-216917.iam.gserviceaccount.com"
 	projectID        = "go-cloud-test-216917"
 )
-
-var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containing private key (required for --record)")
 
 type harness struct {
 }
