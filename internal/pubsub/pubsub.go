@@ -168,16 +168,16 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	}
 	s.q = nil
 	for _, m := range msgs {
+		id := m.AckID
 		// size is an estimate of the size of a single AckID in bytes.
 		const size = 8
-		m := &Message{
+		s.q = append(s.q, &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ackIDBox{m.AckID}, size)
+				s.ackBatcher.Add(ackIDBox{id}, size)
 			},
-		}
-		s.q = append(s.q, m)
+		})
 	}
 	return nil
 }
