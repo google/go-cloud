@@ -15,6 +15,7 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
+	"github.com/google/go-cloud/internal/retry"
 )
 
 type driverTopic struct {
@@ -45,6 +47,8 @@ func (t *driverTopic) Close() error {
 	return nil
 }
 
+func (s *driverTopic) IsRetryable(error) bool { return false }
+
 type driverSub struct {
 	sem chan struct{}
 	// Normally this queue would live on a separate server in the cloud.
@@ -59,11 +63,11 @@ func NewDriverSub() *driverSub {
 	return ds
 }
 
-func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *driverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	for {
 		select {
 		case <-s.sem:
-			ms := s.grabQueue()
+			ms := s.grabQueue(maxMessages)
 			if len(ms) != 0 {
 				return ms, nil
 			}
@@ -74,11 +78,16 @@ func (s *driverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error)
 	}
 }
 
-func (s *driverSub) grabQueue() []*driver.Message {
+func (s *driverSub) grabQueue(maxMessages int) []*driver.Message {
 	defer func() { s.sem <- struct{}{} }()
 	if len(s.q) > 0 {
-		ms := s.q
-		s.q = nil
+		if len(s.q) <= maxMessages {
+			ms := s.q
+			s.q = nil
+			return ms
+		}
+		ms := s.q[:maxMessages]
+		s.q = s.q[maxMessages:]
 		return ms
 	}
 	return nil
@@ -91,6 +100,8 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 func (s *driverSub) Close() error {
 	return nil
 }
+
+func (s *driverSub) IsRetryable(error) bool { return false }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -135,10 +146,10 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 			for {
 				m, err := s.Receive(ctx)
 				if err != nil {
-					if err == context.Canceled {
+					if isCanceled(err) {
 						return
 					}
-					t.Error(err)
+					t.Fatal(err)
 				}
 				mu.Lock()
 				receivedMsgs[string(m.Body)]++
@@ -211,4 +222,76 @@ func TestCancelReceive(t *testing.T) {
 	if _, err := s.Receive(ctx); err == nil {
 		t.Error("got nil, want cancellation error")
 	}
+}
+
+func TestRetryTopic(t *testing.T) {
+	// Test that Send is retried if the driver returns a retryable error.
+	ft := &failTopic{}
+	top := pubsub.NewTopic(ft)
+	err := top.Send(context.Background(), &pubsub.Message{})
+	if err != nil {
+		t.Errorf("Send: got %v, want nil", err)
+	}
+	if got, want := ft.calls, nRetryCalls+1; got != want {
+		t.Errorf("calls: got %d, want %d", got, want)
+	}
+}
+
+var errRetry = errors.New("retry")
+
+func isRetryable(err error) bool {
+	return err == errRetry
+}
+
+const nRetryCalls = 2
+
+type failTopic struct {
+	driver.Topic
+	calls int
+}
+
+func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
+	t.calls++
+	if t.calls <= nRetryCalls {
+		return errRetry
+	}
+	return nil
+}
+
+func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
+
+func TestRetryReceive(t *testing.T) {
+	fs := &failSub{}
+	sub := pubsub.NewSubscription(fs)
+	_, err := sub.Receive(context.Background())
+	if err != nil {
+		t.Errorf("Receive: got %v, want nil", err)
+	}
+	if got, want := fs.calls, nRetryCalls+1; got != want {
+		t.Errorf("calls: got %d, want %d", got, want)
+	}
+}
+
+type failSub struct {
+	driver.Subscription
+	calls int
+}
+
+func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	t.calls++
+	if t.calls <= nRetryCalls {
+		return nil, errRetry
+	}
+	return []*driver.Message{{Body: []byte("")}}, nil
+}
+
+func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
+
+// TODO(jba): add a test for retry of SendAcks.
+
+func isCanceled(err error) bool {
+	if cerr, ok := err.(*retry.ContextError); ok {
+		err = cerr.CtxErr
+	}
+	return err == context.Canceled
 }

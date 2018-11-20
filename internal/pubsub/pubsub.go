@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub/driver"
+	"github.com/google/go-cloud/internal/retry"
+	gax "github.com/googleapis/gax-go"
 	"google.golang.org/api/support/bundler"
 )
 
@@ -103,7 +105,11 @@ func NewTopic(d driver.Topic) *Topic {
 			}
 			dms = append(dms, dm)
 		}
-		err := d.SendBatch(context.TODO(), dms)
+
+		callCtx := context.TODO()
+		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+			return d.SendBatch(callCtx, dms)
+		})
 		for _, mec := range mecs {
 			mec.errChan <- err
 		}
@@ -141,8 +147,9 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-s.sem:
+	default:
 	}
+	<-s.sem
 	defer func() {
 		s.sem <- struct{}{}
 	}()
@@ -159,7 +166,14 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 // getNextBatch gets the next batch of messages from the server and saves it in
 // s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
-	msgs, err := s.driver.ReceiveBatch(ctx)
+	var msgs []*driver.Message
+	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		var err error
+		// TODO(#691): dynamically adjust maxMessages
+		const maxMessages = 10
+		msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -206,8 +220,13 @@ func NewSubscription(d driver.Subscription) *Subscription {
 			id := box.ackID
 			ids = append(ids, id)
 		}
+		// TODO: Consider providing a way to stop this call. See #766.
+		callCtx := context.Background()
+		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+			return d.SendAcks(callCtx, ids)
+		})
 		// TODO(#695): Do something sensible if SendAcks returns an error.
-		_ = d.SendAcks(context.TODO(), ids)
+		_ = err
 	}
 	ab := bundler.NewBundler(ackIDBox{}, handler)
 	ab.DelayThreshold = time.Millisecond
