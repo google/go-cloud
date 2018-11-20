@@ -79,7 +79,7 @@ var errFake = errors.New("fake")
 
 // fakeError implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
-// In addition, when passed the key "work", NewRangedReader and NewTypedWriter
+// In addition, when passed the key "work", NewReader and NewTypedWriter
 // will return a Reader/Writer respectively, that always return errFake
 // from Read/Write and Close.
 type fakeErrorer struct {
@@ -118,7 +118,7 @@ func (b *fakeErrorer) ListPaged(ctx context.Context, opts *driver.ListOptions) (
 	return nil, errFake
 }
 
-func (b *fakeErrorer) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *fakeErrorer) NewReader(ctx context.Context, key string, opts *driver.ReaderOptions) (driver.Reader, error) {
 	if key == "work" {
 		return &fakeErrorReader{}, nil
 	}
@@ -162,14 +162,14 @@ func TestErrorsAreWrapped(t *testing.T) {
 	_, err = iter.Next(ctx)
 	verifyWrap("ListIterator.Next", err)
 
-	_, err = b.NewRangeReader(ctx, "", 0, 1)
-	verifyWrap("NewRangeReader", err)
+	_, err = b.NewReader(ctx, "", nil)
+	verifyWrap("NewReader", err)
 
 	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
 	verifyWrap("NewWriter", err)
 
 	var buf []byte
-	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
+	r, _ := b.NewReader(ctx, "work", nil)
 	_, err = r.Read(buf)
 	verifyWrap("Reader.Read", err)
 

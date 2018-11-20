@@ -793,7 +793,7 @@ func countItems(ctx context.Context, t *testing.T, iter *blob.ListIterator) int 
 	return count
 }
 
-// testRead tests the functionality of NewReader, NewRangeReader, and Reader.
+// testRead tests the functionality of NewReader and Reader.
 func testRead(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-reading"
 	content := []byte("abcdefghijklmnopqurstuvwxyz")
@@ -814,12 +814,12 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		{
 			name:    "read of nonexistent key fails",
 			key:     "key-does-not-exist",
-			length:  -1,
 			wantErr: true,
 		},
 		{
-			name:       "length 0 read fails",
+			name:       "negatigve length fails",
 			key:        key,
+			length:     -1,
 			wantErr:    true,
 			skipCreate: true,
 		},
@@ -834,7 +834,6 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			name:         "read from positive offset to end",
 			key:          key,
 			offset:       10,
-			length:       -1,
 			want:         content[10:],
 			wantReadSize: contentSize - 10,
 		},
@@ -849,8 +848,6 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		{
 			name:         "read in full",
 			key:          key,
-			offset:       0,
-			length:       -1,
 			want:         content,
 			wantReadSize: contentSize,
 		},
@@ -887,7 +884,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.skipCreate)
 			defer done()
 
-			r, err := b.NewRangeReader(ctx, tc.key, tc.offset, tc.length)
+			r, err := b.NewReader(ctx, tc.key, &blob.ReaderOptions{Offset: tc.offset, ReadLength: tc.length})
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v want error %v", err, tc.wantErr)
 			}
@@ -962,7 +959,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	}
 	// Also make a Reader so we can verify the subset of attributes
 	// that it exposes.
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
 	}
@@ -1389,7 +1386,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got unexpected error deleting blob: %v", err)
 		}
 		// Subsequent read fails with IsNotExist.
-		_, err = b.NewReader(ctx, key)
+		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete want error, got nil")
 		} else if !blob.IsNotExist(err) {
@@ -1588,7 +1585,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify Reader.As.
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1616,7 +1613,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		}
 	}
 
-	_, gotErr := b.NewReader(ctx, "key-does-not-exist")
+	_, gotErr := b.NewReader(ctx, "key-does-not-exist", nil)
 	if gotErr == nil {
 		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
 	}

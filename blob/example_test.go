@@ -47,7 +47,7 @@ func ExampleBucket_NewReader() {
 
 	// Open a reader using the blob's key.
 	ctx := context.Background()
-	r, err := bucket.NewReader(ctx, "foo.txt")
+	r, err := bucket.NewReader(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func ExampleBucket_NewReader() {
 	// Hello, World!
 }
 
-func ExampleBucket_NewRangeReader() {
+func ExampleBucket_NewReader_range() {
 	// Connect to a bucket when your program starts up.
 	// This example uses the file-based implementation.
 	dir, cleanup := newTempDir()
@@ -80,7 +80,7 @@ func ExampleBucket_NewRangeReader() {
 
 	// Open a reader using the blob's key at a specific offset at length.
 	ctx := context.Background()
-	r, err := bucket.NewRangeReader(ctx, "foo.txt", 1, 4)
+	r, err := bucket.NewReader(ctx, "foo.txt", &blob.ReaderOptions{Offset: 1, ReadLength: 4})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func ExampleBucket_NewWriter() {
 		log.Fatal(closeErr)
 	}
 	// Copy the written blob to stdout.
-	r, err := bucket.NewReader(ctx, "foo.txt")
+	r, err := bucket.NewReader(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

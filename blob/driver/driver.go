@@ -22,6 +22,15 @@ import (
 	"time"
 )
 
+// ReaderOptions controls Reader behaviors.
+type ReaderOptions struct {
+	// ReadLength sets the total number of bytes to read. 0 is interpreted as
+	// no limit.
+	ReadLength int64
+	// Offset sets the starting point for the read.
+	Offset int64
+}
+
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
@@ -39,7 +48,7 @@ type Writer interface {
 	io.WriteCloser
 }
 
-// WriterOptions controls behaviors of Writer.
+// WriterOptions controls Writer behaviors.
 type WriterOptions struct {
 	// BufferSize changes the default size in byte of the maximum part Writer can
 	// write in a single request, if supported. Larger objects will be split into
@@ -213,12 +222,12 @@ type Bucket interface {
 	// opts is guaranteed to be non-nil.
 	ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error)
 
-	// NewRangeReader returns a Reader that reads part of an object, reading at
-	// most length bytes starting at the given offset. If length is negative, it
+	// NewReader returns a Reader that reads an object, reading at
+	// most opts.ReadLength bytes starting at opts.Offset. If opts.ReadLength is 0, it
 	// will read until the end of the object. If the specified object does not
-	// exist, NewRangeReader must return an error for which IsNotExist returns
+	// exist, NewReader must return an error for which IsNotExist returns
 	// true.
-	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
+	NewReader(ctx context.Context, key string, opts *ReaderOptions) (Reader, error)
 
 	// NewTypedWriter returns Writer that writes to an object associated with key.
 	//
@@ -237,7 +246,7 @@ type Bucket interface {
 	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
 
 	// Delete deletes the object associated with key. If the specified object does
-	// not exist, NewRangeReader must return an error for which IsNotExist returns
+	// not exist, Delete must return an error for which IsNotExist returns
 	// true.
 	Delete(ctx context.Context, key string) error
 

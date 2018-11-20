@@ -396,8 +396,8 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
-// NewRangeReader implements driver.NewRangeReader.
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+// NewReader implements driver.NewReader.
+func (b *bucket) NewReader(ctx context.Context, key string, opts *driver.ReaderOptions) (driver.Reader, error) {
 	path, info, xa, err := b.forKey(key)
 	if err != nil {
 		return nil, err
@@ -406,14 +406,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, err
 	}
-	if offset > 0 {
-		if _, err := f.Seek(offset, io.SeekStart); err != nil {
+	if opts.Offset > 0 {
+		if _, err := f.Seek(opts.Offset, io.SeekStart); err != nil {
 			return nil, err
 		}
 	}
 	r := io.Reader(f)
-	if length > 0 {
-		r = io.LimitReader(r, length)
+	if opts.ReadLength > 0 {
+		r = io.LimitReader(r, opts.ReadLength)
 	}
 	return reader{
 		r: r,

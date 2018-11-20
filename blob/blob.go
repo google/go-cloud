@@ -310,7 +310,7 @@ func (b *Bucket) As(i interface{}) bool {
 
 // ReadAll is a shortcut for creating a Reader via NewReader and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -362,32 +362,30 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 	}, nil
 }
 
-// NewReader returns a Reader to read from an object, or an error when the object
-// is not found by the given key, which can be checked by calling IsNotExist.
+// NewReader returns a Reader that reads an object, reading at most
+// opts.ReadLength bytes starting at opts.Offset. If opts.ReadLength is 0,
+// it will read till the end of the object.
 //
-// The caller must call Close on the returned Reader when done reading.
-func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
-	return b.NewRangeReader(ctx, key, 0, -1)
-}
-
-// NewRangeReader returns a Reader that reads part of an object, reading at
-// most length bytes starting at the given offset. If length is negative, it
-// will read till the end of the object. offset must be >= 0, and length cannot
-// be 0.
-//
-// NewRangeReader returns an error if the object does not exist, which can be checked
+// NewReader returns an error if the object does not exist, which can be checked
 // by calling IsNotExist. Bucket.Attributes is a lighter-weight way to check for
 // existence.
 //
 // The caller must call Close on the returned Reader when done reading.
-func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
-	if offset < 0 {
-		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
+func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
+	if opts == nil {
+		opts = &ReaderOptions{}
 	}
-	if length == 0 {
-		return nil, errors.New("blob.NewRangeReader: length cannot be 0")
+	if opts.Offset < 0 {
+		return nil, errors.New("blob.NewReader: Offset must be >= 0")
 	}
-	r, err := b.b.NewRangeReader(ctx, key, offset, length)
+	if opts.ReadLength < 0 {
+		return nil, errors.New("blob.NewReader: ReadLength must be >= 0")
+	}
+	dopts := &driver.ReaderOptions{
+		ReadLength: opts.ReadLength,
+		Offset:     opts.Offset,
+	}
+	r, err := b.b.NewReader(ctx, key, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
@@ -503,6 +501,15 @@ type SignedURLOptions struct {
 	// Expiry sets how long the returned URL is valid for.
 	// Defaults to DefaultSignedURLExpiry.
 	Expiry time.Duration
+}
+
+// ReaderOptions controls Reader behaviors.
+type ReaderOptions struct {
+	// ReadLength sets the total number of bytes to read. 0 is interpreted as
+	// no limit. Must be >= 0.
+	ReadLength int64
+	// Offset sets the starting point for the read. Must be >= 0.
+	Offset int64
 }
 
 // WriterOptions controls Writer behaviors.

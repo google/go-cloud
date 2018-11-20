@@ -355,16 +355,16 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
-// NewRangeReader implements driver.NewRangeReader.
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+// NewReader implements driver.NewReader.
+func (b *bucket) NewReader(ctx context.Context, key string, opts *driver.ReaderOptions) (driver.Reader, error) {
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	if offset > 0 && length < 0 {
-		in.Range = aws.String(fmt.Sprintf("bytes=%d-", offset))
-	} else if length > 0 {
-		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	if opts.Offset > 0 && opts.ReadLength == 0 {
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-", opts.Offset))
+	} else if opts.ReadLength > 0 {
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", opts.Offset, opts.Offset+opts.ReadLength-1))
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
