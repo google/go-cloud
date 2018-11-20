@@ -363,7 +363,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 }
 
 // NewReader returns a Reader that reads an object, reading at most
-// opts.ReadLength bytes starting at opts.Offset. If opts.ReadLength is 0,
+// opts.Length bytes starting at opts.Offset. If opts.Length is 0,
 // it will read till the end of the object.
 //
 // NewReader returns an error if the object does not exist, which can be checked
@@ -378,12 +378,12 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 	if opts.Offset < 0 {
 		return nil, errors.New("blob.NewReader: Offset must be >= 0")
 	}
-	if opts.ReadLength < 0 {
-		return nil, errors.New("blob.NewReader: ReadLength must be >= 0")
+	if opts.Length < 0 {
+		return nil, errors.New("blob.NewReader: Length must be >= 0")
 	}
 	dopts := &driver.ReaderOptions{
-		ReadLength: opts.ReadLength,
-		Offset:     opts.Offset,
+		Length: opts.Length,
+		Offset: opts.Offset,
 	}
 	r, err := b.b.NewReader(ctx, key, dopts)
 	if err != nil {
@@ -505,9 +505,9 @@ type SignedURLOptions struct {
 
 // ReaderOptions controls Reader behaviors.
 type ReaderOptions struct {
-	// ReadLength sets the total number of bytes to read. 0 is interpreted as
+	// Length sets the total number of bytes to read. 0 is interpreted as
 	// no limit. Must be >= 0.
-	ReadLength int64
+	Length int64
 	// Offset sets the starting point for the read. Must be >= 0.
 	Offset int64
 }

@@ -361,10 +361,10 @@ func (b *bucket) NewReader(ctx context.Context, key string, opts *driver.ReaderO
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	if opts.Offset > 0 && opts.ReadLength == 0 {
+	if opts.Offset > 0 && opts.Length == 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-", opts.Offset))
-	} else if opts.ReadLength > 0 {
-		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", opts.Offset, opts.Offset+opts.ReadLength-1))
+	} else if opts.Length > 0 {
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", opts.Offset, opts.Offset+opts.Length-1))
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {

@@ -884,7 +884,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.skipCreate)
 			defer done()
 
-			r, err := b.NewReader(ctx, tc.key, &blob.ReaderOptions{Offset: tc.offset, ReadLength: tc.length})
+			r, err := b.NewReader(ctx, tc.key, &blob.ReaderOptions{Offset: tc.offset, Length: tc.length})
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v want error %v", err, tc.wantErr)
 			}

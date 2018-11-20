@@ -80,7 +80,7 @@ func ExampleBucket_NewReader_range() {
 
 	// Open a reader using the blob's key at a specific offset at length.
 	ctx := context.Background()
-	r, err := bucket.NewReader(ctx, "foo.txt", &blob.ReaderOptions{Offset: 1, ReadLength: 4})
+	r, err := bucket.NewReader(ctx, "foo.txt", &blob.ReaderOptions{Offset: 1, Length: 4})
 	if err != nil {
 		log.Fatal(err)
 	}

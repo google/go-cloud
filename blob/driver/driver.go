@@ -24,9 +24,9 @@ import (
 
 // ReaderOptions controls Reader behaviors.
 type ReaderOptions struct {
-	// ReadLength sets the total number of bytes to read. 0 is interpreted as
+	// Length sets the total number of bytes to read. 0 is interpreted as
 	// no limit.
-	ReadLength int64
+	Length int64
 	// Offset sets the starting point for the read.
 	Offset int64
 }
@@ -223,7 +223,7 @@ type Bucket interface {
 	ListPaged(ctx context.Context, opts *ListOptions) (*ListPage, error)
 
 	// NewReader returns a Reader that reads an object, reading at
-	// most opts.ReadLength bytes starting at opts.Offset. If opts.ReadLength is 0, it
+	// most opts.Length bytes starting at opts.Offset. If opts.Length is 0, it
 	// will read until the end of the object. If the specified object does not
 	// exist, NewReader must return an error for which IsNotExist returns
 	// true.

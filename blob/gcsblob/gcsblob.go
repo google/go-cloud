@@ -310,12 +310,12 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 func (b *bucket) NewReader(ctx context.Context, key string, opts *driver.ReaderOptions) (driver.Reader, error) {
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	readLength := opts.ReadLength
+	length := opts.Length
 	// GCS NewRangeReader wants -1 for "no limit".
-	if readLength == 0 {
-		readLength = -1
+	if length == 0 {
+		length = -1
 	}
-	r, err := obj.NewRangeReader(ctx, opts.Offset, readLength)
+	r, err := obj.NewRangeReader(ctx, opts.Offset, length)
 	if err != nil {
 		return nil, err
 	}

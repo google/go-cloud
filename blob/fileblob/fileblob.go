@@ -412,8 +412,8 @@ func (b *bucket) NewReader(ctx context.Context, key string, opts *driver.ReaderO
 		}
 	}
 	r := io.Reader(f)
-	if opts.ReadLength > 0 {
-		r = io.LimitReader(r, opts.ReadLength)
+	if opts.Length > 0 {
+		r = io.LimitReader(r, opts.Length)
 	}
 	return reader{
 		r: r,
