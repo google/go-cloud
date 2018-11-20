@@ -51,12 +51,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
-	t.Run("TestErrorOnSendToClosedTopic", func(t *testing.T) {
-		testErrorOnSendToClosedTopic(t, newHarness)
-	})
-	t.Run("TestErrorOnReceiveFromClosedSubscription", func(t *testing.T) {
-		testErrorOnReceiveFromClosedSubscription(t, newHarness)
-	})
 	t.Run("TestCancelSendReceive", func(t *testing.T) {
 		testCancelSendReceive(t, newHarness)
 	})
@@ -103,47 +97,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
 	if diff := cmp.Diff(ms2, ms, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
 		t.Error(diff)
-	}
-}
-
-func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
-	// Set up.
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	top, _, cleanup, err := makePair(ctx, h)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-
-	top.Close()
-
-	// Check that sending to the closed topic fails.
-	m := &pubsub.Message{}
-	if err := top.Send(ctx, m); err == nil {
-		t.Error("top.Send returned nil, want error")
-	}
-}
-
-func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMaker) {
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-	_, sub, cleanup, err := makePair(ctx, h)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-	sub.Close()
-	if _, err = sub.Receive(ctx); err == nil {
-		t.Error("sub.Receive returned nil, want error")
 	}
 }
 
