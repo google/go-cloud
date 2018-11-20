@@ -167,7 +167,9 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 // getNextBatch gets the next batch of messages from the server and saves it in
 // s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
-	msgs, err := s.driver.ReceiveBatch(ctx)
+	// TODO(#691): dynamically adjust maxMessages
+	const maxMessages = 10
+	msgs, err := s.driver.ReceiveBatch(ctx, maxMessages)
 	if err != nil {
 		return err
 	}
