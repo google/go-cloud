@@ -26,7 +26,7 @@ import (
 // driver mischeviously always returns an empty batch.
 type emptyDriverSub struct{}
 
-func (s *emptyDriverSub) ReceiveBatch(ctx context.Context) ([]*driver.Message, error) {
+func (s *emptyDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	return nil, nil
 }
 
