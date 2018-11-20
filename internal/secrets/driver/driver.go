@@ -20,14 +20,14 @@ import "context"
 
 // Decryptor decrypts a cipher message into a plain text message. The
 // implementation of the Decryptor should hold any key information with it, for
-// example, the key name. The information should be get during the creation. If
+// example, the key name. The information should be got during the creation. If
 // user wants to decrypt a message with a different key, they would create
 // another Decryptor.
 type Decryptor interface {
 
 	// Decrypt decrypts the ciphertext and returns the plaintext. It should handle
-	// any necessary base64 decoding based on the service provider implementation.
-	// If an RPC call or any other key information is needed, it should use those
-	// found in the Decryptor.
+	// any necessary base64 encoding/decoding based on the service provider
+	// implementation. If an RPC call or any other key information is needed, it
+	// should use those found in the Decryptor.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 }
