@@ -112,30 +112,27 @@ func TestSaturation(t *testing.T) {
 func TestShutdown(t *testing.T) {
 	ctx := context.Background()
 	var nAdds int64 // atomic
-	b := New(int(0), 10, func(x interface{}) error {
+	c := make(chan int, 10)
+	b := New(int(0), cap(c), func(x interface{}) error {
+		for range x.([]int) {
+			c <- 0
+		}
 		atomic.AddInt64(&nAdds, int64(len(x.([]int))))
-		// Make sure some Adds are active on Shutdown.
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(time.Second) // we want Adds to be active on Shutdown
 		return nil
 	})
-	c := make(chan int, 10)
 	for i := 0; i < cap(c); i++ {
-		i := i
 		go func() {
-			c <- i
-			err := b.Add(ctx, i)
+			err := b.Add(ctx, 0)
 			atomic.AddInt64(&nAdds, -1)
 			if err != nil {
-				t.Errorf("b.Add(ctx, %d) error: %v", i, err)
+				t.Errorf("b.Add error: %v", err)
 			}
 		}()
 	}
 	// Make sure all goroutines have started.
 	for i := 0; i < cap(c); i++ {
 		<-c
-	}
-	if atomic.LoadInt64(&nAdds) == 0 {
-		t.Fatal("no adds started")
 	}
 	b.Shutdown()
 	if got := atomic.LoadInt64(&nAdds); got != 0 {
