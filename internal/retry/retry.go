@@ -32,17 +32,16 @@ import (
 // returns that error.
 //
 // When f returns an error for which isRetryable returns true, Call sleeps for the
-// duration provided by isRetryable, or the provided backoff value if that duration
-// is zero, and invokes f again.
+// provided backoff value and invokes f again.
 //
 // When the provided context is done, Retry returns a ContextError that includes both
 // ctx.Error() and the last error returned by f, or nil if there isn't one.
-func Call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, time.Duration), f func() error) error {
+func Call(ctx context.Context, bo gax.Backoff, isRetryable func(error) bool, f func() error) error {
 	return call(ctx, bo, isRetryable, f, gax.Sleep)
 }
 
 // Split out for testing.
-func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, time.Duration), f func() error,
+func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) bool, f func() error,
 	sleep func(context.Context, time.Duration) error) error {
 	// Do nothing if context is done on entry.
 	if err := ctx.Err(); err != nil {
@@ -53,14 +52,10 @@ func call(ctx context.Context, bo gax.Backoff, isRetryable func(error) (bool, ti
 		if err == nil {
 			return nil
 		}
-		retry, dur := isRetryable(err)
-		if !retry {
+		if !isRetryable(err) {
 			return err
 		}
-		if dur == 0 {
-			dur = bo.Pause()
-		}
-		if cerr := sleep(ctx, dur); cerr != nil {
+		if cerr := sleep(ctx, bo.Pause()); cerr != nil {
 			return &ContextError{CtxErr: cerr, FuncErr: err}
 		}
 	}

@@ -62,7 +62,7 @@ func OpenTopic(b *Broker, name string) *pubsub.Topic {
 	return pubsub.NewTopic(b.topic(name))
 }
 
-// SendBatch implements driver.SendBatch.
+// SendBatch implements driver.Topic.SendBatch.
 // It is error if the topic is closed or has no subscriptions.
 func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	t.mu.Lock()
@@ -96,6 +96,9 @@ func (t *topic) Close() error {
 	t.closed = true
 	return nil
 }
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *topic) IsRetryable(error) bool { return false }
 
 type subscription struct {
 	mu          sync.Mutex
@@ -231,3 +234,6 @@ func (s *subscription) Close() error {
 	s.cancel()
 	return nil
 }
+
+// IsRetryable implements driver.Subscription.IsRetryable.
+func (s *subscription) IsRetryable(error) bool { return false }
