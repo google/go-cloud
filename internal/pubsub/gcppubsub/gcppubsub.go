@@ -51,18 +51,18 @@ func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
 func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
+	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	client, err := raw.NewPublisherClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: creating publisher client: %v", err)
 	}
-	ok, err := topicExists(ctx, client, topicName)
+	ok, err := topicExists(ctx, client, path)
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
 	}
-	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	return &topic{path, client}, nil
 }
 
@@ -123,15 +123,15 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 }
 
 func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
+	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	client, err := raw.NewSubscriberClient(ctx)
-	ok, err := subscriptionExists(ctx, client, subscriptionName)
+	ok, err := subscriptionExists(ctx, client, path)
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("gcppubsub: subscription named %q does not exist", subscriptionName)
 	}
-	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	return &subscription{client, path}, nil
 }
 
