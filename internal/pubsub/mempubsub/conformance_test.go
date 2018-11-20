@@ -31,10 +31,15 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{b: NewBroker([]string{"t"})}, nil
 }
 
-func (h *harness) MakePair(ctx context.Context) (driver.Topic, driver.Subscription, error) {
+func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 	dt := h.b.topic("t")
-	ds := newSubscription(dt, time.Second)
-	return dt, ds, nil
+	return dt, nil
+}
+
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
+	t := dt.(*topic)
+	ds := newSubscription(t, time.Second)
+	return ds, nil
 }
 
 func (h *harness) Close() {
