@@ -53,24 +53,28 @@ var pathToPrivateKey = flag.String("privatekey", "", "path to .pem file containi
 type harness struct {
 }
 
-func (h *harness) MakePair(ctx context.Context) (driver.Topic, driver.Subscription, error) {
+func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 	pubClient, err := raw.NewPublisherClient(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("making publisher client: %v", err)
+		return nil, fmt.Errorf("making publisher client: %v", err)
 	}
 	dt, err := openTopic(ctx, pubClient, projectID, topicName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("opening topic: %v", err)
+		return nil, fmt.Errorf("opening topic: %v", err)
 	}
+	return dt, nil
+}
+
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
 	subClient, err := raw.NewSubscriberClient(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("making subscription client: %v", err)
+		return nil, fmt.Errorf("making subscription client: %v", err)
 	}
 	ds, err := openSubscription(ctx, subClient, projectID, subscriptionName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("opening subscription: %v", err)
+		return nil, fmt.Errorf("opening subscription: %v", err)
 	}
-	return dt, ds, nil
+	return ds, nil
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
