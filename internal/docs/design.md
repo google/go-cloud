@@ -120,7 +120,7 @@ canonical example is `gcpkms` and `awskms`.
 Driver implementations should:
 
 -   Return the raw errors from the underlying provider, and not wrap them in
-    `fmt.Errorf` calls, so that they can be exposed to end users via `As`.
+    `fmt.Errorf` calls, so that they can be exposed to end users via `ErrorAs`.
 
 ### Concrete Types
 
@@ -150,9 +150,9 @@ Concrete types should:
 -   Handle transient network errors. Retry logic is best handled as low in the
     stack as possible to avoid [cascading failure][]. APIs should try to surface
     "permanent" errors (e.g. malformed request, bad permissions) where
-    appropriate so that application logic does not attempt to retry idempotent
-    operations, but the responsibility is largely on the library, not on the
-    application.
+    appropriate so that application logic does not attempt to retry
+    non-idempotent operations, but the responsibility is largely on the library,
+    not on the application.
 
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
