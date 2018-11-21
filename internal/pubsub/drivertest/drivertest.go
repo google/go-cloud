@@ -97,6 +97,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		}
 		ms2 = append(ms2, m2)
 		ss2 = append(ss2, string(m2.Body))
+		m2.Ack()
 	}
 
 	// Check that the received messages match the sent ones.

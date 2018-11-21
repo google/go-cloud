@@ -16,6 +16,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -130,9 +131,7 @@ type Subscription struct {
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher *bundler.Bundler
 
-	// sem is a semaphore guarding q. It is used instead of a mutex to work
-	// with context cancellation.
-	sem chan struct{}
+	mu sync.Mutex
 
 	// q is the local queue of messages downloaded from the server.
 	q []*Message
@@ -144,15 +143,11 @@ type Subscription struct {
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	<-s.sem
-	defer func() {
-		s.sem <- struct{}{}
-	}()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
 			return nil, err
@@ -230,11 +225,8 @@ func NewSubscription(d driver.Subscription) *Subscription {
 	}
 	ab := bundler.NewBundler(ackIDBox{}, handler)
 	ab.DelayThreshold = time.Millisecond
-	s := &Subscription{
+	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
-		sem:        make(chan struct{}, 1),
 	}
-	s.sem <- struct{}{}
-	return s
 }
