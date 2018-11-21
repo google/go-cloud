@@ -91,8 +91,17 @@ func (t *Topic) Close() error {
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
 // It is for use by provider implementations.
-func NewTopic(d driver.Topic) *Topic {
-	handler := func(item interface{}) {
+func NewTopic(d driver.Topic, b *bundler.Bundler) *Topic {
+	return &Topic{
+		driver:  d,
+		batcher: b,
+	}
+}
+
+// NewSendBatcher creates a batcher for message sends, given a driver.Topic.
+// It is for use by provider implementations.
+func NewSendBatcher(d driver.Topic) *bundler.Bundler {
+	handle := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
@@ -115,13 +124,7 @@ func NewTopic(d driver.Topic) *Topic {
 			mec.errChan <- err
 		}
 	}
-	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = time.Millisecond
-	t := &Topic{
-		driver:  d,
-		batcher: b,
-	}
-	return t
+	return bundler.NewBundler(msgErrChan{}, handle)
 }
 
 // Subscription receives published messages.

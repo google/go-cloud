@@ -186,7 +186,7 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	t := pubsub.NewTopic(dt)
+	t := pubsub.NewTopic(dt, pubsub.NewSendBatcher(dt))
 	s := pubsub.NewSubscription(ds)
 	cleanup := func() {
 		t.Close()

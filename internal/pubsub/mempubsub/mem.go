@@ -59,7 +59,8 @@ type topic struct {
 // OpenTopic establishes a new topic.
 // Open subscribers for the topic before publishing.
 func OpenTopic(b *Broker, name string) *pubsub.Topic {
-	return pubsub.NewTopic(b.topic(name))
+	dt := b.topic(name)
+	return pubsub.NewTopic(dt, pubsub.NewSendBatcher(dt))
 }
 
 // SendBatch implements driver.Topic.SendBatch.

@@ -44,7 +44,7 @@ func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: opening topic: %v", err)
 	}
-	t := pubsub.NewTopic(dt)
+	t := pubsub.NewTopic(dt, pubsub.NewSendBatcher(dt))
 	return t, nil
 }
 
