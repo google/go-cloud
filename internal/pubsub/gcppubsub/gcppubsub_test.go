@@ -22,6 +22,9 @@ import (
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
+	"github.com/google/go-cloud/internal/testing/setup"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -46,10 +49,18 @@ const (
 )
 
 type harness struct {
+	conn   *grpc.ClientConn
+	closer func()
+}
+
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	endPoint := "pubsub.googleapis.com:443"
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
+	return &harness{conn, done}, nil
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	pubClient, err := raw.NewPublisherClient(ctx)
+	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(h.conn))
 	if err != nil {
 		return nil, fmt.Errorf("making publisher client: %v", err)
 	}
@@ -61,7 +72,7 @@ func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 }
 
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	subClient, err := raw.NewSubscriberClient(ctx)
+	subClient, err := raw.NewSubscriberClient(ctx, option.WithGRPCConn(h.conn))
 	if err != nil {
 		return nil, fmt.Errorf("making subscription client: %v", err)
 	}
@@ -72,11 +83,8 @@ func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver
 	return ds, nil
 }
 
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{}, nil
-}
-
 func (h *harness) Close() {
+	h.closer()
 }
 
 func TestConformance(t *testing.T) {
