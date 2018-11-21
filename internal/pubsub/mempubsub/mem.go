@@ -53,7 +53,6 @@ type topic struct {
 	mu        sync.Mutex
 	subs      []*subscription
 	nextAckID int
-	closed    bool
 }
 
 // OpenTopic establishes a new topic.
@@ -68,10 +67,7 @@ func OpenTopic(b *Broker, name string) *pubsub.Topic {
 func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	// Check for closed or canceled before doing any work.
-	if t.closed {
-		return errors.New("mempubsub: SendBatch: topic closed")
-	}
+	// Check for canceled before doing any work.
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -90,14 +86,6 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return nil
 }
 
-// Close closes the topic. Subsequent calls to SendBatch will fail.
-func (t *topic) Close() error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.closed = true
-	return nil
-}
-
 // IsRetryable implements driver.Topic.IsRetryable.
 func (t *topic) IsRetryable(error) bool { return false }
 
@@ -106,11 +94,10 @@ type subscription struct {
 	topic       driver.Topic
 	ackDeadline time.Duration
 	msgs        map[driver.AckID]*message // all unacknowledged messages
-	ctx         context.Context           // for Close
-	cancel      func()
 }
 
 // OpenSubscription creates a new subscription for the given topic.
+
 func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
 	b.mu.Lock()
 	t := b.topics[topicName]
@@ -120,13 +107,10 @@ func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *p
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
-	ctx, cancel := context.WithCancel(context.Background())
 	s := &subscription{
 		topic:       t,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
-		ctx:         ctx,
-		cancel:      cancel,
 	}
 	if t != nil {
 		t.mu.Lock()
@@ -176,6 +160,7 @@ const (
 )
 
 // ReceiveBatch implements driver.ReceiveBatch.
+
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Check for closed or cancelled before doing any work.
 	if err := s.wait(ctx, 0); err != nil {
@@ -188,8 +173,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		if msgs := s.receiveNoWait(time.Now(), maxMessages); len(msgs) > 0 {
 			return msgs, nil
 		}
-		if err := s.wait(ctx, pollDuration); err != nil {
-			return nil, err
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(pollDuration):
 		}
 	}
 }
@@ -199,8 +186,6 @@ func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
 		return errors.New("mempubsub: topic does not exist")
 	}
 	select {
-	case <-s.ctx.Done(): // subscription was closed
-		return errors.New("mempubsub: subscription closed")
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(dur):
@@ -210,8 +195,8 @@ func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
 
 // SendAcks implements driver.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	// Check for closed or cancelled before doing any work.
-	if err := s.wait(ctx, 0); err != nil {
+	// Check for context done before doing any work.
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 	// Acknowledge messages by removing them from the map.
@@ -224,13 +209,6 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		// previously acked.
 		delete(s.msgs, id)
 	}
-	return nil
-}
-
-// Close closes the subscription. Pending calls to ReceiveBatch return immediately
-// with an error. Subsequent calls to ReceiveBatch or SendAcks will fail.
-func (s *subscription) Close() error {
-	s.cancel()
 	return nil
 }
 
