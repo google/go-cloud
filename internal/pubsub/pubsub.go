@@ -98,7 +98,7 @@ func NewTopic(d driver.Topic, b *bundler.Bundler) *Topic {
 	}
 }
 
-// NewSendBatcher creates a batcher for message sends, given a driver.Topic.
+// NewSendBatcher creates a batcher for message sends.
 // It is for use by provider implementations.
 func NewSendBatcher(d driver.Topic) *bundler.Bundler {
 	handle := func(item interface{}) {
@@ -124,7 +124,9 @@ func NewSendBatcher(d driver.Topic) *bundler.Bundler {
 			mec.errChan <- err
 		}
 	}
-	return bundler.NewBundler(msgErrChan{}, handle)
+	b := bundler.NewBundler(msgErrChan{}, handle)
+	b.DelayThreshold = time.Millisecond
+	return b
 }
 
 // Subscription receives published messages.
@@ -210,7 +212,16 @@ type ackIDBox struct {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 // It is for use by provider implementations.
-func NewSubscription(d driver.Subscription) *Subscription {
+func NewSubscription(d driver.Subscription, ab *bundler.Bundler) *Subscription {
+	return &Subscription{
+		driver:     d,
+		ackBatcher: ab,
+	}
+}
+
+// NewAckBatcher creates a batcher for message acks.
+// It is for use by provider implementations.
+func NewAckBatcher(d driver.Subscription) *bundler.Bundler {
 	handler := func(item interface{}) {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
@@ -228,8 +239,5 @@ func NewSubscription(d driver.Subscription) *Subscription {
 	}
 	ab := bundler.NewBundler(ackIDBox{}, handler)
 	ab.DelayThreshold = time.Millisecond
-	return &Subscription{
-		driver:     d,
-		ackBatcher: ab,
-	}
+	return ab
 }

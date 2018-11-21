@@ -115,7 +115,8 @@ func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *p
 	b.mu.Lock()
 	t := b.topics[topicName]
 	b.mu.Unlock()
-	return pubsub.NewSubscription(newSubscription(t, ackDeadline))
+	ds := newSubscription(t, ackDeadline)
+	return pubsub.NewSubscription(ds, pubsub.NewAckBatcher(ds))
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
