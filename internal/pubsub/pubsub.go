@@ -17,12 +17,11 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
 
+	"github.com/google/go-cloud/internal/batcher"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/retry"
 	gax "github.com/googleapis/gax-go"
-	"google.golang.org/api/support/bundler"
 )
 
 // Message contains data to be published.
@@ -47,7 +46,7 @@ func (m *Message) Ack() {
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
-	batcher *bundler.Bundler
+	batcher driver.Batcher
 	mu      sync.Mutex
 	err     error
 }
@@ -71,19 +70,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	if err != nil {
 		return err
 	}
-	mec := msgErrChan{
-		msg:     m,
-		errChan: make(chan error),
-	}
-	size := len(m.Body)
-	for k, v := range m.Metadata {
-		size += len(k)
-		size += len(v)
-	}
-	if err := t.batcher.AddWait(ctx, mec, size); err != nil {
-		return err
-	}
-	return <-mec.errChan
+	return t.batcher.Add(ctx, m)
 }
 
 // Close flushes pending message sends and disconnects the Topic.
@@ -92,23 +79,17 @@ func (t *Topic) Close() error {
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
-	t.batcher.Flush()
+	t.batcher.Shutdown()
 	return nil
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
-// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
-// to bundle messages into batches and send them to the server.
+// NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
-	handler := func(item interface{}) {
-		mecs, ok := item.([]msgErrChan)
-		if !ok {
-			panic("failed conversion to []msgErrChan in bundler handler")
-		}
+	handler := func(item interface{}) error {
+		ms := item.([]*Message)
 		var dms []*driver.Message
-		for _, mec := range mecs {
-			m := mec.msg
+		for _, m := range ms {
 			dm := &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
@@ -117,15 +98,13 @@ func NewTopic(d driver.Topic) *Topic {
 		}
 
 		callCtx := context.TODO()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendBatch(callCtx, dms)
 		})
-		for _, mec := range mecs {
-			mec.errChan <- err
-		}
 	}
-	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = time.Millisecond
+	var example *Message
+	maxHandlers := 1
+	b := batcher.New(example, maxHandlers, handler)
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -138,7 +117,7 @@ type Subscription struct {
 	driver driver.Subscription
 
 	// ackBatcher makes batches of acks and sends them to the server.
-	ackBatcher *bundler.Bundler
+	ackBatcher driver.Batcher
 
 	mu sync.Mutex
 
@@ -197,7 +176,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ackIDBox{id}, size)
+				s.ackBatcher.Add(ctx, ackIDBox{id})
 			},
 		})
 	}
@@ -209,7 +188,7 @@ func (s *Subscription) Close() error {
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
-	s.ackBatcher.Flush()
+	s.ackBatcher.Shutdown()
 	return nil
 }
 
@@ -224,7 +203,7 @@ type ackIDBox struct {
 // periodically send them to the server.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
-	handler := func(item interface{}) {
+	handler := func(item interface{}) error {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
 		for _, box := range boxes {
@@ -233,14 +212,12 @@ func NewSubscription(d driver.Subscription) *Subscription {
 		}
 		// TODO: Consider providing a way to stop this call. See #766.
 		callCtx := context.Background()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
-		// TODO(#695): Do something sensible if SendAcks returns an error.
-		_ = err
 	}
-	ab := bundler.NewBundler(ackIDBox{}, handler)
-	ab.DelayThreshold = time.Millisecond
+	maxHandlers := 1
+	ab := batcher.New(ackIDBox{}, maxHandlers, handler)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
