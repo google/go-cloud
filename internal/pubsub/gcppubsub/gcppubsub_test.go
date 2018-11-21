@@ -36,12 +36,10 @@ const (
 	//    "Enable API", "Create a topic".
 	// 1b. Create a subscription by clicking on the topic, then clicking on
 	//    the icon at the top with a "Create subscription" tooltip.
-	// 2. Update the topicName constant to your topic name.
+	// 2. Update the topicName constant to your topic name, and the
+	//    subscriptionName to your subscription name.
 	// 3. Create a service account in your GCP project and update the
 	//    serviceAccountID constant to it.
-	// 4. Download a private key to a .pem file as described here:
-	//    https://godoc.org/cloud.google.com/go/storage#SignedURLOptions
-	//    and pass a path to it via the --privatekey flag.
 	topicName        = "test-topic"
 	subscriptionName = "test-subscription-1"
 	serviceAccountID = "pubsub@go-cloud-test-216917.iam.gserviceaccount.com"
