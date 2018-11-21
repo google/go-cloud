@@ -101,7 +101,7 @@ func NewTopic(d driver.Topic, b *bundler.Bundler) *Topic {
 // NewSendBatcher creates a batcher for message sends.
 // It is for use by provider implementations.
 func NewSendBatcher(d driver.Topic) *bundler.Bundler {
-	handle := func(item interface{}) {
+	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
 			panic("failed conversion to []msgErrChan in bundler handler")
