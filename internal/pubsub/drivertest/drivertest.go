@@ -99,6 +99,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		ms2 = append(ms2, m2)
+		m2.Ack()
 	}
 
 	// Check that the received messages match the sent ones.
