@@ -60,7 +60,7 @@ type topic struct {
 // Open subscribers for the topic before publishing.
 func OpenTopic(b *Broker, name string) *pubsub.Topic {
 	dt := b.topic(name)
-	return pubsub.NewTopic(dt, pubsub.NewSendBatcher(dt))
+	return pubsub.NewTopic(dt)
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -116,7 +116,7 @@ func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *p
 	t := b.topics[topicName]
 	b.mu.Unlock()
 	ds := newSubscription(t, ackDeadline)
-	return pubsub.NewSubscription(ds, pubsub.NewAckBatcher(ds))
+	return pubsub.NewSubscription(ds)
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {

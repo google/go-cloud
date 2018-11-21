@@ -82,11 +82,17 @@ func (t *Topic) Close() error {
 	return nil
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
-// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
-// to bundle messages into batches and send them to the server.
+// NewTopicWithBatcher makes a pubsub.Topic from a driver.Topic. This
+// constructor creates a default batcher for sending messages.
 // It is for use by provider implementations.
-func NewTopic(d driver.Topic, b driver.Batcher) *Topic {
+func NewTopic(d driver.Topic) *Topic {
+	return NewTopicWithBatcher(d, NewSendBatcher(d))
+}
+
+// NewTopicWithBatcher makes a pubsub.Topic from a driver.Topic and a
+// driver.Batcher.
+// It is for use by provider implementations.
+func NewTopicWithBatcher(d driver.Topic, b driver.Batcher) *Topic {
 	return &Topic{
 		driver:  d,
 		batcher: b,
@@ -224,15 +230,21 @@ type ackIDBox struct {
 	ackID driver.AckID
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription and opts to
-// tune sending and receiving of acks and messages. Behind the scenes,
-// NewSubscription spins up a goroutine to gather acks into batches and
-// periodically send them to the server.
+// NewSubscription creates a Subscription from a driver.Subscription. This
+// constructor creates a default batcher to send acks back to the pubsub
+// provider.
 // It is for use by provider implementations.
-func NewSubscription(d driver.Subscription, ab driver.Batcher) *Subscription {
+func NewSubscription(d driver.Subscription) *Subscription {
+	return NewSubscriptionWithBatcher(d, NewAckBatcher(d))
+}
+
+// NewSubscriptionWithBatcher creates a Subscription from a driver.Subscription
+// and a driver.Batcher for acks.
+// It is for use by provider implementations.
+func NewSubscriptionWithBatcher(d driver.Subscription, ackBatcher driver.Batcher) *Subscription {
 	return &Subscription{
 		driver:     d,
-		ackBatcher: ab,
+		ackBatcher: ackBatcher,
 	}
 }
 
