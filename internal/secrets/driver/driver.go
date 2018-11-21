@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver provides the interface for providers of secrets package. This
-// serves as a contract of how the secrets API uses a provider implementation.
+// Package driver defines interfaces to be implemented for providers of the
+// secrets package.
 package driver
 
 import "context"
 
 // Decryptor decrypts a cipher message into a plain text message. The
 // implementation of the Decryptor should hold any key information with it, for
-// example, the key name. The information should be got during the creation. If
-// user wants to decrypt a message with a different key, they would create
-// another Decryptor.
+// example, the key name.
 type Decryptor interface {
 
 	// Decrypt decrypts the ciphertext and returns the plaintext. It should handle
