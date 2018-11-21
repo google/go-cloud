@@ -118,7 +118,7 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: opening subscription: %v", err)
 	}
-	s := pubsub.NewSubscription(ds)
+	s := pubsub.NewSubscription(ds, pubsub.NewAckBatcher(ds))
 	return s, nil
 }
 
