@@ -80,11 +80,6 @@ func topicExists(ctx context.Context, client *raw.PublisherClient, topicName str
 	return false, err
 }
 
-// Close implements driver.Topic.Close.
-func (t *topic) Close() error {
-	return t.client.Close()
-}
-
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	var ms []*pb.PubsubMessage
@@ -100,6 +95,12 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	}
 	_, err := t.client.Publish(ctx, req)
 	return err
+}
+
+// IsRetryable implements driver.Topic.IsRetryable.
+func (t *topic) IsRetryable(error) bool {
+	// The client handles retries.
+	return false
 }
 
 type subscription struct {
@@ -180,17 +181,6 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		Subscription: s.path,
 		AckIds:       ids2,
 	})
-}
-
-// Close implements driver.Subscription.Close.
-func (s *subscription) Close() error {
-	return s.client.Close()
-}
-
-// IsRetryable implements driver.Topic.IsRetryable.
-func (t *topic) IsRetryable(error) bool {
-	// The client handles retries.
-	return false
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
