@@ -89,10 +89,10 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 // Close flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Close() error {
-	t.batcher.Flush()
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
+	t.batcher.Flush()
 	return nil
 }
 
@@ -206,10 +206,10 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 
 // Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Close() error {
-	s.ackBatcher.Flush()
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
+	s.ackBatcher.Flush()
 	return nil
 }
 
