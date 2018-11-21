@@ -57,8 +57,6 @@ func Example_sendReceive() {
 
 func Example_sendReceiveMultipleMessages() {
 	// Open a topic and corresponding subscription.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 	b := mempubsub.NewBroker([]string{"myTopic"})
 	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
@@ -72,14 +70,17 @@ func Example_sendReceiveMultipleMessages() {
 		{Body: []byte("c")},
 	}
 	for _, m := range ms {
+		ctx := context.Background()
 		if err := t.Send(ctx, m); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Receive messages from the subscription.
-	ms2 := []string{}
+	var ms2 []string
 	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
 		m2, err := s.Receive(ctx)
 		if err == context.DeadlineExceeded {
 			break
