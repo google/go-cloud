@@ -78,8 +78,8 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 // Close flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Close() error {
-	t.batcher.Flush()
-	return t.driver.Close()
+	t.batcher.Shutdown()
+	return nil
 }
 
 // NewTopic makes a pubsub.Topic from a driver.Topic and opts to
@@ -108,7 +108,7 @@ func (sb *sendBatcher) Add(ctx context.Context, item interface{}) error {
 	return sb.b.AddWait(ctx, item, size)
 }
 
-func (sb *sendBatcher) Flush() {
+func (sb *sendBatcher) Shutdown() {
 	sb.b.Flush()
 }
 
@@ -210,8 +210,8 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 
 // Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Close() error {
-	s.ackBatcher.Flush()
-	return s.driver.Close()
+	s.ackBatcher.Shutdown()
+	return nil
 }
 
 // ackIDBox makes it possible to use a driver.AckID with bundler.
@@ -241,7 +241,7 @@ func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
 	return ab.b.Add(item, size)
 }
 
-func (ab *ackBatcher) Flush() {
+func (ab *ackBatcher) Shutdown() {
 	ab.b.Flush()
 }
 
