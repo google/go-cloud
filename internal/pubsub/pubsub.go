@@ -47,7 +47,7 @@ func (m *Message) Ack() {
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
-	batcher *bundler.Bundler
+	batcher driver.Batcher
 }
 
 type msgErrChan struct {
@@ -69,12 +69,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 		msg:     m,
 		errChan: make(chan error),
 	}
-	size := len(m.Body)
-	for k, v := range m.Metadata {
-		size += len(k)
-		size += len(v)
-	}
-	if err := t.batcher.AddWait(ctx, mec, size); err != nil {
+	if err := t.batcher.Add(ctx, mec); err != nil {
 		return err
 	}
 	return <-mec.errChan
@@ -91,16 +86,35 @@ func (t *Topic) Close() error {
 // tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
 // to bundle messages into batches and send them to the server.
 // It is for use by provider implementations.
-func NewTopic(d driver.Topic, b *bundler.Bundler) *Topic {
+func NewTopic(d driver.Topic, b driver.Batcher) *Topic {
 	return &Topic{
 		driver:  d,
 		batcher: b,
 	}
 }
 
-// NewSendBatcher creates a batcher for message sends.
+type sendBatcher struct {
+	b *bundler.Bundler
+}
+
+func (sb *sendBatcher) Add(ctx context.Context, item interface{}) error {
+	mec := item.(msgErrChan)
+	m := mec.msg
+	size := len(m.Body)
+	for k, v := range m.Metadata {
+		size += len(k)
+		size += len(v)
+	}
+	return sb.b.AddWait(ctx, item, size)
+}
+
+func (sb *sendBatcher) Flush() {
+	sb.b.Flush()
+}
+
+// NewSendBatcher creates a Bundler for message sends.
 // It is for use by provider implementations.
-func NewSendBatcher(d driver.Topic) *bundler.Bundler {
+func NewSendBatcher(d driver.Topic) *sendBatcher {
 	handler := func(item interface{}) {
 		mecs, ok := item.([]msgErrChan)
 		if !ok {
@@ -126,7 +140,7 @@ func NewSendBatcher(d driver.Topic) *bundler.Bundler {
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
 	b.DelayThreshold = time.Millisecond
-	return b
+	return &sendBatcher{b}
 }
 
 // Subscription receives published messages.
@@ -134,7 +148,7 @@ type Subscription struct {
 	driver driver.Subscription
 
 	// ackBatcher makes batches of acks and sends them to the server.
-	ackBatcher *bundler.Bundler
+	ackBatcher driver.Batcher
 
 	mu sync.Mutex
 
@@ -183,13 +197,11 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	s.q = nil
 	for _, m := range msgs {
 		id := m.AckID
-		// size is an estimate of the size of a single AckID in bytes.
-		const size = 8
 		s.q = append(s.q, &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ackIDBox{id}, size)
+				s.ackBatcher.Add(ctx, ackIDBox{id})
 			},
 		})
 	}
@@ -212,16 +224,30 @@ type ackIDBox struct {
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 // It is for use by provider implementations.
-func NewSubscription(d driver.Subscription, ab *bundler.Bundler) *Subscription {
+func NewSubscription(d driver.Subscription, ab driver.Batcher) *Subscription {
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
 	}
 }
 
+type ackBatcher struct {
+	b *bundler.Bundler
+}
+
+func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
+	// size is an estimate of the size of a single AckID in bytes.
+	const size = 8
+	return ab.b.Add(item, size)
+}
+
+func (ab *ackBatcher) Flush() {
+	ab.b.Flush()
+}
+
 // NewAckBatcher creates a batcher for message acks.
 // It is for use by provider implementations.
-func NewAckBatcher(d driver.Subscription) *bundler.Bundler {
+func NewAckBatcher(d driver.Subscription) *ackBatcher {
 	handler := func(item interface{}) {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
@@ -237,7 +263,7 @@ func NewAckBatcher(d driver.Subscription) *bundler.Bundler {
 		// TODO(#695): Do something sensible if SendAcks returns an error.
 		_ = err
 	}
-	ab := bundler.NewBundler(ackIDBox{}, handler)
-	ab.DelayThreshold = time.Millisecond
-	return ab
+	b := bundler.NewBundler(ackIDBox{}, handler)
+	b.DelayThreshold = time.Millisecond
+	return &ackBatcher{b}
 }

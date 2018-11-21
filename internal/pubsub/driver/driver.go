@@ -20,6 +20,12 @@ import (
 	"context"
 )
 
+// Batcher gathers items into batches to be sent to the pubsub service.
+type Batcher interface {
+	Add(ctx context.Context, item interface{}) error
+	Flush()
+}
+
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
