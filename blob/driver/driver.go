@@ -25,9 +25,10 @@ import (
 // ReaderOptions controls Reader behaviors.
 type ReaderOptions struct {
 	// Length sets the total number of bytes to read. 0 is interpreted as
-	// no limit.
+	// no limit. It is guaranteed to be >= 0.
 	Length int64
 	// Offset sets the starting point for the read.
+	// It is guaranteed to be >= 0.
 	Offset int64
 }
 
