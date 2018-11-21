@@ -1,6 +1,7 @@
 <img src="logo-gopherblue.png" alt="" width="448" height="221">
 
 # The Go Cloud Project
+
 _Write once, run on any cloud ☁️_
 
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
@@ -28,7 +29,6 @@ creates human-readable code that only imports the cloud SDKs for providers you
 use. This allows Go Cloud to grow to support any number of cloud providers,
 without increasing compile times or binary sizes, and avoiding any side effects
 from `init()` functions.
-
 
 You can learn more about the project from our [announcement blog post][], or our
 talk at Next 2018:
@@ -74,10 +74,11 @@ While in alpha, the API is subject to breaking changes.
 ## Current features
 
 Go Cloud provides generic APIs for:
--   Unstructured binary (blob) storage
--   Variables that change at runtime (configuration)
--   Connecting to MySQL databases
--   Server startup and diagnostics: request logging, tracing, and health
+
+*   Unstructured binary (blob) storage
+*   Variables that change at runtime (configuration)
+*   Connecting to MySQL databases
+*   Server startup and diagnostics: request logging, tracing, and health
     checking
 
 ## Contributing
@@ -95,9 +96,8 @@ examples to prove everything is working. Unfortunately, we cannot support every
 cloud provider directly from the project.
 
 If you create a repository that implements the Go Cloud interfaces for other
-cloud providers, let us know!
-We would be happy to link to it here and give you a heads-up before making any
-breaking changes.
+cloud providers, let us know! We would be happy to link to it here and give you
+a heads-up before making any breaking changes.
 
 See [the contributing guide](./CONTRIBUTING.md) for more details.
 
