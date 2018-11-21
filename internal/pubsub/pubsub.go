@@ -91,7 +91,7 @@ func (t *Topic) Close() error {
 	return nil
 }
 
-// NewTopicWithBatcher makes a pubsub.Topic from a driver.Topic. This
+// NewTopic makes a pubsub.Topic from a driver.Topic. This
 // constructor creates a default batcher for sending messages.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
