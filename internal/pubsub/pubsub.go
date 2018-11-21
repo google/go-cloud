@@ -94,10 +94,14 @@ func NewTopic(d driver.Topic, b driver.Batcher) *Topic {
 }
 
 type sendBatcher struct {
-	b *bundler.Bundler
+	b    *bundler.Bundler
+	done bool
 }
 
 func (sb *sendBatcher) Add(ctx context.Context, item interface{}) error {
+	if sb.done {
+		return errors.New("tried to add an item to a send batcher that has been shut down")
+	}
 	mec := item.(msgErrChan)
 	m := mec.msg
 	size := len(m.Body)
@@ -110,6 +114,7 @@ func (sb *sendBatcher) Add(ctx context.Context, item interface{}) error {
 
 func (sb *sendBatcher) Shutdown() {
 	sb.b.Flush()
+	sb.done = true
 }
 
 // NewSendBatcher creates a Bundler for message sends.
@@ -140,7 +145,7 @@ func NewSendBatcher(d driver.Topic) *sendBatcher {
 	}
 	b := bundler.NewBundler(msgErrChan{}, handler)
 	b.DelayThreshold = time.Millisecond
-	return &sendBatcher{b}
+	return &sendBatcher{b: b}
 }
 
 // Subscription receives published messages.
@@ -232,10 +237,14 @@ func NewSubscription(d driver.Subscription, ab driver.Batcher) *Subscription {
 }
 
 type ackBatcher struct {
-	b *bundler.Bundler
+	b    *bundler.Bundler
+	done bool
 }
 
 func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
+	if ab.done {
+		return errors.New("tried to add an item to an ack batcher that has been shut down")
+	}
 	// size is an estimate of the size of a single AckID in bytes.
 	const size = 8
 	return ab.b.Add(item, size)
@@ -243,6 +252,7 @@ func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
 
 func (ab *ackBatcher) Shutdown() {
 	ab.b.Flush()
+	ab.done = true
 }
 
 // NewAckBatcher creates a batcher for message acks.
@@ -265,5 +275,5 @@ func NewAckBatcher(d driver.Subscription) *ackBatcher {
 	}
 	b := bundler.NewBundler(ackIDBox{}, handler)
 	b.DelayThreshold = time.Millisecond
-	return &ackBatcher{b}
+	return &ackBatcher{b: b}
 }
