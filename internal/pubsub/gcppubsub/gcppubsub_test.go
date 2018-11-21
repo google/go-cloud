@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -47,22 +46,27 @@ const (
 )
 
 type harness struct {
-	conn   *grpc.ClientConn
-	closer func()
+	closer    func()
+	pubClient *raw.PublisherClient
+	subClient *raw.SubscriberClient
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	endPoint := "pubsub.googleapis.com:443"
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
-	return &harness{conn, done}, nil
-}
-
-func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(h.conn))
+	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("making publisher client: %v", err)
 	}
-	dt, err := openTopic(ctx, pubClient, projectID, topicName)
+	subClient, err := raw.NewSubscriberClient(ctx, option.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("making subscription client: %v", err)
+	}
+	return &harness{done, pubClient, subClient}, nil
+}
+
+func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
+	dt, err := openTopic(ctx, h.pubClient, projectID, topicName)
 	if err != nil {
 		return nil, fmt.Errorf("opening topic: %v", err)
 	}
@@ -70,11 +74,7 @@ func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 }
 
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	subClient, err := raw.NewSubscriberClient(ctx, option.WithGRPCConn(h.conn))
-	if err != nil {
-		return nil, fmt.Errorf("making subscription client: %v", err)
-	}
-	ds, err := openSubscription(ctx, subClient, projectID, subscriptionName)
+	ds, err := openSubscription(ctx, h.subClient, projectID, subscriptionName)
 	if err != nil {
 		return nil, fmt.Errorf("opening subscription: %v", err)
 	}
@@ -83,6 +83,8 @@ func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver
 
 func (h *harness) Close() {
 	h.closer()
+	h.pubClient.Close()
+	h.subClient.Close()
 }
 
 func TestConformance(t *testing.T) {
