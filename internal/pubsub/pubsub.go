@@ -124,7 +124,7 @@ func NewSendBatcher(d driver.Topic) *bundler.Bundler {
 			mec.errChan <- err
 		}
 	}
-	b := bundler.NewBundler(msgErrChan{}, handle)
+	b := bundler.NewBundler(msgErrChan{}, handler)
 	b.DelayThreshold = time.Millisecond
 	return b
 }
