@@ -227,7 +227,7 @@ func NewSubscriptionWithBatcher(d driver.Subscription, ackBatcher driver.Batcher
 
 // NewAckBatcher creates a batcher for message acks.
 // It is for use by provider implementations.
-func NewAckBatcher(d driver.Subscription) *ackBatcher {
+func NewAckBatcher(d driver.Subscription) *batcher.Batcher {
 	handler := func(item interface{}) error {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
