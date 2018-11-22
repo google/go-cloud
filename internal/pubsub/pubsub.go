@@ -40,7 +40,7 @@ type Message struct {
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
-	go m.ack()
+	m.ack()
 }
 
 // Topic publishes messages to all its subscribers.
@@ -124,6 +124,8 @@ type Subscription struct {
 	// q is the local queue of messages downloaded from the server.
 	q   []*Message
 	err error
+
+	wg sync.WaitGroup
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -176,7 +178,11 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ctx, ackIDBox{id})
+				s.wg.Add(1)
+				go func() {
+					s.ackBatcher.Add(ctx, ackIDBox{id})
+					s.wg.Done()
+				}()
 			},
 		})
 	}
@@ -188,6 +194,7 @@ func (s *Subscription) Close() error {
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
+	s.wg.Wait()
 	s.ackBatcher.Shutdown()
 	return nil
 }
