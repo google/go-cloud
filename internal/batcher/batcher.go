@@ -65,11 +65,11 @@ func New(itemExample interface{}, maxHandlers int, handler func(interface{}) err
 // If Shutdown has been called, Add immediately returns an error.
 func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 	b.wg.Add(1)
+	defer b.wg.Done()
 	b.mu.Lock()
 	if b.shutdown {
 		return errors.New("batcher: shut down")
 	}
-	defer b.wg.Done()
 	// Create a channel to receive the error from the handler.
 	c := make(chan error, 1)
 	// Add the item to the pending list.
