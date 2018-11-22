@@ -20,7 +20,7 @@ import (
 	"context"
 )
 
-// Batcher gathers items into batches to be sent to the pubsub service.
+// Batcher should gather items into batches to be sent to the pubsub service.
 type Batcher interface {
 	// Add should add an item to the batcher.
 	Add(ctx context.Context, item interface{}) error

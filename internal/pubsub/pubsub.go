@@ -17,12 +17,11 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"time"
 
+	"github.com/google/go-cloud/internal/batcher"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/retry"
 	gax "github.com/googleapis/gax-go"
-	"google.golang.org/api/support/bundler"
 )
 
 // Message contains data to be published.
@@ -71,14 +70,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	if err != nil {
 		return err
 	}
-	mec := msgErrChan{
-		msg:     m,
-		errChan: make(chan error),
-	}
-	if err := t.batcher.Add(ctx, mec); err != nil {
-		return err
-	}
-	return <-mec.errChan
+	return t.batcher.Add(ctx, m)
 }
 
 // Close flushes pending message sends and disconnects the Topic.
@@ -108,41 +100,13 @@ func NewTopicWithBatcher(d driver.Topic, b driver.Batcher) *Topic {
 	}
 }
 
-type sendBatcher struct {
-	b    *bundler.Bundler
-	done bool
-}
-
-func (sb *sendBatcher) Add(ctx context.Context, item interface{}) error {
-	if sb.done {
-		return errors.New("tried to add an item to a send batcher that has been shut down")
-	}
-	mec := item.(msgErrChan)
-	m := mec.msg
-	size := len(m.Body)
-	for k, v := range m.Metadata {
-		size += len(k)
-		size += len(v)
-	}
-	return sb.b.AddWait(ctx, item, size)
-}
-
-func (sb *sendBatcher) Shutdown() {
-	sb.b.Flush()
-	sb.done = true
-}
-
 // NewSendBatcher creates a Bundler for message sends.
 // It is for use by provider implementations.
-func NewSendBatcher(d driver.Topic) *sendBatcher {
-	handler := func(item interface{}) {
-		mecs, ok := item.([]msgErrChan)
-		if !ok {
-			panic("failed conversion to []msgErrChan in bundler handler")
-		}
+func NewSendBatcher(d driver.Topic) *batcher.Batcher {
+	handler := func(item interface{}) error {
+		ms := item.([]*Message)
 		var dms []*driver.Message
-		for _, mec := range mecs {
-			m := mec.msg
+		for _, m := range ms {
 			dm := &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
@@ -151,16 +115,13 @@ func NewSendBatcher(d driver.Topic) *sendBatcher {
 		}
 
 		callCtx := context.TODO()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendBatch(callCtx, dms)
 		})
-		for _, mec := range mecs {
-			mec.errChan <- err
-		}
 	}
-	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = time.Millisecond
-	return &sendBatcher{b: b}
+	var example *Message
+	maxHandlers := 1
+	return batcher.New(example, maxHandlers, handler)
 }
 
 // Subscription receives published messages.
@@ -264,29 +225,10 @@ func NewSubscriptionWithBatcher(d driver.Subscription, ackBatcher driver.Batcher
 	}
 }
 
-type ackBatcher struct {
-	b    *bundler.Bundler
-	done bool
-}
-
-func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
-	if ab.done {
-		return errors.New("tried to add an item to an ack batcher that has been shut down")
-	}
-	// size is an estimate of the size of a single AckID in bytes.
-	const size = 8
-	return ab.b.Add(item, size)
-}
-
-func (ab *ackBatcher) Shutdown() {
-	ab.b.Flush()
-	ab.done = true
-}
-
 // NewAckBatcher creates a batcher for message acks.
 // It is for use by provider implementations.
 func NewAckBatcher(d driver.Subscription) *ackBatcher {
-	handler := func(item interface{}) {
+	handler := func(item interface{}) error {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
 		for _, box := range boxes {
@@ -295,13 +237,10 @@ func NewAckBatcher(d driver.Subscription) *ackBatcher {
 		}
 		// TODO: Consider providing a way to stop this call. See #766.
 		callCtx := context.Background()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
-		// TODO(#695): Do something sensible if SendAcks returns an error.
-		_ = err
 	}
-	b := bundler.NewBundler(ackIDBox{}, handler)
-	b.DelayThreshold = time.Millisecond
-	return &ackBatcher{b: b}
+	maxHandlers := 1
+	return batcher.New(ackIDBox{}, maxHandlers, handler)
 }
