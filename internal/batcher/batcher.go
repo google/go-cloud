@@ -74,7 +74,7 @@ func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 	}
 }
 
-// Add adds an item to the batcher and returns immediately. When the handler is
+// AddNoWait adds an item to the batcher and returns immediately. When the handler is
 // called on the item, the handler's error return value will be sent to the channel
 // returned from AddNoWait.
 func (b *Batcher) AddNoWait(item interface{}) <-chan error {
