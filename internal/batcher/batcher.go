@@ -45,18 +45,18 @@ type waiter struct {
 
 // New creates a new Batcher.
 //
-// itemExample is a value of the type that will be batched. For example, if you
-// want to create batches of *Entry, pass &Entry{} for itemExample.
+// itemType is type that will be batched. For example, if you
+// want to create batches of *Entry, pass reflect.TypeOf(&Entry{}) for itemType.
 //
 // maxHandlers is the maximum number of handlers that will run concurrently.
 //
 // handler is a function that will be called on each bundle. If itemExample is
 // of type T, the argument to handler is of type []T.
-func New(itemExample interface{}, maxHandlers int, handler func(interface{}) error) *Batcher {
+func New(itemType reflect.Type, maxHandlers int, handler func(interface{}) error) *Batcher {
 	return &Batcher{
 		maxHandlers:   maxHandlers,
 		handler:       handler,
-		itemSliceZero: reflect.Zero(reflect.SliceOf(reflect.TypeOf(itemExample))),
+		itemSliceZero: reflect.Zero(reflect.SliceOf(itemType)),
 	}
 }
 
