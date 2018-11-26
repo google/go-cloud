@@ -20,7 +20,6 @@ import (
 	"log"
 	"sort"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
@@ -128,13 +127,10 @@ func Example_receiveWithInvertedWorkerPool() {
 
 	// In order to make our test exit, we keep track of how many messages were
 	// processed and cancel the receiveCtx when we've processed them all.
-	var nProcessed int32
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		wg.Wait()
-		if atomic.LoadInt32(&nProcessed) == nMessages {
-			cancel()
-		}
+		cancel()
 	}()
 
 	// Process messages using an inverted worker pool, as described here:
@@ -162,7 +158,6 @@ func Example_receiveWithInvertedWorkerPool() {
 		// messages.
 		go func() {
 			// Record that we've processed this message, and Ack it.
-			atomic.AddInt32(&nProcessed, 1)
 			msg.Ack()
 			wg.Done()
 			// Read a token from the semaphore before exiting this goroutine, freeing
@@ -175,7 +170,7 @@ func Example_receiveWithInvertedWorkerPool() {
 	for n := poolSize; n > 0; n-- {
 		sem <- struct{}{}
 	}
-	fmt.Printf("Read %d messages", nProcessed)
+	fmt.Printf("Read %d messages", nMessages)
 
 	// Output:
 	// Read 100 messages
@@ -205,13 +200,10 @@ func Example_receiveWithTraditionalWorkerPool() {
 
 	// In order to make our test exit, we keep track of how many messages were
 	// processed and cancel the receiveCtx when we've processed them all.
-	var nProcessed int32
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		wg.Wait()
-		if atomic.LoadInt32(&nProcessed) == nMessages {
-			cancel()
-		}
+		cancel()
 	}()
 
 	// Process messages using a traditional worker pool. Consider using an
@@ -235,7 +227,6 @@ func Example_receiveWithTraditionalWorkerPool() {
 				}
 
 				// Process the message and Ack it.
-				atomic.AddInt32(&nProcessed, 1)
 				msg.Ack()
 				wg.Done()
 			}
@@ -244,7 +235,7 @@ func Example_receiveWithTraditionalWorkerPool() {
 
 	// Wait for all workers to finish.
 	workerWg.Wait()
-	fmt.Printf("Read %d messages", nProcessed)
+	fmt.Printf("Read %d messages", nMessages)
 
 	// Output:
 	// Read 100 messages
