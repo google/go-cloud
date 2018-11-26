@@ -114,8 +114,6 @@ func Example_receiveWithInvertedWorkerPool() {
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100
-	var wg sync.WaitGroup
-	wg.Add(nMessages)
 	for n := 0; n < nMessages; n++ {
 		m := &pubsub.Message{
 			Body: []byte(fmt.Sprintf("message %d", n)),
@@ -126,7 +124,10 @@ func Example_receiveWithInvertedWorkerPool() {
 	}
 
 	// In order to make our test exit, we keep track of how many messages were
-	// processed and cancel the receiveCtx when we've processed them all.
+	// processed with wg, and cancel the receiveCtx when we've processed them all.
+	// A more realistic application would not need this WaitGroup.
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		wg.Wait()
@@ -187,8 +188,6 @@ func Example_receiveWithTraditionalWorkerPool() {
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100
-	var wg sync.WaitGroup
-	wg.Add(nMessages)
 	for n := 0; n < nMessages; n++ {
 		m := &pubsub.Message{
 			Body: []byte(fmt.Sprintf("message %d", n)),
@@ -199,7 +198,10 @@ func Example_receiveWithTraditionalWorkerPool() {
 	}
 
 	// In order to make our test exit, we keep track of how many messages were
-	// processed and cancel the receiveCtx when we've processed them all.
+	// processed with wg, and cancel the receiveCtx when we've processed them all.
+	// A more realistic application would not need this WaitGroup.
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
 		wg.Wait()
