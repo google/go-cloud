@@ -73,8 +73,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Send to the topic.
-	ms := []*pubsub.Message{}
-	ss := []string{}
+	var ms []*pubsub.Message
+	var ss []string
 	for i := 0; i < 3; i++ {
 		m := &pubsub.Message{
 			Body:     []byte(randStr()),
@@ -88,8 +88,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Receive from the subscription.
-	ms2 := []*pubsub.Message{}
-	ss2 := []string{}
+	var ms2 []*pubsub.Message
+	var ss2 []string
 	for i := 0; i < len(ms); i++ {
 		m2, err := sub.Receive(ctx)
 		if err != nil {
