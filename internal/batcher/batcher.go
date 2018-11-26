@@ -132,7 +132,8 @@ func (b *Batcher) callHandler(batch []waiter) {
 }
 
 // Shutdown waits for all active calls to Add to finish, then
-// returns. After Shutdown is called, all calls to Add fail.
+// returns. After Shutdown is called, all subsequent calls to Add fail.
+// Shutdown should be called only once.
 func (b *Batcher) Shutdown() {
 	b.mu.Lock()
 	b.shutdown = true
