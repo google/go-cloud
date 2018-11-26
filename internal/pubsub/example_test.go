@@ -115,6 +115,8 @@ func Example_receiveWithInvertedWorkerPool() {
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
 	for n := 0; n < nMessages; n++ {
 		m := &pubsub.Message{
 			Body: []byte(fmt.Sprintf("message %d", n)),
@@ -129,11 +131,9 @@ func Example_receiveWithInvertedWorkerPool() {
 	var nProcessed int32
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
-		for {
-			if atomic.LoadInt32(&nProcessed) == nMessages {
-				cancel()
-				break
-			}
+		wg.Wait()
+		if atomic.LoadInt32(&nProcessed) == nMessages {
+			cancel()
 		}
 	}()
 
@@ -164,6 +164,7 @@ func Example_receiveWithInvertedWorkerPool() {
 			// Record that we've processed this message, and Ack it.
 			atomic.AddInt32(&nProcessed, 1)
 			msg.Ack()
+			wg.Done()
 			// Read a token from the semaphore before exiting this goroutine, freeing
 			// up the slot for another goroutine.
 			<-sem
@@ -191,6 +192,8 @@ func Example_receiveWithTraditionalWorkerPool() {
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
 	for n := 0; n < nMessages; n++ {
 		m := &pubsub.Message{
 			Body: []byte(fmt.Sprintf("message %d", n)),
@@ -205,20 +208,18 @@ func Example_receiveWithTraditionalWorkerPool() {
 	var nProcessed int32
 	receiveCtx, cancel := context.WithCancel(ctx)
 	go func() {
-		for {
-			if atomic.LoadInt32(&nProcessed) == nMessages {
-				cancel()
-				break
-			}
+		wg.Wait()
+		if atomic.LoadInt32(&nProcessed) == nMessages {
+			cancel()
 		}
 	}()
 
 	// Process messages using a traditional worker pool. Consider using an
 	// inverted pool instead (see the other example).
 	const poolSize = 10
-	var wg sync.WaitGroup
+	var workerWg sync.WaitGroup
 	for n := 0; n < poolSize; n++ {
-		wg.Add(1)
+		workerWg.Add(1)
 		go func() {
 			for {
 				// Read a message. Receive will block until a message is available.
@@ -229,19 +230,20 @@ func Example_receiveWithTraditionalWorkerPool() {
 					// so the application should exit.
 					// In this example, we expect to get a error here when we've read all
 					// the messages and receiveCtx is canceled.
-					wg.Done()
+					workerWg.Done()
 					return
 				}
 
 				// Process the message and Ack it.
 				atomic.AddInt32(&nProcessed, 1)
 				msg.Ack()
+				wg.Done()
 			}
 		}()
 	}
 
 	// Wait for all workers to finish.
-	wg.Wait()
+	workerWg.Wait()
 	fmt.Printf("Read %d messages", nProcessed)
 
 	// Output:
