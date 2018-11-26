@@ -43,9 +43,10 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	}, nil
 }
 
-func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
-	path := filepath.Join(h.dir, name)
-	return newWatcher(path, decoder, &Options{WaitDuration: wait})
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
+	// filevar uses a goroutine in the background that poll every WaitDuration if
+	// the file is deleted. Make this fast for tests.
+	return newWatcher(filepath.Join(h.dir, name), decoder, &Options{WaitDuration: 1 * time.Millisecond})
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
