@@ -64,25 +64,7 @@ func New(itemType reflect.Type, maxHandlers int, handler func(interface{}) error
 // processed the item and reports the error that the handler returned.
 // If Shutdown has been called, Add immediately returns an error.
 func (b *Batcher) Add(ctx context.Context, item interface{}) error {
-	b.wg.Add(1)
-	defer b.wg.Done()
-	b.mu.Lock()
-	if b.shutdown {
-		return errors.New("batcher: shut down")
-	}
-	// Create a channel to receive the error from the handler.
-	c := make(chan error, 1)
-	// Add the item to the pending list.
-	b.pending = append(b.pending, waiter{item, c})
-	if b.nHandlers < b.maxHandlers {
-		// If we can start a handler, do so with the item just added and any others that are pending.
-		go b.callHandler(b.pending)
-		b.pending = nil
-		b.nHandlers++
-	}
-	// If we can't start a handler, then one of the currently running handlers will
-	// take our item.
-	b.mu.Unlock()
+	c := b.AddNoWait(item)
 	// Wait until either our result is ready or the context is done.
 	select {
 	case err := <-c:
@@ -92,8 +74,39 @@ func (b *Batcher) Add(ctx context.Context, item interface{}) error {
 	}
 }
 
+// AddNoWait adds an item to the batcher and returns immediately. When the handler is
+// called on the item, the handler's error return value will be sent to the channel
+// returned from AddNoWait.
+func (b *Batcher) AddNoWait(item interface{}) <-chan error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	// Create a channel to receive the error from the handler.
+	c := make(chan error, 1)
+	if b.shutdown {
+		c <- errors.New("batcher: shut down")
+		return c
+	}
+	// Add the item to the pending list.
+	b.pending = append(b.pending, waiter{item, c})
+	if b.nHandlers < b.maxHandlers {
+		// If we can start a handler, do so with the item just added and any others that are pending.
+		batch := b.pending
+		b.pending = nil
+		b.wg.Add(1)
+		go func() {
+			b.callHandler(batch)
+			b.wg.Done()
+		}()
+		b.nHandlers++
+	}
+	// If we can't start a handler, then one of the currently running handlers will
+	// take our item.
+	return c
+}
+
 func (b *Batcher) callHandler(batch []waiter) {
 	for batch != nil {
+
 		// Collect the items into a slice of the example type.
 		items := b.itemSliceZero
 		for _, m := range batch {
