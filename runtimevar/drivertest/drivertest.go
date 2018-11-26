@@ -435,7 +435,7 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), 0)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
 	if err != nil {
 		t.Fatal(err)
 	}
