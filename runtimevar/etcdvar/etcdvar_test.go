@@ -17,7 +17,6 @@ package etcdvar
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
@@ -58,7 +57,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{client: cli}, nil
 }
 
-func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, _ time.Duration) (driver.Watcher, error) {
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
 	return newWatcher(name, h.client, decoder), nil
 }
 

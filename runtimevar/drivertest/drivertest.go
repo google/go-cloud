@@ -26,20 +26,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const (
-	// shortWait is a very short delay.
-	shortWait = 1 * time.Microsecond
-	// defaultWait is a zero time.Duration that causes drivers to use
-	// their default wait.
-	defaultWait = time.Duration(0)
-)
-
 // Harness descibes the functionality test harnesses must provide to run conformance tests.
 type Harness interface {
 	// MakeWatcher creates a driver.Watcher to watch the given variable.
-	// If possible, wait should be used to configure what the Watcher returns
-	// as the wait time.
-	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error)
+	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error)
 	// CreateVariable creates the variable with the given contents in the provider.
 	CreateVariable(ctx context.Context, name string, val []byte) error
 	// UpdateVariable updates an existing variable to have the given contents in the provider.
@@ -89,7 +79,7 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	defer h.Close()
 	ctx := context.Background()
 
-	drv, err := h.MakeWatcher(ctx, "does-not-exist", runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, "does-not-exist", runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,11 +119,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 		}()
 	}
 
-	// Use defaultWait here because we're going to test Watch not returning
-	// below. Using shortWait here results in polling implementations spinning
-	// and replay-based tests being flaky based on how many polls happen
-	// before the ctx times out.
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, defaultWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +188,7 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +235,7 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,44 +268,51 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	}
 	ctx := context.Background()
 
-	// Create the variable and verify Watch sees the value.
+	// Create the variable and verify WatchVariable sees the value.
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := runtimevar.New(drv)
 	defer func() {
-		if err := v.Close(); err != nil {
+		if err := drv.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	got, err := v.Watch(ctx)
+	state, _ := drv.WatchVariable(ctx, nil)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err := state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotS, ok := got.Value.(string); !ok {
-		t.Fatalf("got value of type %T expected string", got.Value)
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
 	} else if gotS != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
+		t.Errorf("got %q want %q", got, content1)
 	}
 
-	// Update the variable and verify Watch sees the updated value.
+	// Update the variable and verify WatchVariable sees the updated value.
 	if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
 	}
-	got, err = v.Watch(ctx)
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err = state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotS, ok := got.Value.(string); !ok {
-		t.Fatalf("got value of type %T expected string", got.Value)
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
 	} else if gotS != content2 {
-		t.Errorf("got %q want %q", got.Value, content2)
+		t.Errorf("got %q want %q", got, content2)
 	}
 }
 
@@ -340,57 +333,69 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	}
 	ctx := context.Background()
 
-	// Create the variable and verify Watch sees the value.
+	// Create the variable and verify WatchVariable sees the value.
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := runtimevar.New(drv)
 	defer func() {
-		if err := v.Close(); err != nil {
+		if err := drv.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	got, err := v.Watch(ctx)
+	state, _ := drv.WatchVariable(ctx, nil)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err := state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotS, ok := got.Value.(string); !ok {
-		t.Fatalf("got value of type %T expected string", got.Value)
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
 	} else if gotS != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
+		t.Errorf("got %q want %q", got, content1)
 	}
-	prev := got
+	prev := state
 
 	// Delete the variable.
 	if err := h.DeleteVariable(ctx, name); err != nil {
 		t.Fatal(err)
 	}
 
-	// Watch should return an error now.
-	if got, err = v.Watch(ctx); err == nil {
-		t.Fatalf("got %v, want error because variable is deleted", got.Value)
+	// WatchVariable should return a state with an error now.
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with an error")
+	}
+	got, err = state.Value()
+	if err == nil {
+		t.Fatalf("got %v want error because variable is deleted", got)
 	}
 
-	// Reset the variable with new content and verify via Watch.
+	// Reset the variable with new content and verify via WatchVariable.
 	if err := h.CreateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
 	}
-	got, err = v.Watch(ctx)
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err = state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if gotS, ok := got.Value.(string); !ok {
-		t.Fatalf("got value of type %T expected string", got.Value)
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
 	} else if gotS != content2 {
-		t.Errorf("got %q want %q", got.Value, content2)
+		t.Errorf("got %q want %q", got, content2)
 	}
-	if got.UpdateTime.Before(prev.UpdateTime) {
-		t.Errorf("got UpdateTime %v < previous %v, want >=", got.UpdateTime, prev.UpdateTime)
+	if state.UpdateTime().Before(prev.UpdateTime()) {
+		t.Errorf("got UpdateTime %v < previous %v, want >=", state.UpdateTime(), prev.UpdateTime())
 	}
 }
