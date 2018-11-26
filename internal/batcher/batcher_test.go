@@ -115,20 +115,20 @@ func TestSaturation(t *testing.T) {
 
 func TestShutdown(t *testing.T) {
 	ctx := context.Background()
-	var nAdds int64 // atomic
+	var nHandlers int64 // atomic
 	c := make(chan int, 10)
 	b := batcher.New(reflect.TypeOf(int(0)), cap(c), func(x interface{}) error {
 		for range x.([]int) {
 			c <- 0
 		}
-		atomic.AddInt64(&nAdds, int64(len(x.([]int))))
-		time.Sleep(time.Second) // we want Adds to be active on Shutdown
+		atomic.AddInt64(&nHandlers, 1)
+		defer atomic.AddInt64(&nHandlers, -1)
+		time.Sleep(time.Second) // we want handlers to be active on Shutdown
 		return nil
 	})
 	for i := 0; i < cap(c); i++ {
 		go func() {
 			err := b.Add(ctx, 0)
-			atomic.AddInt64(&nAdds, -1)
 			if err != nil {
 				t.Errorf("b.Add error: %v", err)
 			}
@@ -139,8 +139,9 @@ func TestShutdown(t *testing.T) {
 		<-c
 	}
 	b.Shutdown()
-	if got := atomic.LoadInt64(&nAdds); got != 0 {
-		t.Fatalf("%d Adds still active after Shutdown returns", got)
+
+	if got := atomic.LoadInt64(&nHandlers); got != 0 {
+		t.Fatalf("%d Handlers still active after Shutdown returns", got)
 	}
 	if err := b.Add(ctx, 1); err == nil {
 		t.Error("got nil, want error from Add after Shutdown")
