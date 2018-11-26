@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
@@ -100,4 +101,144 @@ func Example_sendReceiveMultipleMessages() {
 	// a
 	// b
 	// c
+}
+
+func Example_receiveWithInvertedWorkerPool() {
+	// Open a topic and corresponding subscription.
+	ctx := context.Background()
+	b := mempubsub.NewBroker([]string{"myTopic"})
+	t := mempubsub.OpenTopic(b, "myTopic")
+	defer t.Close()
+	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	defer s.Close()
+
+	// Send a bunch of messages to the topic.
+	const nMessages = 100
+	for n := 0; n < nMessages; n++ {
+		m := &pubsub.Message{
+			Body: []byte(fmt.Sprintf("message %d", n)),
+		}
+		if err := t.Send(ctx, m); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// In order to make our test exit, we keep track of how many messages were
+	// processed with wg, and cancel the receiveCtx when we've processed them all.
+	// A more realistic application would not need this WaitGroup.
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
+	receiveCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		wg.Wait()
+		cancel()
+	}()
+
+	// Process messages using an inverted worker pool, as described here:
+	// https://www.youtube.com/watch?v=5zXAHh5tJqQ&t=26m58s
+	// It uses a buffered channel, sem, as a semaphore to manage the maximum
+	// number of workers.
+	const poolSize = 10
+	sem := make(chan struct{}, poolSize)
+	for {
+		// Read a message. Receive will block until a message is available.
+		msg, err := s.Receive(receiveCtx)
+		if err != nil {
+			// An error from Receive is fatal; Receive will never succeed again
+			// so the application should exit.
+			// In this example, we expect to get a error here when we've read all the
+			// messages and receiveCtx is canceled.
+			break
+		}
+
+		// Write a token to the semaphore; if there are already poolSize workers
+		// active, this will block until one of them completes.
+		sem <- struct{}{}
+		// Process the message. For many applications, this can be expensive, so
+		// we do it in a goroutine, allowing this loop to continue and Receive more
+		// messages.
+		go func() {
+			// Record that we've processed this message, and Ack it.
+			msg.Ack()
+			wg.Done()
+			// Read a token from the semaphore before exiting this goroutine, freeing
+			// up the slot for another goroutine.
+			<-sem
+		}()
+	}
+
+	// Wait for all workers to finish.
+	for n := poolSize; n > 0; n-- {
+		sem <- struct{}{}
+	}
+	fmt.Printf("Read %d messages", nMessages)
+
+	// Output:
+	// Read 100 messages
+}
+
+func Example_receiveWithTraditionalWorkerPool() {
+	// Open a topic and corresponding subscription.
+	ctx := context.Background()
+	b := mempubsub.NewBroker([]string{"myTopic"})
+	t := mempubsub.OpenTopic(b, "myTopic")
+	defer t.Close()
+	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	defer s.Close()
+
+	// Send a bunch of messages to the topic.
+	const nMessages = 100
+	for n := 0; n < nMessages; n++ {
+		m := &pubsub.Message{
+			Body: []byte(fmt.Sprintf("message %d", n)),
+		}
+		if err := t.Send(ctx, m); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	// In order to make our test exit, we keep track of how many messages were
+	// processed with wg, and cancel the receiveCtx when we've processed them all.
+	// A more realistic application would not need this WaitGroup.
+	var wg sync.WaitGroup
+	wg.Add(nMessages)
+	receiveCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		wg.Wait()
+		cancel()
+	}()
+
+	// Process messages using a traditional worker pool. Consider using an
+	// inverted pool instead (see the other example).
+	const poolSize = 10
+	var workerWg sync.WaitGroup
+	for n := 0; n < poolSize; n++ {
+		workerWg.Add(1)
+		go func() {
+			for {
+				// Read a message. Receive will block until a message is available.
+				// It's fine to call Receive from many goroutines.
+				msg, err := s.Receive(receiveCtx)
+				if err != nil {
+					// An error from Receive is fatal; Receive will never succeed again
+					// so the application should exit.
+					// In this example, we expect to get a error here when we've read all
+					// the messages and receiveCtx is canceled.
+					workerWg.Done()
+					return
+				}
+
+				// Process the message and Ack it.
+				msg.Ack()
+				wg.Done()
+			}
+		}()
+	}
+
+	// Wait for all workers to finish.
+	workerWg.Wait()
+	fmt.Printf("Read %d messages", nMessages)
+
+	// Output:
+	// Read 100 messages
 }
