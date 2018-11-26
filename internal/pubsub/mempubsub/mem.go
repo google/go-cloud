@@ -29,6 +29,8 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
+var errNotExist = errors.New("mempubsub: topic does not exist")
+
 type Broker struct {
 	mu     sync.Mutex
 	topics map[string]*topic
@@ -64,14 +66,14 @@ func OpenTopic(b *Broker, name string) *pubsub.Topic {
 // SendBatch implements driver.Topic.SendBatch.
 // It is error if the topic is closed or has no subscriptions.
 func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if t == nil {
+		return errNotExist
+	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	// Check for canceled before doing any work.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	// Associate ack IDs with messages here. It would be a bit better if each subscription's
 	// messages had their own ack IDs, so we could catch one subscription using ack IDs from another,
 	// but that would require copying all the messages.
@@ -86,11 +88,11 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
-func (t *topic) IsRetryable(error) bool { return false }
+func (*topic) IsRetryable(error) bool { return false }
 
 type subscription struct {
 	mu          sync.Mutex
-	topic       driver.Topic
+	topic       *topic
 	ackDeadline time.Duration
 	msgs        map[driver.AckID]*message // all unacknowledged messages
 }
@@ -181,7 +183,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
 	if s.topic == nil {
-		return errors.New("mempubsub: topic does not exist")
+		return errNotExist
 	}
 	select {
 	case <-ctx.Done():
@@ -193,6 +195,9 @@ func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
 
 // SendAcks implements driver.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
+	if s.topic == nil {
+		return errNotExist
+	}
 	// Check for context done before doing any work.
 	if err := ctx.Err(); err != nil {
 		return err
@@ -211,4 +216,4 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool { return false }
+func (*subscription) IsRetryable(error) bool { return false }
