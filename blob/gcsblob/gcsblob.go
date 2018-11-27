@@ -59,46 +59,48 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("gs", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-		q := u.Query()
-		opts := &Options{}
+	blob.Register("gs", openURL)
+}
 
-		if accessID := q["access_id"]; len(accessID) > 0 {
-			opts.GoogleAccessID = accessID[0]
-		}
+func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+	q := u.Query()
+	opts := &Options{}
 
-		if keyPath := q["private_key_path"]; len(keyPath) > 0 {
-			pk, err := ioutil.ReadFile(keyPath[0])
-			if err != nil {
-				return nil, err
-			}
-			opts.PrivateKey = pk
-		}
+	if accessID := q["access_id"]; len(accessID) > 0 {
+		opts.GoogleAccessID = accessID[0]
+	}
 
-		var creds *google.Credentials
-		if credPath := q["cred_path"]; len(credPath) == 0 {
-			var err error
-			creds, err = gcp.DefaultCredentials(ctx)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			jsonCreds, err := ioutil.ReadFile(credPath[0])
-			if err != nil {
-				return nil, err
-			}
-			creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if keyPath := q["private_key_path"]; len(keyPath) > 0 {
+		pk, err := ioutil.ReadFile(keyPath[0])
 		if err != nil {
 			return nil, err
 		}
-		return openBucket(ctx, u.Host, client, opts)
-	})
+		opts.PrivateKey = pk
+	}
+
+	var creds *google.Credentials
+	if credPath := q["cred_path"]; len(credPath) == 0 {
+		var err error
+		creds, err = gcp.DefaultCredentials(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		jsonCreds, err := ioutil.ReadFile(credPath[0])
+		if err != nil {
+			return nil, err
+		}
+		creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		return nil, err
+	}
+	return openBucket(ctx, u.Host, client, opts)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.

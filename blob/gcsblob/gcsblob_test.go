@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
 	"testing"
 
 	"cloud.google.com/go/storage"
@@ -29,6 +31,7 @@ import (
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/testing/setup"
+	"github.com/google/go-cmp/cmp"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )
@@ -198,5 +201,90 @@ func TestBufferSize(t *testing.T) {
 		if got != test.want {
 			t.Errorf("%d) got buffer size %d, want %d", i, got, test.want)
 		}
+	}
+}
+
+func TestOpenURL(t *testing.T) {
+
+	ctx := context.Background()
+	content := []byte("some content")
+	tmpfile, err := ioutil.TempFile("", "myfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+	if _, err := tmpfile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		url      string
+		wantName string
+		wantOpts Options
+		wantErr  bool
+	}{
+		{
+			url:      "gs://mybucket",
+			wantName: "mybucket",
+		},
+		{
+			url:      "gs://mybucket",
+			wantName: "mybucket",
+		},
+		{
+			url:      "gs://mybucket2",
+			wantName: "mybucket2",
+		},
+		{
+			url:      "gs://foo?access_id=bar",
+			wantName: "foo",
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			url:     "gs://foo?private_key_path=/path/does/not/exist",
+			wantErr: true,
+		},
+		{
+			url:      "gs://foo?private_key_path=" + tmpfile.Name(),
+			wantName: "foo",
+			wantOpts: Options{PrivateKey: content},
+		},
+		{
+			url:     "gs://foo?cred_path=/path/does/not/exist",
+			wantErr: true,
+		},
+		{
+			url:     "gs://foo?cred_path=" + tmpfile.Name(),
+			wantErr: true, // tmpfile doesn't have valid JSON
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.url, func(t *testing.T) {
+			u, err := url.Parse(test.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := openURL(ctx, u)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			gotB, ok := got.(*bucket)
+			if !ok {
+				t.Fatalf("got %T want *bucket", got)
+			}
+			if gotB.name != test.wantName {
+				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
+			}
+			if diff := cmp.Diff(*gotB.opts, test.wantOpts); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", *gotB.opts, test.wantOpts, diff)
+			}
+		})
 	}
 }
