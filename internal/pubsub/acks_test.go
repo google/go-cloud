@@ -220,7 +220,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 }
 
 // For best results, run this test with -race.
-func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
+func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 	ctx := context.Background()
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
@@ -236,6 +236,7 @@ func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Spin up some goroutines to ack the message.
 	var mu sync.Mutex
 	panics := 0
 	var wg sync.WaitGroup
@@ -255,6 +256,7 @@ func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
 	}
 	wg.Wait()
 
+	// Check that one of the goroutines panicked.
 	if panics != 1 {
 		t.Errorf("panics = %d, want %d", panics, 1)
 	}
