@@ -218,3 +218,44 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 	}()
 	mr.Ack()
 }
+
+// For best results, run this test with -race.
+func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
+	ctx := context.Background()
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			return nil
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer sub.Close()
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mu sync.Mutex
+	panics := 0
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					panics++
+				}
+			}()
+			mr.Ack()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	if panics != 1 {
+		t.Errorf("panics = %d, want %d", panics, 1)
+	}
+}
