@@ -192,3 +192,29 @@ func TestAckDoesNotBlock(t *testing.T) {
 	}
 	mr.Ack()
 }
+
+func TestDoubleAckCausesPanic(t *testing.T) {
+	ctx := context.Background()
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			return nil
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer sub.Close()
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mr.Ack()
+	defer func() {
+		if r := recover(); r != nil {
+			// ok, panic was expected.
+			return
+		}
+		t.Errorf("second ack failed to panic")
+	}()
+	mr.Ack()
+}
