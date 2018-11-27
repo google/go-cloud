@@ -176,8 +176,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				// TODO(ijt): Do something with the returned chan error.
-				_ = s.ackBatcher.AddNoWait(ackIDBox{id})
+				s.ackBatcher.AddNoWait(ackIDBox{id})
 			},
 		})
 	}
