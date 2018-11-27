@@ -37,6 +37,9 @@ type Message struct {
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
 
+	// mu guards isAcked in case Ack() is called concurrently.
+	mu sync.Mutex
+
 	// isAcked tells whether this message has already had its Ack method
 	// called.
 	isAcked bool
@@ -46,6 +49,8 @@ type Message struct {
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.isAcked {
 		panic(fmt.Sprintf("Ack() called twice on message: %+v", m))
 	}

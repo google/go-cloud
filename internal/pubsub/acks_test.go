@@ -242,6 +242,7 @@ func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			defer func() {
 				if r := recover(); r != nil {
 					mu.Lock()
@@ -250,7 +251,6 @@ func TestDoubleAckWithRaceCausesPanic(t *testing.T) {
 				}
 			}()
 			mr.Ack()
-			wg.Done()
 		}()
 	}
 	wg.Wait()
