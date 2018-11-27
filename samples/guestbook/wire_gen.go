@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
+	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/fileblob"
 	"github.com/google/go-cloud/blob/gcsblob"
@@ -37,18 +38,17 @@ import (
 func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
 	ncsaLogger := xrayserver.NewRequestLogger()
 	client := _wireClientValue
-	certFetcher := &rdsmysql.CertFetcher{
+	certFetcher := &rds.CertFetcher{
 		Client: client,
 	}
 	params := awsSQLParams(flags)
-	options := _wireOptionsValue
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params, options)
+	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	sessionOptions := _wireSessionOptionsValue
-	sessionSession, err := session.NewSessionWithOptions(sessionOptions)
+	options := _wireOptionsValue
+	sessionSession, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -95,10 +95,9 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue         = http.DefaultClient
-	_wireOptionsValue        = (*rdsmysql.Options)(nil)
-	_wireSessionOptionsValue = session.Options{}
-	_wireDefaultDriverValue  = &server.DefaultDriver{}
+	_wireClientValue        = http.DefaultClient
+	_wireOptionsValue       = session.Options{}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
@@ -211,10 +210,15 @@ var (
 
 // inject_aws.go:
 
+// awsBucket is a Wire provider function that returns the S3 bucket based on the
+// command-line flags.
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
 	return s3blob.OpenBucket(ctx, flags.bucket, cp, nil)
 }
 
+// awsSQLParams is a Wire provider function that returns the RDS SQL connection
+// parameters based on the command-line flags. Other providers inside
+// awscloud.AWS use the parameters to construct a *sql.DB.
 func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 	return &rdsmysql.Params{
 		Endpoint: flags.dbHost,
@@ -224,6 +228,8 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 	}
 }
 
+// awsMOTDVar is a Wire provider function that returns the Message of the Day
+// variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
 	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
@@ -232,10 +238,15 @@ func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags
 
 // inject_gcp.go:
 
+// gcpBucket is a Wire provider function that returns the GCS bucket based on
+// the command-line flags.
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
 	return gcsblob.OpenBucket(ctx, flags.bucket, client2, nil)
 }
 
+// gcpSQLParams is a Wire provider function that returns the Cloud SQL
+// connection parameters based on the command-line flags. Other providers inside
+// gcpcloud.GCP use the parameters to construct a *sql.DB.
 func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 	return &cloudmysql.Params{
 		ProjectID: string(id),
@@ -247,6 +258,8 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 	}
 }
 
+// gcpMOTDVar is a Wire provider function that returns the Message of the Day
+// variable from Runtime Configurator.
 func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
@@ -264,10 +277,14 @@ func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, projec
 
 // inject_local.go:
 
+// localBucket is a Wire provider function that returns a directory-based bucket
+// based on the command-line flags.
 func localBucket(flags *cliFlags) (*blob.Bucket, error) {
 	return fileblob.OpenBucket(flags.bucket, nil)
 }
 
+// dialLocalSQL is a Wire provider function that connects to a MySQL database
+// (usually on localhost).
 func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 	cfg := &mysql.Config{
 		Net:                  "tcp",
@@ -280,6 +297,8 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 	return sql.Open("mysql", cfg.FormatDSN())
 }
 
+// localRuntimeVar is a Wire provider function that returns the Message of the
+// Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
 		WaitDuration: flags.motdVarWaitTime,
