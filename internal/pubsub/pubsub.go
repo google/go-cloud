@@ -16,6 +16,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"reflect"
 	"sync"
 
 	"github.com/google/go-cloud/internal/batcher"
@@ -103,9 +104,8 @@ func NewTopic(d driver.Topic) *Topic {
 			return d.SendBatch(callCtx, dms)
 		})
 	}
-	var example *Message
 	maxHandlers := 1
-	b := batcher.New(example, maxHandlers, handler)
+	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -223,7 +223,7 @@ func NewSubscription(d driver.Subscription) *Subscription {
 		})
 	}
 	maxHandlers := 1
-	ab := batcher.New(ackIDBox{}, maxHandlers, handler)
+	ab := batcher.New(reflect.TypeOf([]ackIDBox{}).Elem(), maxHandlers, handler)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
