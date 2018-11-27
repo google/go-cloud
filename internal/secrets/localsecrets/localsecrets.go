@@ -16,40 +16,51 @@ package localsecrets
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
+	"errors"
+	"golang.org/x/crypto/nacl/secretbox"
+	"io"
 	"time"
 )
 
-type EncrypterDecrypter struct {
-	keyString []byte
-	cipher    cipher.AEAD //encrypt and decrypt methods
+//
+type Crypter struct {
+	secretKey [32]byte
 }
 
-func NewEncrypterDecrypter() (*EncrypterDecrypter, error) { //return driver.Decrypter once I pull in that branch
-	ks := []byte(time.Now().String())
+//
+func NewCrypter() (*Crypter, error) { //return driver.Decrypter once I pull in that branch
+	sk := []byte(time.Now().String())
 	enc := base64.StdEncoding
-	dst := make([]byte, enc.EncodedLen(len(ks)))
-	enc.Encode(dst, ks)
+	dst := make([]byte, enc.EncodedLen(len(sk)))
+	enc.Encode(dst, sk)
 
-	cblock, err := aes.NewCipher(dst[:32])
-	if err != nil {
-		return nil, err
-	}
-	c, err := cipher.NewGCM(cblock)
-	if err != nil {
-		return nil, err
-	}
+	var dst32 [32]byte
+	copy(dst32[:], dst)
 
-	return &EncrypterDecrypter{keyString: dst[:32], cipher: c}, nil
+	return &Crypter{secretKey: dst32}, nil
 }
 
-func (d EncrypterDecrypter) Decrypt(ctx context.Context, cipherText []byte) ([]byte, error) {
-	nonce := make([]byte, d.cipher.NonceSize())
-	return d.cipher.Open(nil, nonce, cipherText, nil)
+//
+func (n Crypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
+	var nonce [24]byte
+	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
+		return nil, err
+	}
+	// a slice beginning at nonce is used here as the destination for the encrypted message,
+	// so that we can read the nonce out of the first 24 bytes when we decrypt it
+	return secretbox.Seal(nonce[:], message, &nonce, &n.secretKey), nil
 }
 
-func (e EncrypterDecrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
-	return nil, nil
+//
+func (d Crypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
+	var decryptNonce [24]byte
+	copy(decryptNonce[:], message[:24])
+
+	decrypted, ok := secretbox.Open(nil, message[24:], &decryptNonce, &d.secretKey)
+	if !ok {
+		return nil, errors.New("it failed")
+	}
+	return decrypted, nil
 }
