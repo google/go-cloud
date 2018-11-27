@@ -34,7 +34,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/pmezard/go-difflib/difflib"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/packages"
 )
@@ -59,16 +58,6 @@ func (gen GenerateResult) Commit() error {
 		return nil
 	}
 	return ioutil.WriteFile(gen.OutputPath, gen.Content, 0666)
-}
-
-// Diff writes a diff of the current file on disk vs the generated file to out.
-func (gen GenerateResult) Diff() (string, error) {
-	// Assume the current file is empty if we can't read it.
-	cur, _ := ioutil.ReadFile(gen.OutputPath)
-	return difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A: difflib.SplitLines(string(cur)),
-		B: difflib.SplitLines(string(gen.Content)),
-	})
 }
 
 // Generate performs dependency injection for the packages that match the given

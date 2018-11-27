@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
@@ -30,6 +31,7 @@ import (
 	"strings"
 
 	"github.com/google/go-cloud/wire/internal/wire"
+	"github.com/pmezard/go-difflib/difflib"
 	"golang.org/x/tools/go/types/typeutil"
 )
 
@@ -140,7 +142,12 @@ func diff(pkgs ...string) error {
 			// No Wire output. Maybe errors, maybe no Wire directives.
 			continue
 		}
-		if diff, err := out.Diff(); err == nil {
+		// Assumes the current file is empty if we can't read it.
+		cur, _ := ioutil.ReadFile(out.OutputPath)
+		if diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+			A: difflib.SplitLines(string(cur)),
+			B: difflib.SplitLines(string(out.Content)),
+		}); err == nil {
 			if diff != "" {
 				fmt.Fprintf(os.Stderr, "%s: diff from %s:\n%s", out.PkgPath, out.OutputPath, diff)
 			}
