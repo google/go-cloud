@@ -372,7 +372,7 @@ type Message struct {
 	// sub is the Subscription this message was received from.
 	sub *Subscription
 
-	// isAcked tells whether the message has already had its Ack method called.
+	// isAcked is true if Ack has been called on this message.
 	isAcked bool
 }
 
