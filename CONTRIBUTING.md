@@ -135,7 +135,7 @@ you!
 
 ## Github code review workflow conventions
 
-(For project members and frequent contributors).
+(For project members and frequent contributors.)
 
 As a contributor:
 
@@ -159,7 +159,9 @@ As a contributor:
 -   "Resolve" comments that you are sure you've addressed; let your reviewers
     resolve ones that you're not sure about.
 -   Do not use `git push --force`; this can cause comments from your reviewers
-    that are associated with a specific commit to be lost.
+    that are associated with a specific commit to be lost. This implies that
+    once you've sent a Pull Request, you should use `git merge` instead of `git
+    rebase` to incorporate commits from the master branch.
 
 As a reviewer:
 
