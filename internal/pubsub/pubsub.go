@@ -16,6 +16,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -35,13 +36,21 @@ type Message struct {
 
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
+
+	// isAcked tells whether this message has already had its Ack method
+	// called.
+	isAcked bool
 }
 
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
+	if m.isAcked {
+		panic(fmt.Sprintf("Ack() called twice on message: %+v", m))
+	}
 	go m.ack()
+	m.isAcked = true
 }
 
 // Topic publishes messages to all its subscribers.
