@@ -124,9 +124,6 @@ type Subscription struct {
 	// q is the local queue of messages downloaded from the server.
 	q   []*Message
 	err error
-
-	// wg manages acking goroutines.
-	wg sync.WaitGroup
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -192,7 +189,6 @@ func (s *Subscription) Close() error {
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
-	s.wg.Wait()
 	s.ackBatcher.Shutdown()
 	return nil
 }
