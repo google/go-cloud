@@ -22,6 +22,9 @@ import (
 
 // Batcher should gather items into batches to be sent to the pubsub service.
 type Batcher interface {
+	// Add should add an item to the batcher.
+	Add(ctx context.Context, item interface{}) error
+
 	// AddNoWait should add an item to the batcher without blocking.
 	AddNoWait(item interface{}) <-chan error
 

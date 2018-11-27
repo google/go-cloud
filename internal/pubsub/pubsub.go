@@ -71,8 +71,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	if err != nil {
 		return err
 	}
-	t.batcher.AddNoWait(m)
-	return nil
+	return t.batcher.Add(ctx, m)
 }
 
 // Close flushes pending message sends and disconnects the Topic.
