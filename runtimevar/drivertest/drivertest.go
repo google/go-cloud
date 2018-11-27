@@ -486,7 +486,7 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 		// should have gotten that error back.
 		got, err := state.Value()
 		if err == nil {
-			t.Fatalf("got %v want error", got)
+			t.Fatalf("got %v and nil error, want non-nil error", got)
 		}
 		// tCtx should be cancelled. However, tests using record/replay mode can
 		// be in the middle of an RPC when that happens, and save the resulting
