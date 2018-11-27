@@ -70,7 +70,8 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	if err != nil {
 		return err
 	}
-	return t.batcher.Add(ctx, m)
+	t.batcher.AddNoWait(m)
+	return nil
 }
 
 // Close flushes pending message sends and disconnects the Topic.
@@ -179,11 +180,8 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.wg.Add(1)
-				go func() {
-					defer s.wg.Done()
-					s.ackBatcher.Add(ctx, ackIDBox{id})
-				}()
+				// TODO(ijt): Do something with the returned chan error.
+				_ = s.ackBatcher.AddNoWait(ackIDBox{id})
 			},
 		})
 	}
