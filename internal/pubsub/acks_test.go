@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -177,10 +178,11 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 func TestAckDoesNotBlock(t *testing.T) {
 	ctx := context.Background()
 	m := &driver.Message{}
+	delay := time.Second
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			select {}
+			time.Sleep(delay)
 			return nil
 		},
 	}
@@ -190,5 +192,10 @@ func TestAckDoesNotBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t0 := time.Now()
 	mr.Ack()
+	dt := time.Now().Sub(t0)
+	if dt >= delay {
+		t.Errorf("ack took %v, want less than %v", dt, delay)
+	}
 }
