@@ -21,32 +21,47 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/driver"
 )
 
-// emptyDriverSub is an intentionally buggy subscription driver. Such drivers should
-// wait until some messages are available and then return a non-empty batch. This
-// driver mischeviously always returns an empty batch.
-type emptyDriverSub struct{}
-
-func (s *emptyDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	return nil, nil
+// scriptedSub returns batches of messages in a predefined order from
+// ReceiveBatch.
+type scriptedSub struct{
+	// batches contains batches to return from ReceiveBatch, one after the
+	// other.
+	batches [][]*driver.Message
+	
+	// calls counts how many times ReceiveBatch has been called.
+	calls int
 }
 
-func (s *emptyDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
+func (s *scriptedSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	b := s.batches[s.calls]
+	s.calls++
+	return b, nil
+}
+
+func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
 
-func (s *emptyDriverSub) Close() error {
+func (s *scriptedSub) Close() error {
 	return nil
 }
 
-func (s *emptyDriverSub) IsRetryable(error) bool { return false }
+func (s *scriptedSub) IsRetryable(error) bool { return false }
 
-func TestReceiveErrorIfEmptyBatchReturnedFromDriver(t *testing.T) {
+func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
-	ds := &emptyDriverSub{}
+	ds := &scriptedSub{
+		batches: [][]*driver.Message{
+			// First call gets an empty batch.
+			{},
+			// Second call gets a non-empty batch.
+			{&driver.Message{}},
+		},
+	}
 	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
 	_, err := sub.Receive(ctx)
-	if err == nil {
-		t.Error("error expected for Receive with buggy driver")
+	if err != nil {
+		t.Error(err)
 	}
 }
