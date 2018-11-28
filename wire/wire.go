@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package wire contains directives for Wire code generation.
-// For an overview of working with Wire, see the user guide at
-// https://github.com/google/go-cloud/blob/master/wire/README.md
+// Package wire is the deprecated package for Wire code generation directives.
+// It exists only for backward compatibility. Please update your import paths to
+// "github.com/google/wire".
 //
-// The directives in this package are used as input to the Wire code generation
-// tool. The entry point of Wire's analysis are injector functions: function
-// templates denoted by only containing a call to Build. The arguments to Build
-// describes a set of providers and the Wire code generation tool builds a
-// directed acylic graph of the providers' output types. The generated code will
-// fill in the function template by using the providers from the provider set to
-// instantiate any needed types.
+// For an overview of working with Wire, see the user guide at
+// https://github.com/google/wire/blob/master/README.md
+//
+// Deprecated: Please import "github.com/google/wire" instead of this package.
 package wire
 
+import "github.com/google/wire"
+
 // ProviderSet is a marker type that collects a group of providers.
-type ProviderSet struct{}
+type ProviderSet = wire.ProviderSet
 
 // NewSet creates a new provider set that includes the providers in its
 // arguments. Each argument is a function value, a struct (zero) value, a
@@ -52,8 +51,8 @@ type ProviderSet struct{}
 //
 // The behavior of passing the result of a call to other functions in this
 // package are described in their respective doc comments.
-func NewSet(...interface{}) ProviderSet {
-	return ProviderSet{}
+func NewSet(args ...interface{}) wire.ProviderSet {
+	return wire.NewSet(args...)
 }
 
 // Build is placed in the body of an injector function template to declare the
@@ -83,12 +82,12 @@ func NewSet(...interface{}) ProviderSet {
 //	func injector(ctx context.Context) (*sql.DB, error) {
 //		panic(wire.Build(otherpkg.FooSet, myProviderFunc))
 //	}
-func Build(...interface{}) string {
-	return "implementation not generated, run wire"
+func Build(args ...interface{}) string {
+	return wire.Build(args...)
 }
 
 // A Binding maps an interface to a concrete type.
-type Binding struct{}
+type Binding = wire.Binding
 
 // Bind declares that a concrete type should be used to satisfy a
 // dependency on the type of iface, which must be a pointer to an
@@ -107,12 +106,12 @@ type Binding struct{}
 //	var MySet = wire.NewSet(
 //		MyFoo{},
 //		wire.Bind(new(Fooer), new(MyFoo)))
-func Bind(iface, to interface{}) Binding {
-	return Binding{}
+func Bind(iface, to interface{}) wire.Binding {
+	return wire.Bind(iface, to)
 }
 
 // A ProvidedValue is an expression that is copied to the generated injector.
-type ProvidedValue struct{}
+type ProvidedValue = wire.ProvidedValue
 
 // Value binds an expression to provide the type of the expression.
 // The expression may not be an interface value; use InterfaceValue for that.
@@ -120,8 +119,8 @@ type ProvidedValue struct{}
 // Example:
 //
 //	var MySet = wire.NewSet(wire.Value([]string(nil)))
-func Value(interface{}) ProvidedValue {
-	return ProvidedValue{}
+func Value(v interface{}) wire.ProvidedValue {
+	return wire.Value(v)
 }
 
 // InterfaceValue binds an expression to provide a specific interface type.
@@ -129,6 +128,6 @@ func Value(interface{}) ProvidedValue {
 // Example:
 //
 //	var MySet = wire.NewSet(wire.InterfaceValue(new(io.Reader), os.Stdin))
-func InterfaceValue(typ interface{}, x interface{}) ProvidedValue {
-	return ProvidedValue{}
+func InterfaceValue(typ interface{}, x interface{}) wire.ProvidedValue {
+	return wire.InterfaceValue(typ, x)
 }

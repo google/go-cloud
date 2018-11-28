@@ -26,8 +26,8 @@ gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then,
 the blob.Bucket can be used throughout your application without worrying
 about the underlying implementation.
 
-This project also provides a code generator called Wire
-(https://github.com/google/go-cloud/blob/master/wire/README.md). It creates
+This project works with a code generator called Wire
+(https://github.com/google/wire/blob/master/README.md). It creates
 human-readable code that only imports the cloud SDKs for providers you use. This
 allows Go Cloud to grow to support any number of cloud providers, without
 increasing compile times or binary sizes, and avoiding any side effects from
