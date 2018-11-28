@@ -191,5 +191,9 @@ func TestAckDoesNotBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// If Ack blocks here, waiting for sendAcks to finish, then the
+	// deferred cancel() will never run, so sendAcks can never finish. That
+	// would cause the test to hang. Thus hanging is how this test signals
+	// failure.
 	mr.Ack()
 }
