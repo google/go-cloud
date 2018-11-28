@@ -207,16 +207,31 @@ func TestBufferSize(t *testing.T) {
 func TestOpenURL(t *testing.T) {
 
 	ctx := context.Background()
-	content := []byte("some content")
-	tmpfile, err := ioutil.TempFile("", "myfile")
+
+	// Create a file for use as a dummy private key file.
+	privateKey := []byte("some content")
+	pkFile, err := ioutil.TempFile("", "my-private-key")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpfile.Name())
-	if _, err := tmpfile.Write(content); err != nil {
+	defer os.Remove(pkFile.Name())
+	if _, err := pkFile.Write(privateKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err := pkFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
+	credFile, err := ioutil.TempFile("", "my-creds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(credFile.Name())
+	if _, err := credFile.Write(jsonCred); err != nil {
+		t.Fatal(err)
+	}
+	if err := credFile.Close(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -227,19 +242,15 @@ func TestOpenURL(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			url:      "gs://mybucket",
+			url:      "gs://mybucket?cred_path=" + credFile.Name(),
 			wantName: "mybucket",
 		},
 		{
-			url:      "gs://mybucket",
-			wantName: "mybucket",
-		},
-		{
-			url:      "gs://mybucket2",
+			url:      "gs://mybucket2?cred_path=" + credFile.Name(),
 			wantName: "mybucket2",
 		},
 		{
-			url:      "gs://foo?access_id=bar",
+			url:      "gs://foo?access_id=bar&cred_path=" + credFile.Name(),
 			wantName: "foo",
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
@@ -248,17 +259,17 @@ func TestOpenURL(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			url:      "gs://foo?private_key_path=" + tmpfile.Name(),
+			url:      "gs://foo?private_key_path=" + pkFile.Name(),
 			wantName: "foo",
-			wantOpts: Options{PrivateKey: content},
+			wantOpts: Options{PrivateKey: privateKey},
 		},
 		{
 			url:     "gs://foo?cred_path=/path/does/not/exist",
 			wantErr: true,
 		},
 		{
-			url:     "gs://foo?cred_path=" + tmpfile.Name(),
-			wantErr: true, // tmpfile doesn't have valid JSON
+			url:     "gs://foo?cred_path=" + pkFile.Name(),
+			wantErr: true,
 		},
 	}
 
