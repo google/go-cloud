@@ -18,14 +18,9 @@ package driver
 
 import "context"
 
-// Decrypter decrypts a cipher message into a plain text message. The
-// implementation of the Decrypter should hold any key information with it, for
-// example, the key name.
+// Decrypter decrypts a cipher message into a plain text message.
 type Decrypter interface {
 
-	// Decrypt decrypts the ciphertext and returns the plaintext. It should handle
-	// any necessary base64 encoding/decoding based on the service provider
-	// implementation. If an RPC call or any other key information is needed, it
-	// should use those found in the Decrypter.
+	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 }
