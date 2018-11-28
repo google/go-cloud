@@ -139,7 +139,11 @@ you!
 
 As a contributor:
 
--   Try hard to make each Pull Request as small and focused as possible.
+-   Try hard to make each Pull Request as small and focused as possible. In
+    particular, this means that if a reviewer asks you to do something that is
+    beyond the scope of the Pull Request, the best practice is to file another
+    issue and reference it from the Pull Request rather than just adding more
+    commits to the existing PR.
 -   Adding someone as a Reviewer means "please feel free to look and comment";
     the review is optional. Choose as many Reviewers as you'd like.
 -   Adding someone as an Assignee means that the Pull Request should not be
