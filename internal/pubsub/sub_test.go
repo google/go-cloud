@@ -24,8 +24,8 @@ import (
 // scriptedSub returns batches of messages in a predefined order from
 // ReceiveBatch.
 type scriptedSub struct{
-	// batches contains batches to return from ReceiveBatch, one after the
-	// other.
+	// batches contains slices of messages to return from ReceiveBatch, one
+	// after the other.
 	batches [][]*driver.Message
 	
 	// calls counts how many times ReceiveBatch has been called.
