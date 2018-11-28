@@ -175,21 +175,26 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 }
 
 func TestAckDoesNotBlock(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			select {}
+			<-ctx.Done()
 			return nil
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
 	defer sub.Close()
+	defer cancel()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// If Ack blocks here, waiting for sendAcks to finish, then the
+	// deferred cancel() will never run, so sendAcks can never finish. That
+	// would cause the test to hang. Thus hanging is how this test signals
+	// failure.
 	mr.Ack()
 }
 
