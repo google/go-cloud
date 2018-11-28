@@ -131,7 +131,7 @@ func (w *watcher) WatchVariable(ctx context.Context, _ driver.State) (driver.Sta
 // If not, it drains any previous state buffered in w.ch, then writes s to it.
 // It always return s.
 func (w *watcher) updateState(s, prev *state) *state {
-	if s.err != nil && prev != nil && prev.err != nil && (s.err == prev.err || (os.IsNotExist(s.err) && os.IsNotExist(prev.err))) {
+	if s.err != nil && prev != nil && prev.err != nil && (s.err == prev.err || s.err.Error() == prev.err.Error() || (os.IsNotExist(s.err) && os.IsNotExist(prev.err))) {
 		// s represents the same error as prev.
 		return s
 	}
@@ -152,8 +152,6 @@ func (w *watcher) updateState(s, prev *state) *state {
 // It exits when ctx is canceled, and writes any shutdown errors (or
 // nil if there weren't any) to w.closeCh.
 func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file string, decoder *runtimevar.Decoder, wait time.Duration) {
-	// addedToNotifier is true iff file has been added to the notifier.
-	addedToNotifier := false
 	var cur *state
 
 	for {
@@ -169,25 +167,20 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 			}
 		}
 
-		// If needed, add the file to the notifier to be watched.
-		if !addedToNotifier {
-			if err := notifier.Add(file); err != nil {
-				// File probably does not exist. Try again later.
-				cur = w.updateState(&state{err: err}, cur)
-				continue
-			}
-			addedToNotifier = true
+		// Add the file to the notifier to be watched. It's fine to be
+		// added multiple times, and fsnotifier is a bit flaky about when
+		// it's needed during renames, so just always try.
+		if err := notifier.Add(file); err != nil {
+			// File probably does not exist. Try again later.
+			cur = w.updateState(&state{err: err}, cur)
+			continue
 		}
 
 		// Read the file.
 		b, err := ioutil.ReadFile(file)
 		if err != nil {
+			// It's likely that the file was deleted.
 			cur = w.updateState(&state{err: err}, cur)
-			// It's likely that the file was deleted. fsnotifier
-			// stops watching a deleted file, so we'll need to
-			// re-add the file once it exists again.
-			notifier.Remove(file)
-			addedToNotifier = false
 			continue
 		}
 

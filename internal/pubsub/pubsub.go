@@ -16,6 +16,8 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/google/go-cloud/internal/batcher"
@@ -34,13 +36,26 @@ type Message struct {
 
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
+
+	// mu guards isAcked in case Ack() is called concurrently.
+	mu sync.Mutex
+
+	// isAcked tells whether this message has already had its Ack method
+	// called.
+	isAcked bool
 }
 
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
-	go m.ack()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.isAcked {
+		panic(fmt.Sprintf("Ack() called twice on message: %+v", m))
+	}
+	m.ack()
+	m.isAcked = true
 }
 
 // Topic publishes messages to all its subscribers.
@@ -119,9 +134,8 @@ func NewSendBatcher(d driver.Topic) *batcher.Batcher {
 			return d.SendBatch(callCtx, dms)
 		})
 	}
-	var example *Message
 	maxHandlers := 1
-	return batcher.New(example, maxHandlers, handler)
+	return batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
 }
 
 // Subscription receives published messages.
@@ -166,18 +180,17 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 // s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
 	var msgs []*driver.Message
-	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		// TODO(#691): dynamically adjust maxMessages
-		const maxMessages = 10
-		msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-	if len(msgs) == 0 {
-		return errors.New("subscription driver bug: received empty batch")
+	for len(msgs) == 0 {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+			var err error
+			// TODO(#691): dynamically adjust maxMessages
+			const maxMessages = 10
+			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	s.q = nil
 	for _, m := range msgs {
@@ -186,7 +199,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ctx, ackIDBox{id})
+				s.ackBatcher.AddNoWait(ackIDBox{id})
 			},
 		})
 	}
@@ -242,5 +255,5 @@ func NewAckBatcher(d driver.Subscription) *batcher.Batcher {
 		})
 	}
 	maxHandlers := 1
-	return batcher.New(ackIDBox{}, maxHandlers, handler)
+	return batcher.New(reflect.TypeOf([]ackIDBox{}).Elem(), maxHandlers, handler)
 }

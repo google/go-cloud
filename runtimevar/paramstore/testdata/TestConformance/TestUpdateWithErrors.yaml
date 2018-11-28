@@ -1,0 +1,257 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"Name":"test-updating-variable-to-error","Overwrite":true,"Type":"String","Value":"[{\"Name\":
+      \"Foo\", \"Text\": \"Bar\"}]"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "126"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215744Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":7}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - a3f0597e-2854-4084-880d-cde088994b40
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-updating-variable-to-error"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "42"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215744Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-updating-variable-to-error","LastModifiedDate":1.543269464923E9,"Name":"test-updating-variable-to-error","Type":"String","Value":"[{\"Name\":
+      \"Foo\", \"Text\": \"Bar\"}]","Version":7}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - 409b996c-bea3-422d-ba9e-60f588c1108a
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Filters":[{"Key":"Name","Values":["test-updating-variable-to-error"]}]}'
+    form: {}
+    headers:
+      Content-Length:
+      - "73"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.DescribeParameters
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"LastModifiedDate":1.543269464923E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-updating-variable-to-error","Policies":[],"Type":"String","Version":7}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - 8edb0bc1-acd3-4940-b694-5f4b708686a9
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-updating-variable-to-error","Overwrite":true,"Type":"String","Value":"invalid-json"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "98"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":8}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - 7519da80-7db4-465f-bbbd-51496b2f70f0
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-updating-variable-to-error"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "42"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-updating-variable-to-error","LastModifiedDate":1.543269465209E9,"Name":"test-updating-variable-to-error","Type":"String","Value":"invalid-json","Version":8}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - c0d461c3-1cb8-420d-a1fb-8d9d8164be62
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Filters":[{"Key":"Name","Values":["test-updating-variable-to-error"]}]}'
+    form: {}
+    headers:
+      Content-Length:
+      - "73"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.DescribeParameters
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"LastModifiedDate":1.543269465209E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-updating-variable-to-error","Policies":[],"Type":"String","Version":8}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - b903fc6a-e291-434b-b262-7600a6e7e9c5
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-updating-variable-to-error","Overwrite":true,"Type":"String","Value":"invalid-json2"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "99"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.PutParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Version":9}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - 6ed0202c-b173-4f4c-ba09-8c56a6793f65
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Name":"test-updating-variable-to-error"}'
+    form: {}
+    headers:
+      Content-Length:
+      - "42"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.GetParameter
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameter":{"ARN":"arn:aws:ssm:us-east-2:462380225722:parameter/test-updating-variable-to-error","LastModifiedDate":1.543269465493E9,"Name":"test-updating-variable-to-error","Type":"String","Value":"invalid-json2","Version":9}}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - 28171abc-c744-40b8-8498-1135863a4be8
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Filters":[{"Key":"Name","Values":["test-updating-variable-to-error"]}]}'
+    form: {}
+    headers:
+      Content-Length:
+      - "73"
+      Content-Type:
+      - application/x-amz-json-1.1
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Date:
+      - 20181126T215745Z
+      X-Amz-Target:
+      - AmazonSSM.DescribeParameters
+    url: https://ssm.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Parameters":[{"LastModifiedDate":1.543269465493E9,"LastModifiedUser":"arn:aws:iam::462380225722:user/rvangent","Name":"test-updating-variable-to-error","Policies":[],"Type":"String","Version":9}]}'
+    headers:
+      Content-Type:
+      - application/x-amz-json-1.1
+      Date:
+      - Mon, 26 Nov 2018 21:57:44 GMT
+      X-Amzn-Requestid:
+      - d282103b-5ff9-4a1d-bec9-353e2d50ad4f
+    status: 200 OK
+    code: 200
+    duration: ""
