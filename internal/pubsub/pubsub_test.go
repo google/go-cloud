@@ -175,10 +175,11 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Wait for all the goroutines to finish processing all the messages.
 	for {
 		mu.Lock()
-		if len(receivedMsgs) == howManyToSend {
+		r := len(receivedMsgs)
+		mu.Unlock()
+		if r == howManyToSend {
 			break
 		}
-		mu.Unlock()
 	}
 	cancel()
 	wg.Wait()
