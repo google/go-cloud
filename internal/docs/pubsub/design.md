@@ -371,13 +371,16 @@ type Message struct {
 
 	// sub is the Subscription this message was received from.
 	sub *Subscription
+
+	// isAcked is true if Ack has been called on this message.
+	isAcked bool
 }
 
 type AckID interface{}
 
 // Ack acknowledges the message, telling the server that it does not need to
 // be sent again to the associated Subscription. This method returns
-// immediately.
+// immediately. If Ack has already been called on the message, Ack panics.
 func (m *Message) Ack() {
 	// Send the ack ID back to the subscriber for batching.
         // The ack is sent to the server in a separate goroutine

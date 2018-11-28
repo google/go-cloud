@@ -175,12 +175,35 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 }
 
 func TestAckDoesNotBlock(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			<-ctx.Done()
+			return nil
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer sub.Close()
+	defer cancel()
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// If Ack blocks here, waiting for sendAcks to finish, then the
+	// deferred cancel() will never run, so sendAcks can never finish. That
+	// would cause the test to hang. Thus hanging is how this test signals
+	// failure.
+	mr.Ack()
+}
+
+func TestDoubleAckCausesPanic(t *testing.T) {
 	ctx := context.Background()
 	m := &driver.Message{}
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			select {}
 			return nil
 		},
 	}
@@ -191,4 +214,55 @@ func TestAckDoesNotBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 	mr.Ack()
+	defer func() {
+		if r := recover(); r != nil {
+			// ok, panic was expected.
+			return
+		}
+		t.Errorf("second ack failed to panic")
+	}()
+	mr.Ack()
+}
+
+// For best results, run this test with -race.
+func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
+	ctx := context.Background()
+	m := &driver.Message{}
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
+			return nil
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer sub.Close()
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Spin up some goroutines to ack the message.
+	var mu sync.Mutex
+	panics := 0
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					mu.Lock()
+					defer mu.Unlock()
+					panics++
+				}
+			}()
+			mr.Ack()
+		}()
+	}
+	wg.Wait()
+
+	// Check that one of the goroutines panicked.
+	if panics != 1 {
+		t.Errorf("panics = %d, want %d", panics, 1)
+	}
 }
