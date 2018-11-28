@@ -94,7 +94,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Receive from the subscription.
-	var ms2 []*pubsub.Message
 	var ss2 []string
 	for i := 0; i < len(ms); i++ {
 		m2, err := sub.Receive(ctx)
