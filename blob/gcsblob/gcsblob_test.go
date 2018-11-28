@@ -259,7 +259,7 @@ func TestOpenURL(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			url:      "gs://foo?private_key_path=" + pkFile.Name(),
+			url:      "gs://foo?cred_path=" + credFile.Name() + "&private_key_path=" + pkFile.Name(),
 			wantName: "foo",
 			wantOpts: Options{PrivateKey: privateKey},
 		},
