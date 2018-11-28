@@ -189,18 +189,17 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 // s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
 	var msgs []*driver.Message
-	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		// TODO(#691): dynamically adjust maxMessages
-		const maxMessages = 10
-		msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-	if len(msgs) == 0 {
-		return errors.New("subscription driver bug: received empty batch")
+	for len(msgs) == 0 {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+			var err error
+			// TODO(#691): dynamically adjust maxMessages
+			const maxMessages = 10
+			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	s.q = nil
 	for _, m := range msgs {
