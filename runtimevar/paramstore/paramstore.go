@@ -99,7 +99,8 @@ func errorState(err error, prevS driver.State) driver.State {
 		// New error.
 		return s
 	}
-	if err == prev.err {
+	if err == prev.err || err.Error() == prev.err.Error() {
+		// Same error, return nil to indicate no change.
 		return nil
 	}
 	var code, prevCode string
