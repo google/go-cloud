@@ -18,7 +18,6 @@ package drivertest
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -148,7 +147,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	}
 	// The variable is decoded to a string and matches the expected content.
 	if gotS, ok := got.Value.(string); !ok {
-		t.Fatalf("got value of type %v expected string", reflect.TypeOf(got.Value))
+		t.Fatalf("got value of type %T expected string", got.Value)
 	} else if gotS != content {
 		t.Errorf("got %q want %q", got.Value, content)
 	}
@@ -222,7 +221,7 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 	// The variable is decoded to a []*Message and matches the expected content.
 	if gotSlice, ok := got.Value.([]*Message); !ok {
-		t.Fatalf("got value of type %v expected []*Message", reflect.TypeOf(got.Value))
+		t.Fatalf("got value of type %T expected []*Message", got.Value)
 	} else if !cmp.Equal(gotSlice, want) {
 		t.Errorf("got %v want %v", gotSlice, want)
 	}
@@ -309,7 +308,9 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.(string) != content1 {
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
+	} else if gotS != content1 {
 		t.Errorf("got %q want %q", got, content1)
 	}
 
@@ -325,7 +326,9 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.(string) != content2 {
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
+	} else if gotS != content2 {
 		t.Errorf("got %q want %q", got, content2)
 	}
 }
@@ -370,7 +373,9 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.(string) != content1 {
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
+	} else if gotS != content1 {
 		t.Errorf("got %q want %q", got, content1)
 	}
 	prev := state
@@ -402,7 +407,9 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.(string) != content2 {
+	if gotS, ok := got.(string); !ok {
+		t.Fatalf("got value of type %T expected string", got)
+	} else if gotS != content2 {
 		t.Errorf("got %q want %q", got, content2)
 	}
 	if state.UpdateTime().Before(prev.UpdateTime()) {
