@@ -134,6 +134,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Make a subscription and start goroutines to receive from it.
 	var wg sync.WaitGroup
+	defer wg.Wait()
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ds)
