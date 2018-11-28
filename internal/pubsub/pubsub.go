@@ -16,13 +16,14 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"reflect"
+	"fmt"
 	"sync"
-	"time"
 
+	"github.com/google/go-cloud/internal/batcher"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/retry"
 	gax "github.com/googleapis/gax-go"
-	"google.golang.org/api/support/bundler"
 )
 
 // Message contains data to be published.
@@ -35,19 +36,34 @@ type Message struct {
 
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
+
+	// mu guards isAcked in case Ack() is called concurrently.
+	mu sync.Mutex
+
+	// isAcked tells whether this message has already had its Ack method
+	// called.
+	isAcked bool
 }
 
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
 func (m *Message) Ack() {
-	go m.ack()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.isAcked {
+		panic(fmt.Sprintf("Ack() called twice on message: %+v", m))
+	}
+	m.ack()
+	m.isAcked = true
 }
 
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
-	batcher *bundler.Bundler
+	batcher driver.Batcher
+	mu      sync.Mutex
+	err     error
 }
 
 type msgErrChan struct {
@@ -60,46 +76,35 @@ type msgErrChan struct {
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) error {
 	// Check for doneness before we do any work.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-	mec := msgErrChan{
-		msg:     m,
-		errChan: make(chan error),
-	}
-	size := len(m.Body)
-	for k, v := range m.Metadata {
-		size += len(k)
-		size += len(v)
-	}
-	if err := t.batcher.AddWait(ctx, mec, size); err != nil {
+	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return <-mec.errChan
+	t.mu.Lock()
+	err := t.err
+	t.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	return t.batcher.Add(ctx, m)
 }
 
 // Close flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Close() error {
-	t.batcher.Flush()
-	return t.driver.Close()
+	t.mu.Lock()
+	t.err = errors.New("pubsub: Topic closed")
+	t.mu.Unlock()
+	t.batcher.Shutdown()
+	return nil
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic and opts to
-// tune how messages are sent. Behind the scenes, NewTopic spins up a goroutine
-// to bundle messages into batches and send them to the server.
+// NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
-	handler := func(item interface{}) {
-		mecs, ok := item.([]msgErrChan)
-		if !ok {
-			panic("failed conversion to []msgErrChan in bundler handler")
-		}
+	handler := func(item interface{}) error {
+		ms := item.([]*Message)
 		var dms []*driver.Message
-		for _, mec := range mecs {
-			m := mec.msg
+		for _, m := range ms {
 			dm := &driver.Message{
 				Body:     m.Body,
 				Metadata: m.Metadata,
@@ -108,15 +113,12 @@ func NewTopic(d driver.Topic) *Topic {
 		}
 
 		callCtx := context.TODO()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendBatch(callCtx, dms)
 		})
-		for _, mec := range mecs {
-			mec.errChan <- err
-		}
 	}
-	b := bundler.NewBundler(msgErrChan{}, handler)
-	b.DelayThreshold = time.Millisecond
+	maxHandlers := 1
+	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
 	t := &Topic{
 		driver:  d,
 		batcher: b,
@@ -129,12 +131,13 @@ type Subscription struct {
 	driver driver.Subscription
 
 	// ackBatcher makes batches of acks and sends them to the server.
-	ackBatcher *bundler.Bundler
+	ackBatcher driver.Batcher
 
 	mu sync.Mutex
 
 	// q is the local queue of messages downloaded from the server.
-	q []*Message
+	q   []*Message
+	err error
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -148,6 +151,9 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.err != nil {
+		return nil, s.err
+	}
 	if len(s.q) == 0 {
 		if err := s.getNextBatch(ctx); err != nil {
 			return nil, err
@@ -162,18 +168,17 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 // s.q.
 func (s *Subscription) getNextBatch(ctx context.Context) error {
 	var msgs []*driver.Message
-	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		// TODO(#691): dynamically adjust maxMessages
-		const maxMessages = 10
-		msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
-		return err
-	})
-	if err != nil {
-		return err
-	}
-	if len(msgs) == 0 {
-		return errors.New("subscription driver bug: received empty batch")
+	for len(msgs) == 0 {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+			var err error
+			// TODO(#691): dynamically adjust maxMessages
+			const maxMessages = 10
+			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	s.q = nil
 	for _, m := range msgs {
@@ -184,7 +189,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ackIDBox{id}, size)
+				s.ackBatcher.AddNoWait(ackIDBox{id})
 			},
 		})
 	}
@@ -193,8 +198,11 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 
 // Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Close() error {
-	s.ackBatcher.Flush()
-	return s.driver.Close()
+	s.mu.Lock()
+	s.err = errors.New("pubsub: Subscription closed")
+	s.mu.Unlock()
+	s.ackBatcher.Shutdown()
+	return nil
 }
 
 // ackIDBox makes it possible to use a driver.AckID with bundler.
@@ -208,7 +216,7 @@ type ackIDBox struct {
 // periodically send them to the server.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
-	handler := func(item interface{}) {
+	handler := func(item interface{}) error {
 		boxes := item.([]ackIDBox)
 		var ids []driver.AckID
 		for _, box := range boxes {
@@ -217,14 +225,12 @@ func NewSubscription(d driver.Subscription) *Subscription {
 		}
 		// TODO: Consider providing a way to stop this call. See #766.
 		callCtx := context.Background()
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
-		// TODO(#695): Do something sensible if SendAcks returns an error.
-		_ = err
 	}
-	ab := bundler.NewBundler(ackIDBox{}, handler)
-	ab.DelayThreshold = time.Millisecond
+	maxHandlers := 1
+	ab := batcher.New(reflect.TypeOf([]ackIDBox{}).Elem(), maxHandlers, handler)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,

@@ -20,6 +20,19 @@ import (
 	"context"
 )
 
+// Batcher should gather items into batches to be sent to the pubsub service.
+type Batcher interface {
+	// Add should add an item to the batcher.
+	Add(ctx context.Context, item interface{}) error
+
+	// AddNoWait should add an item to the batcher without blocking.
+	AddNoWait(item interface{}) <-chan error
+
+	// Shutdown should wait for all active calls to Add to finish, then
+	// return. After Shutdown is called, all calls to Add should fail.
+	Shutdown()
+}
+
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
@@ -62,17 +75,6 @@ type Topic interface {
 	// SendBatch should be safe for concurrent access from multiple goroutines.
 	SendBatch(ctx context.Context, ms []*Message) error
 
-	// Close should disconnect the Topic.
-	//
-	// If Close is called after a call to SendBatch begins but before it
-	// ends, then the call to Close should wait for the SendBatch call to
-	// end, and then Close should finish.
-	//
-	// If Close is called and SendBatch is called before Close finishes,
-	// then the call to Close should proceed and the call to SendBatch
-	// should fail immediately after Close returns.
-	Close() error
-
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from SendBatch.
 	IsRetryable(err error) bool
@@ -111,17 +113,6 @@ type Subscription interface {
 	//
 	// SendAcks should be safe for concurrent access from multiple goroutines.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
-
-	// Close should disconnect the Subscription.
-	//
-	// If Close is called after a call to ReceiveBatch/SendAcks begins but
-	// before it ends, then the call to Close should wait for the other
-	// call to end, and then Close should finish.
-	//
-	// If Close is called and ReceiveBatch/SendAcks is called before Close
-	// finishes, then the call to Close should proceed and the other call
-	// should fail immediately after Close returns.
-	Close() error
 
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.

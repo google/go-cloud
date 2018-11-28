@@ -101,7 +101,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		ms2 = append(ms2, m2)
 		ss2 = append(ss2, string(m2.Body))
 		m2.Ack()
 	}

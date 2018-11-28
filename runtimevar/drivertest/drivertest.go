@@ -19,6 +19,7 @@ package drivertest
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,20 +28,10 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-const (
-	// shortWait is a very short delay.
-	shortWait = 1 * time.Microsecond
-	// defaultWait is a zero time.Duration that causes drivers to use
-	// their default wait.
-	defaultWait = time.Duration(0)
-)
-
 // Harness descibes the functionality test harnesses must provide to run conformance tests.
 type Harness interface {
 	// MakeWatcher creates a driver.Watcher to watch the given variable.
-	// If possible, wait should be used to configure what the Watcher returns
-	// as the wait time.
-	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error)
+	MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error)
 	// CreateVariable creates the variable with the given contents in the provider.
 	CreateVariable(ctx context.Context, name string, val []byte) error
 	// UpdateVariable updates an existing variable to have the given contents in the provider.
@@ -80,6 +71,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
+	t.Run("TestUpdateWithErrors", func(t *testing.T) {
+		testUpdateWithErrors(t, newHarness)
+	})
+}
+
+// deadlineExceeded returns true if err represents a context exceeded error.
+// It can either be a true context.DeadlineExceeded, or an RPC aborted due to
+// ctx cancellation; we don't have a good way of checking for the latter
+// explicitly so we check the Error() string.
+func deadlineExceeded(err error) bool {
+	return err == context.DeadlineExceeded || strings.Contains(err.Error(), "context deadline exceeded")
 }
 
 func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
@@ -90,7 +92,7 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	defer h.Close()
 	ctx := context.Background()
 
-	drv, err := h.MakeWatcher(ctx, "does-not-exist", runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, "does-not-exist", runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,11 +132,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 		}()
 	}
 
-	// Use defaultWait here because we're going to test Watch not returning
-	// below. Using shortWait here results in polling implementations spinning
-	// and replay-based tests being flaky based on how many polls happen
-	// before the ctx times out.
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, defaultWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,14 +156,19 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// A second watch should block forever since the value hasn't changed.
 	// A short wait here doesn't guarantee that this is working, but will catch
 	// most problems.
-	tCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
+	tCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 	got, err = v.Watch(tCtx)
 	if err == nil {
 		t.Errorf("got %v want error", got)
 	}
-	if tCtx.Err() == nil {
-		t.Errorf("got err %v; want Watch to have blocked until context was Done", err)
+	// tCtx should be cancelled. However, tests using record/replay mode can
+	// be in the middle of an RPC when that happens, and save the resulting
+	// RPC error during record. During replay, that error can be returned
+	// immediately (before tCtx is cancelled). So, we accept deadline exceeded
+	// errors as well.
+	if tCtx.Err() == nil && !deadlineExceeded(err) {
+		t.Errorf("got err %v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err)
 	}
 }
 
@@ -203,7 +206,7 @@ func testJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +253,7 @@ func testInvalidJSON(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	var jsonData []*Message
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode), shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,40 +286,47 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 	}
 	ctx := context.Background()
 
-	// Create the variable and verify Watch sees the value.
+	// Create the variable and verify WatchVariable sees the value.
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := runtimevar.New(drv)
 	defer func() {
-		if err := v.Close(); err != nil {
+		if err := drv.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	got, err := v.Watch(ctx)
+	state, _ := drv.WatchVariable(ctx, nil)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err := state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Value.(string) != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
+	if got.(string) != content1 {
+		t.Errorf("got %q want %q", got, content1)
 	}
 
-	// Update the variable and verify Watch sees the updated value.
+	// Update the variable and verify WatchVariable sees the updated value.
 	if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
 	}
-	got, err = v.Watch(ctx)
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err = state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Value.(string) != content2 {
-		t.Errorf("got %q want %q", got.Value, content2)
+	if got.(string) != content2 {
+		t.Errorf("got %q want %q", got, content2)
 	}
 }
 
@@ -337,53 +347,154 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 	}
 	ctx := context.Background()
 
-	// Create the variable and verify Watch sees the value.
+	// Create the variable and verify WatchVariable sees the value.
 	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = h.DeleteVariable(ctx, name) }()
 
-	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder, shortWait)
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v := runtimevar.New(drv)
 	defer func() {
-		if err := v.Close(); err != nil {
+		if err := drv.Close(); err != nil {
 			t.Error(err)
 		}
 	}()
-	got, err := v.Watch(ctx)
+	state, _ := drv.WatchVariable(ctx, nil)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err := state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Value.(string) != content1 {
-		t.Errorf("got %q want %q", got.Value, content1)
+	if got.(string) != content1 {
+		t.Errorf("got %q want %q", got, content1)
 	}
-	prev := got
+	prev := state
 
 	// Delete the variable.
 	if err := h.DeleteVariable(ctx, name); err != nil {
 		t.Fatal(err)
 	}
 
-	// Watch should return an error now.
-	if got, err = v.Watch(ctx); err == nil {
-		t.Fatalf("got %v, want error because variable is deleted", got.Value)
+	// WatchVariable should return a state with an error now.
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with an error")
+	}
+	got, err = state.Value()
+	if err == nil {
+		t.Fatalf("got %v want error because variable is deleted", got)
 	}
 
-	// Reset the variable with new content and verify via Watch.
+	// Reset the variable with new content and verify via WatchVariable.
 	if err := h.CreateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
 	}
-	got, err = v.Watch(ctx)
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatalf("got nil state, want a non-nil state with a value")
+	}
+	got, err = state.Value()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Value.(string) != content2 {
-		t.Errorf("got %q want %q", got.Value, content2)
+	if got.(string) != content2 {
+		t.Errorf("got %q want %q", got, content2)
 	}
-	if got.UpdateTime.Before(prev.UpdateTime) {
-		t.Errorf("got UpdateTime %v < previous %v, want >=", got.UpdateTime, prev.UpdateTime)
+	if state.UpdateTime().Before(prev.UpdateTime()) {
+		t.Errorf("got UpdateTime %v < previous %v, want >=", state.UpdateTime(), prev.UpdateTime())
+	}
+}
+
+func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
+	const (
+		name     = "test-updating-variable-to-error"
+		content1 = `[{"Name": "Foo", "Text": "Bar"}]`
+		content2 = "invalid-json"
+		content3 = "invalid-json2"
+	)
+	want := []*Message{{Name: "Foo", Text: "Bar"}}
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	if !h.Mutable() {
+		return
+	}
+	ctx := context.Background()
+
+	// Create the variable and verify WatchVariable sees the value.
+	if err := h.CreateVariable(ctx, name, []byte(content1)); err != nil {
+		t.Fatal(err)
+	}
+
+	var jsonData []*Message
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := drv.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	state, _ := drv.WatchVariable(ctx, nil)
+	if state == nil {
+		t.Fatal("got nil state, want a non-nil state with a value")
+	}
+	got, err := state.Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotSlice, ok := got.([]*Message); !ok {
+		t.Fatalf("got value of type %T expected []*Message", got)
+	} else if !cmp.Equal(gotSlice, want) {
+		t.Errorf("got %v want %v", gotSlice, want)
+	}
+
+	// Update the variable to invalid JSON and verify WatchVariable returns an error.
+	if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
+		t.Fatal(err)
+	}
+	state, _ = drv.WatchVariable(ctx, state)
+	if state == nil {
+		t.Fatal("got nil state, want a non-nil state with an error")
+	}
+	got, err = state.Value()
+	if err == nil {
+		t.Fatal("got nil want invalid JSON error")
+	}
+
+	// Update the variable again, with different invalid JSON.
+	// WatchVariable should block or return nil since it's the same error as before.
+	if err := h.UpdateVariable(ctx, name, []byte(content3)); err != nil {
+		t.Fatal(err)
+	}
+	tCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	state, _ = drv.WatchVariable(tCtx, state)
+	if state == nil {
+		// OK: nil indicates no change.
+	} else {
+		// WatchVariable should have blocked until tCtx was cancelled, and we
+		// should have gotten that error back.
+		got, err := state.Value()
+		if err == nil {
+			t.Fatalf("got %v and nil error, want non-nil error", got)
+		}
+		// tCtx should be cancelled. However, tests using record/replay mode can
+		// be in the middle of an RPC when that happens, and save the resulting
+		// RPC error during record. During replay, that error can be returned
+		// immediately (before tCtx is cancelled). So, we accept deadline exceeded
+		// errors as well.
+		if tCtx.Err() == nil && !deadlineExceeded(err) {
+			t.Errorf("got err %v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err)
+		}
 	}
 }
