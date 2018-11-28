@@ -183,7 +183,6 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 		}
 	}
 	cancel()
-	wg.Wait()
 
 	// Check that all the messages were received.
 	sum := 0
