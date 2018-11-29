@@ -79,7 +79,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Send to the topic.
-	ms := []*pubsub.Message{}
+	var want []*pubsub.Message
 	for i := 0; i < 3; i++ {
 		m := &pubsub.Message{
 			Body:     []byte(randStr()),
@@ -88,23 +88,23 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
-		ms = append(ms, m)
+		want = append(want, m)
 	}
 
 	// Receive from the subscription.
-	ms2 := []*pubsub.Message{}
-	for i := 0; i < len(ms); i++ {
-		m2, err := sub.Receive(ctx)
+	var got []*pubsub.Message
+	for i := 0; i < len(want); i++ {
+		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		ms2 = append(ms2, m2)
-		m2.Ack()
+		got = append(got, m)
+		m.Ack()
 	}
 
 	// Check that the received messages match the sent ones.
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
-	if diff := cmp.Diff(ms2, ms, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
 		t.Error(diff)
 	}
 }
