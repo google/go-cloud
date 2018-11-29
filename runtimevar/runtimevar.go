@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -91,8 +90,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 		c.prev = cur
 		v, err := cur.Value()
 		if err != nil {
-			// Mask underlying errors.
-			return Snapshot{}, fmt.Errorf("Variable.Watch: %v", err)
+			return Snapshot{}, wrapError(c.watcher, err)
 		}
 		return Snapshot{Value: v, UpdateTime: cur.UpdateTime()}, nil
 	}
@@ -100,7 +98,26 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 
 // Close cleans up any resources used by the Variable object.
 func (c *Variable) Close() error {
-	return c.watcher.Close()
+	err := c.watcher.Close()
+	return wrapError(c.watcher, err)
+}
+
+// wrappedError is used to wrap all errors returned by drivers so that users
+// are not given access to provider-specific errors.
+type wrappedError struct {
+	err error
+	w   driver.Watcher
+}
+
+func wrapError(w driver.Watcher, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &wrappedError{w: w, err: err}
+}
+
+func (w *wrappedError) Error() string {
+	return "runtimevar: " + w.err.Error()
 }
 
 // Decode is a function type for unmarshaling/decoding bytes into given object.

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimevar_test contains tests that exercises the runtimevar APIs. It does not test
+// Package runtimevar contains tests that exercises the runtimevar APIs. It does not test
 // driver implementations.
-package runtimevar_test
+package runtimevar
 
 import (
 	"bytes"
@@ -27,7 +27,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
@@ -85,7 +84,7 @@ func (w *fakeWatcher) WatchVariable(ctx context.Context, prev driver.State) (dri
 
 // watchResp encapsulates the expected result of a Watch call.
 type watchResp struct {
-	snap runtimevar.Snapshot
+	snap Snapshot
 	err  bool
 }
 
@@ -99,8 +98,8 @@ func TestVariable(t *testing.T) {
 		upd1         = time.Now()
 		upd2         = time.Now().Add(1 * time.Minute)
 		fail1, fail2 = errors.New("fail1"), errors.New("fail2")
-		snap1        = runtimevar.Snapshot{Value: v1, UpdateTime: upd1}
-		snap2        = runtimevar.Snapshot{Value: v2, UpdateTime: upd2}
+		snap1        = Snapshot{Value: v1, UpdateTime: upd1}
+		snap2        = Snapshot{Value: v2, UpdateTime: upd2}
 	)
 
 	tests := []struct {
@@ -171,7 +170,7 @@ func TestVariable(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			w := &fakeWatcher{t: t, calls: tc.calls}
-			v := runtimevar.New(w)
+			v := New(w)
 			defer func() {
 				if err := v.Close(); err != nil {
 					t.Error(err)
@@ -191,6 +190,45 @@ func TestVariable(t *testing.T) {
 			}
 		})
 	}
+}
+
+var errFake = errors.New("fake")
+
+// fakeError implements driver.Watcher.
+// WatchVariable always returns a state with errFake, and Close
+// always returns errFake.
+type fakeErrorer struct {
+	driver.Watcher
+}
+
+func (b *fakeErrorer) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
+	return &state{err: errFake}, 0
+}
+
+func (r *fakeErrorer) Close() error {
+	return errFake
+}
+
+// TestErrorsAreWrapped tests that all errors returned from the driver are
+// wrapped exactly once by the concrete type.
+func TestErrorsAreWrapped(t *testing.T) {
+	ctx := context.Background()
+	v := New(&fakeErrorer{})
+
+	// verifyWrap ensures that err is wrapped exactly once.
+	verifyWrap := func(description string, err error) {
+		if unwrapped, ok := err.(*wrappedError); !ok {
+			t.Errorf("%s: not wrapped: %v", description, err)
+		} else if du, ok := unwrapped.err.(*wrappedError); ok {
+			t.Errorf("%s: double wrapped: %v", description, du)
+		}
+	}
+
+	_, err := v.Watch(ctx)
+	verifyWrap("Watch", err)
+
+	err = v.Close()
+	verifyWrap("Close", err)
 }
 
 func TestDecoder(t *testing.T) {
@@ -232,22 +270,22 @@ func TestDecoder(t *testing.T) {
 	for _, tc := range []struct {
 		desc     string
 		encodeFn func(interface{}) ([]byte, error)
-		decodeFn runtimevar.Decode
+		decodeFn Decode
 	}{
 		{
 			desc:     "JSON",
 			encodeFn: json.Marshal,
-			decodeFn: runtimevar.JSONDecode,
+			decodeFn: JSONDecode,
 		},
 		{
 			desc:     "Gob",
 			encodeFn: gobMarshal,
-			decodeFn: runtimevar.GobDecode,
+			decodeFn: GobDecode,
 		},
 	} {
 		for i, input := range inputs {
 			t.Run(fmt.Sprintf("%s_%d", tc.desc, i), func(t *testing.T) {
-				decoder := runtimevar.NewDecoder(input, tc.decodeFn)
+				decoder := NewDecoder(input, tc.decodeFn)
 				b, err := tc.encodeFn(input)
 				if err != nil {
 					t.Fatalf("marshal error %v", err)
@@ -277,7 +315,7 @@ func gobMarshal(v interface{}) ([]byte, error) {
 
 func TestStringDecoder(t *testing.T) {
 	input := "hello world"
-	got, err := runtimevar.StringDecoder.Decode([]byte(input))
+	got, err := StringDecoder.Decode([]byte(input))
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -288,7 +326,7 @@ func TestStringDecoder(t *testing.T) {
 
 func TestBytesDecoder(t *testing.T) {
 	input := []byte("hello world")
-	got, err := runtimevar.BytesDecoder.Decode(input)
+	got, err := BytesDecoder.Decode(input)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
