@@ -194,7 +194,7 @@ type Reader struct {...}
 func (r *Reader) As func(i interface{}) bool {...}
 
 // User code would look like:
-r, _ := bucket.NewReader(ctx, "foo.txt")
+r, _ := bucket.NewReader(ctx, "foo.txt", nil)
 var s3type s3.GetObjectOutput
 if r.As(&s3type) {
   ... use s3type...
