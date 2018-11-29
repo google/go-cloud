@@ -17,7 +17,7 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or
 S3):
 
 ```go
-blobReader, err := bucket.NewReader(context.Background(), "my-blob")
+blobReader, err := bucket.NewReader(context.Background(), "my-blob", &blob.ReaderOptions{})
 ```
 
 and being able to run that code on any cloud you want, avoiding all the ceremony
