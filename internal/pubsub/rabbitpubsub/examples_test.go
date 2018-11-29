@@ -68,6 +68,4 @@ func Example_publish() {
 		log.Fatalf("closing topic: %v", err)
 	}
 	fmt.Println("message sent")
-
-	// Output: message sent
 }
