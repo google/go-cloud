@@ -44,34 +44,32 @@ type Harness interface {
 	Close()
 }
 
-// HarnessMaker describes functions that construct a harness for running tests.
-// It is called exactly once per test; Harness.Close() will be called when the test is complete.
-type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
-
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
-	t.Run("TestSendReceive", func(t *testing.T) {
-		testSendReceive(t, newHarness)
-	})
-	t.Run("TestErrorOnSendToClosedTopic", func(t *testing.T) {
-		testErrorOnSendToClosedTopic(t, newHarness)
-	})
-	t.Run("TestErrorOnReceiveFromClosedSubscription", func(t *testing.T) {
-		testErrorOnReceiveFromClosedSubscription(t, newHarness)
-	})
-	t.Run("TestCancelSendReceive", func(t *testing.T) {
-		testCancelSendReceive(t, newHarness)
-	})
+//
+// newHarness is called exactly once per test to construct a Harness; its Close method
+// will be called when the test is complete.
+func RunConformanceTests(t *testing.T, newHarness func(context.Context) (Harness, error)) {
+	ctx := context.Background()
+	for _, test := range []struct {
+		name string
+		f    func(context.Context, *testing.T, Harness)
+	}{
+		{"TestSendReceive", testSendReceive},
+		{"TestErrorOnSendToClosedTopic", testErrorOnSendToClosedTopic},
+		{"TestErrorOnReceiveFromClosedSubscription", testErrorOnReceiveFromClosedSubscription},
+		{"TestCancelSendReceive", testCancelSendReceive},
+	} {
+		h, err := newHarness(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Run(test.name, func(t *testing.T) { test.f(ctx, t, h) })
+		h.Close()
+	}
 }
 
-func testSendReceive(t *testing.T, newHarness HarnessMaker) {
+func testSendReceive(ctx context.Context, t *testing.T, h Harness) {
 	// Set up.
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +77,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Send to the topic.
-	ms := []*pubsub.Message{}
+	var ms []*pubsub.Message
 	for i := 0; i < 3; i++ {
 		m := &pubsub.Message{
 			Body:     []byte(randStr()),
@@ -92,7 +90,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 
 	// Receive from the subscription.
-	ms2 := []*pubsub.Message{}
+	var ms2 []*pubsub.Message
 	for i := 0; i < len(ms); i++ {
 		m2, err := sub.Receive(ctx)
 		if err != nil {
@@ -109,14 +107,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
+func testErrorOnSendToClosedTopic(ctx context.Context, t *testing.T, h Harness) {
 	// Set up.
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, _, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -132,13 +124,7 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMaker) {
-	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
+func testErrorOnReceiveFromClosedSubscription(ctx context.Context, t *testing.T, h Harness) {
 	_, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)
@@ -150,13 +136,8 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 	}
 }
 
-func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
-	ctx, cancel := context.WithCancel(context.Background())
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
+func testCancelSendReceive(ctx context.Context, t *testing.T, h Harness) {
+	ctx, cancel := context.WithCancel(ctx)
 	top, sub, cleanup, err := makePair(ctx, h)
 	if err != nil {
 		t.Fatal(err)

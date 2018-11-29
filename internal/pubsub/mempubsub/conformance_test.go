@@ -27,24 +27,18 @@ type harness struct {
 	b *Broker
 }
 
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{b: NewBroker([]string{"t"})}, nil
+func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
+	return h.b.topic("t"), nil
 }
 
-func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	dt := h.b.topic("t")
-	return dt, nil
+func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
+	return newSubscription(dt.(*topic), time.Second), nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	t := dt.(*topic)
-	ds := newSubscription(t, time.Second)
-	return ds, nil
-}
-
-func (h *harness) Close() {
-}
+func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, func(context.Context) (drivertest.Harness, error) {
+		return &harness{b: NewBroker([]string{"t"})}, nil
+	})
 }
