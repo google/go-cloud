@@ -308,9 +308,10 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ReadAll is a shortcut for creating a Reader via NewReader and reading the entire blob.
+// ReadAll is a shortcut for creating a Reader via NewReader with default
+// ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -366,8 +367,8 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
 // The caller must call Close on the returned Reader when done reading.
-func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
-	return b.NewRangeReader(ctx, key, 0, -1)
+func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
+	return b.NewRangeReader(ctx, key, 0, -1, opts)
 }
 
 // NewRangeReader returns a Reader that reads part of an object, reading at
@@ -380,14 +381,18 @@ func (b *Bucket) NewReader(ctx context.Context, key string) (*Reader, error) {
 // existence.
 //
 // The caller must call Close on the returned Reader when done reading.
-func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (*Reader, error) {
+func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
 	}
 	if length == 0 {
 		return nil, errors.New("blob.NewRangeReader: length cannot be 0")
 	}
-	r, err := b.b.NewRangeReader(ctx, key, offset, length)
+	if opts == nil {
+		opts = &ReaderOptions{}
+	}
+	dopts := &driver.ReaderOptions{}
+	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
@@ -504,6 +509,9 @@ type SignedURLOptions struct {
 	// Defaults to DefaultSignedURLExpiry.
 	Expiry time.Duration
 }
+
+// ReaderOptions controls Reader behaviors.
+type ReaderOptions struct{}
 
 // WriterOptions controls Writer behaviors.
 type WriterOptions struct {
