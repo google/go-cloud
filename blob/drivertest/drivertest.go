@@ -887,7 +887,7 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			b, done := init(t, tc.skipCreate)
 			defer done()
 
-			r, err := b.NewRangeReader(ctx, tc.key, tc.offset, tc.length)
+			r, err := b.NewRangeReader(ctx, tc.key, tc.offset, tc.length, nil)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("got err %v want error %v", err, tc.wantErr)
 			}
@@ -962,7 +962,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	}
 	// Also make a Reader so we can verify the subset of attributes
 	// that it exposes.
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
 	}
@@ -1389,7 +1389,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got unexpected error deleting blob: %v", err)
 		}
 		// Subsequent read fails with IsNotExist.
-		_, err = b.NewReader(ctx, key)
+		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete want error, got nil")
 		} else if !blob.IsNotExist(err) {
@@ -1588,7 +1588,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Verify Reader.As.
-	r, err := b.NewReader(ctx, key)
+	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1616,7 +1616,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		}
 	}
 
-	_, gotErr := b.NewReader(ctx, "key-does-not-exist")
+	_, gotErr := b.NewReader(ctx, "key-does-not-exist", nil)
 	if gotErr == nil {
 		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
 	}
