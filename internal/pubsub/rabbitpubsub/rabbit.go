@@ -65,6 +65,9 @@ func newTopic(conn *amqp.Connection, name string) (*topic, error) {
 		exchange: name,
 		conn:     conn,
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if err := t.establishChannel(); err != nil {
 		return nil, err
 	}
