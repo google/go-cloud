@@ -194,18 +194,18 @@ func TestVariable(t *testing.T) {
 
 var errFake = errors.New("fake")
 
-// fakeError implements driver.Watcher.
+// erroringWatcher implements driver.Watcher.
 // WatchVariable always returns a state with errFake, and Close
 // always returns errFake.
-type fakeErrorer struct {
+type erroringWatcher struct {
 	driver.Watcher
 }
 
-func (b *fakeErrorer) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
+func (b *erroringWatcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
 	return &state{err: errFake}, 0
 }
 
-func (r *fakeErrorer) Close() error {
+func (r *erroringWatcher) Close() error {
 	return errFake
 }
 
@@ -213,7 +213,7 @@ func (r *fakeErrorer) Close() error {
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	v := New(&fakeErrorer{})
+	v := New(&erroringWatcher{})
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
