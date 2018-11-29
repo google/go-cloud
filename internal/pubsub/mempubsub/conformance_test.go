@@ -38,7 +38,7 @@ func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.S
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, func(context.Context) (drivertest.Harness, error) {
+	drivertest.RunConformanceTests(t, func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{b: NewBroker([]string{"t"})}, nil
 	})
 }

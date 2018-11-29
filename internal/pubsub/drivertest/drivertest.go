@@ -48,7 +48,7 @@ type Harness interface {
 //
 // newHarness is called exactly once per test to construct a Harness; its Close method
 // will be called when the test is complete.
-func RunConformanceTests(t *testing.T, newHarness func(context.Context) (Harness, error)) {
+func RunConformanceTests(t *testing.T, newHarness func(context.Context, *testing.T) (Harness, error)) {
 	ctx := context.Background()
 	for _, test := range []struct {
 		name string
@@ -59,7 +59,7 @@ func RunConformanceTests(t *testing.T, newHarness func(context.Context) (Harness
 		{"TestErrorOnReceiveFromClosedSubscription", testErrorOnReceiveFromClosedSubscription},
 		{"TestCancelSendReceive", testCancelSendReceive},
 	} {
-		h, err := newHarness(ctx)
+		h, err := newHarness(ctx, t)
 		if err != nil {
 			t.Fatal(err)
 		}
