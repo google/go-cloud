@@ -24,7 +24,7 @@ and being able to run that code on any cloud you want, avoiding all the ceremony
 of cloud-specific authorization, tracing, SDKs and all the other code required
 to make an application portable across cloud platforms.
 
-The project works with a code generator called
+The project works well with a code generator called
 [Wire](https://github.com/google/wire/blob/master/README.md). It
 creates human-readable code that only imports the cloud SDKs for providers you
 use. This allows Go Cloud to grow to support any number of cloud providers,
