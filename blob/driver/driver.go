@@ -23,6 +23,7 @@ import (
 )
 
 // ReaderOptions controls Reader behaviors.
+// It is provided for future extensibility.
 type ReaderOptions struct{}
 
 // Reader reads an object from the blob.

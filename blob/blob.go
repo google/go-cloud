@@ -308,7 +308,7 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ReadAll is a shortcut for creating a Reader via NewReader with default
+// ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	r, err := b.NewReader(ctx, key, nil)
@@ -323,6 +323,8 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 // bucket, in lexicographical order of UTF-8 encoded keys. The underlying
 // implementation fetches results in pages.
 // Use ListOptions to control the page size and filtering.
+//
+// A nil ListOptions is treated the same as the zero value.
 //
 // List is not guaranteed to include all recently-written objects;
 // some providers are only eventually consistent.
@@ -366,6 +368,8 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 // NewReader returns a Reader to read from an object, or an error when the object
 // is not found by the given key, which can be checked by calling IsNotExist.
 //
+// A nil ReaderOptions is treated the same as the zero value.
+//
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
 	return b.NewRangeReader(ctx, key, 0, -1, opts)
@@ -379,6 +383,8 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 // NewRangeReader returns an error if the object does not exist, which can be checked
 // by calling IsNotExist. Bucket.Attributes is a lighter-weight way to check for
 // existence.
+//
+// A nil ReaderOptions is treated the same as the zero value.
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (*Reader, error) {
@@ -413,6 +419,8 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 }
 
 // NewWriter returns a Writer that writes to an object associated with key.
+//
+// A nil WriterOptions is treated the same as the zero value.
 //
 // A new object will be created unless an object with this key already exists.
 // Otherwise any previous object with the same key will be replaced. The object
@@ -481,6 +489,9 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 
 // SignedURL returns a URL that can be used to GET the blob for the duration
 // specified in opts.Expiry.
+//
+// A nil SignedURLOptions is treated the same as the zero value.
+//
 // If IsNotImplemented returns true for the returned error, the provider does
 // not support SignedURL.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
@@ -511,6 +522,7 @@ type SignedURLOptions struct {
 }
 
 // ReaderOptions controls Reader behaviors.
+// It is provided for future extensibility.
 type ReaderOptions struct{}
 
 // WriterOptions controls Writer behaviors.
