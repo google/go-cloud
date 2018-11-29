@@ -118,7 +118,7 @@ func (b *erroringBucket) ListPaged(ctx context.Context, opts *driver.ListOptions
 	return nil, errFake
 }
 
-func (b *erroringBucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *erroringBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	if key == "work" {
 		return &erroringReader{}, nil
 	}
@@ -162,14 +162,14 @@ func TestErrorsAreWrapped(t *testing.T) {
 	_, err = iter.Next(ctx)
 	verifyWrap("ListIterator.Next", err)
 
-	_, err = b.NewRangeReader(ctx, "", 0, 1)
+	_, err = b.NewRangeReader(ctx, "", 0, 1, nil)
 	verifyWrap("NewRangeReader", err)
 
 	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
 	verifyWrap("NewWriter", err)
 
 	var buf []byte
-	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
+	r, _ := b.NewRangeReader(ctx, "work", 0, 1, nil)
 	_, err = r.Read(buf)
 	verifyWrap("Reader.Read", err)
 
