@@ -35,7 +35,7 @@ const (
 	mandatory = true
 
 	// If there are no waiting consumers, enqueue the message instead of dropping it
-	immediate = true
+	notImmediate = false
 )
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
@@ -46,7 +46,7 @@ const (
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the caller's
 // responsibility to establish this connection before calling OpenTopic, and to close
-// it when it is no longer in use.
+// it when Close has been called on all topics opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
@@ -111,7 +111,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	}
 
 	// Read from the channel established with NotifyPublish.
-	// Do so concurrently or we will be deadlock with the Publish RPC.
+	// Do so concurrently or we will deadlock with the Publish RPC.
 	// (The amqp package docs recommend setting the capacity of the channel
 	// to the number of messages to be published, but we can't do that because
 	// we want to reuse the channel for all calls to SendBatch.)
@@ -152,7 +152,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	for _, m := range ms {
 		pub := toPublishing(m)
-		if err := t.ch.Publish(t.exchange, routingKey, mandatory, !immediate, pub); err != nil {
+		if err := t.ch.Publish(t.exchange, routingKey, mandatory, notImmediate, pub); err != nil {
 			t.ch = nil // AMQP channel is broken after error
 			return err
 		}
