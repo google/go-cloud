@@ -397,7 +397,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 }
 
 // NewRangeReader implements driver.NewRangeReader.
-func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	path, info, xa, err := b.forKey(key)
 	if err != nil {
 		return nil, err
