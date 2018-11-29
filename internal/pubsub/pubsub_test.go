@@ -152,6 +152,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 						return
 					}
 					t.Error(err)
+					return
 				}
 				mu.Lock()
 				receivedMsgs[string(m.Body)]++
