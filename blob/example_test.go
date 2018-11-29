@@ -47,7 +47,7 @@ func ExampleBucket_NewReader() {
 
 	// Open a reader using the blob's key.
 	ctx := context.Background()
-	r, err := bucket.NewReader(ctx, "foo.txt")
+	r, err := bucket.NewReader(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func ExampleBucket_NewRangeReader() {
 
 	// Open a reader using the blob's key at a specific offset at length.
 	ctx := context.Background()
-	r, err := bucket.NewRangeReader(ctx, "foo.txt", 1, 4)
+	r, err := bucket.NewRangeReader(ctx, "foo.txt", 1, 4, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func ExampleBucket_NewWriter() {
 		log.Fatal(closeErr)
 	}
 	// Copy the written blob to stdout.
-	r, err := bucket.NewReader(ctx, "foo.txt")
+	r, err := bucket.NewReader(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
