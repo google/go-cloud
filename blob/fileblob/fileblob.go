@@ -624,11 +624,11 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.urlSigner.SignedURL(ctx, key, path, opts)
 }
 
-// URLSigner
 type URLSigner interface {
 	SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
 }
 
+// errorURLSigner is a stub implementation of URLSigner used when no URLSigner is passed to OpenBucket.
 type errorURLSigner struct{}
 
 func (errorURLSigner) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
