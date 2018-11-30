@@ -85,24 +85,13 @@ are researching how we can do this. If you have any ideas, please file an issue!
 #### Writing and running tests against a cloud environment
 
 If you can create cloud resources, setup your authentication using either `aws`
-or `gcloud` and set the default project as the test project. Most tests will use
-this project, unfortunately
-[some tests need a flag](https://github.com/google/go-cloud/issues/128) and will
-fail telling you what it needs to be passed. You can then run `go test` and a
-new replay file is generated. This uses API quota and will create and delete
+or `gcloud` and set the default project as the test project. Most tests will
+have constants defining the resource names they use (for example, for `blob`
+tests, the bucket name); update the constant and then run `go test -record`. New
+replay files will be generated. This uses API quota and will create and delete
 cloud resources. Replay files scrub sensitive information.
 [Send your PR](#making-a-pull-request) without the replay files, and we can
 generate new ones to be used by others.
-
-#### Writing tests locally
-
-While we figure out how to properly generate replay files for contributors,
-write your tests how you expect the change should work, and send out the PR even
-though the tests will fail (because the replay file doesn't have the right
-requests/responses in it). We can generate the replay files for you on your pull
-request, but this means that you may not be able to properly test your change
-before sending it to us, and please accept our apologies for the bad experience
-right now.
 
 ## Making a pull request
 
@@ -111,9 +100,7 @@ right now.
 *   Build your changes using Go 1.11 with Go modules enabled. Go Cloud's
     continuous integration uses Go modules in order to ensure
     [reproducible builds](https://research.swtch.com/vgo-repro).
-*   Test your changes using `go test -short .`. You can omit the `-short` if you
-    actually want to test your change against a cloud platform and you have a
-    permissions level that enable you to do so. Please add tests that show the
+*   Test your changes using `go test ./...`. Please add tests that show the
     change does what it says it does, even if there wasn't a test in the first
     place. Don't add the replay files to your commits.
 *   Feel free to make as many commits as you want; we will squash them all into
@@ -146,25 +133,54 @@ Once your PR is approved (hooray!) the reviewer will squash your commits into a
 single commit, and then merge the commit onto the Go Cloud master branch. Thank
 you!
 
-### Squashing
+## Github code review workflow conventions
 
-(This section is for project members.)
+(For project members and frequent contributors.)
 
-When you are squashing-and-merging a pull request into master, please edit the
-commit message to fit in with the [project conventions][commit messages]. In
-particular:
+As a contributor:
 
--   Ensure that the first line summary starts with the primary package affected,
-    followed by a colon, followed by a short summary of the change, like
-    "blob/gcsblob: made more blobby (#123)".
--   If the change is addressing an issue, make the commit message end with a
-    block of "Updates #123" and/or "Fixes #456", one issue number per line.
--   Don't include the automatically added code-review commit lines like "Fixed
-    some stuff" or "Addressed feedback".
+-   Try hard to make each Pull Request as small and focused as possible. In
+    particular, this means that if a reviewer asks you to do something that is
+    beyond the scope of the Pull Request, the best practice is to file another
+    issue and reference it from the Pull Request rather than just adding more
+    commits to the existing PR.
+-   Adding someone as a Reviewer means "please feel free to look and comment";
+    the review is optional. Choose as many Reviewers as you'd like.
+-   Adding someone as an Assignee means that the Pull Request should not be
+    submitted until they approve. If you choose multiple Assignees, wait until
+    all of them approve. It is fine to ask someone if they are OK with being
+    removed as an Assignee.
+    -   Note that if you don't select any assignees, ContributeBot will turn all
+        of your Reviewers into Assignees.
+-   Make as many commits as you want locally, but try not to push them to Github
+    until you've addressed comments; this allows the email notification about
+    the push to be a signal to reviewers that the PR is ready to be looked at
+    again.
+-   When there may be confusion about what should happen next for a PR, be
+    explicit; add a "PTAL" comment if it is ready for review again, or a "Please
+    hold off on reviewing for now" if you are still working on addressing
+    comments.
+-   "Resolve" comments that you are sure you've addressed; let your reviewers
+    resolve ones that you're not sure about.
+-   Do not use `git push --force`; this can cause comments from your reviewers
+    that are associated with a specific commit to be lost. This implies that
+    once you've sent a Pull Request, you should use `git merge` instead of `git
+    rebase` to incorporate commits from the master branch.
 
-[#317][] and [#318][] are tracking improvements to Contribute Bot to
-automatically warn for some of these problems.
+As a reviewer:
 
-[#317]: https://github.com/google/go-cloud/issues/317
-[#318]: https://github.com/google/go-cloud/issues/318
-[commit messages]: https://golang.org/doc/contribute.html#commit_messages
+-   Be timely in your review process, especially if you are an Assignee.
+-   Try to use `Start a Review` instead of single comments, to reduce email
+    spam.
+-   "Resolve" your own comments if they have been addressed.
+-   If you want your review to be blocking, and are not currently an Assignee,
+    add yourself as an Assignee.
+
+When squashing-and-merging:
+
+-   Ensure that **all** of the Assignees have approved.
+-   Do a final review of the one-line PR summary, ensuring that it meets the
+    guidelines (e.g., "blob: add more blobbing") and accurately describes the
+    change.
+-   Delete the automatically added commit lines; these are generally not
+    interesting and make commit history harder to read.

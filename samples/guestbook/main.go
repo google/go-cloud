@@ -283,7 +283,7 @@ func (app *application) sign(w http.ResponseWriter, r *http.Request) {
 // serveBlob handles a request for a static asset by retrieving it from a bucket.
 func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
-	blobRead, err := app.bucket.NewReader(r.Context(), key)
+	blobRead, err := app.bucket.NewReader(r.Context(), key, nil)
 	if err != nil {
 		// TODO(light): Distinguish 404.
 		// https://github.com/google/go-cloud/issues/2
