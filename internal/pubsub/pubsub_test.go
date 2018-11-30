@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -129,75 +130,87 @@ func TestSendReceive(t *testing.T) {
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	howManyToSend := int(1e3)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	dt := &driverTopic{}
 
-	// Make a subscription and start goroutines to receive from it.
-	var wg sync.WaitGroup
-	defer wg.Wait()
+	// wgReceives is used to wait until all messages are received.
+	var wgReceives sync.WaitGroup
+	wgReceives.Add(howManyToSend)
+
+	// wgWorkers is used to wait until all worker goroutines have exited.
+	var wgWorkers sync.WaitGroup
+
+	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ds)
 	defer s.Close()
+
+	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
-	receivedMsgs := make(map[string]int)
+	receivedMsgs := make(map[string]string)
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
+		wgWorkers.Add(1)
 		go func() {
-			defer wg.Done()
+			defer wgWorkers.Done()
 			for {
 				m, err := s.Receive(ctx)
 				if err != nil {
-					if isCanceled(err) {
-						return
+					// Permanent error; likely ctx cancelled or subscription closed.
+					mu.Lock()
+					n := len(receivedMsgs)
+					mu.Unlock()
+					if n != howManyToSend {
+						t.Errorf("Worker's Receive failed before all messages were received (%d)", n)
 					}
-					t.Error(err)
 					return
 				}
 				mu.Lock()
-				receivedMsgs[string(m.Body)]++
+				receivedMsgs[string(m.Body)] = m.Metadata["value"]
 				mu.Unlock()
+				wgReceives.Done()
 			}
 		}()
 	}
 
-	// Send messages.
+	// Send messages. Each message has a unique body, used as a key for
+	// receivedMessages, and a "value" metadata key.
 	topic := pubsub.NewTopic(dt)
 	defer topic.Close()
-	sentMsgs := make(map[string]int)
+	wantSum := 0
 	for i := 0; i < howManyToSend; i++ {
-		bod := fmt.Sprintf("%d", i)
-		m := &pubsub.Message{Body: []byte(bod)}
-		sentMsgs[string(m.Body)]++
+		wantSum += i
+		key := fmt.Sprintf("message #%d", i)
+		m := &pubsub.Message{
+			Body:     []byte(key),
+			Metadata: map[string]string{"value": strconv.Itoa(i)},
+		}
 		if err := topic.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	// Wait for all the goroutines to finish processing all the messages.
-	for {
-		mu.Lock()
-		r := len(receivedMsgs)
-		mu.Unlock()
-		if r == howManyToSend {
-			break
-		}
-	}
+	// Wait for the goroutines to receive all of the messages, then cancel the
+	// ctx so they all exit.
+	wgReceives.Wait()
 	cancel()
+	wgWorkers.Wait()
 
 	// Check that all the messages were received.
-	sum := 0
-	for _, n := range receivedMsgs {
-		sum += n
-	}
-	if sum != howManyToSend {
-		t.Errorf("received %d messages, want %d", sum, howManyToSend)
-	}
-	for k, v := range sentMsgs {
-		v2 := receivedMsgs[k]
-		if v2 != v {
-			t.Errorf("got %d for %q, want %d", v2, k, v)
+	got := 0
+	for i := 0; i < howManyToSend; i++ {
+		key := fmt.Sprintf("message #%d", i)
+		if val, ok := receivedMsgs[key]; !ok {
+			t.Errorf("never received message %q", key)
+		} else {
+			v, err := strconv.Atoi(val)
+			if err != nil {
+				t.Error(err)
+			}
+			got += v
 		}
+	}
+	if got != wantSum {
+		t.Errorf("got sum %d want %d", got, wantSum)
 	}
 }
 
