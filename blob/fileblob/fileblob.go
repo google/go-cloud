@@ -102,14 +102,6 @@ type bucket struct {
 	urlSigner URLSigner
 }
 
-func (b *bucket) path(key string) (string, error) {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return "", errAttrsExt
-	}
-	return path, nil
-}
-
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
 func openBucket(dir string, opts *Options) (driver.Bucket, error) {
@@ -632,6 +624,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.urlSigner.SignedURL(ctx, key, path, opts)
 }
 
+// URLSigner
 type URLSigner interface {
 	SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
 }
