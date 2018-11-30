@@ -61,10 +61,8 @@ type Topic interface {
 	// Only the Body and (optionally) Metadata fields of the Messages in ms
 	// should be set by the caller of SendBatch.
 	//
-	// Only one RPC should be made to send the messages, and the returned
-	// error should be based on the result of that RPC. Implementations
-	// that send only one message at a time should return a non-nil error
-	// if len(ms) != 1.
+	// If any message in the batch fails to send, SendBatch should return an
+	// error.
 	//
 	// If there is a transient failure, this method should not retry but should
 	// return an error. The concrete API will take care of retry logic.
