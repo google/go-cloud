@@ -36,19 +36,8 @@ func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 	return dt, nil
 }
 
-func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := h.b.topic("nonexistent-topic")
-	return dt, nil
-}
-
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
 	t := dt.(*topic)
-	ds := newSubscription(t, time.Second)
-	return ds, nil
-}
-
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	var t *topic = nil
 	ds := newSubscription(t, time.Second)
 	return ds, nil
 }
