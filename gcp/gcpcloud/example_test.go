@@ -54,7 +54,7 @@ func Example() {
 // The body of this function will be filled in by running Wire. While
 // the name of the function does not matter, the signature signals to
 // Wire what provider functions to call. See
-// https://github.com/google/go-cloud/blob/master/wire/README.md#injectors
+// https://github.com/google/wire/blob/master/README.md#injectors
 // for more details.
 func setup(ctx context.Context) (*server.Server, func(), error) {
 	wire.Build(
