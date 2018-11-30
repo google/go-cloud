@@ -3,7 +3,10 @@ package rabbitpubsub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -46,7 +49,7 @@ const (
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the caller's
 // responsibility to establish this connection before calling OpenTopic, and to close
-// it when Close has been called on all topics opened with it.
+// it when Close has been called on all Topics opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
@@ -177,6 +180,167 @@ func toPublishing(m *driver.Message) amqp.Publishing {
 
 // IsRetryable implements driver.Topic.IsRetryable.
 func (*topic) IsRetryable(error) bool {
+	// TODO(jba): figure out what errors can be retried.
+	return false
+}
+
+// OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
+// queue must have been previously created (for instance, by using
+// amqp.Channel.QueueDeclare) and bound to an exchange.
+//
+// OpenSubscription uses the supplied amqp.Connection for all communication. It is
+// the caller's responsibility to establish this connection before calling OpenSubscription
+// and to close it when Close has been called on all Subscriptions opened with it.
+//
+// The documentation of the amqp package recommends using separate connections for
+// publishing and subscribing.
+func OpenSubscription(conn *amqp.Connection, name string) (*pubsub.Subscription, error) {
+	// TODO(jba): support context.Context
+	s, err := newSubscription(conn, name)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewSubscription(s), nil
+}
+
+type subscription struct {
+	conn     *amqp.Connection
+	queue    string // the AMQP queue name
+	consumer string // the client-generated name for this particular subscriber
+
+	mu   sync.Mutex
+	ch   *amqp.Channel // AMQP channel used for all communication.
+	delc <-chan amqp.Delivery
+}
+
+var nextConsumer int64 // atomic
+
+func newSubscription(conn *amqp.Connection, name string) (*subscription, error) {
+	s := &subscription{
+		conn:     conn,
+		queue:    name,
+		consumer: fmt.Sprintf("c%d", atomic.AddInt64(&nextConsumer, 1)),
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.establishChannel(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// Must be called with s.mu held.
+func (s *subscription) establishChannel() error {
+	// TODO(jba): support context.Context
+	if s.ch != nil {
+		// We already have a channel; nothing to do.
+		return nil
+	}
+	// Create a new channel.
+	ch, err := s.conn.Channel()
+	if err != nil {
+		return err
+	}
+	// Subscribe to messages from the queue.
+	s.delc, err = ch.Consume(s.queue, s.consumer,
+		false, // autoAck
+		false, // exclusive
+		false, // noLocal
+		wait,
+		nil) // args
+	if err != nil {
+		return err
+	}
+	s.ch = ch
+	return nil
+}
+
+// ReceiveBatch implements driver.Subscription.ReceiveBatch.
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.establishChannel(); err != nil {
+		return nil, err
+	}
+
+	// Get up to maxMessages waiting messages, but don't take too long.
+	var ms []*driver.Message
+	maxTime := time.After(50 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			// Cancel the Consume.
+			_ = s.ch.Cancel(s.consumer, wait) // ignore the error
+			s.ch = nil
+			return nil, ctx.Err()
+
+		case d, ok := <-s.delc:
+			if !ok { // channel closed
+				s.ch = nil // re-establish the channel next time
+				if len(ms) > 0 {
+					return ms, nil
+				}
+				// TODO(jba): get more information for a better message
+				return nil, errors.New("delivery channel closed")
+			}
+			ms = append(ms, toMessage(d))
+			if len(ms) >= maxMessages {
+				return ms, nil
+			}
+
+		case <-maxTime:
+			// Timed out. Return whatever we have.
+			return ms, nil
+		}
+	}
+}
+
+// toMessage converts an amqp.Delivery (a received message) to a driver.Message.
+func toMessage(d amqp.Delivery) *driver.Message {
+	// Delivery.Headers is a map[string]interface{}, so we have to
+	// convert each value to a string.
+	md := map[string]string{}
+	for k, v := range d.Headers {
+		md[k] = fmt.Sprint(v)
+	}
+	return &driver.Message{
+		Body:     d.Body,
+		AckID:    d.DeliveryTag,
+		Metadata: md,
+	}
+}
+
+// SendAcks implements driver.Subscription.SendAcks.
+func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
+	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks don't
+	// block each other.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if err := s.establishChannel(); err != nil {
+		return err
+	}
+
+	// The Ack call doesn't wait for a response, so this loop should execute relatively
+	// quickly.
+	// It wouldn't help to make it concurrent, because Channel.Ack grabs a channel-wide mutex.
+	// (We could consider using multiple channels if performance becomes an issue.)
+	for _, id := range ackIDs {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		err := s.ch.Ack(id.(uint64), false) // multiple=false: acking only this ID
+		if err != nil {
+			s.ch = nil // re-establish channel after an error
+			return err
+		}
+	}
+	return nil
+}
+
+// IsRetryable implements driver.Subscription.IsRetryable.
+func (*subscription) IsRetryable(error) bool {
 	// TODO(jba): figure out what errors can be retried.
 	return false
 }
