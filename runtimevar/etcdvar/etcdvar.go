@@ -97,7 +97,7 @@ func (w *watcher) WatchVariable(ctx context.Context, _ driver.State) (driver.Sta
 // It always return s.
 func (w *watcher) updateState(s, prev *state) *state {
 	if s.err != nil && prev != nil && prev.err != nil {
-		if s.err == prev.err {
+		if s.err == prev.err || s.err.Error() == prev.err.Error() {
 			// s represents the same error as prev.
 			return s
 		}
@@ -146,8 +146,9 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 				val, err := decoder.Decode(kv.Value)
 				if err != nil {
 					cur = w.updateState(&state{err: err}, cur)
+				} else {
+					cur = w.updateState(&state{val: val, updateTime: time.Now(), version: kv.Version}, cur)
 				}
-				cur = w.updateState(&state{val: val, updateTime: time.Now(), version: kv.Version}, cur)
 			}
 		}
 

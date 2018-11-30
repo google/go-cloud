@@ -34,7 +34,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{vars: map[string][]byte{}}, nil
 }
 
-func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder, wait time.Duration) (driver.Watcher, error) {
+func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
 	rawVal, found := h.vars[name]
 	if !found {
 		// The variable isn't set. Create a Variable that always returns an error.
@@ -67,4 +67,29 @@ func (h *harness) Mutable() bool { return false }
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+func TestNew(t *testing.T) {
+	ctx := context.Background()
+
+	// Use New with an error value; it should be plumbed through as a Value.
+	errFail := errors.New("fail")
+	v := New(errFail)
+	val, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.Value != errFail {
+		t.Errorf("got %v want %v", val.Value, errFail)
+	}
+}
+
+func TestNewError(t *testing.T) {
+	ctx := context.Background()
+
+	v := NewError(errors.New("fail"))
+	_, err := v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got nil err want fail err")
+	}
 }

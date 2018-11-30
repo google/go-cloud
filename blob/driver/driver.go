@@ -22,6 +22,10 @@ import (
 	"time"
 )
 
+// ReaderOptions controls Reader behaviors.
+// It is provided for future extensibility.
+type ReaderOptions struct{}
+
 // Reader reads an object from the blob.
 type Reader interface {
 	io.ReadCloser
@@ -218,7 +222,8 @@ type Bucket interface {
 	// will read until the end of the object. If the specified object does not
 	// exist, NewRangeReader must return an error for which IsNotExist returns
 	// true.
-	NewRangeReader(ctx context.Context, key string, offset, length int64) (Reader, error)
+	// opts is guaranteed to be non-nil.
+	NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (Reader, error)
 
 	// NewTypedWriter returns Writer that writes to an object associated with key.
 	//
