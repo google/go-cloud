@@ -64,8 +64,9 @@ type Topic interface {
 	// If any message in the batch fails to send, SendBatch should return an
 	// error.
 	//
-	// If there is a transient failure, this method should not retry but should
-	// return an error. The concrete API will take care of retry logic.
+	// If there is a transient failure, this method should not retry but
+	// should return an error for which IsRetryable returns true. The
+	// concrete API takes care of retry logic.
 	//
 	// The slice ms should not be retained past the end of the call to
 	// SendBatch.
