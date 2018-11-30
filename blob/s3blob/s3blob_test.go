@@ -19,10 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -144,4 +146,101 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	}
 	// Nothing to check.
 	return nil
+}
+
+func TestOpenBucket(t *testing.T) {
+	tests := []struct {
+		description string
+		bucketName  string
+		nilSession  bool
+		want        string
+		wantErr     bool
+	}{
+		{
+			description: "empty bucket name results in error",
+			wantErr:     true,
+		},
+		{
+			description: "nil sess results in error",
+			bucketName:  "foo",
+			nilSession:  true,
+			wantErr:     true,
+		},
+		{
+			description: "success",
+			bucketName:  "foo",
+			want:        "foo",
+		},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			var sess client.ConfigProvider
+			if !test.nilSession {
+				var done func()
+				sess, _, done = setup.NewAWSSession(t, region)
+				defer done()
+			}
+
+			// Create driver impl.
+			drv, err := openBucket(ctx, test.bucketName, sess, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if drv != nil {
+				if drv.name != test.want {
+					t.Errorf("got %q want %q", drv.name, test.want)
+				}
+			}
+
+			// Create concrete type.
+			_, err = OpenBucket(ctx, test.bucketName, sess, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestOpenURL(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		url      string
+		wantName string
+		wantErr  bool
+	}{
+		{
+			url:      "s3://mybucket?region=foo",
+			wantName: "mybucket",
+		},
+		{
+			url:      "gs://mybucket2?region=bar",
+			wantName: "mybucket2",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.url, func(t *testing.T) {
+			u, err := url.Parse(test.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := openURL(ctx, u)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			gotB, ok := got.(*bucket)
+			if !ok {
+				t.Fatalf("got type %T want *bucket", got)
+			}
+			if gotB.name != test.wantName {
+				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
+			}
+		})
+	}
 }
