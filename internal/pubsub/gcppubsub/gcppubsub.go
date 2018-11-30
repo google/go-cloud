@@ -66,14 +66,14 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 	return &topic{path, client}, nil
 }
 
-func topicExists(ctx context.Context, client *raw.PublisherClient, topicName string) (bool, error) {
+func topicExists(ctx context.Context, client *raw.PublisherClient, topicPath string) (bool, error) {
 	// _deleted-topic_ is a special topic name from the GCP PubSub API. Subscriptions to
 	// deleted topics get their topic name set to this value.
 	// https://github.com/GoogleCloudPlatform/google-cloud-go/blob/977bdf6a60d16cd466ccbfe6c20bfc20ddf923ba/pubsub/apiv1/publisher_client.go#L297
-	if topicName == "_deleted-topic_" {
+	if topicPath == "_deleted-topic_" {
 		return false, nil
 	}
-	_, err := client.GetTopic(ctx, &pb.GetTopicRequest{Topic: topicName})
+	_, err := client.GetTopic(ctx, &pb.GetTopicRequest{Topic: topicPath})
 	if err == nil {
 		return true, nil
 	}
@@ -139,8 +139,8 @@ func openSubscription(ctx context.Context, client *raw.SubscriberClient, project
 	return &subscription{client, path}, nil
 }
 
-func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subscriptionName string) (bool, error) {
-	_, err := client.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: subscriptionName})
+func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subscriptionPath string) (bool, error) {
+	_, err := client.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: subscriptionPath})
 	if err == nil {
 		return true, nil
 	}
