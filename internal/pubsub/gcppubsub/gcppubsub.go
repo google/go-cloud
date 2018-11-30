@@ -67,6 +67,9 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 }
 
 func topicExists(ctx context.Context, client *raw.PublisherClient, topicName string) (bool, error) {
+	// _deleted-topic_ is a special topic name from the GCP PubSub API. Subscriptions to
+	// deleted topics get their topic name set to this value.
+	// https://github.com/GoogleCloudPlatform/google-cloud-go/blob/977bdf6a60d16cd466ccbfe6c20bfc20ddf923ba/pubsub/apiv1/publisher_client.go#L297
 	if topicName == "_deleted-topic_" {
 		return false, nil
 	}
