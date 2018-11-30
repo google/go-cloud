@@ -71,7 +71,7 @@ type Topic interface {
 	// The slice ms should not be retained past the end of the call to
 	// SendBatch.
 	//
-	// SendBatch should be safe for concurrent access from multiple goroutines.
+	// SendBatch may be called concurrently from multiple goroutines.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// IsRetryable should report whether err can be retried.
