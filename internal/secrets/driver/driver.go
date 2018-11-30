@@ -25,8 +25,8 @@ type Decrypter interface {
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 }
 
-// Encryptor encrypts a plain text message into a cipher message.
-type Encryptor interface {
+// Encrypter encrypts a plain text message into a cipher message.
+type Encrypter interface {
 
 	// Encrypt Encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
