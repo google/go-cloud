@@ -12,22 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver defines interfaces to be implemented for providers of the
-// secrets package.
-package driver
-
-import "context"
-
-// Decrypter decrypts a cipher message into a plain text message.
-type Decrypter interface {
-
-	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
-	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
-}
-
-// Encrypter encrypts a plain text message into a cipher message.
-type Encrypter interface {
-
-	// Encrypt encrypts the plaintext and returns the cipher message.
-	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
-}
+// Package rabbitpubsub provides a pubsub driver for RabbitMQ.
+//
+// RabbitMQ follows the AMQP specification, which uses different terminology
+// than Go Cloud Pub/Sub.
+//
+// A Pub/Sub topic is an AMQP exchange. The exchange kind should be "fanout" to match
+// the Pub/Sub model, although publishing will work with any kind of exchange.
+//
+// TODO(jba): describe the subscription side.
+package rabbitpubsub
