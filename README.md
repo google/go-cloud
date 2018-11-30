@@ -24,8 +24,8 @@ and being able to run that code on any cloud you want, avoiding all the ceremony
 of cloud-specific authorization, tracing, SDKs and all the other code required
 to make an application portable across cloud platforms.
 
-Another key part of the project is a code generator called
-[Wire](https://github.com/google/go-cloud/blob/master/wire/README.md). It
+The project works well with a code generator called
+[Wire](https://github.com/google/wire/blob/master/README.md). It
 creates human-readable code that only imports the cloud SDKs for providers you
 use. This allows Go Cloud to grow to support any number of cloud providers,
 without increasing compile times or binary sizes, and avoiding any side effects
@@ -45,7 +45,7 @@ talk at Next 2018:
 
 ```shell
 go get github.com/google/go-cloud
-go get github.com/google/go-cloud/wire/cmd/wire
+go get github.com/google/wire/cmd/wire
 ```
 
 Go Cloud builds at the latest stable release of Go. Previous Go versions may
