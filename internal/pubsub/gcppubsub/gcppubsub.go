@@ -25,8 +25,6 @@ import (
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 )
 
 type topic struct {
@@ -56,31 +54,7 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 	if err != nil {
 		return nil, fmt.Errorf("gcppubsub: creating publisher client: %v", err)
 	}
-	ok, err := topicExists(ctx, client, path)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
-	}
 	return &topic{path, client}, nil
-}
-
-func topicExists(ctx context.Context, client *raw.PublisherClient, topicPath string) (bool, error) {
-	// _deleted-topic_ is a special topic name from the GCP PubSub API. Subscriptions to
-	// deleted topics get their topic name set to this value.
-	// https://github.com/GoogleCloudPlatform/google-cloud-go/blob/977bdf6a60d16cd466ccbfe6c20bfc20ddf923ba/pubsub/apiv1/publisher_client.go#L297
-	if topicPath == "_deleted-topic_" {
-		return false, nil
-	}
-	_, err := client.GetTopic(ctx, &pb.GetTopicRequest{Topic: topicPath})
-	if err == nil {
-		return true, nil
-	}
-	if grpc.Code(err) == codes.NotFound {
-		return false, nil
-	}
-	return false, err
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -129,25 +103,10 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	client, err := raw.NewSubscriberClient(ctx)
-	ok, err := subscriptionExists(ctx, client, path)
 	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: subscription named %q does not exist", subscriptionName)
+		return nil, fmt.Errorf("gcppubsub: creating subscriber client: %v", err)
 	}
 	return &subscription{client, path}, nil
-}
-
-func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subscriptionPath string) (bool, error) {
-	_, err := client.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: subscriptionPath})
-	if err == nil {
-		return true, nil
-	}
-	if grpc.Code(err) == codes.NotFound {
-		return false, nil
-	}
-	return false, err
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
