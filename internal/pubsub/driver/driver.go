@@ -59,7 +59,7 @@ type Topic interface {
 	// context is done.
 	//
 	// Only the Body and (optionally) Metadata fields of the Messages in ms
-	// should be set by the caller of SendBatch.
+	// will be set by the caller of SendBatch.
 	//
 	// If any message in the batch fails to send, SendBatch should return an
 	// error.
