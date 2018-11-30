@@ -63,6 +63,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -646,4 +647,17 @@ type errorURLSigner struct{}
 
 func (errorURLSigner) SignedFileURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
 	return "", errNotImplemented
+}
+
+type FakeURLSigner struct{}
+
+func (FakeURLSigner) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
+	//create and return the signed url
+	//need info: where to put it (from 'bucket' dir), base url
+	return "", nil
+}
+
+func (FakeURLSigner) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// handle request for a putatively signed url
+	// check if its valid, if valid, write to http response eg http.ServeFile(resp writer, request, filepath)
 }
