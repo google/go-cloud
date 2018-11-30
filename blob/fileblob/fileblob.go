@@ -83,14 +83,6 @@ type bucket struct {
 	urlSigner URLSigner
 }
 
-func (b *bucket) path(key string) (string, error) {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return "", errAttrsExt
-	}
-	return path, nil
-}
-
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
 func openBucket(dir string, opts *Options) (driver.Bucket, error) {
@@ -269,12 +261,20 @@ func (b *bucket) IsNotImplemented(err error) bool {
 	return err == errNotImplemented
 }
 
+// path returns the full path for a key
+func (b *bucket) path(key string) (string, error) {
+	path := filepath.Join(b.dir, escape(key))
+	if strings.HasSuffix(path, attrsExt) {
+		return "", errAttrsExt
+	}
+	return path, nil
+}
+
 // forKey returns the full path, os.FileInfo, and attributes for key.
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
-	relpath := escape(key)
-	path := filepath.Join(b.dir, relpath)
-	if strings.HasSuffix(path, attrsExt) {
-		return "", nil, nil, errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return "", nil, nil, err
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -590,6 +590,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.urlSigner.SignedURL(ctx, key, path, opts)
 }
 
+// URLSigner
 type URLSigner interface {
 	SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
 }
