@@ -405,12 +405,12 @@ There is support for [binding interfaces][interfaces], [binding
 values][values], as well as support for [cleanup functions][cleanup]. See the
 [Advanced Features][advanced] section for more.
 
-[advanced]:   https://github.com/google/go-cloud/tree/master/wire#advanced-features
-[cleanup]:    https://github.com/google/go-cloud/tree/master/wire#cleanup-functions
+[advanced]:   https://github.com/google/wire/blob/master/README.md#advanced-features
+[cleanup]:    https://github.com/google/wire/blob/master/README.md#cleanup-functions
 [constraint]: https://godoc.org/go/build#hdr-Build_Constraints
 [di]:         https://stackoverflow.com/questions/130794/what-is-dependency-injection
 [guestbook]:  https://github.com/google/go-cloud/tree/master/samples/guestbook
-[interfaces]: https://github.com/google/go-cloud/tree/master/wire#binding-interfaces
-[readme]:     https://github.com/google/go-cloud/blob/master/wire/README.md
-[sets]:       https://github.com/google/go-cloud/tree/master/wire#defining-providers
-[values]:     https://github.com/google/go-cloud/tree/master/wire#binding-values
+[interfaces]: https://github.com/google/wire/blob/master/README.md#binding-interfaces
+[readme]:     https://github.com/google/wire/blob/master/README.md
+[sets]:       https://github.com/google/wire/blob/master/README.md#defining-providers
+[values]:     https://github.com/google/wire/blob/master/README.md#binding-values
