@@ -264,10 +264,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, err
 	}
 
-	// Get all the waiting messages, up to maxMessages.
+	// Get up to maxMessages waiting messages, but don't take too long.
 	var ms []*driver.Message
-loop:
-	for len(ms) < maxMessages {
+	maxTime := time.After(50 * time.Millisecond)
+	for {
 		select {
 		case <-ctx.Done():
 			// Cancel the Consume.
@@ -277,7 +277,7 @@ loop:
 
 		case d, ok := <-s.delc:
 			if !ok { // channel closed
-				s.ch = nil // re-establish the channel
+				s.ch = nil // re-establish the channel next time
 				if len(ms) > 0 {
 					return ms, nil
 				}
@@ -285,23 +285,14 @@ loop:
 				return nil, errors.New("delivery channel closed")
 			}
 			ms = append(ms, toMessage(d))
-		default:
-			// TODO(jba): test that this gets more than one message when several are available.
-			// The problem is that delc is unbuffered, and there's nothing we can do about that
-			// (it's created by the amqp package). We may need a tiny delay here just so waiting
-			// messages can be sent to the channel.
-			break loop
+			if len(ms) >= maxMessages {
+				return ms, nil
+			}
+
+		case <-maxTime:
+			// Timed out. Return whatever we have.
+			return ms, nil
 		}
-	}
-	if len(ms) > 0 {
-		return ms, nil
-	}
-	// No messages; sleep for a bit so that the concrete implementation doesn't busy-wait.
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-time.After(50 * time.Millisecond):
-		return nil, nil
 	}
 }
 
