@@ -3,10 +3,10 @@ package setup
 import (
 	"context"
 	"flag"
+	"net"
 	"net/http"
 	"regexp"
 	"testing"
-	"net"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
@@ -82,7 +82,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
 
 	gcpMatcher := &replay.ProviderMatcher{
-		DropRequestHeaders: gfeDroppedHeaders,
+		DropRequestHeaders:  gfeDroppedHeaders,
 		DropResponseHeaders: gfeDroppedHeaders,
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`Expires=[^?]*`),
