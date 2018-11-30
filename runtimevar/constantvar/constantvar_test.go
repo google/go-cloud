@@ -68,3 +68,28 @@ func (h *harness) Mutable() bool { return false }
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
 }
+
+func TestNew(t *testing.T) {
+	ctx := context.Background()
+
+	// Use New with an error value; it should be plumbed through as a Value.
+	errFail := errors.New("fail")
+	v := New(errFail)
+	val, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.Value != errFail {
+		t.Errorf("got %v want %v", val.Value, errFail)
+	}
+}
+
+func TestNewError(t *testing.T) {
+	ctx := context.Background()
+
+	v := NewError(errors.New("fail"))
+	_, err := v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got nil err want fail err")
+	}
+}

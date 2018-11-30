@@ -77,66 +77,66 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 
 var errFake = errors.New("fake")
 
-// fakeError implements driver.Bucket. All interface methods that return
+// erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
 // In addition, when passed the key "work", NewRangedReader and NewTypedWriter
 // will return a Reader/Writer respectively, that always return errFake
 // from Read/Write and Close.
-type fakeErrorer struct {
+type erroringBucket struct {
 	driver.Bucket
 }
 
-type fakeErrorReader struct {
+type erroringReader struct {
 	driver.Reader
 }
 
-func (r *fakeErrorReader) Read(p []byte) (int, error) {
+func (r *erroringReader) Read(p []byte) (int, error) {
 	return 0, errFake
 }
 
-func (r *fakeErrorReader) Close() error {
+func (r *erroringReader) Close() error {
 	return errFake
 }
 
-type fakeErrorWriter struct {
+type erroringWriter struct {
 	driver.Writer
 }
 
-func (r *fakeErrorWriter) Write(p []byte) (int, error) {
+func (r *erroringWriter) Write(p []byte) (int, error) {
 	return 0, errFake
 }
 
-func (r *fakeErrorWriter) Close() error {
+func (r *erroringWriter) Close() error {
 	return errFake
 }
 
-func (b *fakeErrorer) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *erroringBucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 	return driver.Attributes{}, errFake
 }
 
-func (b *fakeErrorer) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+func (b *erroringBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	return nil, errFake
 }
 
-func (b *fakeErrorer) NewRangeReader(ctx context.Context, key string, offset, length int64) (driver.Reader, error) {
+func (b *erroringBucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	if key == "work" {
-		return &fakeErrorReader{}, nil
+		return &erroringReader{}, nil
 	}
 	return nil, errFake
 }
 
-func (b *fakeErrorer) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+func (b *erroringBucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	if key == "work" {
-		return &fakeErrorWriter{}, nil
+		return &erroringWriter{}, nil
 	}
 	return nil, errFake
 }
 
-func (b *fakeErrorer) Delete(ctx context.Context, key string) error {
+func (b *erroringBucket) Delete(ctx context.Context, key string) error {
 	return errFake
 }
 
-func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	return "", errFake
 }
 
@@ -144,7 +144,7 @@ func (b *fakeErrorer) SignedURL(ctx context.Context, key string, opts *driver.Si
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	b := NewBucket(&fakeErrorer{})
+	b := NewBucket(&erroringBucket{})
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
@@ -162,14 +162,14 @@ func TestErrorsAreWrapped(t *testing.T) {
 	_, err = iter.Next(ctx)
 	verifyWrap("ListIterator.Next", err)
 
-	_, err = b.NewRangeReader(ctx, "", 0, 1)
+	_, err = b.NewRangeReader(ctx, "", 0, 1, nil)
 	verifyWrap("NewRangeReader", err)
 
 	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
 	verifyWrap("NewWriter", err)
 
 	var buf []byte
-	r, _ := b.NewRangeReader(ctx, "work", 0, 1)
+	r, _ := b.NewRangeReader(ctx, "work", 0, 1, nil)
 	_, err = r.Read(buf)
 	verifyWrap("Reader.Read", err)
 
