@@ -37,11 +37,8 @@ const (
 	//    the icon at the top with a "Create subscription" tooltip.
 	// 2. Update the topicName constant to your topic name, and the
 	//    subscriptionName to your subscription name.
-	// 3. Create a service account in your GCP project and update the
-	//    serviceAccountID constant to it.
 	topicName        = "test-topic"
 	subscriptionName = "test-subscription-1"
-	serviceAccountID = "pubsub@go-cloud-test-216917.iam.gserviceaccount.com"
 	projectID        = "go-cloud-test-216917"
 )
 
