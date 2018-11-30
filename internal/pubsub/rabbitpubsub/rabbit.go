@@ -49,7 +49,7 @@ const (
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the caller's
 // responsibility to establish this connection before calling OpenTopic, and to close
-// it when Close has been called on all topics opened with it.
+// it when Close has been called on all Topics opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
@@ -189,7 +189,7 @@ func (*topic) IsRetryable(error) bool {
 // amqp.Channel.QueueDeclare) and bound to an exchange.
 //
 // OpenSubscription uses the supplied amqp.Connection for all communication. It is
-// the caller's responsibility to establish this connection before calling OpenTopic,
+// the caller's responsibility to establish this connection before calling OpenSubscription
 // and to close it when Close has been called on all Subscriptions opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
@@ -257,8 +257,6 @@ func (s *subscription) establishChannel() error {
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// TODO(jba): Improve the timing characteristics of this implementation:
-	// If messages come at a rate just below the timeout, then we can take a long time to gather maxMessages.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -272,6 +270,9 @@ loop:
 	for len(ms) < maxMessages {
 		select {
 		case <-ctx.Done():
+			// Cancel the Consume.
+			_ = s.ch.Cancel(s.consumer, wait) // ignore the error
+			s.ch = nil
 			return nil, ctx.Err()
 
 		case d, ok := <-s.delc:
@@ -285,6 +286,10 @@ loop:
 			}
 			ms = append(ms, toMessage(d))
 		default:
+			// TODO(jba): test that this gets more than one message when several are available.
+			// The problem is that delc is unbuffered, and there's nothing we can do about that
+			// (it's created by the amqp package). We may need a tiny delay here just so waiting
+			// messages can be sent to the channel.
 			break loop
 		}
 	}
@@ -317,6 +322,8 @@ func toMessage(d amqp.Delivery) *driver.Message {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
+	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks don't
+	// block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
