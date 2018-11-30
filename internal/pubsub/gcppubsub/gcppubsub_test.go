@@ -79,9 +79,9 @@ func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver
 }
 
 func (h *harness) Close() {
-	h.closer()
 	h.pubClient.Close()
 	h.subClient.Close()
+	h.closer()
 }
 
 func TestConformance(t *testing.T) {
