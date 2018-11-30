@@ -38,7 +38,7 @@ const (
 	// If the message can't be enqueued, return it to the sender rather than silently dropping it.
 	mandatory = true
 
-	// If there are no waiting consumers, enqueue the message instead of dropping it
+	// If there are no waiting consumers, enqueue the message instead of dropping it.
 	notImmediate = false
 )
 
