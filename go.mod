@@ -37,6 +37,7 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
+	github.com/google/wire v0.1.0
 	github.com/googleapis/gax-go v2.0.0+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -51,7 +52,6 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0
-	github.com/mattn/goveralls v0.0.2 // indirect
 	github.com/opencensus-integrations/ocsql v0.1.1
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0
@@ -62,6 +62,7 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
 	github.com/soheilhy/cmux v0.1.4 // indirect
+	github.com/streadway/amqp v0.0.0-20181107104731-27835f1a64e9
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20171017195756-830351dc03c6 // indirect
 	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516 // indirect
 	github.com/xiang90/probing v0.0.0-20160813154853-07dd2e8dfe18 // indirect

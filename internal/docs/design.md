@@ -315,7 +315,7 @@ To use `-record`:
         needed for a given test.
     -   For now, do this manually.
 
-2.  Run the test with `--record`.
+2.  Run the test with `-record`.
 
     -   TODO(issue #300): The test will read the Terraform output to find its
         inputs.
@@ -332,7 +332,7 @@ To use `-record`:
 
 ### Diffs in replay files
 
-Each time portable API tests are run in `--record` mode, the resulting replay
+Each time portable API tests are run in `-record` mode, the resulting replay
 files are different. Looking at diffs of these files isn't particularly useful.
 
 We [considered](https://github.com/google/go-cloud/issues/276) trying to scrub
