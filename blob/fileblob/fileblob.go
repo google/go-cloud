@@ -74,15 +74,26 @@ func init() {
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct{}
+type Options struct {
+	URLSigner URLSigner
+}
 
 type bucket struct {
-	dir string
+	dir       string
+	urlSigner URLSigner
+}
+
+func (b *bucket) path(key string) (string, error) {
+	path := filepath.Join(b.dir, escape(key))
+	if strings.HasSuffix(path, attrsExt) {
+		return "", errAttrsExt
+	}
+	return path, nil
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
-func openBucket(dir string, _ *Options) (driver.Bucket, error) {
+func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
@@ -91,7 +102,13 @@ func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
-	return &bucket{dir}, nil
+	b := &bucket{dir: dir}
+	if opts != nil && opts.URLSigner != nil {
+		b.urlSigner = opts.URLSigner
+	} else {
+		b.urlSigner = errorURLSigner{}
+	}
+	return b, nil
 }
 
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
@@ -454,9 +471,9 @@ func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return nil, errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, err
@@ -550,11 +567,11 @@ func (w writer) Close() error {
 
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return err
 	}
-	err := os.Remove(path)
+	err = os.Remove(path)
 	if err != nil {
 		return err
 	}
@@ -565,6 +582,20 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	// TODO(Issue #546): Implemented SignedURL for fileblob.
+	path, err := b.path(key)
+	if err != nil {
+		return "", err
+	}
+
+	return b.urlSigner.SignedURL(ctx, key, path, opts)
+}
+
+type URLSigner interface {
+	SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
+}
+
+type errorURLSigner struct{}
+
+func (errorURLSigner) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
 	return "", errNotImplemented
 }
