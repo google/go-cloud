@@ -4,14 +4,14 @@ Guestbook is a sample application that records visitors' messages, displays a
 cloud banner, and an administrative message. The main business logic is
 written in a cloud-agnostic manner using MySQL, the generic blob API, and the
 generic runtimevar API. All platform-specific code is set up by 
-[Wire](https://github.com/google/go-cloud/tree/master/wire).
+[Wire](https://github.com/google/wire).
 
 ## Prerequisites
 
 You will need to install the following software to run this sample:
 
 - [Go](https://golang.org/doc/install)
-- [Wire](https://github.com/google/go-cloud/blob/master/wire/README.md#installing)
+- [Wire](https://github.com/google/wire/blob/master/README.md#installing)
 - [Docker](https://docs.docker.com/install/)
 - [Terraform][TF]
 - [jq](https://stedolan.github.io/jq/download/)
