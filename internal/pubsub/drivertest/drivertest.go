@@ -19,8 +19,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub"
@@ -145,8 +144,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	var want []*pubsub.Message
 	for i := 0; i < 3; i++ {
 		m := &pubsub.Message{
-			Body:     []byte(randStr()),
-			Metadata: map[string]string{randStr(): randStr()},
+			Body:     []byte(strconv.Itoa(i)),
+			Metadata: map[string]string{"a": strconv.Itoa(i)},
 		}
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
@@ -235,10 +234,6 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if _, err := sub.Receive(ctx); err != context.Canceled {
 		t.Errorf("sub.Receive returned %v, want context.Canceled", err)
 	}
-}
-
-func randStr() string {
-	return fmt.Sprintf("%d", rand.Int())
 }
 
 func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
