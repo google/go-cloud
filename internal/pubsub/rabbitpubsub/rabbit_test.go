@@ -60,7 +60,15 @@ func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, "t")
 }
 
+func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
+	return newTopic(h.conn, "nonexistent-topic")
+}
+
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
 	return nil, errors.New("unimplemented")
 }
 
