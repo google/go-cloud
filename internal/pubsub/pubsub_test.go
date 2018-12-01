@@ -17,13 +17,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/retry"
 )
 
 type driverTopic struct {
@@ -132,12 +130,9 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	dt := &driverTopic{}
 
-	// wgReceives is used to wait until all messages are received.
-	var wgReceives sync.WaitGroup
-	wgReceives.Add(howManyToSend)
-
-	// wgWorkers is used to wait until all worker goroutines have exited.
-	var wgWorkers sync.WaitGroup
+	// wg is used to wait until all messages are received.
+	var wg sync.WaitGroup
+	wg.Add(howManyToSend)
 
 	// Make a subscription.
 	ds := NewDriverSub()
@@ -147,15 +142,14 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
-	receivedMsgs := make(map[string]string)
+	receivedMsgs := make(map[string]int)
 	for i := 0; i < 10; i++ {
-		wgWorkers.Add(1)
 		go func() {
-			defer wgWorkers.Done()
 			for {
 				m, err := s.Receive(ctx)
 				if err != nil {
-					// Permanent error; likely ctx cancelled or subscription closed.
+					// Permanent error; ctx cancelled or subscription closed is
+					// expected once we've received all the messages.
 					mu.Lock()
 					n := len(receivedMsgs)
 					mu.Unlock()
@@ -165,25 +159,21 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					return
 				}
 				mu.Lock()
-				receivedMsgs[string(m.Body)] = m.Metadata["value"]
+				receivedMsgs[string(m.Body)]++
 				mu.Unlock()
-				wgReceives.Done()
+				wg.Done()
 			}
 		}()
 	}
 
-	// Send messages. Each message has a unique body, used as a key for
-	// receivedMessages, and a "value" metadata key.
+	// Send messages.
 	topic := pubsub.NewTopic(dt)
 	defer topic.Close()
-	wantSum := 0
+	sentMsgs := make(map[string]int)
 	for i := 0; i < howManyToSend; i++ {
-		wantSum += i
-		key := fmt.Sprintf("message #%d", i)
-		m := &pubsub.Message{
-			Body:     []byte(key),
-			Metadata: map[string]string{"value": strconv.Itoa(i)},
-		}
+		bod := fmt.Sprintf("%d", i)
+		m := &pubsub.Message{Body: []byte(bod)}
+		sentMsgs[string(m.Body)]++
 		if err := topic.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
@@ -191,26 +181,22 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Wait for the goroutines to receive all of the messages, then cancel the
 	// ctx so they all exit.
-	wgReceives.Wait()
-	cancel()
-	wgWorkers.Wait()
+	wg.Wait()
+	defer cancel()
 
 	// Check that all the messages were received.
-	got := 0
-	for i := 0; i < howManyToSend; i++ {
-		key := fmt.Sprintf("message #%d", i)
-		if val, ok := receivedMsgs[key]; !ok {
-			t.Errorf("never received message %q", key)
-		} else {
-			v, err := strconv.Atoi(val)
-			if err != nil {
-				t.Error(err)
-			}
-			got += v
-		}
+	sum := 0
+	for _, n := range receivedMsgs {
+		sum += n
 	}
-	if got != wantSum {
-		t.Errorf("got sum %d want %d", got, wantSum)
+	if sum != howManyToSend {
+		t.Errorf("received %d messages, want %d", sum, howManyToSend)
+	}
+	for k, v := range sentMsgs {
+		v2 := receivedMsgs[k]
+		if v2 != v {
+			t.Errorf("got %d for %q, want %d", v2, k, v)
+		}
 	}
 }
 
@@ -310,10 +296,3 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
 // TODO(jba): add a test for retry of SendAcks.
-
-func isCanceled(err error) bool {
-	if cerr, ok := err.(*retry.ContextError); ok {
-		err = cerr.CtxErr
-	}
-	return err == context.Canceled
-}
