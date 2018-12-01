@@ -16,8 +16,8 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"reflect"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/google/go-cloud/internal/batcher"
