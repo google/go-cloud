@@ -33,3 +33,9 @@ env:
   global:
   - GOPROXY=https://storage.googleapis.com/go-cloud-modules/
   - GO111MODULE=on
+  - CI_NODE_TOTAL=3
+matrix:
+  - CI_NODE_INDEX=0
+  - CI_NODE_INDEX=1
+  - CI_NODE_INDEX=2
+
