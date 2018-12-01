@@ -20,6 +20,7 @@ package rabbitpubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync/atomic"
