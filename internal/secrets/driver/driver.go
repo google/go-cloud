@@ -31,3 +31,9 @@ type Encrypter interface {
 	// Encrypt encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 }
+
+// Crypter is the interface that groups the Encrypt and Decrypt methods.
+type Crypter interface {
+	Encrypter
+	Decrypter
+}
