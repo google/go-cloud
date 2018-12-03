@@ -42,14 +42,13 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Client: client,
 	}
 	params := awsSQLParams(flags)
-	options := _wireOptionsValue
-	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params, options)
+	db, cleanup, err := rdsmysql.Open(ctx, certFetcher, params)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup2 := appHealthChecks(db)
-	sessionOptions := _wireSessionOptionsValue
-	sessionSession, err := session.NewSessionWithOptions(sessionOptions)
+	options := _wireOptionsValue
+	sessionSession, err := session.NewSessionWithOptions(options)
 	if err != nil {
 		cleanup2()
 		cleanup()
@@ -96,10 +95,9 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 }
 
 var (
-	_wireClientValue         = http.DefaultClient
-	_wireOptionsValue        = (*rdsmysql.Options)(nil)
-	_wireSessionOptionsValue = session.Options{}
-	_wireDefaultDriverValue  = &server.DefaultDriver{}
+	_wireClientValue        = http.DefaultClient
+	_wireOptionsValue       = session.Options{}
+	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
 // Injectors from inject_gcp.go:
