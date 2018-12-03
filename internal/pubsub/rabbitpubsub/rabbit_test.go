@@ -20,9 +20,9 @@ package rabbitpubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -41,27 +41,34 @@ func mustDialRabbit(t *testing.T) *amqp.Connection {
 }
 
 func TestConformance(t *testing.T) {
-	t.Skip("subscriptions not implemented")
-	conn := mustDialRabbit(t)
-	defer conn.Close()
-	if err := declareExchange(conn, "t"); err != nil {
-		t.Fatal(err)
-	}
-	drivertest.RunConformanceTests(t, func(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-		return &harness{conn}, nil
+	drivertest.RunConformanceTests(t, func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+		return &harness{conn: mustDialRabbit(t)}, nil
 	})
 }
 
 type harness struct {
 	conn *amqp.Connection
+	uid  int32 // atomic. Unique ID, so tests don't interact with each other.
+}
+
+func (h *harness) newName(prefix string) string {
+	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&h.uid, 1))
 }
 
 func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
-	return newTopic(h.conn, "t")
+	exchange := h.newName("t")
+	if err := declareExchange(h.conn, exchange); err != nil {
+		return nil, err
+	}
+	return newTopic(h.conn, exchange)
 }
 
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
-	return nil, errors.New("unimplemented")
+	queue := h.newName("s")
+	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
+		return nil, err
+	}
+	return newSubscription(h.conn, queue)
 }
 
 func (h *harness) Close() {
@@ -123,4 +130,25 @@ func declareExchange(conn *amqp.Connection, name string) error {
 		false,    // internal
 		false,    // no-wait
 		nil)      // args
+}
+
+func bindQueue(conn *amqp.Connection, queueName, exchangeName string) error {
+	ch, err := conn.Channel()
+	if err != nil {
+		return err
+	}
+	defer ch.Close()
+	q, err := ch.QueueDeclare(
+		queueName,
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil)   // arguments
+	if err != nil {
+		return err
+	}
+	return ch.QueueBind(q.Name, q.Name, exchangeName,
+		false, // no-wait
+		nil)   // args
 }
