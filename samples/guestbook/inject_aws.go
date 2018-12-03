@@ -40,6 +40,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	// wire.Build.
 	wire.Build(
 		awscloud.AWS,
+		rdsmysql.Open,
 		applicationSet,
 		awsBucket,
 		awsMOTDVar,
