@@ -33,7 +33,7 @@ package filevar
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -61,10 +61,10 @@ func newWatcher(path string, decoder *runtimevar.Decoder, opts *Options) (*watch
 		opts = &Options{}
 	}
 	if path == "" {
-		return nil, fmt.Errorf("path is required")
+		return nil, errors.New("path is required")
 	}
 	if decoder == nil {
-		return nil, fmt.Errorf("decoder is required")
+		return nil, errors.New("decoder is required")
 	}
 
 	// Use absolute file path.

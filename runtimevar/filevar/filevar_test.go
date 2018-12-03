@@ -109,13 +109,13 @@ func TestNew(t *testing.T) {
 			wantErr:     true,
 		},
 		{
-			description: "basic file works",
+			description: "basic path works",
 			path:        filepath.Join(dir, "foo.txt"),
 			decoder:     runtimevar.StringDecoder,
 			want:        filepath.Join(dir, "foo.txt"),
 		},
 		{
-			description: "relative file works is turned absolute",
+			description: "path with extra relative dirs works and is cleaned up",
 			path:        filepath.Join(dir, "bar/../foo.txt"),
 			decoder:     runtimevar.StringDecoder,
 			want:        filepath.Join(dir, "foo.txt"),
