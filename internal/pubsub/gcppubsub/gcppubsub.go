@@ -105,6 +105,7 @@ func (t *topic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
+// i can be of type **raw.PublisherClient.
 func (t *topic) As(i interface{}) bool {
 	c, ok := i.(**raw.PublisherClient)
 	if !ok {
@@ -200,6 +201,7 @@ func (s *subscription) IsRetryable(error) bool {
 }
 
 // As implements driver.Subscription.As.
+// i can be of type **raw.SubscriberClient.
 func (s *subscription) As(i interface{}) bool {
 	c, ok := i.(**raw.SubscriberClient)
 	if !ok {
