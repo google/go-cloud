@@ -20,5 +20,6 @@
 // A Pub/Sub topic is an AMQP exchange. The exchange kind should be "fanout" to match
 // the Pub/Sub model, although publishing will work with any kind of exchange.
 //
-// TODO(jba): describe the subscription side.
+// A Pub/Sub subscription is an AMQP queue. The queue should be bound to the exchange
+// that is the topic of the subscription. See the package example for details.
 package rabbitpubsub

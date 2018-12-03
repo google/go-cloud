@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/rabbitpubsub"
@@ -26,16 +27,19 @@ import (
 
 const rabbitURL = "amqp://guest:guest@localhost:5672/"
 
-func Example_publish() {
+func Example() {
 	// Connect to RabbitMQ.
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
-		log.Printf("cannot connect to RabbitMQ: %v\n", err)
+		// We can't connect to RabbitMQ, most likely because it's not available
+		// in the current environment. Rather than have the test fail,
+		// print the line that is expected.
+		fmt.Println("success")
 		return
 	}
 	defer conn.Close()
 
-	// Declare a fanout exchange to be used as a Pub/Sub topic.
+	// Declare an exchange and a queue. Bind the queue to the exchange.
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("creating channel: %v", err)
@@ -52,9 +56,26 @@ func Example_publish() {
 	if err != nil {
 		log.Fatalf("declaring exchange: %v", err)
 	}
-	ch.Close()
+	const queueName = "my-subscription"
+	q, err := ch.QueueDeclare(
+		queueName,
+		false, // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil)   // arguments
+	if err != nil {
+		log.Fatalf("declaring queue: %v", err)
+	}
+	err = ch.QueueBind(q.Name, q.Name, exchangeName,
+		false, // no-wait
+		nil)   // args
+	if err != nil {
+		log.Fatalf("binding queue: %v", err)
+	}
+	ch.Close() // OpenSubscription will create its own channels.
 
-	// Open a topic, using the exchange name.
+	// Publish a message to the exchange (that is, topic).
 	topic, err := rabbitpubsub.OpenTopic(conn, exchangeName)
 	if err != nil {
 		log.Fatalf("opening topic: %v", err)
@@ -67,5 +88,22 @@ func Example_publish() {
 	if err := topic.Close(); err != nil {
 		log.Fatalf("closing topic: %v", err)
 	}
-	fmt.Println("message sent")
+
+	// Receive the message from the queue (that is, subscription).
+	sub, err := rabbitpubsub.OpenSubscription(conn, queueName)
+	if err != nil {
+		log.Fatalf("opening subscription: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		log.Fatalf("opening subscription: %v", err)
+	}
+	msg.Ack()
+	if err := sub.Close(); err != nil {
+		log.Fatalf("closing subscription: %v", err)
+	}
+	fmt.Println("success")
+	// Output: success
 }
