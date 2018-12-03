@@ -1,15 +1,17 @@
-package rabbitpubsub_test
+package rabbitpubsub
 
 import (
+	"fmt"
+	"sync/atomic"
 	"testing"
 
-	"github.com/google/go-cloud/internal/pubsub/rabbitpubsub"
+	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/streadway/amqp"
 )
 
 func TestTopicAsCanFail(t *testing.T) {
 	conn := mustDialRabbit(t)
-	top, err := rabbitpubsub.OpenTopic(conn, "")
+	top, err := OpenTopic(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +23,7 @@ func TestTopicAsCanFail(t *testing.T) {
 
 func TestTopicAsCanSucceed(t *testing.T) {
 	conn := mustDialRabbit(t)
-	top, err := rabbitpubsub.OpenTopic(conn, "")
+	top, err := OpenTopic(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +38,7 @@ func TestTopicAsCanSucceed(t *testing.T) {
 
 func TestSubscriptionAsCanFail(t *testing.T) {
 	conn := mustDialRabbit(t)
-	sub, err := rabbitpubsub.OpenSubscription(conn, "")
+	sub, err := makeSubscription(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +50,7 @@ func TestSubscriptionAsCanFail(t *testing.T) {
 
 func TestSubscriptionAsCanSucceed(t *testing.T) {
 	conn := mustDialRabbit(t)
-	sub, err := rabbitpubsub.OpenSubscription(conn, "")
+	sub, err := makeSubscription(conn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,10 +63,21 @@ func TestSubscriptionAsCanSucceed(t *testing.T) {
 	}
 }
 
-func mustDialRabbit(t *testing.T) *amqp.Connection {
-	conn, err := amqp.Dial(rabbitURL)
-	if err != nil {
-		t.Skipf("skipping because the RabbitMQ server is not up (dial error: %v)", err)
+// atomic. Unique ID, so tests don't interact with each other.
+var uid int32
+
+func newName(prefix string) string {
+	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&uid, 1))
+}
+
+func makeSubscription(conn *amqp.Connection) (driver.Subscription, error) {
+	exchange := newName("t")
+	if err := declareExchange(conn, exchange); err != nil {
+		return nil, err
 	}
-	return conn
+	queue := newName("s")
+	if err := bindQueue(conn, queue, exchange); err != nil {
+		return nil, err
+	}
+	return newSubscription(conn, queue)
 }

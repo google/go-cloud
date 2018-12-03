@@ -357,11 +357,12 @@ func (*subscription) IsRetryable(error) bool {
 }
 
 // As implements driver.Subscription.As.
+// i can be of type **amqp.Connection.
 func (s *subscription) As(i interface{}) bool {
-	s2, ok := i.(*subscription)
+	c, ok := i.(**amqp.Connection)
 	if !ok {
 		return false
 	}
-	*s2 = *s
+	*c = s.conn
 	return true
 }
