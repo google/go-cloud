@@ -29,6 +29,8 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+const EndPoint = "pubsub.googleapis.com:443"
+
 type topic struct {
 	path   string
 	client *raw.PublisherClient
