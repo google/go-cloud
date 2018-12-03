@@ -69,12 +69,29 @@ func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 	return dt, nil
 }
 
+func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
+	dt, err := openTopic(ctx, h.pubClient, projectID, "nonexistent-topic")
+	if err != nil {
+		return nil, fmt.Errorf("opening nonexistent topic: %v", err)
+	}
+	return dt, nil
+}
+
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
 	ds, err := openSubscription(ctx, h.subClient, projectID, subscriptionName)
 	if err != nil {
 		return nil, fmt.Errorf("opening subscription: %v", err)
 	}
 	return ds, nil
+}
+
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
+	ds, err := openSubscription(ctx, h.subClient, projectID, "nonexistent-subscription")
+	if err != nil {
+		return nil, fmt.Errorf("opening nonexistent subscription: %v", err)
+	}
+	return ds, nil
+
 }
 
 func (h *harness) Close() {
