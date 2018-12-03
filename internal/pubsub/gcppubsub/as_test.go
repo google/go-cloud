@@ -27,3 +27,23 @@ func TestTopicAsCanSucceed(t *testing.T) {
 		t.Errorf("cast failed for %T", &c)
 	}
 }
+
+func TestSubscriptionAsCanFail(t *testing.T) {
+	proj := ""
+	subName := "some-sub"
+	sub := gcppubsub.OpenSubscription(context.Background(), client, proj, subName, nil)
+	var c raw.SubscriptionClient
+	if top.As(&c) {
+		t.Errorf("cast succeeded for %T, want failure", &c)
+	}
+}
+
+func TestSubscriptionAsCanSucceed(t *testing.T) {
+	proj := ""
+	subName := "some-sub"
+	top := gcppubsub.OpenSubscription(context.Background(), client, proj, subName, nil)
+	var c *raw.SubscriptionClient
+	if !top.As(&c) {
+		t.Errorf("cast failed for %T", &c)
+	}
+}
