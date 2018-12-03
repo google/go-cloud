@@ -216,7 +216,7 @@ func TestOpenURL(t *testing.T) {
 			wantName: "mybucket",
 		},
 		{
-			url:      "gs://mybucket2?region=bar",
+			url:      "s3://mybucket2?region=bar",
 			wantName: "mybucket2",
 		},
 	}
