@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/retry"
 )
 
 type driverTopic struct {
@@ -129,34 +128,40 @@ func TestSendReceive(t *testing.T) {
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	howManyToSend := int(1e3)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	dt := &driverTopic{}
 
-	// Make a subscription and start goroutines to receive from it.
+	// wg is used to wait until all messages are received.
 	var wg sync.WaitGroup
-	defer wg.Wait()
+	wg.Add(howManyToSend)
+
+	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ds)
 	defer s.Close()
+
+	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
 	receivedMsgs := make(map[string]int)
 	for i := 0; i < 10; i++ {
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			for {
 				m, err := s.Receive(ctx)
 				if err != nil {
-					if isCanceled(err) {
-						return
+					// Permanent error; ctx cancelled or subscription closed is
+					// expected once we've received all the messages.
+					mu.Lock()
+					n := len(receivedMsgs)
+					mu.Unlock()
+					if n != howManyToSend {
+						t.Errorf("Worker's Receive failed before all messages were received (%d)", n)
 					}
-					t.Error(err)
 					return
 				}
 				mu.Lock()
 				receivedMsgs[string(m.Body)]++
 				mu.Unlock()
+				wg.Done()
 			}
 		}()
 	}
@@ -174,16 +179,10 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 		}
 	}
 
-	// Wait for all the goroutines to finish processing all the messages.
-	for {
-		mu.Lock()
-		r := len(receivedMsgs)
-		mu.Unlock()
-		if r == howManyToSend {
-			break
-		}
-	}
-	cancel()
+	// Wait for the goroutines to receive all of the messages, then cancel the
+	// ctx so they all exit.
+	wg.Wait()
+	defer cancel()
 
 	// Check that all the messages were received.
 	sum := 0
@@ -297,10 +296,3 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
 // TODO(jba): add a test for retry of SendAcks.
-
-func isCanceled(err error) bool {
-	if cerr, ok := err.(*retry.ContextError); ok {
-		err = cerr.CtxErr
-	}
-	return err == context.Canceled
-}
