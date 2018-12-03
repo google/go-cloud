@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-//
+// Crypter is not for prod (can only decrypt things which were encrypted in the same memory session)
 type Crypter struct {
 	secretKey [32]byte
 }
