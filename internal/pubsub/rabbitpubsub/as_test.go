@@ -7,11 +7,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var name = ""
-var conn *amqp.Connection
-
 func TestTopicAsCanFail(t *testing.T) {
-	top, err := rabbitpubsub.OpenTopic(conn, name)
+	conn := mustDialRabbit(t)
+	top, err := rabbitpubsub.OpenTopic(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +20,8 @@ func TestTopicAsCanFail(t *testing.T) {
 }
 
 func TestTopicAsCanSucceed(t *testing.T) {
-	top, err := rabbitpubsub.OpenTopic(conn, name)
+	conn := mustDialRabbit(t)
+	top, err := rabbitpubsub.OpenTopic(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +35,8 @@ func TestTopicAsCanSucceed(t *testing.T) {
 }
 
 func TestSubscriptionAsCanFail(t *testing.T) {
-	sub, err := rabbitpubsub.OpenSubscription(conn, name)
+	conn := mustDialRabbit(t)
+	sub, err := rabbitpubsub.OpenSubscription(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,8 @@ func TestSubscriptionAsCanFail(t *testing.T) {
 }
 
 func TestSubscriptionAsCanSucceed(t *testing.T) {
-	sub, err := rabbitpubsub.OpenSubscription(conn, name)
+	conn := mustDialRabbit(t)
+	sub, err := rabbitpubsub.OpenSubscription(conn, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,4 +59,12 @@ func TestSubscriptionAsCanSucceed(t *testing.T) {
 	if conn2 != conn {
 		t.Errorf("got %p, want %p", conn2, conn)
 	}
+}
+
+func mustDialRabbit(t *testing.T) *amqp.Connection {
+	conn, err := amqp.Dial(rabbitURL)
+	if err != nil {
+		t.Skipf("skipping because the RabbitMQ server is not up (dial error: %v)", err)
+	}
+	return conn
 }
