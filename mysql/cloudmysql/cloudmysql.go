@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"sync"
 
+	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/certs"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/opencensus-integrations/ocsql"
 
 	// mysql enables use of the MySQL dialer for the Cloud SQL Proxy.
 	_ "github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/dialers/mysql"
