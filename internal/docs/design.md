@@ -124,7 +124,7 @@ breaking backward compatibility.
     concrete type (e.g., `blob.WriterOptions`), duplicate the struct instead of
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
-    appropriate audience (concrete type: users, driver interface: provider
+    appropriate audience (e.g. end-users for the concrete type, provider implementors for the driver interface)
     implementors), and also allows the structs to diverge over time if
     appropriate.
 -   Arguments that are optional, including ones for which a default value is
