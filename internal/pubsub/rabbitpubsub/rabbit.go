@@ -185,12 +185,13 @@ func (*topic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
+// i can be of type **amqp.Connection.
 func (t *topic) As(i interface{}) bool {
-	t2, ok := i.(*topic)
+	c, ok := i.(**amqp.Connection)
 	if !ok {
 		return false
 	}
-	*t2 = *t
+	*c = t.conn
 	return true
 }
 
