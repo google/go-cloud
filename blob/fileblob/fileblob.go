@@ -75,11 +75,17 @@ func init() {
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
+	// URLSigner implements signing URLs to allow access to a resource without
+	// further authorization and serving a resource corresponding to a valid
+	// signed URL.
+	// URLSigner is only required for utilizing the SignedURL api.
 	URLSigner URLSigner
 }
 
 type bucket struct {
-	dir       string
+	dir string
+
+	// urlSigner is supplied via Options, and is only required if one wants signed URLs.
 	urlSigner URLSigner
 }
 
