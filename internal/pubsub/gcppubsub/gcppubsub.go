@@ -38,21 +38,17 @@ type topic struct {
 type TopicOptions struct{}
 
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName. If the topic does not exist then an error will be returned.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-	dt, err := openTopic(ctx, client, proj, topicName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: opening topic: %v", err)
-	}
-	t := pubsub.NewTopic(dt)
-	return t, nil
+// topicName.
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
+	dt := openTopic(ctx, client, proj, topicName)
+	return pubsub.NewTopic(dt)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
+func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	return &topic{path, client}, nil
+	return &topic{path, client}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -87,20 +83,16 @@ type subscription struct {
 type SubscriptionOptions struct{}
 
 // OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName. If the subscription does not exist then an
-// error is returned.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := openSubscription(ctx, client, proj, subscriptionName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: opening subscription: %v", err)
-	}
-	s := pubsub.NewSubscription(ds)
-	return s, nil
+// projectID and subscriptionName.
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
+	ds := openSubscription(ctx, client, proj, subscriptionName)
+	return pubsub.NewSubscription(ds)
 }
 
-func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
+// openSubscription returns a driver.Subscription.
+func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) driver.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	return &subscription{client, path}, nil
+	return &subscription{client, path}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.

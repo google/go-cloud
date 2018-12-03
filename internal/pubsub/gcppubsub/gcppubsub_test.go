@@ -62,34 +62,22 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	dt, err := openTopic(ctx, h.pubClient, projectID, topicName)
-	if err != nil {
-		return nil, fmt.Errorf("opening topic: %v", err)
-	}
+	dt := openTopic(ctx, h.pubClient, projectID, topicName)
 	return dt, nil
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt, err := openTopic(ctx, h.pubClient, projectID, "nonexistent-topic")
-	if err != nil {
-		return nil, fmt.Errorf("opening nonexistent topic: %v", err)
-	}
+	dt := openTopic(ctx, h.pubClient, projectID, "nonexistent-topic")
 	return dt, nil
 }
 
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	ds, err := openSubscription(ctx, h.subClient, projectID, subscriptionName)
-	if err != nil {
-		return nil, fmt.Errorf("opening subscription: %v", err)
-	}
+	ds := openSubscription(ctx, h.subClient, projectID, subscriptionName)
 	return ds, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	ds, err := openSubscription(ctx, h.subClient, projectID, "nonexistent-subscription")
-	if err != nil {
-		return nil, fmt.Errorf("opening nonexistent subscription: %v", err)
-	}
+	ds := openSubscription(ctx, h.subClient, projectID, "nonexistent-subscription")
 	return ds, nil
 
 }
