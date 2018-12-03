@@ -58,28 +58,33 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("s3", func(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-		q := u.Query()
-		cfg := &aws.Config{}
+	blob.Register("s3", openURL)
+}
 
-		if region := q["region"]; len(region) > 0 {
-			cfg.Region = aws.String(region[0])
-		}
-		sess, err := session.NewSession(cfg)
-		if err != nil {
-			return nil, err
-		}
-		return openBucket(ctx, u.Host, sess, nil)
-	})
+func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+	q := u.Query()
+	cfg := &aws.Config{}
+
+	if region := q["region"]; len(region) > 0 {
+		cfg.Region = aws.String(region[0])
+	}
+	sess, err := session.NewSession(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return openBucket(ctx, u.Host, sess, nil)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct{}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (driver.Bucket, error) {
+func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (*bucket, error) {
 	if sess == nil {
-		return nil, errors.New("sess must be provided to get bucket")
+		return nil, errors.New("s3blob.OpenBucket: sess is required")
+	}
+	if bucketName == "" {
+		return nil, errors.New("s3blob.OpenBucket: bucketName is required")
 	}
 	return &bucket{
 		name:   bucketName,

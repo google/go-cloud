@@ -122,9 +122,12 @@ type Options struct {
 }
 
 // openBucket returns a GCS Bucket that communicates using the given HTTP client.
-func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (driver.Bucket, error) {
+func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*bucket, error) {
 	if client == nil {
-		return nil, errors.New("OpenBucket requires an HTTP client")
+		return nil, errors.New("gcsblob.OpenBucket: client is required")
+	}
+	if bucketName == "" {
+		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
 	if err != nil {
