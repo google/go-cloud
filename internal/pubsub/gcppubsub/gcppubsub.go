@@ -54,13 +54,6 @@ func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 // harness can get the driver interface implementation if it needs to.
 func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	ok, err := topicExists(ctx, client, path)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
-	}
 	return &topic{path, client}, nil
 }
 
@@ -126,13 +119,6 @@ func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gc
 
 func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	ok, err := subscriptionExists(ctx, client, path)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: subscription named %q does not exist", subscriptionName)
-	}
 	return &subscription{client, path}, nil
 }
 
