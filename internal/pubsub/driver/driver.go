@@ -59,20 +59,19 @@ type Topic interface {
 	// context is done.
 	//
 	// Only the Body and (optionally) Metadata fields of the Messages in ms
-	// should be set by the caller of SendBatch.
+	// will be set by the caller of SendBatch.
 	//
-	// Only one RPC should be made to send the messages, and the returned
-	// error should be based on the result of that RPC. Implementations
-	// that send only one message at a time should return a non-nil error
-	// if len(ms) != 1.
+	// If any message in the batch fails to send, SendBatch should return an
+	// error.
 	//
-	// If there is a transient failure, this method should not retry but should
-	// return an error. The concrete API will take care of retry logic.
+	// If there is a transient failure, this method should not retry but
+	// should return an error for which IsRetryable returns true. The
+	// concrete API takes care of retry logic.
 	//
 	// The slice ms should not be retained past the end of the call to
 	// SendBatch.
 	//
-	// SendBatch should be safe for concurrent access from multiple goroutines.
+	// SendBatch may be called concurrently from multiple goroutines.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// IsRetryable should report whether err can be retried.
