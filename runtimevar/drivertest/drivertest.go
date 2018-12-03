@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
@@ -81,6 +82,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 // explicitly so we check the Error() string.
 func deadlineExceeded(err error) bool {
 	return err == context.DeadlineExceeded || strings.Contains(err.Error(), "context deadline exceeded")
+}
+
+// waitTimeForBlockingCheck returns a duration to wait when verifying that a
+// call blocks. When in replay mode, it can be quite short to make tests run
+// quickly. When in record mode, it has to be long enough that RPCs can
+// consistently finish.
+func waitTimeForBlockingCheck() time.Duration {
+	if *setup.Record {
+		return 5 * time.Second
+	}
+	return 10 * time.Millisecond
 }
 
 func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
@@ -155,7 +167,7 @@ func testString(t *testing.T, newHarness HarnessMaker) {
 	// A second watch should block forever since the value hasn't changed.
 	// A short wait here doesn't guarantee that this is working, but will catch
 	// most problems.
-	tCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	tCtx, cancel := context.WithTimeout(ctx, waitTimeForBlockingCheck())
 	defer cancel()
 	got, err = v.Watch(tCtx)
 	if err == nil {
@@ -483,7 +495,7 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 	if err := h.UpdateVariable(ctx, name, []byte(content3)); err != nil {
 		t.Fatal(err)
 	}
-	tCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	tCtx, cancel := context.WithTimeout(ctx, waitTimeForBlockingCheck())
 	defer cancel()
 	state, _ = drv.WatchVariable(tCtx, state)
 	if state == nil {
