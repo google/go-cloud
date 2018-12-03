@@ -96,7 +96,7 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
-## Driver Naming Convention
+## Package Naming Conventions
 
 Inside this repository, we name packages that handle cloud services after the
 service name, not the providing cloud (`s3blob` instead of `awsblob`). While a
@@ -106,6 +106,36 @@ symbols stable over time.
 
 The exception to this rule is if the name is not unique across providers. The
 canonical example is `gcpkms` and `awskms`.
+
+## Option Structs in APIs
+
+All public constructors should take an `Options` struct, even if it is currently
+empty, to ensure that we can add arguments to the APIs in the future without
+breaking backward compatibility.
+
+-   This includes driver constructors (e.g., `gcsblob.OpenBucket`) as well as
+    API functions (e.g., `blob.NewReader`). When in doubt, if you think it's
+    possible that we'll add arguments, add `Options`.
+-   Name the `Options` struct appropriately. `Options` is usually fine for
+    provider constructors since the package generally only exposes a
+    constructor. Inside a driver interface or in a concrete type like `blob`,
+    use more descriptive names like `ReaderOptions` or `WriterOptions`.
+-   When similar `Options` are part of a driver interface and also part of the
+    concrete type (e.g., `blob.WriterOptions`), duplicate the struct instead of
+    aliasing or embedding it, and copy the struct fields explicitly where
+    needed. This allows the godoc for each type to be tailored to the
+    appropriate audience (e.g. end-users for the concrete type, provider implementors for the driver interface)
+    implementors), and also allows the structs to diverge over time if
+    appropriate.
+-   Required arguments must not be in an `Options` struct.
+-   All fields of the `Options` struct must have reasonable defaults.
+
+Regarding empty `Options` structs: we considered only adding them when the first
+option is added, and using a separate constructor for compatibility (e.g., start
+with `foo.New(...)` and later add `foo.NewWithOptions(..., opts *Options)` if
+needed). However, this would result in inconsistent names over time (e.g., some
+packages would expose `New` with an `Options`, while others would expose
+`NewWithOptions`).
 
 ## Errors
 
