@@ -90,6 +90,16 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 // IsRetryable implements driver.Topic.IsRetryable.
 func (*topic) IsRetryable(error) bool { return false }
 
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	t2, ok := i.(*topic)
+	if !ok {
+		return false
+	}
+	*t2 = *t
+	return true
+}
+
 type subscription struct {
 	mu          sync.Mutex
 	topic       *topic
@@ -217,3 +227,13 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (*subscription) IsRetryable(error) bool { return false }
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	s2, ok := i.(*subscription)
+	if !ok {
+		return false
+	}
+	*s2 = *s
+	return true
+}
