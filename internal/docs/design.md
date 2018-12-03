@@ -127,15 +127,15 @@ breaking backward compatibility.
     appropriate audience (concrete type: users, driver interface: provider
     implementors), and also allows the structs to diverge over time if
     appropriate.
--   Arguments that are optional, including ones for which a default value is
-    common, should generally go into the `Options` struct. Avoid adding
-    `Options` fields for which the default value doesn't make sense.
--   Regarding empty `Options` structs: we considered only adding them the first
-    option is added, and using a separate constructor for compatibility (e.g.,
-    start with `foo.New(...)` and later add `foo.NewWithOptions(..., opts
-    *Options)` if needed). However, this would result in inconsistent names over
-    time (e.g., some packages would expose `New` with an `Options`, while others
-    would expose `NewWithOptions`).
+-   Required arguments must not be in an `Options` struct.
+-   All fields of the `Options` struct must have reasonable defaults.
+
+Regarding empty `Options` structs: we considered only adding them when the first
+option is added, and using a separate constructor for compatibility (e.g., start
+with `foo.New(...)` and later add `foo.NewWithOptions(..., opts *Options)` if
+needed). However, this would result in inconsistent names over time (e.g., some
+packages would expose `New` with an `Options`, while others would expose
+`NewWithOptions`).
 
 ## Errors
 
