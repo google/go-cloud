@@ -189,7 +189,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.AddNoWait(ackIDBox{id})
+				s.ackBatcher.AddNoWait(id)
 			},
 		})
 	}
@@ -205,32 +205,22 @@ func (s *Subscription) Close() error {
 	return nil
 }
 
-// ackIDBox makes it possible to use a driver.AckID with bundler.
-type ackIDBox struct {
-	ackID driver.AckID
-}
-
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
 // tune sending and receiving of acks and messages. Behind the scenes,
 // NewSubscription spins up a goroutine to gather acks into batches and
 // periodically send them to the server.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
-	handler := func(item interface{}) error {
-		boxes := item.([]ackIDBox)
-		var ids []driver.AckID
-		for _, box := range boxes {
-			id := box.ackID
-			ids = append(ids, id)
-		}
+	handler := func(items interface{}) error {
+		ids := items.([]driver.AckID)
 		// TODO: Consider providing a way to stop this call. See #766.
 		callCtx := context.Background()
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
 	}
-	maxHandlers := 1
-	ab := batcher.New(reflect.TypeOf([]ackIDBox{}).Elem(), maxHandlers, handler)
+	const maxHandlers = 1
+	ab := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
