@@ -28,8 +28,8 @@ fi
 
 result=0
 
-# Run Go tests for the root. Only do coverage for the Linux build because it
-# is slow, and Coveralls will only save the last one anyway.
+# Run Go tests for the root. Only do race and coverage for the Linux build
+# because they are slow, and Coveralls will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ]; then
@@ -38,7 +38,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     goveralls -coverprofile=coverage2.out -service=travis-ci
   fi
 else
-  go test -race ./... || result=1
+  go test ./... || result=1
 fi
 wire check ./... || result=1
 
