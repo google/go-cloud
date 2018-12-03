@@ -82,3 +82,68 @@ func (h *harness) Mutable() bool { return true }
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
 }
+
+// Filevar-specific tests.
+
+func TestNew(t *testing.T) {
+	dir, err := ioutil.TempDir("", "filevar_test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		description string
+		path        string
+		decoder     *runtimevar.Decoder
+		want        string
+		wantErr     bool
+	}{
+		{
+			description: "empty path results in error",
+			decoder:     runtimevar.StringDecoder,
+			wantErr:     true,
+		},
+		{
+			description: "empty decoder results in error",
+			path:        filepath.Join(dir, "foo.txt"),
+			wantErr:     true,
+		},
+		{
+			description: "basic path works",
+			path:        filepath.Join(dir, "foo.txt"),
+			decoder:     runtimevar.StringDecoder,
+			want:        filepath.Join(dir, "foo.txt"),
+		},
+		{
+			description: "path with extra relative dirs works and is cleaned up",
+			path:        filepath.Join(dir, "bar/../foo.txt"),
+			decoder:     runtimevar.StringDecoder,
+			want:        filepath.Join(dir, "foo.txt"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			// Create driver impl.
+			drv, err := newWatcher(test.path, test.decoder, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if drv != nil {
+				if drv.path != test.want {
+					t.Errorf("got %q want %q", drv.path, test.want)
+				}
+				drv.Close()
+			}
+
+			// Create concrete type.
+			w, err := New(test.path, test.decoder, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if w != nil {
+				w.Close()
+			}
+		})
+	}
+}
