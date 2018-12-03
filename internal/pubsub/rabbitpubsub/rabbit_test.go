@@ -20,6 +20,7 @@ package rabbitpubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync/atomic"
@@ -63,12 +64,20 @@ func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, exchange)
 }
 
+func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
+	return newTopic(h.conn, "nonexistent-topic")
+}
+
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
 	queue := h.newName("s")
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, err
 	}
 	return newSubscription(h.conn, queue)
+}
+
+func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
+	return nil, errors.New("unimplemented")
 }
 
 func (h *harness) Close() {
