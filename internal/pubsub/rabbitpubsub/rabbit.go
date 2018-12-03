@@ -38,7 +38,7 @@ const (
 	mandatory = true
 
 	// If there are no waiting consumers, enqueue the message instead of dropping it
-	notImmediate = false
+	immediate = false
 )
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
@@ -158,7 +158,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	for _, m := range ms {
 		pub := toPublishing(m)
-		if err := t.ch.Publish(t.exchange, routingKey, mandatory, notImmediate, pub); err != nil {
+		if err := t.ch.Publish(t.exchange, routingKey, mandatory, immediate, pub); err != nil {
 			t.ch = nil // AMQP channel is broken after error
 			return err
 		}
