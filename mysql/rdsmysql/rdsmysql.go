@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"sync"
 
+	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/wire"
-	"github.com/opencensus-integrations/ocsql"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
