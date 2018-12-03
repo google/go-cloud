@@ -106,11 +106,11 @@ func (t *topic) IsRetryable(error) bool {
 
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool {
-	t2, ok := i.(*topic)
+	c, ok := i.(**raw.PublisherClient)
 	if !ok {
 		return false
 	}
-	*t2 = *t
+	*c = t.client
 	return true
 }
 
@@ -201,10 +201,10 @@ func (s *subscription) IsRetryable(error) bool {
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
-	s2, ok := i.(*subscription)
+	c, ok := i.(**raw.SubscriberClient)
 	if !ok {
 		return false
 	}
-	*s2 = *s
+	*c = s.client
 	return true
 }
