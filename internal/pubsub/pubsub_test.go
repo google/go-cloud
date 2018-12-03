@@ -47,6 +47,8 @@ func (t *driverTopic) Close() error {
 
 func (s *driverTopic) IsRetryable(error) bool { return false }
 
+func (s *driverTopic) As(i interface{}) bool { return false }
+
 type driverSub struct {
 	sem chan struct{}
 	// Normally this queue would live on a separate server in the cloud.
@@ -100,6 +102,8 @@ func (s *driverSub) Close() error {
 }
 
 func (s *driverSub) IsRetryable(error) bool { return false }
+
+func (s *driverSub) As(i interface{}) bool { return false }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()

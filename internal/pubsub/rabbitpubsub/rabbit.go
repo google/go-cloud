@@ -184,6 +184,16 @@ func (*topic) IsRetryable(error) bool {
 	return false
 }
 
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	t2, ok := i.(*topic)
+	if !ok {
+		return false
+	}
+	*t2 = *t
+	return true
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
 // queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
@@ -343,4 +353,14 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 func (*subscription) IsRetryable(error) bool {
 	// TODO(jba): figure out what errors can be retried.
 	return false
+}
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	s2, ok := i.(*subscription)
+	if !ok {
+		return false
+	}
+	*s2 = *s
+	return true
 }
