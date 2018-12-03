@@ -49,8 +49,7 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	endPoint := "pubsub.googleapis.com:443"
-	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
+	conn, done := setup.NewGCPgRPCConn(ctx, t, EndPoint)
 	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(conn))
 	if err != nil {
 		return nil, fmt.Errorf("making publisher client: %v", err)
