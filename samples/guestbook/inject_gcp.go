@@ -40,6 +40,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	// wire.Build.
 	wire.Build(
 		gcpcloud.GCP,
+		cloudmysql.Open,
 		applicationSet,
 		gcpBucket,
 		gcpMOTDVar,
