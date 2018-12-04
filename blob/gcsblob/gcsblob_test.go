@@ -122,9 +122,14 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 }
 
 func (verifyContentLanguage) ErrorCheck(err error) error {
-	// Can't verify this one because the storage library returns a sentinel
-	// error, storage.ErrObjectNotExist, for "not exists" instead of the
-	// supported As type googleapi.Error.
+	// Can't really verify this one because the storage library returns
+	// a sentinel error, storage.ErrObjectNotExist, for "not exists"
+	// instead of the supported As type googleapi.Error.
+	// Call ErrorAs anyway, and expect it to fail.
+	var to *googleapi.Error
+	if blob.ErrorAs(err, &to) {
+		return errors.New("expected ErrorAs to fail")
+	}
 	return nil
 }
 
@@ -204,8 +209,62 @@ func TestBufferSize(t *testing.T) {
 	}
 }
 
-func TestOpenURL(t *testing.T) {
+func TestOpenBucket(t *testing.T) {
+	tests := []struct {
+		description string
+		bucketName  string
+		nilClient   bool
+		want        string
+		wantErr     bool
+	}{
+		{
+			description: "empty bucket name results in error",
+			wantErr:     true,
+		},
+		{
+			description: "nil client results in error",
+			bucketName:  "foo",
+			nilClient:   true,
+			wantErr:     true,
+		},
+		{
+			description: "success",
+			bucketName:  "foo",
+			want:        "foo",
+		},
+	}
 
+	ctx := context.Background()
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			var client *gcp.HTTPClient
+			if !test.nilClient {
+				var done func()
+				client, _, done = setup.NewGCPClient(ctx, t)
+				defer done()
+			}
+
+			// Create driver impl.
+			drv, err := openBucket(ctx, test.bucketName, client, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if drv != nil {
+				if drv.name != test.want {
+					t.Errorf("got %q want %q", drv.name, test.want)
+				}
+			}
+
+			// Create concrete type.
+			_, err = OpenBucket(ctx, test.bucketName, client, nil)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestOpenURL(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a file for use as a dummy private key file.
@@ -288,7 +347,7 @@ func TestOpenURL(t *testing.T) {
 			}
 			gotB, ok := got.(*bucket)
 			if !ok {
-				t.Fatalf("got %T want *bucket", got)
+				t.Fatalf("got type %T want *bucket", got)
 			}
 			if gotB.name != test.wantName {
 				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
