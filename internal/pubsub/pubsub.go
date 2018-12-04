@@ -138,6 +138,9 @@ type Subscription struct {
 	// q is the local queue of messages downloaded from the server.
 	q   []*Message
 	err error
+
+	// cancel cancels all SendAcks calls.
+	cancel func()
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -197,12 +200,21 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 }
 
 // Close flushes pending ack sends and disconnects the Subscription.
-func (s *Subscription) Close() error {
+func (s *Subscription) Shutdown(ctx context.Context) error {
+	c := make(chan struct{})
+	defer close(c)
+	go func() {
+		select {
+		case <-ctx.Done():
+			s.cancel()
+		case <-c:
+		}
+	}()
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
 	s.ackBatcher.Shutdown()
-	return nil
+	return ctx.Err()
 }
 
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
@@ -211,10 +223,10 @@ func (s *Subscription) Close() error {
 // periodically send them to the server.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
+	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		// TODO: Consider providing a way to stop this call. See #766.
-		callCtx := context.Background()
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
@@ -224,5 +236,6 @@ func NewSubscription(d driver.Subscription) *Subscription {
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
+		cancel:     cancel,
 	}
 }

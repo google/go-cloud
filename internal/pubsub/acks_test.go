@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -43,10 +44,6 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 	return s.sendAcks(ctx, ackIDs)
 }
 
-func (s *ackingDriverSub) Close() error {
-	return nil
-}
-
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
@@ -67,7 +64,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -101,7 +98,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 
 	// Receive and ack the messages concurrently.
 	for i := 0; i < 2; i++ {
@@ -153,7 +150,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 
 	// Receive and ack the messages concurrently.
 	recv := func() {
@@ -185,7 +182,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 	defer cancel()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -208,7 +205,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -235,7 +232,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(context.Background())
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -265,4 +262,26 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 	if panics != 1 {
 		t.Errorf("panics = %d, want %d", panics, 1)
 	}
+}
+
+func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
+	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		sub.Shutdown(ctx)
+		cancel()
+	}()
+	mr, err := sub.Receive(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mr.Ack()
 }
