@@ -119,7 +119,6 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	if err != nil {
 		return nil, nil, err
 	}
-	// This should be gone.
 	params := gcpSQLParams(projectID, flags)
 	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
 	if err != nil {
