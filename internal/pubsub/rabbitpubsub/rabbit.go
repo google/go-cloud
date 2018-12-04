@@ -1,3 +1,6 @@
+// It exposes the following types for As:
+// Topic: *amqp.Connection
+// Subscription: *amqp.Connection
 package rabbitpubsub
 
 import (
@@ -185,7 +188,6 @@ func (*topic) IsRetryable(error) bool {
 }
 
 // As implements driver.Topic.As.
-// i can be of type **amqp.Connection.
 func (t *topic) As(i interface{}) bool {
 	c, ok := i.(**amqp.Connection)
 	if !ok {
@@ -357,7 +359,6 @@ func (*subscription) IsRetryable(error) bool {
 }
 
 // As implements driver.Subscription.As.
-// i can be of type **amqp.Connection.
 func (s *subscription) As(i interface{}) bool {
 	c, ok := i.(**amqp.Connection)
 	if !ok {
