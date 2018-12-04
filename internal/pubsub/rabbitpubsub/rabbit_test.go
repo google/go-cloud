@@ -196,22 +196,3 @@ func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	}
 	return nil
 }
-
-// atomic. Unique ID, so tests don't interact with each other.
-var uid int32
-
-func newName(prefix string) string {
-	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&uid, 1))
-}
-
-func makeSubscription(conn *amqp.Connection) (driver.Subscription, error) {
-	exchange := newName("t")
-	if err := declareExchange(conn, exchange); err != nil {
-		return nil, err
-	}
-	queue := newName("s")
-	if err := bindQueue(conn, queue, exchange); err != nil {
-		return nil, err
-	}
-	return newSubscription(conn, queue)
-}
