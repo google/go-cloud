@@ -133,72 +133,44 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if prev != nil {
 		lastVersion = prev.(*state).version
 	}
-	// Read the variable from the backend.
-	p, err := readParam(w.sess, w.name, lastVersion)
+	// GetParameter from S3 to get the current value and version.
+	svc := ssm.New(w.sess)
+	getResp, err := svc.GetParameter(&ssm.GetParameterInput{Name: aws.String(w.name)})
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
-	if p == nil {
-		// Version hasn't changed.
+	if getResp.Parameter == nil {
+		return errorState(fmt.Errorf("unable to get %q parameter", w.name), prev), w.wait
+	}
+	getP := getResp.Parameter
+	if *getP.Version == lastVersion {
+		// Version hasn't changed, so no change; return nil.
 		return nil, w.wait
 	}
 
-	// New value! Decode it.
-	val, err := w.decoder.Decode([]byte(p.value))
+	// DescribeParameters from S3 to get the LastModified date.
+	descResp, err := svc.DescribeParameters(&ssm.DescribeParametersInput{
+		Filters: []*ssm.ParametersFilter{
+			{Key: aws.String("Name"), Values: []*string{&w.name}},
+		},
+	})
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
-	return &state{val: val, updateTime: p.updateTime, version: p.version}, w.wait
+	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != w.name {
+		return errorState(fmt.Errorf("unable to get single %q parameter", w.name), prev), w.wait
+	}
+	descP := descResp.Parameters[0]
+
+	// New value (or at least, new version). Decode it.
+	val, err := w.decoder.Decode([]byte(*getP.Value))
+	if err != nil {
+		return errorState(err, prev), w.wait
+	}
+	return &state{val: val, updateTime: *descP.LastModifiedDate, version: *getP.Version}, w.wait
 }
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
-}
-
-type param struct {
-	name       string
-	value      string
-	version    int64
-	updateTime time.Time
-}
-
-// readParam returns the named parameter. An error is returned if AWS is unreachable
-// or the named parameter isn't found. If the parameter hasn't changed from the
-// passed version, returns a nil param and nil error. This saves a
-// redundant API call.
-func readParam(p client.ConfigProvider, name string, version int64) (*param, error) {
-	svc := ssm.New(p)
-
-	getResp, err := svc.GetParameter(&ssm.GetParameterInput{Name: aws.String(name)})
-	if err != nil {
-		return nil, err
-	}
-	if getResp.Parameter == nil {
-		return nil, fmt.Errorf("unable to get %q parameter", name)
-	}
-	getP := getResp.Parameter
-	if *getP.Version == version {
-		return nil, nil
-	}
-
-	descResp, err := svc.DescribeParameters(&ssm.DescribeParametersInput{
-		Filters: []*ssm.ParametersFilter{
-			{Key: aws.String("Name"), Values: []*string{&name}},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(descResp.Parameters) != 1 || *descResp.Parameters[0].Name != name {
-		return nil, fmt.Errorf("unable to get single %q parameter", name)
-	}
-	descP := descResp.Parameters[0]
-
-	return &param{
-		name:       *getP.Name,
-		value:      *getP.Value,
-		version:    *getP.Version,
-		updateTime: *descP.LastModifiedDate,
-	}, nil
 }
