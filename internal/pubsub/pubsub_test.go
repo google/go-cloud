@@ -185,7 +185,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Check that all the messages were received.
 	for i := 0; i < howManyToSend; i++ {
 		key := fmt.Sprintf("message #%d", i)
-		if _, found := receivedMsgs[key]; !found {
+		if !receivedMsgs[key] {
 			t.Errorf("message %q was not received", key)
 		}
 	}
