@@ -15,10 +15,12 @@
 package blob
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cloud/blob/driver"
@@ -144,14 +146,20 @@ func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
+	buf := bytes.Repeat([]byte{65}, sniffLen)
 	b := NewBucket(&erroringBucket{})
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
-		if unwrapped, ok := err.(*wrappedError); !ok {
+		if err == nil {
+			t.Errorf("%s: got nil error, wanted non-nil", description)
+		} else if unwrapped, ok := err.(*wrappedError); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		} else if du, ok := unwrapped.err.(*wrappedError); ok {
 			t.Errorf("%s: double wrapped: %v", description, du)
+		}
+		if s := err.Error(); !strings.HasPrefix(s, "blob: ") {
+			t.Errorf("%s: Error() for wrapped error doesn't start with blob: prefix: %s", description, s)
 		}
 	}
 
@@ -164,11 +172,24 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	_, err = b.NewRangeReader(ctx, "", 0, 1, nil)
 	verifyWrap("NewRangeReader", err)
+	_, err = b.ReadAll(ctx, "")
+	verifyWrap("ReadAll", err)
 
+	// Providing ContentType means driver.NewTypedWriter is called right away.
 	_, err = b.NewWriter(ctx, "", &WriterOptions{ContentType: "foo"})
 	verifyWrap("NewWriter", err)
+	err = b.WriteAll(ctx, "", buf, &WriterOptions{ContentType: "foo"})
+	verifyWrap("WriteAll", err)
 
-	var buf []byte
+	// Not providing ContentType means driver.NewTypedWriter is only called
+	// after writing sniffLen bytes.
+	w, _ := b.NewWriter(ctx, "", nil)
+	_, err = w.Write(buf)
+	verifyWrap("NewWriter (no ContentType)", err)
+	w.Close()
+	err = b.WriteAll(ctx, "", buf, nil)
+	verifyWrap("WriteAll (no ContentType)", err)
+
 	r, _ := b.NewRangeReader(ctx, "work", 0, 1, nil)
 	_, err = r.Read(buf)
 	verifyWrap("Reader.Read", err)
@@ -176,7 +197,7 @@ func TestErrorsAreWrapped(t *testing.T) {
 	err = r.Close()
 	verifyWrap("Reader.Close", err)
 
-	w, _ := b.NewWriter(ctx, "work", &WriterOptions{ContentType: "foo"})
+	w, _ = b.NewWriter(ctx, "work", &WriterOptions{ContentType: "foo"})
 	_, err = w.Write(buf)
 	verifyWrap("Writer.Write", err)
 
@@ -213,6 +234,11 @@ func TestOpen(t *testing.T) {
 	}{
 		{
 			name:    "empty URL",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL",
+			url:     ":foo",
 			wantErr: true,
 		},
 		{
@@ -280,6 +306,10 @@ func TestCallsWithUnwrappedError(t *testing.T) {
 		t.Errorf("IsNotImplemented got true with unwrapped error, wanted false")
 	}
 	if got := ErrorAs(errFail, nil); got {
-		t.Errorf("ErrorAs got true with unwrapped error, wanted false")
+		t.Errorf("ErrorAs got true with unwrapped error conversion to nil, wanted false")
+	}
+	var s string
+	if got := ErrorAs(errFail, &s); got {
+		t.Errorf("ErrorAs got true with unwrapped error conversion to string, wanted false")
 	}
 }
