@@ -120,15 +120,23 @@ breaking backward compatibility.
     provider constructors since the package generally only exposes a
     constructor. Inside a driver interface or in a concrete type like `blob`,
     use more descriptive names like `ReaderOptions` or `WriterOptions`.
+-   If a function already has a struct argument, don't add a separate `Options`
+    struct. Example: the various `sql.Open` functions take a `Params` struct
+    with connection parameters; we chose to add new options to `Params` instead
+    of introducing a separate `Options` struct. This keeps the function
+    signature simpler and avoid confusion about which struct new parameters
+    should be added to.
 -   When similar `Options` are part of a driver interface and also part of the
     concrete type (e.g., `blob.WriterOptions`), duplicate the struct instead of
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
-    appropriate audience (e.g. end-users for the concrete type, provider implementors for the driver interface)
-    implementors), and also allows the structs to diverge over time if
-    appropriate.
--   Required arguments must not be in an `Options` struct.
--   All fields of the `Options` struct must have reasonable defaults.
+    appropriate audience (e.g. end-users for the concrete type, provider
+    implementors for the driver interface) implementors), and also allows the
+    structs to diverge over time if appropriate.
+-   Required arguments must not be in an `Options` struct, and all fields of the
+    `Options` struct must have reasonable defaults. Exception: struct arguments
+    that don't have `Options` in the name can contain required arguments (e.g.,
+    see the `Params` example for `sql.Open` above).
 
 Regarding empty `Options` structs: we considered only adding them when the first
 option is added, and using a separate constructor for compatibility (e.g., start
