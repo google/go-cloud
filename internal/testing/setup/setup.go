@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"flag"
+	"net"
 	"net/http"
 	"regexp"
 	"testing"
@@ -81,7 +82,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
 
 	gcpMatcher := &replay.ProviderMatcher{
-		DropRequestHeaders: gfeDroppedHeaders,
+		DropRequestHeaders:  gfeDroppedHeaders,
 		DropResponseHeaders: gfeDroppedHeaders,
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`Expires=[^?]*`),
@@ -120,13 +121,23 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 	}
 
 	opts, done := replay.NewGCPDialOptions(t, mode, t.Name()+".replay")
-	opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
 	if mode == recorder.ModeRecording {
+		// Add credentials for real RPCs.
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
+		opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
 		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
+	} else {
+		// Establish a local listener for Dial to connect to and update endPoint
+		// to point to it.
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		endPoint = l.Addr().String()
+		opts = append(opts, grpc.WithInsecure())
 	}
 	conn, err := grpc.DialContext(ctx, endPoint, opts...)
 	if err != nil {

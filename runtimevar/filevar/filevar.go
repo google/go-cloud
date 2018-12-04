@@ -33,6 +33,7 @@ package filevar
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -47,21 +48,27 @@ import (
 // New constructs a runtimevar.Variable object with this package as the driver
 // implementation.  The decoder argument allows users to dictate the decoding function to parse the
 // file as well as the type to unmarshal into.
-func New(file string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := newWatcher(file, decoder, opts)
+func New(path string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(path, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func newWatcher(file string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+func newWatcher(path string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
+	if path == "" {
+		return nil, errors.New("path is required")
+	}
+	if decoder == nil {
+		return nil, errors.New("decoder is required")
+	}
 
 	// Use absolute file path.
-	file, err := filepath.Abs(file)
+	abspath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
@@ -77,12 +84,13 @@ func newWatcher(file string, decoder *runtimevar.Decoder, opts *Options) (*watch
 	// result being passed back via closeCh.
 	ctx, cancel := context.WithCancel(context.Background())
 	w := &watcher{
+		path: abspath,
 		// See struct comments for why it's buffered.
 		ch:       make(chan *state, 1),
 		closeCh:  make(chan error),
 		shutdown: cancel,
 	}
-	go w.watch(ctx, notifier, file, decoder, driver.WaitDuration(opts.WaitDuration))
+	go w.watch(ctx, notifier, abspath, decoder, driver.WaitDuration(opts.WaitDuration))
 	return w, nil
 }
 
@@ -104,6 +112,8 @@ func (s *state) UpdateTime() time.Time {
 
 // watcher implements driver.Watcher for configurations stored in files.
 type watcher struct {
+	// The path for the file we're watching.
+	path string
 	// The background goroutine writes new *state values to ch.
 	// It is buffered so that the background goroutine can write without
 	// blocking; it always drains the buffer before writing so that the latest
@@ -179,7 +189,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		// Read the file.
 		b, err := ioutil.ReadFile(file)
 		if err != nil {
-			// It's likely that the file was deleted.
+			// File probably does not exist. Try again later.
 			cur = w.updateState(&state{err: err}, cur)
 			continue
 		}

@@ -19,7 +19,7 @@ import (
 	"net/http"
 
 	"github.com/google/go-cloud/aws"
-	"github.com/google/go-cloud/mysql/rdsmysql"
+	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/runtimevar/paramstore"
 	"github.com/google/go-cloud/server/xrayserver"
 	"github.com/google/go-cloud/wire"
@@ -38,6 +38,6 @@ var AWS = wire.NewSet(
 // AWS set, does not include credentials. Individual services may require
 // additional configuration.
 var Services = wire.NewSet(
-	rdsmysql.Set,
+	rds.CertFetcherSet,
 	paramstore.NewClient,
 	xrayserver.Set)
