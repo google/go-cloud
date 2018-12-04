@@ -118,7 +118,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHa
 		t.Fatalf("creating a local subscription that doesn't exist on the server: %v", err)
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 
 	_, err = sub.Receive(ctx)
 	if err == nil {
