@@ -40,7 +40,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 else
   go test -race ./... || result=1
 fi
-wire check ./...
+wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || (echo "FAIL: wire diff found diffs!" && result=1)
 
