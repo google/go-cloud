@@ -74,24 +74,15 @@ func init() {
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct {
-	// URLSigner implements signing URLs to allow access to a resource without
-	// further authorization and serving a resource corresponding to a valid
-	// signed URL.
-	// URLSigner is only required for utilizing the SignedURL api.
-	URLSigner URLSigner
-}
+type Options struct{}
 
 type bucket struct {
 	dir string
-
-	// urlSigner is supplied via Options, and is only required if one wants signed URLs.
-	urlSigner URLSigner
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
-func openBucket(dir string, opts *Options) (driver.Bucket, error) {
+func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
@@ -100,13 +91,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
-	b := &bucket{dir: dir}
-	if opts != nil && opts.URLSigner != nil {
-		b.urlSigner = opts.URLSigner
-	} else {
-		b.urlSigner = errorURLSigner{}
-	}
-	return b, nil
+	return &bucket{dir}, nil
 }
 
 // OpenBucket creates a *blob.Bucket that reads and writes to dir.
@@ -588,28 +573,6 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	path, err := b.path(key)
-	if err != nil {
-		return "", err
-	}
-
-	return b.urlSigner.SignedFileURL(ctx, key, path, opts)
-}
-
-// URLSigner defines an interface that wraps the SignedFileURL method.
-// SignedFileURL uses the full path of an object (includes the bucket dir), the path,
-// and expiry information in opts to create a signature for the resource.
-// It returns a string containing the path, expiry, and signature, to be used
-// for accessing the resource without further authorization.
-// Callers should ensure that creation of signed urls is restricted to properly
-// authenticated entities, as appropriate for the application.
-type URLSigner interface {
-	SignedFileURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
-}
-
-// errorURLSigner is a stub implementation of URLSigner used when no URLSigner is passed to OpenBucket.
-type errorURLSigner struct{}
-
-func (errorURLSigner) SignedFileURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
+	// TODO(Issue #546): Implemented SignedURL for fileblob.
 	return "", errNotImplemented
 }
