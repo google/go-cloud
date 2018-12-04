@@ -101,7 +101,9 @@ func Example() {
 		log.Fatalf("opening subscription: %v", err)
 	}
 	msg.Ack()
-	if err := sub.Close(); err != nil {
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := sub.Shutdown(ctx); err != nil {
 		log.Fatalf("closing subscription: %v", err)
 	}
 	fmt.Println("success")
