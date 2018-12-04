@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/streadway/amqp"
@@ -42,9 +43,13 @@ func mustDialRabbit(t *testing.T) *amqp.Connection {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil
-	})
+	}
+	asTests := []drivertest.AsTest{
+		rabbitAsTest{},
+	}
+	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
 type harness struct {
@@ -160,4 +165,53 @@ func bindQueue(conn *amqp.Connection, queueName, exchangeName string) error {
 	return ch.QueueBind(q.Name, q.Name, exchangeName,
 		false, // no-wait
 		nil)   // args
+}
+
+type rabbitAsTest struct{}
+
+func (rabbitAsTest) Name() string {
+	return "rabbit test"
+}
+
+func (rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
+	var conn2 amqp.Connection
+	if top.As(&conn2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
+	}
+	var conn3 *amqp.Connection
+	if !top.As(&conn3) {
+		return fmt.Errorf("cast failed for %T", &conn3)
+	}
+	return nil
+}
+
+func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	var conn2 amqp.Connection
+	if sub.As(&conn2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
+	}
+	var conn3 *amqp.Connection
+	if !sub.As(&conn3) {
+		return fmt.Errorf("cast failed for %T", &conn3)
+	}
+	return nil
+}
+
+// atomic. Unique ID, so tests don't interact with each other.
+var uid int32
+
+func newName(prefix string) string {
+	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&uid, 1))
+}
+
+func makeSubscription(conn *amqp.Connection) (driver.Subscription, error) {
+	exchange := newName("t")
+	if err := declareExchange(conn, exchange); err != nil {
+		return nil, err
+	}
+	queue := newName("s")
+	if err := bindQueue(conn, queue, exchange); err != nil {
+		return nil, err
+	}
+	return newSubscription(conn, queue)
 }
