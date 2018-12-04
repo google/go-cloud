@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
-	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
@@ -91,13 +90,9 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	asTests := []drivertest.AsTest{}
+	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
-
-var proj gcp.ProjectID
-var topicName = "some-topic"
-var subName = "some-sub"
 
 type gcpAsTest struct{}
 
@@ -106,35 +101,25 @@ func (gcpAsTest) Name() string {
 }
 
 func (gcpAsTest) TopicCheck(top *pubsub.Topic) error {
-	var c *raw.PublisherClient
-	top := OpenTopic(context.Background(), c, proj, topicName, nil)
 	var c2 raw.PublisherClient
 	if top.As(&c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
 	var c3 *raw.PublisherClient
 	if !top.As(&c3) {
-		t.Fatalf("cast failed for %T", &c3)
+		return fmt.Errorf("cast failed for %T", &c3)
 	}
-	if c3 != c {
-		t.Errorf("got %p, want %p", c3, c)
-	}
+	return nil
 }
 
 func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
-	var c *raw.SubscriberClient
-	sub := OpenSubscription(context.Background(), c, proj, subName, nil)
 	var c2 raw.SubscriberClient
 	if sub.As(&c2) {
-		t.Errorf("cast succeeded for %T, want failure", &c2)
+		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
-	var c *raw.SubscriberClient
-	sub := OpenSubscription(context.Background(), c, proj, subName, nil)
 	var c3 *raw.SubscriberClient
 	if !sub.As(&c3) {
-		t.Fatalf("cast failed for %T", &c3)
+		return fmt.Errorf("cast failed for %T", &c3)
 	}
-	if c3 != c {
-		t.Errorf("got %p, want %p", c3, c)
-	}
+	return nil
 }
