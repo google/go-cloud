@@ -64,7 +64,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
 	for i := 0; i < 2; i++ {
@@ -150,7 +150,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
 	recv := func() {
@@ -182,7 +182,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 	defer cancel()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -205,7 +205,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(context.Background())
+	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -265,6 +265,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 }
 
 func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
+	ctx := context.Background()
 	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
@@ -279,7 +280,7 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 		sub.Shutdown(ctx)
 		cancel()
 	}()
-	mr, err := sub.Receive(context.Background())
+	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
