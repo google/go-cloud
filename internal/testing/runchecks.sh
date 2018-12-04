@@ -28,6 +28,11 @@ fi
 
 result=0
 
+if [[ "$TRAVIS_OS_NAME" == "windows" && "$TRAVIS_EVENT_TYPE" != "cron" ]]; then
+	echo "Skipping windows build for event type '$TRAVIS_EVENT_TYPE' (!= 'cron')."
+	exit 0
+fi
+
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and Coveralls will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
