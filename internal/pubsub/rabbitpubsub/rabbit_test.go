@@ -77,7 +77,7 @@ func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.S
 }
 
 func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
-	return nil, errors.New("unimplemented")
+	return nil, errors.New("rabbitpubsub.harness.MakeNonexistentSubscription unimplemented")
 }
 
 func (h *harness) Close() {
