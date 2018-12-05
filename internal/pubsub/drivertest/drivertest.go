@@ -67,6 +67,8 @@ type AsTest interface {
 	TopicCheck(t *pubsub.Topic) error
 	// SubscriptionCheck will be called to allow verification of Subscription.As.
 	SubscriptionCheck(s *pubsub.Subscription) error
+	// MessageCheck will be called to allow verification of Message.As.
+	MessageCheck(t *pubsub.Topic, s *pubsub.Subscription, m *pubsub.Message) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -85,6 +87,16 @@ func (verifyAsFailsOnNil) TopicCheck(t *pubsub.Topic) error {
 func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 	if s.As(nil) {
 		return errors.New("want Subscription.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) MessageCheck(t *pubsub.Topic, s *pubsub.Subscription, m *pubsub.Message) error {
+	if t.MessageAs(nil) {
+		return errors.New("want Topic.MessageAs to return false when passed nil")
+	}
+	if s.MessageAs(nil) {
+		return errors.New("want Subscription.MessageAs to return false when passed nil")
 	}
 	return nil
 }
@@ -313,6 +325,13 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 	if err := st.SubscriptionCheck(sub); err != nil {
+		t.Error(err)
+	}
+	m := &pubsub.Message{
+		Metadata: map[string]string{"a": "1"},
+		Body:     []byte("lorem ipsum"),
+	}
+	if err := st.MessageCheck(m); err != nil {
 		t.Error(err)
 	}
 }

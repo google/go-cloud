@@ -108,6 +108,13 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
+// MessageAs converts a message to an implementation-specifc message
+// type, returning true or false depending on whether the conversion
+// succeeded.
+func (t *Topic) MessageAs(m *Message, i interface{}) bool {
+	return t.driver.MessageAs(m, i)
+}
+
 // NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
@@ -223,6 +230,13 @@ func (s *Subscription) Close() error {
 // for more background.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
+}
+
+// MessageAs converts a message to an implementation-specifc message
+// type, returning true or false depending on whether the conversion
+// succeeded.
+func (s *Subscription) MessageAs(m *Message, i interface{}) bool {
+	return s.driver.MessageAs(m, i)
 }
 
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
