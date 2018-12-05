@@ -41,16 +41,8 @@ const (
 	// If the message can't be enqueued, return it to the sender rather than silently dropping it.
 	mandatory = true
 
-<<<<<<< HEAD
 	// If there are no waiting consumers, enqueue the message instead of dropping it.
-	notImmediate = false
-||||||| merged common ancestors
-	// If there are no waiting consumers, enqueue the message instead of dropping it
-	notImmediate = false
-=======
-	// If there are no waiting consumers, enqueue the message instead of dropping it
 	immediate = false
->>>>>>> 90c322bdabbb41e48b19c4b14635d90bd02e6f9f
 )
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
@@ -153,9 +145,11 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 // Read from the channels established with NotifyPublish and NotifyReturn.
 // Must be called with t.mu held.
 func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) error {
-	// Consume all the acknowledgments for the messages we are publishing.
+	// Consume all the acknowledgments for the messages we are publishing, and also get returned messages.
+	// The server will send exactly one ack for each published message (successful or not),
+	// and one return for each undeliverable message.
 	// Since SendBatch (the only caller of this method) holds the lock, we expect
-	// exactly as many acks (items on t.pubc) as messages.
+	// exactly as many acks as messages.
 	var err error
 	nAcks := 0
 	for nAcks < nMessages {
@@ -187,6 +181,7 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 				if err == nil {
 					err = errors.New("rabbitpubsub: publish listener closed unexpectedly")
 				}
+				// If pubc is closed, the AMQP channel is closed.
 				t.ch = nil // re-create the channel on next use
 				return err
 			}
