@@ -77,6 +77,13 @@ type Topic interface {
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from SendBatch.
 	IsRetryable(err error) bool
+
+	// As allows providers to expose provider-specific types.
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	As(i interface{}) bool
 }
 
 // Subscription receives published messages.
@@ -116,4 +123,11 @@ type Subscription interface {
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
 	IsRetryable(err error) bool
+
+	// As allows providers to expose provider-specific types.
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	As(i interface{}) bool
 }
