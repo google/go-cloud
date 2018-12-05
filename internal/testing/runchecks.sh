@@ -35,6 +35,9 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   if [ -f coverage.out ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
+    wc -l coverage2.out
+    echo ${COVERALLS_PARALLEL}
+    echo ${COVERALLS_TOKEN}
     goveralls -coverprofile=coverage2.out -service=travis-ci
   fi
 else
