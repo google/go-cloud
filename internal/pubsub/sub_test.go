@@ -48,6 +48,8 @@ func (s *scriptedSub) Close() error {
 
 func (s *scriptedSub) IsRetryable(error) bool { return false }
 
+func (s *scriptedSub) As(i interface{}) bool { return false }
+
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &scriptedSub{
@@ -59,7 +61,7 @@ func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	_, err := sub.Receive(ctx)
 	if err != nil {
 		t.Error(err)
