@@ -19,6 +19,7 @@ package drivertest
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 
@@ -55,8 +56,41 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// AsTest represents a test of As functionality.
+// The conformance test:
+// 1. Calls TopicCheck.
+// 2. Calls SubscriptionCheck.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// TopicCheck will be called to allow verifcation of Topic.As.
+	TopicCheck(t *pubsub.Topic) error
+	// SubscriptionCheck will be called to allow verification of Subscription.As.
+	SubscriptionCheck(s *pubsub.Subscription) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) TopicCheck(t *pubsub.Topic) error {
+	if t.As(nil) {
+		return errors.New("want Topic.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
+	if s.As(nil) {
+		return errors.New("want Subscription.As to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
@@ -74,6 +108,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 	t.Run("TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend", func(t *testing.T) {
 		testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
+	})
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("TestAs", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				testAs(t, newHarness, st)
+			})
+		}
 	})
 }
 
@@ -250,4 +295,22 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 		s.Shutdown(ctx)
 	}
 	return t, s, cleanup, nil
+}
+
+// testAs tests the various As functions, using AsTest.
+func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	top, sub, cleanup, err := makePair(ctx, h)
+	defer cleanup()
+	if err := st.TopicCheck(top); err != nil {
+		t.Error(err)
+	}
+	if err := st.SubscriptionCheck(sub); err != nil {
+		t.Error(err)
+	}
 }

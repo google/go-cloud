@@ -46,6 +46,8 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
+func (s *ackingDriverSub) As(i interface{}) bool { return false }
+
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var mu sync.Mutex
