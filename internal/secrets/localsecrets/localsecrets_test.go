@@ -23,8 +23,14 @@ import (
 
 type harness struct{}
 
-func (h harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
-	return NewCrypter()
+func (h harness) MakeDriver(ctx context.Context) (driver.Encrypter, driver.Decrypter, error) {
+	sk := "very secret secret"
+	skr, err := NewSecretKeeper(sk)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return skr.Encrypter, skr.Decrypter, nil
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {

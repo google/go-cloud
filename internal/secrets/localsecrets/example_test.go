@@ -21,15 +21,18 @@ import (
 )
 
 func ExampleEncrypterDecrypterEncrypt() {
-	msg := "I'm a message!"
-	e, _ := localsecrets.NewCrypter()
+	sk := "I'm a secret string!"
+	skr, _ := localsecrets.NewSecretKeeper(sk)
+	e := skr.Encrypter
+	d := skr.Decrypter
 
+	msg := "I'm a message!"
 	encryptedMsg, err := e.Encrypt(context.Background(), []byte(msg))
 	if err != nil {
 		panic(err)
 	}
 
-	decryptedMsg, err := e.Decrypt(context.Background(), encryptedMsg)
+	decryptedMsg, err := d.Decrypt(context.Background(), encryptedMsg)
 	if err != nil {
 		panic(err)
 	}
