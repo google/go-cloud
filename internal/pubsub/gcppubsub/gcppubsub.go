@@ -14,6 +14,10 @@
 
 // Package gcppubsub provides an implementation of pubsub that uses GCP
 // PubSub.
+//
+// It exposes the following types for As:
+// Topic: *raw.PublisherClient
+// Subscription: *raw.SubscriberClient
 package gcppubsub
 
 import (
@@ -72,6 +76,16 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 func (t *topic) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
+}
+
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	c, ok := i.(**raw.PublisherClient)
+	if !ok {
+		return false
+	}
+	*c = t.client
+	return true
 }
 
 type subscription struct {
@@ -135,4 +149,14 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 func (s *subscription) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
+}
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	c, ok := i.(**raw.SubscriberClient)
+	if !ok {
+		return false
+	}
+	*c = s.client
+	return true
 }
