@@ -112,7 +112,15 @@ func (t *Topic) As(i interface{}) bool {
 // type, returning true or false depending on whether the conversion
 // succeeded.
 func (t *Topic) MessageAs(m *Message, i interface{}) bool {
-	return t.driver.MessageAs(m, i)
+	dm := toDriverMessage(m)
+	return t.driver.MessageAs(dm, i)
+}
+
+func toDriverMessage(m *Message) *driver.Message {
+	return &driver.Message{
+		Body:     m.Body,
+		Metadata: m.Metadata,
+	}
 }
 
 // NewTopic makes a pubsub.Topic from a driver.Topic.
@@ -122,10 +130,7 @@ func NewTopic(d driver.Topic) *Topic {
 		ms := item.([]*Message)
 		var dms []*driver.Message
 		for _, m := range ms {
-			dm := &driver.Message{
-				Body:     m.Body,
-				Metadata: m.Metadata,
-			}
+			dm := toDriverMessage(m)
 			dms = append(dms, dm)
 		}
 
@@ -236,7 +241,8 @@ func (s *Subscription) As(i interface{}) bool {
 // type, returning true or false depending on whether the conversion
 // succeeded.
 func (s *Subscription) MessageAs(m *Message, i interface{}) bool {
-	return s.driver.MessageAs(m, i)
+	dm := toDriverMessage(m)
+	return s.driver.MessageAs(dm, i)
 }
 
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
