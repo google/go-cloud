@@ -144,7 +144,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) error {
 	// Consume all the acknowledgments for the messages we are publishing.
 	// Since SendBatch (the only caller of this method) holds the lock, we expect
-	// exactly as many acks as messages.
+	// exactly as many acks (items on t.pubc) as messages.
 	var err error
 	nAcks := 0
 	for nAcks < nMessages {
@@ -152,6 +152,7 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 		case <-ctx.Done():
 			// Channel will be in a weird state (not all publish acks consumed, perhaps)
 			// so re-create it next time.
+			t.ch.Close()
 			t.ch = nil
 			return ctx.Err()
 
@@ -171,7 +172,7 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 
 		case conf, ok := <-t.pubc:
 			if !ok {
-				// t.pubc was closed
+				// t.pubc was closed.
 				if err == nil {
 					err = errors.New("rabbitpubsub: publish listener closed unexpectedly")
 				}
