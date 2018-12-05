@@ -20,7 +20,6 @@ package rabbitpubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync/atomic"
@@ -66,11 +65,11 @@ func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
 	if err := declareExchange(h.conn, exchange); err != nil {
 		return nil, err
 	}
-	return newTopic(h.conn, exchange)
+	return newTopic(h.conn, exchange), nil
 }
 
 func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
-	return newTopic(h.conn, "nonexistent-topic")
+	return newTopic(h.conn, "nonexistent-topic"), nil
 }
 
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
@@ -78,11 +77,11 @@ func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.S
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, err
 	}
-	return newSubscription(h.conn, queue)
+	return newSubscription(h.conn, queue), nil
 }
 
 func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
-	return nil, errors.New("unimplemented")
+	return newSubscription(h.conn, "nonexistent-subscription"), nil
 }
 
 func (h *harness) Close() {
@@ -105,11 +104,7 @@ func TestPublishConcurrently(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	top, err := newTopic(conn, "t")
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	top := newTopic(conn, "t")
 	errc := make(chan error, 100)
 	for g := 0; g < cap(errc); g++ {
 		go func() {

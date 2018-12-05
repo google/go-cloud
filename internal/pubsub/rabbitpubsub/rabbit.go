@@ -45,10 +45,10 @@ const (
 )
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
-// exchange must have been previously created (for instance, by using
-// amqp.Channel.ExchangeDeclare). For the model of Go Cloud Pub/Sub to make sense,
-// the exchange should be a fanout exchange, although nothing in this package
-// enforces that.
+// exchange should already exist (for instance, by using
+// amqp.Channel.ExchangeDeclare), although this won't be checked until the first call
+// to SendBatch. For the model of Go Cloud Pub/Sub to make sense, the exchange should
+// be a fanout exchange, although nothing in this package enforces that.
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the caller's
 // responsibility to establish this connection before calling OpenTopic, and to close
@@ -56,35 +56,23 @@ const (
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenTopic(conn *amqp.Connection, name string) (*pubsub.Topic, error) {
-	// TODO(jba): support context.Context
-	t, err := newTopic(conn, name)
-	if err != nil {
-		return nil, err
-	}
-	return pubsub.NewTopic(t), nil
+func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
+	return pubsub.NewTopic(newTopic(conn, name))
 
 }
 
-func newTopic(conn *amqp.Connection, name string) (*topic, error) {
-	t := &topic{
-		exchange: name,
+func newTopic(conn *amqp.Connection, name string) *topic {
+	return &topic{
 		conn:     conn,
+		exchange: name,
 	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	if err := t.establishChannel(); err != nil {
-		return nil, err
-	}
-	return t, nil
 }
 
 // establishChannel creates an AMQP channel if necessary. According to the amqp
 // package docs, once an error is returned from the channel, it must be discarded and
 // a new one created.
 //
-// Must be called with the t.mu held.
+// Must be called with t.mu held.
 func (t *topic) establishChannel() error {
 	// TODO(jba): support context.Context
 	if t.ch != nil {
@@ -207,13 +195,8 @@ func (t *topic) As(i interface{}) bool {
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenSubscription(conn *amqp.Connection, name string) (*pubsub.Subscription, error) {
-	// TODO(jba): support context.Context
-	s, err := newSubscription(conn, name)
-	if err != nil {
-		return nil, err
-	}
-	return pubsub.NewSubscription(s), nil
+func OpenSubscription(conn *amqp.Connection, name string) *pubsub.Subscription {
+	return pubsub.NewSubscription(newSubscription(conn, name))
 }
 
 type subscription struct {
@@ -228,18 +211,12 @@ type subscription struct {
 
 var nextConsumer int64 // atomic
 
-func newSubscription(conn *amqp.Connection, name string) (*subscription, error) {
-	s := &subscription{
+func newSubscription(conn *amqp.Connection, name string) *subscription {
+	return &subscription{
 		conn:     conn,
 		queue:    name,
 		consumer: fmt.Sprintf("c%d", atomic.AddInt64(&nextConsumer, 1)),
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if err := s.establishChannel(); err != nil {
-		return nil, err
-	}
-	return s, nil
 }
 
 // Must be called with s.mu held.
