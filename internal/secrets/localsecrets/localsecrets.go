@@ -19,46 +19,62 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"github.com/google/go-cloud/internal/secrets/driver"
 	"golang.org/x/crypto/nacl/secretbox"
 	"io"
-	"time"
 )
 
-// Crypter is not for prod (can only decrypt things which were encrypted in the same memory session)
-type Crypter struct {
+// secretKeeper
+type secretKeeper struct {
 	secretKey [32]byte
+	Encrypter driver.Encrypter
+	Decrypter driver.Decrypter
 }
 
-//
-func NewCrypter() (*Crypter, error) { //return driver.Decrypter once I pull in that branch
-	sk := []byte(time.Now().String())
+// NewSecretKeeper takes a secret key and returns a secretKeeper
+func NewSecretKeeper(sk string) (*secretKeeper, error) {
+	skb := []byte(sk)
 	enc := base64.StdEncoding
-	dst := make([]byte, enc.EncodedLen(len(sk)))
-	enc.Encode(dst, sk)
+	dst := make([]byte, enc.EncodedLen(len(skb)))
+	enc.Encode(dst, skb)
 
 	var dst32 [32]byte
 	copy(dst32[:], dst)
 
-	return &Crypter{secretKey: dst32}, nil
+	skr := &secretKeeper{secretKey: dst32}
+	skr.Encrypter = &encrypter{skr: skr}
+	skr.Decrypter = &decrypter{skr: skr}
+
+	return skr, nil
 }
 
 //
-func (n Crypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
+type encrypter struct {
+	skr *secretKeeper
+}
+
+//
+func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [24]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
 	}
 	// a slice beginning at nonce is used here as the destination for the encrypted message,
 	// so that we can read the nonce out of the first 24 bytes when we decrypt it
-	return secretbox.Seal(nonce[:], message, &nonce, &n.secretKey), nil
+	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
 }
 
 //
-func (d Crypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
+type decrypter struct {
+	skr *secretKeeper
+}
+
+//
+func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [24]byte
 	copy(decryptNonce[:], message[:24])
 
-	decrypted, ok := secretbox.Open(nil, message[24:], &decryptNonce, &d.secretKey)
+	decrypted, ok := secretbox.Open(nil, message[24:], &decryptNonce, &d.skr.secretKey)
 	if !ok {
 		return nil, errors.New("it failed")
 	}
