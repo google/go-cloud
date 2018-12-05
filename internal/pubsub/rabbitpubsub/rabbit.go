@@ -390,12 +390,12 @@ func (s *subscription) MessageAs(m *driver.Message, i interface{}) bool {
 
 	// Delivery.Headers is a map[string]interface{}, so we have to
 	// convert each value to an interface.
-	msi := map[string]interface{}
+	msi := map[string]interface{}{}
 	for k, v := range m.Metadata {
-		md[k] = v
+		msi[k] = v
 	}
-	*d.Headers = msi
-	*d.Body = m.Body
-	*d.DeliveryTag = m.AckID
+	d.Headers = msi
+	d.Body = m.Body
+	d.DeliveryTag = m.AckID.(uint64)
 	return true
 }

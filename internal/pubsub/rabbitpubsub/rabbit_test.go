@@ -196,3 +196,24 @@ func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	}
 	return nil
 }
+
+func (rabbitAsTest) MessageCheck(top *pubsub.Topic, sub *pubsub.Subscription, m *pubsub.Message) error {
+
+	var conn amqp.Connection
+	if top.MessageAs(m, &conn) {
+		return fmt.Errorf("message check: top.MessageAs succeeded for %T, want failure", &conn)
+	}
+	var p amqp.Publishing
+	if !top.MessageAs(m, &p) {
+		return fmt.Errorf("message check: top.MessageAs failed for %T", &p)
+	}
+
+	if sub.MessageAs(m, &conn) {
+		return fmt.Errorf("message check: sub.MessageAs succeeded for %T, want failure", &conn)
+	}
+	var d amqp.Delivery
+	if !sub.MessageAs(m, &d) {
+		return fmt.Errorf("message check: top.MessageAs failed for %T", &d)
+	}
+	return nil
+}
