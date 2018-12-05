@@ -312,13 +312,16 @@ on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 ## Coding Conventions
 
 We try to adhere to commonly accepted Go coding conventions, some of which are
-described on the
-[Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+described on the [Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
 wiki page. We also adopt the following guidelines:
-* Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
-* When writing a loop appending to a slice `s`, prefer `var s []T` to `s :=
-  make([]T, 0, N)` unless the loop body is trivial and the loop is
-  performance-sensitive.
+- Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
+- When writing a loop appending to a slice `s`, prefer `var s []T` plus `append`
+  in the loop to `s :-= make([]T, 0, N)` plus append or `make([]T, N)` plus
+  `s[i]`. 
+  (Exception: the loop body is trivial and the loop is
+  performance-sensitive.) The first version is shorter and easier to read, and
+  it is impossible to get the length wrong.
+  
 
 ## Tests
 
