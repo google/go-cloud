@@ -23,6 +23,7 @@ type topic struct {
 	mu   sync.Mutex
 	ch   *amqp.Channel            // AMQP channel used for all communication.
 	pubc <-chan amqp.Confirmation // Go channel for server acks of publishes
+	retc <-chan amqp.Return       // Go channel for "returned" undeliverable messages
 }
 
 // Values for the amqp client.
@@ -37,10 +38,11 @@ const (
 	// exchanges, which disregard the routing key.
 	routingKey = ""
 
-	// If the message can't be enqueued, return it to the sender rather than silently dropping it.
+	// If the message can't be enqueued, return it to the sender rather than silently
+	// dropping it.
 	mandatory = true
 
-	// If there are no waiting consumers, enqueue the message instead of dropping it
+	// If there are no waiting consumers, enqueue the message instead of dropping it.
 	immediate = false
 )
 
@@ -50,9 +52,9 @@ const (
 // the exchange should be a fanout exchange, although nothing in this package
 // enforces that.
 //
-// OpenTopic uses the supplied amqp.Connection for all communication. It is the caller's
-// responsibility to establish this connection before calling OpenTopic, and to close
-// it when Close has been called on all Topics opened with it.
+// OpenTopic uses the supplied amqp.Connection for all communication. It is the
+// caller's responsibility to establish this connection before calling OpenTopic, and
+// to close it when Close has been called on all Topics opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
@@ -104,6 +106,7 @@ func (t *topic) establishChannel() error {
 	// Get a Go channel which will hold acks from the server. The server
 	// will send an ack for each published message to confirm that it was received.
 	t.pubc = ch.NotifyPublish(make(chan amqp.Confirmation)) // NotifyPublish returns its arg
+	t.retc = ch.NotifyReturn(make(chan amqp.Return))        // NotifyReturn returns its arg
 	return nil
 }
 
@@ -119,44 +122,16 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 		return err
 	}
 
-	// Read from the channel established with NotifyPublish.
-	// Do so concurrently or we will deadlock with the Publish RPC.
-	// (The amqp package docs recommend setting the capacity of the channel
-	// to the number of messages to be published, but we can't do that because
-	// we want to reuse the channel for all calls to SendBatch.)
+	// Receive from Go channels concurrently or we will deadlock with the Publish
+	// RPC. (The amqp package docs recommend setting the capacity of the Go channel
+	// to the number of messages to be published, but we can't do that because we
+	// want to reuse the channel for all calls to SendBatch--it takes two RPCs to set
+	// up.)
 	errc := make(chan error, 1)
 	go func() {
-		// Consume all the acknowledgments for the messages we are publishing.
-		// Since this method holds the lock, we expect exactly as many acks as messages.
-		//
-		// This goroutine can safely access the mutex-protected fields t.ch and t.pubc
-		// because its lifetime is within the lifetime of the lock held by SendBatch.
-		//
-		// TODO(jba): look at AMQP "returns" for more information about publish errors.
-		// See https://godoc.org/github.com/streadway/amqp#Channel.NotifyReturn.
-		ok := true
-		for range ms {
-			select {
-			case <-ctx.Done():
-				errc <- ctx.Err()
-				return
-			case conf, ok := <-t.pubc:
-				if !ok {
-					// t.pubc was closed
-					errc <- errors.New("rabbitpubsub: publish listener closed unexpectedly")
-					t.ch = nil // re-create the channel on next use
-					return
-				}
-				if !conf.Ack {
-					ok = false
-				}
-			}
-		}
-		if !ok {
-			errc <- errors.New("rabbitpubsub: ack failed on publish")
-		} else {
-			errc <- nil
-		}
+		// This goroutine runs with t.mu held because its lifetime is within the
+		// lifetime of the t.mu.Lock call at the start of SendBatch.
+		errc <- t.receiveFromPublishChannels(ctx, len(ms))
 	}()
 
 	for _, m := range ms {
@@ -167,6 +142,58 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 		}
 	}
 	return <-errc
+}
+
+// Read from the channels established with NotifyPublish and NotifyReturn.
+// Must be called with t.mu held.
+func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) error {
+	// Consume all the acknowledgments for the messages we are publishing, and also
+	// get returned messages. The server will send exactly one ack for each published
+	// message (successful or not), and one return for each undeliverable message.
+	// Since SendBatch (the only caller of this method) holds the lock, we expect
+	// exactly as many acks as messages.
+	var err error
+	nAcks := 0
+	for nAcks < nMessages {
+		select {
+		case <-ctx.Done():
+			// Channel will be in a weird state (not all publish acks consumed, perhaps)
+			// so re-create it next time.
+			t.ch.Close()
+			t.ch = nil
+			return ctx.Err()
+
+		case ret, ok := <-t.retc:
+			if !ok {
+				// Channel closed. Handled in the pubc case below. But set
+				// the channel to nil to prevent it from being selected again.
+				t.retc = nil
+			} else if err == nil {
+				// The message was returned from the server because it is unroutable.
+				// This will be the error we return, but continue so we drain all
+				// items from pubc. We don't need to re-establish the channel on this
+				// error.
+				err = fmt.Errorf("rabbitpubsub: message returned from %s: %s (code %d)",
+					ret.Exchange, ret.ReplyText, ret.ReplyCode)
+			}
+
+		case conf, ok := <-t.pubc:
+			if !ok {
+				// t.pubc was closed.
+				if err == nil {
+					err = errors.New("rabbitpubsub: publish listener closed unexpectedly")
+				}
+				// If pubc is closed, the AMQP channel is closed.
+				t.ch = nil // re-create the channel on next use
+				return err
+			}
+			nAcks++
+			if !conf.Ack && err == nil {
+				err = errors.New("rabbitpubsub: ack failed on publish")
+			}
+		}
+	}
+	return err
 }
 
 // toPublishing converts a driver.Message to an amqp.Publishing.
@@ -197,13 +224,14 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
-// OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
-// queue must have been previously created (for instance, by using
+// OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
+// The queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
 //
 // OpenSubscription uses the supplied amqp.Connection for all communication. It is
-// the caller's responsibility to establish this connection before calling OpenSubscription
-// and to close it when Close has been called on all Subscriptions opened with it.
+// the caller's responsibility to establish this connection before calling
+// OpenSubscription and to close it when Close has been called on all Subscriptions
+// opened with it.
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
@@ -326,8 +354,8 @@ func toMessage(d amqp.Delivery) *driver.Message {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks don't
-	// block each other.
+	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks
+	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -337,8 +365,9 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 
 	// The Ack call doesn't wait for a response, so this loop should execute relatively
 	// quickly.
-	// It wouldn't help to make it concurrent, because Channel.Ack grabs a channel-wide mutex.
-	// (We could consider using multiple channels if performance becomes an issue.)
+	// It wouldn't help to make it concurrent, because Channel.Ack grabs a
+	// channel-wide mutex. (We could consider using multiple channels if performance
+	// becomes an issue.)
 	for _, id := range ackIDs {
 		if ctx.Err() != nil {
 			return ctx.Err()
