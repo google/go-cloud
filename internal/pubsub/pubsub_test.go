@@ -142,7 +142,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
-	receivedMsgs := make(map[string]int)
+	receivedMsgs := make(map[string]bool)
 	for i := 0; i < 10; i++ {
 		go func() {
 			for {
@@ -159,21 +159,19 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					return
 				}
 				mu.Lock()
-				receivedMsgs[string(m.Body)]++
+				receivedMsgs[string(m.Body)] = true
 				mu.Unlock()
 				wg.Done()
 			}
 		}()
 	}
 
-	// Send messages.
+	// Send messages. Each message has a unique body used as a key to receivedMsgs.
 	topic := pubsub.NewTopic(dt)
 	defer topic.Close()
-	sentMsgs := make(map[string]int)
 	for i := 0; i < howManyToSend; i++ {
-		bod := fmt.Sprintf("%d", i)
-		m := &pubsub.Message{Body: []byte(bod)}
-		sentMsgs[string(m.Body)]++
+		key := fmt.Sprintf("message #%d", i)
+		m := &pubsub.Message{Body: []byte(key)}
 		if err := topic.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
@@ -185,17 +183,10 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	defer cancel()
 
 	// Check that all the messages were received.
-	sum := 0
-	for _, n := range receivedMsgs {
-		sum += n
-	}
-	if sum != howManyToSend {
-		t.Errorf("received %d messages, want %d", sum, howManyToSend)
-	}
-	for k, v := range sentMsgs {
-		v2 := receivedMsgs[k]
-		if v2 != v {
-			t.Errorf("got %d for %q, want %d", v2, k, v)
+	for i := 0; i < howManyToSend; i++ {
+		key := fmt.Sprintf("message #%d", i)
+		if !receivedMsgs[key] {
+			t.Errorf("message %q was not received", key)
 		}
 	}
 }

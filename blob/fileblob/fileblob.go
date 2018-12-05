@@ -252,12 +252,20 @@ func (b *bucket) IsNotImplemented(err error) bool {
 	return err == errNotImplemented
 }
 
+// path returns the full path for a key
+func (b *bucket) path(key string) (string, error) {
+	path := filepath.Join(b.dir, escape(key))
+	if strings.HasSuffix(path, attrsExt) {
+		return "", errAttrsExt
+	}
+	return path, nil
+}
+
 // forKey returns the full path, os.FileInfo, and attributes for key.
 func (b *bucket) forKey(key string) (string, os.FileInfo, *xattrs, error) {
-	relpath := escape(key)
-	path := filepath.Join(b.dir, relpath)
-	if strings.HasSuffix(path, attrsExt) {
-		return "", nil, nil, errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return "", nil, nil, err
 	}
 	info, err := os.Stat(path)
 	if err != nil {
@@ -454,9 +462,9 @@ func (r reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return nil, errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, err
@@ -550,11 +558,11 @@ func (w writer) Close() error {
 
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	path := filepath.Join(b.dir, escape(key))
-	if strings.HasSuffix(path, attrsExt) {
-		return errAttrsExt
+	path, err := b.path(key)
+	if err != nil {
+		return err
 	}
-	err := os.Remove(path)
+	err = os.Remove(path)
 	if err != nil {
 		return err
 	}
