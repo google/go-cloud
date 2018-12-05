@@ -94,7 +94,7 @@ func (t *topic) MessageAs(m *driver.Message, i interface{}) bool {
 	if !ok {
 		return false
 	}
-	mi.Data = m.Data
+	mi.Data = m.Body
 	mi.Attributes = m.Metadata
 	return true
 }
@@ -173,7 +173,7 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // MessageAs implements driver.Subscription.MessageAs.
-func (s *subscription) MessageAs(i interface{}) bool {
+func (s *subscription) MessageAs(m *driver.Message, i interface{}) bool {
 	mi, ok := i.(*pb.PubsubMessage)
 	if !ok {
 		return false

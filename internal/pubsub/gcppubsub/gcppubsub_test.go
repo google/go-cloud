@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
 	"google.golang.org/api/option"
+	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 const (
@@ -120,6 +121,25 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var c3 *raw.SubscriberClient
 	if !sub.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
+	}
+	return nil
+}
+
+func (gcpAsTest) MessageCheck(top *pubsub.Topic, sub *pubsub.Subscription, m *pubsub.Message) error {
+	var pm pb.PubsubMessage
+	var ppm *pb.PubsubMessage
+	if top.MessageAs(m, &ppm) {
+		return fmt.Errorf("message check: top.MessageAs succeeded for %T, want failure", &ppm)
+	}
+	if !top.MessageAs(m, &pm) {
+		return fmt.Errorf("message check: top.MessageAs failed for %T", &pm)
+	}
+
+	if sub.MessageAs(m, &ppm) {
+		return fmt.Errorf("message check: sub.MessageAs succeeded for %T, want failure", &ppm)
+	}
+	if !sub.MessageAs(m, &pm) {
+		return fmt.Errorf("message check: top.MessageAs failed for %T", &pm)
 	}
 	return nil
 }
