@@ -30,7 +30,7 @@ result=0
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and Coveralls will only save the last one anyway.
-if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+if [[ "$TRAVIS_OS_NAME" != "xxxlinux" ]]; then
   go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ]; then
     # Filter out test and sample packages.
