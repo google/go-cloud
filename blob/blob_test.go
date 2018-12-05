@@ -146,7 +146,7 @@ func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	buf := bytes.Repeat([]byte{65}, sniffLen)
+	buf := bytes.Repeat([]byte{'A'}, sniffLen)
 	b := NewBucket(&erroringBucket{})
 
 	// verifyWrap ensures that err is wrapped exactly once.
