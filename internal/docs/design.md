@@ -116,6 +116,8 @@ breaking backward compatibility.
 -   This includes driver constructors (e.g., `gcsblob.OpenBucket`) as well as
     API functions (e.g., `blob.NewReader`). When in doubt, if you think it's
     possible that we'll add arguments, add `Options`.
+-   The argument should be of type `*Options`, so that `nil` can be passed in
+    the default case.
 -   Name the `Options` struct appropriately. `Options` is usually fine for
     provider constructors since the package generally only exposes a
     constructor. Inside a driver interface or in a concrete type like `blob`,
