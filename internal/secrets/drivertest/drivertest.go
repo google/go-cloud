@@ -25,12 +25,12 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeDriver
+	// MakeDriver returns an Encypter and a Decrypter for use in tests.
 	MakeDriver(ctx context.Context) (driver.Encrypter, driver.Decrypter, error)
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
-// It is called exactly once per test; Harness.Close() will be called when the test is complete.
+// It is called exactly once per test.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
 // RunConformanceTests runs conformance tests for provider implementations of secret management.
@@ -40,7 +40,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 }
 
-// testWrite tests the functionality of NewWriter and Writer.
+// testEncryptDecrypt tests the functionality of encryption and decryption
 func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	harness, err := newHarness(ctx, t)

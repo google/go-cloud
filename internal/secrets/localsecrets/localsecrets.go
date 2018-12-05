@@ -24,14 +24,15 @@ import (
 	"io"
 )
 
-// secretKeeper
+// secretKeeper holds a secret for use in symmetric encryption,
+// and implementations of driver.Encryper and driver.Decrypter.
 type secretKeeper struct {
 	secretKey [32]byte
 	Encrypter driver.Encrypter
 	Decrypter driver.Decrypter
 }
 
-// NewSecretKeeper takes a secret key and returns a secretKeeper
+// NewSecretKeeper takes a secret key and returns a secretKeeper.
 func NewSecretKeeper(sk string) (*secretKeeper, error) {
 	skb := []byte(sk)
 	enc := base64.StdEncoding
@@ -48,12 +49,14 @@ func NewSecretKeeper(sk string) (*secretKeeper, error) {
 	return skr, nil
 }
 
-//
+// encrypter implemets driver.Encrypter and holds a pointer to
+// a secretKeeper, which holds the secret.
 type encrypter struct {
 	skr *secretKeeper
 }
 
-//
+// Encrypt encrypts a message using a per-message generated nonce and
+// the secret held in the encrypter's secretKeeper.
 func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [24]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
@@ -64,12 +67,14 @@ func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error)
 	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
 }
 
-//
+// decrypter implemets driver.Decrypter and holds a pointer to
+// a secretKeeper, which holds the secret.
 type decrypter struct {
 	skr *secretKeeper
 }
 
-//
+// Decrypt decryptes a message using a nonce that is read out of the first 24 bytes
+// of the message and a secret held by the decrypter's secretKeeper.
 func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [24]byte
 	copy(decryptNonce[:], message[:24])
