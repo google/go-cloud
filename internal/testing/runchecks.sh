@@ -28,8 +28,8 @@ fi
 
 result=0
 
-if [[ "$TRAVIS_OS_NAME" == "windows" && "$TRAVIS_EVENT_TYPE" != "cron" ]]; then
-	echo "Skipping windows build for event type '$TRAVIS_EVENT_TYPE' (!= 'cron')."
+if [[ "$TRAVIS_OS_NAME" == "windows" && ( "$TRAVIS_EVENT_TYPE" == "push" || "$TRAVIS_EVENT_TYPE" == "pull_request" ) ]]; then
+	echo "Skipping windows build for event type '$TRAVIS_EVENT_TYPE'"
 	exit 0
 fi
 
