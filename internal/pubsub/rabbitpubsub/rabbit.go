@@ -396,6 +396,8 @@ func (s *subscription) MessageAs(m *driver.Message, i interface{}) bool {
 	}
 	d.Headers = msi
 	d.Body = m.Body
-	d.DeliveryTag = m.AckID.(uint64)
+	if m.AckID != nil {
+		d.DeliveryTag = m.AckID.(uint64)
+	}
 	return true
 }
