@@ -33,7 +33,7 @@ func Example_sendReceive() {
 	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 
 	// Send a message to the topic.
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello, world!")}); err != nil {
@@ -63,7 +63,7 @@ func Example_sendReceiveMultipleMessages() {
 	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 
 	// Send messages to the topic.
 	ms := []*pubsub.Message{
@@ -110,7 +110,7 @@ func Example_receiveWithInvertedWorkerPool() {
 	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100
@@ -184,7 +184,7 @@ func Example_receiveWithTraditionalWorkerPool() {
 	t := mempubsub.OpenTopic(b, "myTopic")
 	defer t.Close()
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 
 	// Send a bunch of messages to the topic.
 	const nMessages = 100

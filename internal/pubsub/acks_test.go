@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -41,10 +42,6 @@ func (s *ackingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]
 
 func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return s.sendAcks(ctx, ackIDs)
-}
-
-func (s *ackingDriverSub) Close() error {
-	return nil
 }
 
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
@@ -71,7 +68,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +102,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
 	for i := 0; i < 2; i++ {
@@ -157,7 +154,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
 	recv := func() {
@@ -189,7 +186,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	defer cancel()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -212,7 +209,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +236,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -268,5 +265,37 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 	// Check that one of the goroutines panicked.
 	if panics != 1 {
 		t.Errorf("panics = %d, want %d", panics, 1)
+	}
+}
+
+func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
+	ctx := context.Background()
+	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
+	ds := &ackingDriverSub{
+		q: []*driver.Message{m},
+		sendAcks: func(ctx context.Context, ackIDs []driver.AckID) error {
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	mr, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mr.Ack()
+
+	done := make(chan struct{})
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		defer cancel()
+		sub.Shutdown(ctx)
+		close(done)
+	}()
+	tooLong := 5 * time.Second
+	select {
+	case <-done:
+	case <-time.After(tooLong):
+		t.Fatalf("waited too long (%v) for Shutdown to run", tooLong)
 	}
 }
