@@ -1,3 +1,6 @@
+// It exposes the following types for As:
+// Topic: *amqp.Connection
+// Subscription: *amqp.Connection
 package rabbitpubsub
 
 import (
@@ -184,6 +187,16 @@ func (*topic) IsRetryable(error) bool {
 	return false
 }
 
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	c, ok := i.(**amqp.Connection)
+	if !ok {
+		return false
+	}
+	*c = t.conn
+	return true
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
 // queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
@@ -343,4 +356,14 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 func (*subscription) IsRetryable(error) bool {
 	// TODO(jba): figure out what errors can be retried.
 	return false
+}
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	c, ok := i.(**amqp.Connection)
+	if !ok {
+		return false
+	}
+	*c = s.conn
+	return true
 }

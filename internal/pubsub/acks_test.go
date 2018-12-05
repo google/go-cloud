@@ -49,6 +49,8 @@ func (s *ackingDriverSub) Close() error {
 
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
+func (s *ackingDriverSub) As(i interface{}) bool { return false }
+
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var mu sync.Mutex

@@ -98,6 +98,16 @@ func (t *Topic) Close() error {
 	return nil
 }
 
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (t *Topic) As(i interface{}) bool {
+	return t.driver.As(i)
+}
+
 // NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
@@ -203,6 +213,16 @@ func (s *Subscription) Close() error {
 	s.mu.Unlock()
 	s.ackBatcher.Shutdown()
 	return nil
+}
+
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (s *Subscription) As(i interface{}) bool {
+	return s.driver.As(i)
 }
 
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
