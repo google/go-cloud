@@ -275,14 +275,23 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 		},
 	}
 	sub := pubsub.NewSubscription(ds)
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
-		sub.Shutdown(ctx)
-		cancel()
-	}()
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	mr.Ack()
+
+	done := make(chan struct{})
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		defer cancel()
+		sub.Shutdown(ctx)
+		close(done)
+	}()
+	tooLong := 5 * time.Second
+	select {
+	case <-done:
+	case <-time.After(tooLong):
+		t.Fatalf("waited too long (%v) for Shutdown to run", tooLong)
+	}
 }
