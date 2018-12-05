@@ -33,7 +33,7 @@ type secretKeeper struct {
 }
 
 // NewSecretKeeper takes a secret key and returns a secretKeeper.
-func NewSecretKeeper(sk string) (*secretKeeper, error) {
+func NewSecretKeeper(sk string) *secretKeeper {
 	skb := []byte(sk)
 	enc := base64.StdEncoding
 	dst := make([]byte, enc.EncodedLen(len(skb)))
@@ -46,10 +46,10 @@ func NewSecretKeeper(sk string) (*secretKeeper, error) {
 	skr.Encrypter = &encrypter{skr: skr}
 	skr.Decrypter = &decrypter{skr: skr}
 
-	return skr, nil
+	return skr
 }
 
-// encrypter implemets driver.Encrypter and holds a pointer to
+// encrypter implements driver.Encrypter and holds a pointer to
 // a secretKeeper, which holds the secret.
 type encrypter struct {
 	skr *secretKeeper
@@ -67,7 +67,7 @@ func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error)
 	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
 }
 
-// decrypter implemets driver.Decrypter and holds a pointer to
+// decrypter implements driver.Decrypter and holds a pointer to
 // a secretKeeper, which holds the secret.
 type decrypter struct {
 	skr *secretKeeper
@@ -81,7 +81,7 @@ func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error)
 
 	decrypted, ok := secretbox.Open(nil, message[24:], &decryptNonce, &d.skr.secretKey)
 	if !ok {
-		return nil, errors.New("it failed")
+		return nil, errors.New("localsecrets: Decrypt failed")
 	}
 	return decrypted, nil
 }
