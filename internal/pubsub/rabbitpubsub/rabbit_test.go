@@ -140,11 +140,8 @@ func TestUnroutable(t *testing.T) {
 	if err := declareExchange(conn, "u"); err != nil {
 		t.Fatal(err)
 	}
-	top, err := newTopic(conn, "u")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
+	top := newTopic(conn, "u")
+	err := top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
 	if err == nil || !strings.Contains(err.Error(), "NO_ROUTE") {
 		t.Errorf("got %v, want an error with 'NO_ROUTE'", err)
 	}
