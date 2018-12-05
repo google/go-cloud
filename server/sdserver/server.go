@@ -44,6 +44,9 @@ var Set = wire.NewSet(
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.
+//
+// The second return value is a Wire cleanup function that calls Flush
+// on the exporter.
 func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
 	tokOpt := option.WithTokenSource(oauth2.TokenSource(ts))
 	exp, err := stackdriver.NewExporter(stackdriver.Options{
