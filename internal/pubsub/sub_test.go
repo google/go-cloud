@@ -50,6 +50,8 @@ func (s *scriptedSub) IsRetryable(error) bool { return false }
 
 func (s *scriptedSub) As(i interface{}) bool { return false }
 
+func (s *scriptedSub) MessageAs(m *driver.Message, i interface{}) bool { return false }
+
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &scriptedSub{

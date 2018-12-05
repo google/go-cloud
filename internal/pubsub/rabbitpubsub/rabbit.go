@@ -1,6 +1,9 @@
 // It exposes the following types for As:
 // Topic: *amqp.Connection
 // Subscription: *amqp.Connection
+//
+// It exposes the following type for Topic.MessageAs: amqp.Publishing
+// It exposes the following type for Subscription.MessageAs: amqp.Delivery
 package rabbitpubsub
 
 import (
@@ -197,6 +200,16 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// MessageAs implements driver.Topic.MessageAs.
+func (t *topic) MessageAs(m *driver.Message, i interface{}) bool {
+	p, ok := i.(*amqp.Publishing)
+	if !ok {
+		return false
+	}
+	*p = toPublishing(m)
+	return true
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
 // queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
@@ -365,5 +378,24 @@ func (s *subscription) As(i interface{}) bool {
 		return false
 	}
 	*c = s.conn
+	return true
+}
+
+// MessageAs implements driver.Subscription.MessageAs.
+func (s *subscription) MessageAs(m *driver.Message, i interface{}) bool {
+	d, ok := i.(*amqp.Delivery)
+	if !ok {
+		return false
+	}
+
+	// Delivery.Headers is a map[string]interface{}, so we have to
+	// convert each value to an interface.
+	msi := map[string]interface{}
+	for k, v := range m.Metadata {
+		md[k] = v
+	}
+	*d.Headers = msi
+	*d.Body = m.Body
+	*d.DeliveryTag = m.AckID
 	return true
 }
