@@ -88,6 +88,17 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// MessageAs implements driver.Topic.MessageAs.
+func (t *topic) MessageAs(m *driver.Message, i interface{}) bool {
+	mi, ok := i.(*pb.PubsubMessage)
+	if !ok {
+		return false
+	}
+	mi.Data = m.Data
+	mi.Attributes = m.Metadata
+	return true
+}
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -158,5 +169,17 @@ func (s *subscription) As(i interface{}) bool {
 		return false
 	}
 	*c = s.client
+	return true
+}
+
+// MessageAs implements driver.Subscription.MessageAs.
+func (s *subscription) MessageAs(i interface{}) bool {
+	mi, ok := i.(*pb.PubsubMessage)
+	if !ok {
+		return false
+	}
+	mi.Data = m.Body
+	mi.Attributes = m.Metadata
+	// TODO: set mi.MessageID?
 	return true
 }
