@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"time"
 
+	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/google/go-cloud/aws/rds"
 	"github.com/lib/pq"
 )
@@ -47,6 +48,9 @@ type Params struct {
 	// Values sets additional parameters, as documented in
 	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
 	Values url.Values
+
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
 }
 
 // Open opens an encrypted connection to an RDS database.
@@ -81,14 +85,16 @@ func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*
 		RawQuery: vals.Encode(),
 	}
 	db := sql.OpenDB(connector{
-		provider: provider,
-		pqConn:   u.String(),
+		provider:  provider,
+		pqConn:    u.String(),
+		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
 	})
 	return db, func() { db.Close() }, nil
 }
 
 type pqDriver struct {
-	provider rds.CertPoolProvider
+	provider  rds.CertPoolProvider
+	traceOpts []ocsql.TraceOption
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
@@ -97,20 +103,25 @@ func (d pqDriver) Open(name string) (driver.Conn, error) {
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return connector{d.provider, name + " sslmode=disable"}, nil
+	return connector{d.provider, name + " sslmode=disable", d.traceOpts}, nil
 }
 
 type connector struct {
-	provider rds.CertPoolProvider
-	pqConn   string
+	provider  rds.CertPoolProvider
+	pqConn    string
+	traceOpts []ocsql.TraceOption
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
-	return pq.DialOpen(dialer{c.provider}, c.pqConn)
+	conn, err := pq.DialOpen(dialer{c.provider}, c.pqConn)
+	if err != nil {
+		return nil, err
+	}
+	return ocsql.WrapConn(conn, c.traceOpts...), nil
 }
 
 func (c connector) Driver() driver.Driver {
-	return pqDriver{c.provider}
+	return pqDriver{c.provider, c.traceOpts}
 }
 
 type dialer struct {
