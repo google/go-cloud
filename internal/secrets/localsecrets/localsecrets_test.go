@@ -25,10 +25,7 @@ type harness struct{}
 
 func (h harness) MakeDriver(ctx context.Context) (driver.Encrypter, driver.Decrypter, error) {
 	sk := "very secret secret"
-	skr, err := NewSecretKeeper(sk)
-	if err != nil {
-		return nil, nil, err
-	}
+	skr := NewSecretKeeper(sk)
 
 	return skr.Encrypter, skr.Decrypter, nil
 }
