@@ -27,7 +27,7 @@ import (
 // secretKeeper holds a secret for use in symmetric encryption,
 // and implementations of driver.Encryper and driver.Decrypter.
 type secretKeeper struct {
-	secretKey [32]byte
+	secretKey [32]byte // secretbox key size
 	Encrypter driver.Encrypter
 	Decrypter driver.Decrypter
 }
@@ -49,6 +49,8 @@ func NewSecretKeeper(sk string) *secretKeeper {
 	return skr
 }
 
+const nonceSize = 24
+
 // encrypter implements driver.Encrypter and holds a pointer to
 // a secretKeeper, which holds the secret.
 type encrypter struct {
@@ -58,12 +60,12 @@ type encrypter struct {
 // Encrypt encrypts a message using a per-message generated nonce and
 // the secret held in the encrypter's secretKeeper.
 func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
-	var nonce [24]byte
+	var nonce [nonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
 	}
 	// a slice beginning at nonce is used here as the destination for the encrypted message,
-	// so that we can read the nonce out of the first 24 bytes when we decrypt it
+	// so that we can read the nonce out of the first nonceSize bytes when we decrypt it
 	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
 }
 
@@ -73,13 +75,13 @@ type decrypter struct {
 	skr *secretKeeper
 }
 
-// Decrypt decryptes a message using a nonce that is read out of the first 24 bytes
+// Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
 // of the message and a secret held by the decrypter's secretKeeper.
 func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
-	var decryptNonce [24]byte
-	copy(decryptNonce[:], message[:24])
+	var decryptNonce [nonceSize]byte
+	copy(decryptNonce[:], message[:nonceSize])
 
-	decrypted, ok := secretbox.Open(nil, message[24:], &decryptNonce, &d.skr.secretKey)
+	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &d.skr.secretKey)
 	if !ok {
 		return nil, errors.New("localsecrets: Decrypt failed")
 	}

@@ -22,7 +22,7 @@ import (
 
 func ExampleEncrypterDecrypterEncrypt() {
 	secretKey := "I'm a secret string!"
-	skr := localsecrets.NewSecretKeeper(sk)
+	skr := localsecrets.NewSecretKeeper(secretKey)
 	e := skr.Encrypter
 	d := skr.Decrypter
 
