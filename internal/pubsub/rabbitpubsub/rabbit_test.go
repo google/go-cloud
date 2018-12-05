@@ -20,12 +20,14 @@ package rabbitpubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/streadway/amqp"
@@ -42,9 +44,13 @@ func mustDialRabbit(t *testing.T) *amqp.Connection {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil
-	})
+	}
+	asTests := []drivertest.AsTest{
+		rabbitAsTest{},
+	}
+	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
 type harness struct {
@@ -64,12 +70,20 @@ func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, exchange)
 }
 
+func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
+	return newTopic(h.conn, "nonexistent-topic")
+}
+
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
 	queue := h.newName("s")
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, err
 	}
 	return newSubscription(h.conn, queue)
+}
+
+func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
+	return nil, errors.New("unimplemented")
 }
 
 func (h *harness) Close() {
@@ -176,4 +190,34 @@ func bindQueue(conn *amqp.Connection, queueName, exchangeName string) error {
 	return ch.QueueBind(q.Name, q.Name, exchangeName,
 		false, // no-wait
 		nil)   // args
+}
+
+type rabbitAsTest struct{}
+
+func (rabbitAsTest) Name() string {
+	return "rabbit test"
+}
+
+func (rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
+	var conn2 amqp.Connection
+	if top.As(&conn2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
+	}
+	var conn3 *amqp.Connection
+	if !top.As(&conn3) {
+		return fmt.Errorf("cast failed for %T", &conn3)
+	}
+	return nil
+}
+
+func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	var conn2 amqp.Connection
+	if sub.As(&conn2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
+	}
+	var conn3 *amqp.Connection
+	if !sub.As(&conn3) {
+		return fmt.Errorf("cast failed for %T", &conn3)
+	}
+	return nil
 }

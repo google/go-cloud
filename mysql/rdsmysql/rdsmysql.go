@@ -23,17 +23,16 @@ import (
 	"fmt"
 	"sync"
 
+	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/wire"
-	"github.com/opencensus-integrations/ocsql"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
 // *Params and an HTTP client.
 var Set = wire.NewSet(
 	Open,
-	wire.Value((*Options)(nil)),
 	rds.CertFetcherSet,
 )
 
@@ -49,17 +48,16 @@ type Params struct {
 	Password string
 	// Database is the MySQL database name to connect to.
 	Database string
-}
 
-type Options struct {
-	// This is only a placeholder so far.
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
 }
 
 // Open opens an encrypted connection to an RDS MySQL database.
 //
 // The second return value is a Wire cleanup function that calls Close on the
 // database and ignores the error.
-func Open(ctx context.Context, provider CertPoolProvider, params *Params, opts *Options) (*sql.DB, func(), error) {
+func Open(ctx context.Context, provider CertPoolProvider, params *Params) (*sql.DB, func(), error) {
 	if params.Endpoint == "" {
 		return nil, nil, fmt.Errorf("open RDS: endpoint empty")
 	}
@@ -70,6 +68,9 @@ func Open(ctx context.Context, provider CertPoolProvider, params *Params, opts *
 		ready:    make(chan struct{}),
 	}
 	c.sem <- struct{}{}
+	// Make a copy of TraceOpts to avoid caller modifying.
+	c.params.TraceOpts = append([]ocsql.TraceOption(nil), c.params.TraceOpts...)
+
 	db := sql.OpenDB(c)
 	return db, func() { db.Close() }, nil
 }
@@ -127,7 +128,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 }
 
 func (c *connector) Driver() driver.Driver {
-	return ocsql.Wrap(mysql.MySQLDriver{}, ocsql.WithAllTraceOptions())
+	return ocsql.Wrap(mysql.MySQLDriver{}, c.params.TraceOpts...)
 }
 
 var tlsConfigCounter struct {

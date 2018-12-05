@@ -49,6 +49,8 @@ func (s *ackingDriverSub) Close() error {
 
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
+func (s *ackingDriverSub) As(i interface{}) bool { return false }
+
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var mu sync.Mutex
@@ -176,7 +178,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 
 func TestAckDoesNotBlock(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &driver.Message{}
+	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
@@ -200,7 +202,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 
 func TestDoubleAckCausesPanic(t *testing.T) {
 	ctx := context.Background()
-	m := &driver.Message{}
+	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
@@ -227,7 +229,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 // For best results, run this test with -race.
 func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 	ctx := context.Background()
-	m := &driver.Message{}
+	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {

@@ -14,6 +14,10 @@
 
 // Package gcppubsub provides an implementation of pubsub that uses GCP
 // PubSub.
+//
+// It exposes the following types for As:
+// Topic: *raw.PublisherClient
+// Subscription: *raw.SubscriberClient
 package gcppubsub
 
 import (
@@ -25,9 +29,9 @@ import (
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 )
+
+const EndPoint = "pubsub.googleapis.com:443"
 
 type topic struct {
 	path   string
@@ -38,46 +42,17 @@ type topic struct {
 type TopicOptions struct{}
 
 // OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName. If the topic does not exist then an error will be returned.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) (*pubsub.Topic, error) {
-	dt, err := openTopic(ctx, client, proj, topicName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: opening topic: %v", err)
-	}
-	t := pubsub.NewTopic(dt)
-	return t, nil
+// topicName.
+func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
+	dt := openTopic(ctx, client, proj, topicName)
+	return pubsub.NewTopic(dt)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) (driver.Topic, error) {
-	client, err := raw.NewPublisherClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: creating publisher client: %v", err)
-	}
-	ok, err := topicExists(ctx, client, topicName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking existence of topic: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: topic named %q does not exist", topicName)
-	}
+func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
-	return &topic{path, client}, nil
-}
-
-func topicExists(ctx context.Context, client *raw.PublisherClient, topicName string) (bool, error) {
-	if topicName == "_deleted-topic_" {
-		return false, nil
-	}
-	_, err := client.GetTopic(ctx, &pb.GetTopicRequest{Topic: topicName})
-	if err == nil {
-		return true, nil
-	}
-	if grpc.Code(err) == codes.NotFound {
-		return false, nil
-	}
-	return false, err
+	return &topic{path, client}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -103,6 +78,16 @@ func (t *topic) IsRetryable(error) bool {
 	return false
 }
 
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	c, ok := i.(**raw.PublisherClient)
+	if !ok {
+		return false
+	}
+	*c = t.client
+	return true
+}
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -112,39 +97,16 @@ type subscription struct {
 type SubscriptionOptions struct{}
 
 // OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName. If the subscription does not exist then an
-// error is returned.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := openSubscription(ctx, client, proj, subscriptionName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: opening subscription: %v", err)
-	}
-	s := pubsub.NewSubscription(ds)
-	return s, nil
+// projectID and subscriptionName.
+func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
+	ds := openSubscription(ctx, client, proj, subscriptionName)
+	return pubsub.NewSubscription(ds)
 }
 
-func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) (driver.Subscription, error) {
-	client, err := raw.NewSubscriberClient(ctx)
-	ok, err := subscriptionExists(ctx, client, subscriptionName)
-	if err != nil {
-		return nil, fmt.Errorf("gcppubsub: checking for existence of subscription: %v", err)
-	}
-	if !ok {
-		return nil, fmt.Errorf("gcppubsub: subscription named %q does not exist", subscriptionName)
-	}
+// openSubscription returns a driver.Subscription.
+func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) driver.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
-	return &subscription{client, path}, nil
-}
-
-func subscriptionExists(ctx context.Context, client *raw.SubscriberClient, subscriptionName string) (bool, error) {
-	_, err := client.GetSubscription(ctx, &pb.GetSubscriptionRequest{Subscription: subscriptionName})
-	if err == nil {
-		return true, nil
-	}
-	if grpc.Code(err) == codes.NotFound {
-		return false, nil
-	}
-	return false, err
+	return &subscription{client, path}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -187,4 +149,14 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 func (s *subscription) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
+}
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	c, ok := i.(**raw.SubscriberClient)
+	if !ok {
+		return false
+	}
+	*c = s.client
+	return true
 }

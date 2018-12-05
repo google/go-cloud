@@ -28,18 +28,26 @@ fi
 
 result=0
 
-# Run Go tests for the root, including coverage.
-go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
-if [ -f coverage.out ]; then
-  # Filter out test and sample packages.
-  grep -v test coverage.out | grep -v samples > coverage2.out
-  goveralls -coverprofile=coverage2.out -service=travis-ci
+# Run Go tests for the root. Only do coverage for the Linux build
+# because it is slow, and Coveralls will only save the last one anyway.
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  if [ -f coverage.out ]; then
+    # Filter out test and sample packages.
+    grep -v test coverage.out | grep -v samples > coverage2.out
+    goveralls -coverprofile=coverage2.out -service=travis-ci
+  fi
+else
+  go test -race ./... || result=1
 fi
 wire check ./... || result=1
+# "wire diff" fails with exit code 1 if any diffs are detected.
+wire diff ./... || (echo "FAIL: wire diff found diffs!" && result=1)
 
 # Run Go tests for each additional module, without coverage.
 for path in "./internal/contributebot" "./samples/appengine"; do
   ( cd "$path" && exec go test ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
+  ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)
 done
 exit $result

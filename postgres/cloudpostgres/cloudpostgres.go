@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"time"
 
+	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/lib/pq"
 )
@@ -50,6 +51,9 @@ type Params struct {
 	// Values sets additional parameters, as documented in
 	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
 	Values url.Values
+
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
 }
 
 // Open opens a Cloud SQL database.
@@ -84,36 +88,44 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 			Port:  3307,
 			Certs: certSource,
 		},
-		instance: params.ProjectID + ":" + params.Region + ":" + params.Instance,
-		pqConn:   u.String(),
+		instance:  params.ProjectID + ":" + params.Region + ":" + params.Instance,
+		pqConn:    u.String(),
+		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
 	}), nil
 }
 
 type pqDriver struct {
-	client   *proxy.Client
-	instance string
+	client    *proxy.Client
+	instance  string
+	traceOpts []ocsql.TraceOption
 }
 
 func (d pqDriver) Open(name string) (driver.Conn, error) {
-	return connector{d.client, d.instance, name}.Connect(context.Background())
+	c, _ := d.OpenConnector(name)
+	return c.Connect(context.Background())
 }
 
 func (d pqDriver) OpenConnector(name string) (driver.Connector, error) {
-	return connector{d.client, d.instance, name}, nil
+	return connector{d.client, d.instance, name, d.traceOpts}, nil
 }
 
 type connector struct {
-	client   *proxy.Client
-	instance string
-	pqConn   string
+	client    *proxy.Client
+	instance  string
+	pqConn    string
+	traceOpts []ocsql.TraceOption
 }
 
 func (c connector) Connect(context.Context) (driver.Conn, error) {
-	return pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
+	conn, err := pq.DialOpen(dialer{c.client, c.instance}, c.pqConn)
+	if err != nil {
+		return nil, err
+	}
+	return ocsql.WrapConn(conn, c.traceOpts...), nil
 }
 
 func (c connector) Driver() driver.Driver {
-	return pqDriver{c.client, c.instance}
+	return pqDriver{c.client, c.instance, c.traceOpts}
 }
 
 type dialer struct {

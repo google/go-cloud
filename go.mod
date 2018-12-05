@@ -18,6 +18,7 @@ require (
 	cloud.google.com/go v0.30.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20180906190126-dd54a7ef511e
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
+	contrib.go.opencensus.io/integrations/ocsql v0.1.2
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181009230506-ac834ce67862
 	github.com/aws/aws-sdk-go v1.15.57
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
@@ -37,7 +38,7 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
-	github.com/google/wire v0.1.0
+	github.com/google/wire v0.2.0
 	github.com/googleapis/gax-go v2.0.0+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -52,9 +53,7 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0
-	github.com/opencensus-integrations/ocsql v0.1.1
 	github.com/pkg/errors v0.8.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0
 	github.com/prometheus/client_golang v0.9.0 // indirect
 	github.com/prometheus/common v0.0.0-20181015124227-bcb74de08d37 // indirect
 	github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d // indirect
@@ -75,7 +74,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20181017192945-9dcd33a902f4
 	golang.org/x/sys v0.0.0-20181011152604-fa43e7bc11ba // indirect
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
-	golang.org/x/tools v0.0.0-20181017214349-06f26fdaaa28
 	google.golang.org/api v0.0.0-20181017004218-3f6e8463aa1d
 	google.golang.org/appengine v1.2.0 // indirect
 	google.golang.org/genproto v0.0.0-20181016170114-94acd270e44e

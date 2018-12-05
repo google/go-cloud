@@ -16,8 +16,8 @@ package pubsub
 import (
 	"context"
 	"errors"
-	"reflect"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/google/go-cloud/internal/batcher"
@@ -96,6 +96,16 @@ func (t *Topic) Close() error {
 	t.mu.Unlock()
 	t.batcher.Shutdown()
 	return nil
+}
+
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (t *Topic) As(i interface{}) bool {
+	return t.driver.As(i)
 }
 
 // NewTopic makes a pubsub.Topic from a driver.Topic.
@@ -189,7 +199,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.AddNoWait(ackIDBox{id})
+				s.ackBatcher.AddNoWait(id)
 			},
 		})
 	}
@@ -205,9 +215,14 @@ func (s *Subscription) Close() error {
 	return nil
 }
 
-// ackIDBox makes it possible to use a driver.AckID with bundler.
-type ackIDBox struct {
-	ackID driver.AckID
+// As converts i to provider-specific types. See provider documentation for
+// which type(s) are supported.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (s *Subscription) As(i interface{}) bool {
+	return s.driver.As(i)
 }
 
 // NewSubscription creates a Subscription from a driver.Subscription and opts to
@@ -216,21 +231,16 @@ type ackIDBox struct {
 // periodically send them to the server.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
-	handler := func(item interface{}) error {
-		boxes := item.([]ackIDBox)
-		var ids []driver.AckID
-		for _, box := range boxes {
-			id := box.ackID
-			ids = append(ids, id)
-		}
+	handler := func(items interface{}) error {
+		ids := items.([]driver.AckID)
 		// TODO: Consider providing a way to stop this call. See #766.
 		callCtx := context.Background()
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
 	}
-	maxHandlers := 1
-	ab := batcher.New(reflect.TypeOf([]ackIDBox{}).Elem(), maxHandlers, handler)
+	const maxHandlers = 1
+	ab := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,

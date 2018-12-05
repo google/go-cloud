@@ -1,3 +1,6 @@
+// It exposes the following types for As:
+// Topic: *amqp.Connection
+// Subscription: *amqp.Connection
 package rabbitpubsub
 
 import (
@@ -38,8 +41,16 @@ const (
 	// If the message can't be enqueued, return it to the sender rather than silently dropping it.
 	mandatory = true
 
+<<<<<<< HEAD
 	// If there are no waiting consumers, enqueue the message instead of dropping it.
 	notImmediate = false
+||||||| merged common ancestors
+	// If there are no waiting consumers, enqueue the message instead of dropping it
+	notImmediate = false
+=======
+	// If there are no waiting consumers, enqueue the message instead of dropping it
+	immediate = false
+>>>>>>> 90c322bdabbb41e48b19c4b14635d90bd02e6f9f
 )
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
@@ -131,7 +142,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	for _, m := range ms {
 		pub := toPublishing(m)
-		if err := t.ch.Publish(t.exchange, routingKey, mandatory, notImmediate, pub); err != nil {
+		if err := t.ch.Publish(t.exchange, routingKey, mandatory, immediate, pub); err != nil {
 			t.ch = nil // AMQP channel is broken after error
 			return err
 		}
@@ -204,6 +215,16 @@ func toPublishing(m *driver.Message) amqp.Publishing {
 func (*topic) IsRetryable(error) bool {
 	// TODO(jba): figure out what errors can be retried.
 	return false
+}
+
+// As implements driver.Topic.As.
+func (t *topic) As(i interface{}) bool {
+	c, ok := i.(**amqp.Connection)
+	if !ok {
+		return false
+	}
+	*c = t.conn
+	return true
 }
 
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue. The
@@ -365,4 +386,14 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 func (*subscription) IsRetryable(error) bool {
 	// TODO(jba): figure out what errors can be retried.
 	return false
+}
+
+// As implements driver.Subscription.As.
+func (s *subscription) As(i interface{}) bool {
+	c, ok := i.(**amqp.Connection)
+	if !ok {
+		return false
+	}
+	*c = s.conn
+	return true
 }
