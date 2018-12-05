@@ -309,6 +309,17 @@ b, err := blob.NewBucket(d, blob.FeatureUnicodeNames)
 Design discussions regarding enforcing portability are ongoing; we welcome input
 on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 
+## Coding Conventions
+
+We try to adhere to commonly accepted Go coding conventions, some of which are
+described on the
+[Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+wiki page. We also adopt the following guidelines:
+* Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
+* When writing a loop appending to a slice `s`, prefer `var s []T` to `s :=
+  make([]T, 0, N)` unless the loop body is trivial and the loop is
+  performance-sensitive.
+
 ## Tests
 
 Portable API integration tests require developer-specific resources to be
