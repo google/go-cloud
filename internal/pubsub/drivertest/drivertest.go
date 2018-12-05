@@ -92,10 +92,10 @@ func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 }
 
 func (verifyAsFailsOnNil) MessageCheck(t *pubsub.Topic, s *pubsub.Subscription, m *pubsub.Message) error {
-	if t.MessageAs(nil) {
+	if t.MessageAs(m, nil) {
 		return errors.New("want Topic.MessageAs to return false when passed nil")
 	}
-	if s.MessageAs(nil) {
+	if s.MessageAs(m, nil) {
 		return errors.New("want Subscription.MessageAs to return false when passed nil")
 	}
 	return nil
@@ -331,7 +331,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		Metadata: map[string]string{"a": "1"},
 		Body:     []byte("lorem ipsum"),
 	}
-	if err := st.MessageCheck(m); err != nil {
+	if err := st.MessageCheck(top, sub, m); err != nil {
 		t.Error(err)
 	}
 }

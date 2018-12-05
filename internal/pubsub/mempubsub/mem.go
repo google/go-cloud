@@ -93,6 +93,9 @@ func (*topic) IsRetryable(error) bool { return false }
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool { return false }
 
+// MessageAs implements driver.Topic.MessageAs.
+func (t *topic) MessageAs(m *driver.Message, i interface{}) bool { return false }
+
 type subscription struct {
 	mu          sync.Mutex
 	topic       *topic
@@ -223,3 +226,6 @@ func (*subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool { return false }
+
+// MessageAs implements driver.Subscription.MessageAs.
+func (s *subscription) MessageAs(m *driver.Message, i interface{}) bool { return false }
