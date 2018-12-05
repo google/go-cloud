@@ -31,7 +31,11 @@ install:
 script:
   - 'internal/testing/runchecks.sh'
 
+notifications:
+  webhooks: https://coveralls.io/webhook
+
 env:
   global:
   - GOPROXY=https://storage.googleapis.com/go-cloud-modules/
   - GO111MODULE=on
+  - COVERALLS_PARALLEL=true
