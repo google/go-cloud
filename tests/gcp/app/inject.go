@@ -25,11 +25,11 @@ import (
 	"github.com/google/go-cloud/wire"
 )
 
-func initialize(ctx context.Context) (*server.Server, error) {
+func initialize(ctx context.Context) (*server.Server, func(), error) {
 	wire.Build(
 		appSet,
 		gcpcloud.Services,
 		gcp.DefaultIdentity,
 	)
-	return nil, nil
+	return nil, nil, nil
 }

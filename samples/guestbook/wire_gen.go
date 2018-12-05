@@ -126,7 +126,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	v, cleanup := appHealthChecks(db)
 	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	exporter, cleanup2, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -143,23 +143,27 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	serverServer := server.New(options)
 	bucket, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	runtimeConfigManagerClient, cleanup2, err := runtimeconfigurator.Dial(ctx, tokenSource)
+	runtimeConfigManagerClient, cleanup3, err := runtimeconfigurator.Dial(ctx, tokenSource)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	client := runtimeconfigurator.NewClient(runtimeConfigManagerClient)
-	variable, cleanup3, err := gcpMOTDVar(ctx, client, projectID, flags)
+	variable, cleanup4, err := gcpMOTDVar(ctx, client, projectID, flags)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	mainApplication := newApplication(serverServer, db, bucket, variable)
 	return mainApplication, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
