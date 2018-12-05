@@ -201,19 +201,19 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 
 // Close flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) error {
-	c := make(chan struct{})
-	defer close(c)
-	go func() {
-		select {
-		case <-ctx.Done():
-			s.cancel()
-		case <-c:
-		}
-	}()
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
-	s.ackBatcher.Shutdown()
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		s.ackBatcher.Shutdown()
+	}()
+	select {
+	case <-ctx.Done():
+	case <-c:
+	}
+	s.cancel()
 	return ctx.Err()
 }
 
