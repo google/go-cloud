@@ -84,6 +84,13 @@ type Topic interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// As allows providers to expose provider-specific types.
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	MessageAs(m *Message, i interface{}) bool
 }
 
 // Subscription receives published messages.
@@ -130,4 +137,11 @@ type Subscription interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// As allows providers to expose provider-specific types.
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	MessageAs(m *Message, i interface{}) bool
 }
