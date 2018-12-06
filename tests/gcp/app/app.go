@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 
 	"go.opencensus.io/trace"
 )
@@ -42,10 +42,11 @@ func main() {
 	flag.StringVar(&projectID, "project", "", "Project ID to use for the test app")
 
 	flag.Parse()
-	srv, err := initialize(context.Background())
+	srv, cleanup, err := initialize(context.Background())
 	if err != nil {
 		log.Fatalf("unable to initialize server: %v", err)
 	}
+	defer cleanup()
 
 	m := http.NewServeMux()
 	m.HandleFunc("/", handleMain)

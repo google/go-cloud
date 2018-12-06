@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
@@ -44,14 +44,22 @@ var Set = wire.NewSet(
 )
 
 // NewExporter returns a new OpenCensus Stackdriver exporter.
-func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, error) {
+//
+// The second return value is a Wire cleanup function that calls Flush
+// on the exporter.
+func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
 	tokOpt := option.WithTokenSource(oauth2.TokenSource(ts))
-	return stackdriver.NewExporter(stackdriver.Options{
+	exp, err := stackdriver.NewExporter(stackdriver.Options{
 		ProjectID:               string(id),
 		MonitoringClientOptions: []option.ClientOption{tokOpt},
 		TraceClientOptions:      []option.ClientOption{tokOpt},
 		MonitoredResource:       mr,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return exp, func() { exp.Flush() }, err
 }
 
 // NewRequestLogger returns a request logger that sends entries to stdout.

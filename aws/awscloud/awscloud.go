@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/go-cloud/runtimevar/paramstore"
 	"github.com/google/go-cloud/server/xrayserver"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface

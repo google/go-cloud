@@ -20,9 +20,9 @@ package rabbitpubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -66,11 +66,11 @@ func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
 	if err := declareExchange(h.conn, exchange); err != nil {
 		return nil, err
 	}
-	return newTopic(h.conn, exchange)
+	return newTopic(h.conn, exchange), nil
 }
 
 func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
-	return newTopic(h.conn, "nonexistent-topic")
+	return newTopic(h.conn, "nonexistent-topic"), nil
 }
 
 func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
@@ -78,11 +78,11 @@ func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.S
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, err
 	}
-	return newSubscription(h.conn, queue)
+	return newSubscription(h.conn, queue), nil
 }
 
 func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {
-	return nil, errors.New("rabbitpubsub.harness.MakeNonexistentSubscription unimplemented")
+	return newSubscription(h.conn, "nonexistent-subscription"), nil
 }
 
 func (h *harness) Close() {
@@ -104,20 +104,21 @@ func TestPublishConcurrently(t *testing.T) {
 	if err := declareExchange(conn, "t"); err != nil {
 		t.Fatal(err)
 	}
-
-	top, err := newTopic(conn, "t")
-	if err != nil {
+	// The queue is needed, or RabbitMQ says the message is unroutable.
+	if err := bindQueue(conn, "s", "t"); err != nil {
 		t.Fatal(err)
 	}
 
+	top := newTopic(conn, "t")
 	errc := make(chan error, 100)
 	for g := 0; g < cap(errc); g++ {
+		g := g
 		go func() {
 			var msgs []*driver.Message
 			for i := 0; i < 10; i++ {
 				msgs = append(msgs, &driver.Message{
 					Metadata: map[string]string{"a": strconv.Itoa(i)},
-					Body:     []byte(fmt.Sprintf("msg-%d", i)),
+					Body:     []byte(fmt.Sprintf("msg-%d-%d", g, i)),
 				})
 			}
 			errc <- top.SendBatch(ctx, msgs)
@@ -127,6 +128,22 @@ func TestPublishConcurrently(t *testing.T) {
 		if err := <-errc; err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestUnroutable(t *testing.T) {
+	// Expect that we get an error on publish if the exchange has no queue bound to it.
+	ctx := context.Background()
+	conn := mustDialRabbit(t)
+	defer conn.Close()
+
+	if err := declareExchange(conn, "u"); err != nil {
+		t.Fatal(err)
+	}
+	top := newTopic(conn, "u")
+	err := top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
+	if err == nil || !strings.Contains(err.Error(), "NO_ROUTE") {
+		t.Errorf("got %v, want an error with 'NO_ROUTE'", err)
 	}
 }
 

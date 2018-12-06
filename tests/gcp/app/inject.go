@@ -22,14 +22,14 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/gcp/gcpcloud"
 	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
-func initialize(ctx context.Context) (*server.Server, error) {
+func initialize(ctx context.Context) (*server.Server, func(), error) {
 	wire.Build(
 		appSet,
 		gcpcloud.Services,
 		gcp.DefaultIdentity,
 	)
-	return nil, nil
+	return nil, nil, nil
 }
