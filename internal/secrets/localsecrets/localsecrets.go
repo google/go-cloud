@@ -64,8 +64,9 @@ func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error)
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
 	}
-	// a slice beginning at nonce is used here as the destination for the encrypted message,
-	// so that we can read the nonce out of the first nonceSize bytes when we decrypt it
+	// secretbox.Seal appends the encrypted message to its first argument and returns
+	// the result; using a slice on top of the nonce array for this "out" arg allows reading
+	// the nonce out of the first nonceSize bytes when the message is decrypted.
 	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
 }
 
