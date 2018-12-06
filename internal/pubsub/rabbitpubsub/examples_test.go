@@ -76,10 +76,7 @@ func Example() {
 	ch.Close() // OpenSubscription will create its own channels.
 
 	// Publish a message to the exchange (that is, topic).
-	topic, err := rabbitpubsub.OpenTopic(conn, exchangeName)
-	if err != nil {
-		log.Fatalf("opening topic: %v", err)
-	}
+	topic := rabbitpubsub.OpenTopic(conn, exchangeName)
 	ctx := context.Background()
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello")})
 	if err != nil {
@@ -90,10 +87,7 @@ func Example() {
 	}
 
 	// Receive the message from the queue (that is, subscription).
-	sub, err := rabbitpubsub.OpenSubscription(conn, queueName)
-	if err != nil {
-		log.Fatalf("opening subscription: %v", err)
-	}
+	sub := rabbitpubsub.OpenSubscription(conn, queueName)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	msg, err := sub.Receive(ctx)
