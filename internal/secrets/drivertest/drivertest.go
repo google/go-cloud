@@ -61,14 +61,14 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	if cmp.Equal(msg, encryptedMsg) {
-		t.Error("Encrypted message should not match plain text.")
+		t.Errorf("Got encrypted message %v, want it to differ from original message %v", string(msg), string(encryptedMsg))
 	}
 	decryptedMsg, err := decrypter.Decrypt(ctx, encryptedMsg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !cmp.Equal(msg, decryptedMsg) {
-		t.Error("Decrypted message should match original message.")
+		t.Errorf("Got decrypted message %v, want it to match original message %v", string(msg), string(decryptedMsg))
 	}
 
 }

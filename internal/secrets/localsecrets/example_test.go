@@ -17,6 +17,7 @@ package localsecrets_test
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/go-cloud/internal/secrets/localsecrets"
 )
@@ -30,12 +31,12 @@ func ExampleEncrypterDecrypterEncrypt() {
 	msg := "I'm a message!"
 	encryptedMsg, err := e.Encrypt(context.Background(), []byte(msg))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	decryptedMsg, err := d.Decrypt(context.Background(), encryptedMsg)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	fmt.Println(string(decryptedMsg))
 
