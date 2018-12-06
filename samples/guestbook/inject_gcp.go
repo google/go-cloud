@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-cloud/mysql/cloudmysql"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It

@@ -25,7 +25,7 @@ import (
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server/driver"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 
 	"go.opencensus.io/trace"
 )

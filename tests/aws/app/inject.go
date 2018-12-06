@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cloud/aws/awscloud"
 	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"

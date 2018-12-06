@@ -26,7 +26,7 @@ import (
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
 	"github.com/google/go-cloud/aws/rds"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
