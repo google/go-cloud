@@ -17,22 +17,22 @@ import (
 
 // Injectors from inject.go:
 
-func initialize(ctx context.Context) (*server.Server, error) {
+func initialize(ctx context.Context) (*server.Server, func(), error) {
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v := _wireValue
 	credentials, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	projectID, err := gcp.DefaultProjectID(credentials)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tokenSource := gcp.CredentialsTokenSource(credentials)
 	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	exporter, cleanup, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
@@ -44,7 +44,9 @@ func initialize(ctx context.Context) (*server.Server, error) {
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
-	return serverServer, nil
+	return serverServer, func() {
+		cleanup()
+	}, nil
 }
 
 var (
