@@ -119,7 +119,7 @@ func TestSendReceive(t *testing.T) {
 	}
 
 	sub := pubsub.NewSubscription(ds)
-	defer sub.Close()
+	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
 	s := pubsub.NewSubscription(ds)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
 	var mu sync.Mutex
@@ -219,7 +219,7 @@ func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
 	s := pubsub.NewSubscription(ds)
-	defer s.Close()
+	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
