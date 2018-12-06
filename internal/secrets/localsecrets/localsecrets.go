@@ -21,9 +21,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"io"
+
 	"github.com/google/go-cloud/internal/secrets/driver"
 	"golang.org/x/crypto/nacl/secretbox"
-	"io"
 )
 
 // secretKeeper holds a secret for use in symmetric encryption,

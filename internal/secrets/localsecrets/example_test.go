@@ -17,6 +17,7 @@ package localsecrets_test
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-cloud/internal/secrets/localsecrets"
 )
 

@@ -13,14 +13,15 @@
 // limitations under the License.
 
 // Package drivertest provides a conformance test for implementations of
-// driver.
+// the secrets driver.
 package drivertest
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cloud/internal/secrets/driver"
 	"github.com/google/go-cmp/cmp"
-	"testing"
 )
 
 // Harness descibes the functionality test harnesses must provide to run

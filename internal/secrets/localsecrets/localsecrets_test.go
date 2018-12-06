@@ -16,9 +16,10 @@ package localsecrets
 
 import (
 	"context"
+	"testing"
+
 	"github.com/google/go-cloud/internal/secrets/driver"
 	"github.com/google/go-cloud/internal/secrets/drivertest"
-	"testing"
 )
 
 type harness struct{}
