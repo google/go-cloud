@@ -1279,14 +1279,14 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			name:    "valid metadata",
 			content: hello,
 			metadata: map[string]string{
-				"key-a": "value-a",
-				"kEy-B": "value-b",
-				"key-c": "vAlUe-c",
+				"key_a": "value-a",
+				"kEy_B": "value-b",
+				"key_c": "vAlUe-c",
 			},
 			want: map[string]string{
-				"key-a": "value-a",
-				"key-b": "value-b",
-				"key-c": "vAlUe-c",
+				"key_a": "value-a",
+				"key_b": "value-b",
+				"key_c": "vAlUe-c",
 			},
 		},
 		{
