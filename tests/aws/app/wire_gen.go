@@ -14,7 +14,7 @@ import (
 	"github.com/google/go-cloud/health"
 	"github.com/google/go-cloud/server"
 	"github.com/google/go-cloud/server/xrayserver"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 	"go.opencensus.io/trace"
 )
 

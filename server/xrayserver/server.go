@@ -20,14 +20,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/go-cloud/requestlog"
-	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
-
+	exporter "contrib.go.opencensus.io/exporter/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/xray"
 	"github.com/aws/aws-sdk-go/service/xray/xrayiface"
-	exporter "contrib.go.opencensus.io/exporter/aws"
+	"github.com/google/go-cloud/requestlog"
+	"github.com/google/go-cloud/server"
+	"github.com/google/wire"
 	"go.opencensus.io/trace"
 )
 
