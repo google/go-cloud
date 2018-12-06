@@ -37,10 +37,7 @@ type secretKeeper struct {
 
 // NewSecretKeeper takes a secret key and returns a secretKeeper.
 func NewSecretKeeper(sk string) *secretKeeper {
-	skb := []byte(sk)
-	enc := base64.StdEncoding
-	dst := make([]byte, enc.EncodedLen(len(skb)))
-	enc.Encode(dst, skb)
+	dst := base64.StdEncoding.EncodeToString([]byte(sk))
 
 	var dst32 [32]byte
 	copy(dst32[:], dst)
