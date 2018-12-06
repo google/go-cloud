@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//
+// Package drivertest provides a conformance test for implementations of
+// driver.
 package drivertest
 
 import (

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package localsecrets provides a way to encrypt and decrypt small messages
+// without making network calls to a third party service.
 package localsecrets
 
 import (
