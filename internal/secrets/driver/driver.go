@@ -31,3 +31,13 @@ type Encrypter interface {
 	// Encrypt encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 }
+
+// Crypter defines an interface satisfied by implementing both
+// Encrypterand Decrypter. This composed interface reflects the
+// inherent tie between compatible pairs, ie to decrypt a message,
+// Decrypter must be based on the same underlying credentials as
+// the Encrypter which encrypted the message.
+type Crypter interface {
+	Encrypter
+	Decrypter
+}
