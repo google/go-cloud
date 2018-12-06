@@ -20,10 +20,11 @@ type topic struct {
 	exchange string // the AMQP exchange
 	conn     *amqp.Connection
 
-	mu   sync.Mutex
-	ch   *amqp.Channel            // AMQP channel used for all communication.
-	pubc <-chan amqp.Confirmation // Go channel for server acks of publishes
-	retc <-chan amqp.Return       // Go channel for "returned" undeliverable messages
+	mu     sync.Mutex
+	ch     *amqp.Channel            // AMQP channel used for all communication.
+	pubc   <-chan amqp.Confirmation // Go channel for server acks of publishes
+	retc   <-chan amqp.Return       // Go channel for "returned" undeliverable messages
+	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
 // Values for the amqp client.
@@ -77,9 +78,16 @@ func newTopic(conn *amqp.Connection, name string) *topic {
 // Must be called with t.mu held.
 func (t *topic) establishChannel() error {
 	// TODO(jba): support context.Context
-	if t.ch != nil {
-		// We already have a channel; nothing to do.
-		return nil
+	if t.ch != nil { // We already have a channel.
+		select {
+		// If it was closed, open a new one.
+		// (Ignore the error, if any.)
+		case <-t.closec:
+
+		// If it isn't closed, nothing to do.
+		default:
+			return nil
+		}
 	}
 	// Create a new channel.
 	ch, err := t.conn.Channel()
@@ -93,8 +101,10 @@ func (t *topic) establishChannel() error {
 	t.ch = ch
 	// Get a Go channel which will hold acks from the server. The server
 	// will send an ack for each published message to confirm that it was received.
-	t.pubc = ch.NotifyPublish(make(chan amqp.Confirmation)) // NotifyPublish returns its arg
-	t.retc = ch.NotifyReturn(make(chan amqp.Return))        // NotifyReturn returns its arg
+	// All the Notify methods return their arg.
+	t.pubc = ch.NotifyPublish(make(chan amqp.Confirmation))
+	t.retc = ch.NotifyReturn(make(chan amqp.Return))
+	t.closec = ch.NotifyClose(make(chan *amqp.Error, 1)) // closec will get at most one element
 	return nil
 }
 
@@ -167,13 +177,18 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 
 		case conf, ok := <-t.pubc:
 			if !ok {
-				// t.pubc was closed.
-				if err == nil {
-					err = errors.New("rabbitpubsub: publish listener closed unexpectedly")
-				}
-				// If pubc is closed, the AMQP channel is closed.
+				// t.pubc was closed unexpectedly.
 				t.ch = nil // re-create the channel on next use
-				return err
+				if err != nil {
+					return err
+				}
+				// t.closec must be closed too. See if it has an error.
+				if err = closeErr(t.closec); err != nil {
+					return err
+				}
+				// We shouldn't be here, but if we are, we still want to return an
+				// error.
+				return errors.New("rabbitpubsub: publish listener closed unexpectedly")
 			}
 			nAcks++
 			if !conf.Ack && err == nil {
@@ -182,6 +197,27 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 		}
 	}
 	return err
+}
+
+// Return the error from a Go channel monitoring the closing of an AMQP channel.
+// closec must have been registered via Channel.NotifyClose.
+// When closeErr is called, we expect closec to be closed. If it isn't, we also
+// consider that an error.
+func closeErr(closec <-chan *amqp.Error) error {
+	select {
+	case aerr := <-closec:
+		// This nil check is necessary. aerr is of type *ampq.Error. If we
+		// returned it directly (effectively assigning it to a variable of
+		// type error), then the return value would not be a nil interface
+		// value even if aerr was a nil pointer, and that would break tests
+		// like "if err == nil ...".
+		if aerr == nil {
+			return nil
+		}
+		return aerr
+	default:
+		return errors.New("rabbitpubsub: channel not closed")
+	}
 }
 
 // toPublishing converts a driver.Message to an amqp.Publishing.
@@ -232,9 +268,10 @@ type subscription struct {
 	queue    string // the AMQP queue name
 	consumer string // the client-generated name for this particular subscriber
 
-	mu   sync.Mutex
-	ch   *amqp.Channel // AMQP channel used for all communication.
-	delc <-chan amqp.Delivery
+	mu     sync.Mutex
+	ch     *amqp.Channel // AMQP channel used for all communication.
+	delc   <-chan amqp.Delivery
+	closec <-chan *amqp.Error
 }
 
 var nextConsumer int64 // atomic
@@ -250,9 +287,16 @@ func newSubscription(conn *amqp.Connection, name string) *subscription {
 // Must be called with s.mu held.
 func (s *subscription) establishChannel() error {
 	// TODO(jba): support context.Context
-	if s.ch != nil {
-		// We already have a channel; nothing to do.
-		return nil
+	if s.ch != nil { // We already have a channel.
+		select {
+		// If it was closed, open a new one.
+		// (Ignore the error, if any.)
+		case <-s.closec:
+
+		// If it isn't closed, nothing to do.
+		default:
+			return nil
+		}
 	}
 	// Create a new channel.
 	ch, err := s.conn.Channel()
@@ -270,6 +314,7 @@ func (s *subscription) establishChannel() error {
 		return err
 	}
 	s.ch = ch
+	s.closec = ch.NotifyClose(make(chan *amqp.Error, 1)) // closec will get at most one element
 	return nil
 }
 
@@ -299,8 +344,13 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				if len(ms) > 0 {
 					return ms, nil
 				}
-				// TODO(jba): get more information for a better message
-				return nil, errors.New("delivery channel closed")
+				// t.closec must be closed too. See if it has an error.
+				if err := closeErr(s.closec); err != nil {
+					return nil, err
+				}
+				// We shouldn't be here, but if we are, we still want to return an
+				// error.
+				return nil, errors.New("rabbitpubsub: delivery channel closed unexpectedly")
 			}
 			ms = append(ms, toMessage(d))
 			if len(ms) >= maxMessages {
