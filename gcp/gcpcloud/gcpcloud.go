@@ -20,7 +20,7 @@ import (
 	"github.com/google/go-cloud/gcp/cloudsql"
 	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 	"github.com/google/go-cloud/server/sdserver"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
 // GCP is a Wire provider set that includes all Google Cloud Platform services

@@ -23,7 +23,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 	"github.com/google/go-cloud/requestlog"
 	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"

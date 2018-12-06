@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-cloud/mysql/rdsmysql"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/runtimevar/paramstore"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 )
 
 // This file wires the generic interfaces up to Amazon Web Services (AWS). It

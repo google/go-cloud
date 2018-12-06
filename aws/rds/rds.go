@@ -24,7 +24,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 	"golang.org/x/net/context/ctxhttp"
 )
 
