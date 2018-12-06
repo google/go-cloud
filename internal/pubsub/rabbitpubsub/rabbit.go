@@ -344,7 +344,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				if len(ms) > 0 {
 					return ms, nil
 				}
-				// t.closec must be closed too. See if it has an error.
+				// s.closec must be closed too. See if it has an error.
 				if err := closeErr(s.closec); err != nil {
 					return nil, err
 				}
