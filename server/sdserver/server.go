@@ -59,11 +59,7 @@ func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Inte
 		return nil, nil, err
 	}
 
-	cleanup := func() {
-		exp.Flush()
-	}
-
-	return exp, cleanup, err
+	return exp, func() { exp.Flush() }, err
 }
 
 // NewRequestLogger returns a request logger that sends entries to stdout.
