@@ -35,7 +35,7 @@ import (
 	"github.com/google/go-cloud/health/sqlhealth"
 	"github.com/google/go-cloud/runtimevar"
 	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/wire"
+	"github.com/google/wire"
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 )
