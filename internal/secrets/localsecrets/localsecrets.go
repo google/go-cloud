@@ -19,7 +19,6 @@ package localsecrets
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"io"
 
@@ -36,17 +35,20 @@ type secretKeeper struct {
 }
 
 // NewSecretKeeper takes a secret key and returns a secretKeeper.
-func NewSecretKeeper(sk string) *secretKeeper {
-	dst := base64.StdEncoding.EncodeToString([]byte(sk))
-
-	var dst32 [32]byte
-	copy(dst32[:], dst)
-
-	skr := &secretKeeper{secretKey: dst32}
+func NewSecretKeeper(sk [32]byte) *secretKeeper {
+	skr := &secretKeeper{secretKey: sk}
 	skr.Encrypter = &encrypter{skr: skr}
 	skr.Decrypter = &decrypter{skr: skr}
 
 	return skr
+}
+
+// ByteKey takes a secret key as a string and converts it
+// to a [32]byte, cropping it if necessary.
+func ByteKey(sk string) [32]byte {
+	var sk32 [32]byte
+	copy(sk32[:], []byte(sk))
+	return sk32
 }
 
 const nonceSize = 24
