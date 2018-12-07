@@ -28,7 +28,7 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeDriver returns an Encypter and a Decrypter for use in tests.
-	MakeDriver(ctx context.Context) (driver.Encrypter, driver.Decrypter, error)
+	MakeDriver(ctx context.Context) (driver.Crypter, error)
 }
 
 // HarnessMaker describes functions that construct a harness for running tests.
@@ -50,20 +50,20 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 
-	encrypter, decrypter, err := harness.MakeDriver(ctx)
+	crypter, err := harness.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	msg := []byte("I'm a secret message!")
-	encryptedMsg, err := encrypter.Encrypt(ctx, msg)
+	encryptedMsg, err := crypter.Encrypt(ctx, msg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cmp.Equal(msg, encryptedMsg) {
 		t.Errorf("Got encrypted message %v, want it to differ from original message %v", string(msg), string(encryptedMsg))
 	}
-	decryptedMsg, err := decrypter.Decrypt(ctx, encryptedMsg)
+	decryptedMsg, err := crypter.Decrypt(ctx, encryptedMsg)
 	if err != nil {
 		t.Fatal(err)
 	}

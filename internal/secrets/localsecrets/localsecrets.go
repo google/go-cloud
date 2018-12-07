@@ -22,25 +22,18 @@ import (
 	"errors"
 	"io"
 
-	"github.com/google/go-cloud/internal/secrets/driver"
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
 // SecretKeeper holds a secret for use in symmetric encryption,
-// and implementations of driver.Encryper and driver.Decrypter.
+// and implements driver.Crypter.
 type SecretKeeper struct {
 	secretKey [32]byte // secretbox key size
-	Encrypter driver.Encrypter
-	Decrypter driver.Decrypter
 }
 
 // NewSecretKeeper takes a secret key and returns a SecretKeeper.
 func NewSecretKeeper(sk [32]byte) *SecretKeeper {
-	skr := &SecretKeeper{secretKey: sk}
-	skr.Encrypter = &encrypter{skr: skr}
-	skr.Decrypter = &decrypter{skr: skr}
-
-	return skr
+	return &SecretKeeper{secretKey: sk}
 }
 
 // ByteKey takes a secret key as a string and converts it
@@ -53,15 +46,9 @@ func ByteKey(sk string) [32]byte {
 
 const nonceSize = 24
 
-// encrypter implements driver.Encrypter and holds a pointer to
-// a SecretKeeper, which holds the secret.
-type encrypter struct {
-	skr *SecretKeeper
-}
-
 // Encrypt encrypts a message using a per-message generated nonce and
 // the secret held in the encrypter's SecretKeeper.
-func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
+func (sk *SecretKeeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [nonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
@@ -69,22 +56,16 @@ func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error)
 	// secretbox.Seal appends the encrypted message to its first argument and returns
 	// the result; using a slice on top of the nonce array for this "out" arg allows reading
 	// the nonce out of the first nonceSize bytes when the message is decrypted.
-	return secretbox.Seal(nonce[:], message, &nonce, &e.skr.secretKey), nil
-}
-
-// decrypter implements driver.Decrypter and holds a pointer to
-// a SecretKeeper, which holds the secret.
-type decrypter struct {
-	skr *SecretKeeper
+	return secretbox.Seal(nonce[:], message, &nonce, &sk.secretKey), nil
 }
 
 // Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
 // of the message and a secret held by the decrypter's SecretKeeper.
-func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
+func (sk *SecretKeeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
 	copy(decryptNonce[:], message[:nonceSize])
 
-	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &d.skr.secretKey)
+	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &sk.secretKey)
 	if !ok {
 		return nil, errors.New("localsecrets: Decrypt failed")
 	}

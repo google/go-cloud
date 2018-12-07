@@ -25,16 +25,14 @@ import (
 func ExampleEncrypterDecrypterEncrypt() {
 	secretKey := localsecrets.ByteKey("I'm a secret string!")
 	skr := localsecrets.NewSecretKeeper(secretKey)
-	e := skr.Encrypter
-	d := skr.Decrypter
 
 	msg := "I'm a message!"
-	encryptedMsg, err := e.Encrypt(context.Background(), []byte(msg))
+	encryptedMsg, err := skr.Encrypt(context.Background(), []byte(msg))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	decryptedMsg, err := d.Decrypt(context.Background(), encryptedMsg)
+	decryptedMsg, err := skr.Decrypt(context.Background(), encryptedMsg)
 	if err != nil {
 		log.Fatal(err)
 	}
