@@ -26,17 +26,17 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
-// secretKeeper holds a secret for use in symmetric encryption,
+// SecretKeeper holds a secret for use in symmetric encryption,
 // and implementations of driver.Encryper and driver.Decrypter.
-type secretKeeper struct {
+type SecretKeeper struct {
 	secretKey [32]byte // secretbox key size
 	Encrypter driver.Encrypter
 	Decrypter driver.Decrypter
 }
 
-// NewSecretKeeper takes a secret key and returns a secretKeeper.
-func NewSecretKeeper(sk [32]byte) *secretKeeper {
-	skr := &secretKeeper{secretKey: sk}
+// NewSecretKeeper takes a secret key and returns a SecretKeeper.
+func NewSecretKeeper(sk [32]byte) *SecretKeeper {
+	skr := &SecretKeeper{secretKey: sk}
 	skr.Encrypter = &encrypter{skr: skr}
 	skr.Decrypter = &decrypter{skr: skr}
 
@@ -54,13 +54,13 @@ func ByteKey(sk string) [32]byte {
 const nonceSize = 24
 
 // encrypter implements driver.Encrypter and holds a pointer to
-// a secretKeeper, which holds the secret.
+// a SecretKeeper, which holds the secret.
 type encrypter struct {
-	skr *secretKeeper
+	skr *SecretKeeper
 }
 
 // Encrypt encrypts a message using a per-message generated nonce and
-// the secret held in the encrypter's secretKeeper.
+// the secret held in the encrypter's SecretKeeper.
 func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [nonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
@@ -73,13 +73,13 @@ func (e *encrypter) Encrypt(ctx context.Context, message []byte) ([]byte, error)
 }
 
 // decrypter implements driver.Decrypter and holds a pointer to
-// a secretKeeper, which holds the secret.
+// a SecretKeeper, which holds the secret.
 type decrypter struct {
-	skr *secretKeeper
+	skr *SecretKeeper
 }
 
 // Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
-// of the message and a secret held by the decrypter's secretKeeper.
+// of the message and a secret held by the decrypter's SecretKeeper.
 func (d *decrypter) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
 	copy(decryptNonce[:], message[:nonceSize])
