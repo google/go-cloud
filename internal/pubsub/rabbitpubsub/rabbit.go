@@ -216,7 +216,7 @@ func closeErr(closec <-chan *amqp.Error) error {
 		}
 		return aerr
 	default:
-		return errors.New("rabbitpubsub: channel not closed")
+		return errors.New("rabbitpubsub: NotifyClose Go channel is unexpectedly open")
 	}
 }
 
