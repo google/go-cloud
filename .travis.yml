@@ -31,6 +31,9 @@ install:
 script:
   - 'internal/testing/runchecks.sh'
 
+after_success:
+  - bash <(curl -s https://codecov.io/bash) -t "b089d85f-80c6-4cb7-9254-90fe3825e611"
+
 env:
   global:
   - GOPROXY=https://storage.googleapis.com/go-cloud-modules/

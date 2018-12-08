@@ -35,16 +35,12 @@ fi
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and Coveralls will only save the last one anyway.
-if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
-  if [ -f coverage.out ]; then
-    # Filter out test and sample packages.
-    grep -v test coverage.out | grep -v samples > coverage2.out
-    goveralls -coverprofile=coverage2.out -service=travis-ci
-  fi
-else
-  go test -race ./... || result=1
+go test -race -coverpkg=./... -coverprofile=coverage1.out ./... || result=1
+if [ -f coverage1.out ]; then
+  # Filter out test and sample packages.
+  grep -v test coverage1.out | grep -v samples > coverage.out
 fi
+
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || (echo "FAIL: wire diff found diffs!" && result=1)
