@@ -36,13 +36,17 @@ if [ ! -f "$TEMPLATE" ]; then
 fi
 
 
+if [ -e $OUTDIR ]; then
+  echo "The $OUTDIR directory exists. Move or remove it, then re-run."
+  exit 1
+fi
+
 shopt -s nullglob  # glob patterns that don't match turn into the empty string, instead of themselves
 
 function files_exist() {  # assumes nullglob
   [[ ${1:-""} != "" ]]
 }
 
-rm -rf $OUTDIR
 
 # Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
 # directive to remove the initial './'.
