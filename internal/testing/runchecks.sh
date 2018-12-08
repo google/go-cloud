@@ -35,10 +35,11 @@ fi
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and Coveralls will only save the last one anyway.
-go test -race -coverpkg=./... -coverprofile=coverage1.out ./... || result=1
-if [ -f coverage1.out ]; then
+go test -race -coverpkg=./... -coverprofile=allcoverage.out ./... || result=1
+if [ -f allcoverage.out ]; then
   # Filter out test and sample packages.
-  grep -v test coverage1.out | grep -v samples > coverage.out
+  grep -v test allcoverage.out | grep -v samples > coverage.out
+  rm allcoverage.out
 fi
 
 wire check ./... || result=1
