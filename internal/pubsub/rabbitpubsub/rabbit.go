@@ -116,7 +116,7 @@ func (t *topic) establishChannel(ctx context.Context) error {
 // Run f while checking to see if ctx is done.
 // Return the error from f if it completes, or ctx.Err() if ctx is done.
 func runWithContext(ctx context.Context, f func() error) error {
-	c := make(chan error)
+	c := make(chan error, 1) // buffer so the goroutine can finish even if ctx is done
 	go func() { c <- f() }()
 	select {
 	case <-ctx.Done():
