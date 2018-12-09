@@ -20,7 +20,7 @@
 // https://github.com/google/wire/blob/master/README.md
 //
 // Deprecated: Please import "github.com/google/wire" instead of this package.
-package wire
+package wire // import "gocloud.dev/wire"
 
 import "github.com/google/wire"
 

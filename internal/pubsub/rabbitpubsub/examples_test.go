@@ -20,8 +20,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/rabbitpubsub"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/rabbitpubsub"
 	"github.com/streadway/amqp"
 )
 

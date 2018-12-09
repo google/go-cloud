@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package replay provides the ability to record and replay HTTP requests.
-package replay
+package replay // import "gocloud.dev/internal/testing/replay"
 
 import (
 	"bytes"

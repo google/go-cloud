@@ -14,7 +14,7 @@
 
 // Package etcdvar provides a runtimevar.Driver implementation to read
 // variables from etcd.
-package etcdvar
+package etcdvar // import "gocloud.dev/runtimevar/etcdvar"
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 	"google.golang.org/grpc/codes"
 )
 

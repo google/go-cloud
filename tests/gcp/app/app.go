@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/google/go-cloud/health"
+	"gocloud.dev/health"
 	"github.com/google/wire"
 
 	"go.opencensus.io/trace"
