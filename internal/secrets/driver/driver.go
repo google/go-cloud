@@ -33,7 +33,7 @@ type Encrypter interface {
 }
 
 // Crypter defines an interface satisfied by implementing both
-// Encrypterand Decrypter. This composed interface reflects the
+// Encrypter and Decrypter. This composed interface reflects the
 // inherent tie between compatible pairs, ie to decrypt a message,
 // Decrypter must be based on the same underlying credentials as
 // the Encrypter which encrypted the message.
