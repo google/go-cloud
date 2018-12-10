@@ -25,15 +25,15 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
-// SecretKeeper holds a secret for use in symmetric encryption,
+// Keeper holds a secret for use in symmetric encryption,
 // and implements driver.Crypter.
-type SecretKeeper struct {
+type Keeper struct {
 	secretKey [32]byte // secretbox key size
 }
 
-// NewSecretKeeper takes a secret key and returns a SecretKeeper.
-func NewSecretKeeper(sk [32]byte) *SecretKeeper {
-	return &SecretKeeper{secretKey: sk}
+// NewKeeper takes a secret key and returns a Keeper.
+func NewKeeper(sk [32]byte) *Keeper {
+	return &Keeper{secretKey: sk}
 }
 
 // ByteKey takes a secret key as a string and converts it
@@ -47,8 +47,8 @@ func ByteKey(sk string) [32]byte {
 const nonceSize = 24
 
 // Encrypt encrypts a message using a per-message generated nonce and
-// the secret held in the encrypter's SecretKeeper.
-func (sk *SecretKeeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
+// the secret held in the Keeper.
+func (k *Keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [nonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
@@ -56,16 +56,16 @@ func (sk *SecretKeeper) Encrypt(ctx context.Context, message []byte) ([]byte, er
 	// secretbox.Seal appends the encrypted message to its first argument and returns
 	// the result; using a slice on top of the nonce array for this "out" arg allows reading
 	// the nonce out of the first nonceSize bytes when the message is decrypted.
-	return secretbox.Seal(nonce[:], message, &nonce, &sk.secretKey), nil
+	return secretbox.Seal(nonce[:], message, &nonce, &k.secretKey), nil
 }
 
 // Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
-// of the message and a secret held by the decrypter's SecretKeeper.
-func (sk *SecretKeeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
+// of the message and a secret held in the Keeper.
+func (k *Keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
 	copy(decryptNonce[:], message[:nonceSize])
 
-	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &sk.secretKey)
+	decrypted, ok := secretbox.Open(nil, message[nonceSize:], &decryptNonce, &k.secretKey)
 	if !ok {
 		return nil, errors.New("localsecrets: Decrypt failed")
 	}

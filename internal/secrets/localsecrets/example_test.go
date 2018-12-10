@@ -23,24 +23,24 @@ import (
 )
 
 func ExampleCrypterEncryptDecrypt() {
-	// SecretKeeper untilizes the golang.org/x/crypto/nacl/secretbox package
+	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
-	// that is a [32]byte. Because most people will have keys which are strings,
+	// that is a [32]byte. Because most users will have keys which are strings,
 	// the localsecrets package supplies a helper function to convert your key
 	// and also crop it to size, if necessary.
 	secretKey := localsecrets.ByteKey("I'm a secret string!")
-	skr := localsecrets.NewSecretKeeper(secretKey)
+	k := localsecrets.NewKeeper(secretKey)
 
 	// Package localsecrets is intended for use with small messages,
 	// as the encryption takes place in-memory. For more information,
 	// see the documentation for golang.org/x/crypto/nacl/secretbox.
 	msg := "I'm a message!"
-	encryptedMsg, err := skr.Encrypt(context.Background(), []byte(msg))
+	encryptedMsg, err := k.Encrypt(context.Background(), []byte(msg))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	decryptedMsg, err := skr.Decrypt(context.Background(), encryptedMsg)
+	decryptedMsg, err := k.Decrypt(context.Background(), encryptedMsg)
 	if err != nil {
 		log.Fatal(err)
 	}
