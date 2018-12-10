@@ -35,6 +35,7 @@ package s3blob
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -269,6 +270,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				Key:     *obj.Key,
 				ModTime: *obj.LastModified,
 				Size:    *obj.Size,
+				MD5:     eTagToMD5(obj.ETag),
 				AsFunc: func(i interface{}) bool {
 					p, ok := i.(*s3.Object)
 					if !ok {
@@ -349,6 +351,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    md,
 		ModTime:     aws.TimeValue(resp.LastModified),
 		Size:        aws.Int64Value(resp.ContentLength),
+		MD5:         eTagToMD5(resp.ETag),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*s3.HeadObjectOutput)
 			if !ok {
@@ -384,6 +387,32 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		},
 		raw: resp,
 	}, nil
+}
+
+// etagToMD5 processes an ETag header and returns an MD5 hash if possible.
+// S3's ETag header is sometimes a quoted hexstring of the MD5. Other times,
+// notably when the object was uploaded in multiple parts, it is not.
+// We do the best we can.
+// Some links about ETag:
+// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+// https://github.com/aws/aws-sdk-net/issues/815
+// https://teppen.io/2018/06/23/aws_s3_etags/
+func eTagToMD5(etag *string) []byte {
+	if etag == nil {
+		// No header at all.
+		return nil
+	}
+	// Strip the expected leading and trailing quotes.
+	quoted := *etag
+	if quoted[0] != '"' || quoted[len(quoted)-1] != '"' {
+		return nil
+	}
+	unquoted := quoted[1:len(quoted)-1]
+	// Un-hex; we return nil on error. In particular, we'll get an error here
+	// for multi-part uploaded blobs, whose ETag will look something like
+	// "aaaaaaa-2".
+	md5, _ := hex.DecodeString(unquoted)
+	return md5
 }
 
 func getSize(resp *s3.GetObjectOutput) int64 {

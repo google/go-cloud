@@ -170,6 +170,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
 	})
+	t.Run("TestMD5", func(t *testing.T) {
+		testMD5(t, newHarness)
+	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
 	})
@@ -561,62 +564,62 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		},
 		// TODO(#905): Backslashes cause problems for Azure; disable for now.
 		/*
-		{
-			name:  "backslash",
-			delim: "\\",
-			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantRecursive: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-						listResult{
-							Key:   keyPrefix + "\\dir1\\subdir\\",
-							IsDir: true,
-							Sub: []listResult{
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+			{
+				name:  "backslash",
+				delim: "\\",
+				wantFlat: []listResult{
+					listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+					listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantRecursive: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+							listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+							listResult{
+								Key:   keyPrefix + "\\dir1\\subdir\\",
+								IsDir: true,
+								Sub: []listResult{
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+								},
 							},
 						},
 					},
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+						},
 					},
+					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				wantPaged: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantAfterDel: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
 			},
-			wantPaged: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantAfterDel: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-		},
 		*/
 		{
 			name:  "abc",
@@ -1346,6 +1349,84 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
+// testMD5 tests reading MD5 hashes via List and Attributes.
+func testMD5(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+
+	const aKey = "blob-for-md5-aaa"
+	const bKey = "blob-for-md5-bbb"
+	aContent := []byte("hello")
+	bContent := []byte("goodbye")
+	hash := md5.New()
+	hash.Write(aContent)
+	aMD5 := hash.Sum(nil)
+	hash = md5.New()
+	hash.Write(bContent)
+	bMD5 := hash.Sum(nil)
+
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+
+	// Write two blobs. Include an MD5 hash while writing in case provider
+	// implementations use that to produce the MD5 for List/Attributes.
+	if err := b.WriteAll(ctx, aKey, aContent, &blob.WriterOptions{ContentMD5: aMD5}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Delete(ctx, aKey) }()
+	if err := b.WriteAll(ctx, bKey, bContent, &blob.WriterOptions{ContentMD5: bMD5}); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = b.Delete(ctx, bKey) }()
+
+	// Check the MD5 we get through Attributes.
+	aAttr, err := b.Attributes(ctx, aKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if aAttr.MD5 != nil && !bytes.Equal(aAttr.MD5, aMD5) {
+		t.Errorf("got MD5\n%x\nwant\n%x", aAttr.MD5, aMD5)
+	}
+
+	bAttr, err := b.Attributes(ctx, bKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bAttr.MD5 != nil && !bytes.Equal(bAttr.MD5, bMD5) {
+		t.Errorf("got MD5\n%x\nwant\n%x", bAttr.MD5, bMD5)
+	}
+
+	// Check the MD5 we get through List.
+	iter := b.List(&blob.ListOptions{Prefix: "blob-for-md5-"})
+	obj, err := iter.Next(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if obj.Key != aKey {
+		t.Errorf("got name %q want %q", obj.Key, aKey)
+	}
+	if obj.MD5 != nil && !bytes.Equal(obj.MD5, aMD5) {
+		t.Errorf("got MD5\n%x\nwant\n%x", obj.MD5, aMD5)
+	}
+	obj, err = iter.Next(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if obj.Key != bKey {
+		t.Errorf("got name %q want %q", obj.Key, bKey)
+	}
+	if obj.MD5 != nil && !bytes.Equal(obj.MD5, bMD5) {
+		t.Errorf("got MD5\n%x\nwant\n%x", obj.MD5, bMD5)
+	}
+}
+
 // testDelete tests the functionality of Delete.
 func testDelete(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-deleting"
@@ -1435,7 +1516,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			description: "punctuation",
 			// TODO(#905): Backslashes cause problems for Azure; disable for now.
 			// key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
-			key:         "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
+			key: "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
 		},
 		{
 			description: "unicode",

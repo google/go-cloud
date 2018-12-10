@@ -1,0 +1,303 @@
+---
+version: 1
+interactions:
+- request:
+    body: hello
+    form: {}
+    headers:
+      Content-Length:
+      - "5"
+      Content-Md5:
+      - XUFAKrxLKna5cZ2REBfFkg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-aaa
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - N5K2xZI6BOeO2EktSKPa6rEXg6fI6bDYArJuSpkzGU7HBAzSpMXN6mx//YI+iErps108NiXi+Go=
+      X-Amz-Request-Id:
+      - 421050CA21F1B59A
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: goodbye
+    form: {}
+    headers:
+      Content-Length:
+      - "7"
+      Content-Md5:
+      - afqrYmg1ApVVDefVh7wyPQ==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-bbb
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Etag:
+      - '"69faab6268350295550de7d587bc323d"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - vFB4uDm9HZCdiRq/O1gDm1zP94mo8WFdUIiOtXGDMQ9tbQWAtvit7Qa6PGJh4u6O3KqCWUekXpU=
+      X-Amz-Request-Id:
+      - 44DBD89E96658299
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-aaa
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Last-Modified:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 0NM4pnYPAzj+snXunlladiYOl83iin55WDwKsx/MAXWa5dIapUrGLeffZJniodiQtVzxmKbpNjs=
+      X-Amz-Request-Id:
+      - D4B27E0D6023B5F7
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-bbb
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "7"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Etag:
+      - '"69faab6268350295550de7d587bc323d"'
+      Last-Modified:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 6h1cD4Y+LHClUWY7G/gjTHoDXc1BZhWqyGsbNYN4HKFppH+emgITK9N3m5vi8IoL8lpTiKCKfRc=
+      X-Amz-Request-Id:
+      - CF42C887EBF30188
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=blob-for-md5-
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>blob-for-md5-</Prefix><KeyCount>2</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-md5-aaa</Key><LastModified>2018-12-10T23:23:12.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-md5-bbb</Key><LastModified>2018-12-10T23:23:12.000Z</LastModified><ETag>&quot;69faab6268350295550de7d587bc323d&quot;</ETag><Size>7</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-east-2
+      X-Amz-Id-2:
+      - hr80bysXQDoPLKFOskHCm5ulyNUavaZ37OkfhlgrmxSvOYgcsl2EVSu+PFYhiGd5MNARvHuC41k=
+      X-Amz-Request-Id:
+      - 1759ED78055908FE
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232311Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-bbb
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "7"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Etag:
+      - '"69faab6268350295550de7d587bc323d"'
+      Last-Modified:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Z/jXANcloU2kw3wSayJkCZhKZyBHtXbn0JKJI7+orGw02buhI87wzitSn9myqjf0vOtBLgO7JMY=
+      X-Amz-Request-Id:
+      - 6ED8AE533904907B
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232312Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-bbb
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Mon, 10 Dec 2018 23:23:13 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - OTX8LWaN78+tcbLAwxIYBa3ydbThU3bDK/XqfdDWTRSlKudaoAACFX8sF8LpWkSiNUHgEEctlU8=
+      X-Amz-Request-Id:
+      - 7B711D9B4FDDF480
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232312Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-aaa
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Mon, 10 Dec 2018 23:23:13 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Last-Modified:
+      - Mon, 10 Dec 2018 23:23:12 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - jtCsyg0U48KqLuC2aTwtM9GfmKWrWU5PuDXH+KR7PSWeYryqhGM3KYUpJFNpFfuRLoBRWIaNW/U=
+      X-Amz-Request-Id:
+      - 1FB2FEC184019CB5
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181210T232312Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-md5-aaa
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Mon, 10 Dec 2018 23:23:13 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Z95AFV6HKtO9HEIGCmKfoKLMB/SECF5eBVhkClh/56C0kRNHu7+7qcOeX/rdZt4CciQvFv+xucg=
+      X-Amz-Request-Id:
+      - 7E21BFBD1942122A
+    status: 204 No Content
+    code: 204
+    duration: ""

@@ -88,6 +88,8 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// MD5 is an MD5 hash of the blob contents, or nil if not available.
+	MD5 []byte
 
 	asFunc func(interface{}) bool
 }
@@ -227,6 +229,7 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 				Key:     dobj.Key,
 				ModTime: dobj.ModTime,
 				Size:    dobj.Size,
+				MD5:     dobj.MD5,
 				IsDir:   dobj.IsDir,
 				asFunc:  dobj.AsFunc,
 			}, nil
@@ -256,6 +259,8 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// MD5 is an MD5 hash of the blob contents, or nil if not available.
+	MD5 []byte
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
@@ -361,6 +366,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 		Metadata:    md,
 		ModTime:     a.ModTime,
 		Size:        a.Size,
+		MD5:         a.MD5,
 		asFunc:      a.AsFunc,
 	}, nil
 }

@@ -339,10 +339,15 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
+		var md5 []byte
+		if xa, err := getAttrs(path); err == nil {
+			md5 = xa.MD5
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+			MD5:     md5,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -401,6 +406,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    xa.Metadata,
 		ModTime:     info.ModTime(),
 		Size:        info.Size(),
+		MD5:         xa.MD5,
 	}, nil
 }
 
@@ -543,6 +549,7 @@ func (w writer) Close() error {
 				base64.StdEncoding.EncodeToString(w.contentMD5),
 			)
 		}
+		w.attrs.MD5 = md5sum
 	}
 	// Write the attributes file.
 	if err := setAttrs(w.path, w.attrs); err != nil {

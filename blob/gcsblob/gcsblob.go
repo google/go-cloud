@@ -246,6 +246,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					Key:     obj.Name,
 					ModTime: obj.Updated,
 					Size:    obj.Size,
+					MD5:     obj.MD5,
 					AsFunc:  asFunc,
 				}
 			} else {
@@ -300,6 +301,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    attrs.Metadata,
 		ModTime:     attrs.Updated,
 		Size:        attrs.Size,
+		MD5:         attrs.MD5,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {
