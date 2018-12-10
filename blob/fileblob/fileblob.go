@@ -341,6 +341,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 		var md5 []byte
 		if xa, err := getAttrs(path); err == nil {
+			// Note: we only have the MD5 hash for blobs that we wrote, and
+			// where the caller provided a WriterOptions.ContentMD5 for us to verify.
+			// For other blobs, md5 will remain nil.
 			md5 = xa.MD5
 		}
 		obj := &driver.ListObject{
