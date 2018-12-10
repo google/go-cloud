@@ -1353,10 +1353,10 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 func testMD5(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 
-	const aKey = "blob-for-md5-aaa"
-	const bKey = "blob-for-md5-bbb"
-	aContent := []byte("hello")
-	bContent := []byte("goodbye")
+	// Define two blobs with different content; we'll write them and then verify
+	// their returned MD5 hashes.
+	const aKey, bKey = "blob-for-md5-aaa", "blob-for-md5-bbb"
+	aContent, bContent := []byte("hello"), []byte("goodbye")
 	hash := md5.New()
 	hash.Write(aContent)
 	aMD5 := hash.Sum(nil)
@@ -1375,7 +1375,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	}
 	b := blob.NewBucket(drv)
 
-	// Write two blobs. Include an MD5 hash while writing in case provider
+	// Write the two blobs. Include an MD5 hash while writing in case provider
 	// implementations use that to produce the MD5 for List/Attributes.
 	if err := b.WriteAll(ctx, aKey, aContent, &blob.WriterOptions{ContentMD5: aMD5}); err != nil {
 		t.Fatal(err)
@@ -1386,7 +1386,8 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer func() { _ = b.Delete(ctx, bKey) }()
 
-	// Check the MD5 we get through Attributes.
+	// Check the MD5 we get through Attributes. Note that it's always legal to
+	// return a nil MD5.
 	aAttr, err := b.Attributes(ctx, aKey)
 	if err != nil {
 		t.Fatal(err)
@@ -1403,7 +1404,8 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("got MD5\n%x\nwant\n%x", bAttr.MD5, bMD5)
 	}
 
-	// Check the MD5 we get through List.
+	// Check the MD5 we get through List. Note that it's always legal to
+	// return a nil MD5.
 	iter := b.List(&blob.ListOptions{Prefix: "blob-for-md5-"})
 	obj, err := iter.Next(ctx)
 	if err != nil {
