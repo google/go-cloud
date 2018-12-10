@@ -407,7 +407,7 @@ func eTagToMD5(etag *string) []byte {
 	if quoted[0] != '"' || quoted[len(quoted)-1] != '"' {
 		return nil
 	}
-	unquoted := quoted[1:len(quoted)-1]
+	unquoted := quoted[1 : len(quoted)-1]
 	// Un-hex; we return nil on error. In particular, we'll get an error here
 	// for multi-part uploaded blobs, whose ETag will look something like
 	// "aaaaaaa-2".
