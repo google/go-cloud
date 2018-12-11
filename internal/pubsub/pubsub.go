@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+// Package pubsub provides an easy and portable way to interact with publish/
+// subscribe systems.
 package pubsub
 
 import (
@@ -222,7 +225,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	return nil
 }
 
-// Close flushes pending ack sends and disconnects the Subscription.
+// Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
