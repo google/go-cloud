@@ -41,9 +41,6 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 		}
 	}()
 
-	// Wait long enough for top.Send() to be blocked.
-	time.Sleep(10 * time.Millisecond)
-
 	done := make(chan struct{})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
@@ -51,9 +48,6 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 		top.Shutdown(ctx)
 		close(done)
 	}()
-
-	// Wait long enough for top.Shutdown() to be blocked.
-	time.Sleep(10 * time.Millisecond)
 
 	// Now cancel the context being used by top.Shutdown.
 	cancel()
