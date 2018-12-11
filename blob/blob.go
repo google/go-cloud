@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package blob provides an easy and portable way to interact with blob objects
-// within a container, hereafter called the "bucket".
+// within a container, hereafter called a "bucket".
 //
 // It supports operations like reading and writing blobs (using standard
 // interfaces from the io package), deleting a blob, and listing blobs in a
