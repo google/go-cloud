@@ -142,8 +142,8 @@ func ExampleBucket_NewWriter() {
 
 func Example() {
 	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation in fileblob, rooted in a
-	// temporary directory that we create for the example.
+	// This example uses the file-based implementation in fileblob, and creates
+	// a temporary directory to use as the root directory.
 	dir, cleanup := newTempDir()
 	defer cleanup()
 	bucket, err := fileblob.OpenBucket(dir, nil)

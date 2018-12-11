@@ -32,7 +32,7 @@
 //
 // As
 //
-// gcsblog exposes the following types for As:
+// gcsblob exposes the following types for As:
 //  - Bucket: *storage.Client
 //  - Error: *googleapi.Error
 //  - ListObject: storage.ObjectAttrs
