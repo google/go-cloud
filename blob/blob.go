@@ -306,9 +306,9 @@ type Bucket struct {
 }
 
 // NewBucket creates a new *Bucket based on a specific driver implementation.
-// It is only intended for use by provider implementations. Most end users
-// should use constructors from subpackages to construct a *Bucket; see the
-// package documentation for details.
+// Most end users should use subpackages to construct a *Bucket instead of this
+// function; see the package documentation for details.
+// It is intended for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
