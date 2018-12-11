@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fileblob provides a bucket implementation that operates on the local
-// filesystem. This should not be used for production: it is intended for local
-// development.
+// Package fileblob provides a blob implementation that uses the filesystem.
+// Use OpenBucket to construct a blob.Bucket.
 //
 // Blob keys are escaped before being used as filenames, and filenames are
 // unescaped when they are passed back as blob keys during List. The escape
 // algorithm is:
-// -- Alphanumeric characters (A-Z a-z 0-9) are not escaped.
-// -- Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-// -- Slash ('/') is always escaped to the OS-specific path separator character
+//  - Alphanumeric characters (A-Z a-z 0-9) are not escaped.
+//  - Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
+//  - Slash ('/') is always escaped to the OS-specific path separator character
 //    (os.PathSeparator).
-// -- All other characters are escaped similar to url.PathEscape:
+//  - All other characters are escaped similar to url.PathEscape:
 //    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
 //
 // Filenames that can't be unescaped due to invalid escape sequences
@@ -31,13 +30,20 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
-// For blob.Open URLs, fileblob registers for the "file" scheme.
+// Open URLs
+//
+// For blob.Open URLs, fileblob registers for the protocol "file".
 // The URL's Path is used as the root directory; the URL's Host is ignored.
 // If os.PathSeparator != "/", any leading "/" from the Path is dropped.
 // No query options are supported. Examples:
-// -- file:///a/directory passes "/a/directory" to OpenBucket.
-// -- file://localhost/a/directory also passes "/a/directory".
-// -- file:///c:/foo/bar passes "c:/foo/bar".
+//  - file:///a/directory
+//    -> Passes "/a/directory" to OpenBucket.
+//  - file://localhost/a/directory
+//    -> Also passes "/a/directory".
+//  - file:///c:/foo/bar
+//    -> Passes "c:/foo/bar".
+//
+// As
 //
 // fileblob does not support any types for As.
 package fileblob
@@ -94,8 +100,8 @@ func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	return &bucket{dir}, nil
 }
 
-// OpenBucket creates a *blob.Bucket that reads and writes to dir.
-// dir must exist.
+// OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
+// dir, which must exist. See the package documentation for an example.
 func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(dir, opts)
 	if err != nil {

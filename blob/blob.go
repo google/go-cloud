@@ -12,8 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package blob provides an easy way to interact with Blob objects within
-// a bucket. It utilizes standard io packages to handle reads and writes.
+// Package blob provides an easy and portable way to interact with blob objects
+// within a storage location, hereafter called a "bucket".
+//
+// It supports operations like reading and writing blobs (using standard
+// interfaces from the io package), deleting blobs, and listing blobs in a
+// bucket.
+//
+// To construct a *Bucket, don't use the NewBucket function in this package.
+// Instead, import one of the blob subpackages (e.g., fileblob, gcsblob,
+// s3blob), and use its exported function(s). For example:
+//
+//  bucket, err := fileblob.OpenBucket("path/to/dir", nil)
+//  if err != nil {
+//      return fmt.Errorf("could not open bucket: %v", err)
+//  }
+//  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
+//  ...
+//
+// Write your application code using the *Bucket type, and you can easily
+// reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using fileblob, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
+//
+// Alternatively, you can construct a *Bucket using blob.Open by providing
+// a URL that's supported by a blob subpackage that you have linked
+// in to your application.
 package blob
 
 import (
@@ -285,8 +310,10 @@ type Bucket struct {
 	b driver.Bucket
 }
 
-// NewBucket creates a new Bucket for a group of objects for a blob service.
-// It is for use by provider implementations.
+// NewBucket creates a new *Bucket based on a specific driver implementation.
+// Most end users should use subpackages to construct a *Bucket instead of this
+// function; see the package documentation for details.
+// It is intended for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
