@@ -17,22 +17,25 @@
 // For blob.Open URLs, gcsblob registers for the "gs" protocol.
 // The URL's Host is used as the bucket name.
 // The following query options are supported:
-// - cred_path: Sets path to the Google credentials file. If unset, default
-//       credentials are loaded.
-//       See https://cloud.google.com/docs/authentication/production.
-// - access_id: Sets Options.GoogleAccessID.
-// - private_key_path: Sets path to a private key, which is read and used
-//       to set Options.PrivateKey.
-// Example URL: blob.Open("gs://mybucket")
+//
+//  * cred_path - Sets path to the Google credentials file. If unset, default 
+//    credentials are loaded. See 
+//    https://cloud.google.com/docs/authentication/production.
+//  * access_id - Sets Options.GoogleAccessID.
+//  * private_key_path - Sets path to a private key, which is read and used to 
+//    set Options.PrivateKey.
+//    
+// Example URL: 
+//    blob.Open("gs://mybucket")
 //
 // It exposes the following types for As:
-// Bucket: *storage.Client
-// Error: *googleapi.Error
-// ListObject: storage.ObjectAttrs
-// ListOptions.BeforeList: *storage.Query
-// Reader: storage.Reader
-// Attributes: storage.ObjectAttrs
-// WriterOptions.BeforeWrite: *storage.Writer
+//  Bucket: *storage.Client
+//  Error: *googleapi.Error
+//  ListObject: storage.ObjectAttrs
+//  ListOptions.BeforeList: *storage.Query
+//  Reader: storage.Reader
+//  Attributes: storage.ObjectAttrs
+//  WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob
 
 import (

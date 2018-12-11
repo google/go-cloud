@@ -20,11 +20,13 @@ package rabbitpubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
@@ -144,6 +146,25 @@ func TestUnroutable(t *testing.T) {
 	err := top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
 	if err == nil || !strings.Contains(err.Error(), "NO_ROUTE") {
 		t.Errorf("got %v, want an error with 'NO_ROUTE'", err)
+	}
+}
+
+func TestRunWithContext(t *testing.T) {
+	// runWithContext will run its argument to completion if the context isn't done.
+	e := errors.New("")
+	// f sleeps for a bit just to give the scheduler a chance to run.
+	f := func() error { time.Sleep(100 * time.Millisecond); return e }
+	got := runWithContext(context.Background(), f)
+	if want := e; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	// runWithContext will return ctx.Err if context is done.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	got = runWithContext(ctx, f)
+	if want := context.Canceled; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
 
