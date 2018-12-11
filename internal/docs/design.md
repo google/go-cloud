@@ -96,6 +96,14 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
+## No Global State
+
+As a library, Go Cloud should not introduce global state. Global state is
+difficult to reason about in large codebases, where it can be necessary for
+different parts of the application to use different states. Instead of adding
+global state, push responsibility to the application to inject the state where
+it is needed.
+
 ## Package Naming Conventions
 
 Inside this repository, we name packages that handle cloud services after the
