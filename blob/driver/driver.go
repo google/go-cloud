@@ -88,7 +88,7 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// MD5 is an MD5 hash of the blob contents, or nil if not available.
+	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
@@ -136,7 +136,7 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// MD5 is an MD5 hash of the blob contents, or nil if not available.
+	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
