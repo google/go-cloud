@@ -1,13 +1,14 @@
 # Design Decisions
 
 This document outlines important design decisions made for this repository and
-attempts to provide succinct rationales. A broad design goal for Go Cloud is
-for the API style to be cohesive and consistent: consistency aides users in
-building a mental model of how to use the APIs. As such, the design of
-individual packages must also consider their impact on Go Cloud as a whole.
-Recording these decisions helps maintain consistency across packages, especially
-as an open source project where contributors can join at any point during
-development.
+attempts to provide succinct rationales. Recording these decisions helps
+maintain consistency across packages, especially as an open source project
+where contributors can join at any point during development.
+
+A broad design goal for Go Cloud is for the API style to be cohesive and
+consistent: consistency aides users in building a mental model of how to use
+the APIs. As such, the design of individual packages must also consider their
+impact on Go Cloud as a whole.
 
 This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The
 decisions in here are not set in stone, but simply describe our current thinking
