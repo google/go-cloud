@@ -294,6 +294,6 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(tooLong):
-		t.Fatalf("waited too long (%v) for Shutdown to run", tooLong)
+		t.Fatalf("waited too long (%v) for Shutdown(ctx) to run", tooLong)
 	}
 }
