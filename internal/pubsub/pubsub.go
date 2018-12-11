@@ -91,7 +91,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	return t.batcher.Add(ctx, m)
 }
 
-// Shutdown(ctx) flushes pending message sends and disconnects the Topic.
+// Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Shutdown(ctx context.Context) error {
 	t.mu.Lock()

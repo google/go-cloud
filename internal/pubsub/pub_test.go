@@ -66,7 +66,3 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 		t.Fatalf("waited too long(%v) for Shutdown(ctx) to run", tooLong)
 	}
 }
-
-// start send.
-
-// wait for dt to be waiting on a channel.kkk
