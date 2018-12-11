@@ -358,6 +358,8 @@ wiki page. We also adopt the following guidelines:
   (Exception: the loop body is trivial and the loop is
   performance-sensitive.) The first version is shorter and easier to read, and
   it is impossible to get the length wrong.
+- Prefer `log.Fatal` to `panic` in example tests.
+- Ensure you've run `goimports` on your code to properly group import statements.
 
 
 ## Tests
