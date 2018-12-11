@@ -21,7 +21,7 @@ import (
 	"github.com/google/go-cloud/blob/s3blob"
 )
 
-func ExampleOpenBucket() {
+func Example() {
 	ctx := context.Background()
 
 	// Create an AWS session.

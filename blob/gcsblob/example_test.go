@@ -21,7 +21,7 @@ import (
 	"github.com/google/go-cloud/gcp"
 )
 
-func ExampleOpenBucket() {
+func Example() {
 	ctx := context.Background()
 
 	// Load credentials for GCP.
