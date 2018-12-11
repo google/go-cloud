@@ -23,10 +23,12 @@
 // Instead, import one of the blob subpackages (e.g., fileblob, gcsblob,
 // s3blob), and use its exported function(s). For example:
 //
-//	bucket, err := fileblob.OpenBucket("path/to/dir", nil)
-//	if err != nil {
-//		return fmt.Errorf("could not open bucket: %v", err)
-//	}
+//  bucket, err := fileblob.OpenBucket("path/to/dir", nil)
+//  if err != nil {
+//      return fmt.Errorf("could not open bucket: %v", err)
+//  }
+//  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
+//  ...
 //
 // Write your application code using the *Bucket type, and you can easily
 // reconfigure your initialization code to choose a different provider.
