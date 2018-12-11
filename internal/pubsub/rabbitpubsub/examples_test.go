@@ -82,7 +82,7 @@ func Example() {
 	if err != nil {
 		log.Fatalf("sending: %v", err)
 	}
-	if err := topic.Close(); err != nil {
+	if err := topic.Shutdown(ctx); err != nil {
 		log.Fatalf("closing topic: %v", err)
 	}
 

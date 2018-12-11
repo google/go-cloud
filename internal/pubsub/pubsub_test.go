@@ -112,7 +112,7 @@ func TestSendReceive(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(dt)
-	defer topic.Close()
+	defer topic.Shutdown(ctx)
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
 		t.Fatal(err)
@@ -172,7 +172,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 
 	// Send messages. Each message has a unique body used as a key to receivedMsgs.
 	topic := pubsub.NewTopic(dt)
-	defer topic.Close()
+	defer topic.Shutdown(ctx)
 	for i := 0; i < howManyToSend; i++ {
 		key := fmt.Sprintf("message #%d", i)
 		m := &pubsub.Message{Body: []byte(key)}
@@ -202,7 +202,7 @@ func TestCancelSend(t *testing.T) {
 		subs: []*driverSub{ds},
 	}
 	topic := pubsub.NewTopic(dt)
-	defer topic.Close()
+	defer topic.Shutdown(ctx)
 	m := &pubsub.Message{}
 
 	// Intentionally break the driver subscription by acquiring its semaphore.
