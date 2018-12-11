@@ -30,7 +30,7 @@
 // for managing your initialization code.
 //
 // Alternatively, you can construct a *Bucket using blob.Open by providing
-// and provide a URL that's supported by a blob subpackage that you have linked
+// a URL that's supported by a blob subpackage that you have linked
 // in to your application.
 package blob
 
