@@ -88,7 +88,7 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
-	// MD5 is an MD5 hash of the blob contents, or nil if not available.
+	// MD5 is an MD5 hash of the blob contents or nil if not available.
 	MD5 []byte
 
 	asFunc func(interface{}) bool
