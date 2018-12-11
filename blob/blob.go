@@ -16,7 +16,7 @@
 // within a container, hereafter called a "bucket".
 //
 // It supports operations like reading and writing blobs (using standard
-// interfaces from the io package), deleting a blob, and listing blobs in a
+// interfaces from the io package), deleting blobs, and listing blobs in a
 // bucket.
 //
 // To construct a *Bucket, don't use the NewBucket function in this package.
