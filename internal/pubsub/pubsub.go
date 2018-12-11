@@ -64,6 +64,9 @@ type Topic struct {
 	batcher driver.Batcher
 	mu      sync.Mutex
 	err     error
+
+	// cancel cancels all SendBatch calls.
+	cancel func()
 }
 
 type msgErrChan struct {
@@ -94,8 +97,17 @@ func (t *Topic) Shutdown(ctx context.Context) error {
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
-	t.batcher.Shutdown()
-	return nil
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		t.batcher.Shutdown()
+	}()
+	select {
+	case <-ctx.Done():
+	case <-c:
+	}
+	t.cancel()
+	return ctx.Err()
 }
 
 // As converts i to provider-specific types. See provider documentation for
@@ -111,6 +123,7 @@ func (t *Topic) As(i interface{}) bool {
 // NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
+	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
 		var dms []*driver.Message
@@ -122,7 +135,6 @@ func NewTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		callCtx := context.TODO()
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendBatch(callCtx, dms)
 		})
@@ -132,6 +144,7 @@ func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:  d,
 		batcher: b,
+		cancel:  cancel,
 	}
 	return t
 }

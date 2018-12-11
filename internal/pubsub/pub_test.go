@@ -36,8 +36,8 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 
 	go func() {
 		m := &pubsub.Message{}
-		if err := top.Send(context.Background(), m); err != nil {
-			t.Fatal(err)
+		if err := top.Send(context.Background(), m); err == nil {
+			t.Fatal("nil err from Send, expected context cancellation error")
 		}
 	}()
 
