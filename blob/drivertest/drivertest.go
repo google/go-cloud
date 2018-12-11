@@ -1377,11 +1377,11 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 
 	// Write the two blobs. Include an MD5 hash while writing in case provider
 	// implementations use that to produce the MD5 for List/Attributes.
-	if err := b.WriteAll(ctx, aKey, aContent, &blob.WriterOptions{ContentMD5: aMD5}); err != nil {
+	if err := b.WriteAll(ctx, aKey, aContent, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = b.Delete(ctx, aKey) }()
-	if err := b.WriteAll(ctx, bKey, bContent, &blob.WriterOptions{ContentMD5: bMD5}); err != nil {
+	if err := b.WriteAll(ctx, bKey, bContent, nil); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = b.Delete(ctx, bKey) }()
