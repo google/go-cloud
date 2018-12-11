@@ -30,7 +30,7 @@ var errAttrsExt = fmt.Errorf("file extension %q is reserved", attrsExt)
 type xattrs struct {
 	ContentType string            `json:"user.content_type"`
 	Metadata    map[string]string `json:"user.metadata"`
-	MD5         []byte
+	MD5         []byte `json:"md5"`
 }
 
 // setAttrs creates a "path.attrs" file along with blob to store the attributes,
