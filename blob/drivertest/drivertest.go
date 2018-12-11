@@ -561,62 +561,62 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		},
 		// TODO(#905): Backslashes cause problems for Azure; disable for now.
 		/*
-			{
-				name:  "backslash",
-				delim: "\\",
-				wantFlat: []listResult{
-					listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-					listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-					listResult{Key: keyPrefix + "\\f.txt"},
-				},
-				wantRecursive: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
-						Sub: []listResult{
-							listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-							listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-							listResult{
-								Key:   keyPrefix + "\\dir1\\subdir\\",
-								IsDir: true,
-								Sub: []listResult{
-									listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-									listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-								},
+		{
+			name:  "backslash",
+			delim: "\\",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantRecursive: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+						listResult{
+							Key:   keyPrefix + "\\dir1\\subdir\\",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
 							},
 						},
 					},
-					listResult{
-						Key:   keyPrefix + "\\dir2\\",
-						IsDir: true,
-						Sub: []listResult{
-							listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-						},
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				wantPaged: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
 					},
-					listResult{
-						Key:   keyPrefix + "\\dir2\\",
-						IsDir: true,
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				wantAfterDel: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
-				},
+				listResult{Key: keyPrefix + "\\f.txt"},
 			},
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+		},
 		*/
 		{
 			name:  "abc",
@@ -1435,7 +1435,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			description: "punctuation",
 			// TODO(#905): Backslashes cause problems for Azure; disable for now.
 			// key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
-			key: "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
+			key:         "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
 		},
 		{
 			description: "unicode",
