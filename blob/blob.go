@@ -21,7 +21,12 @@
 //
 // To construct a *Bucket, don't use the NewBucket function in this package.
 // Instead, import one of the blob subpackages (e.g., fileblob, gcsblob,
-// s3blob), and use its exported function(s).
+// s3blob), and use its exported function(s). For example:
+//
+//	bucket, err := fileblob.OpenBucket("path/to/dir", nil)
+//	if err != nil {
+//		return fmt.Errorf("could not open bucket: %v", err)
+//	}
 //
 // Write your application code using the *Bucket type, and you can easily
 // reconfigure your initialization code to choose a different provider.
