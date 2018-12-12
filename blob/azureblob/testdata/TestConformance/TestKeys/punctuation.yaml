@@ -1,0 +1,313 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:qqgXI9dx0Oq5xbGhdJdRbF8MRmAopX5c72qSTcqyJfU=
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Blob-Public-Access:
+      - blob
+      X-Ms-Client-Request-Id:
+      - 311f9ebc-5669-4363-7875-8dcd90cb1448
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket?restype=container&timeout=4
+    method: PUT
+  response:
+    body: "\uFEFF\x3C\x3F\x78\x6D\x6C\x20\x76\x65\x72\x73\x69\x6F\x6E\x3D\"\x31\x2E\x30\"\x20\x65\x6E\x63\x6F\x64\x69\x6E\x67\x3D\"\x75\x74\x66\x2D\x38\"\x3F\x3E\x3C\x45\x72\x72\x6F\x72\x3E\x3C\x43\x6F\x64\x65\x3E\x43\x6F\x6E\x74\x61\x69\x6E\x65\x72\x41\x6C\x72\x65\x61\x64\x79\x45\x78\x69\x73\x74\x73\x3C\x2F\x43\x6F\x64\x65\x3E\x3C\x4D\x65\x73\x73\x61\x67\x65\x3E\x54\x68\x65\x20\x73\x70\x65\x63\x69\x66\x69\x65\x64\x20\x63\x6F\x6E\x74\x61\x69\x6E\x65\x72\x20\x61\x6C\x72\x65\x61\x64\x79\x20\x65\x78\x69\x73\x74\x73\x2E\n\x52\x65\x71\x75\x65\x73\x74\x49\x64\x3A\x34\x62\x66\x65\x66\x31\x35\x31\x2D\x32\x30\x31\x65\x2D\x30\x30\x64\x62\x2D\x31\x39\x32\x66\x2D\x39\x32\x34\x32\x36\x35\x30\x30\x30\x30\x30\x30\n\x54\x69\x6D\x65\x3A\x32\x30\x31\x38\x2D\x31\x32\x2D\x31\x32\x54\x31\x35\x3A\x33\x30\x3A\x33\x34\x2E\x38\x32\x37\x39\x32\x32\x33\x5A\x3C\x2F\x4D\x65\x73\x73\x61\x67\x65\x3E\x3C\x2F\x45\x72\x72\x6F\x72\x3E"
+    headers:
+      Content-Length:
+      - "230"
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Error-Code:
+      - ContainerAlreadyExists
+      X-Ms-Request-Id:
+      - 4bfef151-201e-00db-192f-924265000000
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 409 The specified container already exists.
+    code: 409
+    duration: ""
+- request:
+    body: hello
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:XfH6diG+w6AnvqlZtWf1S94oTPgNBIF9+FapNDLRSiQ=
+      Content-Length:
+      - "5"
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Client-Request-Id:
+      - 7044ca94-aa00-448f-5b66-dd902053fda6
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%7C;%27:%22,/.%3C%3E%3F?blockid=AQAAAA%3D%3D&comp=block&timeout=4
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Md5:
+      - XUFAKrxLKna5cZ2REBfFkg==
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Request-Id:
+      - 4bfef154-201e-00db-1c2f-924265000000
+      X-Ms-Request-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 201 Created
+    code: 201
+    duration: ""
+- request:
+    body: <BlockList><Latest>AQAAAA==</Latest></BlockList>
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:4AcmKR3+QdJzfqBND7dcsH+BOMlUPr4Mr+dp2btO11k=
+      Content-Length:
+      - "48"
+      Content-Type:
+      - application/xml
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Blob-Cache-Control:
+      - ""
+      X-Ms-Blob-Content-Disposition:
+      - ""
+      X-Ms-Blob-Content-Encoding:
+      - ""
+      X-Ms-Blob-Content-Language:
+      - ""
+      X-Ms-Blob-Content-Type:
+      - ""
+      X-Ms-Client-Request-Id:
+      - e202b00c-a330-40ec-47c4-27d2fbc18439
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%7C;%27:%22,/.%3C%3E%3F?comp=blocklist&timeout=4
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Md5:
+      - ZklFHW7fwbf3mbpGH5R+dg==
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Etag:
+      - '"0x8D66046C29A65F2"'
+      Last-Modified:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Request-Id:
+      - 4bfef159-201e-00db-1f2f-924265000000
+      X-Ms-Request-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 201 Created
+    code: 201
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:gblUXsHfLYY+zJ8uUlF5KB0hQpF5fu3iXo+qzghGCWI=
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Blob-Cache-Control:
+      - ""
+      X-Ms-Blob-Content-Disposition:
+      - ""
+      X-Ms-Blob-Content-Encoding:
+      - ""
+      X-Ms-Blob-Content-Language:
+      - ""
+      X-Ms-Blob-Content-Type:
+      - text/plain; charset=utf-8
+      X-Ms-Client-Request-Id:
+      - 3f0ce43d-29db-4645-4457-ed9c6bdcf579
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%7C;%27:%22,/.%3C%3E%3F?comp=properties&timeout=4
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Etag:
+      - '"0x8D66046C29B9E6D"'
+      Last-Modified:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Request-Id:
+      - 4bfef15d-201e-00db-232f-924265000000
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:QQzyrVOXJevqOCmVmjHIx1Y35PBz/4HrZO433RXhUyo=
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Client-Request-Id:
+      - 8c2f5287-abeb-4c6a-6fcd-8009a4edd651
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%7C;%27:%22,/.%3C%3E%3F?timeout=4
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Disposition:
+      - ""
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Etag:
+      - '"0x8D66046C29B9E6D"'
+      Last-Modified:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Creation-Time:
+      - Wed, 12 Dec 2018 01:04:36 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Request-Id:
+      - 4bfef162-201e-00db-272f-924265000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:nQPPiTImSjnqUKKqkdpbvG5H/Cm+5emEMBeUeGXJDfs=
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Client-Request-Id:
+      - e4f888c6-0899-4c57-4567-19e831b50abd
+      X-Ms-Range:
+      - bytes=0-4
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/weird-keys~%21@%23$%25%5E&%2A%28%29_+%60-=%5B%5D%7B%7D%7C;%27:%22,/.%3C%3E%3F?timeout=4
+    method: GET
+  response:
+    body: hello
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Disposition:
+      - ""
+      Content-Length:
+      - "5"
+      Content-Range:
+      - bytes 0-4/5
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Etag:
+      - '"0x8D66046C29B9E6D"'
+      Last-Modified:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Creation-Time:
+      - Wed, 12 Dec 2018 01:04:36 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Request-Id:
+      - 4bfef164-201e-00db-292f-924265000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 206 Partial Content
+    code: 206
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      Authorization:
+      - SharedKey gocloud:9HRCGtama22Z4jcnJghwnEF3Mx5nrG6jeaSOSlumIc8=
+      User-Agent:
+      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      X-Ms-Client-Request-Id:
+      - 3751e08f-0807-4aed-5294-003eedb3d2d2
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+    url: https://gocloud.blob.core.windows.net/go-cloud-bucket?comp=list&delimiter=&maxresults=5000&prefix=weird-keys~%21%40%23%24%25%5E%26%2A%28%29_%2B%60-%3D%5B%5D%7B%7D%7C%3B%27%3A%22%2C%2F.%3C%3E%3F&restype=container&timeout=4
+    method: GET
+  response:
+    body: "\uFEFF\x3C\x3F\x78\x6D\x6C\x20\x76\x65\x72\x73\x69\x6F\x6E\x3D\"\x31\x2E\x30\"\x20\x65\x6E\x63\x6F\x64\x69\x6E\x67\x3D\"\x75\x74\x66\x2D\x38\"\x3F\x3E\x3C\x45\x6E\x75\x6D\x65\x72\x61\x74\x69\x6F\x6E\x52\x65\x73\x75\x6C\x74\x73\x20\x53\x65\x72\x76\x69\x63\x65\x45\x6E\x64\x70\x6F\x69\x6E\x74\x3D\"\x68\x74\x74\x70\x73\x3A\x2F\x2F\x67\x6F\x63\x6C\x6F\x75\x64\x2E\x62\x6C\x6F\x62\x2E\x63\x6F\x72\x65\x2E\x77\x69\x6E\x64\x6F\x77\x73\x2E\x6E\x65\x74\x2F\"\x20\x43\x6F\x6E\x74\x61\x69\x6E\x65\x72\x4E\x61\x6D\x65\x3D\"\x67\x6F\x2D\x63\x6C\x6F\x75\x64\x2D\x62\x75\x63\x6B\x65\x74\"\x3E\x3C\x50\x72\x65\x66\x69\x78\x3E\x77\x65\x69\x72\x64\x2D\x6B\x65\x79\x73\x7E\x21\x40\x23\x24\x25\x5E\x26\x61\x6D\x70\x3B\x2A\x28\x29\x5F\x2B\x60\x2D\x3D\x5B\x5D\x7B\x7D\x7C\x3B\x27\x3A\"\x2C\x2F\x2E\x26\x6C\x74\x3B\x26\x67\x74\x3B\x3F\x3C\x2F\x50\x72\x65\x66\x69\x78\x3E\x3C\x4D\x61\x78\x52\x65\x73\x75\x6C\x74\x73\x3E\x35\x30\x30\x30\x3C\x2F\x4D\x61\x78\x52\x65\x73\x75\x6C\x74\x73\x3E\x3C\x42\x6C\x6F\x62\x73\x3E\x3C\x42\x6C\x6F\x62\x3E\x3C\x4E\x61\x6D\x65\x3E\x77\x65\x69\x72\x64\x2D\x6B\x65\x79\x73\x7E\x21\x40\x23\x24\x25\x5E\x26\x61\x6D\x70\x3B\x2A\x28\x29\x5F\x2B\x60\x2D\x3D\x5B\x5D\x7B\x7D\x7C\x3B\x27\x3A\"\x2C\x2F\x2E\x26\x6C\x74\x3B\x26\x67\x74\x3B\x3F\x3C\x2F\x4E\x61\x6D\x65\x3E\x3C\x50\x72\x6F\x70\x65\x72\x74\x69\x65\x73\x3E\x3C\x43\x72\x65\x61\x74\x69\x6F\x6E\x2D\x54\x69\x6D\x65\x3E\x57\x65\x64\x2C\x20\x31\x32\x20\x44\x65\x63\x20\x32\x30\x31\x38\x20\x30\x31\x3A\x30\x34\x3A\x33\x36\x20\x47\x4D\x54\x3C\x2F\x43\x72\x65\x61\x74\x69\x6F\x6E\x2D\x54\x69\x6D\x65\x3E\x3C\x4C\x61\x73\x74\x2D\x4D\x6F\x64\x69\x66\x69\x65\x64\x3E\x57\x65\x64\x2C\x20\x31\x32\x20\x44\x65\x63\x20\x32\x30\x31\x38\x20\x31\x35\x3A\x33\x30\x3A\x33\x34\x20\x47\x4D\x54\x3C\x2F\x4C\x61\x73\x74\x2D\x4D\x6F\x64\x69\x66\x69\x65\x64\x3E\x3C\x45\x74\x61\x67\x3E\x30\x78\x38\x44\x36\x36\x30\x34\x36\x43\x32\x39\x42\x39\x45\x36\x44\x3C\x2F\x45\x74\x61\x67\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x4C\x65\x6E\x67\x74\x68\x3E\x35\x3C\x2F\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x4C\x65\x6E\x67\x74\x68\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x54\x79\x70\x65\x3E\x74\x65\x78\x74\x2F\x70\x6C\x61\x69\x6E\x3B\x20\x63\x68\x61\x72\x73\x65\x74\x3D\x75\x74\x66\x2D\x38\x3C\x2F\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x54\x79\x70\x65\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x45\x6E\x63\x6F\x64\x69\x6E\x67\x20\x2F\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x4C\x61\x6E\x67\x75\x61\x67\x65\x20\x2F\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x4D\x44\x35\x20\x2F\x3E\x3C\x43\x61\x63\x68\x65\x2D\x43\x6F\x6E\x74\x72\x6F\x6C\x20\x2F\x3E\x3C\x43\x6F\x6E\x74\x65\x6E\x74\x2D\x44\x69\x73\x70\x6F\x73\x69\x74\x69\x6F\x6E\x20\x2F\x3E\x3C\x42\x6C\x6F\x62\x54\x79\x70\x65\x3E\x42\x6C\x6F\x63\x6B\x42\x6C\x6F\x62\x3C\x2F\x42\x6C\x6F\x62\x54\x79\x70\x65\x3E\x3C\x4C\x65\x61\x73\x65\x53\x74\x61\x74\x75\x73\x3E\x75\x6E\x6C\x6F\x63\x6B\x65\x64\x3C\x2F\x4C\x65\x61\x73\x65\x53\x74\x61\x74\x75\x73\x3E\x3C\x4C\x65\x61\x73\x65\x53\x74\x61\x74\x65\x3E\x61\x76\x61\x69\x6C\x61\x62\x6C\x65\x3C\x2F\x4C\x65\x61\x73\x65\x53\x74\x61\x74\x65\x3E\x3C\x53\x65\x72\x76\x65\x72\x45\x6E\x63\x72\x79\x70\x74\x65\x64\x3E\x74\x72\x75\x65\x3C\x2F\x53\x65\x72\x76\x65\x72\x45\x6E\x63\x72\x79\x70\x74\x65\x64\x3E\x3C\x2F\x50\x72\x6F\x70\x65\x72\x74\x69\x65\x73\x3E\x3C\x2F\x42\x6C\x6F\x62\x3E\x3C\x2F\x42\x6C\x6F\x62\x73\x3E\x3C\x4E\x65\x78\x74\x4D\x61\x72\x6B\x65\x72\x20\x2F\x3E\x3C\x2F\x45\x6E\x75\x6D\x65\x72\x61\x74\x69\x6F\x6E\x52\x65\x73\x75\x6C\x74\x73\x3E"
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 12 Dec 2018 15:30:34 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Request-Id:
+      - 4bfef16a-201e-00db-2e2f-924265000000
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
