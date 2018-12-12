@@ -33,7 +33,6 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -84,15 +83,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return &http.Client{Transport: h.rt}
+	return &h.client.Client
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(&h.client.Client))
-	if err != nil {
-		return nil, err
-	}
-	return &bucket{name: bucketName, client: c, opts: h.opts}, nil
+	return openBucket(ctx, bucketName, h.client, h.opts)
 }
 
 func (h *harness) Close() {
