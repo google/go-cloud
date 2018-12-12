@@ -15,11 +15,22 @@
 package main
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/github"
 )
+
+func TestDefaultRepoConfig(t *testing.T) {
+	cfg := defaultRepoConfig()
+	if _, err := regexp.Compile(cfg.IssueTitlePattern); err != nil {
+		t.Error("Issue title pattern:", err)
+	}
+	if _, err := regexp.Compile(cfg.PullRequestTitlePattern); err != nil {
+		t.Error("Pull request title pattern:", err)
+	}
+}
 
 func TestProcessIssueEvent(t *testing.T) {
 	const (
@@ -71,7 +82,7 @@ func TestProcessIssueEvent(t *testing.T) {
 			action:      "opened",
 			title:       "foo",
 			want: &issueEdits{
-				AddComments: []string{issueTitleComment},
+				AddComments: []string{defaultRepoConfig().IssueTitleResponse},
 			},
 		},
 		{
@@ -87,7 +98,7 @@ func TestProcessIssueEvent(t *testing.T) {
 			title:       "prev",
 			prevTitle:   "foo",
 			want: &issueEdits{
-				AddComments: []string{issueTitleComment},
+				AddComments: []string{defaultRepoConfig().IssueTitleResponse},
 			},
 		},
 	}
@@ -117,7 +128,7 @@ func TestProcessIssueEvent(t *testing.T) {
 				Issue:  iss,
 				Change: chg,
 			}
-			got := processIssueEvent(data)
+			got := processIssueEvent(defaultRepoConfig(), data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
 			}
@@ -163,7 +174,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			fork:        false,
 			want: &pullRequestEdits{
 				Close:       true,
-				AddComments: []string{branchesInForkCloseComment},
+				AddComments: []string{branchesInForkCloseResponse},
 			},
 		},
 		// Assign to reviewers.
@@ -199,7 +210,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			title:       "foo",
 			fork:        true,
 			want: &pullRequestEdits{
-				AddComments: []string{pullRequestTitleComment},
+				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
 			},
 		},
 		{
@@ -217,7 +228,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			prevTitle:   "foo",
 			fork:        true,
 			want: &pullRequestEdits{
-				AddComments: []string{pullRequestTitleComment},
+				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
 			},
 		},
 	}
@@ -254,7 +265,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 				PullRequest: pr,
 				Change:      chg,
 			}
-			got := processPullRequestEvent(data)
+			got := processPullRequestEvent(defaultRepoConfig(), data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
 			}

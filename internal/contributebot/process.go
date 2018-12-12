@@ -24,17 +24,30 @@ import (
 	"github.com/google/go-github/github"
 )
 
-const (
-	inProgressLabel            = "in progress"
-	issueTitleComment          = "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`."
-	pullRequestTitleComment    = "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`."
-	branchesInForkCloseComment = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
-)
+// inProgressLabel is the name of the label used to indicate that an
+// issue is currently being worked on.
+const inProgressLabel = "in progress"
 
-var (
-	issueTitleRegexp       = regexp.MustCompile(`^([a-z0-9./-]+|[A-Z_]+): .*$`)
-	pullRequestTitleRegexp = issueTitleRegexp
-)
+// branchesInForkCloseResponse is the comment response given when a
+// branch is created on the repository instead of a fork.
+const branchesInForkCloseResponse = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+
+type repoConfig struct {
+	IssueTitlePattern        string `json:"issue_title_pattern"`
+	IssueTitleResponse       string `json:"issue_title_response"`
+	PullRequestTitlePattern  string `json:"pull_request_title_pattern"`
+	PullRequestTitleResponse string `json:"pull_request_title_response"`
+}
+
+func defaultRepoConfig() *repoConfig {
+	const titlePattern = `^([a-z0-9./-]+|[A-Z_]+): .*$`
+	return &repoConfig{
+		IssueTitlePattern:        titlePattern,
+		IssueTitleResponse:       "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`.",
+		PullRequestTitlePattern:  titlePattern,
+		PullRequestTitleResponse: "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`.",
+	}
+}
 
 // issueData is information about an issue event.
 // See the github documentation for more details about the fields:
@@ -74,7 +87,7 @@ func titleChanged(title string, edit *github.EditChange) bool {
 
 // processIssueEvent identifies actions that should be taken based on the issue
 // event represented by data.
-func processIssueEvent(data *issueData) *issueEdits {
+func processIssueEvent(cfg *repoConfig, data *issueData) *issueEdits {
 	edits := &issueEdits{}
 	log.Printf("Identifying actions for issue: %v", data)
 	defer log.Printf("-> %v", edits)
@@ -88,9 +101,12 @@ func processIssueEvent(data *issueData) *issueEdits {
 
 	// Add a comment if the title doesn't match our regexp, and it's a new issue,
 	// or an issue whose title has just been modified.
-	if !issueTitleRegexp.MatchString(data.Issue.GetTitle()) &&
+	if re, err := regexp.Compile(cfg.IssueTitlePattern); err != nil {
+		// TODO(light): Increment a configuration error metric.
+		log.Printf("Invalid issue title pattern %q: %v", cfg.IssueTitlePattern, err)
+	} else if !re.MatchString(data.Issue.GetTitle()) &&
 		(data.Action == "opened" || (data.Action == "edited" && titleChanged(data.Issue.GetTitle(), data.Change))) {
-		edits.AddComments = append(edits.AddComments, issueTitleComment)
+		edits.AddComments = append(edits.AddComments, cfg.IssueTitleResponse)
 	}
 
 	return edits
@@ -158,7 +174,7 @@ func (pr *pullRequestData) String() string {
 
 // processPullRequestEvent identifies actions that should be taken based on the
 // pull request event represented by data.
-func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
+func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
 	log.Printf("Identifying actions for pull request: %v", data)
 	defer log.Printf("-> %v", edits)
@@ -175,7 +191,7 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 	// from a fork instead.
 	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
 		edits.Close = true
-		edits.AddComments = append(edits.AddComments, branchesInForkCloseComment)
+		edits.AddComments = append(edits.AddComments, branchesInForkCloseResponse)
 		// Short circuit since we're closing anyway.
 		return edits
 	}
@@ -189,9 +205,12 @@ func processPullRequestEvent(data *pullRequestData) *pullRequestEdits {
 
 	// Add a comment if the title doesn't match our regexp, and it's a new issue,
 	// or an issue whose title has just been modified.
-	if !pullRequestTitleRegexp.MatchString(pr.GetTitle()) &&
+	if re, err := regexp.Compile(cfg.PullRequestTitlePattern); err != nil {
+		// TODO(light): Increment a configuration error metric.
+		log.Printf("Invalid pull request title pattern %q: %v", cfg.PullRequestTitlePattern, err)
+	} else if !re.MatchString(pr.GetTitle()) &&
 		(data.Action == "opened" || (data.Action == "edited" && titleChanged(pr.GetTitle(), data.Change))) {
-		edits.AddComments = append(edits.AddComments, pullRequestTitleComment)
+		edits.AddComments = append(edits.AddComments, cfg.PullRequestTitleResponse)
 	}
 
 	return edits

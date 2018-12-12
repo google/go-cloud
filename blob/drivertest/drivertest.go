@@ -1213,6 +1213,9 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 				if err := b.WriteAll(ctx, key, content, opts); err != nil {
 					t.Fatal(err)
 				}
+				defer func() {
+					_ = b.Delete(ctx, key)
+				}()
 			}
 
 			// Create a writer with the context that we're going
