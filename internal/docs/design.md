@@ -322,47 +322,64 @@ on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 ## Coding Conventions
 
 We try to adhere to commonly accepted Go coding conventions, some of which are
-described on the [Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+described on the
+[Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
 wiki page. We also adopt the following guidelines:
-- Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
-- When writing a loop appending to a slice `s`, prefer
-  ```
-  var s []T
-  for ... {
-    ...
-    s = append(s, ...)
-    ...
-  }
-  ```
 
-  to
-  ```
-  s := make([]T, 0, N)
-  for ... { 
-    ...
-    s = append(s, ...)
-    ...
-  }
-  ```
+-   Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
+-   When writing a loop appending to a slice `s`, prefer
 
-  or
-  ```
-  s := make([]T, N)
-  for ... {
-    ...
-    s[i] = ...
-    ...
-  }
-  ```
+    ```
+      var s []T
+      for ... {
+        ...
+        s = append(s, ...)
+        ...
+      }
+    ```
 
-  (Exception: the loop body is trivial and the loop is
-  performance-sensitive.) The first version is shorter and easier to read, and
-  it is impossible to get the length wrong.
-- Prefer `log.Fatal` to `panic` in example tests.
-- Ensure you've run `goimports` on your code to properly group import statements.
+    to
 
+    ```
+      s := make([]T, 0, N)
+      for ... {
+        ...
+        s = append(s, ...)
+        ...
+      }
+    ```
+
+    or
+
+    ```
+      s := make([]T, N)
+      for ... {
+        ...
+        s[i] = ...
+        ...
+      }
+    ```
+
+    (Exception: the loop body is trivial and the loop is performance-sensitive.)
+    The first version is shorter and easier to read, and it is impossible to get
+    the length wrong.
+
+-   Prefer `log.Fatal` to `panic` in example tests.
+
+-   Ensure you've run `goimports` on your code to properly group import
+    statements.
 
 ## Tests
+
+### Conformance Tests
+
+Since our goal is for users to be able to use provider implementations
+interchangeably, it is critical that they behave similarly. To this end, for
+each portable API (e.g., `blob`), we provide a suite of conformance tests that
+each provider implementation should run. The conformance tests are
+comprehensive, so provider implementations shouldn't need additional tests.
+
+### Provisioning For Tests
 
 Portable API integration tests require developer-specific resources to be
 created and destroyed. We use [Terraform](http://terraform.io) to do so, and
