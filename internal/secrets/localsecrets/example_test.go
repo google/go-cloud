@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/google/go-cloud/internal/secrets/localsecrets"
+	"gocloud.dev/internal/secrets/localsecrets"
 )
 
 func ExampleCrypterEncryptDecrypt() {
