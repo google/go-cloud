@@ -2,8 +2,8 @@
 
 This document outlines important design decisions made for this repository and
 attempts to provide succinct rationales. Recording these decisions helps
-maintain consistency across packages, especially as an open source project
-where contributors can join at any point during development.
+maintain consistency across packages, especially as an open source project where
+contributors can join at any point during development.
 
 A broad design goal for Go Cloud is for the API style to be consistent.
 Consistency aids users in building a mental model of how to use the APIs. As
@@ -97,7 +97,8 @@ user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
-New Go Cloud APIs should always follow this driver plus user-facing type pattern.
+New Go Cloud APIs should always follow this driver plus user-facing type
+pattern.
 
 [`runtimevar.Variable`]:
 https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
@@ -383,10 +384,11 @@ wiki page. We also adopt the following guidelines:
 ### Conformance Tests
 
 Since our goal is for users to be able to use provider implementations
-interchangeably, it is critical that they behave similarly. To this end, for
-each portable API (e.g., `blob`), we provide a suite of conformance tests that
-each provider implementation should run. The conformance tests are
-comprehensive, so provider implementations shouldn't need additional tests.
+interchangeably, it is critical that they behave similarly. To this end, each
+portable API (e.g., `blob`) must provide a suite of conformance tests that
+provider implementations should run. The conformance tests should be
+comprehensive; provider implementations should not need additional unit tests
+for the core driver semantics.
 
 ### Provisioning For Tests
 
