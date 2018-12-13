@@ -38,7 +38,7 @@
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
-package s3blob
+package s3blob // import "gocloud.dev/blob/s3blob"
 
 import (
 	"context"
@@ -53,8 +53,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"

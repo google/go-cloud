@@ -42,7 +42,7 @@
 //  - Reader: storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - WriterOptions.BeforeWrite: *storage.Writer
-package gcsblob
+package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
 	"context"
@@ -54,9 +54,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcp"
 
 	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"

@@ -14,7 +14,7 @@
 
 // Package driver provides the interface for providers of runtimevar.  This serves as a contract
 // of how the runtimevar API uses a provider implementation.
-package driver
+package driver // import "gocloud.dev/runtimevar/driver"
 
 import (
 	"context"

@@ -17,9 +17,9 @@ package cloudpostgres_test
 import (
 	"context"
 
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/google/go-cloud/postgres/cloudpostgres"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/cloudsql"
+	"gocloud.dev/postgres/cloudpostgres"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )

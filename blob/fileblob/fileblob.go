@@ -48,7 +48,7 @@
 // As
 //
 // fileblob does not support any types for As.
-package fileblob
+package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
 	"bytes"
@@ -65,8 +65,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 )
 
 const defaultPageSize = 1000

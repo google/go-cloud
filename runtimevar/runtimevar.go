@@ -14,7 +14,7 @@
 
 // Package runtimevar provides an interface for reading runtime variables and
 // ability to detect changes and get updates on those variables.
-package runtimevar
+package runtimevar // import "gocloud.dev/runtimevar"
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar/driver"
 )
 
 // Snapshot contains a variable and metadata about it.
