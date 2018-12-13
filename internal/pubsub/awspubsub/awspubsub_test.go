@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"net/http"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -26,6 +28,7 @@ import (
 	"github.com/google/go-cloud/internal/pubsub"
 	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cloud/internal/pubsub/drivertest"
+	"github.com/google/go-cloud/internal/testing/setup"
 )
 
 const (
@@ -40,23 +43,22 @@ const (
 	//    and clicking "Create New Queue", typing the queue name, then
 	//    "Quick-Create Queue".
 	// 2. Update the topicARN constant to your topic ARN, and the
-	//    queueARN to your queue ARN.
+	//    qURL to your queue URL.
 	topicARN = "arn:aws:sns:us-east-2:221420415498:test-topic"
 	qURL     = "https://sqs.us-east-2.amazonaws.com/221420415498/test-q"
+	region   = "us-east-2"
 )
 
 type harness struct {
-	sess *session.Session
-	cfg  *aws.Config
+	sess   *session.Session
+	cfg    *aws.Config
+	rt     http.RoundTripper
+	closer func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("awspubsub: making new session: %v", err)
-	}
-	cfg := &aws.Config{}
-	return &harness{sess, cfg}, nil
+	sess, rt, done := setup.NewAWSSession(t, region)
+	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done}, nil
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
@@ -84,6 +86,7 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 }
 
 func (h *harness) Close() {
+	h.closer()
 }
 
 func TestConformance(t *testing.T) {
