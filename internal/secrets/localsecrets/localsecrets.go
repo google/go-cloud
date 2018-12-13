@@ -14,7 +14,7 @@
 
 // Package localsecrets provides a way to encrypt and decrypt small messages
 // without making network calls to a third party service.
-package localsecrets
+package localsecrets // import "gocloud.dev/internal/secrets/localsecrets"
 
 import (
 	"context"

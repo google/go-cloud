@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob/driver"
 	"github.com/google/go-cmp/cmp"
 )
 

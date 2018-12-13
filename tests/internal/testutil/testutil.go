@@ -14,7 +14,7 @@
 
 // Package testutil contains utility functions used by server tests against
 // different platforms.
-package testutil
+package testutil // import "gocloud.dev/tests/internal/testutil"
 
 import (
 	"crypto/rand"

@@ -14,14 +14,14 @@
 
 // Package constantvar provides a runtimevar.Driver implementation for variables
 // that never change.
-package constantvar
+package constantvar // import "gocloud.dev/runtimevar/constantvar"
 
 import (
 	"context"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 )
 
 // New constructs a runtimevar.Variable that returns value from Watch.

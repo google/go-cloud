@@ -20,12 +20,12 @@ import (
 	"context"
 
 	awsclient "github.com/aws/aws-sdk-go/aws/client"
-	"github.com/google/go-cloud/aws/awscloud"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/mysql/rdsmysql"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/paramstore"
+	"gocloud.dev/aws/awscloud"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/mysql/rdsmysql"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/paramstore"
 	"github.com/google/wire"
 )
 

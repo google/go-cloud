@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/mempubsub"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/mempubsub"
 )
 
 func Example_sendReceive() {
