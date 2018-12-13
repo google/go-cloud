@@ -41,10 +41,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		cleanup()
 		return workerAndServer{}, nil, err
 	}
-	mainWorker := &worker{
-		sub:  subscription,
-		auth: mainGitHubAppAuth,
-	}
+	mainWorker := newWorker(subscription, mainGitHubAppAuth)
 	logger := _wireLoggerValue
 	v := healthChecks(mainWorker)
 	exporter := _wireExporterValue
