@@ -428,7 +428,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 	}
 	r := io.Reader(f)
-	if length > 0 {
+	if length >= 0 {
 		r = io.LimitReader(r, length)
 	}
 	return reader{

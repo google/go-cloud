@@ -377,15 +377,23 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	if offset > 0 && length < 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-", offset))
-	} else if length > 0 {
+	} else if length == 0 {
+		// AWS doesn't support a zero-length read; we'll read 1 byte and then
+		// ignore it in favor of emptyBody below.
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
+	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
+	body := resp.Body
+	if length == 0 {
+		body = emptyBody
+	}
 	return &reader{
-		body: resp.Body,
+		body: body,
 		attrs: driver.ReaderAttributes{
 			ContentType: aws.StringValue(resp.ContentType),
 			ModTime:     aws.TimeValue(resp.LastModified),
