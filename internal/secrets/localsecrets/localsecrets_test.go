@@ -12,31 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package s3blob_test
+package localsecrets
 
 import (
 	"context"
+	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob/s3blob"
+	"github.com/google/go-cloud/internal/secrets/driver"
+	"github.com/google/go-cloud/internal/secrets/drivertest"
 )
 
-func Example() {
-	ctx := context.Background()
+type harness struct{}
 
-	// Create an AWS session.
-	// This example uses defaults for finding credentials, which region to use,
-	// etc.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-	// for more info on available options.
-	sess, err := session.NewSession()
-	if err != nil {
-		// Handle errror.
-		return
-	}
+func (h harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
+	return NewKeeper(ByteKey("very secret secret")), nil
+}
 
-	// Create a *blob.Bucket.
-	_, _ = s3blob.OpenBucket(ctx, "my-bucket", sess, nil)
-
-	// Output:
+func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	return harness{}, nil
 }

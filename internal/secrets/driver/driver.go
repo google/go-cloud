@@ -18,15 +18,13 @@ package driver
 
 import "context"
 
-// Decrypter decrypts a cipher message into a plain text message.
-type Decrypter interface {
+// Crypter holds the key information to encrypt a plain text message into a
+// cipher message, as well as decrypt a cipher message into a plain text message
+// encrypted by the same key.
+type Crypter interface {
 
 	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
-}
-
-// Encrypter encrypts a plain text message into a cipher message.
-type Encrypter interface {
 
 	// Encrypt encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)

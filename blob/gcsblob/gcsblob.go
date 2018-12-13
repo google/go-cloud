@@ -12,27 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcsblob provides an implementation of blob that uses GCS.
+// Package gcsblob provides a blob implementation that uses GCS. Use OpenBucket
+// to construct a blob.Bucket.
 //
-// For blob.Open URLs, gcsblob registers for the "gs" protocol.
+// Open URLs
+//
+// For blob.Open URLs, gcsblob registers for the scheme "gs"; URLs start
+// with "gs://".
+//
 // The URL's Host is used as the bucket name.
 // The following query options are supported:
-// - cred_path: Sets path to the Google credentials file. If unset, default
-//       credentials are loaded.
-//       See https://cloud.google.com/docs/authentication/production.
-// - access_id: Sets Options.GoogleAccessID.
-// - private_key_path: Sets path to a private key, which is read and used
-//       to set Options.PrivateKey.
-// Example URL: blob.Open("gs://mybucket")
 //
-// It exposes the following types for As:
-// Bucket: *storage.Client
-// Error: *googleapi.Error
-// ListObject: storage.ObjectAttrs
-// ListOptions.BeforeList: *storage.Query
-// Reader: storage.Reader
-// Attributes: storage.ObjectAttrs
-// WriterOptions.BeforeWrite: *storage.Writer
+//  - cred_path: Sets path to the Google credentials file. If unset, default
+//    credentials are loaded.
+//    See https://cloud.google.com/docs/authentication/production.
+//  - access_id: Sets Options.GoogleAccessID.
+//  - private_key_path: Sets path to a private key, which is read and used
+//    to set Options.PrivateKey.
+// Example URL:
+//  gs://mybucket
+//
+// As
+//
+// gcsblob exposes the following types for As:
+//  - Bucket: *storage.Client
+//  - Error: *googleapi.Error
+//  - ListObject: storage.ObjectAttrs
+//  - ListOptions.BeforeList: *storage.Query
+//  - Reader: storage.Reader
+//  - Attributes: storage.ObjectAttrs
+//  - WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob
 
 import (
@@ -139,7 +148,8 @@ func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, 
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
 
-// OpenBucket returns a GCS Bucket that communicates using the given HTTP client.
+// OpenBucket returns a *blob.Bucket backed by GCS. See the package
+// documentation for an example.
 func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, bucketName, client, opts)
 	if err != nil {

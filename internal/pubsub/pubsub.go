@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+// Package pubsub provides an easy and portable way to interact with publish/
+// subscribe systems.
 package pubsub
 
 import (
@@ -64,6 +67,9 @@ type Topic struct {
 	batcher driver.Batcher
 	mu      sync.Mutex
 	err     error
+
+	// cancel cancels all SendBatch calls.
+	cancel func()
 }
 
 type msgErrChan struct {
@@ -88,14 +94,23 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 	return t.batcher.Add(ctx, m)
 }
 
-// Close flushes pending message sends and disconnects the Topic.
+// Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
-func (t *Topic) Close() error {
+func (t *Topic) Shutdown(ctx context.Context) error {
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
-	t.batcher.Shutdown()
-	return nil
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		t.batcher.Shutdown()
+	}()
+	select {
+	case <-ctx.Done():
+	case <-c:
+	}
+	t.cancel()
+	return ctx.Err()
 }
 
 // As converts i to provider-specific types. See provider documentation for
@@ -111,6 +126,7 @@ func (t *Topic) As(i interface{}) bool {
 // NewTopic makes a pubsub.Topic from a driver.Topic.
 // It is for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
+	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
 		var dms []*driver.Message
@@ -122,7 +138,6 @@ func NewTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		callCtx := context.TODO()
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendBatch(callCtx, dms)
 		})
@@ -132,6 +147,7 @@ func NewTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:  d,
 		batcher: b,
+		cancel:  cancel,
 	}
 	return t
 }
@@ -209,7 +225,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 	return nil
 }
 
-// Close flushes pending ack sends and disconnects the Subscription.
+// Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
@@ -237,10 +253,7 @@ func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription and opts to
-// tune sending and receiving of acks and messages. Behind the scenes,
-// NewSubscription spins up a goroutine to gather acks into batches and
-// periodically send them to the server.
+// NewSubscription creates a Subscription from a driver.Subscription.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
 	callCtx, cancel := context.WithCancel(context.Background())

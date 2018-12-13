@@ -12,24 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package s3blob provides an implementation of blob using S3.
+// Package s3blob provides a blob implementation that uses S3. Use OpenBucket
+// to construct a blob.Bucket.
 //
-// For blob.Open URLs, s3blob registers for the "s3" protocol.
+// Open URLs
+//
+// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
+// with "s3://".
+//
 // The URL's Host is used as the bucket name.
 // The AWS session is created as described in
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
 // The following query options are supported:
-// - region: The AWS region for requests; sets aws.Config.Region.
-// Example URL: blob.Open("s3://mybucket?region=us-east-1")
+//  - region: The AWS region for requests; sets aws.Config.Region.
+// Example URL:
+//  s3://mybucket?region=us-east-1
+//
+// As
 //
 // s3blob exposes the following types for As:
-// Bucket: *s3.S3
-// Error: awserr.Error
-// ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
-// ListOptions.BeforeList: *s3.ListObjectsV2Input
-// Reader: s3.GetObjectOutput
-// Attributes: s3.HeadObjectOutput
-// WriterOptions.BeforeWrite: *s3manager.UploadInput
+//  - Bucket: *s3.S3
+//  - Error: awserr.Error
+//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
+//  - ListOptions.BeforeList: *s3.ListObjectsV2Input
+//  - Reader: s3.GetObjectOutput
+//  - Attributes: s3.HeadObjectOutput
+//  - WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob
 
 import (
@@ -93,7 +101,8 @@ func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvid
 	}, nil
 }
 
-// OpenBucket returns an S3 Bucket.
+// OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
+// for an example.
 func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, bucketName, sess, opts)
 	if err != nil {
