@@ -253,10 +253,7 @@ func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription and opts to
-// tune sending and receiving of acks and messages. Behind the scenes,
-// NewSubscription spins up a goroutine to gather acks into batches and
-// periodically send them to the server.
+// NewSubscription creates a Subscription from a driver.Subscription.
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
 	callCtx, cancel := context.WithCancel(context.Background())
