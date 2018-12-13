@@ -1,7 +1,14 @@
 # Design Decisions
 
 This document outlines important design decisions made for this repository and
-attempts to provide succinct rationales.
+attempts to provide succinct rationales. Recording these decisions helps
+maintain consistency across packages, especially as an open source project
+where contributors can join at any point during development.
+
+A broad design goal for Go Cloud is for the API style to be consistent.
+Consistency aids users in building a mental model of how to use the APIs. As
+such, the design of individual packages must also consider their impact on Go
+Cloud as a whole.
 
 This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The
 decisions in here are not set in stone, but simply describe our current thinking
@@ -89,6 +96,8 @@ As a rule, if a method `Foo` has the same inputs and semantics in the
 user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
+
+New Go Cloud APIs should always follow this driver plus user-facing type pattern.
 
 [`runtimevar.Variable`]:
 https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
