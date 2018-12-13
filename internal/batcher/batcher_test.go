@@ -25,8 +25,8 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/internal/batcher"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/batcher"
 )
 
 func TestSequential(t *testing.T) {

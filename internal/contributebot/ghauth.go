@@ -27,8 +27,8 @@ import (
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"gocloud.dev/runtimevar"
 	"github.com/google/go-github/github"
+	"gocloud.dev/runtimevar"
 )
 
 // gitHubAppAuth makes HTTP requests with GitHub application credentials.

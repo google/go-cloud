@@ -20,13 +20,13 @@ import (
 	"context"
 
 	awsclient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/google/wire"
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/mysql/rdsmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/paramstore"
-	"github.com/google/wire"
 )
 
 // This file wires the generic interfaces up to Amazon Web Services (AWS). It

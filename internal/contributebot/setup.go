@@ -24,14 +24,14 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/google/wire"
+	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/health"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
-	"github.com/google/wire"
-	"go.opencensus.io/trace"
 	"google.golang.org/api/option"
 )
 
