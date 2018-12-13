@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
 )
 

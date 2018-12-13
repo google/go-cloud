@@ -20,9 +20,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/google/go-cloud/aws/awscloud"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/server"
+	"gocloud.dev/aws/awscloud"
+	"gocloud.dev/health"
+	"gocloud.dev/server"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
 )

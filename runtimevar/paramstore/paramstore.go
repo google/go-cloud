@@ -17,15 +17,15 @@
 //
 // Construct a Client, then use NewVariable to construct any number of
 // runtimevar.Variable objects.
-package paramstore
+package paramstore // import "gocloud.dev/runtimevar/paramstore"
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
