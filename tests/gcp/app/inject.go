@@ -19,9 +19,9 @@ package main
 import (
 	"context"
 
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/gcpcloud"
-	"github.com/google/go-cloud/server"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/gcpcloud"
+	"gocloud.dev/server"
 	"github.com/google/wire"
 )
 

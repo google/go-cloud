@@ -28,7 +28,7 @@
 // * Saving a configuration file in vim using :w will incur events Rename and Create. When the
 // Rename event occurs, the file is temporarily removed and hence Watch will return error.  A
 // follow-up Watch call will then detect the Create event.
-package filevar
+package filevar // import "gocloud.dev/runtimevar/filevar"
 
 import (
 	"bytes"
@@ -39,8 +39,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 
 	"github.com/fsnotify/fsnotify"
 )

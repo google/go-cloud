@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package rds contains Wire providers that are common across RDS.
-package rds
+package rds // import "gocloud.dev/aws/rds"
 
 import (
 	"context"
