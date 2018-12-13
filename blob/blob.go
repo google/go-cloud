@@ -180,7 +180,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // Close closes the blob writer. The write operation is not guaranteed to have succeeded until
 // Close returns with no error.
-// Close will return an error if the context provided to create the Writer is
+// Close may return an error if the context provided to create the Writer is
 // canceled or times out.
 func (w *Writer) Close() error {
 	if w.w != nil {
