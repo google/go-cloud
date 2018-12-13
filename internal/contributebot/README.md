@@ -120,7 +120,12 @@ go run . --project=your-project-name --github_app=42 --github_key=/foo.pem
 To deploy an updated Contribute Bot to production, follow these steps.
 
 ```shell
-# Build Docker image.
+# If you're working on production Contribute Bot, Cloud Build will
+# automatically build a new version of the Docker image when commits are
+# made to internal/contributebot. Find a new image at
+# https://console.cloud.google.com/cloud-build/builds?project=go-cloud-contribute-bot
+
+# Otherwise, fire off a manual Cloud Build.
 gcloud builds submit --config cloudbuild.yaml ../.. --project=go-cloud-contribute-bot
 
 # Edit prod/k8s/contributebot.yaml and replace the image with the one
@@ -133,13 +138,11 @@ gcloud container clusters get-credentials \
     contributebot-cluster
 kubectl apply -f prod/k8s
 
+# Check that the deployment was successful:
+kubectl describe pods --selector=app=contributebot-worker
+
 # Send a PR with the updated .yaml file.
 ```
-
-To check that the deploy was successful, consult the contributebot-worker [Deployment Details][]
-
-[Deployment Details]: https://pantheon.corp.google.com/kubernetes/deployment/us-central1-c/contributebot-cluster/default/contributebot-worker?project=go-cloud-contribute-bot&tab=history&deployment_overview_active_revisions_tablesize=50&duration=PT1H&pod_summary_list_tablesize=20&deployment_revision_history_tablesize=50
-
 
 ### Somewhere else
 
