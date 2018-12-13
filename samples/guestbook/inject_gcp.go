@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 
+	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
@@ -26,7 +27,6 @@ import (
 	"gocloud.dev/mysql/cloudmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
-	"github.com/google/wire"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It
