@@ -23,7 +23,6 @@ package awspubsub
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -40,8 +39,7 @@ type topic struct {
 // TopicOptions will contain configuration for topics.
 type TopicOptions struct{}
 
-// OpenTopic opens the topic on AWS SNS for the given projectID and
-// topicName.
+// OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(ctx, client, topicARN)
 	return pubsub.NewTopic(dt)
@@ -70,7 +68,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		}
 		req, _ := t.client.PublishRequest(&params)
 		if err := req.Send(); err != nil {
-			return fmt.Errorf("awspubsub: failed to send message: %v", err)
+			return err
 		}
 	}
 	return nil
@@ -100,8 +98,8 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription opens the queue on AWS SQS for the given
-// projectID and subscriptionName.
+// OpenSubscription opens the queue on AWS SQS for the given SQS client and
+// queue URL.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, qURL)
 	return pubsub.NewSubscription(ds)
@@ -118,7 +116,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	req, output := s.client.ReceiveMessageRequest(&params)
 	err := req.Send()
 	if err != nil {
-		return nil, fmt.Errorf("awspubsub: message receive failed: %v", err)
+		return nil, err
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
@@ -132,7 +130,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 		var body MsgBody
 		if err := json.Unmarshal([]byte(*m.Body), &body); err != nil {
-			return nil, fmt.Errorf("awspubsub: unmarshalling message body json: %v", err)
+			return nil, err
 		}
 		attrs := map[string]string{}
 		for k, v := range body.MessageAttributes {
@@ -157,7 +155,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 			ReceiptHandle: &rh,
 		})
 		if err != nil {
-			return fmt.Errorf("awspubsub: deleting message: %v", err)
+			return err
 		}
 	}
 	return nil
