@@ -10,24 +10,54 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181212T210130Z
+      - 20181213T202528Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>459D6AC0EB2A0672</RequestId><HostId>X+48+N6HpvwBTkynmMNQJ7+hb8TJVMYdBEGmvj9BJ+5Mzl31LugbaMQ411q4PUud7+mI5bh80C4=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>962E5C2076EA3C40</RequestId><HostId>kGRXNaWkCBhXbsrSrBjGqaXzhPHJJ7L/G8qcquuFio5u8NoH/MzdKxXyVoUrL/xyaGdfwLFRDWs=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Wed, 12 Dec 2018 21:01:30 GMT
+      - Thu, 13 Dec 2018 20:25:28 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - X+48+N6HpvwBTkynmMNQJ7+hb8TJVMYdBEGmvj9BJ+5Mzl31LugbaMQ411q4PUud7+mI5bh80C4=
+      - kGRXNaWkCBhXbsrSrBjGqaXzhPHJJ7L/G8qcquuFio5u8NoH/MzdKxXyVoUrL/xyaGdfwLFRDWs=
       X-Amz-Request-Id:
-      - 459D6AC0EB2A0672
+      - 962E5C2076EA3C40
+    status: 404 Not Found
+    code: 404
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20181213T202528Z
+    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>5AD1156F897CBDC4</RequestId><HostId>uutkxx5atiJ+fwNkXVJd3pZ8CritB+BDNOu9DpwCik0Km8RwswLv5zgnhtYiD5nIwXKPmVEQOiE=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 13 Dec 2018 20:25:28 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - uutkxx5atiJ+fwNkXVJd3pZ8CritB+BDNOu9DpwCik0Km8RwswLv5zgnhtYiD5nIwXKPmVEQOiE=
+      X-Amz-Request-Id:
+      - 5AD1156F897CBDC4
     status: 404 Not Found
     code: 404
     duration: ""

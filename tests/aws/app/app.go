@@ -23,8 +23,8 @@ import (
 	"net/http"
 	"sync"
 
-	"gocloud.dev/health"
 	"github.com/google/wire"
+	"gocloud.dev/health"
 
 	"go.opencensus.io/trace"
 )

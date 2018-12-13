@@ -20,11 +20,11 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/google/wire"
+	"go.opencensus.io/trace"
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/health"
 	"gocloud.dev/server"
-	"github.com/google/wire"
-	"go.opencensus.io/trace"
 )
 
 // This is an example of how to bootstrap an HTTP server running on
