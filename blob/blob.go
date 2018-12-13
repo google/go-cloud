@@ -414,10 +414,8 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 }
 
 // NewRangeReader returns a Reader to read content from the blob object
-// represented by key. It reads at most length bytes starting at offset. If
-// length is negative, it will read till the end of the object.
-//
-// offset must be >= 0, and length cannot be 0.
+// represented by key. It reads at most length (!= 0) bytes starting at
+// offset (>= 0). If length is negative, it will read till the end of the object.
 //
 // If the blob object does not exist, NewRangeReader returns an error for which
 // IsNotExist will return true. Attributes is a lighter-weight way
