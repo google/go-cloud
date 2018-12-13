@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package aws provides fundamental Wire providers for Amazon Web Services (AWS).
-package aws
+package aws // import "gocloud.dev/aws"
 
 import (
 	"github.com/aws/aws-sdk-go/aws"

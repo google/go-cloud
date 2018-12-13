@@ -17,7 +17,7 @@
 //
 // Construct a Client, then use NewVariable to construct any number of
 // runtimevar.Variable objects.
-package runtimeconfigurator
+package runtimeconfigurator // import "gocloud.dev/runtimevar/runtimeconfigurator"
 
 import (
 	"bytes"
@@ -26,10 +26,10 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
 	"github.com/google/wire"
+	"gocloud.dev/gcp"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

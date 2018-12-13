@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module github.com/google/go-cloud
+module gocloud.dev
 
 require (
 	cloud.google.com/go v0.30.0

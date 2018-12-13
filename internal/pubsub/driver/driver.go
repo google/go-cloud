@@ -14,7 +14,7 @@
 
 // Package driver defines a set of interfaces that the pubsub package uses to
 // interact with the underlying pubsub services.
-package driver
+package driver // import "gocloud.dev/internal/pubsub/driver"
 
 import (
 	"context"

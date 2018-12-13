@@ -14,7 +14,7 @@
 
 // Package driver defines a set of interfaces that the blob package uses to interact
 // with the underlying blob services.
-package driver
+package driver // import "gocloud.dev/blob/driver"
 
 import (
 	"context"

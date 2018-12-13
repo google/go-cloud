@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package rdspostgres provides connections to AWS RDS PostgreSQL instances.
-package rdspostgres
+package rdspostgres // import "gocloud.dev/postgres/rdspostgres"
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
-	"github.com/google/go-cloud/aws/rds"
 	"github.com/lib/pq"
+	"gocloud.dev/aws/rds"
 )
 
 // Params specifies how to connect to an RDS database.
