@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/runtimevar/driver"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/runtimevar/driver"
 )
 
 // state implements driver.State.
