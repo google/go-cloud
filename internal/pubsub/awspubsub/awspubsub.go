@@ -121,7 +121,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	var ms []*driver.Message
 	for _, m := range output.Messages {
 		type Attribute struct {
-			Type  string
 			Value string
 		}
 		type MsgBody struct {
