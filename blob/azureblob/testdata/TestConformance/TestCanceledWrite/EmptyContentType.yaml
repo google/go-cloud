@@ -5,29 +5,27 @@ interactions:
     body: ""
     form: {}
     headers:
-      Authorization:
-      - SharedKey gocloud:gRpS+vnyXBImD34YG3DQIpdxGDIbFZ0qm1mWFYcmeno=
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - fbfea3c5-5168-4c84-682d-f053a0dea299
+      - 40b5b0f1-bff1-4f7b-4279-f6b95f6f4d10
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Wed, 12 Dec 2018 15:30:34 GMT
+      - Thu, 13 Dec 2018 02:47:52 GMT
     url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-canceled-write?timeout=4
     method: HEAD
   response:
     body: ""
     headers:
       Date:
-      - Wed, 12 Dec 2018 15:30:34 GMT
+      - Thu, 13 Dec 2018 02:47:52 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Error-Code:
       - BlobNotFound
       X-Ms-Request-Id:
-      - 4bfef06f-201e-00db-4f2f-924265000000
+      - b86a0f7a-301e-0080-3c8e-924519000000
       X-Ms-Version:
       - "2018-03-28"
     status: 404 The specified blob does not exist.

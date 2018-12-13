@@ -155,30 +155,26 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
 // It requires setting environment variables for the Storage Account Name (AZURE_STORAGE_ACCOUNT_NAME) and a storage key (AZURE_STORAGE_ACCOUNT_KEY)
-func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.Pipeline, done func()) {
+func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.Pipeline, done func(), accountName string, accountKey string) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
-	}
-
-	azMatcher := &replay.ProviderMatcher{
-		Headers: []string{"X-Az-Target"},
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`X-Amz-(Credential|Signature)=[^?]*`),
-		},
-	}
-
-	r, done, err := replay.NewRecorder(t, mode, azMatcher, t.Name())
+	}	
+	r, done, err := replay.NewRecorder(t, mode, &replay.ProviderMatcher{}, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
-
-	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	
+	accountName = "gocloud"	
+	accountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
 	credentials, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 
+	if !*Record {					
+		accountKey = "FAKE_KEY"		
+	}
+
 	p := newPipeline(credentials, r)
-	return p, done
+	return p, done, accountName, accountKey
 }
 
 func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {

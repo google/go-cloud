@@ -79,8 +79,7 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	settings := azureblob.Settings{
 		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:       os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),
-		PublicAccessType: azureblob.PublicAccessBlob,
+		AccountKey:       os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),		
 		SASToken:         "", // Not used when bootstrapping with AccountName & AccountKey
 	}
 	return azureblob.OpenBucket(ctx, &settings, bucket)
@@ -98,8 +97,7 @@ func setupAzureWithSASToken(ctx context.Context, bucket string) (*blob.Bucket, e
 
 	settings := azureblob.Settings{
 		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:       "", // Not used when bootstrapping with SASToken
-		PublicAccessType: azureblob.PublicAccessContainer,
+		AccountKey:       "", // Not used when bootstrapping with SASToken		
 		SASToken:         sasToken,
 	}
 	return azureblob.OpenBucket(ctx, &settings, bucket)

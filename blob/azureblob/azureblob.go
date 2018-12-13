@@ -1,3 +1,18 @@
+
+// Copyright 2018 The Go Cloud Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package azureblob
 
 import (
@@ -24,8 +39,7 @@ import (
 
 type bucket struct {
 	name             string
-	credential       *azblob.SharedKeyCredential // used for SignedURL
-	PublicAccessType azblob.PublicAccessType
+	credential       *azblob.SharedKeyCredential // used for SignedURL	
 	urls             serviceUrls
 	pageMarkers      map[string]azblob.Marker // temporary page marker map, until azblob.Marker is an exportable type
 	defaultDelimiter string                   // for escaping backslashes
@@ -40,8 +54,7 @@ type serviceUrls struct {
 // Settings to establish connection to Azure
 type Settings struct {
 	AccountName      string
-	AccountKey       string
-	PublicAccessType azblob.PublicAccessType
+	AccountKey       string	
 	SASToken         string
 	Pipeline         pipeline.Pipeline
 	DefaultDelimiter DefaultBlobDelimiter
@@ -51,16 +64,6 @@ type Settings struct {
 type DefaultBlobDelimiter struct {
 	Value string
 }
-
-// See https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx and "x-ms-blob-public-access" header.
-const (
-	// PublicAccessBlob
-	PublicAccessBlob azblob.PublicAccessType = azblob.PublicAccessBlob
-	// PublicAccessContainer
-	PublicAccessContainer azblob.PublicAccessType = azblob.PublicAccessContainer
-	// PublicAccessNone represents an empty PublicAccessType.
-	PublicAccessNone azblob.PublicAccessType = azblob.PublicAccessNone
-)
 
 const (
 	// BlobPathSeparator is used to escape backslashes
@@ -117,8 +120,7 @@ func openBucketWithSASToken(ctx context.Context, settings *Settings, containerNa
 	containerURL := serviceURL.NewContainerURL(containerName)
 
 	return &bucket{
-		name:             containerName,
-		PublicAccessType: settings.PublicAccessType,
+		name:             containerName,		
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
@@ -149,8 +151,7 @@ func openBucketWithAccountKey(ctx context.Context, settings *Settings, container
 
 	return &bucket{
 		name:             containerName,
-		credential:       credential,
-		PublicAccessType: settings.PublicAccessType,
+		credential:       credential,		
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
@@ -349,7 +350,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 	marker := azblob.Marker{}
 	if len(opts.PageToken) > 0 {
-		marker = b.pageMarkers[string(opts.PageToken)]
+		if m, ok := b.pageMarkers[string(opts.PageToken)]; ok {
+			marker = m
+		}
 	}
 
 	opts.Prefix = strings.Replace(opts.Prefix, OSPathSeparator, b.defaultDelimiter, -1)
@@ -454,30 +457,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		return nil, fmt.Errorf("Invalid/Empty Key")
 	}
 
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-
-	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
-	// try to create the azure container
-	// if it already exists, continue..
-	// if authorization failure, assume SASToken scope is limited to the Blob and continue..
-	// fail all other exceptions
-	_, err := containerURL.Create(ctx, nil, b.PublicAccessType)
-	if err != nil {
-		if serr, ok := err.(azblob.StorageError); ok {
-			switch serr.ServiceCode() {
-			case azblob.ServiceCodeContainerAlreadyExists:
-				// Can be thrown if container already exist, ignore and continue
-			case azblob.ServiceCodeAuthenticationFailed:
-				fallthrough
-			case "AuthorizationFailure":
-				// Can be thrown if SASToken Scope is restricted to Read & Write on Blobs
-				// Assume container exist, blob operations will succeed/fail based on SASToken scope
-			default:
-				return nil, azureError{bucket: b.name, key: key, msg: err.Error()}
-			}
-		}
-	}
-
+	containerURL := b.urls.serviceURL.NewContainerURL(b.name)	
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
 	blockBlobURL := containerURL.NewBlockBlobURL(key)
 

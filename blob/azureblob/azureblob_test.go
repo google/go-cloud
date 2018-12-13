@@ -1,15 +1,38 @@
+// Copyright 2018 The Go Cloud Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package azureblob
 
 import (
-	"context"
-	"net/http"
 	"os"
+	"context"
+	"net/http"	
 	"testing"
 	
 	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cloud/blob/drivertest"
 	"github.com/google/go-cloud/internal/testing/setup"
 )
+
+// Prerequisites for --record mode
+// 1. Sign-in to your Azure Subscription and create a Storage Account
+//    link to the Azure Portal: https://portal.azure.com
+// 2. Locate the Access Key (Primary or Secondary) under your Storage Account > Settings > Access Keys
+// 3. Set Environment Variable AZURE_STORAGE_ACCOUNT_KEY below
+// 4. Create a container in your Storage Account > Blob. Use the bucketName constant below as the container name.
+// Here is a step-by-step walkthrough using the Azure Portal
+// https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal
 
 const (
 	bucketName = "go-cloud-bucket"
@@ -21,13 +44,10 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	p, done := setup.NewAzureTestPipeline(ctx, t)
-	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	p, done, accountName, accountKey := setup.NewAzureTestPipeline(ctx, t)
 	s := &Settings{
 		AccountName:      accountName,
-		AccountKey:       accountKey,
-		PublicAccessType: PublicAccessBlob,
+		AccountKey:       accountKey,		
 		SASToken:         "",
 		Pipeline:         p,
 	}
@@ -48,11 +68,9 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	// test requires the following environment variables
-	// AZURE_STORAGE_ACCOUNT_NAME is the Azure Storage Account Name
-	// AZURE_STORAGE_ACCOUNT_KEY is the Primary or Secondary Key
-	os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", "gocloud")
+	// please set the storage account key if running in record mode, it is not needed for replay mode
+	
+	// AZURE_STORAGE_ACCOUNT_KEY is the Primary or Secondary Key	
 	os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", "")
-
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
