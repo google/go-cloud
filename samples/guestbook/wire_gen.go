@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
+	"go.opencensus.io/trace"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
@@ -29,7 +30,6 @@ import (
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
-	"go.opencensus.io/trace"
 	"net/http"
 )
 
