@@ -17,7 +17,7 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, gcsblob registers for the protocol "gs".
+// For blob.Open URLs, gcsblob registers for the scheme "gs".
 // The URL's Host is used as the bucket name.
 // The following query options are supported:
 //

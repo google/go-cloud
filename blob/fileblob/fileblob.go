@@ -32,7 +32,7 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, fileblob registers for the protocol "file".
+// For blob.Open URLs, fileblob registers for the scheme "file".
 // The URL's Path is used as the root directory; the URL's Host is ignored.
 // If os.PathSeparator != "/", any leading "/" from the Path is dropped.
 // No query options are supported. Examples:

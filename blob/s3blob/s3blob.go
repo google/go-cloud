@@ -17,7 +17,7 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, s3blob registers for the protocol "s3".
+// For blob.Open URLs, s3blob registers for the scheme "s3".
 // The URL's Host is used as the bucket name.
 // The AWS session is created as described in
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
