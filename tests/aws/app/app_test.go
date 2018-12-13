@@ -32,7 +32,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/xray"
-	"github.com/google/go-cloud/tests/internal/testutil"
+	"gocloud.dev/tests/internal/testutil"
 	"golang.org/x/crypto/ssh"
 	"google.golang.org/api/iterator"
 )
