@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package retry provides retry logic.
-package retry
+package retry // import "gocloud.dev/internal/retry"
 
 import (
 	"context"

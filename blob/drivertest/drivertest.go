@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // driver.
-package drivertest
+package drivertest // import "gocloud.dev/blob/drivertest"
 
 import (
 	"bytes"
@@ -31,9 +31,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -561,62 +561,62 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		},
 		// TODO(#905): Backslashes cause problems for Azure; disable for now.
 		/*
-		{
-			name:  "backslash",
-			delim: "\\",
-			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantRecursive: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-						listResult{
-							Key:   keyPrefix + "\\dir1\\subdir\\",
-							IsDir: true,
-							Sub: []listResult{
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+			{
+				name:  "backslash",
+				delim: "\\",
+				wantFlat: []listResult{
+					listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+					listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantRecursive: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+							listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+							listResult{
+								Key:   keyPrefix + "\\dir1\\subdir\\",
+								IsDir: true,
+								Sub: []listResult{
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+								},
 							},
 						},
 					},
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+						},
 					},
+					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				wantPaged: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantAfterDel: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
 			},
-			wantPaged: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantAfterDel: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-		},
 		*/
 		{
 			name:  "abc",
@@ -1457,7 +1457,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			description: "punctuation",
 			// TODO(#905): Backslashes cause problems for Azure; disable for now.
 			// key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
-			key:         "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
+			key: "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
 		},
 		{
 			description: "unicode",

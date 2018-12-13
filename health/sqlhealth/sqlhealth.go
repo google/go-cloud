@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package sqlhealth provides a health check for a SQL database connection.
-package sqlhealth
+package sqlhealth // import "gocloud.dev/health/sqlhealth"
 
 import (
 	"context"

@@ -41,7 +41,7 @@
 // Alternatively, you can construct a *Bucket using blob.Open by providing
 // a URL that's supported by a blob subpackage that you have linked
 // in to your application.
-package blob
+package blob // import "gocloud.dev/blob"
 
 import (
 	"bytes"
@@ -58,7 +58,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob/driver"
 )
 
 // Reader reads bytes from a blob.

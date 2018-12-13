@@ -23,7 +23,7 @@ import (
 
 	"cloud.google.com/go/logging/logadmin"
 	tracepb "cloud.google.com/go/trace/apiv1"
-	"github.com/google/go-cloud/tests/internal/testutil"
+	"gocloud.dev/tests/internal/testutil"
 	"google.golang.org/api/iterator"
 	cloudtracepb "google.golang.org/genproto/googleapis/devtools/cloudtrace/v1"
 )

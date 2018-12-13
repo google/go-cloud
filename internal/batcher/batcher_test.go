@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/internal/batcher"
+	"gocloud.dev/internal/batcher"
 	"github.com/google/go-cmp/cmp"
 )
 
