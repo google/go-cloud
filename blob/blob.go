@@ -208,7 +208,7 @@ func (w *Writer) open(p []byte) (int, error) {
 	return n, wrapError(w.b, err)
 }
 
-// ListOptions sets options for listing objects via List.
+// ListOptions sets options for listing objects via Bucket.List.
 type ListOptions struct {
 	// Prefix indicates that only objects with a key starting with this prefix
 	// should be returned.
