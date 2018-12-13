@@ -1225,6 +1225,23 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			if _, err := w.Write(cancelContent); err != nil {
 				t.Fatal(err)
 			}
+
+			// Verify that the previous content (if any) is still readable,
+			// because the write hasn't been Closed yet.
+			got, err := b.ReadAll(ctx, key)
+			if test.exists {
+				// The previous content should still be there.
+				if !cmp.Equal(got, content) {
+					t.Errorf("during unclosed write, got %q want %q", string(got), string(content))
+				}
+			} else {
+				// The read should fail; the write hasn't been Closed so the
+				// blob shouldn't exist.
+				if err == nil {
+					t.Error("wanted read to return an error when write is not yet Closed")
+				}
+			}
+
 			// Cancel the context to abort the write.
 			cancel()
 			// Close should return some kind of canceled context error.
@@ -1233,7 +1250,9 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			if err := w.Close(); err == nil {
 				t.Errorf("got Close error %v want canceled ctx error", err)
 			}
-			got, err := b.ReadAll(ctx, key)
+
+			// Verify the write was truly aborted.
+			got, err = b.ReadAll(ctx, key)
 			if test.exists {
 				// The previous content should still be there.
 				if !cmp.Equal(got, content) {
