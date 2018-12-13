@@ -461,7 +461,7 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // If a blob object with this key already exists, it will be replaced.
 // The blob object being written is not guaranteed to be readable until Close
 // has been called; until then, any previous object will still be readable.
-// Even after CLose is called, newly written objects are not guaranteed to be
+// Even after Close is called, newly written objects are not guaranteed to be
 // returned from List; some providers are only eventually consistent.
 //
 // The returned Writer will store ctx for later use in Write and/or Close.
