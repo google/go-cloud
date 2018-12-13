@@ -55,15 +55,15 @@ type serviceUrls struct {
 type Settings struct {
 	AccountName      string
 	AccountKey       string	
-	SASToken         string
+	DefaultDelimiter string
+	SASToken         string		
 	Pipeline         pipeline.Pipeline
-	DefaultDelimiter DefaultBlobDelimiter
 }
 
 // DefaultBlobDelimiter is used to escape backslashes
-type DefaultBlobDelimiter struct {
-	Value string
-}
+//type DefaultBlobDelimiter struct {
+//	Value string
+//}
 
 const (
 	// BlobPathSeparator is used to escape backslashes
@@ -80,8 +80,8 @@ var (
 // OpenBucket returns an Azure BlockBlob Bucket
 func OpenBucket(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
 
-	if settings.DefaultDelimiter.Value == "" {
-		settings.DefaultDelimiter.Value = BlobPathSeparator
+	if settings.DefaultDelimiter == "" {
+		settings.DefaultDelimiter = BlobPathSeparator
 	}
 
 	if settings.SASToken != "" {
@@ -126,7 +126,7 @@ func openBucketWithSASToken(ctx context.Context, settings *Settings, containerNa
 			containerURL: &containerURL,
 		},
 		pageMarkers:      make(map[string]azblob.Marker),
-		defaultDelimiter: settings.DefaultDelimiter.Value,
+		defaultDelimiter: settings.DefaultDelimiter,
 	}, nil
 }
 
@@ -157,7 +157,7 @@ func openBucketWithAccountKey(ctx context.Context, settings *Settings, container
 			containerURL: &containerURL,
 		},
 		pageMarkers:      make(map[string]azblob.Marker),
-		defaultDelimiter: settings.DefaultDelimiter.Value,
+		defaultDelimiter: settings.DefaultDelimiter,
 	}, nil
 }
 
