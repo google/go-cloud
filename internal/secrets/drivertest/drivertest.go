@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // the secrets driver.
-package drivertest
+package drivertest // import "gocloud.dev/internal/secrets/drivertest"
 
 import (
 	"context"

@@ -17,8 +17,8 @@ package filevar_test
 import (
 	"log"
 
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/filevar"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/filevar"
 )
 
 // MyAppConfig is the unmarshaled type for myapp.conf file.

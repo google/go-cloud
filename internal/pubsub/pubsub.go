@@ -14,7 +14,7 @@
 
 // Package pubsub provides an easy and portable way to interact with publish/
 // subscribe systems.
-package pubsub
+package pubsub // import "gocloud.dev/internal/pubsub"
 
 import (
 	"context"
@@ -23,10 +23,10 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/google/go-cloud/internal/batcher"
-	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/retry"
 	gax "github.com/googleapis/gax-go"
+	"gocloud.dev/internal/batcher"
+	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/internal/retry"
 )
 
 // Message contains data to be published.

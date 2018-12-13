@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package terraform provides a function to read Terraform output.
-package terraform
+package terraform // import "gocloud.dev/internal/testing/terraform"
 
 import (
 	"encoding/json"

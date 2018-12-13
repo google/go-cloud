@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
 	"github.com/streadway/amqp"
 )
 
