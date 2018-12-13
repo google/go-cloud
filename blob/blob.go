@@ -19,9 +19,11 @@
 // interfaces from the io package), deleting blobs, and listing blobs in a
 // bucket.
 //
-// To construct a *Bucket, don't use the NewBucket function in this package.
-// Instead, import one of the blob subpackages (e.g., fileblob, gcsblob,
-// s3blob), and use its exported function(s). For example:
+// Subpackages contain distinct implementations of blob for various providers,
+// including Cloud and on-prem solutions. For example, "fileblob" supports
+// blobs backed by a filesystem. Your application should import one of these
+// provider-specific subpackages and use its exported function(s) to create a
+// *Bucket; do not use the NewBucket function in this package. For example:
 //
 //  bucket, err := fileblob.OpenBucket("path/to/dir", nil)
 //  if err != nil {
@@ -30,7 +32,7 @@
 //  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
 //  ...
 //
-// Write your application code using the *Bucket type, and you can easily
+// Then, write your application code using the *Bucket type, and you can easily
 // reconfigure your initialization code to choose a different provider.
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
