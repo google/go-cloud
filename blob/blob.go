@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package blob provides an easy and portable way to interact with blob objects
+// Package blob provides an easy and portable way to interact with blobs
 // within a storage location, hereafter called a "bucket".
 //
 // It supports operations like reading and writing blobs (using standard
@@ -78,17 +78,17 @@ func (r *Reader) Close() error {
 	return wrapError(r.b, r.r.Close())
 }
 
-// ContentType returns the MIME type of the blob object.
+// ContentType returns the MIME type of the blob.
 func (r *Reader) ContentType() string {
 	return r.r.Attributes().ContentType
 }
 
-// ModTime returns the time the blob object was last modified.
+// ModTime returns the time the blob was last modified.
 func (r *Reader) ModTime() time.Time {
 	return r.r.Attributes().ModTime
 }
 
-// Size returns the size of the blob object's content.
+// Size returns the size of the blob content in bytes.
 func (r *Reader) Size() int64 {
 	return r.r.Attributes().Size
 }
@@ -101,7 +101,7 @@ func (r *Reader) As(i interface{}) bool {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
-	// ContentType is the MIME type of the blob object. It will not be empty.
+	// ContentType is the MIME type of the blob. It will not be empty.
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
 	// Keys are guaranteed to be in lowercase, even if the backend provider
@@ -110,9 +110,9 @@ type Attributes struct {
 	// case-insensitive keys (e.g., "foo" and "FOO"), only one value
 	// will be kept, and it is undefined which one.
 	Metadata map[string]string
-	// ModTime is the time the blob object was last modified.
+	// ModTime is the time the blob was last modified.
 	ModTime time.Time
-	// Size is the size of the blob object's content.
+	// Size is the size of the blob's content in bytes.
 	Size int64
 
 	asFunc func(interface{}) bool
@@ -128,7 +128,9 @@ func (a *Attributes) As(i interface{}) bool {
 }
 
 // Writer writes bytes to a blob.
-// It implements io.WriteCloser, and must be closed after all writes are done.
+//
+// It implements io.WriteCloser (https://golang.org/pkg/io/#Closer), and must be
+// closed after all writes are done.
 type Writer struct {
 	b driver.Bucket
 	w driver.Writer
@@ -137,7 +139,7 @@ type Writer struct {
 	// NewWriter is called.
 	//
 	// A ctx is stored in the Writer since we need to pass it into NewTypedWriter
-	// when we finish detecting the content type of the object and create the
+	// when we finish detecting the content type of the blob and create the
 	// underlying driver.Writer. This step happens inside Write or Close and
 	// neither of them take a context.Context as an argument. The ctx must be set
 	// to nil after we have passed it.
@@ -208,9 +210,9 @@ func (w *Writer) open(p []byte) (int, error) {
 	return n, wrapError(w.b, err)
 }
 
-// ListOptions sets options for listing objects via List.
+// ListOptions sets options for listing blobs via List.
 type ListOptions struct {
-	// Prefix indicates that only objects with a key starting with this prefix
+	// Prefix indicates that only blobs with a key starting with this prefix
 	// should be returned.
 	Prefix string
 	// Delimiter sets the delimiter used to define a hierarchical namespace,
@@ -241,8 +243,8 @@ type ListIterator struct {
 	nextIdx int
 }
 
-// Next returns the next object. It returns (nil, io.EOF) if there are
-// no more objects.
+// Next returns a *ListObject for the next blob. It returns (nil, io.EOF) if
+// there are no more.
 func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	if i.page != nil {
 		// We've already got a page of results.
@@ -275,13 +277,13 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 	return i.Next(ctx)
 }
 
-// ListObject represents a single blob object returned from List.
+// ListObject represents a single blob returned from List.
 type ListObject struct {
 	// Key is the key for this blob.
 	Key string
-	// ModTime is the time the blob object was last modified.
+	// ModTime is the time the blob was last modified.
 	ModTime time.Time
-	// Size is the size of the blob object's content.
+	// Size is the size of the blob's content in bytes.
 	Size int64
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
@@ -301,7 +303,7 @@ func (o *ListObject) As(i interface{}) bool {
 	return o.asFunc(i)
 }
 
-// Bucket provides an easy and portable way to interact with blob objects
+// Bucket provides an easy and portable way to interact with blobs
 // within a "bucket", including read, write, and list operations.
 // To create a Bucket, use constructors found in provider-specific
 // subpackages.
@@ -359,14 +361,14 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-// List returns a ListIterator that can be used to iterate over objects in a
+// List returns a ListIterator that can be used to iterate over blobs in a
 // bucket, in lexicographical order of UTF-8 encoded keys. The underlying
 // implementation fetches results in pages.
 // Use ListOptions to control the page size and filtering.
 //
 // A nil ListOptions is treated the same as the zero value.
 //
-// List is not guaranteed to include all recently-written objects;
+// List is not guaranteed to include all recently-written blobs;
 // some providers are only eventually consistent.
 func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	if opts == nil {
@@ -380,9 +382,9 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	return &ListIterator{b: b.b, opts: dopts}
 }
 
-// Attributes returns attributes for the blob object represented by key.
+// Attributes returns attributes for the blob stored at key.
 //
-// If the blob object does not exist, Attributes returns an error for which
+// If the blob does not exist, Attributes returns an error for which
 // IsNotExist will return true.
 func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error) {
 	a, err := b.b.Attributes(ctx, key)
@@ -413,11 +415,11 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 	return b.NewRangeReader(ctx, key, 0, -1, opts)
 }
 
-// NewRangeReader returns a Reader to read content from the blob object
-// represented by key. It reads at most length (!= 0) bytes starting at
-// offset (>= 0). If length is negative, it will read till the end of the object.
+// NewRangeReader returns a Reader to read content from the blob stored at key.
+// It reads at most length (!= 0) bytes starting at offset (>= 0).
+// If length is negative, it will read till the end of the blob.
 //
-// If the blob object does not exist, NewRangeReader returns an error for which
+// If the blob does not exist, NewRangeReader returns an error for which
 // IsNotExist will return true. Attributes is a lighter-weight way
 // to check for existence.
 //
@@ -455,13 +457,13 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 	return w.Close()
 }
 
-// NewWriter returns a Writer that writes to the blob object represented by key.
+// NewWriter returns a Writer that writes to the blob stored at key.
 // A nil WriterOptions is treated the same as the zero value.
 //
-// If a blob object with this key already exists, it will be replaced.
-// The blob object being written is not guaranteed to be readable until Close
-// has been called; until then, any previous object will still be readable.
-// Even after CLose is called, newly written objects are not guaranteed to be
+// If a blob with this key already exists, it will be replaced.
+// The blob being written is not guaranteed to be readable until Close
+// has been called; until then, any previous blob will still be readable.
+// Even after CLose is called, newly written blobs are not guaranteed to be
 // returned from List; some providers are only eventually consistent.
 //
 // The returned Writer will store ctx for later use in Write and/or Close.
@@ -519,9 +521,9 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}, nil
 }
 
-// Delete deletes the blob object represented by key.
+// Delete deletes the blob stored at key.
 //
-// If the blob object does not exist, Delete returns an error for which
+// If the blob does not exist, Delete returns an error for which
 // IsNotExist will return true.
 func (b *Bucket) Delete(ctx context.Context, key string) error {
 	return wrapError(b.b, b.b.Delete(ctx, key))
@@ -568,8 +570,8 @@ type ReaderOptions struct{}
 // WriterOptions sets options for NewWriter.
 type WriterOptions struct {
 	// BufferSize changes the default size in bytes of the chunks that
-	// Writer will upload in a single request; larger blob object will be
-	// split into multiple requests.
+	// Writer will upload in a single request; larger blobs will be split into
+	// multiple requests.
 	//
 	// This option may be ignored by some provider implementations.
 	//
@@ -579,7 +581,7 @@ type WriterOptions struct {
 	// smaller BufferSize may reduce memory usage.
 	BufferSize int
 
-	// ContentType specifies the MIME type of the object being written. If not set,
+	// ContentType specifies the MIME type of the blob being written. If not set,
 	// it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/.
 	ContentType string
