@@ -56,7 +56,6 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Top
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	for _, dm := range dms {
-		b := string(dm.Body)
 		attrs := map[string]*sns.MessageAttributeValue{}
 		for k, v := range dm.Metadata {
 			attrs[k] = &sns.MessageAttributeValue{
@@ -65,7 +64,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			}
 		}
 		params := sns.PublishInput{
-			Message:           &b,
+			Message:           aws.String(string(dm.Body)),
 			MessageAttributes: attrs,
 			TopicArn:          &t.arn,
 		}
