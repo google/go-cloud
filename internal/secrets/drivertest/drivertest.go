@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cloud/internal/secrets/driver"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/secrets/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run

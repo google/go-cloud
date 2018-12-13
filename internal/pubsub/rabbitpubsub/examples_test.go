@@ -20,9 +20,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/streadway/amqp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/rabbitpubsub"
-	"github.com/streadway/amqp"
 )
 
 const rabbitURL = "amqp://guest:guest@localhost:5672/"
