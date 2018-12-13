@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-cloud/server"
+	"gocloud.dev/server"
 	"github.com/gorilla/mux"
 )
 
