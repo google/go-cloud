@@ -180,10 +180,10 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// Close completes the Write, which is not guaranteed to have succeeded until
+// Close closes the blob writer. The write operation is not guaranteed to have succeeded until
 // Close returns with no error.
-// Close will return an error if the context provided to create the Writer is
-// canceled or times out.
+// Close may return an error if the context provided to create the Writer is
+// canceled or reaches its deadline.
 func (w *Writer) Close() error {
 	if w.w != nil {
 		return wrapError(w.b, w.w.Close())
@@ -210,7 +210,7 @@ func (w *Writer) open(p []byte) (int, error) {
 	return n, wrapError(w.b, err)
 }
 
-// ListOptions sets options for listing blobs via List.
+// ListOptions sets options for listing blobs via Bucket.List.
 type ListOptions struct {
 	// Prefix indicates that only blobs with a key starting with this prefix
 	// should be returned.
@@ -463,7 +463,7 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // If a blob with this key already exists, it will be replaced.
 // The blob being written is not guaranteed to be readable until Close
 // has been called; until then, any previous blob will still be readable.
-// Even after CLose is called, newly written blobs are not guaranteed to be
+// Even after Close is called, newly written blobs are not guaranteed to be
 // returned from List; some providers are only eventually consistent.
 //
 // The returned Writer will store ctx for later use in Write and/or Close.
