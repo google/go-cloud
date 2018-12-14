@@ -19,9 +19,9 @@ package main
 import (
 	"context"
 
+	"github.com/google/wire"
 	"gocloud.dev/aws/awscloud"
 	"gocloud.dev/server"
-	"github.com/google/wire"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
