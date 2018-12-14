@@ -347,10 +347,17 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
+		var md5 []byte
+		if xa, err := getAttrs(path); err == nil {
+			// Note: we only have the MD5 hash for blobs that we wrote.
+			// For other blobs, md5 will remain nil.
+			md5 = xa.MD5
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+			MD5:     md5,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -409,6 +416,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    xa.Metadata,
 		ModTime:     info.ModTime(),
 		Size:        info.Size(),
+		MD5:         xa.MD5,
 	}, nil
 }
 
@@ -500,10 +508,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		path:  path,
 		attrs: attrs,
 	}
-	if len(opts.ContentMD5) > 0 {
-		w.contentMD5 = opts.ContentMD5
-		w.md5hash = md5.New()
-	}
+	w.contentMD5 = opts.ContentMD5
+	w.md5hash = md5.New()
 	return w, nil
 }
 
@@ -517,10 +523,8 @@ type writer struct {
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
-	if w.md5hash != nil {
-		if _, err := w.md5hash.Write(p); err != nil {
-			return 0, err
-		}
+	if _, err := w.md5hash.Write(p); err != nil {
+		return 0, err
 	}
 	return w.f.Write(p)
 }
@@ -541,9 +545,11 @@ func (w *writer) Close() error {
 		return err
 	}
 
+	md5sum := w.md5hash.Sum(nil)
+	w.attrs.MD5 = md5sum
+
 	// Check MD5 hash if necessary.
-	if w.md5hash != nil {
-		md5sum := w.md5hash.Sum(nil)
+	if len(w.contentMD5) > 0 {
 		if !bytes.Equal(md5sum, w.contentMD5) {
 			return fmt.Errorf(
 				"the ContentMD5 you specified did not match what we received (%s != %s)",
