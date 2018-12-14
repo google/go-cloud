@@ -1379,12 +1379,8 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	// their returned MD5 hashes.
 	const aKey, bKey = "blob-for-md5-aaa", "blob-for-md5-bbb"
 	aContent, bContent := []byte("hello"), []byte("goodbye")
-	hash := md5.New()
-	hash.Write(aContent)
-	aMD5 := hash.Sum(nil)
-	hash = md5.New()
-	hash.Write(bContent)
-	bMD5 := hash.Sum(nil)
+	aMD5 := md5.Sum(aContent)
+	bMD5 := md5.Sum(bContent)
 
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -1414,7 +1410,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if aAttr.MD5 != nil && !bytes.Equal(aAttr.MD5, aMD5) {
+	if aAttr.MD5 != nil && !bytes.Equal(aAttr.MD5, aMD5[:]) {
 		t.Errorf("got MD5\n%x\nwant\n%x", aAttr.MD5, aMD5)
 	}
 
@@ -1422,7 +1418,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bAttr.MD5 != nil && !bytes.Equal(bAttr.MD5, bMD5) {
+	if bAttr.MD5 != nil && !bytes.Equal(bAttr.MD5, bMD5[:]) {
 		t.Errorf("got MD5\n%x\nwant\n%x", bAttr.MD5, bMD5)
 	}
 
@@ -1436,7 +1432,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	if obj.Key != aKey {
 		t.Errorf("got name %q want %q", obj.Key, aKey)
 	}
-	if obj.MD5 != nil && !bytes.Equal(obj.MD5, aMD5) {
+	if obj.MD5 != nil && !bytes.Equal(obj.MD5, aMD5[:]) {
 		t.Errorf("got MD5\n%x\nwant\n%x", obj.MD5, aMD5)
 	}
 	obj, err = iter.Next(ctx)
@@ -1446,7 +1442,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	if obj.Key != bKey {
 		t.Errorf("got name %q want %q", obj.Key, bKey)
 	}
-	if obj.MD5 != nil && !bytes.Equal(obj.MD5, bMD5) {
+	if obj.MD5 != nil && !bytes.Equal(obj.MD5, bMD5[:]) {
 		t.Errorf("got MD5\n%x\nwant\n%x", obj.MD5, bMD5)
 	}
 }

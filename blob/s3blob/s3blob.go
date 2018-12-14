@@ -418,8 +418,8 @@ func eTagToMD5(etag *string) []byte {
 	}
 	unquoted := quoted[1 : len(quoted)-1]
 	// Un-hex; we return nil on error. In particular, we'll get an error here
-	// for multi-part uploaded blobs, whose ETag will look something like
-	// "aaaaaaa-2".
+	// for multi-part uploaded blobs, whose ETag will contain a "-" and so will
+	// never be a legal hex encoding.
 	md5, _ := hex.DecodeString(unquoted)
 	return md5
 }
