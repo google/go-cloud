@@ -47,7 +47,7 @@ else
 fi
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
-wire diff ./... || result=1
+wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
 for path in "./internal/contributebot" "./samples/appengine"; do
