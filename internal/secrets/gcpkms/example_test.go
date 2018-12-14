@@ -53,7 +53,9 @@ func ExampleCrypter_Decrypt() {
 		panic(err)
 	}
 	defer done()
-	var ciphertext []byte // get the secret to be decrypted
+
+	// Get the secret to be decrypted from some kind of storage.
+	var ciphertext []byte
 
 	crypter := gcpkms.NewCrypter(
 		&gcpkms.KeyInfo{

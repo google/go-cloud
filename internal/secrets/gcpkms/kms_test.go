@@ -68,7 +68,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{
 		client: client,
 		close: func() {
-			_ = client.Close()
+			client.Close()
 			done()
 		},
 	}, nil
