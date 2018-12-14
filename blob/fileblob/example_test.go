@@ -12,38 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package s3blob_test
+package fileblob_test
 
 import (
 	"context"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/blob/fileblob"
 )
 
 func Example() {
-	ctx := context.Background()
 
-	// Create an AWS session.
-	// This example uses defaults for finding credentials, which region to use,
-	// etc.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-	// for more info on available options.
-	sess, err := session.NewSession()
+	// For this example, create a temporary directory.
+	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
-		// Handle errror.
-		return
+		log.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 
-	// Create a *blob.Bucket.
-	_, _ = s3blob.OpenBucket(ctx, "my-bucket", sess, nil)
+	// Create a file-based bucket.
+	_, err = fileblob.OpenBucket(dir, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Output:
 }
 
 func Example_open() {
-	_, _ = blob.Open(context.Background(), "s3://my-bucket")
+	// For this example, create a temporary directory.
+	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	_, err = blob.Open(context.Background(), path.Join("file://", dir))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Output:
 }

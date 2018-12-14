@@ -17,6 +17,7 @@ package gcsblob_test
 import (
 	"context"
 
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
 )
@@ -43,6 +44,12 @@ func Example() {
 
 	// Create a *blob.Bucket.
 	_, _ = gcsblob.OpenBucket(ctx, "my-bucket", client, nil)
+
+	// Output:
+}
+
+func Example_open() {
+	_, _ = blob.Open(context.Background(), "gs://my-bucket")
 
 	// Output:
 }
