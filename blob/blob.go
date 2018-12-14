@@ -371,7 +371,6 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 // List returns a ListIterator that can be used to iterate over blobs in a
 // bucket, in lexicographical order of UTF-8 encoded keys. The underlying
 // implementation fetches results in pages.
-// Use ListOptions to control the page size and filtering.
 //
 // A nil ListOptions is treated the same as the zero value.
 //
