@@ -22,9 +22,9 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.4 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20181213T230500Z
+      - 20181214T051821Z
       X-Amz-Security-Token:
-      - FQoGZXIvYXdzELj//////////wEaDNwZRLQ4SU8InErsgyKsAQV1Vhnt5Qfc7KJNamYy3lqmHzwEaLFU0cqL9VWn4c+0ES6l1N1oLWiE+sJ5dtkL8hVysJsMl0TTVhPfChJLJYCfDPiyg5iaw9CsBcd5DJqRY8Hz3OPyOZKU6TUcbr8qZmtsqlfbMwB0q4LPXv+m1Rc6i0jwNGIOSejiyAUnoyiHyDjBIHVgoHPulbJ5YKmx+yjghiLp8nTx9fvQYfaFljWA3YWket93z8jsrpQo1bnL4AU=
+      - FQoGZXIvYXdzEL///////////wEaDJbJVQj8jq1qB/HaxCKsAU01gE9StAe5rt/v2HfEZRDDiUpkLwmrnnz86saCXREGvDf4qCRUGivwldAkfqT5zM5Dk8SgQjP/FWNurT0YvDRQ33kQmIInIfYtSCM40smKXuKp0XrNGuTr0I2Wr8WHy2W8jieiQ043hNil0NZkb2+16tjbaMhwYUqjx+JICEhMfFhDtodpQYv6IRlzCAVMtzIPVoaVw6wvRa4BtqMOqigj9ILWCVV0LBtUgMgoiPrM4AU=
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -35,7 +35,7 @@ interactions:
           <Code>InvalidParameter</Code>
           <Message>Invalid parameter: TopicArn Reason: An ARN must have at least 6 elements, not 1</Message>
         </Error>
-        <RequestId>15074f0f-cdc4-5d27-93ab-1b832a1887fe</RequestId>
+        <RequestId>a6879eb9-4553-57c7-b262-ca347a0eb890</RequestId>
       </ErrorResponse>
     headers:
       Content-Length:
@@ -43,9 +43,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Thu, 13 Dec 2018 23:04:59 GMT
+      - Fri, 14 Dec 2018 05:18:20 GMT
       X-Amzn-Requestid:
-      - 15074f0f-cdc4-5d27-93ab-1b832a1887fe
+      - a6879eb9-4553-57c7-b262-ca347a0eb890
     status: 400 Bad Request
     code: 400
     duration: ""
