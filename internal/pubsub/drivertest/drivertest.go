@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // driver.
-package drivertest
+package drivertest // import "gocloud.dev/internal/pubsub/drivertest"
 
 import (
 	"bytes"
@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -138,7 +138,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 		t.Fatalf("creating a local topic that doesn't exist on the server: %v", err)
 	}
 	top := pubsub.NewTopic(dt)
-	defer top.Close()
+	defer top.Shutdown(ctx)
 
 	m := &pubsub.Message{}
 	err = top.Send(ctx, m)
@@ -228,7 +228,7 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	top.Close()
+	top.Shutdown(ctx)
 
 	// Check that sending to the closed topic fails.
 	m := &pubsub.Message{}
@@ -291,7 +291,7 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 	t := pubsub.NewTopic(dt)
 	s := pubsub.NewSubscription(ds)
 	cleanup := func() {
-		t.Close()
+		t.Shutdown(ctx)
 		s.Shutdown(ctx)
 	}
 	return t, s, cleanup, nil

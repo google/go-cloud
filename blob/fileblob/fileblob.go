@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package fileblob provides a bucket implementation that operates on the local
-// filesystem. This should not be used for production: it is intended for local
-// development.
+// Package fileblob provides a blob implementation that uses the filesystem.
+// Use OpenBucket to construct a blob.Bucket.
 //
 // Blob keys are escaped before being used as filenames, and filenames are
 // unescaped when they are passed back as blob keys during List. The escape
 // algorithm is:
-// -- Alphanumeric characters (A-Z a-z 0-9) are not escaped.
-// -- Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-// -- Slash ('/') is always escaped to the OS-specific path separator character
+//  - Alphanumeric characters (A-Z a-z 0-9) are not escaped.
+//  - Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
+//  - Slash ('/') is always escaped to the OS-specific path separator character
 //    (os.PathSeparator).
-// -- All other characters are escaped similar to url.PathEscape:
+//  - All other characters are escaped similar to url.PathEscape:
 //    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
 //
 // Filenames that can't be unescaped due to invalid escape sequences
@@ -31,16 +30,25 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
-// For blob.Open URLs, fileblob registers for the "file" scheme.
+// Open URLs
+//
+// For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
+// with "file://".
+//
 // The URL's Path is used as the root directory; the URL's Host is ignored.
 // If os.PathSeparator != "/", any leading "/" from the Path is dropped.
 // No query options are supported. Examples:
-// -- file:///a/directory passes "/a/directory" to OpenBucket.
-// -- file://localhost/a/directory also passes "/a/directory".
-// -- file:///c:/foo/bar passes "c:/foo/bar".
+//  - file:///a/directory
+//    -> Passes "/a/directory" to OpenBucket.
+//  - file://localhost/a/directory
+//    -> Also passes "/a/directory".
+//  - file:///c:/foo/bar
+//    -> Passes "c:/foo/bar".
+//
+// As
 //
 // fileblob does not support any types for As.
-package fileblob
+package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
 	"bytes"
@@ -57,8 +65,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 )
 
 const defaultPageSize = 1000
@@ -94,8 +102,8 @@ func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	return &bucket{dir}, nil
 }
 
-// OpenBucket creates a *blob.Bucket that reads and writes to dir.
-// dir must exist.
+// OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
+// dir, which must exist. See the package documentation for an example.
 func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(dir, opts)
 	if err != nil {
@@ -339,10 +347,17 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
+		var md5 []byte
+		if xa, err := getAttrs(path); err == nil {
+			// Note: we only have the MD5 hash for blobs that we wrote.
+			// For other blobs, md5 will remain nil.
+			md5 = xa.MD5
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+			MD5:     md5,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -401,6 +416,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    xa.Metadata,
 		ModTime:     info.ModTime(),
 		Size:        info.Size(),
+		MD5:         xa.MD5,
 	}, nil
 }
 
@@ -423,7 +439,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if length > 0 {
 		r = io.LimitReader(r, length)
 	}
-	return reader{
+	return &reader{
 		r: r,
 		c: f,
 		attrs: driver.ReaderAttributes{
@@ -440,25 +456,25 @@ type reader struct {
 	attrs driver.ReaderAttributes
 }
 
-func (r reader) Read(p []byte) (int, error) {
+func (r *reader) Read(p []byte) (int, error) {
 	if r.r == nil {
 		return 0, io.EOF
 	}
 	return r.r.Read(p)
 }
 
-func (r reader) Close() error {
+func (r *reader) Close() error {
 	if r.c == nil {
 		return nil
 	}
 	return r.c.Close()
 }
 
-func (r reader) Attributes() driver.ReaderAttributes {
+func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 
-func (r reader) As(i interface{}) bool { return false }
+func (r *reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -492,10 +508,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		path:  path,
 		attrs: attrs,
 	}
-	if len(opts.ContentMD5) > 0 {
-		w.contentMD5 = opts.ContentMD5
-		w.md5hash = md5.New()
-	}
+	w.contentMD5 = opts.ContentMD5
+	w.md5hash = md5.New()
 	return w, nil
 }
 
@@ -508,16 +522,14 @@ type writer struct {
 	md5hash    hash.Hash
 }
 
-func (w writer) Write(p []byte) (n int, err error) {
-	if w.md5hash != nil {
-		if _, err := w.md5hash.Write(p); err != nil {
-			return 0, err
-		}
+func (w *writer) Write(p []byte) (n int, err error) {
+	if _, err := w.md5hash.Write(p); err != nil {
+		return 0, err
 	}
 	return w.f.Write(p)
 }
 
-func (w writer) Close() error {
+func (w *writer) Close() error {
 	err := w.f.Close()
 	if err != nil {
 		return err
@@ -533,9 +545,11 @@ func (w writer) Close() error {
 		return err
 	}
 
+	md5sum := w.md5hash.Sum(nil)
+	w.attrs.MD5 = md5sum
+
 	// Check MD5 hash if necessary.
-	if w.md5hash != nil {
-		md5sum := w.md5hash.Sum(nil)
+	if len(w.contentMD5) > 0 {
 		if !bytes.Equal(md5sum, w.contentMD5) {
 			return fmt.Errorf(
 				"the ContentMD5 you specified did not match what we received (%s != %s)",

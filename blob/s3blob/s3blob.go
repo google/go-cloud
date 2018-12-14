@@ -12,29 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package s3blob provides an implementation of blob using S3.
+// Package s3blob provides a blob implementation that uses S3. Use OpenBucket
+// to construct a blob.Bucket.
 //
-// For blob.Open URLs, s3blob registers for the "s3" protocol.
+// Open URLs
+//
+// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
+// with "s3://".
+//
 // The URL's Host is used as the bucket name.
 // The AWS session is created as described in
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
 // The following query options are supported:
-// - region: The AWS region for requests; sets aws.Config.Region.
-// Example URL: blob.Open("s3://mybucket?region=us-east-1")
+//  - region: The AWS region for requests; sets aws.Config.Region.
+// Example URL:
+//  s3://mybucket?region=us-east-1
+//
+// As
 //
 // s3blob exposes the following types for As:
-// Bucket: *s3.S3
-// Error: awserr.Error
-// ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
-// ListOptions.BeforeList: *s3.ListObjectsV2Input
-// Reader: s3.GetObjectOutput
-// Attributes: s3.HeadObjectOutput
-// WriterOptions.BeforeWrite: *s3manager.UploadInput
-package s3blob
+//  - Bucket: *s3.S3
+//  - Error: awserr.Error
+//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
+//  - ListOptions.BeforeList: *s3.ListObjectsV2Input
+//  - Reader: s3.GetObjectOutput
+//  - Attributes: s3.HeadObjectOutput
+//  - WriterOptions.BeforeWrite: *s3manager.UploadInput
+package s3blob // import "gocloud.dev/blob/s3blob"
 
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -44,8 +53,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -93,7 +102,8 @@ func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvid
 	}, nil
 }
 
-// OpenBucket returns an S3 Bucket.
+// OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
+// for an example.
 func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, bucketName, sess, opts)
 	if err != nil {
@@ -269,6 +279,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				Key:     *obj.Key,
 				ModTime: *obj.LastModified,
 				Size:    *obj.Size,
+				MD5:     eTagToMD5(obj.ETag),
 				AsFunc: func(i interface{}) bool {
 					p, ok := i.(*s3.Object)
 					if !ok {
@@ -349,6 +360,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    md,
 		ModTime:     aws.TimeValue(resp.LastModified),
 		Size:        aws.Int64Value(resp.ContentLength),
+		MD5:         eTagToMD5(resp.ETag),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*s3.HeadObjectOutput)
 			if !ok {
@@ -384,6 +396,32 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		},
 		raw: resp,
 	}, nil
+}
+
+// etagToMD5 processes an ETag header and returns an MD5 hash if possible.
+// S3's ETag header is sometimes a quoted hexstring of the MD5. Other times,
+// notably when the object was uploaded in multiple parts, it is not.
+// We do the best we can.
+// Some links about ETag:
+// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html
+// https://github.com/aws/aws-sdk-net/issues/815
+// https://teppen.io/2018/06/23/aws_s3_etags/
+func eTagToMD5(etag *string) []byte {
+	if etag == nil {
+		// No header at all.
+		return nil
+	}
+	// Strip the expected leading and trailing quotes.
+	quoted := *etag
+	if quoted[0] != '"' || quoted[len(quoted)-1] != '"' {
+		return nil
+	}
+	unquoted := quoted[1 : len(quoted)-1]
+	// Un-hex; we return nil on error. In particular, we'll get an error here
+	// for multi-part uploaded blobs, whose ETag will contain a "-" and so will
+	// never be a legal hex encoding.
+	md5, _ := hex.DecodeString(unquoted)
+	return md5
 }
 
 func getSize(resp *s3.GetObjectOutput) int64 {

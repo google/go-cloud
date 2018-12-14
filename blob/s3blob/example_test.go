@@ -18,10 +18,10 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob/s3blob"
+	"gocloud.dev/blob/s3blob"
 )
 
-func ExampleOpenBucket() {
+func Example() {
 	ctx := context.Background()
 
 	// Create an AWS session.

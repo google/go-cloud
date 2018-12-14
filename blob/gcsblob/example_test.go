@@ -17,11 +17,11 @@ package gcsblob_test
 import (
 	"context"
 
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/blob/gcsblob"
+	"gocloud.dev/gcp"
 )
 
-func ExampleOpenBucket() {
+func Example() {
 	ctx := context.Background()
 
 	// Load credentials for GCP.

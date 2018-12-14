@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package rdsmysql provides connections to AWS RDS MySQL instances.
-package rdsmysql
+package rdsmysql // import "gocloud.dev/mysql/rdsmysql"
 
 import (
 	"context"
@@ -25,8 +25,8 @@ import (
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/go-sql-driver/mysql"
-	"github.com/google/go-cloud/aws/rds"
 	"github.com/google/wire"
+	"gocloud.dev/aws/rds"
 )
 
 // Set is a Wire provider set that provides a *sql.DB given
@@ -98,7 +98,7 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 		tlsConfigNum := tlsConfigCounter.n
 		tlsConfigCounter.n++
 		tlsConfigCounter.mu.Unlock()
-		tlsConfigName := fmt.Sprintf("github.com/google/go-cloud/mysql/rdsmysql/%d", tlsConfigNum)
+		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/rdsmysql/%d", tlsConfigNum)
 		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
 			RootCAs: certPool,
 		})

@@ -1,6 +1,17 @@
-// It exposes the following types for As:
-// Topic: *amqp.Connection
-// Subscription: *amqp.Connection
+// Copyright 2018 The Go Cloud Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rabbitpubsub
 
 import (
@@ -11,9 +22,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/streadway/amqp"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
 )
 
 type topic struct {
@@ -76,8 +87,7 @@ func newTopic(conn *amqp.Connection, name string) *topic {
 // a new one created.
 //
 // Must be called with t.mu held.
-func (t *topic) establishChannel() error {
-	// TODO(jba): support context.Context
+func (t *topic) establishChannel(ctx context.Context) error {
 	if t.ch != nil { // We already have a channel.
 		select {
 		// If it was closed, open a new one.
@@ -89,23 +99,42 @@ func (t *topic) establishChannel() error {
 			return nil
 		}
 	}
-	// Create a new channel.
-	ch, err := t.conn.Channel()
+	var ch *amqp.Channel
+	err := runWithContext(ctx, func() error {
+		// Create a new channel.
+		var err error
+		ch, err = t.conn.Channel()
+		if err != nil {
+			return err
+		}
+		// Put the channel into a mode where confirmations are delivered for each publish.
+		return ch.Confirm(wait)
+	})
 	if err != nil {
 		return err
 	}
-	// Put the channel into a mode where confirmations are delivered for each publish.
-	if err := ch.Confirm(wait); err != nil {
-		return err
-	}
 	t.ch = ch
-	// Get a Go channel which will hold acks from the server. The server
+	// Get Go channels which will hold acks and returns from the server. The server
 	// will send an ack for each published message to confirm that it was received.
+	// It will return undeliverable messages.
 	// All the Notify methods return their arg.
 	t.pubc = ch.NotifyPublish(make(chan amqp.Confirmation))
 	t.retc = ch.NotifyReturn(make(chan amqp.Return))
 	t.closec = ch.NotifyClose(make(chan *amqp.Error, 1)) // closec will get at most one element
 	return nil
+}
+
+// Run f while checking to see if ctx is done.
+// Return the error from f if it completes, or ctx.Err() if ctx is done.
+func runWithContext(ctx context.Context, f func() error) error {
+	c := make(chan error, 1) // buffer so the goroutine can finish even if ctx is done
+	go func() { c <- f() }()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-c:
+		return err
+	}
 }
 
 // SendBatch implements driver.SendBatch.
@@ -116,7 +145,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-	if err := t.establishChannel(); err != nil {
+	if err := t.establishChannel(ctx); err != nil {
 		return err
 	}
 
@@ -316,8 +345,8 @@ func newSubscription(conn *amqp.Connection, name string) *subscription {
 }
 
 // Must be called with s.mu held.
-func (s *subscription) establishChannel() error {
-	// TODO(jba): support context.Context
+func (s *subscription) establishChannel(ctx context.Context) error {
+
 	if s.ch != nil { // We already have a channel.
 		select {
 		// If it was closed, open a new one.
@@ -329,18 +358,23 @@ func (s *subscription) establishChannel() error {
 			return nil
 		}
 	}
-	// Create a new channel.
-	ch, err := s.conn.Channel()
-	if err != nil {
+	var ch *amqp.Channel
+	err := runWithContext(ctx, func() error {
+		// Create a new channel.
+		var err error
+		ch, err = s.conn.Channel()
+		if err != nil {
+			return err
+		}
+		// Subscribe to messages from the queue.
+		s.delc, err = ch.Consume(s.queue, s.consumer,
+			false, // autoAck
+			false, // exclusive
+			false, // noLocal
+			wait,
+			nil) // args
 		return err
-	}
-	// Subscribe to messages from the queue.
-	s.delc, err = ch.Consume(s.queue, s.consumer,
-		false, // autoAck
-		false, // exclusive
-		false, // noLocal
-		wait,
-		nil) // args
+	})
 	if err != nil {
 		return err
 	}
@@ -354,7 +388,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.establishChannel(); err != nil {
+	if err := s.establishChannel(ctx); err != nil {
 		return nil, err
 	}
 
@@ -417,7 +451,7 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.establishChannel(); err != nil {
+	if err := s.establishChannel(ctx); err != nil {
 		return err
 	}
 

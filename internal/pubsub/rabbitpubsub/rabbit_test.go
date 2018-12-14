@@ -27,11 +27,12 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/pubsub/drivertest"
 	"github.com/streadway/amqp"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub/drivertest"
 )
 
 const rabbitURL = "amqp://guest:guest@localhost:5672/"
@@ -164,6 +165,25 @@ func TestIsRetryable(t *testing.T) {
 		if got != test.want {
 			t.Errorf("%+v: got %t, want %t", test.err, got, test.want)
 		}
+	}
+}
+
+func TestRunWithContext(t *testing.T) {
+	// runWithContext will run its argument to completion if the context isn't done.
+	e := errors.New("")
+	// f sleeps for a bit just to give the scheduler a chance to run.
+	f := func() error { time.Sleep(100 * time.Millisecond); return e }
+	got := runWithContext(context.Background(), f)
+	if want := e; got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+
+	// runWithContext will return ctx.Err if context is done.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	got = runWithContext(ctx, f)
+	if want := context.Canceled; got != want {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
 

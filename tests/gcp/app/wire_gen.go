@@ -8,11 +8,11 @@ package main
 import (
 	"context"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/server"
-	"github.com/google/go-cloud/server/sdserver"
 	"go.opencensus.io/trace"
+	"gocloud.dev/gcp"
+	"gocloud.dev/health"
+	"gocloud.dev/server"
+	"gocloud.dev/server/sdserver"
 )
 
 // Injectors from inject.go:

@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/mempubsub"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/mempubsub"
 )
 
 func Example_sendReceive() {
@@ -31,7 +31,7 @@ func Example_sendReceive() {
 	ctx := context.Background()
 	b := mempubsub.NewBroker([]string{"myTopic"})
 	t := mempubsub.OpenTopic(b, "myTopic")
-	defer t.Close()
+	defer t.Shutdown(ctx)
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Shutdown(ctx)
 
@@ -61,7 +61,7 @@ func Example_sendReceiveMultipleMessages() {
 	ctx := context.Background()
 	b := mempubsub.NewBroker([]string{"myTopic"})
 	t := mempubsub.OpenTopic(b, "myTopic")
-	defer t.Close()
+	defer t.Shutdown(ctx)
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Shutdown(ctx)
 
@@ -108,7 +108,7 @@ func Example_receiveWithInvertedWorkerPool() {
 	ctx := context.Background()
 	b := mempubsub.NewBroker([]string{"myTopic"})
 	t := mempubsub.OpenTopic(b, "myTopic")
-	defer t.Close()
+	defer t.Shutdown(ctx)
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Shutdown(ctx)
 
@@ -182,7 +182,7 @@ func Example_receiveWithTraditionalWorkerPool() {
 	ctx := context.Background()
 	b := mempubsub.NewBroker([]string{"myTopic"})
 	t := mempubsub.OpenTopic(b, "myTopic")
-	defer t.Close()
+	defer t.Shutdown(ctx)
 	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
 	defer s.Shutdown(ctx)
 

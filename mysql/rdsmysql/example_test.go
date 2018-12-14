@@ -17,7 +17,7 @@ package rdsmysql_test
 import (
 	"context"
 
-	"github.com/google/go-cloud/mysql/rdsmysql"
+	"gocloud.dev/mysql/rdsmysql"
 )
 
 func Example() {

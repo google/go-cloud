@@ -25,8 +25,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
 )
 
 func ExampleBucket_NewReader() {
@@ -140,25 +140,26 @@ func ExampleBucket_NewWriter() {
 	// text/plain; charset=utf-8
 }
 
-func ExampleBucket_ReadAll() {
+func Example() {
 	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
+	// This example uses the file-based implementation in fileblob, and creates
+	// a temporary directory to use as the root directory.
 	dir, cleanup := newTempDir()
 	defer cleanup()
-
-	// Create the file-based bucket.
 	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Write a blob using WriteAll.
+	// We now have a *blob.Bucket! We can write our application using the
+	// *blob.Bucket type, and have the freedom to change the initialization code
+	// above to choose a different provider later.
+
+	// In this example, we'll write a blob and then read it.
 	ctx := context.Background()
 	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), nil); err != nil {
 		log.Fatal(err)
 	}
-
-	// Read it back using ReadAll.
 	b, err := bucket.ReadAll(ctx, "foo.txt")
 	if err != nil {
 		log.Fatal(err)

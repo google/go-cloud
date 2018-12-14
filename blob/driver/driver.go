@@ -14,7 +14,7 @@
 
 // Package driver defines a set of interfaces that the blob package uses to interact
 // with the underlying blob services.
-package driver
+package driver // import "gocloud.dev/blob/driver"
 
 import (
 	"context"
@@ -88,6 +88,8 @@ type Attributes struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// MD5 is an MD5 hash of the blob contents or nil if not available.
+	MD5 []byte
 	// AsFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	// If not set, no provider-specific types are supported.
@@ -95,7 +97,6 @@ type Attributes struct {
 }
 
 // ListOptions sets options for listing objects in the bucket.
-// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
@@ -114,7 +115,7 @@ type ListOptions struct {
 	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
-	// max.
+	// max. It is guaranteed to be >= 0.
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
@@ -134,6 +135,8 @@ type ListObject struct {
 	ModTime time.Time
 	// Size is the size of the object in bytes.
 	Size int64
+	// MD5 is an MD5 hash of the blob contents or nil if not available.
+	MD5 []byte
 	// IsDir indicates that this result represents a "directory" in the
 	// hierarchical namespace, ending in ListOptions.Delimiter. Key can be
 	// passed as ListOptions.Prefix to list items in the "directory".
@@ -147,7 +150,7 @@ type ListObject struct {
 
 // ListPage represents a page of results return from ListPaged.
 type ListPage struct {
-	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
+	// Objects is the slice of objects found. If ListOptions.PageSize > 0,
 	// it should have at most ListOptions.PageSize entries.
 	//
 	// Objects should be returned in lexicographical order of UTF-8 encoded keys,
