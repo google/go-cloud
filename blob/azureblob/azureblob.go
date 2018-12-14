@@ -72,7 +72,7 @@ const (
 
 var (
 	maxDownloadRetryRequests = 3    // download retry policy
-	maxPageSize              = 5000 // default page size for ListPaged
+	defaultPageSize          = 1000 // default page size for ListPaged
 )
 
 // OpenBucket returns an Azure BlockBlob Bucket
@@ -205,21 +205,18 @@ func (r *reader) As(i interface{}) bool {
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
 	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
-	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
-
-	if err != nil {
-		return nil, err
-	}
 
 	end := length
 	if end < 0 {
 		end = azblob.CountToEnd
 	}
 
-	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
+	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)	
 	if err != nil {
 		return nil, err
 	}
+
+	blobPropertiesResponse, _ := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
 	return &reader{
 		body: blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
@@ -252,18 +249,12 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) IsNotExist(err error) bool {
-	if serr, ok := err.(azblob.StorageError); ok {
-		switch serr.ServiceCode() {
-		case azblob.ServiceCodeBlobNotFound:
+	if serr, ok := err.(azblob.StorageError); ok {		
+		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
+		if serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404 {
 			return true
-		default:
-			// Test the http status code for 404/NotFound
-			errorStatusCode := serr.Response().StatusCode
-			if errorStatusCode == 404 {
-				return true
-			}
-		}
-	}
+		}		
+	}	
 	return false
 }
 
@@ -280,14 +271,12 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	if err != nil {
 		return driver.Attributes{}, err
 	}
-
-	metadata := blobPropertiesResponse.NewMetadata()
-
+	
 	return driver.Attributes{
 		ContentType: blobPropertiesResponse.ContentType(),
 		Size:        blobPropertiesResponse.ContentLength(),
 		ModTime:     blobPropertiesResponse.LastModified(),
-		Metadata:    metadata,
+		Metadata:    blobPropertiesResponse.NewMetadata(),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)
 			if !ok {
@@ -302,7 +291,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	pageSize := opts.PageSize
 	if pageSize == 0 {
-		pageSize = maxPageSize
+		pageSize = defaultPageSize
 	}
 
 	marker := azblob.Marker{}
