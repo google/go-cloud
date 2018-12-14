@@ -23,7 +23,6 @@ package awspubsub
 import (
 	"context"
 	"encoding/json"
-	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -33,7 +32,6 @@ import (
 )
 
 type topic struct {
-	mu     sync.Mutex
 	client *sns.SNS
 	arn    string
 }
@@ -43,8 +41,7 @@ type TopicOptions struct{}
 
 // OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	dt := openTopic(ctx, client, topicARN)
-	return pubsub.NewTopic(dt)
+	return pubsub.NewTopic(openTopic(ctx, client, topicARN))
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -63,23 +60,16 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 				StringValue: aws.String(v),
 			}
 		}
-		params := sns.PublishInput{
+		req, _ := t.client.PublishRequest(&sns.PublishInput{
 			Message:           aws.String(string(dm.Body)),
 			MessageAttributes: attrs,
 			TopicArn:          &t.arn,
-		}
-		if err := t.send(&params); err != nil {
+		})
+		if err := req.Send(); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (t *topic) send(params *sns.PublishInput) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	req, _ := t.client.PublishRequest(params)
-	return req.Send()
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -94,14 +84,11 @@ func (t *topic) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
-	t.mu.Lock()
-	defer t.mu.Unlock()
 	*c = t.client
 	return true
 }
 
 type subscription struct {
-	mu     sync.Mutex
 	client *sqs.SQS
 	qURL   string
 }
@@ -109,9 +96,11 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
+// OpenSubscription opens a on AWS SQS for the given SQS client and queue URL.
+// The queue is assumed to be subscribed to some SNS topic, though there is no
+// check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	ds := openSubscription(ctx, client, qURL)
-	return pubsub.NewSubscription(ds)
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL))
 }
 
 // openSubscription returns a driver.Subscription.
@@ -145,7 +134,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		m := &driver.Message{
 			Body:     []byte(body.Message),
 			Metadata: attrs,
-			AckID:    *m.ReceiptHandle,
+			AckID:    m.ReceiptHandle,
 		}
 		ms = append(ms, m)
 	}
@@ -153,34 +142,27 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 }
 
 func (s *subscription) receiveMessages() (*sqs.ReceiveMessageOutput, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	params := sqs.ReceiveMessageInput{QueueUrl: &s.qURL}
-	req, output := s.client.ReceiveMessageRequest(&params)
-	err := req.Send()
-	return output, err
+	req, output := s.client.ReceiveMessageRequest(&sqs.ReceiveMessageInput{
+		QueueUrl: &s.qURL,
+	})
+	if err := req.Send(); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	for _, id := range ids {
-		rh := id.(string)
-		err := s.deleteMessage(rh)
+		_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
+			QueueUrl:      &s.qURL,
+			ReceiptHandle: id.(*string),
+		})
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func (s *subscription) deleteMessage(receiptHandle string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
-		QueueUrl:      &s.qURL,
-		ReceiptHandle: &receiptHandle,
-	})
-	return err
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
@@ -195,8 +177,6 @@ func (s *subscription) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	*c = s.client
 	return true
 }
