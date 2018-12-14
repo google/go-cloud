@@ -22,4 +22,8 @@
 //
 // A Pub/Sub subscription is an AMQP queue. The queue should be bound to the exchange
 // that is the topic of the subscription. See the package example for details.
+//
+// This package exposes the following types for As:
+// Topic: *amqp.Connection
+// Subscription: *amqp.Connection
 package rabbitpubsub // import "gocloud.dev/internal/pubsub/rabbitpubsub"
