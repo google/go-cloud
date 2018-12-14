@@ -542,6 +542,8 @@ func (b *Bucket) Delete(ctx context.Context, key string) error {
 //
 // A nil SignedURLOptions is treated the same as the zero value.
 //
+// It is valid to call SignedURL for a key that does not exist.
+//
 // If the provider implementation does not support this functionality, SignedURL
 // will return an error for which IsNotImplemented will return true.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {

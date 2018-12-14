@@ -439,7 +439,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if length > 0 {
 		r = io.LimitReader(r, length)
 	}
-	return reader{
+	return &reader{
 		r: r,
 		c: f,
 		attrs: driver.ReaderAttributes{
@@ -456,25 +456,25 @@ type reader struct {
 	attrs driver.ReaderAttributes
 }
 
-func (r reader) Read(p []byte) (int, error) {
+func (r *reader) Read(p []byte) (int, error) {
 	if r.r == nil {
 		return 0, io.EOF
 	}
 	return r.r.Read(p)
 }
 
-func (r reader) Close() error {
+func (r *reader) Close() error {
 	if r.c == nil {
 		return nil
 	}
 	return r.c.Close()
 }
 
-func (r reader) Attributes() driver.ReaderAttributes {
+func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 
-func (r reader) As(i interface{}) bool { return false }
+func (r *reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -522,14 +522,14 @@ type writer struct {
 	md5hash    hash.Hash
 }
 
-func (w writer) Write(p []byte) (n int, err error) {
+func (w *writer) Write(p []byte) (n int, err error) {
 	if _, err := w.md5hash.Write(p); err != nil {
 		return 0, err
 	}
 	return w.f.Write(p)
 }
 
-func (w writer) Close() error {
+func (w *writer) Close() error {
 	err := w.f.Close()
 	if err != nil {
 		return err
