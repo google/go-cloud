@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -146,6 +147,24 @@ func TestUnroutable(t *testing.T) {
 	err := top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
 	if err == nil || !strings.Contains(err.Error(), "NO_ROUTE") {
 		t.Errorf("got %v, want an error with 'NO_ROUTE'", err)
+	}
+}
+
+func TestIsRetryable(t *testing.T) {
+	for _, test := range []struct {
+		err  error
+		want bool
+	}{
+		{errors.New("xyz"), false},
+		{io.ErrUnexpectedEOF, false},
+		{&amqp.Error{Code: amqp.AccessRefused}, false},
+		{&amqp.Error{Code: amqp.ContentTooLarge}, true},
+		{&amqp.Error{Code: amqp.ConnectionForced}, true},
+	} {
+		got := isRetryable(test.err)
+		if got != test.want {
+			t.Errorf("%+v: got %t, want %t", test.err, got, test.want)
+		}
 	}
 }
 
