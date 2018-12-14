@@ -23,6 +23,7 @@ package awspubsub
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -32,6 +33,7 @@ import (
 )
 
 type topic struct {
+	mu     sync.Mutex
 	client *sns.SNS
 	arn    string
 }
@@ -48,7 +50,7 @@ func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *Topi
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
 func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Topic {
-	return &topic{client, topicARN}
+	return &topic{client: client, arn: topicARN}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -66,12 +68,18 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			MessageAttributes: attrs,
 			TopicArn:          &t.arn,
 		}
-		req, _ := t.client.PublishRequest(&params)
-		if err := req.Send(); err != nil {
+		if err := t.send(&params); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (t *topic) send(params *sns.PublishInput) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	req, _ := t.client.PublishRequest(params)
+	return req.Send()
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -86,11 +94,14 @@ func (t *topic) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
 	*c = t.client
 	return true
 }
 
 type subscription struct {
+	mu     sync.Mutex
 	client *sqs.SQS
 	qURL   string
 }
@@ -98,8 +109,6 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription opens the queue on AWS SQS for the given SQS client and
-// queue URL.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, qURL)
 	return pubsub.NewSubscription(ds)
@@ -107,14 +116,12 @@ func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *S
 
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
-	return &subscription{client, qURL}
+	return &subscription{client: client, qURL: qURL}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	params := sqs.ReceiveMessageInput{QueueUrl: &s.qURL}
-	req, output := s.client.ReceiveMessageRequest(&params)
-	err := req.Send()
+	output, err := s.receiveMessages()
 	if err != nil {
 		return nil, err
 	}
@@ -145,19 +152,35 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	return ms, nil
 }
 
+func (s *subscription) receiveMessages() (*sqs.ReceiveMessageOutput, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	params := sqs.ReceiveMessageInput{QueueUrl: &s.qURL}
+	req, output := s.client.ReceiveMessageRequest(&params)
+	err := req.Send()
+	return output, err
+}
+
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	for _, id := range ids {
 		rh := id.(string)
-		_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
-			QueueUrl:      &s.qURL,
-			ReceiptHandle: &rh,
-		})
+		err := s.deleteMessage(rh)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *subscription) deleteMessage(receiptHandle string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      &s.qURL,
+		ReceiptHandle: &receiptHandle,
+	})
+	return err
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
@@ -172,6 +195,8 @@ func (s *subscription) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	*c = s.client
 	return true
 }
