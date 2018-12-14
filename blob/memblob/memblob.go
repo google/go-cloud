@@ -97,10 +97,13 @@ func (b *bucket) IsNotImplemented(err error) bool {
 }
 
 // ListPaged implements driver.ListPaged.
+// The implementation largely mirrors the one in fileblob.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	// pageToken is a returned NextPageToken, set below; it's the last key of the
+	// previous page.
 	var pageToken string
 	if len(opts.PageToken) > 0 {
 		pageToken = string(opts.PageToken)
@@ -206,8 +209,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			return nil, err
 		}
 	}
-	var ior io.Reader
-	ior = r
+	var ior io.Reader = r
 	if length >= 0 {
 		ior = io.LimitReader(r, length)
 	}
@@ -227,9 +229,7 @@ type reader struct {
 }
 
 func (r *reader) Read(p []byte) (int, error) {
-	x, err := r.r.Read(p)
-	return x, err
-	// return r.r.Read(p)
+	return r.r.Read(p)
 }
 
 func (r *reader) Close() error {
