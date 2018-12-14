@@ -26,12 +26,12 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/blob/drivertest"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 )

@@ -10,13 +10,13 @@ import (
 	"context"
 	"crypto/rsa"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/requestlog"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/filevar"
-	"github.com/google/go-cloud/server"
 	"go.opencensus.io/trace"
+	"gocloud.dev/gcp"
+	"gocloud.dev/health"
+	"gocloud.dev/requestlog"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/filevar"
+	"gocloud.dev/server"
 	"google.golang.org/api/option"
 	"net/http"
 )
@@ -41,10 +41,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		cleanup()
 		return workerAndServer{}, nil, err
 	}
-	mainWorker := &worker{
-		sub:  subscription,
-		auth: mainGitHubAppAuth,
-	}
+	mainWorker := newWorker(subscription, mainGitHubAppAuth)
 	logger := _wireLoggerValue
 	v := healthChecks(mainWorker)
 	exporter := _wireExporterValue

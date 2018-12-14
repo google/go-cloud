@@ -17,7 +17,9 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, gcsblob registers for the protocol "gs".
+// For blob.Open URLs, gcsblob registers for the scheme "gs"; URLs start
+// with "gs://".
+//
 // The URL's Host is used as the bucket name.
 // The following query options are supported:
 //
@@ -40,7 +42,7 @@
 //  - Reader: storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - WriterOptions.BeforeWrite: *storage.Writer
-package gcsblob
+package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
 	"context"
@@ -52,9 +54,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcp"
 
 	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"

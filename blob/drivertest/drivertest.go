@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // driver.
-package drivertest
+package drivertest // import "gocloud.dev/blob/drivertest"
 
 import (
 	"bytes"
@@ -31,9 +31,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -561,62 +561,62 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		},
 		// TODO(#905): Backslashes cause problems for Azure; disable for now.
 		/*
-		{
-			name:  "backslash",
-			delim: "\\",
-			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantRecursive: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-						listResult{
-							Key:   keyPrefix + "\\dir1\\subdir\\",
-							IsDir: true,
-							Sub: []listResult{
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+			{
+				name:  "backslash",
+				delim: "\\",
+				wantFlat: []listResult{
+					listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+					listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+					listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantRecursive: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+							listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+							listResult{
+								Key:   keyPrefix + "\\dir1\\subdir\\",
+								IsDir: true,
+								Sub: []listResult{
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+									listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+								},
 							},
 						},
 					},
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+						Sub: []listResult{
+							listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+						},
 					},
+					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				wantPaged: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{
+						Key:   keyPrefix + "\\dir2\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
+				wantAfterDel: []listResult{
+					listResult{
+						Key:   keyPrefix + "\\dir1\\",
+						IsDir: true,
+					},
+					listResult{Key: keyPrefix + "\\f.txt"},
+				},
 			},
-			wantPaged: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{
-					Key:   keyPrefix + "\\dir2\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-			wantAfterDel: []listResult{
-				listResult{
-					Key:   keyPrefix + "\\dir1\\",
-					IsDir: true,
-				},
-				listResult{Key: keyPrefix + "\\f.txt"},
-			},
-		},
 		*/
 		{
 			name:  "abc",
@@ -1210,6 +1210,9 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 				if err := b.WriteAll(ctx, key, content, opts); err != nil {
 					t.Fatal(err)
 				}
+				defer func() {
+					_ = b.Delete(ctx, key)
+				}()
 			}
 
 			// Create a writer with the context that we're going
@@ -1222,6 +1225,23 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			if _, err := w.Write(cancelContent); err != nil {
 				t.Fatal(err)
 			}
+
+			// Verify that the previous content (if any) is still readable,
+			// because the write hasn't been Closed yet.
+			got, err := b.ReadAll(ctx, key)
+			if test.exists {
+				// The previous content should still be there.
+				if !cmp.Equal(got, content) {
+					t.Errorf("during unclosed write, got %q want %q", string(got), string(content))
+				}
+			} else {
+				// The read should fail; the write hasn't been Closed so the
+				// blob shouldn't exist.
+				if err == nil {
+					t.Error("wanted read to return an error when write is not yet Closed")
+				}
+			}
+
 			// Cancel the context to abort the write.
 			cancel()
 			// Close should return some kind of canceled context error.
@@ -1230,7 +1250,9 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 			if err := w.Close(); err == nil {
 				t.Errorf("got Close error %v want canceled ctx error", err)
 			}
-			got, err := b.ReadAll(ctx, key)
+
+			// Verify the write was truly aborted.
+			got, err = b.ReadAll(ctx, key)
 			if test.exists {
 				// The previous content should still be there.
 				if !cmp.Equal(got, content) {
@@ -1435,7 +1457,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			description: "punctuation",
 			// TODO(#905): Backslashes cause problems for Azure; disable for now.
 			// key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
-			key:         "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
+			key: "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
 		},
 		{
 			description: "unicode",

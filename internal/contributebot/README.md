@@ -14,7 +14,45 @@ with the assumption that incoming events are bursty.
 [github-async]: https://developer.github.com/v3/guides/best-practices-for-integrators/#favor-asynchronous-work-over-synchronous
 [github-ratelimit]: https://developer.github.com/v3/#rate-limiting
 
-## Setup
+## Configuration
+
+Contribute Bot will look for a configuration file at the root of the repository
+called `.contributebot` on the repository's default branch. This allows changes
+to the configuration to be version-controlled and reviewed using the project's
+normal process.
+
+The configuration file is in JSON format and has the following keys:
+
+<dl>
+  <dt><code>issue_title_pattern</code></dt>
+  <dd>
+    An <a href="https://golang.org/s/re2syntax">RE2 regular expression</a> of an
+    acceptable issue title. Any issue that does not match the pattern will
+    receive a response. The default pattern is
+    <code>^([a-z0-9./-]+|[A-Z_]+): .*$</code>.
+  </dd>
+  <dt><code>issue_title_response</code></dt>
+  <dd>
+    The text of the comment that will be added to an issue that does not
+    match the title pattern. This can use
+    <a href="https://help.github.com/articles/about-writing-and-formatting-on-github/">GitHub-flavored Markdown</a>.
+  </dd>
+  <dt><code>pull_request_title_pattern</code></dt>
+  <dd>
+    An <a href="https://golang.org/s/re2syntax">RE2 regular expression</a> of an
+    acceptable pull request title. Any issue that does not match the pattern will
+    receive a response. The default pattern is
+    <code>^([a-z0-9./-]+|[A-Z_]+): .*$</code>.
+  </dd>
+  <dt><code>pull_request_title_response</code></dt>
+  <dd>
+    The text of the comment that will be added to a pull request that does not
+    match the title pattern. This can use
+    <a href="https://help.github.com/articles/about-writing-and-formatting-on-github/">GitHub-flavored Markdown</a>.
+  </dd>
+</dl>
+
+## DevOps Setup
 
 To set up your own instance of Contribute Bot for local testing or deployment:
 
@@ -82,7 +120,12 @@ go run . --project=your-project-name --github_app=42 --github_key=/foo.pem
 To deploy an updated Contribute Bot to production, follow these steps.
 
 ```shell
-# Build Docker image.
+# If you're working on production Contribute Bot, Cloud Build will
+# automatically build a new version of the Docker image when commits are
+# made to internal/contributebot. Find a new image at
+# https://console.cloud.google.com/cloud-build/builds?project=go-cloud-contribute-bot
+
+# Otherwise, fire off a manual Cloud Build.
 gcloud builds submit --config cloudbuild.yaml ../.. --project=go-cloud-contribute-bot
 
 # Edit prod/k8s/contributebot.yaml and replace the image with the one
@@ -95,13 +138,11 @@ gcloud container clusters get-credentials \
     contributebot-cluster
 kubectl apply -f prod/k8s
 
+# Check that the deployment was successful:
+kubectl describe pods --selector=app=contributebot-worker
+
 # Send a PR with the updated .yaml file.
 ```
-
-To check that the deploy was successful, consult the contributebot-worker [Deployment Details][]
-
-[Deployment Details]: https://pantheon.corp.google.com/kubernetes/deployment/us-central1-c/contributebot-cluster/default/contributebot-worker?project=go-cloud-contribute-bot&tab=history&deployment_overview_active_revisions_tablesize=50&duration=PT1H&pod_summary_list_tablesize=20&deployment_revision_history_tablesize=50
-
 
 ### Somewhere else
 

@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
+	"gocloud.dev/runtimevar"
 )
 
 func main() {

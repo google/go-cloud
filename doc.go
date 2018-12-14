@@ -36,4 +36,4 @@ increasing compile times or binary sizes, and avoiding any side effects from
 For sample applications and a tutorial, see the samples directory
 (https://github.com/google/go-cloud/tree/master/samples).
 */
-package cloud // import "github.com/google/go-cloud"
+package cloud // import "gocloud.dev"

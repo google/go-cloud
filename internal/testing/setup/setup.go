@@ -1,4 +1,4 @@
-package setup
+package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dnaeon/go-vcr/recorder"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/replay"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/testing/replay"
 
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
