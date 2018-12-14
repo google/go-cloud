@@ -135,6 +135,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Key:     key,
 			ModTime: entry.Attributes.ModTime,
 			Size:    entry.Attributes.Size,
+			MD5:     entry.Attributes.MD5,
 		}
 
 		// If using Delimiter, collapse "directories".
@@ -311,6 +312,7 @@ func (w *writer) Close() error {
 			Metadata:    w.metadata,
 			Size:        int64(len(content)),
 			ModTime:     time.Now(),
+			MD5:         md5sum,
 		},
 	}
 	w.b.mu.Lock()
