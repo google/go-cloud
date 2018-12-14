@@ -27,6 +27,7 @@ import (
 	"gocloud.dev/mysql/cloudmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
+	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It
@@ -71,13 +72,13 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
-func gcpMOTDVar(ctx context.Context, client *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
+func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := runtimeconfigurator.NewVariable(name, client, runtimevar.StringDecoder, &runtimeconfigurator.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
