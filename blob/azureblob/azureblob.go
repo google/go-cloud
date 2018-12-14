@@ -1,4 +1,3 @@
-
 // Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +16,7 @@ package azureblob
 
 import (
 	"bytes"
-	"context"	
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,7 +38,7 @@ import (
 
 type bucket struct {
 	name             string
-	credential       *azblob.SharedKeyCredential // used for SignedURL	
+	credential       *azblob.SharedKeyCredential // used for SignedURL
 	urls             serviceUrls
 	pageMarkers      map[string]azblob.Marker // temporary page marker map, until azblob.Marker is an exportable type
 	defaultDelimiter string                   // for escaping backslashes
@@ -54,9 +53,9 @@ type serviceUrls struct {
 // Settings to establish connection to Azure
 type Settings struct {
 	AccountName      string
-	AccountKey       string	
+	AccountKey       string
 	DefaultDelimiter string
-	SASToken         string		
+	SASToken         string
 	Pipeline         pipeline.Pipeline
 }
 
@@ -101,10 +100,10 @@ func OpenBucket(ctx context.Context, settings *Settings, containerName string) (
 
 func openBucketWithSASToken(ctx context.Context, settings *Settings, containerName string) (driver.Bucket, error) {
 	if settings.AccountName == "" {
-		return nil, fmt.Errorf("Settings.AccountName is not set")
+		return nil, fmt.Errorf("azureblob: fail, settings.AccountName is not set")
 	}
 	if settings.SASToken == "" {
-		return nil, fmt.Errorf("Settings.SASToken is not set")
+		return nil, fmt.Errorf("azureblob: fail, settings.SASToken is not set")
 	}
 
 	credential := azblob.NewAnonymousCredential()
@@ -120,23 +119,23 @@ func openBucketWithSASToken(ctx context.Context, settings *Settings, containerNa
 	containerURL := serviceURL.NewContainerURL(containerName)
 
 	return &bucket{
-		name:             containerName,		
+		name: containerName,
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
 		},
-		pageMarkers:      make(map[string]azblob.Marker),
+		pageMarkers:      map[string]azblob.Marker{},
 		defaultDelimiter: settings.DefaultDelimiter,
 	}, nil
 }
 
 func openBucketWithAccountKey(ctx context.Context, settings *Settings, containerName string) (driver.Bucket, error) {
 	if settings.AccountName == "" {
-		return nil, fmt.Errorf("Settings.AccountName is not set")
+		return nil, fmt.Errorf("azureblob: fail, settings.AccountName is not set")
 	}
 
 	if settings.AccountKey == "" {
-		return nil, fmt.Errorf("Settings.AccountKey is not set")
+		return nil, fmt.Errorf("azureblob: fail, settings.AccountKey is not set")
 	}
 
 	credential, _ := azblob.NewSharedKeyCredential(settings.AccountName, settings.AccountKey)
@@ -150,13 +149,13 @@ func openBucketWithAccountKey(ctx context.Context, settings *Settings, container
 	containerURL := serviceURL.NewContainerURL(containerName)
 
 	return &bucket{
-		name:             containerName,
-		credential:       credential,		
+		name:       containerName,
+		credential: credential,
 		urls: serviceUrls{
 			serviceURL:   &serviceURL,
 			containerURL: &containerURL,
 		},
-		pageMarkers:      make(map[string]azblob.Marker),
+		pageMarkers:      map[string]azblob.Marker{},
 		defaultDelimiter: settings.DefaultDelimiter,
 	}, nil
 }
@@ -168,20 +167,14 @@ func makeBlobStorageURL(accountName string) *url.URL {
 }
 
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	if key == "" {
-		return fmt.Errorf("Invalid/Empty Key")
-	}
-
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-
 	blobURL := b.urls.containerURL.NewBlockBlobURL(key)
 	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 
 	if err != nil {
-		return makeAzureError(err, b.name, key)
-	} else {
-		return nil
+		return err
 	}
+	return nil
 }
 
 // reader reads an azblob. It implements io.ReadCloser.
@@ -211,18 +204,12 @@ func (r *reader) As(i interface{}) bool {
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
-
-	if key == "" {
-		return nil, fmt.Errorf("Invalid/Empty Key")
-	}
-
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-
 	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
 	if err != nil {
-		return nil, makeAzureError(err, b.name, key)
+		return nil, err
 	}
 
 	// determine content end for reader
@@ -231,7 +218,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		end = blobPropertiesResponse.ContentLength()
 
 		if offset > blobPropertiesResponse.ContentLength() {
-			return nil, azureError{bucket: b.name, key: key, msg: "offset cannot be greater than length"}
+			return nil, err
 		}
 	}
 
@@ -240,7 +227,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
 
 		if err != nil {
-			return nil, makeAzureError(err, b.name, key)
+			return nil, err
 		}
 
 		return &reader{
@@ -300,13 +287,6 @@ func (b *bucket) IsNotExist(err error) bool {
 		}
 	}
 
-	// check azureError code code
-	if aerr, ok := err.(azureError); ok {
-		if aerr.errorCode == 404 {
-			return true
-		}
-	}
-
 	return false
 }
 
@@ -321,7 +301,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
 	if err != nil {
-		return driver.Attributes{}, makeAzureError(err, b.name, key)
+		return driver.Attributes{}, err
 	}
 
 	metadata := blobPropertiesResponse.NewMetadata()
@@ -363,15 +343,13 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	})
 
 	if err != nil {
-		return nil, makeAzureError(err, b.name, "")
+		return nil, err
 	}
 
-	resultCount := len(listBlob.Segment.BlobPrefixes) + len(listBlob.Segment.BlobItems)
-
 	page := &driver.ListPage{}
-	page.Objects = make([]*driver.ListObject, resultCount)
-	for idx, blobPrefix := range listBlob.Segment.BlobPrefixes {
-		page.Objects[idx] = &driver.ListObject{
+	page.Objects = []*driver.ListObject{}
+	for _, blobPrefix := range listBlob.Segment.BlobPrefixes {
+		page.Objects = append(page.Objects, &driver.ListObject{
 			Key:   blobPrefix.Name,
 			Size:  0,
 			IsDir: true,
@@ -382,11 +360,11 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				}
 				*p = blobPrefix
 				return true
-			},
-		}
+			}})
 	}
-	for idx, blobInfo := range listBlob.Segment.BlobItems {
-		page.Objects[idx+len(listBlob.Segment.BlobPrefixes)] = &driver.ListObject{
+
+	for _, blobInfo := range listBlob.Segment.BlobItems {
+		page.Objects = append(page.Objects, &driver.ListObject{
 			Key:     blobInfo.Name,
 			ModTime: blobInfo.Properties.LastModified,
 			Size:    *blobInfo.Properties.ContentLength,
@@ -399,7 +377,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 				*p = blobInfo
 				return true
 			},
-		}
+		})
 	}
 
 	if listBlob.NextMarker.NotDone() {
@@ -433,7 +411,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}.NewSASQueryParameters(b.credential)
 
 	if err != nil {
-		return "", makeAzureError(err, b.name, key)
+		return "", err
 	}
 
 	srcBlobURLWithSAS := srcBlobParts.URL()
@@ -452,12 +430,7 @@ type writer struct {
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-
-	if key == "" {
-		return nil, fmt.Errorf("Invalid/Empty Key")
-	}
-
-	containerURL := b.urls.serviceURL.NewContainerURL(b.name)	
+	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
 	blockBlobURL := containerURL.NewBlockBlobURL(key)
 
@@ -519,7 +492,7 @@ func split(buf []byte, lim int) [][]byte {
 // create an empty file at the given key.
 func (w *writer) Close() error {
 	select {
-	case <-w.ctx.Done():				
+	case <-w.ctx.Done():
 		return w.ctx.Err()
 	default:
 		metaData := azblob.Metadata{}
@@ -538,29 +511,4 @@ func (w *writer) Close() error {
 
 		return err
 	}
-}
-
-type azureError struct {
-	bucket, key, msg string
-	errorCode        int
-}
-
-func (e azureError) Error() string {
-	return fmt.Sprintf("azure://%s/%s: %s", e.bucket, e.key, e.msg)
-}
-func makeAzureError(err error, bucketName string, key string) azureError {
-	aerr := azureError{bucket: bucketName, key: key, msg: err.Error()}
-
-	if serr, ok := err.(azblob.StorageError); ok {
-		switch serr.ServiceCode() {
-		case azblob.ServiceCodeBlobNotFound:
-			aerr.errorCode = 404 // NotFound
-		default:
-			// use http response status code
-			statusCode := serr.Response().StatusCode
-			aerr.errorCode = statusCode
-		}
-	}
-
-	return aerr
 }
