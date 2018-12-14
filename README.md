@@ -44,7 +44,7 @@ talk at Next 2018:
 ## Installation instructions
 
 ```shell
-go get github.com/google/go-cloud
+go get gocloud.dev
 go get github.com/google/wire/cmd/wire
 ```
 
