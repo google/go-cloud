@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"sort"
@@ -212,44 +211,24 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, err
 	}
 
-	// determine content end for reader
 	end := length
 	if end < 0 {
-		end = blobPropertiesResponse.ContentLength()
-
-		if offset > blobPropertiesResponse.ContentLength() {
-			return nil, err
-		}
+		end = azblob.CountToEnd
 	}
 
-	// return content reader
-	if end > 0 {
-		blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return &reader{
-			body: blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
-			attrs: driver.ReaderAttributes{
-				ContentType: blobPropertiesResponse.ContentType(),
-				Size:        blobPropertiesResponse.ContentLength(),
-				ModTime:     blobPropertiesResponse.LastModified(),
-			},
-			raw: &blockBlobURL}, nil
+	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
+	if err != nil {
+		return nil, err
 	}
 
-	// return metadata reader
-	emptyReader := ioutil.NopCloser(strings.NewReader(""))
 	return &reader{
-		body: emptyReader,
+		body: blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
 		attrs: driver.ReaderAttributes{
 			ContentType: blobPropertiesResponse.ContentType(),
 			Size:        blobPropertiesResponse.ContentLength(),
 			ModTime:     blobPropertiesResponse.LastModified(),
 		},
-		raw: nil}, nil
+		raw: &blockBlobURL}, nil
 }
 
 func (b *bucket) As(i interface{}) bool {
@@ -273,20 +252,18 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) IsNotExist(err error) bool {
-	// check StorageError error code
 	if serr, ok := err.(azblob.StorageError); ok {
 		switch serr.ServiceCode() {
 		case azblob.ServiceCodeBlobNotFound:
 			return true
 		default:
-			// test the http status code for 404/notfound
+			// Test the http status code for 404/NotFound
 			errorStatusCode := serr.Response().StatusCode
 			if errorStatusCode == 404 {
 				return true
 			}
 		}
 	}
-
 	return false
 }
 
@@ -473,7 +450,7 @@ func (w *writer) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// credits to xlab/bytes_split.go
+// All credits to xlab/bytes_split.go
 func split(buf []byte, lim int) [][]byte {
 	var chunk []byte
 	chunks := make([][]byte, 0, len(buf)/lim+1)
