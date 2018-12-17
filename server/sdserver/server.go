@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/wire"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/server"
 
@@ -48,11 +49,14 @@ var Set = wire.NewSet(
 // The second return value is a Wire cleanup function that calls Flush
 // on the exporter.
 func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
-	tokOpt := option.WithTokenSource(oauth2.TokenSource(ts))
+	opts := []option.ClientOption{
+		option.WithTokenSource(oauth2.TokenSource(ts)),
+		option.WithUserAgent(useragent.GoCloudUserAgent),
+	}
 	exp, err := stackdriver.NewExporter(stackdriver.Options{
 		ProjectID:               string(id),
-		MonitoringClientOptions: []option.ClientOption{tokOpt},
-		TraceClientOptions:      []option.ClientOption{tokOpt},
+		MonitoringClientOptions: opts,
+		TraceClientOptions:      opts,
 		MonitoredResource:       mr,
 	})
 	if err != nil {
