@@ -347,10 +347,17 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		if !strings.HasPrefix(key, opts.Prefix) {
 			return nil
 		}
+		var md5 []byte
+		if xa, err := getAttrs(path); err == nil {
+			// Note: we only have the MD5 hash for blobs that we wrote.
+			// For other blobs, md5 will remain nil.
+			md5 = xa.MD5
+		}
 		obj := &driver.ListObject{
 			Key:     key,
 			ModTime: info.ModTime(),
 			Size:    info.Size(),
+			MD5:     md5,
 		}
 		// If using Delimiter, collapse "directories".
 		if opts.Delimiter != "" {
@@ -409,6 +416,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    xa.Metadata,
 		ModTime:     info.ModTime(),
 		Size:        info.Size(),
+		MD5:         xa.MD5,
 	}, nil
 }
 
@@ -428,10 +436,10 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		}
 	}
 	r := io.Reader(f)
-	if length > 0 {
+	if length >= 0 {
 		r = io.LimitReader(r, length)
 	}
-	return reader{
+	return &reader{
 		r: r,
 		c: f,
 		attrs: driver.ReaderAttributes{
@@ -448,25 +456,25 @@ type reader struct {
 	attrs driver.ReaderAttributes
 }
 
-func (r reader) Read(p []byte) (int, error) {
+func (r *reader) Read(p []byte) (int, error) {
 	if r.r == nil {
 		return 0, io.EOF
 	}
 	return r.r.Read(p)
 }
 
-func (r reader) Close() error {
+func (r *reader) Close() error {
 	if r.c == nil {
 		return nil
 	}
 	return r.c.Close()
 }
 
-func (r reader) Attributes() driver.ReaderAttributes {
+func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 
-func (r reader) As(i interface{}) bool { return false }
+func (r *reader) As(i interface{}) bool { return false }
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
@@ -500,10 +508,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		path:  path,
 		attrs: attrs,
 	}
-	if len(opts.ContentMD5) > 0 {
-		w.contentMD5 = opts.ContentMD5
-		w.md5hash = md5.New()
-	}
+	w.contentMD5 = opts.ContentMD5
+	w.md5hash = md5.New()
 	return w, nil
 }
 
@@ -516,16 +522,14 @@ type writer struct {
 	md5hash    hash.Hash
 }
 
-func (w writer) Write(p []byte) (n int, err error) {
-	if w.md5hash != nil {
-		if _, err := w.md5hash.Write(p); err != nil {
-			return 0, err
-		}
+func (w *writer) Write(p []byte) (n int, err error) {
+	if _, err := w.md5hash.Write(p); err != nil {
+		return 0, err
 	}
 	return w.f.Write(p)
 }
 
-func (w writer) Close() error {
+func (w *writer) Close() error {
 	err := w.f.Close()
 	if err != nil {
 		return err
@@ -541,9 +545,11 @@ func (w writer) Close() error {
 		return err
 	}
 
+	md5sum := w.md5hash.Sum(nil)
+	w.attrs.MD5 = md5sum
+
 	// Check MD5 hash if necessary.
-	if w.md5hash != nil {
-		md5sum := w.md5hash.Sum(nil)
+	if len(w.contentMD5) > 0 {
 		if !bytes.Equal(md5sum, w.contentMD5) {
 			return fmt.Errorf(
 				"the ContentMD5 you specified did not match what we received (%s != %s)",

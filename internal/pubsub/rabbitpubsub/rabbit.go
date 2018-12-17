@@ -1,6 +1,17 @@
-// It exposes the following types for As:
-// Topic: *amqp.Connection
-// Subscription: *amqp.Connection
+// Copyright 2018 The Go Cloud Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rabbitpubsub
 
 import (
@@ -228,9 +239,40 @@ func toPublishing(m *driver.Message) amqp.Publishing {
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
-func (*topic) IsRetryable(error) bool {
-	// TODO(jba): figure out what errors can be retried.
-	return false
+func (*topic) IsRetryable(err error) bool {
+	return isRetryable(err)
+}
+
+func isRetryable(err error) bool {
+	aerr, ok := err.(*amqp.Error)
+	if !ok {
+		return false
+	}
+	// amqp.Error has a Recover field which sounds like it should mean "retryable".
+	// But it actually means "can be recovered by retrying later or with different
+	// parameters," which is not what we want. The error codes for which Recover is
+	// true, defined in the isSoftExceptionCode function of
+	// github.com/streadway/amqp/spec091.go, include things like NotFound and
+	// AccessRefused, which require outside action.
+	//
+	// The following are the codes which might be resolved by retry without external
+	// action, according to the AMQP 0.91 spec
+	// (https://www.rabbitmq.com/amqp-0-9-1-reference.html#constants). The quotations
+	// are from that page.
+	switch aerr.Code {
+	case amqp.ContentTooLarge:
+		// "The client attempted to transfer content larger than the server could
+		// accept at the present time. The client may retry at a later time."
+		return true
+
+	case amqp.ConnectionForced:
+		// "An operator intervened to close the connection for some reason. The
+		// client may retry at some later date."
+		return true
+
+	default:
+		return false
+	}
 }
 
 // As implements driver.Topic.As.
@@ -408,9 +450,8 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (*subscription) IsRetryable(error) bool {
-	// TODO(jba): figure out what errors can be retried.
-	return false
+func (*subscription) IsRetryable(err error) bool {
+	return isRetryable(err)
 }
 
 // As implements driver.Subscription.As.

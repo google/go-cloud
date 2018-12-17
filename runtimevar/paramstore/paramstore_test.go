@@ -34,19 +34,17 @@ import (
 const region = "us-east-2"
 
 type harness struct {
-	client  *Client
 	session client.ConfigProvider
 	closer  func()
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, _, done := setup.NewAWSSession(t, region)
-	client := NewClient(sess)
-	return &harness{client: client, session: sess, closer: done}, nil
+	return &harness{session: sess, closer: done}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return h.client.newWatcher(name, decoder, nil)
+	return newWatcher(h.session, name, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
