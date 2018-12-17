@@ -36,7 +36,7 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 	for k, vv := range req.Header {
 		newReq.Header[k] = vv
 	}
-	// Append, don't overwrite.
+	// Append to the User-Agent string to preserve other information.
 	newReq.Header.Set("User-Agent", req.UserAgent()+" "+GoCloudUserAgent)
 	return t.base.RoundTrip(&newReq)
 }
