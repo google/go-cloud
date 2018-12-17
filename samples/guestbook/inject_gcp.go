@@ -53,7 +53,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
 func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, flags.bucket, client, nil)
+	return gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL
@@ -78,7 +78,7 @@ func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, proje
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := runtimeconfigurator.NewVariable(name, client, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := runtimeconfigurator.NewVariable(client, name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

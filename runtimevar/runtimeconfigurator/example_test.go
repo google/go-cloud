@@ -52,7 +52,7 @@ func Example() {
 	}
 
 	// Create a variable object to watch for changes.
-	v, err := runtimeconfigurator.NewVariable(name, client, decoder, nil)
+	v, err := runtimeconfigurator.NewVariable(client, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -34,15 +34,15 @@ import (
 )
 
 // NewVariable constructs a runtimevar.Variable that watches AWS Parameter Store.
-func NewVariable(name string, sess client.ConfigProvider, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := newWatcher(name, sess, decoder, opts)
+func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(sess, name, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func newWatcher(name string, sess client.ConfigProvider, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
