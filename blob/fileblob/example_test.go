@@ -12,44 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcsblob_test
+package fileblob_test
 
 import (
 	"context"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
 
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/gcsblob"
-	"gocloud.dev/gcp"
+	"gocloud.dev/blob/fileblob"
 )
 
 func Example() {
-	ctx := context.Background()
 
-	// Load credentials for GCP.
-	// This example uses the default approach; see
-	// https://cloud.google.com/docs/authentication/production
-	// for more info on alternatives.
-	creds, err := gcp.DefaultCredentials(ctx)
+	// For this example, create a temporary directory.
+	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
 
-	// Create an HTTP client.
-	// This example uses the default HTTP transport and the credentials created
-	// above.
-	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	// Create a file-based bucket.
+	_, err = fileblob.OpenBucket(dir, nil)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
-
-	// Create a *blob.Bucket.
-	_, _ = gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
 
 	// Output:
 }
 
 func Example_open() {
-	_, _ = blob.Open(context.Background(), "gs://my-bucket")
+	// For this example, create a temporary directory.
+	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	_, err = blob.Open(context.Background(), path.Join("file://", dir))
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Output:
 }
