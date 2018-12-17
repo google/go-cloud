@@ -19,11 +19,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -73,6 +73,8 @@ const (
 var (
 	maxDownloadRetryRequests = 3    // download retry policy
 	defaultPageSize          = 1000 // default page size for ListPaged
+	defaultUploadBuffers     = 5    // configure the number of rotating buffers that are used when uploading
+	defaultUploadBlockSize   = 8 * 1024 * 1024
 )
 
 // OpenBucket returns an Azure BlockBlob Bucket
@@ -211,7 +213,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		end = azblob.CountToEnd
 	}
 
-	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)	
+	blobDownloadResponse, err := blockBlobURL.Download(ctx, offset, end, azblob.BlobAccessConditions{}, false)
 	if err != nil {
 		return nil, err
 	}
@@ -249,12 +251,12 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) IsNotExist(err error) bool {
-	if serr, ok := err.(azblob.StorageError); ok {		
+	if serr, ok := err.(azblob.StorageError); ok {
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
 		if serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404 {
 			return true
-		}		
-	}	
+		}
+	}
 	return false
 }
 
@@ -271,7 +273,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	if err != nil {
 		return driver.Attributes{}, err
 	}
-	
+
 	return driver.Attributes{
 		ContentType: blobPropertiesResponse.ContentType(),
 		Size:        blobPropertiesResponse.ContentLength(),
@@ -389,9 +391,11 @@ type writer struct {
 	urls        *serviceUrls
 	key         string
 	contentType string
-	blockIDs    []string
-	mux         sync.Mutex
-	writerOpts  *driver.WriterOptions
+	opts        *driver.WriterOptions
+
+	w     *io.PipeWriter
+	donec chan struct{}
+	err   error
 }
 
 // NewTypedWriter implements driver.NewTypedWriter.
@@ -400,81 +404,108 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
 	blockBlobURL := containerURL.NewBlockBlobURL(key)
 
-	var blockIDs []string
+	if opts.Metadata == nil {
+		opts.Metadata = map[string]string{}
+	}
+	if opts.BufferSize == 0 {
+		opts.BufferSize = defaultUploadBlockSize
+	}
+
 	w := &writer{
 		ctx:         ctx,
 		key:         key,
 		contentType: contentType,
-		writerOpts:  opts,
+		opts:        opts,
 		urls: &serviceUrls{
 			serviceURL:   b.urls.serviceURL,
 			containerURL: &containerURL,
 			blockBlobURL: &blockBlobURL,
 		},
-		blockIDs: blockIDs,
+		donec: make(chan struct{}),
 	}
 
 	return w, nil
 }
 
-// Write creates a stated block for incoming buffer (p)
-// Each call to Write will append to the blockId list for final commit in w.Close()
+// Write appends p to w. User must call Close to close the w after done writing.
 func (w *writer) Write(p []byte) (int, error) {
-	chunks := split(p, azblob.BlockBlobMaxStageBlockBytes)
-	var wg sync.WaitGroup
-	wg.Add(len(chunks))
-
-	for _, chunk := range chunks {
-		var index = len(w.blockIDs) + 1
-		blockID := BlockIDIntToBase64(index)
-		w.blockIDs = append(w.blockIDs, blockID)
-
-		go func(c []byte, bid string) {
-			defer wg.Done()
-			w.urls.blockBlobURL.StageBlock(w.ctx, bid, bytes.NewReader(c), azblob.LeaseAccessConditions{}, w.writerOpts.ContentMD5)
-		}(chunk, blockID)
+	if w.w == nil {
+		if err := w.open(); err != nil {
+			return 0, err
+		}
 	}
-	wg.Wait()
 
-	return len(p), nil
+	select {
+	case <-w.donec:
+		return 0, w.err
+	default:
+	}
+
+	return w.w.Write(p)
 }
 
-// All credits to xlab/bytes_split.go
-func split(buf []byte, lim int) [][]byte {
-	var chunk []byte
-	chunks := make([][]byte, 0, len(buf)/lim+1)
-	for len(buf) >= lim {
-		chunk, buf = buf[:lim], buf[lim:]
-		chunks = append(chunks, chunk)
-	}
-	if len(buf) > 0 {
-		chunks = append(chunks, buf)
-	}
-	return chunks
+func (w *writer) open() error {
+	pr, pw := io.Pipe()
+	w.w = pw
+
+	go func() {
+		defer close(w.donec)
+
+		var blobHTTPHeaders = azblob.BlobHTTPHeaders{}
+		if w.contentType != "" {
+			blobHTTPHeaders.ContentType = w.contentType
+		}
+		if len(w.opts.ContentMD5) > 0 {
+			blobHTTPHeaders.ContentMD5 = w.opts.ContentMD5
+		}
+
+		buf, err := ioutil.ReadAll(pr)
+		if err != nil {
+			w.err = err
+			pr.CloseWithError(err)
+			return
+		}
+
+		uploadOpts := azblob.UploadStreamToBlockBlobOptions{BufferSize: w.opts.BufferSize, MaxBuffers: defaultUploadBuffers, Metadata: w.opts.Metadata, BlobHTTPHeaders: blobHTTPHeaders}
+		_, err = azblob.UploadStreamToBlockBlob(w.ctx, bytes.NewReader(buf), *w.urls.blockBlobURL, uploadOpts)
+		w.err = err
+		
+		if err != nil {
+			w.err = err
+			pr.CloseWithError(err)
+			return
+		}
+	}()
+
+	return nil
 }
 
-// Close completes the writer and close it. Any error occurring during write will
+// Close completes the writer and close it. Any error occuring during write will
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {
-	select {
-	case <-w.ctx.Done():
-		return w.ctx.Err()
-	default:
-		metaData := azblob.Metadata{}
-		if w.writerOpts != nil {
-			if len(w.writerOpts.Metadata) > 0 {
-				metaData = w.writerOpts.Metadata
-			}
-		}
-		_, err := w.urls.blockBlobURL.CommitBlockList(w.ctx, w.blockIDs, azblob.BlobHTTPHeaders{}, metaData, azblob.BlobAccessConditions{})
-		if err == nil && w.contentType != "" {
-			var basicHeaders = azblob.BlobHTTPHeaders{
-				ContentType: w.contentType,
-			}
-			w.urls.blockBlobURL.SetHTTPHeaders(w.ctx, basicHeaders, azblob.BlobAccessConditions{})
-		}
-
+	if w.w == nil {
+		w.touch()
+	} else if err := w.w.Close(); err != nil {
 		return err
 	}
+
+	<-w.donec
+
+	return w.err
+}
+
+// touch creates an empty object in the bucket. It is called if user creates a
+// new writer but never calls write before closing it.
+func (w *writer) touch() {
+	if w.w != nil {
+		return
+	}
+	defer close(w.donec)
+
+	blobHTTPHeaders := azblob.BlobHTTPHeaders{}
+	uploadOpts := azblob.UploadStreamToBlockBlobOptions{BufferSize: w.opts.BufferSize, MaxBuffers: defaultUploadBuffers, Metadata: w.opts.Metadata, BlobHTTPHeaders: blobHTTPHeaders}
+	_, err := azblob.UploadStreamToBlockBlob(w.ctx, ioutil.NopCloser(strings.NewReader("")), *w.urls.blockBlobURL, uploadOpts)
+
+	w.err = err
 }
