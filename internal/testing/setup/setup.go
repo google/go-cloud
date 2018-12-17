@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
+// Record is true iff the tests are being run in "record" mode.
 var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
 
 // NewAWSSession creates a new session for testing against AWS.
