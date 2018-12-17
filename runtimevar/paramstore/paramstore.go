@@ -33,32 +33,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// Client stores long-lived variables for connecting to Parameter Store.
-type Client struct {
-	sess client.ConfigProvider
-}
-
-// NewClient returns a constructed Client with the required values.
-func NewClient(p client.ConfigProvider) *Client {
-	return &Client{sess: p}
-}
-
-// NewVariable constructs a runtimevar.Variable object with this package as the driver
-// implementation.
-func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := c.newWatcher(name, decoder, opts)
+// NewVariable constructs a runtimevar.Variable that watches AWS Parameter Store.
+func NewVariable(name string, sess client.ConfigProvider, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(name, sess, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+func newWatcher(name string, sess client.ConfigProvider, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		sess:    c.sess,
+		sess:    sess,
 		name:    name,
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
