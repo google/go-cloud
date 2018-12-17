@@ -423,7 +423,7 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 }
 
 // NewRangeReader returns a Reader to read content from the blob stored at key.
-// It reads at most length (!= 0) bytes starting at offset (>= 0).
+// It reads at most length bytes starting at offset (>= 0).
 // If length is negative, it will read till the end of the blob.
 //
 // If the blob does not exist, NewRangeReader returns an error for which
@@ -436,9 +436,6 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
-	}
-	if length == 0 {
-		return nil, errors.New("blob.NewRangeReader: length cannot be 0")
 	}
 	if opts == nil {
 		opts = &ReaderOptions{}
