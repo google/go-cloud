@@ -21,7 +21,6 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
-	"gocloud.dev/runtimevar/paramstore"
 	"gocloud.dev/server/xrayserver"
 )
 
@@ -39,5 +38,4 @@ var AWS = wire.NewSet(
 // additional configuration.
 var Services = wire.NewSet(
 	rds.CertFetcherSet,
-	paramstore.NewClient,
 	xrayserver.Set)

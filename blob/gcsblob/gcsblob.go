@@ -109,7 +109,7 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, u.Host, client, opts)
+	return openBucket(ctx, client, u.Host, opts)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
@@ -131,7 +131,7 @@ type Options struct {
 }
 
 // openBucket returns a GCS Bucket that communicates using the given HTTP client.
-func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*bucket, error) {
+func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*bucket, error) {
 	if client == nil {
 		return nil, errors.New("gcsblob.OpenBucket: client is required")
 	}
@@ -150,8 +150,8 @@ func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, 
 
 // OpenBucket returns a *blob.Bucket backed by GCS. See the package
 // documentation for an example.
-func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
-	drv, err := openBucket(ctx, bucketName, client, opts)
+func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
 		return nil, err
 	}
