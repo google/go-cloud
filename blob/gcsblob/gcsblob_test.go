@@ -240,7 +240,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create driver impl.
-			drv, err := openBucket(ctx, test.bucketName, client, nil)
+			drv, err := openBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -251,7 +251,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create concrete type.
-			_, err = OpenBucket(ctx, test.bucketName, client, nil)
+			_, err = OpenBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
