@@ -57,6 +57,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 
 	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"
@@ -138,7 +139,8 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	if bucketName == "" {
 		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
+	// We wrap the provided http.Client to add a Go Cloud User-Agent.
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(useragent.HTTPClient(&client.Client)))
 	if err != nil {
 		return nil, err
 	}
