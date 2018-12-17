@@ -237,6 +237,7 @@ func (w *worker) repoConfig(ctx context.Context, client *github.Client, owner, r
 		ready:  done,
 		config: *defaultRepoConfig(),
 	}
+	w.configCache[cacheKey] = ent
 	w.mu.Unlock()
 	defer func() {
 		ent.fetched = time.Now()
