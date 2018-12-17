@@ -46,17 +46,17 @@ func resourceName(name string) ResourceName {
 }
 
 type harness struct {
-	client *Client
+	client pb.RuntimeConfigManagerClient
 	closer func()
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	ctx := context.Background()
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
-	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
+	client := pb.NewRuntimeConfigManagerClient(conn)
 	rn := resourceName("")
 	// Ignore errors if the config already exists.
-	_, _ = client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
+	_, _ = client.CreateConfig(ctx, &pb.CreateConfigRequest{
 		Parent: "projects/" + rn.ProjectID,
 		Config: &pb.RuntimeConfig{
 			Name:        rn.configPath(),
@@ -66,19 +66,19 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{
 		client: client,
 		closer: func() {
-			_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+			_, _ = client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
 			done()
 		},
 	}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return h.client.newWatcher(resourceName(name), decoder, nil)
+	return newWatcher(resourceName(name), h.client, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	_, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
+	_, err := h.client.CreateVariable(ctx, &pb.CreateVariableRequest{
 		Parent: rn.configPath(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
@@ -90,7 +90,7 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	_, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+	_, err := h.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
 		Name: rn.String(),
 		Variable: &pb.Variable{
 			Contents: &pb.Variable_Value{Value: val},
@@ -101,7 +101,7 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	rn := resourceName(name)
-	_, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
+	_, err := h.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
 	return err
 }
 

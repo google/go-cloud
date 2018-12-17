@@ -30,6 +30,7 @@ import (
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
+	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"net/http"
 )
 
@@ -78,8 +79,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 		return nil, nil, err
 	}
-	paramstoreClient := paramstore.NewClient(sessionSession)
-	variable, err := awsMOTDVar(ctx, paramstoreClient, flags)
+	variable, err := awsMOTDVar(ctx, sessionSession, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -153,8 +153,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 		return nil, nil, err
 	}
-	client := runtimeconfigurator.NewClient(runtimeConfigManagerClient)
-	variable, cleanup4, err := gcpMOTDVar(ctx, client, projectID, flags)
+	variable, cleanup4, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -234,8 +233,8 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
-func awsMOTDVar(ctx context.Context, client2 *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client2.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
+	return paramstore.NewVariable(flags.motdVar, sess, runtimevar.StringDecoder, &paramstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -264,13 +263,13 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
-func gcpMOTDVar(ctx context.Context, client2 *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
+func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client2.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := runtimeconfigurator.NewVariable(name, client2, runtimevar.StringDecoder, &runtimeconfigurator.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
