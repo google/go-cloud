@@ -37,7 +37,7 @@ func Example() {
 	}
 
 	// Create a *blob.Bucket.
-	_, _ = s3blob.OpenBucket(ctx, "my-bucket", sess, nil)
+	_, _ = s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
 
 	// Output:
 }

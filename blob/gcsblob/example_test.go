@@ -43,7 +43,7 @@ func Example() {
 	}
 
 	// Create a *blob.Bucket.
-	_, _ = gcsblob.OpenBucket(ctx, "my-bucket", client, nil)
+	_, _ = gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
 
 	// Output:
 }
