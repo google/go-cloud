@@ -59,15 +59,15 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func NewVariable(name ResourceName, client pb.RuntimeConfigManagerClient, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := newWatcher(name, client, decoder, opts)
+func NewVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(client, name, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func newWatcher(name ResourceName,client pb.RuntimeConfigManagerClient, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
+func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
