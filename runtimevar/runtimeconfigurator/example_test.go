@@ -23,27 +23,17 @@ import (
 	"gocloud.dev/runtimevar/runtimeconfigurator"
 )
 
-func ExampleNewClient() {
+func Example() {
 	ctx := context.Background()
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	stub, cleanup, err := runtimeconfigurator.Dial(ctx, creds.TokenSource)
+	client, cleanup, err := runtimeconfigurator.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	client := runtimeconfigurator.NewClient(stub)
-
-	// Now use the client.
-	_ = client
-}
-
-func ExampleClient_NewVariable() {
-	// Assume client was created at server startup.
-	ctx := context.Background()
-	client := openClient()
 
 	// MyAppConfig is an example unmarshaled type for configuration stored in key
 	// "projects/projectID/configs/configName/variables/appConfig". Runtime
@@ -62,7 +52,7 @@ func ExampleClient_NewVariable() {
 	}
 
 	// Create a variable object to watch for changes.
-	v, err := client.NewVariable(name, decoder, nil)
+	v, err := runtimeconfigurator.NewVariable(name, client, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,8 +68,4 @@ func ExampleClient_NewVariable() {
 	// Value will always be of the decoder's type.
 	cfg := snapshot.Value.(*MyAppConfig)
 	log.Println(cfg.MsgOfTheDay)
-}
-
-func openClient() *runtimeconfigurator.Client {
-	return nil
 }
