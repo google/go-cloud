@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -49,6 +50,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	conn, err := grpc.DialContext(ctx, endPoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
+		grpc.WithUserAgent(useragent.GoCloudUserAgent),
 	)
 	if err != nil {
 		return nil, nil, err
