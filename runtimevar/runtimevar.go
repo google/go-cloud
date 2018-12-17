@@ -41,7 +41,9 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"reflect"
+	"sync"
 	"time"
 
 	"gocloud.dev/runtimevar/driver"
@@ -96,6 +98,9 @@ type Variable struct {
 	watcher  driver.Watcher
 	nextCall time.Time
 	prev     driver.State
+
+	mu sync.Mutex
+	w  *watcher
 }
 
 // New creates a new *Variable based on a specific driver implementation.
@@ -116,7 +121,21 @@ func New(w driver.Watcher) *Variable {
 //
 // Watch is not goroutine-safe; typical use is to call it in a single
 // goroutine in a loop.
+//
+// Alternatively, use Latest (and optionally InitLatest) to retrieve the latest
+// good config. If Latest or InitLatest has been called, Watch panics.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+	c.mu.Lock()
+	if c.w != nil {
+		panic("Watch called after InitLatest")
+	}
+	c.mu.Unlock()
+	return c.watch(ctx)
+}
+
+// Implements Watch above, minus the check to ensure that it's not being
+// called after Latest/InitLatest.
+func (c *Variable) watch(ctx context.Context) (Snapshot, error) {
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {
@@ -148,8 +167,123 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	}
 }
 
-// Close closes the Variable; don't call Watch after this.
+// ErrNoValue is returned from Latest if no good value of the variable has
+// been read.
+var ErrNoValue = errors.New("runtimevar: no good value received")
+
+// InitLatest prepares Variable for Latest to be called.
+//
+// It starts a goroutine that calls Watch and saves the last good value.
+// Errors received from Watch are written to errCh so that they can be logged
+// by the application; errCh may be nil to ignore errors. If non-nil, errCh will
+// be closed as part of Close.
+//
+// InitLatest blocks until ctx is done or until a good value of the variable
+// is read, whichever is first. ctx may be nil to avoid blocking entirely.
+// Typically it is called during application initialization with a short or nil
+// timeout.
+func (c *Variable) InitLatest(ctx context.Context, errCh chan<- error) {
+	c.mu.Lock()
+	if c.w == nil {
+		// First time. Create and start a background watcher.
+		ctx, cancel := context.WithCancel(context.Background())
+		c.w = &watcher{
+			cancel:  cancel,
+			closeCh: make(chan bool),
+			goodCh:  make(chan bool),
+		}
+		go c.w.watch(ctx, c, errCh)
+	}
+	c.mu.Unlock()
+
+	// If ctx is provided, block until it is done or until a good value
+	// is received.
+	if ctx != nil {
+		select {
+		case <-ctx.Done():
+		case <-c.w.goodCh:
+		}
+	}
+}
+
+// Latest always returns the last good value of the variable, or ErrNoValue
+// if no good value has been received.
+//
+// Latest blocks until ctx is done or until a good value of the variable
+// is read, whichever is first. ctx may be nil to avoid blocking entirely.
+// Typically it is called when processing a request, with the request context.
+//
+// Latest calls InitLatest, so it is not necessary to call InitLatest
+// explicitly unless you want to prime fetching of the variable's value
+// or process errors via errCh.
+func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
+	// InitLatest ensures c.w is set, and does any needed
+	// blocking for ctx.
+	c.InitLatest(ctx, nil)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.w.latest()
+}
+
+type watcher struct {
+	cancel  func()
+	closeCh chan bool // a single boolean value is written during shutdown
+	goodCh  chan bool // closed when a good value is received
+
+	mu       sync.Mutex
+	lastGood *Snapshot
+}
+
+// watch calls v.Watch in a loop, saving good values in lastGood.
+func (w *watcher) watch(ctx context.Context, v *Variable, errCh chan<- error) {
+	for ctx.Err() == nil {
+		s, err := v.watch(ctx)
+		if err != nil {
+			if errCh != nil {
+				// TODO: should this be non-blocking?
+				errCh <- err
+			}
+			continue
+		}
+		// Got a good value!
+		w.mu.Lock()
+		if w.lastGood == nil {
+			close(w.goodCh)
+		}
+		w.lastGood = &s
+		w.mu.Unlock()
+	}
+	// Shutting down.
+	if errCh != nil {
+		close(errCh)
+	}
+	w.closeCh <- true
+}
+
+func (w *watcher) latest() (Snapshot, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.lastGood == nil {
+		return Snapshot{}, ErrNoValue
+	}
+	return *w.lastGood, nil
+}
+
+func (w *watcher) close() {
+	w.cancel()
+	<-w.closeCh
+}
+
+// Close closes the Variable. The variable is unusable after Close returns.
 func (c *Variable) Close() error {
+	c.mu.Lock()
+	if c.w != nil {
+		c.w.close()
+		c.w = nil
+	}
+	c.mu.Unlock()
 	err := c.watcher.Close()
 	return wrapError(c.watcher, err)
 }

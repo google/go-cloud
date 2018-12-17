@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,7 +51,8 @@ func (s *state) As(i interface{}) bool {
 	return false
 }
 
-// fakeWatcher is a fake implementation of driver.Watcher.
+// fakeWatcher is a fake implementation of driver.Watcher that verifies a
+// specific set of calls to driver.WatchVariable are made.
 type fakeWatcher struct {
 	t     *testing.T
 	calls []*state
@@ -96,7 +98,7 @@ type watchResp struct {
 	err  bool
 }
 
-func TestVariable(t *testing.T) {
+func TestVariable_Watch(t *testing.T) {
 
 	const (
 		v1 = "foo"
@@ -200,6 +202,207 @@ func TestVariable(t *testing.T) {
 	}
 }
 
+// fakeStableWatcher is a fake implementation of driver.Watcher that always
+// returns state.
+type fakeStableWatcher struct {
+	mu    sync.Mutex
+	state *state
+}
+
+func (w *fakeStableWatcher) Set(s *state) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.state = s
+}
+
+func (w *fakeStableWatcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.state, 0
+}
+
+func (*fakeStableWatcher) Close() error                          { return nil }
+func (*fakeStableWatcher) ErrorAs(err error, i interface{}) bool { return false }
+
+func TestVariable_Latest(t *testing.T) {
+	const content1, content2 = "foo", "bar"
+	const numGoroutines = 100
+	const delay = 10 * time.Millisecond
+
+	fake := &fakeStableWatcher{state: &state{err: errFake}}
+	v := New(fake)
+	defer v.Close()
+
+	// InitLatest should block indefinitely since there's no good value
+	var mu sync.Mutex
+	var errs []error
+	errCh := make(chan error)
+	go func() {
+		for {
+			err, ok := <-errCh
+			if !ok {
+				return
+			}
+			mu.Lock()
+			errs = append(errs, err)
+			mu.Unlock()
+		}
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), delay)
+	defer cancel()
+	v.InitLatest(ctx, errCh)
+	if ctx.Err() == nil {
+		t.Error("InitLatest returned before ctx was done, expected it to time out")
+	}
+
+	// Similarly, Latest should block.
+	ctx, cancel = context.WithTimeout(context.Background(), delay)
+	defer cancel()
+	_, err := v.Latest(ctx)
+	if ctx.Err() == nil {
+		t.Error("Latest returned before ctx was done, expected it to time out")
+	}
+	if err != ErrNoValue {
+		t.Errorf("got err %v, want %v", err, ctx.Err())
+	}
+
+	// InitLatest and Latest should work with nil ctx, and not block.
+	v.InitLatest(nil, nil)
+	_, err = v.Latest(nil)
+	if err != ErrNoValue {
+		t.Errorf("got err %v, want %v", err, ctx.Err())
+	}
+
+	// Call Latest concurrently. There's still no value.
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			_, err := v.Latest(nil)
+			if err != ErrNoValue {
+				t.Errorf("got error %v, want %v", err, errFake)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// Set a value. At some point after this, Latest should start returning
+	// a Snapshot with Value set to content1.
+	fake.Set(&state{val: content1})
+
+	// Call Latest concurrently, only exiting each goroutine when they
+	// see the content1 value.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(nil)
+				if err != nil {
+					continue
+				}
+				if val.Value.(string) != content1 {
+					t.Errorf("got %v want %s", val, content1)
+				}
+				wg.Done()
+				return
+			}
+		}()
+	}
+	wg.Wait()
+
+	// We should have accumulated some errors by now.
+	mu.Lock()
+	nErrs := len(errs)
+	if nErrs == 0 {
+		t.Errorf("got %d errors, want > 0", nErrs)
+	}
+	mu.Unlock()
+
+	// Set a different value. At some point after this, Latest should start
+	// returning a Snapshot with Value set to content2.
+	fake.Set(&state{val: content2})
+
+	// Call Latest concurrently, only exiting each goroutine when they
+	// see the content1 value.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(nil)
+				if err != nil {
+					// Errors are unexpected at this point.
+					t.Error(err)
+				}
+				if val.Value.(string) == content1 {
+					// Still seeing the old value.
+					continue
+				}
+				if val.Value.(string) != content2 {
+					t.Errorf("got %v want %s", val, content2)
+				}
+				wg.Done()
+				return
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Set an error value. Latest should still return content2, but the
+	// new error should be reported to errCh.
+	fake.Set(&state{err: errors.New("a different error")})
+
+	// Call Latest concurrently. The test will be flaky if some of them
+	// start getting errors.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(nil)
+				if err != nil {
+					// Errors are unexpected at this point.
+					t.Error(err)
+				}
+				if val.Value.(string) != content2 {
+					t.Errorf("got %v want %s", val, content2)
+				}
+				wg.Done()
+				return
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Verify that we're getting new errors on errCh. This will block forever
+	// if we don't.
+	n := 0
+	for n <= nErrs {
+		mu.Lock()
+		n = len(errs)
+		mu.Unlock()
+	}
+}
+
+func TestVariable_LatestNoInit(t *testing.T) {
+	const content = "foo"
+
+	fake := &fakeStableWatcher{state: &state{val: content}}
+	v := New(fake)
+	defer v.Close()
+
+	for {
+		s, err := v.Latest(nil)
+		if err != nil {
+			// No value yet.
+			continue
+		}
+		if s.Value.(string) != content {
+			t.Errorf("got %v want %v", s.Value.(string), content)
+		}
+		break
+	}
+}
+
 var errFake = errors.New("fake")
 
 // erroringWatcher implements driver.Watcher.
@@ -213,7 +416,7 @@ func (b *erroringWatcher) WatchVariable(ctx context.Context, prev driver.State) 
 	return &state{err: errFake}, 0
 }
 
-func (r *erroringWatcher) Close() error {
+func (b *erroringWatcher) Close() error {
 	return errFake
 }
 
