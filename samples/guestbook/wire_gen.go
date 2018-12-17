@@ -216,7 +216,7 @@ var (
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
 func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, flags.bucket, cp, nil)
+	return s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
 }
 
 // awsSQLParams is a Wire provider function that returns the RDS SQL connection
@@ -234,7 +234,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return paramstore.NewVariable(flags.motdVar, sess, runtimevar.StringDecoder, &paramstore.Options{
+	return paramstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -244,7 +244,7 @@ func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
 func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, flags.bucket, client2, nil)
+	return gcsblob.OpenBucket(ctx, client2, flags.bucket, nil)
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL
@@ -269,7 +269,7 @@ func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerC
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := runtimeconfigurator.NewVariable(name, client2, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := runtimeconfigurator.NewVariable(client2, name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

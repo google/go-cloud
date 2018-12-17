@@ -12,38 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package s3blob_test
+package memblob_test
 
 import (
 	"context"
+	"log"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/blob/memblob"
 )
 
 func Example() {
-	ctx := context.Background()
 
-	// Create an AWS session.
-	// This example uses defaults for finding credentials, which region to use,
-	// etc.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-	// for more info on available options.
-	sess, err := session.NewSession()
-	if err != nil {
-		// Handle errror.
-		return
-	}
-
-	// Create a *blob.Bucket.
-	_, _ = s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
+	// Create an in-memory bucket.
+	_ = memblob.OpenBucket(nil)
 
 	// Output:
 }
 
 func Example_open() {
-	_, _ = blob.Open(context.Background(), "s3://my-bucket")
-
+	_, err := blob.Open(context.Background(), "mem://")
+	if err != nil {
+		log.Fatal(err)
+	}
 	// Output:
+
 }
