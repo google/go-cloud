@@ -2,18 +2,18 @@
 version: 1
 interactions:
 - request:
-    body: "--f8ea1327c942cb8fe0362244ea9cb733a562009495c2015f906b629c95dd\r\nContent-Type:
+    body: "--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\"}\n\r\n--f8ea1327c942cb8fe0362244ea9cb733a562009495c2015f906b629c95dd\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\n\r\n--f8ea1327c942cb8fe0362244ea9cb733a562009495c2015f906b629c95dd--\r\n"
+      charset=utf-8\"}\n\r\n--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\n\r\n--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=f8ea1327c942cb8fe0362244ea9cb733a562009495c2015f906b629c95dd
+      - multipart/related; boundary=629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4
       User-Agent:
-      - google-api-go-client/0.5
+      - google-api-go-client/0.5 go-cloud/0.1
       X-Goog-Api-Client:
-      - gl-go/1.11.0-rc2 gccl/20180226
+      - gl-go/1.11.0 gccl/20180226
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
     method: POST
   response:
@@ -40,7 +40,7 @@ interactions:
       com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
       com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
       com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
-      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:846)\n\tat
+      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:824)\n\tat
       com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
       io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
       com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
@@ -55,7 +55,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 26 Oct 2018 22:56:33 GMT
+      - Mon, 17 Dec 2018 22:49:25 GMT
       Server:
       - UploadServer
       Vary:
@@ -68,7 +68,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UrWZAfDyvtioaphqQMrDbLRe-KfmPKymoZOiL4uCOBe77_JKNPtdED5EYMgTJl97E_G4FMC-A3HqTkHnycVv0f2_ZHlIg
+      - AEnB2UreAklTaQXhjSEjYxPUxwSvx5efJC-sxzXBsRFBPfETAlVFq4O432ClqcI5XuoZx9sGl0eeheEahwv5tSV7XPIWcKXe5w
     status: 400 Bad Request
     code: 400
     duration: ""
