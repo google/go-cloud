@@ -59,7 +59,7 @@ events.
 
 ## Detailed Design
 
-<img src="design/architecture.svg" alt="Architecture diagram showing GitHub communicating with a webhook endpoint, which sends to a Cloud Pub/Sub queue, which is read by an event worker, which then communicates with GitHub." height="329">
+<img src="architecture.svg" alt="Architecture diagram showing GitHub communicating with a webhook endpoint, which sends to a Cloud Pub/Sub queue, which is read by an event worker, which then communicates with GitHub." height="329">
 
 A highly available webhook endpoint (running on App Engine Standard) will listen
 for webhook events from GitHub and write them to a Cloud Pub/Sub topic. A single
