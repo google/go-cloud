@@ -135,20 +135,28 @@ func (w *wrappedError) Error() string {
 	return "runtimevar: " + w.err.Error()
 }
 
-// Decode is a function type for unmarshaling/decoding bytes into given object.
+// Decode is a function type for unmarshaling/decoding a slice of bytes into
+// an arbitrary type. Decode functions are used when creating a Decoder via
+// NewDecoder. This package provides common Decode functions including
+// GobDecode and JSONDecode.
 type Decode func([]byte, interface{}) error
 
-// Decoder is a helper for decoding bytes into a particular Go type object.  The Variable objects
-// produced by a particular driver.Watcher should always contain the same type for Variable.Value
-// field.  A driver.Watcher can use/construct a Decoder object with an associated type (Type) and
-// decoding function (Func) for decoding retrieved bytes into Variable.Value.
+// Decoder decodes a slice of bytes into a particular Go object.
+//
+// This package provides some common Decoders that you can use directly,
+// including StringDecoder and BytesDecoder. You can also NewDecoder to
+// construct other Decoders.
 type Decoder struct {
 	typ reflect.Type
-	// Func is a Decode function.
 	fn Decode
 }
 
-// NewDecoder constructs a Decoder for given object that uses the given Decode function.
+// NewDecoder returns a Decoder that uses fn to decode a slice of bytes into
+// an object of type obj.
+//
+// This package provides some common Decode functions, including JSONDecode
+// and GobDecode, which can be passed to this function to create Decoders for
+// JSON and gob values.
 func NewDecoder(obj interface{}, fn Decode) *Decoder {
 	return &Decoder{
 		typ: reflect.TypeOf(obj),
@@ -156,7 +164,7 @@ func NewDecoder(obj interface{}, fn Decode) *Decoder {
 	}
 }
 
-// Decode decodes given bytes into an object of type Type using Func.
+// Decode decodes b into a new instance of the target type.
 func (d *Decoder) Decode(b []byte) (interface{}, error) {
 	nv := reflect.New(d.typ).Interface()
 	if err := d.fn(b, nv); err != nil {
@@ -166,19 +174,18 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 	return ptr.Elem().Interface(), nil
 }
 
-// Simple Decoder objects.
 var (
+	// StringDecoder decodes into strings.
 	StringDecoder = NewDecoder("", stringDecode)
 
+	// BytesDecoder copies the slice of bytes.
 	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
-)
 
-// Decode functions.
-var (
+	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
 	JSONDecode = json.Unmarshal
 )
 
-// GobDecode gob decodes bytes into given object.
+// GobDecode can be passed to NewDecoder when decoding gobs (https://golang.org/pkg/encoding/gob/).
 func GobDecode(data []byte, obj interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
