@@ -48,6 +48,10 @@ type Message struct {
 	isAcked bool
 }
 
+func (m *Message) String() string {
+	return fmt.Sprintf("{%q %v}", m.Body, m.Metadata)
+}
+
 // Ack acknowledges the message, telling the server that it does not need to be
 // sent again to the associated Subscription. It returns immediately, but the
 // actual ack is sent in the background, and is not guaranteed to succeed.
