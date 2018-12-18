@@ -32,7 +32,7 @@
 //  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
 //  ...
 //
-// Then, write your application code using the *Bucket type, and you can easily
+// Then, write your application code using the *Bucket type. You can easily
 // reconfigure your initialization code to choose a different provider.
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
