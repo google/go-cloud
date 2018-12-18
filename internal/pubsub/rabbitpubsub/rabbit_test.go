@@ -59,8 +59,9 @@ func TestConformance(t *testing.T) {
 	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil
 	}
+	_, isFake := mustDialRabbit(t).(*fakeConnection)
 	asTests := []drivertest.AsTest{
-		rabbitAsTest{},
+		rabbitAsTest{isFake},
 	}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
@@ -200,6 +201,7 @@ func TestRunWithContext(t *testing.T) {
 func declareExchange(conn amqpConnection, name string) error {
 	ch, err := conn.Channel()
 	if err != nil {
+		panic(err)
 		return err
 	}
 	defer ch.Close()
@@ -215,32 +217,38 @@ func bindQueue(conn amqpConnection, queueName, exchangeName string) error {
 	return ch.QueueDeclareAndBind(queueName, exchangeName)
 }
 
-type rabbitAsTest struct{}
+type rabbitAsTest struct {
+	usingFake bool
+}
 
 func (rabbitAsTest) Name() string {
 	return "rabbit test"
 }
 
-func (rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
+func (r rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
 	var conn2 amqp.Connection
 	if top.As(&conn2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
 	}
-	var conn3 *amqp.Connection
-	if !top.As(&conn3) {
-		return fmt.Errorf("cast failed for %T", &conn3)
+	if !r.usingFake {
+		var conn3 *amqp.Connection
+		if !top.As(&conn3) {
+			return fmt.Errorf("cast failed for %T", &conn3)
+		}
 	}
 	return nil
 }
 
-func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var conn2 amqp.Connection
 	if sub.As(&conn2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
 	}
-	var conn3 *amqp.Connection
-	if !sub.As(&conn3) {
-		return fmt.Errorf("cast failed for %T", &conn3)
+	if !r.usingFake {
+		var conn3 *amqp.Connection
+		if !sub.As(&conn3) {
+			return fmt.Errorf("cast failed for %T", &conn3)
+		}
 	}
 	return nil
 }

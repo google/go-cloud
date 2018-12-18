@@ -282,8 +282,8 @@ func (t *topic) As(i interface{}) bool {
 		return false
 	}
 	conn, ok := t.conn.(*connection)
-	if !ok { // running against the fake; pretend to succeed
-		return true
+	if !ok { // running against the fake
+		return false
 	}
 	*c = conn.conn
 	return true
@@ -461,8 +461,8 @@ func (s *subscription) As(i interface{}) bool {
 		return false
 	}
 	conn, ok := s.conn.(*connection)
-	if !ok { // running against the fake; pretend to succeed
-		return true
+	if !ok { // running against the fake
+		return false
 	}
 	*c = conn.conn
 	return true
