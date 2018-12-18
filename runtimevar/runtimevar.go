@@ -174,23 +174,23 @@ type Decode func([]byte, interface{}) error
 // field.  A driver.Watcher can use/construct a Decoder object with an associated type (Type) and
 // decoding function (Func) for decoding retrieved bytes into Variable.Value.
 type Decoder struct {
-	Type reflect.Type
+	typ reflect.Type
 	// Func is a Decode function.
-	Func Decode
+	fn Decode
 }
 
 // NewDecoder constructs a Decoder for given object that uses the given Decode function.
 func NewDecoder(obj interface{}, fn Decode) *Decoder {
 	return &Decoder{
-		Type: reflect.TypeOf(obj),
-		Func: fn,
+		typ: reflect.TypeOf(obj),
+		fn:  fn,
 	}
 }
 
 // Decode decodes given bytes into an object of type Type using Func.
 func (d *Decoder) Decode(b []byte) (interface{}, error) {
-	nv := reflect.New(d.Type).Interface()
-	if err := d.Func(b, nv); err != nil {
+	nv := reflect.New(d.typ).Interface()
+	if err := d.fn(b, nv); err != nil {
 		return nil, err
 	}
 	ptr := reflect.ValueOf(nv)
@@ -199,15 +199,9 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 
 // Simple Decoder objects.
 var (
-	StringDecoder = &Decoder{
-		Type: reflect.TypeOf(""),
-		Func: stringDecode,
-	}
+	StringDecoder = NewDecoder("", stringDecode)
 
-	BytesDecoder = &Decoder{
-		Type: reflect.TypeOf([]byte{}),
-		Func: bytesDecode,
-	}
+	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
 )
 
 // Decode functions.
@@ -221,15 +215,13 @@ func GobDecode(data []byte, obj interface{}) error {
 }
 
 func stringDecode(b []byte, obj interface{}) error {
-	// obj is a pointer to a string.
-	v := reflect.ValueOf(obj).Elem()
-	v.SetString(string(b))
+	v := obj.(*string)
+	*v = string(b)
 	return nil
 }
 
 func bytesDecode(b []byte, obj interface{}) error {
-	// obj is a pointer to []byte.
-	v := reflect.ValueOf(obj).Elem()
-	v.SetBytes(b)
+	v := obj.(*[]byte)
+	*v = b[:]
 	return nil
 }
