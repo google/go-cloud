@@ -134,12 +134,11 @@ func (s *state) As(i interface{}) bool {
 	if s.raw == nil {
 		return false
 	}
-	switch p := i.(type) {
-	case **pb.Variable:
-		*p = s.raw
-	default:
+	p, ok := i.(**pb.Variable)
+	if !ok {
 		return false
 	}
+	*p = s.raw
 	return true
 }
 
