@@ -52,12 +52,7 @@ type State interface {
 // JSON string).
 //
 // Providers that don't have raw bytes may dictate the type of the exposed
-// Snapshot.Value, or expose custom decooding logic.
-//
-// Implementation note: We considered having the driver interface return a
-// raw []byte value, and doing all of the decoding in the concrete type. This
-// would avoid the duplicate decoding in many providers, but makes it more
-// difficult to support providers that don't store configuration in raw bytes.
+// Snapshot.Value, or expose custom decoding logic.
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil.
