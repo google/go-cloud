@@ -162,8 +162,9 @@ type Subscription struct {
 	mu sync.Mutex
 
 	// q is the local queue of messages downloaded from the server.
-	q   []*Message
-	err error
+	q     []*Message
+	err   error
+	waitc chan struct{} // for goroutines waiting on ReceiveBatch
 
 	// cancel cancels all SendAcks calls.
 	cancel func()
@@ -175,54 +176,84 @@ type Subscription struct {
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
 func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.err != nil {
-		return nil, s.err
-	}
-	if len(s.q) == 0 {
-		if err := s.getNextBatch(ctx); err != nil {
+	for {
+		// The lock is always held here, at the top of the loop.
+		if err := ctx.Err(); err != nil {
+			// The context is done. Return its error.
 			return nil, err
 		}
+		if s.err != nil {
+			// The Subscription is in a permanent error state. Return the error.
+			return nil, s.err
+		}
+		if len(s.q) > 0 {
+			// At least one message is available. Return it.
+			m := s.q[0]
+			s.q = s.q[1:]
+			return m, nil
+		}
+		if s.waitc != nil {
+			// A call to ReceiveBatch is in flight. Wait for it.
+			waitc := s.waitc
+			s.mu.Unlock()
+			select {
+			case <-waitc:
+			case <-ctx.Done():
+			}
+			s.mu.Lock()
+			continue
+		}
+		// No messages are available and there are no calls to ReceiveBatch in flight.
+		// Make a call.
+		s.waitc = make(chan struct{})
+		s.mu.Unlock()
+		// Even though the mutex is unlocked, only one goroutine can be here.
+		// The only way here is if s.waitc == nil. This goroutine just set
+		// s.waitc to non-nil while holding the lock.
+		msgs, err := getNextBatch(ctx, s.driver, s.ackBatcher)
+		s.mu.Lock()
+		close(s.waitc)
+		s.waitc = nil
+		if err != nil {
+			// This goroutine's call failed, perhaps because its context was done.
+			// Some waiting goroutine will wake up when s.waitc is closed,
+			// go to the top of the loop, and (since s.q is empty and s.waitc is
+			// now nil) will try the RPC for itself.
+			return nil, err
+		}
+		s.q = append(s.q, msgs...)
 	}
-	m := s.q[0]
-	s.q = s.q[1:]
-	return m, nil
 }
 
-// getNextBatch gets the next batch of messages from the server and saves it in
-// s.q.
-func (s *Subscription) getNextBatch(ctx context.Context) error {
+// getNextBatch gets the next batch of messages from the server and returns it.
+func getNextBatch(ctx context.Context, d driver.Subscription, ackBatcher driver.Batcher) ([]*Message, error) {
 	var msgs []*driver.Message
 	for len(msgs) == 0 {
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		err := retry.Call(ctx, gax.Backoff{}, d.IsRetryable, func() error {
 			var err error
 			// TODO(#691): dynamically adjust maxMessages
 			const maxMessages = 10
-			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			msgs, err = d.ReceiveBatch(ctx, maxMessages)
 			return err
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	s.q = nil
+	var q []*Message
 	for _, m := range msgs {
 		id := m.AckID
-		// size is an estimate of the size of a single AckID in bytes.
-		const size = 8
-		s.q = append(s.q, &Message{
+		q = append(q, &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.AddNoWait(id)
+				ackBatcher.AddNoWait(id)
 			},
 		})
 	}
-	return nil
+	return q, nil
 }
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
