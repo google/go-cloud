@@ -66,7 +66,7 @@ func (h *harness) Close() {}
 func (h *harness) Mutable() bool { return false }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, nil)
 }
 
 func TestNew(t *testing.T) {

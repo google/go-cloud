@@ -38,6 +38,36 @@ type Snapshot struct {
 
 	// UpdateTime is the time when the last changed was detected.
 	UpdateTime time.Time
+
+	asFunc func(interface{}) bool
+}
+
+// As converts i to provider-specific types.
+//
+// This function (and the other As functions in this package) are inherently
+// provider-specific, and using them will make that part of your application
+// non-portable, so use with care.
+//
+// See the documentation for the subpackage used to instantiate Variable to see
+// which type(s) are supported.
+//
+// Usage:
+//
+// 1. Declare a variable of the provider-specific type you want to access.
+//
+// 2. Pass a pointer to it to As.
+//
+// 3. If the type is supported, As will return true and copy the
+// provider-specific type into your variable. Otherwise, it will return false.
+//
+// See
+// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+// for more background.
+func (s *Snapshot) As(i interface{}) bool {
+	if s.asFunc == nil {
+		return false
+	}
+	return s.asFunc(i)
 }
 
 // Variable provides the ability to read runtime variables with its blocking Watch method.
@@ -90,33 +120,50 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 		c.prev = cur
 		v, err := cur.Value()
 		if err != nil {
-			return Snapshot{}, wrapError(err)
+			return Snapshot{}, wrapError(c.watcher, err)
 		}
-		return Snapshot{Value: v, UpdateTime: cur.UpdateTime()}, nil
+		return Snapshot{
+			Value:      v,
+			UpdateTime: cur.UpdateTime(),
+			asFunc:     cur.As,
+		}, nil
 	}
 }
 
 // Close cleans up any resources used by the Variable object.
 func (c *Variable) Close() error {
 	err := c.watcher.Close()
-	return wrapError(err)
+	return wrapError(c.watcher, err)
 }
 
 // wrappedError is used to wrap all errors returned by drivers so that users
 // are not given access to provider-specific errors.
 type wrappedError struct {
 	err error
+	w   driver.Watcher
 }
 
-func wrapError(err error) error {
+func wrapError(w driver.Watcher, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &wrappedError{err: err}
+	return &wrappedError{w: w, err: err}
 }
 
 func (w *wrappedError) Error() string {
 	return "runtimevar: " + w.err.Error()
+}
+
+// ErrorAs converts i to provider-specific types.
+// See Snapshot.As for more details.
+func ErrorAs(err error, i interface{}) bool {
+	if err == nil || i == nil {
+		return false
+	}
+	if e, ok := err.(*wrappedError); ok {
+		return e.w.ErrorAs(e.err, i)
+	}
+	return false
 }
 
 // Decode is a function type for unmarshaling/decoding bytes into given object.

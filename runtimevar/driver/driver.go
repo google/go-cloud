@@ -38,6 +38,27 @@ type State interface {
 	Value() (interface{}, error)
 	// UpdateTime returns the update time for the variable.
 	UpdateTime() time.Time
+
+	// As allows providers to expose provider-specific types.
+	//
+	// i will be a pointer to the type the user wants filled in.
+	// As should either fill it in and return true, or return false.
+	//
+	// A provider should document the type(s) it support in package
+	// comments, and add conformance tests verifying them.
+	//
+	// A sample implementation might look like this, for supporting foo.MyType:
+	//   mt, ok := i.(*foo.MyType)
+	//   if !ok {
+	//     return false
+	//   }
+	//   *i = foo.MyType{}  // or, more likely, the existing value
+	//   return true
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	As(interface{}) bool
 }
 
 // Watcher watches for updates on a variable and returns an updated Variable object if
@@ -79,4 +100,8 @@ type Watcher interface {
 
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
+
+	// ErrorAs allows providers to expose provider-specific types for returned
+	// errors; see State.As for more details.
+	ErrorAs(error, interface{}) bool
 }

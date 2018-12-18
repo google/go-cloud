@@ -28,6 +28,10 @@
 // * Saving a configuration file in vim using :w will incur events Rename and Create. When the
 // Rename event occurs, the file is temporarily removed and hence Watch will return error.  A
 // follow-up Watch call will then detect the Create event.
+//
+// As
+//
+// filevar does not support any types for As.
 package filevar // import "gocloud.dev/runtimevar/filevar"
 
 import (
@@ -108,6 +112,10 @@ func (s *state) Value() (interface{}, error) {
 
 func (s *state) UpdateTime() time.Time {
 	return s.updateTime
+}
+
+func (s *state) As(i interface{}) bool {
+	return false
 }
 
 // watcher implements driver.Watcher for configurations stored in files.
@@ -245,4 +253,8 @@ func (w *watcher) Close() error {
 	close(w.ch)
 	close(w.closeCh)
 	return err
+}
+
+func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	return false
 }
