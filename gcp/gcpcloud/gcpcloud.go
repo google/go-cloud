@@ -34,5 +34,5 @@ var Services = wire.NewSet(
 	cloudsql.CertSourceSet,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
-	runtimeconfigurator.Set,
+	runtimeconfigurator.Dial,
 	sdserver.Set)
