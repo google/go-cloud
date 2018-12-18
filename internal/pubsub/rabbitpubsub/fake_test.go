@@ -200,30 +200,39 @@ func (ch *fakeChannel) Consume(queueName, consumerName string) (<-chan amqp.Deli
 		// For this simple fake, just deliver one message every once in a while if
 		// any are available, until the consumer is canceled.
 		for {
-			ch.deliverOneMessage(q, delc)
+			m, ok := ch.takeOneMessage(q)
+			if ok {
+				select {
+				case delc <- m:
+				case <-ctx.Done():
+					// ignore error
+					return
+				}
+			}
 			select {
+			case <-time.After(100 * time.Millisecond):
 			case <-ctx.Done():
 				// ignore error
 				return
-			case <-time.After(100 * time.Millisecond):
 			}
 		}
 	}()
 	return delc, nil
 }
 
-// Deliver exactly one message from q to delc, if one is available. We just remove
+// Take a message from q, if one is available. We just remove
 // the message from the queue permanently. In a more sophisticated implementation
 // we'd mark it as outstanding and keep it around until it got acked, but we don't
 // need acks for this fake.
-func (ch *fakeChannel) deliverOneMessage(q *queue, delc chan<- amqp.Delivery) {
+func (ch *fakeChannel) takeOneMessage(q *queue) (amqp.Delivery, bool) {
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 	if len(q.messages) == 0 {
-		return
+		return amqp.Delivery{}, false
 	}
-	delc <- q.messages[0]
+	m := q.messages[0]
 	q.messages = q.messages[1:]
+	return m, true
 }
 
 // Ack is a no-op. (We don't test ack behavior.)
