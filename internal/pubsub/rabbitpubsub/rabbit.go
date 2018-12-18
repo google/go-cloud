@@ -29,34 +29,14 @@ import (
 
 type topic struct {
 	exchange string // the AMQP exchange
-	conn     *amqp.Connection
+	conn     amqpConnection
 
 	mu     sync.Mutex
-	ch     *amqp.Channel            // AMQP channel used for all communication.
+	ch     amqpChannel              // AMQP channel used for all communication.
 	pubc   <-chan amqp.Confirmation // Go channel for server acks of publishes
 	retc   <-chan amqp.Return       // Go channel for "returned" undeliverable messages
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
-
-// Values for the amqp client.
-// See https://www.rabbitmq.com/amqp-0-9-1-reference.html.
-const (
-	// Many methods of the amqp client take a "no-wait" parameter, which
-	// if true causes the client to return without waiting for a server
-	// response. We always want to wait.
-	wait = false
-
-	// Always use the empty routing key. This driver expects to be used with topic
-	// exchanges, which disregard the routing key.
-	routingKey = ""
-
-	// If the message can't be enqueued, return it to the sender rather than silently
-	// dropping it.
-	mandatory = true
-
-	// If there are no waiting consumers, enqueue the message instead of dropping it.
-	immediate = false
-)
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
 // exchange should already exist (for instance, by using
@@ -71,11 +51,11 @@ const (
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
-	return pubsub.NewTopic(newTopic(conn, name))
+	return pubsub.NewTopic(newTopic(&connection{conn}, name))
 
 }
 
-func newTopic(conn *amqp.Connection, name string) *topic {
+func newTopic(conn amqpConnection, name string) *topic {
 	return &topic{
 		conn:     conn,
 		exchange: name,
@@ -99,16 +79,12 @@ func (t *topic) establishChannel(ctx context.Context) error {
 			return nil
 		}
 	}
-	var ch *amqp.Channel
+	var ch amqpChannel
 	err := runWithContext(ctx, func() error {
-		// Create a new channel.
+		// Create a new channel in confirm mode.
 		var err error
 		ch, err = t.conn.Channel()
-		if err != nil {
-			return err
-		}
-		// Put the channel into a mode where confirmations are delivered for each publish.
-		return ch.Confirm(wait)
+		return err
 	})
 	if err != nil {
 		return err
@@ -162,8 +138,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	}()
 
 	for _, m := range ms {
-		pub := toPublishing(m)
-		if err := t.ch.Publish(t.exchange, routingKey, mandatory, immediate, pub); err != nil {
+		if err := t.ch.Publish(t.exchange, toPublishing(m)); err != nil {
 			t.ch = nil // AMQP channel is broken after error
 			return err
 		}
@@ -184,10 +159,12 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 	for nAcks < nMessages {
 		select {
 		case <-ctx.Done():
-			// Channel will be in a weird state (not all publish acks consumed, perhaps)
-			// so re-create it next time.
-			t.ch.Close()
-			t.ch = nil
+			if t.ch != nil {
+				// Channel will be in a weird state (not all publish acks consumed, perhaps)
+				// so re-create it next time.
+				t.ch.Close()
+				t.ch = nil
+			}
 			return ctx.Err()
 
 		case ret, ok := <-t.retc:
@@ -304,7 +281,11 @@ func (t *topic) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
-	*c = t.conn
+	conn, ok := t.conn.(*connection)
+	if !ok { // running against the fake
+		return false
+	}
+	*c = conn.conn
 	return true
 }
 
@@ -320,23 +301,23 @@ func (t *topic) As(i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(conn, name))
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name))
 }
 
 type subscription struct {
-	conn     *amqp.Connection
+	conn     amqpConnection
 	queue    string // the AMQP queue name
 	consumer string // the client-generated name for this particular subscriber
 
 	mu     sync.Mutex
-	ch     *amqp.Channel // AMQP channel used for all communication.
+	ch     amqpChannel // AMQP channel used for all communication.
 	delc   <-chan amqp.Delivery
 	closec <-chan *amqp.Error
 }
 
 var nextConsumer int64 // atomic
 
-func newSubscription(conn *amqp.Connection, name string) *subscription {
+func newSubscription(conn amqpConnection, name string) *subscription {
 	return &subscription{
 		conn:     conn,
 		queue:    name,
@@ -358,7 +339,7 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 			return nil
 		}
 	}
-	var ch *amqp.Channel
+	var ch amqpChannel
 	err := runWithContext(ctx, func() error {
 		// Create a new channel.
 		var err error
@@ -367,12 +348,7 @@ func (s *subscription) establishChannel(ctx context.Context) error {
 			return err
 		}
 		// Subscribe to messages from the queue.
-		s.delc, err = ch.Consume(s.queue, s.consumer,
-			false, // autoAck
-			false, // exclusive
-			false, // noLocal
-			wait,
-			nil) // args
+		s.delc, err = ch.Consume(s.queue, s.consumer)
 		return err
 	})
 	if err != nil {
@@ -399,7 +375,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		select {
 		case <-ctx.Done():
 			// Cancel the Consume.
-			_ = s.ch.Cancel(s.consumer, wait) // ignore the error
+			_ = s.ch.Cancel(s.consumer) // ignore the error
 			s.ch = nil
 			return nil, ctx.Err()
 
@@ -464,7 +440,7 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		err := s.ch.Ack(id.(uint64), false) // multiple=false: acking only this ID
+		err := s.ch.Ack(id.(uint64))
 		if err != nil {
 			s.ch = nil // re-establish channel after an error
 			return err
@@ -484,6 +460,10 @@ func (s *subscription) As(i interface{}) bool {
 	if !ok {
 		return false
 	}
-	*c = s.conn
+	conn, ok := s.conn.(*connection)
+	if !ok { // running against the fake
+		return false
+	}
+	*c = conn.conn
 	return true
 }

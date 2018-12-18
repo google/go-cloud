@@ -28,10 +28,20 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
-// New constructs a runtimevar.Variable that returns value from Watch.
-// Subsequent calls to Watch will block.
+// New constructs a runtimevar.Variable that returns a Snapshot with value from
+// Watch. Subsequent calls to Watch will block.
 func New(value interface{}) *runtimevar.Variable {
 	return runtimevar.New(&watcher{value: value, t: time.Now()})
+}
+
+// NewBytes uses decoder to decode b. If the decode succeeds, it returns
+// New with the decoded value, otherwise it returns NewError with the error.
+func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
+	value, err := decoder.Decode(b)
+	if err != nil {
+		return NewError(err)
+	}
+	return New(value)
 }
 
 // NewError constructs a runtimevar.Variable that returns err from Watch.
@@ -76,9 +86,9 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 }
 
 // Close implements driver.Close.
-func (_ *watcher) Close() error { return nil }
+func (*watcher) Close() error { return nil }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
+func (*watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }

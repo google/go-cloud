@@ -106,6 +106,29 @@ func TestNew(t *testing.T) {
 	}
 }
 
+func TestNewBytes(t *testing.T) {
+	ctx := context.Background()
+	content := "hello world"
+
+	// Decode succeeds.
+	v := NewBytes([]byte(content), runtimevar.StringDecoder)
+	val, err := v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if val.Value != content {
+		t.Errorf("got %v want %v", val.Value, content)
+	}
+
+	// Decode fails.
+	var jsonData []string
+	v = NewBytes([]byte(content), runtimevar.NewDecoder(jsonData, runtimevar.JSONDecode))
+	val, err = v.Watch(ctx)
+	if err == nil {
+		t.Errorf("got nil error and %v, want error", val)
+	}
+}
+
 func TestNewError(t *testing.T) {
 	ctx := context.Background()
 
