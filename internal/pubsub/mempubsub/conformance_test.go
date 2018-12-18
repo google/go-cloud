@@ -34,6 +34,7 @@ func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
+	// A nil *topic behaves like a nonexistent topic.
 	return (*topic)(nil), nil
 }
 
