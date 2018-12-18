@@ -131,8 +131,8 @@ type Decode func([]byte, interface{}) error
 // including StringDecoder and BytesDecoder. You can also NewDecoder to
 // construct other Decoders.
 type Decoder struct {
-	Type reflect.Type
-	Func Decode
+	typ reflect.Type
+	fn Decode
 }
 
 // NewDecoder returns a Decoder that uses fn to decode a slice of bytes into
@@ -143,15 +143,15 @@ type Decoder struct {
 // JSON and gob values.
 func NewDecoder(obj interface{}, fn Decode) *Decoder {
 	return &Decoder{
-		Type: reflect.TypeOf(obj),
-		Func: fn,
+		typ: reflect.TypeOf(obj),
+		fn:  fn,
 	}
 }
 
 // Decode decodes b into a new instance of the target type.
 func (d *Decoder) Decode(b []byte) (interface{}, error) {
-	nv := reflect.New(d.Type).Interface()
-	if err := d.Func(b, nv); err != nil {
+	nv := reflect.New(d.typ).Interface()
+	if err := d.fn(b, nv); err != nil {
 		return nil, err
 	}
 	ptr := reflect.ValueOf(nv)
@@ -160,16 +160,10 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 
 var (
 	// StringDecoder decodes into strings.
-	StringDecoder = &Decoder{
-		Type: reflect.TypeOf(""),
-		Func: stringDecode,
-	}
+	StringDecoder = NewDecoder("", stringDecode)
 
 	// BytesDecoder copies the slice of bytes.
-	BytesDecoder = &Decoder{
-		Type: reflect.TypeOf([]byte{}),
-		Func: bytesDecode,
-	}
+	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
 
 	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
 	JSONDecode = json.Unmarshal
@@ -181,15 +175,13 @@ func GobDecode(data []byte, obj interface{}) error {
 }
 
 func stringDecode(b []byte, obj interface{}) error {
-	// obj is a pointer to a string.
-	v := reflect.ValueOf(obj).Elem()
-	v.SetString(string(b))
+	v := obj.(*string)
+	*v = string(b)
 	return nil
 }
 
 func bytesDecode(b []byte, obj interface{}) error {
-	// obj is a pointer to []byte.
-	v := reflect.ValueOf(obj).Elem()
-	v.SetBytes(b)
+	v := obj.(*[]byte)
+	*v = b[:]
 	return nil
 }
