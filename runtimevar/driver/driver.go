@@ -46,11 +46,13 @@ type State interface {
 // An application can have more than one Watcher, one for each variable.  It is typical
 // to only have one Watcher per variable.
 //
-// A Watcher provider can dictate the type of Variable.Value if the backend service dictates
-// a particular format and type.  If the backend service has the flexibility to store bytes and
-// allow clients to dictate the format, it is better for a Watcher provider to allow users to
-// dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
-// runtimevar.Decoder to facilitate the decoding logic.
+// Many Watcher providers store their configuration data as raw bytes; such
+// providers should include a runtimevar.Decoder in their constructor to allow
+// users to decode the raw bytes into a particular format (e.g., parsing a
+// JSON string).
+//
+// Providers that don't have raw bytes may dictate the type of the exposed
+// Snapshot.Value, or expose custom decoding logic.
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil.
