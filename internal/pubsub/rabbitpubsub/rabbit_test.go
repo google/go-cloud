@@ -14,9 +14,10 @@
 
 package rabbitpubsub
 
-// To run these tests, first run:
+// To run these tests against a real RabbitMQ server, first run:
 //     docker run -d --hostname my-rabbit --name rabbit -p 5672:5672 rabbitmq:3
 // Then wait a few seconds for the server to be ready.
+// If no server is running, the tests will use a fake (see fake_tset.go).
 
 import (
 	"context"
@@ -25,6 +26,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -37,26 +39,35 @@ import (
 
 const rabbitURL = "amqp://guest:guest@localhost:5672/"
 
-func mustDialRabbit(t *testing.T) *amqp.Connection {
+var logOnce sync.Once
+
+func mustDialRabbit(t *testing.T) amqpConnection {
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
-		t.Skipf("skipping because the RabbitMQ server is not up (dial error: %v)", err)
+		logOnce.Do(func() {
+			t.Logf("using the fake because the RabbitMQ server is not up (dial error: %v)", err)
+		})
+		return newFakeConnection()
 	}
-	return conn
+	logOnce.Do(func() {
+		t.Logf("using the RabbitMQ server at %s", rabbitURL)
+	})
+	return &connection{conn}
 }
 
 func TestConformance(t *testing.T) {
 	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil
 	}
+	_, isFake := mustDialRabbit(t).(*fakeConnection)
 	asTests := []drivertest.AsTest{
-		rabbitAsTest{},
+		rabbitAsTest{isFake},
 	}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
 type harness struct {
-	conn *amqp.Connection
+	conn amqpConnection
 	uid  int32 // atomic. Unique ID, so tests don't interact with each other.
 }
 
@@ -187,69 +198,57 @@ func TestRunWithContext(t *testing.T) {
 	}
 }
 
-func declareExchange(conn *amqp.Connection, name string) error {
+func declareExchange(conn amqpConnection, name string) error {
+	ch, err := conn.Channel()
+	if err != nil {
+		panic(err)
+		return err
+	}
+	defer ch.Close()
+	return ch.ExchangeDeclare(name)
+}
+
+func bindQueue(conn amqpConnection, queueName, exchangeName string) error {
 	ch, err := conn.Channel()
 	if err != nil {
 		return err
 	}
 	defer ch.Close()
-	return ch.ExchangeDeclare(
-		name,
-		"fanout", // kind
-		false,    // durable
-		false,    // delete when unused
-		false,    // internal
-		false,    // no-wait
-		nil)      // args
+	return ch.QueueDeclareAndBind(queueName, exchangeName)
 }
 
-func bindQueue(conn *amqp.Connection, queueName, exchangeName string) error {
-	ch, err := conn.Channel()
-	if err != nil {
-		return err
-	}
-	defer ch.Close()
-	q, err := ch.QueueDeclare(
-		queueName,
-		false, // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil)   // arguments
-	if err != nil {
-		return err
-	}
-	return ch.QueueBind(q.Name, q.Name, exchangeName,
-		false, // no-wait
-		nil)   // args
+type rabbitAsTest struct {
+	usingFake bool
 }
-
-type rabbitAsTest struct{}
 
 func (rabbitAsTest) Name() string {
 	return "rabbit test"
 }
 
-func (rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
+func (r rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
 	var conn2 amqp.Connection
 	if top.As(&conn2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
 	}
-	var conn3 *amqp.Connection
-	if !top.As(&conn3) {
-		return fmt.Errorf("cast failed for %T", &conn3)
+	if !r.usingFake {
+		var conn3 *amqp.Connection
+		if !top.As(&conn3) {
+			return fmt.Errorf("cast failed for %T", &conn3)
+		}
 	}
 	return nil
 }
 
-func (rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var conn2 amqp.Connection
 	if sub.As(&conn2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
 	}
-	var conn3 *amqp.Connection
-	if !sub.As(&conn3) {
-		return fmt.Errorf("cast failed for %T", &conn3)
+	if !r.usingFake {
+		var conn3 *amqp.Connection
+		if !sub.As(&conn3) {
+			return fmt.Errorf("cast failed for %T", &conn3)
+		}
 	}
 	return nil
 }
