@@ -24,7 +24,9 @@
 // these provider-specific subpackages and use its exported function(s) to
 // create a *Variable; do not use the New function in this package. For example:
 //
-//  v, err := etcdvar.New("my variable", etcdClient, runtimevar.JSONDecode, nil)
+//  var v *runtimevar.Variable
+//  var err error
+//  v, err = etcdvar.New("my variable", etcdClient, runtimevar.JSONDecode, nil)
 //  ...
 //
 // Then, write your application code using the *Variable type. You can
@@ -148,7 +150,7 @@ type Decode func([]byte, interface{}) error
 // construct other Decoders.
 type Decoder struct {
 	typ reflect.Type
-	fn Decode
+	fn  Decode
 }
 
 // NewDecoder returns a Decoder that uses fn to decode a slice of bytes into
