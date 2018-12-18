@@ -307,6 +307,9 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer cleanup()
 	if err := st.TopicCheck(top); err != nil {
 		t.Error(err)
