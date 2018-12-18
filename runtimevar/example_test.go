@@ -70,4 +70,30 @@ func Example() {
 			log.Printf("Value: %+v", snap.Value.(*DBConfig))
 		}
 	}()
+	// Output:
 }
+
+func Example_NewDecoder_string() {
+	// Configure a JSON decoder for myapp.json to unmarshal into a MyAppConfig object.
+	v, err := filevar.New("/etc/myapp/myapp.json", runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
+	if err != nil {
+		log.Fatalf("Error in constructing variable: %v", err)
+	}
+	v.Close()
+	// Output:
+}
+
+// MyAppConfig is the unmarshaled type for myapp.conf file.
+type MyAppConfig struct {
+	MsgOfTheDay string `json:"msg_of_the_day"`
+}
+
+func ExampleNew() {
+	// Output:
+}
+
+/*
+TODO: (note to self)
+-- Use constantvar in some examples
+-- Use filevar in another one, but actually create the value
+*/
