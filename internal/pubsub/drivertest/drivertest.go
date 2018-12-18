@@ -17,7 +17,6 @@
 package drivertest // import "gocloud.dev/internal/pubsub/drivertest"
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"strconv"
@@ -184,7 +183,11 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Send to the topic.
-	var want []*pubsub.Message
+	type Message struct {
+		Body     string
+		Metadata map[string]string
+	}
+	var want []Message
 	for i := 0; i < 3; i++ {
 		m := &pubsub.Message{
 			Body:     []byte(strconv.Itoa(i)),
@@ -193,23 +196,29 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
-		want = append(want, m)
+		want = append(want, Message{
+			Body:     string(m.Body),
+			Metadata: m.Metadata,
+		})
 	}
 
 	// Receive from the subscription.
-	var got []*pubsub.Message
+	var got []Message
 	for i := 0; i < len(want); i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = append(got, m)
+		got = append(got, Message{
+			Body:     string(m.Body),
+			Metadata: m.Metadata,
+		})
 		m.Ack()
 	}
 
 	// Check that the received messages match the sent ones.
-	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
-	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
+	less := func(x, y Message) bool { return x.Body < y.Body }
+	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less)); diff != "" {
 		t.Error(diff)
 	}
 }
