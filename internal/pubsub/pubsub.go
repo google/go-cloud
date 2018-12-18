@@ -61,6 +61,24 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
+// Value returns a MessageValue based on the Message receiver.
+func (m *Message) Value() MessageValue {
+	return MessageValue{
+		Body:     string(m.Body),
+		Metadata: m.Metadata,
+	}
+}
+
+// MessageValue contains the exported fields of a Message with a UTF8 Body, making it
+// easier to read and compare in diffs and other output.
+type MessageValue struct {
+	// Body contains the content of the message.
+	Body string
+
+	// Metadata has key/value metadata for the message.
+	Metadata map[string]string
+}
+
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
