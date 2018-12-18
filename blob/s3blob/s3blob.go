@@ -81,14 +81,14 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, u.Host, sess, nil)
+	return openBucket(ctx, sess, u.Host, nil)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct{}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (*bucket, error) {
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
 	if sess == nil {
 		return nil, errors.New("s3blob.OpenBucket: sess is required")
 	}
@@ -104,8 +104,8 @@ func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvid
 
 // OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
 // for an example.
-func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
-	drv, err := openBucket(ctx, bucketName, sess, opts)
+func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, sess, bucketName, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -380,15 +380,23 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	if offset > 0 && length < 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-", offset))
-	} else if length > 0 {
+	} else if length == 0 {
+		// AWS doesn't support a zero-length read; we'll read 1 byte and then
+		// ignore it in favor of emptyBody below.
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
+	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
+	body := resp.Body
+	if length == 0 {
+		body = emptyBody
+	}
 	return &reader{
-		body: resp.Body,
+		body: body,
 		attrs: driver.ReaderAttributes{
 			ContentType: aws.StringValue(resp.ContentType),
 			ModTime:     aws.TimeValue(resp.LastModified),

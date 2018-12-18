@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/wire"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
@@ -35,13 +35,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
-)
-
-// Set is a Wire provider set that provides *Client using a default
-// connection to the Runtime Configurator API given a GCP token source.
-var Set = wire.NewSet(
-	Dial,
-	NewClient,
 )
 
 const (
@@ -57,6 +50,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	conn, err := grpc.DialContext(ctx, endPoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
+		grpc.WithUserAgent(useragent.GoCloudUserAgent),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -64,33 +58,23 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	return pb.NewRuntimeConfigManagerClient(conn), func() { conn.Close() }, nil
 }
 
-// A Client constructs runtime variables using the Runtime Configurator API.
-type Client struct {
-	client pb.RuntimeConfigManagerClient
-}
-
-// NewClient returns a new client that makes calls to the given gRPC stub.
-func NewClient(stub pb.RuntimeConfigManagerClient) *Client {
-	return &Client{client: stub}
-}
-
 // NewVariable constructs a runtimevar.Variable object with this package as the driver
 // implementation. Provide a decoder to unmarshal updated configurations into similar
 // objects during the Watch call.
-func (c *Client) NewVariable(name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := c.newWatcher(name, decoder, opts)
+func NewVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(client, name, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func (c *Client) newWatcher(name ResourceName, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
+func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		client:  c.client,
+		client:  client,
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		name:    name.String(),
 		decoder: decoder,
