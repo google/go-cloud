@@ -147,6 +147,7 @@ func TestPublishConcurrently(t *testing.T) {
 
 func TestUnroutable(t *testing.T) {
 	// Expect that we get an error on publish if the exchange has no queue bound to it.
+	// The error should be a MultiError containing one error per message.
 	ctx := context.Background()
 	conn := mustDialRabbit(t)
 	defer conn.Close()
@@ -155,9 +156,23 @@ func TestUnroutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	top := newTopic(conn, "u")
-	err := top.SendBatch(ctx, []*driver.Message{{Body: []byte("")}})
-	if err == nil || !strings.Contains(err.Error(), "NO_ROUTE") {
-		t.Errorf("got %v, want an error with 'NO_ROUTE'", err)
+	msgs := []*driver.Message{
+		{Body: []byte("")},
+		{Body: []byte("")},
+	}
+	err := top.SendBatch(ctx, msgs)
+	merr, ok := err.(MultiError)
+	if !ok {
+		t.Fatalf("got error of type %T, want MultiError", err)
+	}
+	if got, want := len(merr), len(msgs); got != want {
+		fmt.Printf("%+v\n", merr)
+		t.Fatalf("got %d errors, want %d", got, want)
+	}
+	for i, err := range merr {
+		if !strings.Contains(err.Error(), "NO_ROUTE") {
+			t.Errorf("%d: got %v, want an error with 'NO_ROUTE'", i, err)
+		}
 	}
 }
 
