@@ -11,27 +11,10 @@ import (
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/gcppubsub"
 	"google.golang.org/api/option"
-	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 )
-
-func makeGCPTopic(ctx context.Context, topicID string) error {
-	pubClient, cleanup, err := openGCPPubClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-	proj, err := getGCPProjectID()
-	if err != nil {
-		return err
-	}
-	_, err = pubClient.CreateTopic(ctx, &pubsubpb.Topic{
-		Name: gcpTopicName(proj, topicID),
-	})
-	return err
-}
 
 // openGCPTopic returns the GCP topic based on the topic ID.
 func openGCPTopic(ctx context.Context, topicID string) (*pubsub.Topic, func(), error) {
@@ -49,21 +32,6 @@ func openGCPTopic(ctx context.Context, topicID string) (*pubsub.Topic, func(), e
 		cleanup()
 	}
 	return topic, cleanup2, nil
-}
-
-func deleteGCPTopic(ctx context.Context, topicID string) error {
-	pubClient, cleanup, err := openGCPPubClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-	proj, err := getGCPProjectID()
-	if err != nil {
-		return err
-	}
-	return pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{
-		Topic: gcpTopicName(proj, topicID),
-	})
 }
 
 func getGCPProjectID() (gcp.ProjectID, error) {
