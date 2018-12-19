@@ -180,10 +180,6 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 	defer s.mu.Unlock()
 	for {
 		// The lock is always held here, at the top of the loop.
-		if err := ctx.Err(); err != nil {
-			// The context is done. Return its error.
-			return nil, err
-		}
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
 			return nil, s.err
@@ -200,10 +196,12 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 			s.mu.Unlock()
 			select {
 			case <-waitc:
+				s.mu.Lock()
+				continue
 			case <-ctx.Done():
+				s.mu.Lock()
+				return nil, ctx.Err()
 			}
-			s.mu.Lock()
-			continue
 		}
 		// No messages are available and there are no calls to ReceiveBatch in flight.
 		// Make a call.
