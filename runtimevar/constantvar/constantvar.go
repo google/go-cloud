@@ -14,6 +14,10 @@
 
 // Package constantvar provides a runtimevar.Driver implementation for variables
 // that never change.
+//
+// As
+//
+// constantvar does not support any types for As.
 package constantvar // import "gocloud.dev/runtimevar/constantvar"
 
 import (
@@ -53,12 +57,19 @@ type watcher struct {
 	t     time.Time
 }
 
+// Value implements driver.State.Value.
 func (w *watcher) Value() (interface{}, error) {
 	return w.value, w.err
 }
 
+// UpdateTime implements driver.State.UpdateTime.
 func (w *watcher) UpdateTime() time.Time {
 	return w.t
+}
+
+// As implements driver.State.As.
+func (w *watcher) As(i interface{}) bool {
+	return false
 }
 
 // WatchVariable implements driver.WatchVariable.
@@ -76,3 +87,8 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 // Close implements driver.Close.
 func (*watcher) Close() error { return nil }
+
+// ErrorAs implements driver.ErrorAs.
+func (*watcher) ErrorAs(err error, i interface{}) bool {
+	return false
+}

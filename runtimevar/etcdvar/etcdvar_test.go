@@ -16,6 +16,7 @@ package etcdvar
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/coreos/etcd/clientv3"
@@ -82,5 +83,24 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var resp *clientv3.GetResponse
+	if !s.As(&resp) {
+		return errors.New("Snapshot.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	// etcdvar returns a fmt.Errorf error for "not found", so we can't do much here.
+	return nil
 }
