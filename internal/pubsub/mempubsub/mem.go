@@ -17,7 +17,7 @@
 // development and testing.
 //
 // mempubsub does not support any types for As.
-package mempubsub
+package mempubsub // import "gocloud.dev/internal/pubsub/mempubsub"
 
 import (
 	"context"
@@ -25,42 +25,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
 )
 
 var errNotExist = errors.New("mempubsub: topic does not exist")
 
-type Broker struct {
-	mu     sync.Mutex
-	topics map[string]*topic
-}
-
-func NewBroker(topicNames []string) *Broker {
-	topics := map[string]*topic{}
-	for _, n := range topicNames {
-		topics[n] = &topic{name: n}
-	}
-	return &Broker{topics: topics}
-}
-
-func (b *Broker) topic(name string) *topic {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.topics[name]
-}
-
 type topic struct {
-	name      string
 	mu        sync.Mutex
 	subs      []*subscription
 	nextAckID int
 }
 
-// OpenTopic establishes a new topic.
-// Open subscribers for the topic before publishing.
-func OpenTopic(b *Broker, name string) *pubsub.Topic {
-	return pubsub.NewTopic(b.topic(name))
+// NewTopic creates a new in-memory topic.
+func NewTopic() *pubsub.Topic {
+	return pubsub.NewTopic(&topic{})
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -91,7 +70,17 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
-func (t *topic) As(i interface{}) bool { return false }
+// It supports *topic so that NewSubscription can recover a *topic
+// from the concrete type (see below). External users won't be able
+// to use As because topic isn't exported.
+func (t *topic) As(i interface{}) bool {
+	x, ok := i.(**topic)
+	if !ok {
+		return false
+	}
+	*x = t
+	return true
+}
 
 type subscription struct {
 	mu          sync.Mutex
@@ -100,12 +89,13 @@ type subscription struct {
 	msgs        map[driver.AckID]*message // all unacknowledged messages
 }
 
-// OpenSubscription creates a new subscription for the given topic.
-
-func OpenSubscription(b *Broker, topicName string, ackDeadline time.Duration) *pubsub.Subscription {
-	b.mu.Lock()
-	t := b.topics[topicName]
-	b.mu.Unlock()
+// NewSubscription creates a new subscription for the given topic.
+// It panics if the giventopic did not come from mempubsub.
+func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
+	var t *topic
+	if !top.As(&t) {
+		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
+	}
 	return pubsub.NewSubscription(newSubscription(t, ackDeadline))
 }
 
@@ -163,7 +153,6 @@ const (
 )
 
 // ReceiveBatch implements driver.ReceiveBatch.
-
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Check for closed or cancelled before doing any work.
 	if err := s.wait(ctx, 0); err != nil {

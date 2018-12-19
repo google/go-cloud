@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-cloud/server"
 	"github.com/gorilla/mux"
+	"gocloud.dev/server"
 )
 
 func main() {

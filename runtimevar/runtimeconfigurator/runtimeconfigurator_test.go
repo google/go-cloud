@@ -16,13 +16,15 @@ package runtimeconfigurator
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/google/go-cloud/internal/testing/setup"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/runtimevar/drivertest"
+	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc/status"
 )
 
 // This constant records the project used for the last --record.
@@ -46,17 +48,17 @@ func resourceName(name string) ResourceName {
 }
 
 type harness struct {
-	client *Client
+	client pb.RuntimeConfigManagerClient
 	closer func()
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	ctx := context.Background()
 	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
-	client := NewClient(pb.NewRuntimeConfigManagerClient(conn))
+	client := pb.NewRuntimeConfigManagerClient(conn)
 	rn := resourceName("")
 	// Ignore errors if the config already exists.
-	_, _ = client.client.CreateConfig(ctx, &pb.CreateConfigRequest{
+	_, _ = client.CreateConfig(ctx, &pb.CreateConfigRequest{
 		Parent: "projects/" + rn.ProjectID,
 		Config: &pb.RuntimeConfig{
 			Name:        rn.configPath(),
@@ -66,19 +68,19 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 	return &harness{
 		client: client,
 		closer: func() {
-			_, _ = client.client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
+			_, _ = client.DeleteConfig(ctx, &pb.DeleteConfigRequest{Name: rn.configPath()})
 			done()
 		},
 	}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return h.client.newWatcher(resourceName(name), decoder, nil)
+	return newWatcher(h.client, resourceName(name), decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	_, err := h.client.client.CreateVariable(ctx, &pb.CreateVariableRequest{
+	_, err := h.client.CreateVariable(ctx, &pb.CreateVariableRequest{
 		Parent: rn.configPath(),
 		Variable: &pb.Variable{
 			Name:     rn.String(),
@@ -90,7 +92,7 @@ func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) e
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
 	rn := resourceName(name)
-	_, err := h.client.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
+	_, err := h.client.UpdateVariable(ctx, &pb.UpdateVariableRequest{
 		Name: rn.String(),
 		Variable: &pb.Variable{
 			Contents: &pb.Variable_Value{Value: val},
@@ -101,7 +103,7 @@ func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) e
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	rn := resourceName(name)
-	_, err := h.client.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
+	_, err := h.client.DeleteVariable(ctx, &pb.DeleteVariableRequest{Name: rn.String()})
 	return err
 }
 
@@ -112,5 +114,27 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var v *pb.Variable
+	if !s.As(&v) {
+		return errors.New("Snapshot.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var s *status.Status
+	if !runtimevar.ErrorAs(err, &s) {
+		return errors.New("runtimevar.ErrorAs failed")
+	}
+	return nil
 }

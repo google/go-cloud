@@ -13,14 +13,14 @@
 // limitations under the License.
 
 // Package gcpcloud contains Wire providers for GCP services.
-package gcpcloud
+package gcpcloud // import "gocloud.dev/gcp/gcpcloud"
 
 import (
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
-	"github.com/google/go-cloud/server/sdserver"
 	"github.com/google/wire"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/cloudsql"
+	"gocloud.dev/runtimevar/runtimeconfigurator"
+	"gocloud.dev/server/sdserver"
 )
 
 // GCP is a Wire provider set that includes all Google Cloud Platform services
@@ -34,5 +34,5 @@ var Services = wire.NewSet(
 	cloudsql.CertSourceSet,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
-	runtimeconfigurator.Set,
+	runtimeconfigurator.Dial,
 	sdserver.Set)

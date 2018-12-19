@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/terraform"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/testing/terraform"
 )
 
 func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {

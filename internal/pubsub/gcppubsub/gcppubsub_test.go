@@ -16,14 +16,15 @@ package gcppubsub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/pubsub/drivertest"
-	"github.com/google/go-cloud/internal/testing/setup"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub/drivertest"
+	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/option"
 )
 
@@ -36,11 +37,14 @@ const (
 	//    "Enable API", "Create a topic".
 	// 1b. Create a subscription by clicking on the topic, then clicking on
 	//    the icon at the top with a "Create subscription" tooltip.
+	// 1c. Create a second subscription the same way.
 	// 2. Update the topicName constant to your topic name, and the
-	//    subscriptionName to your subscription name.
-	topicName        = "test-topic"
-	subscriptionName = "test-subscription-1"
-	projectID        = "go-cloud-test-216917"
+	//    subscriptionName0 and subscriptionName1 constants to your
+	//    subscription names.
+	topicName         = "test-topic"
+	subscriptionName0 = "test-subscription-1"
+	subscriptionName1 = "test-subscription-2"
+	projectID         = "go-cloud-test-216917"
 )
 
 type harness struct {
@@ -72,9 +76,17 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	ds := openSubscription(ctx, h.subClient, projectID, subscriptionName)
-	return ds, nil
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
+	var sname string
+	switch n {
+	case 0:
+		sname = subscriptionName0
+	case 1:
+		sname = subscriptionName1
+	default:
+		return nil, errors.New("n must be 0 or 1")
+	}
+	return openSubscription(ctx, h.subClient, projectID, sname), nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {

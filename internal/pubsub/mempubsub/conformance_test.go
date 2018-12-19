@@ -16,45 +16,41 @@ package mempubsub
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub/driver"
-	"github.com/google/go-cloud/internal/pubsub/drivertest"
+	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub/drivertest"
 )
 
-type harness struct {
-	b *Broker
-}
+type harness struct{}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return &harness{b: NewBroker([]string{"t"})}, nil
+	return &harness{}, nil
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	dt := h.b.topic("t")
-	return dt, nil
+	return &topic{}, nil
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := h.b.topic("nonexistent-topic")
-	return dt, nil
+	// A nil *topic behaves like a nonexistent topic.
+	return (*topic)(nil), nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
-	t := dt.(*topic)
-	ds := newSubscription(t, time.Second)
-	return ds, nil
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
+	if n < 0 || n >= 2 {
+		return nil, errors.New("n must be 0 or 1")
+	}
+	return newSubscription(dt.(*topic), time.Second), nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	var t *topic = nil
-	ds := newSubscription(t, time.Second)
-	return ds, nil
+	return newSubscription(nil, time.Second), nil
 }
 
-func (h *harness) Close() {
-}
+func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)

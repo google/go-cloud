@@ -16,15 +16,17 @@ package paramstore
 
 import (
 	"context"
+	"errors"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/google/go-cloud/internal/testing/setup"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/runtimevar/drivertest"
+	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/runtimevar/drivertest"
 )
 
 // This constant records the region used for the last --record.
@@ -34,19 +36,17 @@ import (
 const region = "us-east-2"
 
 type harness struct {
-	client  *Client
 	session client.ConfigProvider
 	closer  func()
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	sess, _, done := setup.NewAWSSession(t, region)
-	client := NewClient(sess)
-	return &harness{client: client, session: sess, closer: done}, nil
+	return &harness{session: sess, closer: done}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return h.client.newWatcher(name, decoder, nil)
+	return newWatcher(h.session, name, decoder, nil)
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
@@ -77,5 +77,31 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var getParam *ssm.GetParameterOutput
+	if !s.As(&getParam) {
+		return errors.New("Snapshot.As failed for GetParameterOutput")
+	}
+	var descParam *ssm.DescribeParametersOutput
+	if !s.As(&descParam) {
+		return errors.New("Snapshot.As failed for DescribeParametersOutput")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var e awserr.Error
+	if !runtimevar.ErrorAs(err, &e) {
+		return errors.New("runtimevar.ErrorAs failed")
+	}
+	return nil
 }

@@ -20,13 +20,13 @@ import (
 	"context"
 
 	awsclient "github.com/aws/aws-sdk-go/aws/client"
-	"github.com/google/go-cloud/aws/awscloud"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/mysql/rdsmysql"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/paramstore"
 	"github.com/google/wire"
+	"gocloud.dev/aws/awscloud"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/mysql/rdsmysql"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/paramstore"
 )
 
 // This file wires the generic interfaces up to Amazon Web Services (AWS). It
@@ -52,7 +52,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
 func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, flags.bucket, cp, nil)
+	return s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
 }
 
 // awsSQLParams is a Wire provider function that returns the RDS SQL connection
@@ -69,8 +69,8 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
-func awsMOTDVar(ctx context.Context, client *paramstore.Client, flags *cliFlags) (*runtimevar.Variable, error) {
-	return client.NewVariable(flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+func awsMOTDVar(ctx context.Context, sess awsclient.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
+	return paramstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }

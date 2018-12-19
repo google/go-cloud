@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/cloudsql"
-	"github.com/google/go-cloud/internal/testing/terraform"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/cloudsql"
+	"gocloud.dev/internal/testing/terraform"
 )
 
 func TestOpen(t *testing.T) {

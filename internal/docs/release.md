@@ -19,14 +19,14 @@ To do a release:
     a new release`, enter your release name, select your tag from the dropdown,
     and enter your release notes. Note that Github only has the last few commits
     in the dropdown; if your commit is older than what it shows, you'll need to
-    create a tag from the command line and then select it in the UI.
+    create a tag from the command line (see below) and then select it in the UI.
 
-```bash
-$ TAG=v0.n.0
-$ COMMIT=aaaaaa
-$ git tag -a ${TAG} -m ${TAG} ${COMMIT}
-$ git push upstream ${TAG}
-```
+    ```bash
+    $ TAG=v0.n.0
+    $ COMMIT=aaaaaa
+    $ git tag -a ${TAG} -m ${TAG} ${COMMIT}
+    $ git push upstream ${TAG}
+    ```
 
 -   Send an email to
     [go-cloud@googlegroups.com](https://groups.google.com/forum/#!forum/go-cloud)

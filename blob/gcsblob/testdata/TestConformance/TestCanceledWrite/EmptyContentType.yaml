@@ -4,7 +4,9 @@ interactions:
 - request:
     body: ""
     form: {}
-    headers: {}
+    headers:
+      User-Agent:
+      - ' go-cloud/0.1'
     url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-canceled-write
     method: GET
   response:
@@ -20,9 +22,9 @@ interactions:
       Content-Type:
       - application/xml; charset=UTF-8
       Date:
-      - Fri, 26 Oct 2018 22:56:36 GMT
+      - Mon, 17 Dec 2018 22:49:36 GMT
       Expires:
-      - Fri, 26 Oct 2018 22:56:36 GMT
+      - Mon, 17 Dec 2018 22:49:36 GMT
       Server:
       - UploadServer
       X-Guploader-Customer:
@@ -32,7 +34,44 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UqbD5AuvzR7nJBN6Jht_1QHsJTdz6xcqTOBZsPxX1FRXaxJMUHRXTKaDjGr4j6gM9PMlOVYXw1IpU_ytE5YWzIfsMYIRQ
+      - AEnB2UpKF9PQb_-YTUuv-80TijddbOT8C1b5yk56OXQND_zDNaVHhH-Pp0Tb--3m0sT0IuuLQC7GD8Ghhw1DRgy3kiIB-0gjnA
+    status: 404 Not Found
+    code: 404
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - ' go-cloud/0.1'
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-canceled-write
+    method: GET
+  response:
+    body: '<?xml version=''1.0'' encoding=''UTF-8''?><Error><Code>NoSuchKey</Code><Message>The
+      specified key does not exist.</Message><Details>No such object: go-cloud-blob-test-bucket/blob-for-canceled-write</Details></Error>'
+    headers:
+      Alt-Svc:
+      - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
+      Content-Length:
+      - "211"
+      Content-Type:
+      - application/xml; charset=UTF-8
+      Date:
+      - Mon, 17 Dec 2018 22:49:36 GMT
+      Expires:
+      - Mon, 17 Dec 2018 22:49:36 GMT
+      Server:
+      - UploadServer
+      X-Guploader-Customer:
+      - cloud-storage
+      X-Guploader-Request-Result:
+      - agent_rejected
+      X-Guploader-Upload-Result:
+      - agent_rejected
+      X-Guploader-Uploadid:
+      - AEnB2Ur1HGZNOFe-n1I9Q_1tm4P8hFhRiQW93VG5F_BQxlbvTD2sbHSQk2kkEOHsaw2XY6oYJNeMaSs9M_j_iXeLhpyAzbkVkQ
     status: 404 Not Found
     code: 404
     duration: ""

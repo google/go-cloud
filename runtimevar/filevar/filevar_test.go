@@ -16,15 +16,16 @@ package filevar
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/runtimevar/drivertest"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/runtimevar/drivertest"
 )
 
 type harness struct {
@@ -80,7 +81,29 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var ss string
+	if s.As(&ss) {
+		return errors.New("Snapshot.As expected to fail")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var ss string
+	if runtimevar.ErrorAs(err, &ss) {
+		return errors.New("runtimevar.ErrorAs expected to fail")
+	}
+	return nil
 }
 
 // Filevar-specific tests.

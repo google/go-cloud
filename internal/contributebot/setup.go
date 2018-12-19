@@ -24,14 +24,14 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/requestlog"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/filevar"
-	"github.com/google/go-cloud/server"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
+	"gocloud.dev/gcp"
+	"gocloud.dev/health"
+	"gocloud.dev/requestlog"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/filevar"
+	"gocloud.dev/server"
 	"google.golang.org/api/option"
 )
 
@@ -63,7 +63,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		wire.InterfaceValue(new(requestlog.Logger), (requestlog.Logger)(nil)),
 		wire.InterfaceValue(new(trace.Exporter), (trace.Exporter)(nil)),
 		workerAndServer{},
-		worker{},
+		newWorker,
 	)
 	return workerAndServer{}, nil, errors.New("will be replaced by Wire")
 }

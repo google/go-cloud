@@ -1,7 +1,14 @@
 # Design Decisions
 
 This document outlines important design decisions made for this repository and
-attempts to provide succinct rationales.
+attempts to provide succinct rationales. Recording these decisions helps
+maintain consistency across packages, especially as an open source project where
+contributors can join at any point during development.
+
+A broad design goal for Go Cloud is for the API style to be consistent.
+Consistency aids users in building a mental model of how to use the APIs. As
+such, the design of individual packages must also consider their impact on Go
+Cloud as a whole.
 
 This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The
 decisions in here are not set in stone, but simply describe our current thinking
@@ -90,11 +97,22 @@ user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
+New Go Cloud APIs should always follow this driver plus user-facing type
+pattern.
+
 [`runtimevar.Variable`]:
 https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 [`Bucket.NewWriter` method]:
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
+
+## No Global State
+
+As a library, Go Cloud should not introduce global state. Global state is
+difficult to reason about in large codebases, where it can be necessary for
+different parts of the application to use different states. Instead of adding
+global state, push responsibility to the application to inject the state where
+it is needed.
 
 ## Package Naming Conventions
 
@@ -107,7 +125,27 @@ symbols stable over time.
 The exception to this rule is if the name is not unique across providers. The
 canonical example is `gcpkms` and `awskms`.
 
-## Option Structs in APIs
+## Concrete Type Constructors
+
+Concrete type constructors are the functions defined in provider-specific
+packages that end users use to get an instance of the concrete type. For
+example, `gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket`
+concrete type backed by GCS.
+
+-   Concrete type constructors should be top-level functions that return the
+    concrete type directly. Avoid helpers (e.g., a `Client` struct with a
+    function that returns the concrete type instead of it being top-level) and
+    wrappers (e.g., a `fooblob.Bucket` type returned from `fooblob.OpenBucket`
+    that wraps the concrete type). Top level functions without wrappers are
+    easier to use, especially when we're consistent about it.
+-   Order arguments that are less likely to change across multiple calls to the
+    constructor before ones that are likely to change. For example, connection
+    and authorization related arguments should go before names, so
+    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
+    "mybucket", client)```.
+-   All public constructors should take an `Options` struct (see next section).
+
+### Option Structs
 
 All public constructors should take an `Options` struct, even if it is currently
 empty, to ensure that we can add arguments to the APIs in the future without
@@ -322,47 +360,71 @@ on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 ## Coding Conventions
 
 We try to adhere to commonly accepted Go coding conventions, some of which are
-described on the [Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
+described on the
+[Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
 wiki page. We also adopt the following guidelines:
-- Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
-- When writing a loop appending to a slice `s`, prefer
-  ```
-  var s []T
-  for ... {
-    ...
-    s = append(s, ...)
-    ...
-  }
-  ```
 
-  to
-  ```
-  s := make([]T, 0, N)
-  for ... { 
-    ...
-    s = append(s, ...)
-    ...
-  }
-  ```
+-   Prefer `map[K]V{}` to `make(map[K]V)`. It's more concise.
+-   When writing a loop appending to a slice `s`, prefer
 
-  or
-  ```
-  s := make([]T, N)
-  for ... {
-    ...
-    s[i] = ...
-    ...
-  }
-  ```
+    ```
+      var s []T
+      for ... {
+        ...
+        s = append(s, ...)
+        ...
+      }
+    ```
 
-  (Exception: the loop body is trivial and the loop is
-  performance-sensitive.) The first version is shorter and easier to read, and
-  it is impossible to get the length wrong.
-- Prefer `log.Fatal` to `panic` in example tests.
-- Ensure you've run `goimports` on your code to properly group import statements.
+    to
 
+    ```
+      s := make([]T, 0, N)
+      for ... {
+        ...
+        s = append(s, ...)
+        ...
+      }
+    ```
+
+    or
+
+    ```
+      s := make([]T, N)
+      for ... {
+        ...
+        s[i] = ...
+        ...
+      }
+    ```
+
+    (Exception: the loop body is trivial and the loop is performance-sensitive.)
+    The first version is shorter and easier to read, and it is impossible to get
+    the length wrong.
+
+-   Prefer `log.Fatal` to `panic` in example tests.
+
+-   Ensure you've run `goimports` on your code to properly group import
+    statements.
+
+-   Order arguments that are less likely to change across multiple calls to the
+    constructor before ones that are likely to change. For example, connection
+    and authorization related arguments should go before names, so
+    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
+    "mybucket", client)```.
 
 ## Tests
+
+### Conformance Tests
+
+Since our goal is for users to be able to use provider implementations
+interchangeably, it is critical that they behave similarly. To this end, each
+portable API (e.g., `blob`) must provide a suite of conformance tests that
+provider implementations should run. The conformance tests should be
+comprehensive; provider implementations should not need additional unit tests
+for the core driver semantics.
+
+### Provisioning For Tests
 
 Portable API integration tests require developer-specific resources to be
 created and destroyed. We use [Terraform](http://terraform.io) to do so, and

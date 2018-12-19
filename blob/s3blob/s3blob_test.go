@@ -28,10 +28,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/blob/drivertest"
-	"github.com/google/go-cloud/internal/testing/setup"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/internal/testing/setup"
 )
 
 // These constants record the region & bucket used for the last --record.
@@ -62,7 +62,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, bucketName, h.session, nil)
+	return openBucket(ctx, h.session, bucketName, nil)
 }
 
 func (h *harness) Close() {
@@ -184,7 +184,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create driver impl.
-			drv, err := openBucket(ctx, test.bucketName, sess, nil)
+			drv, err := openBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -195,7 +195,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create concrete type.
-			_, err = OpenBucket(ctx, test.bucketName, sess, nil)
+			_, err = OpenBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}

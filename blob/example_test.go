@@ -25,8 +25,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/fileblob"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/fileblob"
 )
 
 func ExampleBucket_NewReader() {

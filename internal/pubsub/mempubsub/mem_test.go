@@ -19,14 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
+	"gocloud.dev/internal/pubsub/driver"
 )
 
 func TestReceive(t *testing.T) {
-	b := NewBroker([]string{"t"})
 	ctx := context.Background()
-	top := b.topic("t")
+	top := &topic{}
 	sub := newSubscription(top, 3*time.Second)
 	if err := top.SendBatch(ctx, []*driver.Message{
 		{Body: []byte("a")},
@@ -74,20 +72,5 @@ func TestReceive(t *testing.T) {
 	msgs = sub.receiveNoWait(now, 10)
 	if got, want := len(msgs), 0; got != want {
 		t.Fatalf("got %d, want %d", got, want)
-	}
-}
-
-func TestNotExist(t *testing.T) {
-	ctx := context.Background()
-	b := NewBroker([]string{"t"})
-	top := OpenTopic(b, "x")
-	err := top.Send(ctx, &pubsub.Message{Body: []byte("x")})
-	if err != errNotExist {
-		t.Errorf("got %v, want %v", err, errNotExist)
-	}
-	sub := OpenSubscription(b, "x", time.Second)
-	_, err = sub.Receive(ctx)
-	if err != errNotExist {
-		t.Errorf("got %v, want %v", err, errNotExist)
 	}
 }

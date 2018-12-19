@@ -18,7 +18,8 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob/s3blob"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/s3blob"
 )
 
 func Example() {
@@ -36,7 +37,13 @@ func Example() {
 	}
 
 	// Create a *blob.Bucket.
-	_, _ = s3blob.OpenBucket(ctx, "my-bucket", sess, nil)
+	_, _ = s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
+
+	// Output:
+}
+
+func Example_open() {
+	_, _ = blob.Open(context.Background(), "s3://my-bucket")
 
 	// Output:
 }

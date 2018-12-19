@@ -17,12 +17,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
@@ -65,6 +68,35 @@ func main() {
 type worker struct {
 	sub  *pubsub.Subscription
 	auth *gitHubAppAuth
+
+	mu          sync.Mutex
+	configCache map[repoKey]*repoConfigCacheEntry
+}
+
+func newWorker(sub *pubsub.Subscription, auth *gitHubAppAuth) *worker {
+	return &worker{
+		sub:         sub,
+		auth:        auth,
+		configCache: make(map[repoKey]*repoConfigCacheEntry),
+	}
+}
+
+const configCacheTTL = 2 * time.Minute
+
+type repoKey struct {
+	owner string
+	repo  string
+}
+
+type repoConfigCacheEntry struct {
+	// On initial placement in the cache, ready will be an open channel.
+	// It will be closed once the entry has been fetched and the other
+	// fields are thus safe to read.
+	ready <-chan struct{}
+
+	config  repoConfig
+	err     error
+	fetched time.Time
 }
 
 // receive listens for events on its subscription and handles them.
@@ -90,7 +122,7 @@ func (w *worker) receive(ctx context.Context) error {
 			handleErr = w.receiveIssueEvent(ctx, event)
 		case *github.PullRequestEvent:
 			handleErr = w.receivePullRequestEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckRunEvent, *github.CheckSuiteEvent, *github.PushEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -108,6 +140,7 @@ func (w *worker) receive(ctx context.Context) error {
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
+	client := w.ghClient(e.GetInstallation().GetID())
 
 	// Pull out the interesting data from the event.
 	data := &issueData{
@@ -118,8 +151,13 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 		Change: e.GetChanges(),
 	}
 
+	// Fetch repository configuration.
+	cfg, err := w.repoConfig(ctx, client, data.Owner, data.Repo)
+	if err != nil {
+		return err
+	}
+
 	// Refetch the issue in case the event data is stale.
-	client := w.ghClient(e.GetInstallation().GetID())
 	iss, _, err := client.Issues.Get(ctx, data.Owner, data.Repo, data.Issue.GetNumber())
 	if err != nil {
 		return err
@@ -127,12 +165,13 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	data.Issue = iss
 
 	// Process the issue, deciding what actions to take (if any).
-	edits := processIssueEvent(data)
+	edits := processIssueEvent(cfg, data)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
 }
 
 func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
+	client := w.ghClient(e.GetInstallation().GetID())
 
 	// Pull out the interesting data from the event.
 	data := &pullRequestData{
@@ -143,8 +182,13 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 		Change:      e.GetChanges(),
 	}
 
+	// Fetch repository configuration.
+	cfg, err := w.repoConfig(ctx, client, data.OwnerLogin, data.Repo)
+	if err != nil {
+		return err
+	}
+
 	// Refetch the pull request in case the event data is stale.
-	client := w.ghClient(e.GetInstallation().GetID())
 	pr, _, err := client.PullRequests.Get(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber())
 	if err != nil {
 		return err
@@ -152,9 +196,82 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	data.PullRequest = pr
 
 	// Process the pull request, deciding what actions to take (if any).
-	edits := processPullRequestEvent(data)
+	edits := processPullRequestEvent(cfg, data)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
+}
+
+// repoConfig fetches the parsed Contribute Bot configuration for the given
+// repository. The result may be cached.
+func (w *worker) repoConfig(ctx context.Context, client *github.Client, owner, repo string) (_ *repoConfig, err error) {
+	cacheKey := repoKey{owner, repo}
+	queryTime := time.Now()
+	w.mu.Lock()
+	ent := w.configCache[cacheKey]
+	if ent != nil {
+		select {
+		case <-ent.ready:
+			// Entry has been fully written. Check if we can use its results.
+			if ent.err == nil && queryTime.Sub(ent.fetched) < configCacheTTL {
+				// Cache hit; no processing necessary.
+				w.mu.Unlock()
+				return &ent.config, nil
+			}
+		default:
+			// Another goroutine is currently retrieving the configuration. Block on that result.
+			w.mu.Unlock()
+			select {
+			case <-ent.ready:
+				if ent.err != nil {
+					return nil, ent.err
+				}
+				return &ent.config, nil
+			case <-ctx.Done():
+				return nil, fmt.Errorf("read repository %s/%s config: %v", owner, repo, ctx.Err())
+			}
+		}
+	}
+	// Cache miss. Reserve the fetch work.
+	done := make(chan struct{})
+	ent = &repoConfigCacheEntry{
+		ready:  done,
+		config: *defaultRepoConfig(),
+	}
+	w.configCache[cacheKey] = ent
+	w.mu.Unlock()
+	defer func() {
+		ent.fetched = time.Now()
+		ent.err = err // err is the named return value.
+		close(done)
+	}()
+
+	// Fetch the configuration from the repository.
+	content, _, response, err := client.Repositories.GetContents(ctx, owner, repo, ".contributebot", nil)
+	if response != nil && response.StatusCode == http.StatusNotFound {
+		// File not found. Use default configuration.
+		return &ent.config, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read repository %s/%s config: %v", owner, repo, err)
+	}
+	data, err := content.GetContent()
+	if err != nil {
+		return nil, fmt.Errorf("read repository %s/%s config: %v", owner, repo, err)
+	}
+	if err := json.Unmarshal([]byte(data), &ent.config); err != nil {
+		return nil, fmt.Errorf("read repository %s/%s config: %v", owner, repo, err)
+	}
+	return &ent.config, nil
+}
+
+// isClosed tests whether a channel is closed without blocking.
+func isClosed(c <-chan struct{}) bool {
+	select {
+	case _, ok := <-c:
+		return !ok
+	default:
+		return false
+	}
 }
 
 // ghClient creates a GitHub client authenticated for the given installation.

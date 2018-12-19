@@ -1,4 +1,4 @@
-package setup
+package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
 	"os"
@@ -15,8 +15,9 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/dnaeon/go-vcr/recorder"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/replay"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/testing/replay"
+	"gocloud.dev/internal/useragent"
 
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
@@ -26,6 +27,7 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
+// Record is true iff the tests are being run in "record" mode.
 var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
 
 // NewAWSSession creates a new session for testing against AWS.
@@ -88,6 +90,7 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
 
 	gcpMatcher := &replay.ProviderMatcher{
+		Headers:             []string{"User-Agent"},
 		DropRequestHeaders:  gfeDroppedHeaders,
 		DropResponseHeaders: gfeDroppedHeaders,
 		URLScrubbers: []*regexp.Regexp{
@@ -127,6 +130,7 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 	}
 
 	opts, done := replay.NewGCPDialOptions(t, mode, t.Name()+".replay")
+	opts = append(opts, grpc.WithUserAgent(useragent.GoCloudUserAgent))
 	if mode == recorder.ModeRecording {
 		// Add credentials for real RPCs.
 		creds, err := gcp.DefaultCredentials(ctx)

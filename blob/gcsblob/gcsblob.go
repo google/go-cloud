@@ -17,7 +17,9 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, gcsblob registers for the protocol "gs".
+// For blob.Open URLs, gcsblob registers for the scheme "gs"; URLs start
+// with "gs://".
+//
 // The URL's Host is used as the bucket name.
 // The following query options are supported:
 //
@@ -40,7 +42,7 @@
 //  - Reader: storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - WriterOptions.BeforeWrite: *storage.Writer
-package gcsblob
+package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
 	"context"
@@ -52,9 +54,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 
 	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"
@@ -107,7 +110,7 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, u.Host, client, opts)
+	return openBucket(ctx, client, u.Host, opts)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
@@ -129,14 +132,15 @@ type Options struct {
 }
 
 // openBucket returns a GCS Bucket that communicates using the given HTTP client.
-func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*bucket, error) {
+func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*bucket, error) {
 	if client == nil {
 		return nil, errors.New("gcsblob.OpenBucket: client is required")
 	}
 	if bucketName == "" {
 		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(&client.Client))
+	// We wrap the provided http.Client to add a Go Cloud User-Agent.
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(useragent.HTTPClient(&client.Client)))
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +152,8 @@ func openBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, 
 
 // OpenBucket returns a *blob.Bucket backed by GCS. See the package
 // documentation for an example.
-func OpenBucket(ctx context.Context, bucketName string, client *gcp.HTTPClient, opts *Options) (*blob.Bucket, error) {
-	drv, err := openBucket(ctx, bucketName, client, opts)
+func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -254,6 +258,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 					Key:     obj.Name,
 					ModTime: obj.Updated,
 					Size:    obj.Size,
+					MD5:     obj.MD5,
 					AsFunc:  asFunc,
 				}
 			} else {
@@ -308,6 +313,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Metadata:    attrs.Metadata,
 		ModTime:     attrs.Updated,
 		Size:        attrs.Size,
+		MD5:         attrs.MD5,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {

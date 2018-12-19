@@ -13,16 +13,15 @@
 // limitations under the License.
 
 // Package awscloud contains Wire providers for AWS services.
-package awscloud
+package awscloud // import "gocloud.dev/aws/awscloud"
 
 import (
 	"net/http"
 
-	"github.com/google/go-cloud/aws"
-	"github.com/google/go-cloud/aws/rds"
-	"github.com/google/go-cloud/runtimevar/paramstore"
-	"github.com/google/go-cloud/server/xrayserver"
 	"github.com/google/wire"
+	"gocloud.dev/aws"
+	"gocloud.dev/aws/rds"
+	"gocloud.dev/server/xrayserver"
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface
@@ -39,5 +38,4 @@ var AWS = wire.NewSet(
 // additional configuration.
 var Services = wire.NewSet(
 	rds.CertFetcherSet,
-	paramstore.NewClient,
 	xrayserver.Set)

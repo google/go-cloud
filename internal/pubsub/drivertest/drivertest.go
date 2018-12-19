@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // driver.
-package drivertest
+package drivertest // import "gocloud.dev/internal/pubsub/drivertest"
 
 import (
 	"bytes"
@@ -23,10 +23,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/go-cloud/internal/pubsub"
-	"github.com/google/go-cloud/internal/pubsub/driver"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/internal/pubsub/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -41,7 +41,8 @@ type Harness interface {
 
 	// MakeSubscription makes a driver.Subscription subscribed to the given
 	// driver.Topic.
-	MakeSubscription(ctx context.Context, t driver.Topic) (driver.Subscription, error)
+	// n must be 0 or 1, to select between two different subscriptions. Any other value is an error.
+	MakeSubscription(ctx context.Context, t driver.Topic, n int) (driver.Subscription, error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
 	// subscription that does not exist.
@@ -284,7 +285,7 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, err := h.MakeSubscription(ctx, dt)
+	ds, err := h.MakeSubscription(ctx, dt, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -306,6 +307,9 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer cleanup()
 	if err := st.TopicCheck(top); err != nil {
 		t.Error(err)

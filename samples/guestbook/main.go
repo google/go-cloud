@@ -30,14 +30,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/health"
-	"github.com/google/go-cloud/health/sqlhealth"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/server"
 	"github.com/google/wire"
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
+	"gocloud.dev/blob"
+	"gocloud.dev/health"
+	"gocloud.dev/health/sqlhealth"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/server"
 )
 
 type cliFlags struct {

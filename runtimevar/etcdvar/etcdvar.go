@@ -14,7 +14,13 @@
 
 // Package etcdvar provides a runtimevar.Driver implementation to read
 // variables from etcd.
-package etcdvar
+//
+// As
+//
+// etcdvar exposes the following types for As:
+//  - Snapshot: *clientv3.GetResponse
+//  - Error: rpctypes.EtcdError
+package etcdvar // import "gocloud.dev/runtimevar/etcdvar"
 
 import (
 	"context"
@@ -23,8 +29,8 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 	"google.golang.org/grpc/codes"
 )
 
@@ -56,17 +62,33 @@ func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) 
 // state implements driver.State.
 type state struct {
 	val        interface{}
+	raw        *clientv3.GetResponse
 	updateTime time.Time
 	version    int64
 	err        error
 }
 
+// Value implements driver.State.Value.
 func (s *state) Value() (interface{}, error) {
 	return s.val, s.err
 }
 
+// UpdateTime implements driver.State.UpdateTime.
 func (s *state) UpdateTime() time.Time {
 	return s.updateTime
+}
+
+// As implements driver.State.As.
+func (s *state) As(i interface{}) bool {
+	if s.raw == nil {
+		return false
+	}
+	p, ok := i.(**clientv3.GetResponse)
+	if !ok {
+		return false
+	}
+	*p = s.raw
+	return true
 }
 
 // watcher implements driver.Watcher.
@@ -147,7 +169,7 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 				if err != nil {
 					cur = w.updateState(&state{err: err}, cur)
 				} else {
-					cur = w.updateState(&state{val: val, updateTime: time.Now(), version: kv.Version}, cur)
+					cur = w.updateState(&state{val: val, raw: resp, updateTime: time.Now(), version: kv.Version}, cur)
 				}
 			}
 		}
@@ -169,4 +191,16 @@ func (w *watcher) Close() error {
 	for _ = range w.ch {
 	}
 	return nil
+}
+
+// ErrorAs implements driver.ErrorAs.
+func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case rpctypes.EtcdError:
+		if p, ok := i.(*rpctypes.EtcdError); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
 }

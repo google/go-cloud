@@ -19,14 +19,15 @@ package main
 import (
 	"context"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/gcp/gcpcloud"
-	"github.com/google/go-cloud/mysql/cloudmysql"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/runtimeconfigurator"
 	"github.com/google/wire"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/gcsblob"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/gcpcloud"
+	"gocloud.dev/mysql/cloudmysql"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/runtimeconfigurator"
+	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 )
 
 // This file wires the generic interfaces up to Google Cloud Platform (GCP). It
@@ -52,7 +53,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
 func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, flags.bucket, client, nil)
+	return gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL
@@ -71,13 +72,13 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
-func gcpMOTDVar(ctx context.Context, client *runtimeconfigurator.Client, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
+func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: string(project),
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := client.NewVariable(name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := runtimeconfigurator.NewVariable(client, name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

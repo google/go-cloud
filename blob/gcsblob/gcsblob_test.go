@@ -26,14 +26,13 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/blob/drivertest"
-	"github.com/google/go-cloud/gcp"
-	"github.com/google/go-cloud/internal/testing/setup"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcp"
+	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -84,15 +83,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return &http.Client{Transport: h.rt}
+	return &h.client.Client
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(&h.client.Client))
-	if err != nil {
-		return nil, err
-	}
-	return &bucket{name: bucketName, client: c, opts: h.opts}, nil
+	return openBucket(ctx, h.client, bucketName, h.opts)
 }
 
 func (h *harness) Close() {
@@ -245,7 +240,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create driver impl.
-			drv, err := openBucket(ctx, test.bucketName, client, nil)
+			drv, err := openBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -256,7 +251,7 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create concrete type.
-			_, err = OpenBucket(ctx, test.bucketName, client, nil)
+			_, err = OpenBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}

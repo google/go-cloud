@@ -15,18 +15,19 @@
 package main
 
 import (
-	"time"
-	"os"
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/gcsblob"
-	"github.com/google/go-cloud/blob/s3blob"
-	"github.com/google/go-cloud/gcp"
+
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/gcsblob"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/gcp"
 
 	azureblob "github.com/google/go-cloud/blob/azureblob"
 )
@@ -58,7 +59,7 @@ func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gcsblob.OpenBucket(ctx, bucket, c, nil)
+	return gcsblob.OpenBucket(ctx, c, bucket, nil)
 }
 
 // setupAWS creates a connection to Simple Cloud Storage Service (S3).
@@ -73,14 +74,14 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 		Credentials: credentials.NewEnvCredentials(),
 	}
 	s := session.Must(session.NewSession(c))
-	return s3blob.OpenBucket(ctx, bucket, s, nil)
+	return s3blob.OpenBucket(ctx, s, bucket, nil)
 }
 
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	settings := azureblob.Settings{
-		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:       os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),		
-		SASToken:         "", // Not used when bootstrapping with AccountName & AccountKey
+		AccountName: os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
+		AccountKey:  os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),
+		SASToken:    "", // Not used when bootstrapping with AccountName & AccountKey
 	}
 	return azureblob.OpenBucket(ctx, &settings, bucket)
 }
@@ -96,9 +97,9 @@ func setupAzureWithSASToken(ctx context.Context, bucket string) (*blob.Bucket, e
 	// sasToken2 := azureblob.GenerateSampleSASTokenForContainerBlob(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), bucket, "", time.Now().UTC(), time.Now().UTC().Add(48*time.Hour))
 
 	settings := azureblob.Settings{
-		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:       "", // Not used when bootstrapping with SASToken		
-		SASToken:         sasToken,
+		AccountName: os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
+		AccountKey:  "", // Not used when bootstrapping with SASToken
+		SASToken:    sasToken,
 	}
 	return azureblob.OpenBucket(ctx, &settings, bucket)
 }

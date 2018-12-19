@@ -23,8 +23,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cloud/blob/driver"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/blob/driver"
 )
 
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.

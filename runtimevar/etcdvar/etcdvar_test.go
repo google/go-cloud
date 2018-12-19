@@ -16,13 +16,14 @@ package etcdvar
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
-	"github.com/google/go-cloud/runtimevar"
-	"github.com/google/go-cloud/runtimevar/driver"
-	"github.com/google/go-cloud/runtimevar/drivertest"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/runtimevar/drivertest"
 )
 
 var (
@@ -82,5 +83,24 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var resp *clientv3.GetResponse
+	if !s.As(&resp) {
+		return errors.New("Snapshot.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	// etcdvar returns a fmt.Errorf error for "not found", so we can't do much here.
+	return nil
 }
