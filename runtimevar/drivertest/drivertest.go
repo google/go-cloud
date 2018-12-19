@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/runtimevar/drivertest"
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -50,9 +51,44 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(t *testing.T) (Harness, error)
 
+// AsTest represents a test of As functionality.
+// The conformance test:
+// 1. Reads a Snapshot of the variable before it exists.
+// 2. Calls ErrorCheck.
+// 3. Creates the variable and reads a Snapshot of it.
+// 4. Calls SnapshotCheck.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// SnapshotCheck will be called to allow verification of Snapshot.As.
+	SnapshotCheck(s *runtimevar.Snapshot) error
+	// ErrorCheck will be called to allow verification of Variable.ErrorAs.
+	ErrorCheck(err error) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) SnapshotCheck(v *runtimevar.Snapshot) error {
+	if v.As(nil) {
+		return errors.New("want Snapshot.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) ErrorCheck(err error) error {
+	if runtimevar.ErrorAs(err, nil) {
+		return errors.New("want ErrorAs to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations
 // of runtimevar.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestNonExistentVariable", func(t *testing.T) {
 		testNonExistentVariable(t, newHarness)
 	})
@@ -73,6 +109,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 	t.Run("TestUpdateWithErrors", func(t *testing.T) {
 		testUpdateWithErrors(t, newHarness)
+	})
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("TestAs", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				testAs(t, newHarness, st)
+			})
+		}
 	})
 }
 
@@ -515,5 +562,67 @@ func testUpdateWithErrors(t *testing.T, newHarness HarnessMaker) {
 		if tCtx.Err() == nil && !deadlineExceeded(err) {
 			t.Errorf("got err %v; want Watch to have blocked until context was Done, or for the error to be deadline exceeded", err)
 		}
+	}
+}
+
+// testAs tests the various As functions, using AsTest.
+func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
+	const (
+		name    = "variable-for-as"
+		content = "hello world"
+	)
+
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	ctx := context.Background()
+
+	// Try to read the variable before it exists.
+	drv, err := h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := runtimevar.New(drv)
+	s, gotErr := v.Watch(ctx)
+	if gotErr == nil {
+		t.Fatalf("got nil error and %v, expected non-nil error", v)
+	}
+	if err := st.ErrorCheck(gotErr); err != nil {
+		t.Error(err)
+	}
+	if err := v.Close(); err != nil {
+		t.Error(err)
+	}
+
+	// Create the variable and verify WatchVariable sees the value.
+	if err := h.CreateVariable(ctx, name, []byte(content)); err != nil {
+		t.Fatal(err)
+	}
+	if h.Mutable() {
+		defer func() {
+			if err := h.DeleteVariable(ctx, name); err != nil {
+				t.Fatal(err)
+			}
+		}()
+	}
+
+	drv, err = h.MakeWatcher(ctx, name, runtimevar.StringDecoder)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v = runtimevar.New(drv)
+	defer func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	}()
+	s, err = v.Watch(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SnapshotCheck(&s); err != nil {
+		t.Error(err)
 	}
 }
