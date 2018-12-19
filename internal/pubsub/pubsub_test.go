@@ -262,15 +262,9 @@ func TestCancelTwoReceives(t *testing.T) {
 	}()
 	// Give the Receive call time to block on the mutex before canceling.
 	time.AfterFunc(100*time.Millisecond, cancel)
-	select {
-	case err := <-errc:
-		if err != context.Canceled {
-			t.Errorf("got %v, want context.Canceled", err)
-		}
-		s.Shutdown(context.Background())
-	case <-time.After(time.Second):
-		t.Error("timed out waiting for canceled Receive to return")
-		// We can't call Shutdown in this case; s's mutex is held, so it would block forever.
+	err := <-errc
+	if err != context.Canceled {
+		t.Errorf("got %v, want context.Canceled", err)
 	}
 }
 
