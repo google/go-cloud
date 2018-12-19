@@ -40,7 +40,7 @@ type Options struct{}
 
 // New constructs a *runtimevar.Variable that uses client to watch the variable
 // name on an etcd server.
-// Etcd returns raw bytes; provide a decoder to decode the raw bytes into the
+// etcd returns raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
 func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {

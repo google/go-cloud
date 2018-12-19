@@ -98,7 +98,7 @@ func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder
 	}, nil
 }
 
-// ResourceName identifies a full configuration variable path.
+// ResourceName identifies a configuration variable.
 type ResourceName struct {
 	ProjectID string
 	Config    string

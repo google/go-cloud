@@ -23,7 +23,7 @@
 //
 // Known Issues:
 //
-// * On Mac OSX, if an empty file is copied into a configuration file,
+// * On macOS, if an empty file is copied into a configuration file,
 //   filevar will not detect the change.
 //
 // As
