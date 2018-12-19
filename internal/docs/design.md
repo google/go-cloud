@@ -125,7 +125,27 @@ symbols stable over time.
 The exception to this rule is if the name is not unique across providers. The
 canonical example is `gcpkms` and `awskms`.
 
-## Option Structs in APIs
+## Concrete Type Constructors
+
+Concrete type constructors are the functions defined in provider-specific
+packages that end users use to get an instance of the concrete type. For
+example, `gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket`
+concrete type backed by GCS.
+
+-   Concrete type constructors should be top-level functions that return the
+    concrete type directly. Avoid helpers (e.g., a `Client` struct with a
+    function that returns the concrete type instead of it being top-level) and
+    wrappers (e.g., a `fooblob.Bucket` type returned from `fooblob.OpenBucket`
+    that wraps the concrete type). Top level functions without wrappers are
+    easier to use, especially when we're consistent about it.
+-   Order arguments that are less likely to change across multiple calls to the
+    constructor before ones that are likely to change. For example, connection
+    and authorization related arguments should go before names, so
+    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
+    "mybucket", client)```.
+-   All public constructors should take an `Options` struct (see next section).
+
+### Option Structs
 
 All public constructors should take an `Options` struct, even if it is currently
 empty, to ensure that we can add arguments to the APIs in the future without
@@ -386,6 +406,12 @@ wiki page. We also adopt the following guidelines:
 
 -   Ensure you've run `goimports` on your code to properly group import
     statements.
+
+-   Order arguments that are less likely to change across multiple calls to the
+    constructor before ones that are likely to change. For example, connection
+    and authorization related arguments should go before names, so
+    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
+    "mybucket", client)```.
 
 ## Tests
 
