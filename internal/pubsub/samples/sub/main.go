@@ -1,5 +1,4 @@
-// sub is a sample application that publishes messages from stdin to an
-// existing topic.
+// sub is a sample application that receives messages from an existing subscription.
 package main
 
 import (
