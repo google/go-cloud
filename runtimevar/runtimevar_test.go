@@ -46,17 +46,14 @@ func (s *state) UpdateTime() time.Time {
 	return s.updateTime
 }
 
+func (s *state) As(i interface{}) bool {
+	return false
+}
+
 // fakeWatcher is a fake implementation of driver.Watcher.
 type fakeWatcher struct {
 	t     *testing.T
 	calls []*state
-}
-
-func (w *fakeWatcher) Close() error {
-	if len(w.calls) != 0 {
-		return fmt.Errorf("expected %d more calls to WatchVariable", len(w.calls))
-	}
-	return nil
 }
 
 func (w *fakeWatcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
@@ -80,6 +77,17 @@ func (w *fakeWatcher) WatchVariable(ctx context.Context, prev driver.State) (dri
 	}
 	w.t.Logf("  --> returning %v", c)
 	return c, 0
+}
+
+func (w *fakeWatcher) Close() error {
+	if len(w.calls) != 0 {
+		return fmt.Errorf("expected %d more calls to WatchVariable", len(w.calls))
+	}
+	return nil
+}
+
+func (w *fakeWatcher) ErrorAs(err error, i interface{}) bool {
+	return false
 }
 
 // watchResp encapsulates the expected result of a Watch call.
