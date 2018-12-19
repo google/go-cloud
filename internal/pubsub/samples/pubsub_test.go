@@ -1,15 +1,26 @@
 package pubsub_test
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"golang.org/x/sync/errgroup"
 )
+
+var topicFlag = flag.String("topic", "test-topic", "topic to be used for testing pub and sub commands")
+var subFlag = flag.String("sub", "test-subscription-1", "subscription to be used for testing pub and sub commands")
+var envsFlag = flag.String("pubsub_envs", "gcp,rabbit", "environments in which to run the test")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	os.Exit(m.Run())
+}
 
 func TestPubAndSubCommands(t *testing.T) {
 	if !commandExists("pub") {
@@ -18,26 +29,11 @@ func TestPubAndSubCommands(t *testing.T) {
 	if !commandExists("sub") {
 		t.Skip("sub command not found")
 	}
-	for _, env := range []string{"gcp", "rabbit"} {
+	envs := strings.Split(*envsFlag, ",")
+	topic := *topicFlag
+	sub := *subFlag
+	for _, env := range envs {
 		t.Run(env, func(t *testing.T) {
-			topic := "pub-and-sub-test-topic"
-			if _, err := run("pub", "-env", env, "new", topic); err != nil {
-				t.Fatal(err)
-			}
-			defer func() {
-				if _, err := run("pub", "-env", env, "del", topic); err != nil {
-					t.Fatal(err)
-				}
-			}()
-			sub := "pub-and-sub-test-subscription"
-			if _, err := run("sub", "-env", env, "new", topic, sub); err != nil {
-				t.Fatal(err)
-			}
-			defer func() {
-				if _, err := run("sub", "-env", env, "del", sub); err != nil {
-					t.Fatal(err)
-				}
-			}()
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
 				if _, err := runWithInput(msg, "pub", "-env", env, "send", topic); err != nil {
@@ -73,19 +69,18 @@ func runWithInput(input, name string, args ...string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("opening pipe to stdin for %v: %v", c.Args, err)
 	}
-	var g errgroup.Group
-	g.Go(func() error {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		defer inPipe.Close()
-		_, err = inPipe.Write([]byte(input))
-		return err
-	})
+		inPipe.Write([]byte(input))
+	}()
 	out, err := c.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("running %v: %s", c.Args, out)
 	}
-	if err = g.Wait(); err != nil {
-		return "", err
-	}
+	wg.Wait()
 	return string(out), nil
 }
 
