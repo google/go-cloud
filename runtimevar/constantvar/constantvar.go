@@ -14,7 +14,7 @@
 
 // Package constantvar provides a runtimevar implementation with variables
 // that never change. Use New, NewBytes, or NewError to construct a
-// runtimevar.Variable.
+// *runtimevar.Variable.
 //
 // As
 //
@@ -29,13 +29,13 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
-// New constructs a runtimevar.Variable holding value.
+// New constructs a *runtimevar.Variable holding value.
 func New(value interface{}) *runtimevar.Variable {
 	return runtimevar.New(&watcher{value: value, t: time.Now()})
 }
 
 // NewBytes uses decoder to decode b. If the decode succeeds, it constructs
-// a runtimevar.Variable holding the decoded value. If the decode fails, it
+// a *runtimevar.Variable holding the decoded value. If the decode fails, it
 // constructs a runtimevar.Variable that always fails with the error.
 func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	value, err := decoder.Decode(b)
@@ -45,7 +45,7 @@ func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	return New(value)
 }
 
-// NewError constructs a runtimevar.Variable that always fails. Runtimevar
+// NewError constructs a *runtimevar.Variable that always fails. Runtimevar
 // wraps errors returned by provider implementations, so the error returned
 // by runtimevar will not equal err.
 func NewError(err error) *runtimevar.Variable {

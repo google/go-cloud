@@ -15,7 +15,7 @@
 // Package paramstore provides a runtimevar implementation with variables
 // read from AWS Systems Manager Parameter Store
 // (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
-// Use NewVariable to construct a runtimevar.Variable.
+// Use NewVariable to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -45,7 +45,7 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// NewVariable constructs a runtimevar.Variable backed by the variable name in
+// NewVariable constructs a *runtimevar.Variable backed by the variable name in
 // AWS Systems Manager Parameter Store.
 // Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.

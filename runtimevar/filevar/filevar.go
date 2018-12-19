@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package filevar provides a runtimevar implementation with variables
-// backed by the filesystem. Use New to construct a runtimevar.Variable.
+// backed by the filesystem. Use New to construct a *runtimevar.Variable.
 //
 // Configuration files can be updated using any commands (cp, mv) or
 // tools/editors. This package does not guarantee read consistency since
@@ -53,7 +53,7 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// New constructs a runtimevar.Variable backed by the file at path.
+// New constructs a *runtimevar.Variable backed by the file at path.
 // The file holds raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.

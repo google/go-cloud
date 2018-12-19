@@ -15,7 +15,7 @@
 // Package runtimeconfigurator provides a runtimevar implementation with
 // variables read from GCP Cloud Runtime Configurator
 // (https://cloud.google.com/deployment-manager/runtime-configurator).
-// Use NewVariable to construct a runtimevar.Variable.
+// Use NewVariable to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -73,7 +73,7 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// NewVariable constructs a runtimevar.Variable backed by the variable name in
+// NewVariable constructs a *runtimevar.Variable backed by the variable name in
 // GCP Cloud Runtime Configurator.
 // Runtime Configurator returns raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.

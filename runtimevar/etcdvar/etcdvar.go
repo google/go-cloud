@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package etcdvar provides a runtimevar implementation with variables
-// backed by etcd. Use New to construct a runtimevar.Variable.
+// backed by etcd. Use New to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -38,7 +38,7 @@ import (
 // It is provided for future extensibility.
 type Options struct{}
 
-// New constructs a runtimevar.Variable that uses client to watch the variable
+// New constructs a *runtimevar.Variable that uses client to watch the variable
 // name on an etcd server.
 // Etcd returns raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
