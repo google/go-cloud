@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package constantvar provides a runtimevar.Driver implementation for variables
-// that never change.
+// Package constantvar provides a runtimevar implementation with variables
+// that never change. Use New, NewBytes, or NewError to construct a
+// runtimevar.Variable.
 //
 // As
 //
@@ -28,14 +29,14 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
-// New constructs a runtimevar.Variable that returns a Snapshot with value from
-// Watch. Subsequent calls to Watch will block.
+// New constructs a runtimevar.Variable holding value.
 func New(value interface{}) *runtimevar.Variable {
 	return runtimevar.New(&watcher{value: value, t: time.Now()})
 }
 
-// NewBytes uses decoder to decode b. If the decode succeeds, it returns
-// New with the decoded value, otherwise it returns NewError with the error.
+// NewBytes uses decoder to decode b. If the decode succeeds, it constructs
+// a runtimevar.Variable holding the decoded value. If the decode fails, it
+// constructs a runtimevar.Variable that always fails with the error.
 func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	value, err := decoder.Decode(b)
 	if err != nil {
@@ -44,8 +45,7 @@ func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
 	return New(value)
 }
 
-// NewError constructs a runtimevar.Variable that returns err from Watch.
-// Subsequent calls to Watch will block.
+// NewError constructs a runtimevar.Variable that always fails with err.
 func NewError(err error) *runtimevar.Variable {
 	return runtimevar.New(&watcher{err: err})
 }
@@ -74,7 +74,6 @@ func (w *watcher) As(i interface{}) bool {
 
 // WatchVariable implements driver.WatchVariable.
 func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
-
 	// The first time this is called, return the constant value.
 	if prev == nil {
 		return w, 0
