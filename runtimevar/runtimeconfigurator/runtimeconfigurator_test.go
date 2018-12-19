@@ -16,6 +16,7 @@ package runtimeconfigurator
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"gocloud.dev/internal/testing/setup"
@@ -23,6 +24,7 @@ import (
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc/status"
 )
 
 // This constant records the project used for the last --record.
@@ -112,5 +114,27 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var v *pb.Variable
+	if !s.As(&v) {
+		return errors.New("Snapshot.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var s *status.Status
+	if !runtimevar.ErrorAs(err, &s) {
+		return errors.New("runtimevar.ErrorAs failed")
+	}
+	return nil
 }
