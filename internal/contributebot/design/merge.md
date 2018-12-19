@@ -33,17 +33,18 @@ this process.
 ## Overview
 
 To reduce maintainer toil, this document proposes a new set of interactions for
-Contribute Bot. If a user writes a comment on a pull request with the text
-"/merge", Contribute Bot will:
+Contribute Bot. If a user writes a comment on a pull request that starts with
+the text "/merge", Contribute Bot will:
 
 1.  Verify that the commenter has `write` or `admin` access to the repository.
     If they do not, do not proceed and leave an error comment on the PR.
-2.  Verify that the pull request has the necessary approvals. If it does not, do
-    not proceed and leave an error comment on the PR.
+2.  Verify that the pull request has the approvals required by the [GitHub
+    branch protections][required reviews]. If it does not, do not proceed and
+    leave an error comment on the PR.
 3.  Verify that there are no other commits on the pull request branch since the
     last approved commit (or a manually entered commit hash entered by the
     commenter) other than those created by Contribute Bot. If such commits
-    exists, then do not proceed and leave a comment on the PR mentioning that
+    exist, then do not proceed and leave a comment on the PR mentioning that
     "/merge COMMITHASH" will bypass this. While this is stricter than what the
     branch protections might allow, it avoids accidentally merging in unreviewed
     changes.
@@ -57,12 +58,14 @@ Contribute Bot. If a user writes a comment on a pull request with the text
     failure, then stop trying to merge the PR and make an error comment on the
     PR.
 6.  Merge the pull request using the project's allowed merge method (`squash`
-    for Go Cloud and Wire), using the body of the pull request (the first
-    comment) as the commit message in the case of `merge` or `squash`.
+    for Go Cloud and Wire), using the title and body of the pull request (the
+    first comment) as the commit message in the case of `merge` or `squash`.
 
 Multiple pull requests may be requested to be merged at the same time. In this
 case, Contribute Bot will hold off on proceeding through Steps 4-6 until the
 merge requests made earlier have either been merged or stopped due to errors.
+
+[required reviews]: https://help.github.com/articles/about-required-reviews-for-pull-requests/
 
 ## Detailed Design
 
