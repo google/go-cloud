@@ -407,6 +407,12 @@ wiki page. We also adopt the following guidelines:
 -   Ensure you've run `goimports` on your code to properly group import
     statements.
 
+-   Order arguments that are less likely to change across multiple calls to the
+    constructor before ones that are likely to change. For example, connection
+    and authorization related arguments should go before names, so
+    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
+    "mybucket", client)```.
+
 ## Tests
 
 ### Conformance Tests
