@@ -12,6 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package azureblob provides a blob implementation that uses Azure Storage’s BlockBlob. Use OpenBucket
+// to construct a blob.Bucket.
+//
+// Open URLs
+//
+// For blob.Open URLs, azureblob registers for the protocol "azblob".
+// The URL's Host is used as the bucket name.
+//
+// Authentication Options:
+//
+// Option 1: Use the Storage Account Name and Account Key (Primary or Secondary)
+// This option requires the following environment variables to be set: AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY
+//
+// Option 2: Use a Shared Access Token (SASToken) for the Storage Account or Container
+// This option requires the following environment variables to be set: AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_SASTOKEN
+// See documentation on Shared Access Signature: https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
+//
+// The following query options are supported:
+//  - backslashEscapeStr: Optional, defaults to forwardslash. Used to set the escape character for backslashes.
+//
+// Example URL:
+//  azblob://mybucket?backslashEscapeStr=%2F
+//
+// As
+//
+// azureblob exposes the following types for As:
+//  - Bucket: *azblob.BlockBlobURL
+//  - Error: *azblob.StorageError
+//  - ListObject: *azblob.BlobItem for objects, *azblob.BlobPrefix for "directories".
+//  - ListOptions.BeforeList: Not Implemented
+//  - Reader: *azblob.ContainerURL
+//  - Attributes: *azblob.BlobGetPropertiesResponse
+//  - WriterOptions.BeforeWrite: Not Implemented
 package azureblob
 
 import (
@@ -58,11 +91,6 @@ type Settings struct {
 	Pipeline         pipeline.Pipeline
 }
 
-// DefaultBlobDelimiter is used to escape backslashes
-//type DefaultBlobDelimiter struct {
-//	Value string
-//}
-
 const (
 	// BlobPathSeparator is used to escape backslashes
 	BlobPathSeparator = "/"
@@ -71,11 +99,35 @@ const (
 )
 
 var (
-	maxDownloadRetryRequests = 3    // download retry policy
-	defaultPageSize          = 1000 // default page size for ListPaged
-	defaultUploadBuffers     = 5    // configure the number of rotating buffers that are used when uploading
-	defaultUploadBlockSize   = 8 * 1024 * 1024
+	maxDownloadRetryRequests = 3               // download retry policy
+	defaultPageSize          = 1000            // default page size for ListPaged
+	defaultUploadBuffers     = 5               // configure the number of rotating buffers that are used when uploading
+	defaultUploadBlockSize   = 8 * 1024 * 1024 //configure the upload buffer size
 )
+
+func init() {
+	blob.Register("azblob", openURL)
+}
+
+func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+	q := u.Query()
+	s := Settings{
+		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
+		AccountKey:       os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),
+		SASToken:         os.Getenv("AZURE_STORAGE_SASTOKEN"),
+		DefaultDelimiter: BlobPathSeparator,
+	}
+
+	if backslashEscapeStr := q["backslashEscapeStr"]; len(backslashEscapeStr) > 0 {
+		s.DefaultDelimiter = backslashEscapeStr[0]
+	}
+
+	if s.SASToken != "" {
+		return openBucketWithSASToken(ctx, &s, u.Host)
+	} else {
+		return openBucketWithAccountKey(ctx, &s, u.Host)
+	}
+}
 
 // OpenBucket returns an Azure BlockBlob Bucket
 func OpenBucket(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
@@ -484,15 +536,22 @@ func (w *writer) open() error {
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {
-	if w.w == nil {
-		w.touch()
-	} else if err := w.w.Close(); err != nil {
-		return err
+
+	select {
+	case <-w.ctx.Done():
+		return w.ctx.Err()
+
+	default:
+		if w.w == nil {
+			w.touch()
+		} else if err := w.w.Close(); err != nil {
+			return err
+		}
+
+		<-w.donec
+
+		return w.err
 	}
-
-	<-w.donec
-
-	return w.err
 }
 
 // touch creates an empty object in the bucket. It is called if user creates a
