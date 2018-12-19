@@ -22,7 +22,7 @@ func main() {
 		log.Fatal("missing -env flag\n")
 	}
 	if flag.NArg() != 1 {
-		fmt.Fprintf(os.Stderr, "usage: pub [flags] topic\n")
+		fmt.Fprintf(os.Stderr, "usage: pub -env=<env> [flags] <topic-name>\n")
 	}
 	if err := pub(flag.Arg(0), *envFlag); err != nil {
 		log.Fatal(err)

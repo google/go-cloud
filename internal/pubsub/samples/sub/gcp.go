@@ -11,29 +11,10 @@ import (
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/gcppubsub"
 	"google.golang.org/api/option"
-	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 )
-
-// makeGCPSubscription creates a subscription to the given topic.
-func makeGCPSubscription(ctx context.Context, topicID, subID string) error {
-	subClient, cleanup, err := openGCPSubscriberClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-	proj, err := getGCPProjectID()
-	if err != nil {
-		return err
-	}
-	_, err = subClient.CreateSubscription(ctx, &pubsubpb.Subscription{
-		Topic: fmt.Sprintf("projects/%s/topics/%s", proj, topicID),
-		Name:  gcpSubscriptionName(proj, subID),
-	})
-	return err
-}
 
 // openGCPSubscription returns the GCP topic based on the subscription ID.
 func openGCPSubscription(ctx context.Context, subID string) (*pubsub.Subscription, func(), error) {
@@ -51,22 +32,6 @@ func openGCPSubscription(ctx context.Context, subID string) (*pubsub.Subscriptio
 		cleanup()
 	}
 	return sub, cleanup2, nil
-}
-
-// deleteGCPSubscription deletes the given GCP topic.
-func deleteGCPSubscription(ctx context.Context, subID string) error {
-	subClient, cleanup, err := openGCPSubscriberClient(ctx)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-	proj, err := getGCPProjectID()
-	if err != nil {
-		return err
-	}
-	return subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{
-		Subscription: gcpSubscriptionName(proj, subID),
-	})
 }
 
 func getGCPProjectID() (gcp.ProjectID, error) {

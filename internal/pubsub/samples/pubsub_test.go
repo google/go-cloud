@@ -36,12 +36,12 @@ func TestPubAndSubCommands(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
-				if _, err := runWithInput(msg, "pub", "-env", env, "send", topic); err != nil {
+				if _, err := runWithInput(msg, "pub", "-env", env, topic); err != nil {
 					t.Fatal(err)
 				}
 			}
 			n := fmt.Sprintf("%d", len(msgs))
-			recvOut, err := run("sub", "-env", env, "recv", "-n", n, sub)
+			recvOut, err := run("sub", "-env", env, "-n", n, sub)
 			if err != nil {
 				t.Fatal(err)
 			}
