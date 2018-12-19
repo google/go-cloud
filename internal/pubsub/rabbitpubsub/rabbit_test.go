@@ -166,7 +166,6 @@ func TestUnroutable(t *testing.T) {
 		t.Fatalf("got error of type %T, want MultiError", err)
 	}
 	if got, want := len(merr), len(msgs); got != want {
-		fmt.Printf("%+v\n", merr)
 		t.Fatalf("got %d errors, want %d", got, want)
 	}
 	for i, err := range merr {
