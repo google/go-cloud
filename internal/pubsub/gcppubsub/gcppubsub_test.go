@@ -39,11 +39,11 @@ const (
 	//    the icon at the top with a "Create subscription" tooltip.
 	// 1c. Create a second subscription the same way.
 	// 2. Update the topicName constant to your topic name, and the
-	//    subscriptionName1 and subscriptionName2 constants to your
+	//    subscriptionName0 and subscriptionName1 constants to your
 	//    subscription names.
 	topicName         = "test-topic"
-	subscriptionName1 = "test-subscription-1"
-	subscriptionName2 = "test-subscription-2"
+	subscriptionName0 = "test-subscription-1"
+	subscriptionName1 = "test-subscription-2"
 	projectID         = "go-cloud-test-216917"
 )
 
@@ -80,9 +80,9 @@ func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) 
 	var sname string
 	switch n {
 	case 0:
-		sname = subscriptionName1
+		sname = subscriptionName0
 	case 1:
-		sname = subscriptionName2
+		sname = subscriptionName1
 	default:
 		return nil, errors.New("n must be 0 or 1")
 	}
