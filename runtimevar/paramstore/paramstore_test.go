@@ -16,6 +16,8 @@ package paramstore
 
 import (
 	"context"
+	"errors"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -75,5 +77,31 @@ func (h *harness) Close() {
 func (h *harness) Mutable() bool { return true }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var getParam *ssm.GetParameterOutput
+	if !s.As(&getParam) {
+		return errors.New("Snapshot.As failed for GetParameterOutput")
+	}
+	var descParam *ssm.DescribeParametersOutput
+	if !s.As(&descParam) {
+		return errors.New("Snapshot.As failed for DescribeParametersOutput")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var e awserr.Error
+	if !runtimevar.ErrorAs(err, &e) {
+		return errors.New("runtimevar.ErrorAs failed")
+	}
+	return nil
 }
