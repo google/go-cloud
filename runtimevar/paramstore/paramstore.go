@@ -17,6 +17,12 @@
 //
 // Construct a Client, then use NewVariable to construct any number of
 // runtimevar.Variable objects.
+//
+// As
+//
+// paramstore exposes the following types for As:
+//  - Snapshot: *ssm.GetParameterOutput, *ssm.DescribeParametersOutput
+//  - Error: awserr.Error
 package paramstore // import "gocloud.dev/runtimevar/paramstore"
 
 import (
@@ -63,17 +69,37 @@ type Options struct {
 // state implements driver.State.
 type state struct {
 	val        interface{}
+	rawGet     *ssm.GetParameterOutput
+	rawDesc    *ssm.DescribeParametersOutput
 	updateTime time.Time
 	version    int64
 	err        error
 }
 
+// Value implements driver.State.Value.
 func (s *state) Value() (interface{}, error) {
 	return s.val, s.err
 }
 
+// UpdateTime implements driver.State.UpdateTime.
 func (s *state) UpdateTime() time.Time {
 	return s.updateTime
+}
+
+// As implements driver.State.As.
+func (s *state) As(i interface{}) bool {
+	if s.rawGet == nil {
+		return false
+	}
+	switch p := i.(type) {
+	case **ssm.GetParameterOutput:
+		*p = s.rawGet
+	case **ssm.DescribeParametersOutput:
+		*p = s.rawDesc
+	default:
+		return false
+	}
+	return true
 }
 
 // errorState returns a new State with err, unless prevS also represents
@@ -156,10 +182,22 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
-	return &state{val: val, updateTime: *descP.LastModifiedDate, version: *getP.Version}, w.wait
+	return &state{val: val, rawGet: getResp, rawDesc: descResp, updateTime: *descP.LastModifiedDate, version: *getP.Version}, w.wait
 }
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
+}
+
+// ErrorAs implements driver.ErrorAs.
+func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case awserr.Error:
+		if p, ok := i.(*awserr.Error); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
 }

@@ -66,7 +66,29 @@ func (h *harness) Close() {}
 func (h *harness) Mutable() bool { return false }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
+	var ss string
+	if s.As(&ss) {
+		return errors.New("Snapshot.As expected to fail")
+	}
+	return nil
+}
+
+func (verifyAs) ErrorCheck(err error) error {
+	var ss string
+	if runtimevar.ErrorAs(err, &ss) {
+		return errors.New("runtimevar.ErrorAs expected to fail")
+	}
+	return nil
 }
 
 func TestNew(t *testing.T) {
