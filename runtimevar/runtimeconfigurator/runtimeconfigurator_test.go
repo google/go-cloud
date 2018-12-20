@@ -54,7 +54,7 @@ type harness struct {
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
 	ctx := context.Background()
-	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "runtimevar")
 	client := pb.NewRuntimeConfigManagerClient(conn)
 	rn := resourceName("")
 	// Ignore errors if the config already exists.
