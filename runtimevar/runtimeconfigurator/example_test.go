@@ -29,7 +29,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNew() {
+func ExampleNewVariable() {
 	ctx := context.Background()
 
 	// Get GCP credentials and dial the server.

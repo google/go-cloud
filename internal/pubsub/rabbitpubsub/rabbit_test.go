@@ -205,7 +205,6 @@ func declareExchange(conn amqpConnection, name string) error {
 	ch, err := conn.Channel()
 	if err != nil {
 		panic(err)
-		return err
 	}
 	defer ch.Close()
 	return ch.ExchangeDeclare(name)

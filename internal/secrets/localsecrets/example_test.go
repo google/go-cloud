@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/internal/secrets/localsecrets"
 )
 
-func ExampleCrypterEncryptDecrypt() {
+func Example() {
 	// localsecrets.Keeper untilizes the golang.org/x/crypto/nacl/secretbox package
 	// for the crypto implementation, and secretbox requires a secret key
 	// that is a [32]byte. Because most users will have keys which are strings,
