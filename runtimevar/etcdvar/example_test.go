@@ -15,6 +15,7 @@
 package etcdvar_test
 
 import (
+	"context"
 	"log"
 
 	"github.com/coreos/etcd/clientv3"

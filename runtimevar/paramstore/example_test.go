@@ -15,6 +15,7 @@
 package paramstore_test
 
 import (
+	"context"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
