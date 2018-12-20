@@ -29,10 +29,9 @@ import (
 func Example_sendReceive() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	b := mempubsub.NewBroker([]string{"myTopic"})
-	t := mempubsub.OpenTopic(b, "myTopic")
+	t := mempubsub.NewTopic()
 	defer t.Shutdown(ctx)
-	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	s := mempubsub.NewSubscription(t, time.Second)
 	defer s.Shutdown(ctx)
 
 	// Send a message to the topic.
@@ -59,10 +58,9 @@ func Example_sendReceive() {
 func Example_sendReceiveMultipleMessages() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	b := mempubsub.NewBroker([]string{"myTopic"})
-	t := mempubsub.OpenTopic(b, "myTopic")
+	t := mempubsub.NewTopic()
 	defer t.Shutdown(ctx)
-	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	s := mempubsub.NewSubscription(t, time.Second)
 	defer s.Shutdown(ctx)
 
 	// Send messages to the topic.
@@ -106,10 +104,9 @@ func Example_sendReceiveMultipleMessages() {
 func Example_receiveWithInvertedWorkerPool() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	b := mempubsub.NewBroker([]string{"myTopic"})
-	t := mempubsub.OpenTopic(b, "myTopic")
+	t := mempubsub.NewTopic()
 	defer t.Shutdown(ctx)
-	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	s := mempubsub.NewSubscription(t, time.Second)
 	defer s.Shutdown(ctx)
 
 	// Send a bunch of messages to the topic.
@@ -180,10 +177,9 @@ func Example_receiveWithInvertedWorkerPool() {
 func Example_receiveWithTraditionalWorkerPool() {
 	// Open a topic and corresponding subscription.
 	ctx := context.Background()
-	b := mempubsub.NewBroker([]string{"myTopic"})
-	t := mempubsub.OpenTopic(b, "myTopic")
+	t := mempubsub.NewTopic()
 	defer t.Shutdown(ctx)
-	s := mempubsub.OpenSubscription(b, "myTopic", time.Second)
+	s := mempubsub.NewSubscription(t, time.Second)
 	defer s.Shutdown(ctx)
 
 	// Send a bunch of messages to the topic.

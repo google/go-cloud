@@ -17,6 +17,12 @@
 //
 // Construct a Client, then use NewVariable to construct any number of
 // runtimevar.Variable objects.
+//
+// As
+//
+// paramstore exposes the following types for As:
+//  - Snapshot: *ssm.GetParameterOutput, *ssm.DescribeParametersOutput
+//  - Error: awserr.Error
 package paramstore // import "gocloud.dev/runtimevar/paramstore"
 
 import (
@@ -33,32 +39,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// Client stores long-lived variables for connecting to Parameter Store.
-type Client struct {
-	sess client.ConfigProvider
-}
-
-// NewClient returns a constructed Client with the required values.
-func NewClient(p client.ConfigProvider) *Client {
-	return &Client{sess: p}
-}
-
-// NewVariable constructs a runtimevar.Variable object with this package as the driver
-// implementation.
-func (c *Client) NewVariable(name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := c.newWatcher(name, decoder, opts)
+// NewVariable constructs a runtimevar.Variable that watches AWS Parameter Store.
+func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	w, err := newWatcher(sess, name, decoder, opts)
 	if err != nil {
 		return nil, err
 	}
 	return runtimevar.New(w), nil
 }
 
-func (c *Client) newWatcher(name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
-		sess:    c.sess,
+		sess:    sess,
 		name:    name,
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
@@ -74,17 +69,37 @@ type Options struct {
 // state implements driver.State.
 type state struct {
 	val        interface{}
+	rawGet     *ssm.GetParameterOutput
+	rawDesc    *ssm.DescribeParametersOutput
 	updateTime time.Time
 	version    int64
 	err        error
 }
 
+// Value implements driver.State.Value.
 func (s *state) Value() (interface{}, error) {
 	return s.val, s.err
 }
 
+// UpdateTime implements driver.State.UpdateTime.
 func (s *state) UpdateTime() time.Time {
 	return s.updateTime
+}
+
+// As implements driver.State.As.
+func (s *state) As(i interface{}) bool {
+	if s.rawGet == nil {
+		return false
+	}
+	switch p := i.(type) {
+	case **ssm.GetParameterOutput:
+		*p = s.rawGet
+	case **ssm.DescribeParametersOutput:
+		*p = s.rawDesc
+	default:
+		return false
+	}
+	return true
 }
 
 // errorState returns a new State with err, unless prevS also represents
@@ -167,10 +182,22 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}
-	return &state{val: val, updateTime: *descP.LastModifiedDate, version: *getP.Version}, w.wait
+	return &state{val: val, rawGet: getResp, rawDesc: descResp, updateTime: *descP.LastModifiedDate, version: *getP.Version}, w.wait
 }
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
 	return nil
+}
+
+// ErrorAs implements driver.ErrorAs.
+func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case awserr.Error:
+		if p, ok := i.(*awserr.Error); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
 }

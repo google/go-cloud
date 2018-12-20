@@ -824,17 +824,16 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			wantErr: true,
 		},
 		{
-			name:       "length 0 read fails",
-			key:        key,
-			wantErr:    true,
-			skipCreate: true,
-		},
-		{
 			name:       "negative offset fails",
 			key:        key,
 			offset:     -1,
 			wantErr:    true,
 			skipCreate: true,
+		},
+		{
+			name: "length 0 read",
+			key:  key,
+			want: []byte{},
 		},
 		{
 			name:         "read from positive offset to end",
@@ -855,8 +854,14 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		{
 			name:         "read in full",
 			key:          key,
-			offset:       0,
 			length:       -1,
+			want:         content,
+			wantReadSize: contentSize,
+		},
+		{
+			name:         "read in full with negative length not -1",
+			key:          key,
+			length:       -42,
 			want:         content,
 			wantReadSize: contentSize,
 		},
