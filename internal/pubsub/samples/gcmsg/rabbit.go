@@ -20,11 +20,20 @@ import (
 	"gocloud.dev/internal/pubsub/rabbitpubsub"
 )
 
-const rabbitURL = "amqp://guest:guest@localhost:5672/"
+// openRabbitTopic returns the RabbitMQ topic for the given topic ID.
+func openRabbitTopic(topicID, serverURL string) (*pubsub.Topic, func(), error) {
+	conn, err := amqp.Dial(serverURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanup := func() { conn.Close() }
+	topic := rabbitpubsub.OpenTopic(conn, topicID)
+	return topic, cleanup, nil
+}
 
 // openRabbitTopic returns the RabbitMQ topic for the given topic ID.
-func openRabbitSubscription(subID string) (*pubsub.Subscription, func(), error) {
-	conn, err := amqp.Dial(rabbitURL)
+func openRabbitSubscription(subID, serverURL string) (*pubsub.Subscription, func(), error) {
+	conn, err := amqp.Dial(serverURL)
 	if err != nil {
 		return nil, nil, err
 	}

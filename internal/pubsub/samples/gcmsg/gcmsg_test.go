@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package samples_test
+package main
 
 import (
 	"flag"
@@ -37,11 +37,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestPubAndSubCommands(t *testing.T) {
-	if !commandExists("pub") {
-		t.Skip("pub command not found")
-	}
-	if !commandExists("sub") {
-		t.Skip("sub command not found")
+	if !commandExists("msgs") {
+		t.Skip("msgs command not found")
 	}
 	envs := strings.Split(*envsFlag, ",")
 	topic := *topicFlag
@@ -50,12 +47,14 @@ func TestPubAndSubCommands(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
-				if _, err := runWithInput(msg, "pub", "-env", env, topic); err != nil {
+				c := cmd{name: "msgs", args: []string{"-env", env, "pub", topic}}
+				if _, err := c.runWithInput(msg); err != nil {
 					t.Fatal(err)
 				}
 			}
 			n := fmt.Sprintf("%d", len(msgs))
-			recvOut, err := run("sub", "-env", env, "-n", n, sub)
+			c := cmd{name: "msgs", args: []string{"-env", env, "-n", n, "sub", sub}}
+			recvOut, err := c.run()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -68,20 +67,25 @@ func TestPubAndSubCommands(t *testing.T) {
 	}
 }
 
-func run(name string, args ...string) (string, error) {
-	c := exec.Command(name, args...)
-	out, err := c.CombinedOutput()
+type cmd struct {
+	name string
+	args []string
+}
+
+func (c *cmd) run() (string, error) {
+	c2 := exec.Command(c.name, c.args...)
+	out, err := c2.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("running %v: %s", c.Args, out)
+		return "", fmt.Errorf("running %v: %s", c2.Args, out)
 	}
 	return string(out), nil
 }
 
-func runWithInput(input, name string, args ...string) (string, error) {
-	c := exec.Command(name, args...)
-	inPipe, err := c.StdinPipe()
+func (c *cmd) runWithInput(input string) (string, error) {
+	c2 := exec.Command(c.name, c.args...)
+	inPipe, err := c2.StdinPipe()
 	if err != nil {
-		return "", fmt.Errorf("opening pipe to stdin for %v: %v", c.Args, err)
+		return "", fmt.Errorf("opening pipe to stdin for %v: %v", c2.Args, err)
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -90,9 +94,9 @@ func runWithInput(input, name string, args ...string) (string, error) {
 		defer inPipe.Close()
 		inPipe.Write([]byte(input))
 	}()
-	out, err := c.CombinedOutput()
+	out, err := c2.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("running %v: %s", c.Args, out)
+		return "", fmt.Errorf("running %v: %s", c2.Args, out)
 	}
 	wg.Wait()
 	return string(out), nil
