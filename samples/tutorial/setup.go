@@ -29,7 +29,7 @@ import (
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/gcp"
 
-	azureblob "github.com/google/go-cloud/blob/azureblob"
+	azureblob "gocloud.dev/blob/azureblob"
 )
 
 // setupBucket creates a connection to a particular cloud provider's blob storage.

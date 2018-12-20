@@ -61,8 +61,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/google/go-cloud/blob"
-	"github.com/google/go-cloud/blob/driver"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
@@ -272,14 +272,24 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 
 	blobPropertiesResponse, _ := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
-	return &reader{
-		body: blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
-		attrs: driver.ReaderAttributes{
-			ContentType: blobPropertiesResponse.ContentType(),
-			Size:        blobPropertiesResponse.ContentLength(),
-			ModTime:     blobPropertiesResponse.LastModified(),
-		},
-		raw: &blockBlobURL}, nil
+	attrs := driver.ReaderAttributes{
+		ContentType: blobPropertiesResponse.ContentType(),
+		Size:        blobPropertiesResponse.ContentLength(),
+		ModTime:     blobPropertiesResponse.LastModified(),
+	}
+
+	if length != 0 {
+		return &reader{
+			body:  blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
+			attrs: attrs,
+			raw:   &blockBlobURL}, nil
+	} else {
+		// Return a metadata reader with empty body (length = 0)
+		return &reader{
+			body:  ioutil.NopCloser(strings.NewReader("")),
+			attrs: attrs,
+			raw:   &blockBlobURL}, nil
+	}
 }
 
 func (b *bucket) As(i interface{}) bool {
@@ -521,7 +531,7 @@ func (w *writer) open() error {
 		uploadOpts := azblob.UploadStreamToBlockBlobOptions{BufferSize: w.opts.BufferSize, MaxBuffers: defaultUploadBuffers, Metadata: w.opts.Metadata, BlobHTTPHeaders: blobHTTPHeaders}
 		_, err = azblob.UploadStreamToBlockBlob(w.ctx, bytes.NewReader(buf), *w.urls.blockBlobURL, uploadOpts)
 		w.err = err
-		
+
 		if err != nil {
 			w.err = err
 			pr.CloseWithError(err)

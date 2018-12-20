@@ -19,9 +19,8 @@ import (
 	"io"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/google/go-cloud/blob"
-
-	"github.com/google/go-cloud/blob/azureblob"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/azureblob"
 )
 
 func Example() {

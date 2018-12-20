@@ -169,7 +169,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
 	
-	accountName = "gocloud"	
+	accountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 	accountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
 	credentials, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 

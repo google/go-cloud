@@ -2,11 +2,11 @@
 version: 1
 interactions:
 - request:
-    body: hello world
+    body: abcdefghijklmnopqurstuvwxyz
     form: {}
     headers:
       Content-Length:
-      - "11"
+      - "27"
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Blob-Cache-Control:
@@ -17,14 +17,12 @@ interactions:
       - ""
       X-Ms-Blob-Content-Language:
       - ""
-      X-Ms-Blob-Content-Md5:
-      - XrY7u+Ae7tCTyyK7j1rNww==
       X-Ms-Blob-Content-Type:
       - text/plain; charset=utf-8
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Client-Request-Id:
-      - 8d98a517-c96b-462b-5959-35ba83bd33bf
+      - 228d495b-d52d-49af-772b-4282e0a91525
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
@@ -35,17 +33,17 @@ interactions:
     body: ""
     headers:
       Content-Md5:
-      - XrY7u+Ae7tCTyyK7j1rNww==
+      - PflsWr6X8pZ9OAEIcAMKXw==
       Date:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Etag:
-      - '"0x8D66618A13D0949"'
+      - '"0x8D66618A0FEC760"'
       Last-Modified:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - aa899f80-b01e-0012-0e01-98d2af000000
+      - aa899e09-b01e-0012-3701-98d2af000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -60,7 +58,7 @@ interactions:
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - eedec6fb-ddcb-47ab-41ea-0d80eea0c85e
+      - 073157bb-307c-411d-642f-c204cdde28cb
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
@@ -68,22 +66,22 @@ interactions:
     url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading?timeout=4
     method: GET
   response:
-    body: hello world
+    body: abcdefghijklmnopqurstuvwxyz
     headers:
       Accept-Ranges:
       - bytes
       Content-Disposition:
       - ""
       Content-Length:
-      - "11"
+      - "27"
       Content-Md5:
-      - XrY7u+Ae7tCTyyK7j1rNww==
+      - PflsWr6X8pZ9OAEIcAMKXw==
       Content-Type:
       - text/plain; charset=utf-8
       Date:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Etag:
-      - '"0x8D66618A13D0949"'
+      - '"0x8D66618A0FEC760"'
       Last-Modified:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Server:
@@ -97,7 +95,7 @@ interactions:
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - aa899f86-b01e-0012-1201-98d2af000000
+      - aa899e0e-b01e-0012-3c01-98d2af000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -112,7 +110,7 @@ interactions:
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - baafc1ad-b279-4f1b-706b-72a99aa99742
+      - 9e630c3e-0e34-4982-56bd-0f1337bcd741
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
@@ -127,15 +125,15 @@ interactions:
       Content-Disposition:
       - ""
       Content-Length:
-      - "11"
+      - "27"
       Content-Md5:
-      - XrY7u+Ae7tCTyyK7j1rNww==
+      - PflsWr6X8pZ9OAEIcAMKXw==
       Content-Type:
       - text/plain; charset=utf-8
       Date:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Etag:
-      - '"0x8D66618A13D0949"'
+      - '"0x8D66618A0FEC760"'
       Last-Modified:
       - Thu, 20 Dec 2018 01:15:28 GMT
       Server:
@@ -149,7 +147,7 @@ interactions:
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - aa899f8a-b01e-0012-1601-98d2af000000
+      - aa899e17-b01e-0012-4501-98d2af000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -164,7 +162,7 @@ interactions:
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - 66720550-abf0-4119-4429-691fc81c2609
+      - ea79fc6b-b32c-469a-7350-81d59125c5e1
       X-Ms-Delete-Snapshots:
       - include
       X-Ms-Version:
@@ -183,7 +181,7 @@ interactions:
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - aa899f8c-b01e-0012-1801-98d2af000000
+      - aa899e19-b01e-0012-4701-98d2af000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted

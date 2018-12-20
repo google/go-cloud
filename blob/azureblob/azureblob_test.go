@@ -15,21 +15,21 @@
 package azureblob
 
 import (
-	"os"
 	"context"
-	"net/http"	
+	"net/http"
+	"os"
 	"testing"
-	
-	"github.com/google/go-cloud/blob/driver"
-	"github.com/google/go-cloud/blob/drivertest"
-	"github.com/google/go-cloud/internal/testing/setup"
+
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/internal/testing/setup"
 )
 
 // Prerequisites for --record mode
 // 1. Sign-in to your Azure Subscription and create a Storage Account
 //    link to the Azure Portal: https://portal.azure.com
 // 2. Locate the Access Key (Primary or Secondary) under your Storage Account > Settings > Access Keys
-// 3. Set Environment Variable AZURE_STORAGE_ACCOUNT_KEY below
+// 3. Set Environment Variable AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY below
 // 4. Create a container in your Storage Account > Blob. Use the bucketName constant below as the container name.
 // Here is a step-by-step walkthrough using the Azure Portal
 // https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal
@@ -46,10 +46,10 @@ type harness struct {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	p, done, accountName, accountKey := setup.NewAzureTestPipeline(ctx, t)
 	s := &Settings{
-		AccountName:      accountName,
-		AccountKey:       accountKey,		
-		SASToken:         "",
-		Pipeline:         p,
+		AccountName: accountName,
+		AccountKey:  accountKey,
+		SASToken:    "",
+		Pipeline:    p,
 	}
 
 	return &harness{settings: *s, closer: done}, nil
@@ -68,9 +68,11 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	// please set the storage account key if running in record mode, it is not needed for replay mode
-	
-	// AZURE_STORAGE_ACCOUNT_KEY is the Primary or Secondary Key	
+	// See setup instructions above for more details.
+	// AZURE_STORAGE_ACCOUNT_NAME is the Azure Storage Account Name
+	os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", "gocloud")
+	// AZURE_STORAGE_ACCOUNT_KEY is the Primary or Secondary Key
 	os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", "")
+
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
