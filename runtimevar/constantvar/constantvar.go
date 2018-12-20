@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package constantvar provides a runtimevar implementation with variables
+// Package constantvar provides a runtimevar implementation with Variables
 // that never change. Use New, NewBytes, or NewError to construct a
 // *runtimevar.Variable.
 //
