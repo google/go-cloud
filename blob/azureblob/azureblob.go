@@ -555,20 +555,13 @@ func (w *writer) open(pr *io.PipeReader) error {
 // be returned. If a writer is closed before any Write is called, Close will
 // create an empty file at the given key.
 func (w *writer) Close() error {
-
-	select {
-	case <-w.ctx.Done():
-		return w.ctx.Err()
-
-	default:
-		if w.w == nil {
-			w.open(nil)
-		} else if err := w.w.Close(); err != nil {
-			return err
-		}
-
-		<-w.donec
-
-		return w.err
+	if w.w == nil {
+		w.open(nil)
+	} else if err := w.w.Close(); err != nil {
+		return err
 	}
+
+	<-w.donec
+
+	return w.err
 }
