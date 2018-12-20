@@ -30,7 +30,7 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNew() {
+func ExampleNewVariable() {
 	// Establish an AWS session.
 	session, err := session.NewSession(&aws.Config{})
 
