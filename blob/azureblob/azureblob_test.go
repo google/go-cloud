@@ -39,12 +39,13 @@ const (
 )
 
 type harness struct {
-	settings Settings
-	closer   func()
+	settings   Settings
+	closer     func()
+	httpClient *http.Client
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	p, done, accountName, accountKey := setup.NewAzureTestPipeline(ctx, t)
+	p, done, accountName, accountKey, httpClient := setup.NewAzureTestPipeline(ctx, t)
 	s := &Settings{
 		AccountName: accountName,
 		AccountKey:  accountKey,
@@ -52,11 +53,11 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		Pipeline:    p,
 	}
 
-	return &harness{settings: *s, closer: done}, nil
+	return &harness{settings: *s, closer: done, httpClient: httpClient}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return setup.AzureHTTPClient(nil)
+	return h.httpClient
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {

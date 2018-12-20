@@ -1,15 +1,15 @@
 package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
-	"os"
-	"fmt"
-	"time"
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
@@ -156,29 +156,29 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 	return conn, done
 }
 
-
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
 // It requires setting environment variables for the Storage Account Name (AZURE_STORAGE_ACCOUNT_NAME) and a storage key (AZURE_STORAGE_ACCOUNT_KEY)
-func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.Pipeline, done func(), accountName string, accountKey string) {
+func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.Pipeline, done func(), accountName string, accountKey string, httpClient *http.Client) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
-	}	
+	}
 	r, done, err := replay.NewRecorder(t, mode, &replay.ProviderMatcher{}, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
-	
+
 	accountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 	accountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
 	credentials, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 
-	if !*Record {					
-		accountKey = "FAKE_KEY"		
+	if !*Record {
+		accountKey = "FAKE_KEY"
 	}
 
+	httpClient = azureHTTPClient(r)
 	p := newPipeline(credentials, r)
-	return p, done, accountName, accountKey
+	return p, done, accountName, accountKey, httpClient
 }
 
 func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
@@ -213,7 +213,7 @@ func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
 		},
 	}
 
-	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: newDefaultHTTPClientFactory(AzureHTTPClient(r)), Log: log})
+	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: newDefaultHTTPClientFactory(azureHTTPClient(r)), Log: log})
 }
 
 func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Factory {
@@ -227,29 +227,31 @@ func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Facto
 		}
 	})
 }
-// AzureHTTPClient returns a new http.Client configured for Azure
-func AzureHTTPClient(r *recorder.Recorder) *http.Client {
+
+func azureHTTPClient(r *recorder.Recorder) *http.Client {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).Dial,
+		MaxIdleConns:           0,
+		MaxIdleConnsPerHost:    1000,
+		IdleConnTimeout:        180 * time.Second,
+		TLSHandshakeTimeout:    10 * time.Second,
+		ExpectContinueTimeout:  1 * time.Second,
+		DisableKeepAlives:      false,
+		DisableCompression:     false,
+		MaxResponseHeaderBytes: 0,
+	}
+
 	if r != nil {
+		r.SetTransport(transport)
 		return &http.Client{Transport: r}
 	} else {
 		return &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				Dial: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-					DualStack: true,
-				}).Dial,
-				MaxIdleConns:           0,
-				MaxIdleConnsPerHost:    1000,
-				IdleConnTimeout:        180 * time.Second,
-				TLSHandshakeTimeout:    10 * time.Second,
-				ExpectContinueTimeout:  1 * time.Second,
-				DisableKeepAlives:      false,
-				DisableCompression:     false,
-				MaxResponseHeaderBytes: 0,
-			},
+			Transport: transport,
 		}
 	}
 }
-
