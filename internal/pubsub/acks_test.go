@@ -54,7 +54,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	var sentAcks []driver.AckID
 	id := rand.Int()
 	m := &driver.Message{AckID: id}
-	ackChan := make(chan struct{})
+	ackChan := make(chan struct{}, 1)
 	ds := &ackingDriverSub{
 		q: []*driver.Message{m},
 		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
@@ -171,30 +171,6 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 	if len(sentAckBatches) < 2 {
 		t.Errorf("got %d batches, want at least 2", len(sentAckBatches))
 	}
-}
-
-func TestAckDoesNotBlock(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	m := &driver.Message{AckID: 0} // the batcher doesn't like nil interfaces
-	ds := &ackingDriverSub{
-		q: []*driver.Message{m},
-		sendAcks: func(_ context.Context, ackIDs []driver.AckID) error {
-			<-ctx.Done()
-			return nil
-		},
-	}
-	sub := pubsub.NewSubscription(ds)
-	defer sub.Shutdown(ctx)
-	defer cancel()
-	mr, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// If Ack blocks here, waiting for sendAcks to finish, then the
-	// deferred cancel() will never run, so sendAcks can never finish. That
-	// would cause the test to hang. Thus hanging is how this test signals
-	// failure.
-	mr.Ack()
 }
 
 func TestDoubleAckCausesPanic(t *testing.T) {
