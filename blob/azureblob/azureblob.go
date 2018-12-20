@@ -95,7 +95,7 @@ const (
 	// BlobPathSeparator is used to escape backslashes
 	BlobPathSeparator = "/"
 	// OSPathSeparator or backslashes must be converted to forwardslashes
-	OSPathSeparator = string(os.PathSeparator)
+	OSPathSeparator = "\\" //string(os.PathSeparator)
 )
 
 var (
