@@ -51,7 +51,7 @@ var Set = wire.NewSet(
 func NewExporter(id gcp.ProjectID, ts gcp.TokenSource, mr monitoredresource.Interface) (*stackdriver.Exporter, func(), error) {
 	opts := []option.ClientOption{
 		option.WithTokenSource(oauth2.TokenSource(ts)),
-		option.WithUserAgent(useragent.GoCloudUserAgent),
+		useragent.ClientOption("server"),
 	}
 	exp, err := stackdriver.NewExporter(stackdriver.Options{
 		ProjectID:               string(id),
