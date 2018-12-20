@@ -41,7 +41,8 @@ type Harness interface {
 
 	// MakeSubscription makes a driver.Subscription subscribed to the given
 	// driver.Topic.
-	MakeSubscription(ctx context.Context, t driver.Topic) (driver.Subscription, error)
+	// n must be 0 or 1, to select between two different subscriptions. Any other value is an error.
+	MakeSubscription(ctx context.Context, t driver.Topic, n int) (driver.Subscription, error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
 	// subscription that does not exist.
@@ -284,7 +285,7 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, err := h.MakeSubscription(ctx, dt)
+	ds, err := h.MakeSubscription(ctx, dt, 0)
 	if err != nil {
 		return nil, nil, nil, err
 	}
