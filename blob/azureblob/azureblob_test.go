@@ -16,8 +16,10 @@ package azureblob
 
 import (
 	"context"
+	"encoding/json"
+	"flag"
+	"io/ioutil"
 	"net/http"
-	"os"
 	"testing"
 
 	"gocloud.dev/blob/driver"
@@ -27,16 +29,30 @@ import (
 
 // Prerequisites for --record mode
 // 1. Sign-in to your Azure Subscription and create a Storage Account
-//    link to the Azure Portal: https://portal.azure.com
+//    Link to the Azure Portal: https://portal.azure.com
+//
 // 2. Locate the Access Key (Primary or Secondary) under your Storage Account > Settings > Access Keys
-// 3. Set Environment Variable AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY below
-// 4. Create a container in your Storage Account > Blob. Use the bucketName constant below as the container name.
+//
+// 3. Create a file in JSON format with the AccountName and AccountKey values
+// Example: settings.json
+//	{
+//		"AccountName": "enter-your-storage-account-name",
+//		"AccountKey": "enter-your-storage-account-key",
+//	}
+//
+// 4. Create a container in your Storage Account > Blob. Update the bucketName constant to your container name.
 // Here is a step-by-step walkthrough using the Azure Portal
 // https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal
+//
+// 5. Run the tests with -record and -settingsfile flags
+// Example:
+// go.exe test -timeout 30s gocloud.dev/blob/azureblob -run ^TestConformance$ -v -record -settingsfile <path-to-settings.json>
 
 const (
 	bucketName = "go-cloud-bucket"
 )
+
+var pathToSettingsFile = flag.String("settingsfile", "", "path to .json file containing Azure Storage AccountKey and AccountName(required for --record)")
 
 type harness struct {
 	settings   Settings
@@ -45,13 +61,27 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	p, done, accountName, accountKey, httpClient := setup.NewAzureTestPipeline(ctx, t)
-	s := &Settings{
-		AccountName: accountName,
-		AccountKey:  accountKey,
-		SASToken:    "",
-		Pipeline:    p,
+	s := &Settings{}
+
+	if *setup.Record {
+		// Fetch the AccountName and AccountKey settings from file
+		if *pathToSettingsFile == "" {
+			t.Fatalf("--settingsfile is required in --record mode.")
+		} else {
+			b, err := ioutil.ReadFile(*pathToSettingsFile)
+			if err != nil {
+				t.Fatalf("Couldn't find settings file at %v: %v", *pathToSettingsFile, err)
+			}
+			json.Unmarshal(b, s)
+		}
+	} else {
+		// In replay mode, the AccountName must match the name used for recording.
+		s.AccountName = "gocloud"
+		s.AccountKey = "FAKE_KEY"
 	}
+
+	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, s.AccountName, s.AccountKey)
+	s.Pipeline = p
 
 	return &harness{settings: *s, closer: done, httpClient: httpClient}, nil
 }
@@ -70,10 +100,5 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	// See setup instructions above for more details.
-	// AZURE_STORAGE_ACCOUNT_NAME is the Azure Storage Account Name
-	os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", "gocloud")
-	// AZURE_STORAGE_ACCOUNT_KEY is the Primary or Secondary Key
-	os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", "")
-
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -157,8 +156,7 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.C
 }
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
-// It requires setting environment variables for the Storage Account Name (AZURE_STORAGE_ACCOUNT_NAME) and a storage key (AZURE_STORAGE_ACCOUNT_KEY)
-func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.Pipeline, done func(), accountName string, accountKey string, httpClient *http.Client) {
+func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string, accountKey string) (pipeline pipeline.Pipeline, done func(), httpClient *http.Client) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
@@ -168,17 +166,17 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T) (pipeline pipeline.
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
 
-	accountName = os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	accountKey = os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
-	credentials, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
-
-	if !*Record {
-		accountKey = "FAKE_KEY"
+	var credential azblob.Credential
+	if *Record {
+		credential, _ = azblob.NewSharedKeyCredential(accountName, accountKey)
+	} else {
+		credential = azblob.NewAnonymousCredential()
 	}
 
 	httpClient = azureHTTPClient(r)
-	p := newPipeline(credentials, r)
-	return p, done, accountName, accountKey, httpClient
+	p := newPipeline(credential, r)
+
+	return p, done, httpClient
 }
 
 func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
