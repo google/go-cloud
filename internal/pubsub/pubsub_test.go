@@ -247,7 +247,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// 3. The context passed to the Goroutine 2 call is canceled.
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
-	inReceiveBatch := make(chan int)
+	inReceiveBatch := make(chan int, 1)
 	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch})
 	go func() {
 		s.Receive(context.Background())
