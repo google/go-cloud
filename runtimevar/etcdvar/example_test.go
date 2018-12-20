@@ -48,5 +48,10 @@ func ExampleNew() {
 	defer v.Close()
 
 	// You can now read the current value of the variable from v.
+	snapshot, err := v.Watch(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
 	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
+	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
 }
