@@ -42,7 +42,7 @@ func ExampleNew() {
 	// Construct a *runtimevar.Variable that watches the variable.
 	// For this example, the etcd variable being referenced should have a
 	// JSON string that decodes into MyConfig.
-	v, err := etcdvar.New("myconfig", client, decoder, nil)
+	v, err := etcdvar.New(client, "myconfig", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
