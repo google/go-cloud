@@ -32,7 +32,7 @@
 //  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
 //  ...
 //
-// Then, write your application code using the *Bucket type, and you can easily
+// Then, write your application code using the *Bucket type. You can easily
 // reconfigure your initialization code to choose a different provider.
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
@@ -319,7 +319,7 @@ type Bucket struct {
 }
 
 // NewBucket creates a new *Bucket based on a specific driver implementation.
-// Most end users should use subpackages to construct a *Bucket instead of this
+// End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
 // It is intended for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
