@@ -631,15 +631,20 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.urlSigner.SignedFileURL(ctx, key, path, opts)
 }
 
-// URLSigner defines an interface that wraps the SignedFileURL method.
-// SignedFileURL uses the full path of an object (includes the bucket dir), the path,
-// and expiry information in opts to create a signature for the resource.
-// It returns a string containing the path, expiry, and signature, to be used
-// for accessing the resource without further authorization.
-// Callers should ensure that creation of signed urls is restricted to properly
-// authenticated entities, as appropriate for the application.
+// URLSigner defines an interface that describes functionality for
+// creating and verifying a signed URL (Signed path?) for objects
+// in a fileblob bucket.
 type URLSigner interface {
-	SignedFileURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
+	//wraps the SignedFileURL method.
+	// SignedFileURL uses the full path of an object (includes the bucket dir), the path,
+	// and expiry information in opts to create a signature for the resource.
+	// It returns a string containing the path, expiry, and signature, to be used
+	// for accessing the resource without further authorization.
+	// Callers should ensure that creation of signed urls is restricted to properly
+	// authenticated entities, as appropriate for the application.
+	Sign(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
+
+	Verify(ctx context.Context, su string) bool
 }
 
 // errorURLSigner is a stub implementation of URLSigner used when no URLSigner is passed to OpenBucket.
