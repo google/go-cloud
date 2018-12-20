@@ -63,5 +63,5 @@ func ExampleNew() {
 	defer v.Close()
 
 	// You can now read the current value of the variable from v.
-	// Snapshot.Value will be of type MyConfig.
+	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
 }
