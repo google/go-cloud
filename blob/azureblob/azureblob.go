@@ -48,6 +48,7 @@
 package azureblob
 
 import (
+	"strconv"
 	"context"
 	"fmt"
 	"io"
@@ -269,13 +270,11 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, err
 	}
-
-	blobPropertiesResponse, _ := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
-
+	
 	attrs := driver.ReaderAttributes{
-		ContentType: blobPropertiesResponse.ContentType(),
-		Size:        blobPropertiesResponse.ContentLength(),
-		ModTime:     blobPropertiesResponse.LastModified(),
+		ContentType: blobDownloadResponse.ContentType(),
+		Size:        getSize(blobDownloadResponse.ContentLength(), blobDownloadResponse.ContentRange()),
+		ModTime:     blobDownloadResponse.LastModified(),
 	}
 
 	if length != 0 {
@@ -290,6 +289,23 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			attrs: attrs,
 			raw:   &blockBlobURL}, nil
 	}
+}
+
+func getSize(contentLength int64, contentRange string) int64 {
+	// Default size to ContentLength, but that's incorrect for partial-length reads,
+	// where ContentLength refers to the size of the returned Body, not the entire
+	// size of the blob. ContentRange has the full size.
+	size := contentLength
+	if contentRange != "" {
+		// Sample: bytes 10-14/27 (where 27 is the full size).
+		parts := strings.Split(contentRange, "/")
+		if len(parts) == 2 {
+			if i, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				size = i
+			}
+		}
+	}
+	return size
 }
 
 func (b *bucket) As(i interface{}) bool {

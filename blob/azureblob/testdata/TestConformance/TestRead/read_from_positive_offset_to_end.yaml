@@ -22,11 +22,11 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Client-Request-Id:
-      - 04639c8b-97aa-488e-4fe2-e9a744a88e1d
+      - ecf3a3af-7c2a-4c47-575a-b0d9a0b075f4
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:58 GMT
     url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading?timeout=4
     method: PUT
   response:
@@ -35,15 +35,15 @@ interactions:
       Content-Md5:
       - PflsWr6X8pZ9OAEIcAMKXw==
       Date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:57 GMT
       Etag:
-      - '"0x8D666BAD9D51005"'
+      - '"0x8D666BF143FE379"'
       Last-Modified:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:58 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - bd223eb2-301e-0161-49a3-98e439000000
+      - 69c6a019-401e-00cb-6fa7-987483000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -58,13 +58,13 @@ interactions:
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - 1a5f06a6-e7e9-4200-66f1-50e4864431e6
+      - 43abc569-344f-47ff-78f1-4efc83231c3c
       X-Ms-Range:
       - bytes=10-
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:58 GMT
     url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading?timeout=4
     method: GET
   response:
@@ -81,11 +81,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:57 GMT
       Etag:
-      - '"0x8D666BAD9D51005"'
+      - '"0x8D666BF143FE379"'
       Last-Modified:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:58 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Content-Md5:
@@ -93,13 +93,13 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:06:58 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - bd223ebc-301e-0161-4fa3-98e439000000
+      - 69c6a035-401e-00cb-09a7-987483000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -114,78 +114,26 @@ interactions:
       User-Agent:
       - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
       X-Ms-Client-Request-Id:
-      - 74bb433d-2e98-4e46-795d-9601b5ca6871
-      X-Ms-Version:
-      - "2018-03-28"
-      x-ms-date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading?timeout=4
-    method: HEAD
-  response:
-    body: ""
-    headers:
-      Accept-Ranges:
-      - bytes
-      Content-Disposition:
-      - ""
-      Content-Length:
-      - "27"
-      Content-Md5:
-      - PflsWr6X8pZ9OAEIcAMKXw==
-      Content-Type:
-      - text/plain; charset=utf-8
-      Date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
-      Etag:
-      - '"0x8D666BAD9D51005"'
-      Last-Modified:
-      - Thu, 20 Dec 2018 20:36:42 GMT
-      Server:
-      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
-      X-Ms-Blob-Type:
-      - BlockBlob
-      X-Ms-Creation-Time:
-      - Thu, 20 Dec 2018 20:36:42 GMT
-      X-Ms-Lease-State:
-      - available
-      X-Ms-Lease-Status:
-      - unlocked
-      X-Ms-Request-Id:
-      - bd223ebf-301e-0161-51a3-98e439000000
-      X-Ms-Server-Encrypted:
-      - "true"
-      X-Ms-Version:
-      - "2018-03-28"
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: ""
-    form: {}
-    headers:
-      User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
-      X-Ms-Client-Request-Id:
-      - 1c7732c9-f8d2-4e73-67e6-8511a698aa55
+      - 7e0e3523-c0df-46d4-57c5-976e003a05df
       X-Ms-Delete-Snapshots:
       - include
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:07:23 GMT
     url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading?timeout=4
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 20 Dec 2018 20:36:42 GMT
+      - Thu, 20 Dec 2018 21:07:22 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - bd223ec2-301e-0161-54a3-98e439000000
+      - 69c6d674-401e-00cb-5ca8-987483000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted

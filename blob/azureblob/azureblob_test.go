@@ -74,7 +74,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 			}
 			err = json.Unmarshal(b, s)
 			if err != nil {
-				t.Fatalf("Couldn't deserialize settings file at %v: %v" , *pathToSettingsFile, err)
+				t.Fatalf("Cannot load settings file %v: %v", *pathToSettingsFile, err)
 			}
 		}
 	} else {
