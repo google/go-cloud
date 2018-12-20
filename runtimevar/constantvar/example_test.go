@@ -43,7 +43,7 @@ func ExampleNew() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Value: %#v\n", snapshot.Value)
+	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
 
 	// Output:
 	// Value: constantvar_test.MyConfig{Server:"foo.com", Port:80}
@@ -78,7 +78,7 @@ func ExampleNewBytes() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Value: %#v\n", snapshot.Value)
+	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
 
 	// Output:
 	// Value: constantvar_test.MyConfig{Server:"foo.com", Port:80}
