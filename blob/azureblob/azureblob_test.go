@@ -72,7 +72,10 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 			if err != nil {
 				t.Fatalf("Couldn't find settings file at %v: %v", *pathToSettingsFile, err)
 			}
-			json.Unmarshal(b, s)
+			err = json.Unmarshal(b, s)
+			if err != nil {
+				t.Fatalf("Couldn't deserialize settings file at %v: %v" , *pathToSettingsFile, err)
+			}
 		}
 	} else {
 		// In replay mode, the AccountName must match the name used for recording.
