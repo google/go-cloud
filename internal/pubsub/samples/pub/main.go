@@ -73,6 +73,5 @@ func pub(topicID, env string) error {
 			return err
 		}
 	}
-
-	return nil
+	return scanner.Err()
 }
