@@ -48,11 +48,11 @@
 package azureblob
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
@@ -491,8 +491,15 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 
 // Write appends p to w. User must call Close to close the w after done writing.
 func (w *writer) Write(p []byte) (int, error) {
+
+	if len(p) == 0 {
+		return 0, nil
+	}
+
 	if w.w == nil {
-		if err := w.open(); err != nil {
+		pr, pw := io.Pipe()
+		w.w = pw
+		if err := w.open(pr); err != nil {
 			return 0, err
 		}
 	}
@@ -506,10 +513,7 @@ func (w *writer) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
-func (w *writer) open() error {
-	pr, pw := io.Pipe()
-	w.w = pw
-
+func (w *writer) open(pr *io.PipeReader) error {
 	go func() {
 		defer close(w.donec)
 
@@ -521,20 +525,25 @@ func (w *writer) open() error {
 			blobHTTPHeaders.ContentMD5 = w.opts.ContentMD5
 		}
 
-		buf, err := ioutil.ReadAll(pr)
-		if err != nil {
-			w.err = err
-			pr.CloseWithError(err)
-			return
+		var body io.Reader
+		if pr == nil {
+			body = http.NoBody
+		} else {
+			body = pr
 		}
 
-		uploadOpts := azblob.UploadStreamToBlockBlobOptions{BufferSize: w.opts.BufferSize, MaxBuffers: defaultUploadBuffers, Metadata: w.opts.Metadata, BlobHTTPHeaders: blobHTTPHeaders}
-		_, err = azblob.UploadStreamToBlockBlob(w.ctx, bytes.NewReader(buf), *w.urls.blockBlobURL, uploadOpts)
-		w.err = err
+		opts := azblob.UploadStreamToBlockBlobOptions{
+			BufferSize:      w.opts.BufferSize,
+			MaxBuffers:      defaultUploadBuffers,
+			Metadata:        w.opts.Metadata,
+			BlobHTTPHeaders: blobHTTPHeaders,
+		}
+		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.urls.blockBlobURL, opts)
 
-		if err != nil {
-			w.err = err
-			pr.CloseWithError(err)
+		if w.err != nil {
+			if pr != nil {
+				pr.CloseWithError(w.err)
+			}
 			return
 		}
 	}()
@@ -553,7 +562,7 @@ func (w *writer) Close() error {
 
 	default:
 		if w.w == nil {
-			w.touch()
+			w.open(nil)
 		} else if err := w.w.Close(); err != nil {
 			return err
 		}
@@ -562,19 +571,4 @@ func (w *writer) Close() error {
 
 		return w.err
 	}
-}
-
-// touch creates an empty object in the bucket. It is called if user creates a
-// new writer but never calls write before closing it.
-func (w *writer) touch() {
-	if w.w != nil {
-		return
-	}
-	defer close(w.donec)
-
-	blobHTTPHeaders := azblob.BlobHTTPHeaders{}
-	uploadOpts := azblob.UploadStreamToBlockBlobOptions{BufferSize: w.opts.BufferSize, MaxBuffers: defaultUploadBuffers, Metadata: w.opts.Metadata, BlobHTTPHeaders: blobHTTPHeaders}
-	_, err := azblob.UploadStreamToBlockBlob(w.ctx, ioutil.NopCloser(strings.NewReader("")), *w.urls.blockBlobURL, uploadOpts)
-
-	w.err = err
 }
