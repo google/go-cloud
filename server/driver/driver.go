@@ -20,7 +20,7 @@ import (
 	"net/http"
 )
 
-// A type that implements Server dispatches requests to an http.Handler.
+// Server dispatches requests to an http.Handler.
 type Server interface {
 	// ListenAndServe listens on the TCP network address addr and then
 	// calls Serve with handler to handle requests on incoming connections.

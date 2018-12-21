@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package etcdvar provides a runtimevar.Driver implementation to read
-// variables from etcd.
+// Package etcdvar provides a runtimevar implementation with variables
+// backed by etcd. Use New to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -38,11 +38,12 @@ import (
 // It is provided for future extensibility.
 type Options struct{}
 
-// New constructs a runtimevar.Variable object that uses client to watch
-// variables in etcd.
-// Provide a decoder to unmarshal updated configurations into similar
-// objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
+// New constructs a *runtimevar.Variable that uses client to watch the variable
+// name on an etcd server.
+// etcd returns raw bytes; provide a decoder to decode the raw bytes into the
+// appropriate type for runtimevar.Snapshot.Value.
+// See the runtimevar package documentation for examples of decoders.
+func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(name, cli, decoder)), nil
 }
 

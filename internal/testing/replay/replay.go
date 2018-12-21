@@ -76,17 +76,9 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 	}
 
 	// Use a custom matcher as the default matcher looks for URLs and methods.
-	// We match strictly in order, and verify URL, method, (possibly scrubbed)
-	// body, and (possibly) some headers.
+	// We verify URL, method, (possibly scrubbed) body, and (possibly) some headers.
 	cur := 0
-	lastMatch := -1
 	r.SetMatcher(func(r *http.Request, i cassette.Request) bool {
-		// If we've already used the request at this index, skip it.
-		if cur <= lastMatch {
-			cur++
-			return false
-		}
-
 		if r.Method != i.Method {
 			t.Fatalf("mismatched Method at request #%d; got %q want %q", cur, r.Method, i.Method)
 		}
@@ -125,8 +117,7 @@ func NewRecorder(t *testing.T, mode recorder.Mode, matcher *ProviderMatcher, fil
 
 		// We've got a match!
 		t.Logf("matched request #%d (%s %s)", cur, i.Method, i.URL)
-		lastMatch = cur
-		cur = 0
+		cur++
 		return true
 	})
 	return r, func() {
