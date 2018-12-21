@@ -37,8 +37,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestPubAndSubCommands(t *testing.T) {
-	if !commandExists("msgs") {
-		t.Skip("msgs command not found")
+	if !commandExists("gcmsgs") {
+		t.Skip("gcmsgs command not found")
 	}
 	envs := strings.Split(*envsFlag, ",")
 	topic := *topicFlag
