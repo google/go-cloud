@@ -9,9 +9,9 @@ Part of [#687][]
 
 ## Objective
 
-As a maintainer of Go Cloud, it is desirable to have pull requests merged in as
-quickly as they can be merged after receiving approvals, assuming there are no
-test breakages or merge conflicts. Currently, merging requires a manual process:
+The maintainers of Go Cloud want pull requests merged in as quickly as they can
+be merged after receiving approvals, assuming there are no test breakages or
+merge conflicts. Currently, merging requires a manual process:
 
 ```
 while branch is not up-to-date with master {
