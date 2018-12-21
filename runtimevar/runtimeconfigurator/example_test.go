@@ -23,8 +23,16 @@ import (
 	"gocloud.dev/runtimevar/runtimeconfigurator"
 )
 
-func Example() {
+// MyConfig is a sample configuration struct.
+type MyConfig struct {
+	Server string
+	Port   int
+}
+
+func ExampleNewVariable() {
 	ctx := context.Background()
+
+	// Get GCP credentials and dial the server.
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
@@ -35,37 +43,30 @@ func Example() {
 	}
 	defer cleanup()
 
-	// MyAppConfig is an example unmarshaled type for configuration stored in key
-	// "projects/projectID/configs/configName/variables/appConfig". Runtime
-	// Configurator stores individual variables as strings or binary data, so a
-	// decoder automatically parses the data.
-	type MyAppConfig struct {
-		MsgOfTheDay string `json:"msg_of_the_day"`
-	}
-	decoder := runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode)
+	// Create a decoder for decoding JSON strings into MyConfig.
+	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Fill these in with the values from the Cloud Console.
+	// For this example, the GCP Cloud Runtime Configurator variable being
+	// referenced should have a JSON string that decodes into MyConfig.
 	name := runtimeconfigurator.ResourceName{
 		ProjectID: "projectID",
 		Config:    "configName",
 		Variable:  "appConfig",
 	}
 
-	// Create a variable object to watch for changes.
+	// Construct a *runtimevar.Variable that watches the variable.
 	v, err := runtimeconfigurator.NewVariable(client, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
-	// Read the current value. Calling Watch() again will block until the value
-	// changes.
-	snapshot, err := v.Watch(ctx)
+	// You can now read the current value of the variable from v.
+	snapshot, err := v.Watch(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Value will always be of the decoder's type.
-	cfg := snapshot.Value.(*MyAppConfig)
-	log.Println(cfg.MsgOfTheDay)
+	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
+	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
 }
