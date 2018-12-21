@@ -220,6 +220,11 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	return grpc.Code(err) == codes.NotFound
+}
+
 func bytesFromProto(vpb *pb.Variable) []byte {
 	// Proto may contain either bytes or text.  If it contains text content, convert that to []byte.
 	if _, isBytes := vpb.GetContents().(*pb.Variable_Value); isBytes {
