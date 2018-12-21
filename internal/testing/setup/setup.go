@@ -161,7 +161,15 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string,
 	if *Record {
 		mode = recorder.ModeRecording
 	}
-	r, done, err := replay.NewRecorder(t, mode, &replay.ProviderMatcher{}, t.Name())
+
+	azMatchers := &replay.ProviderMatcher{
+		URLScrubbers: []*regexp.Regexp{
+			regexp.MustCompile(`se=[^?]*`),
+			regexp.MustCompile(`sig=[^?]*`),
+		},
+	}
+	
+	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
