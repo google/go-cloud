@@ -58,7 +58,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	conn, err := grpc.DialContext(ctx, endPoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
-		grpc.WithUserAgent(useragent.GoCloudUserAgent),
+		useragent.GRPCDialOption("runtimevar"),
 	)
 	if err != nil {
 		return nil, nil, err
