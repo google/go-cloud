@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestPubAndSubCommands(t *testing.T) {
-	if !commandExists("gcmsg") {
+	if _, err := exec.LookPath("gcmsg"); err != nil {
 		t.Skip("gcmsg command not found")
 	}
 	envs := strings.Split(*envsFlag, ",")
@@ -100,10 +100,4 @@ func (c *cmd) runWithInput(input string) (string, error) {
 	}
 	wg.Wait()
 	return string(out), nil
-}
-
-func commandExists(name string) bool {
-	c := exec.Command(name)
-	err := c.Start()
-	return err == nil
 }
