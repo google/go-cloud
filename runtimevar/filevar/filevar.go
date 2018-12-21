@@ -38,6 +38,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"gocloud.dev/runtimevar"
@@ -255,5 +256,13 @@ func (w *watcher) Close() error {
 
 // ErrorAs implements driver.ErrorAs.
 func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	return false
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	if e, ok := err.(syscall.Errno); ok {
+		return e == syscall.ENOENT
+	}
 	return false
 }

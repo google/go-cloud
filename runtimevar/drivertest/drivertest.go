@@ -163,6 +163,8 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v expected not-found error", got.Value)
+	} else if !runtimevar.IsNotExist(err) {
+		t.Error("got IsNotExist false, expected true")
 	}
 }
 
