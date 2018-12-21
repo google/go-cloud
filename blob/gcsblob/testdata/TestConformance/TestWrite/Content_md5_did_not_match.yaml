@@ -2,16 +2,16 @@
 version: 1
 interactions:
 - request:
-    body: "--a41a45e55c261c9275ba58b05016b86cd0161ec14e2bc18b2e187b0c9208\r\nContent-Type:
+    body: "--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--a41a45e55c261c9275ba58b05016b86cd0161ec14e2bc18b2e187b0c9208\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--a41a45e55c261c9275ba58b05016b86cd0161ec14e2bc18b2e187b0c9208--\r\n"
+      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=a41a45e55c261c9275ba58b05016b86cd0161ec14e2bc18b2e187b0c9208
+      - multipart/related; boundary=b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864
       User-Agent:
-      - google-api-go-client/0.5 go-cloud/0.1
+      - google-api-go-client/0.5 go-cloud/blob/0.9.0
       X-Goog-Api-Client:
       - gl-go/1.11.0 gccl/20180226
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
@@ -62,7 +62,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 17 Dec 2018 22:49:34 GMT
+      - Thu, 20 Dec 2018 23:16:29 GMT
       Server:
       - UploadServer
       Vary:
@@ -75,7 +75,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2Up94v3a8mBLWG0d878zy9ibR3Y_kOn6Scw1t-q8RCBw-Uss5gDDZPO_g1H4T9i_VOigjyOV8pLbPPXMCVWHzYnn8GooZA
+      - AEnB2Uoycwk2g0XXRVdpnDaP4ICIT5sDCvSrLJApuNY0TYYAhOoyI3AeNlU8J9VXJwAGPR7xfqzFzGsxKp2JHONwlFPtfLP9og
     status: 400 Bad Request
     code: 400
     duration: ""

@@ -87,7 +87,10 @@ func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, "nonexistent-topic"), nil
 }
 
-func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (driver.Subscription, error) {
+func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
+	if n < 0 || n >= 2 {
+		return nil, errors.New("n must be 0 or 1")
+	}
 	queue := h.newName("s")
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, err
@@ -202,7 +205,6 @@ func declareExchange(conn amqpConnection, name string) error {
 	ch, err := conn.Channel()
 	if err != nil {
 		panic(err)
-		return err
 	}
 	defer ch.Close()
 	return ch.ExchangeDeclare(name)

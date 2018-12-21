@@ -2,23 +2,23 @@
 version: 1
 interactions:
 - request:
-    body: "--b4c8c509a133082c0bb78de95a115d19f02e3731f5ff077bf2640a3b6e40\r\nContent-Type:
+    body: "--206f63cea4f4a134c1f8992c1305fcdee9b9cd40f4c3aaa826a5b96c6402\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"name\":\"blob-for-signing\"}\n\r\n--b4c8c509a133082c0bb78de95a115d19f02e3731f5ff077bf2640a3b6e40\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nhello world\r\n--b4c8c509a133082c0bb78de95a115d19f02e3731f5ff077bf2640a3b6e40--\r\n"
+      charset=utf-8\",\"name\":\"blob-for-signing\"}\n\r\n--206f63cea4f4a134c1f8992c1305fcdee9b9cd40f4c3aaa826a5b96c6402\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\nhello world\r\n--206f63cea4f4a134c1f8992c1305fcdee9b9cd40f4c3aaa826a5b96c6402--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=b4c8c509a133082c0bb78de95a115d19f02e3731f5ff077bf2640a3b6e40
+      - multipart/related; boundary=206f63cea4f4a134c1f8992c1305fcdee9b9cd40f4c3aaa826a5b96c6402
       User-Agent:
-      - google-api-go-client/0.5 go-cloud/0.1
+      - google-api-go-client/0.5 go-cloud/blob/0.9.0
       X-Goog-Api-Client:
       - gl-go/1.11.0 gccl/20180226
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
     method: POST
   response:
-    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/blob-for-signing/1545086980493019","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing","name":"blob-for-signing","bucket":"go-cloud-blob-test-bucket","generation":"1545086980493019","metageneration":"1","contentType":"text/plain;
-      charset=utf-8","timeCreated":"2018-12-17T22:49:40.492Z","updated":"2018-12-17T22:49:40.492Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-12-17T22:49:40.492Z","size":"11","md5Hash":"XrY7u+Ae7tCTyyK7j1rNww==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing?generation=1545086980493019&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545086980493019/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545086980493019","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CNud+sT5p98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545086980493019/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545086980493019","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CNud+sT5p98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545086980493019/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545086980493019","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CNud+sT5p98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545086980493019/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545086980493019","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CNud+sT5p98CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"yZRlqg==","etag":"CNud+sT5p98CEAE="}'
+    body: '{"kind":"storage#object","id":"go-cloud-blob-test-bucket/blob-for-signing/1545347798593541","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing","name":"blob-for-signing","bucket":"go-cloud-blob-test-bucket","generation":"1545347798593541","metageneration":"1","contentType":"text/plain;
+      charset=utf-8","timeCreated":"2018-12-20T23:16:38.593Z","updated":"2018-12-20T23:16:38.593Z","storageClass":"REGIONAL","timeStorageClassUpdated":"2018-12-20T23:16:38.593Z","size":"11","md5Hash":"XrY7u+Ae7tCTyyK7j1rNww==","mediaLink":"https://www.googleapis.com/download/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing?generation=1545347798593541&alt=media","acl":[{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545347798593541/project-owners-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-owners-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545347798593541","entity":"project-owners-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"owners"},"etag":"CIXg25TFr98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545347798593541/project-editors-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-editors-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545347798593541","entity":"project-editors-892942638129","role":"OWNER","projectTeam":{"projectNumber":"892942638129","team":"editors"},"etag":"CIXg25TFr98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545347798593541/project-viewers-892942638129","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/project-viewers-892942638129","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545347798593541","entity":"project-viewers-892942638129","role":"READER","projectTeam":{"projectNumber":"892942638129","team":"viewers"},"etag":"CIXg25TFr98CEAE="},{"kind":"storage#objectAccessControl","id":"go-cloud-blob-test-bucket/blob-for-signing/1545347798593541/user-rvangent@google.com","selfLink":"https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing/acl/user-rvangent@google.com","bucket":"go-cloud-blob-test-bucket","object":"blob-for-signing","generation":"1545347798593541","entity":"user-rvangent@google.com","role":"OWNER","email":"rvangent@google.com","etag":"CIXg25TFr98CEAE="}],"owner":{"entity":"user-rvangent@google.com"},"crc32c":"yZRlqg==","etag":"CIXg25TFr98CEAE="}'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
@@ -29,9 +29,9 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 17 Dec 2018 22:49:40 GMT
+      - Thu, 20 Dec 2018 23:16:38 GMT
       Etag:
-      - CNud+sT5p98CEAE=
+      - CIXg25TFr98CEAE=
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -48,7 +48,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2Upi29lXLURprNN6aAiG8sYd8i0atoxSOfN-dkgO1hhx3LSJPvZcv6Tgki2V2ajVQM7SVPEeScD_yQUrQ_tWJDEp6YnDZg
+      - AEnB2UofrcQKsl1yJAvZTeV9LkN-WZPtJCrfQElK6vBEBlKlq9a9x4iIPevyTGP3ipMWm3VQfIqO7n1CkGo_0VH45Rp_sR0oog
     status: 200 OK
     code: 200
     duration: ""
@@ -56,7 +56,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=1545090580&GoogleAccessId=storage-viewer%40go-cloud-test-216917.iam.gserviceaccount.com&Signature=c6mgRCOcyyLONoMKqTXkJpjmGpsbscIRbP7jfMXDKw%2F3SGBtfikNYVzBczKxniwwW9xXEhjVxEDsSGPYih6i1urdAY1H%2BEivpXxrruyXPT8PYMuf4VM2QWl9H9oZ0HBK9in68drGaFCy7w6PWssbsr98uO90u4i2Pj4W%2BzPp%2BS1Kve06V3p%2FcZSK%2FL3EOObsEDIFNzFjXnmtJmZDgK143XBRxK53vht4b8h5jQ1EeJYASuoJ1hnyIU8EwdS89AGyDCxlwTaYuy%2BJRB5ypSC6lgXnbTGO4knpNwx%2FC4Dqf8le2Rbu%2FNqCLCs4RKCLzefZU9Hryi9v1eEh2ZFIRHZZow%3D%3D
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-signing?Expires=1545351398&GoogleAccessId=storage-viewer%40go-cloud-test-216917.iam.gserviceaccount.com&Signature=NUgt2YDB%2FYF4fToFFyXc1tiHX6KVheEzDSoNL87IEUJHVnjO7237HP6oiKfKq7VcMvxzTyMiS13Xv8BukRd9dcLUvcqYz48RvrdDwXvmywchq%2FyYiDYhPlqzF549XApvMYVIqT7SmFkuBzSKUpS3tZkSJTBekkj0ATu9d%2FhiuycyppZSNRfxLZBPCzmG2sdxxjhPiVU31JxsB4T9gxQ6QFBtOfKlyE0Phvf5KOc%2Bd%2F4QPVbSfIUGM2bjujjK2RqPZ1YUAwtfZilp8LlNdlDygQ3GK2IJARpt8L6SgokecqcOrTvMDedOW1Zth9vgjDWF5lHNcdZAuAWeMdngPPQsmg%3D%3D
     method: GET
   response:
     body: hello world
@@ -72,17 +72,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 17 Dec 2018 22:49:40 GMT
+      - Thu, 20 Dec 2018 23:16:38 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Expires:
-      - Mon, 17 Dec 2018 22:49:40 GMT
+      - Thu, 20 Dec 2018 23:16:38 GMT
       Last-Modified:
-      - Mon, 17 Dec 2018 22:49:40 GMT
+      - Thu, 20 Dec 2018 23:16:38 GMT
       Server:
       - UploadServer
       X-Goog-Generation:
-      - "1545086980493019"
+      - "1545347798593541"
       X-Goog-Hash:
       - crc32c=yZRlqg==
       - md5=XrY7u+Ae7tCTyyK7j1rNww==
@@ -101,7 +101,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UpTbaCd92rZqJY_kC-YqI2RRCcJc2XXV983AqZaXao6HFadxlDY0MRLPhtweTq5Ykihl7fjq5C4QN8u_O_cgKUg99DYFw
+      - AEnB2UqpoJKA67mA3iQnEmVXOT9f_HUhFqWpWpAH1Y9Y3vQAcbHYYQ73yre3id32duonJaayk-ciOl643Ng18CdpeEjJTl2y9g
     status: 200 OK
     code: 200
     duration: ""
@@ -110,7 +110,7 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - google-api-go-client/0.5 go-cloud/0.1
+      - google-api-go-client/0.5 go-cloud/blob/0.9.0
       X-Goog-Api-Client:
       - gl-go/1.11.0 gccl/20180226
     url: https://www.googleapis.com/storage/v1/b/go-cloud-blob-test-bucket/o/blob-for-signing?alt=json&prettyPrint=false
@@ -127,7 +127,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 17 Dec 2018 22:49:40 GMT
+      - Thu, 20 Dec 2018 23:16:38 GMT
       Expires:
       - Mon, 01 Jan 1990 00:00:00 GMT
       Pragma:
@@ -144,7 +144,7 @@ interactions:
       X-Guploader-Upload-Result:
       - success
       X-Guploader-Uploadid:
-      - AEnB2UrvlErclBJebABxFxv7PXPJ9m6OCvD4vK71kBP2rT_CcXtGF-SM465S8qIW3j9NZuDwN4B2T84l4wBCA4iVkcPaeK5t4w
+      - AEnB2UrmpPOa0-WmcnpjYEgEDEg2meoVjhU6W8dcx1cyOQJGc7weqyd4G1rNXqE6a95i32Ai7wTYy1Eg4w1QYuv0g0vUZZ26ug
     status: 204 No Content
     code: 204
     duration: ""
