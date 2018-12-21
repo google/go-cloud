@@ -15,13 +15,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/streadway/amqp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/rabbitpubsub"
 )
 
 // openRabbitTopic returns the RabbitMQ topic for the given topic ID.
-func openRabbitTopic(topicID, serverURL string) (*pubsub.Topic, func(), error) {
+func openRabbitTopic(serverURL, topicID string) (*pubsub.Topic, func(), error) {
 	conn, err := amqp.Dial(serverURL)
 	if err != nil {
 		return nil, nil, err
@@ -32,10 +33,10 @@ func openRabbitTopic(topicID, serverURL string) (*pubsub.Topic, func(), error) {
 }
 
 // openRabbitTopic returns the RabbitMQ topic for the given topic ID.
-func openRabbitSubscription(subID, serverURL string) (*pubsub.Subscription, func(), error) {
+func openRabbitSubscription(serverURL, subID string) (*pubsub.Subscription, func(), error) {
 	conn, err := amqp.Dial(serverURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf(`opening rabbit subscription "%s" on "%s": %v`, subID, serverURL, err)
 	}
 	cleanup := func() { conn.Close() }
 	sub := rabbitpubsub.OpenSubscription(conn, subID)

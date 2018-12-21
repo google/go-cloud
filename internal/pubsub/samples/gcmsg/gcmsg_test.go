@@ -27,9 +27,11 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var topicFlag = flag.String("topic", "test-topic", "topic to be used for testing pub and sub commands")
-var subFlag = flag.String("sub", "test-subscription-1", "subscription to be used for testing pub and sub commands")
-var envsFlag = flag.String("pubsub_envs", "gcp,rabbit", "environments in which to run the test")
+// -topics and -subs are parallel arrays of URLs* that specify topics and corresponding subscriptions.
+//
+// *in an extended sense, bringing the notion of URLs closer to its intended universality.
+var topicsFlag = flag.String("topics", "gcppubsub://projects/go-cloud-test-216917/topics/test-topic,rabbitpubsub://guest:guest@localhost:5672/topics/test-topic", "comma-separated URLs for topics")
+var subsFlag = flag.String("subs", "gcppubsub://projects/go-cloud-test-216917/subscriptions/test-subscription-1,rabbitpubsub://guest:guest@localhost:5672/subscriptions/test-subscription-1", "comma-separated URLs for subscriptions")
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -40,25 +42,33 @@ func TestPubAndSubCommands(t *testing.T) {
 	if _, err := exec.LookPath("gcmsg"); err != nil {
 		t.Skip("gcmsg command not found")
 	}
-	envs := strings.Split(*envsFlag, ",")
-	topic := *topicFlag
-	sub := *subFlag
-	for _, env := range envs {
-		t.Run(env, func(t *testing.T) {
+	topics := strings.Split(*topicsFlag, ",")
+	subs := strings.Split(*subsFlag, ",")
+	if len(subs) != len(topics) {
+		t.Fatalf("got %d items in -subs flag and %d items in -topics flag, want them to be the same", len(subs), len(topics))
+	}
+	if len(topics) == 0 {
+		t.Fatalf("empty string specified for -topics flag")
+	}
+	for i := range topics {
+		topic := topics[i]
+		sub := subs[i]
+		testName := fmt.Sprintf("%s+%s", topic, sub)
+		t.Run(testName, func(t *testing.T) {
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
-				c := cmd{name: "gcmsg", args: []string{"-env", env, "pub", topic}}
+				c := cmd{name: "gcmsg", args: []string{"pub", topic}}
 				if _, err := c.runWithInput(msg); err != nil {
 					t.Fatal(err)
 				}
 			}
 			n := fmt.Sprintf("%d", len(msgs))
-			c := cmd{name: "gcmsg", args: []string{"-env", env, "sub", "-n", n, sub}}
-			recvOut, err := c.run()
+			c := cmd{name: "gcmsg", args: []string{"sub", "-n", n, sub}}
+			subOut, err := c.run()
 			if err != nil {
 				t.Fatal(err)
 			}
-			lines := strings.Split(strings.TrimSpace(recvOut), "\n")
+			lines := strings.Split(strings.TrimSpace(subOut), "\n")
 			sort.Strings(lines)
 			if diff := cmp.Diff(lines, msgs); diff != "" {
 				t.Error(diff)

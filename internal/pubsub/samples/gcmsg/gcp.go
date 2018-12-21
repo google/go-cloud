@@ -15,36 +15,27 @@
 package main
 
 import (
+	raw "cloud.google.com/go/pubsub/apiv1"
 	"context"
 	"fmt"
-	"os"
-
-	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/gcppubsub"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
-	grpccreds "google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 // openGCPSubscription returns the GCP topic based on the subscription ID.
-func openGCPSubscription(ctx context.Context, subID string) (*pubsub.Subscription, func(), error) {
-	subClient, cleanup, err := openGCPSubscriberClient(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+func openGCPSubscription(ctx context.Context, proj, subID string) (*pubsub.Subscription, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
 	}
-	proj, err := gcpProjectID(creds)
+	subClient, cleanup, err := openGCPSubscriberClient(ctx, creds)
 	if err != nil {
 		return nil, nil, err
 	}
-	sub := gcppubsub.OpenSubscription(ctx, subClient, proj, subID, nil)
+	sub := gcppubsub.OpenSubscription(ctx, subClient, gcp.ProjectID(proj), subID, nil)
 	cleanup2 := func() {
 		sub.Shutdown(ctx)
 		cleanup()
@@ -53,16 +44,13 @@ func openGCPSubscription(ctx context.Context, subID string) (*pubsub.Subscriptio
 }
 
 // openGCPSubscriberClient opens a GCP SubscriberClient with default credentials.
-func openGCPSubscriberClient(ctx context.Context) (*raw.SubscriberClient, func(), error) {
+func openGCPSubscriberClient(ctx context.Context, creds *google.Credentials) (*raw.SubscriberClient, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
 	}
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}),
-	}
-	conn, err := grpc.DialContext(ctx, gcppubsub.EndPoint, opts...)
+	ts := gcp.CredentialsTokenSource(creds)
+	conn, cleanup, err := gcppubsub.Dial(ctx, ts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dialing grpc endpoint: %v", err)
 	}
@@ -70,19 +58,19 @@ func openGCPSubscriberClient(ctx context.Context) (*raw.SubscriberClient, func()
 	if err != nil {
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
-	cleanup := func() {
-		conn.Close()
+	cleanup2 := func() {
+		cleanup()
 		subClient.Close()
 	}
-	return subClient, cleanup, nil
+	return subClient, cleanup2, nil
 }
 
 func gcpSubscriptionName(proj gcp.ProjectID, subscriptionID string) string {
 	return fmt.Sprintf("projects/%s/subscriptions/%s", proj, subscriptionID)
 }
 
-// openGCPTopic returns the GCP topic based on the topic ID.
-func openGCPTopic(ctx context.Context, topicID string) (*pubsub.Topic, func(), error) {
+// openGCPTopic returns the GCP topic based on the project and topic ID.
+func openGCPTopic(ctx context.Context, proj, topicID string) (*pubsub.Topic, func(), error) {
 	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
@@ -91,11 +79,7 @@ func openGCPTopic(ctx context.Context, topicID string) (*pubsub.Topic, func(), e
 	if err != nil {
 		return nil, nil, err
 	}
-	proj, err := gcpProjectID(creds)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting default project: %v", err)
-	}
-	topic := gcppubsub.OpenTopic(ctx, pubClient, proj, topicID, nil)
+	topic := gcppubsub.OpenTopic(ctx, pubClient, gcp.ProjectID(proj), topicID, nil)
 	cleanup2 := func() {
 		topic.Shutdown(ctx)
 		cleanup()
@@ -104,11 +88,12 @@ func openGCPTopic(ctx context.Context, topicID string) (*pubsub.Topic, func(), e
 }
 
 func openGCPPubClient(ctx context.Context, creds *google.Credentials) (*raw.PublisherClient, func(), error) {
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")),
-		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}),
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
 	}
-	conn, err := grpc.DialContext(ctx, gcppubsub.EndPoint, opts...)
+	ts := gcp.CredentialsTokenSource(creds)
+	conn, cleanup, err := gcppubsub.Dial(ctx, ts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("dialing grpc endpoint: %v", err)
 	}
@@ -116,17 +101,9 @@ func openGCPPubClient(ctx context.Context, creds *google.Credentials) (*raw.Publ
 	if err != nil {
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
-	cleanup := func() {
-		conn.Close()
+	cleanup2 := func() {
+		cleanup()
 		pubClient.Close()
 	}
-	return pubClient, cleanup, nil
-}
-
-func gcpProjectID(creds *google.Credentials) (gcp.ProjectID, error) {
-	p := os.Getenv("PROJECT_ID")
-	if p == "" {
-		return gcp.DefaultProjectID(creds)
-	}
-	return gcp.ProjectID(p), nil
+	return pubClient, cleanup2, nil
 }
