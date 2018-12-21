@@ -37,8 +37,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestPubAndSubCommands(t *testing.T) {
-	if !commandExists("gcmsgs") {
-		t.Skip("gcmsgs command not found")
+	if !commandExists("gcmsg") {
+		t.Skip("gcmsg command not found")
 	}
 	envs := strings.Split(*envsFlag, ",")
 	topic := *topicFlag
@@ -47,13 +47,13 @@ func TestPubAndSubCommands(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
-				c := cmd{name: "msgs", args: []string{"-env", env, "pub", topic}}
+				c := cmd{name: "gcmsg", args: []string{"-env", env, "pub", topic}}
 				if _, err := c.runWithInput(msg); err != nil {
 					t.Fatal(err)
 				}
 			}
 			n := fmt.Sprintf("%d", len(msgs))
-			c := cmd{name: "msgs", args: []string{"-env", env, "-n", n, "sub", sub}}
+			c := cmd{name: "gcmsg", args: []string{"-env", env, "sub", "-n", n, sub}}
 			recvOut, err := c.run()
 			if err != nil {
 				t.Fatal(err)

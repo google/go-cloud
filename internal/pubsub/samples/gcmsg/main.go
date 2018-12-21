@@ -104,7 +104,7 @@ func (*subCmd) Usage() string {
 }
 
 func (s *subCmd) SetFlags(f *flag.FlagSet) {
-	flag.IntVar(&s.n, "n", 0, "number of messages to receive, or 0 for unlimited")
+	f.IntVar(&s.n, "n", 0, "number of messages to receive, or 0 for unlimited")
 }
 
 func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
