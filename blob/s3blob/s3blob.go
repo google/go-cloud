@@ -47,7 +47,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -112,8 +112,6 @@ func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 	return blob.NewBucket(drv), nil
 }
 
-var emptyBody = ioutil.NopCloser(strings.NewReader(""))
-
 // reader reads an S3 object. It implements io.ReadCloser.
 type reader struct {
 	body  io.ReadCloser
@@ -145,7 +143,7 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
-	w *io.PipeWriter
+	w *io.PipeWriter // created when the first byte is written
 
 	ctx      context.Context
 	uploader *s3manager.Uploader
@@ -157,8 +155,17 @@ type writer struct {
 
 // Write appends p to w. User must call Close to close the w after done writing.
 func (w *writer) Write(p []byte) (int, error) {
+	// Avoid opening the pipe for a zero-length write;
+	// the concrete can do these for empty blobs.
+	if len(p) == 0 {
+		return 0, nil
+	}
 	if w.w == nil {
-		if err := w.open(); err != nil {
+		// We'll write into pw and use pr as an io.Reader for the
+		// Upload call to S3.
+		pr, pw := io.Pipe()
+		w.w = pw
+		if err := w.open(pr); err != nil {
 			return 0, err
 		}
 	}
@@ -170,18 +177,24 @@ func (w *writer) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
-func (w *writer) open() error {
-	pr, pw := io.Pipe()
-	w.w = pw
+// pr may be nil if we're Closing and no data was written.
+func (w *writer) open(pr *io.PipeReader) error {
 
 	go func() {
 		defer close(w.donec)
 
-		w.req.Body = pr
+		if pr == nil {
+			// AWS doesn't like a nil Body.
+			w.req.Body = http.NoBody
+		} else {
+			w.req.Body = pr
+		}
 		_, err := w.uploader.UploadWithContext(w.ctx, w.req)
 		if err != nil {
 			w.err = err
-			pr.CloseWithError(err)
+			if pr != nil {
+				pr.CloseWithError(err)
+			}
 			return
 		}
 	}()
@@ -193,23 +206,13 @@ func (w *writer) open() error {
 // create an empty file at the given key.
 func (w *writer) Close() error {
 	if w.w == nil {
-		w.touch()
+		// We never got any bytes written. We'll write an http.NoBody.
+		w.open(nil)
 	} else if err := w.w.Close(); err != nil {
 		return err
 	}
 	<-w.donec
 	return w.err
-}
-
-// touch creates an empty object in the bucket. It is called if user creates a
-// new writer but never calls write before closing it.
-func (w *writer) touch() {
-	if w.w != nil {
-		return
-	}
-	defer close(w.donec)
-	w.req.Body = emptyBody
-	_, w.err = w.uploader.UploadWithContext(w.ctx, w.req)
 }
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
@@ -382,7 +385,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-", offset))
 	} else if length == 0 {
 		// AWS doesn't support a zero-length read; we'll read 1 byte and then
-		// ignore it in favor of emptyBody below.
+		// ignore it in favor of http.NoBody below.
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
 	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
@@ -393,7 +396,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	body := resp.Body
 	if length == 0 {
-		body = emptyBody
+		body = http.NoBody
 	}
 	return &reader{
 		body: body,

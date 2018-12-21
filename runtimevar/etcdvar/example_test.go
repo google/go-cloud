@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filevar_test
+package etcdvar_test
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
 	"log"
 
+	"github.com/coreos/etcd/clientv3"
 	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/filevar"
+	"gocloud.dev/runtimevar/etcdvar"
 )
 
 // MyConfig is a sample configuration struct.
@@ -31,35 +30,29 @@ type MyConfig struct {
 }
 
 func ExampleNew() {
-	// cfgJSON is a JSON string that can be decoded into a MyConfig.
-	const cfgJSON = `{"Server": "foo.com", "Port": 80}`
-
-	// Create a temporary file to hold our config.
-	f, err := ioutil.TempFile("", "")
+	// Connect to the etcd server.
+	client, err := clientv3.NewFromURL("http://foo.bar.com:9999")
 	if err != nil {
-		log.Fatal(err)
-	}
-	if _, err := f.Write([]byte(cfgJSON)); err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
-	// Construct a runtimevar.Variable pointing at f.
-	v, err := filevar.New(f.Name(), decoder, nil)
+	// Construct a *runtimevar.Variable that watches the variable.
+	// For this example, the etcd variable being referenced should have a
+	// JSON string that decodes into MyConfig.
+	v, err := etcdvar.New(client, "myconfig", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
-	// Verify the variable value; it will be of type MyConfig.
+	// You can now read the current value of the variable from v.
 	snapshot, err := v.Watch(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
-
-	// Output:
-	// Value: filevar_test.MyConfig{Server:"foo.com", Port:80}
+	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
+	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
 }

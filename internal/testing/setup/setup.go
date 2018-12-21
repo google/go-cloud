@@ -122,14 +122,14 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing RPC and uses fake credentials.
-func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint string) (*grpc.ClientConn, func()) {
+func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*grpc.ClientConn, func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
 
 	opts, done := replay.NewGCPDialOptions(t, mode, t.Name()+".replay")
-	opts = append(opts, grpc.WithUserAgent(useragent.GoCloudUserAgent))
+	opts = append(opts, useragent.GRPCDialOption(api))
 	if mode == recorder.ModeRecording {
 		// Add credentials for real RPCs.
 		creds, err := gcp.DefaultCredentials(ctx)

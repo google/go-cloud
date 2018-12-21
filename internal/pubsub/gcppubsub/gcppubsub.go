@@ -28,14 +28,45 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/internal/useragent"
+	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/oauth"
 )
 
-const EndPoint = "pubsub.googleapis.com:443"
+const endPoint = "pubsub.googleapis.com:443"
 
 type topic struct {
 	path   string
 	client *raw.PublisherClient
+}
+
+// Dial opens a gRPC connection to the GCP Pub Sub API.
+//
+// The second return value is a function that can be called to clean up
+// the connection opened by Dial.
+func Dial(ctx context.Context, ts gcp.TokenSource) (*grpc.ClientConn, func(), error) {
+	conn, err := grpc.DialContext(ctx, endPoint,
+		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
+		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
+		useragent.GRPCDialOption("pubsub"),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return conn, func() { conn.Close() }, nil
+}
+
+// PublisherClient returns a *raw.PublisherClient that can be used in OpenTopic.
+func PublisherClient(ctx context.Context, conn *grpc.ClientConn) (*raw.PublisherClient, error) {
+	return raw.NewPublisherClient(ctx, option.WithGRPCConn(conn))
+}
+
+// SubscriberClient returns a *raw.SubscriberClient that can be used in OpenSubscription.
+func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.SubscriberClient, error) {
+	return raw.NewSubscriberClient(ctx, option.WithGRPCConn(conn))
 }
 
 // TopicOptions will contain configuration for topics.
