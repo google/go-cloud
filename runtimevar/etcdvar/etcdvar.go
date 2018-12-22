@@ -24,6 +24,7 @@ package etcdvar // import "gocloud.dev/runtimevar/etcdvar"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -59,6 +60,9 @@ func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) 
 	go w.watch(ctx, cli, name, decoder)
 	return w
 }
+
+// errNotExist is a sentinel error for nonexistent variables.
+var errNotExist = errors.New("variable does not exist")
 
 // state implements driver.State.
 type state struct {
@@ -160,7 +164,7 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 		if err != nil {
 			cur = w.updateState(&state{err: err}, cur)
 		} else if len(resp.Kvs) == 0 {
-			cur = w.updateState(&state{err: fmt.Errorf("%q not found", name)}, cur)
+			cur = w.updateState(&state{err: errNotExist}, cur)
 		} else if len(resp.Kvs) > 1 {
 			cur = w.updateState(&state{err: fmt.Errorf("%q has multiple values", name)}, cur)
 		} else {
@@ -189,7 +193,7 @@ func (w *watcher) Close() error {
 	// Tell the background goroutine to shut down by canceling its ctx.
 	w.shutdown()
 	// Wait for it to exit.
-	for _ = range w.ch {
+	for range w.ch {
 	}
 	return nil
 }
@@ -204,4 +208,9 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 		}
 	}
 	return false
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	return err == errNotExist
 }
