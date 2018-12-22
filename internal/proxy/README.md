@@ -19,4 +19,7 @@ dependency to the proxy:
     [Google Open Source](https://opensource.google.com/docs/thirdparty/licenses/).
 2.  Gather the new set of dependencies and sync them to the GCS bucket by running
     `internal/proxy/add.sh` from the root of the Go Cloud repository.
+    Review the files to be sent to the proxy when prompted by the script.
 
+Periodically, someone on the project should run `internal/proxy/add.sh -R` to
+skip the rsync step and thereby prune unused dependencies.
