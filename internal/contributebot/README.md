@@ -50,6 +50,11 @@ The configuration file is in JSON format and has the following keys:
     match the title pattern. This can use
     <a href="https://help.github.com/articles/about-writing-and-formatting-on-github/">GitHub-flavored Markdown</a>.
   </dd>
+  <dt><code>require_pull_request_fork_branch</code></dt>
+  <dd>
+    If <code>true</code>, then pull requests coming from branches on the same
+    repository will be automatically closed. Defaults to <code>true</code>.
+  </dd>
 </dl>
 
 ## DevOps Setup
