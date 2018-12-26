@@ -15,22 +15,51 @@
 package filevar_test
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 )
 
-// MyAppConfig is the unmarshaled type for myapp.conf file.
-type MyAppConfig struct {
-	MsgOfTheDay string `json:"msg_of_the_day"`
+// MyConfig is a sample configuration struct.
+type MyConfig struct {
+	Server string
+	Port   int
 }
 
 func ExampleNew() {
-	// Configure a JSON decoder for myapp.json to unmarshal into a MyAppConfig object.
-	v, err := filevar.New("/etc/myapp/myapp.json", runtimevar.NewDecoder(&MyAppConfig{}, runtimevar.JSONDecode), nil)
+	// cfgJSON is a JSON string that can be decoded into a MyConfig.
+	const cfgJSON = `{"Server": "foo.com", "Port": 80}`
+
+	// Create a temporary file to hold our config.
+	f, err := ioutil.TempFile("", "")
 	if err != nil {
-		log.Fatalf("Error in constructing variable: %v", err)
+		log.Fatal(err)
 	}
-	v.Close()
+	if _, err := f.Write([]byte(cfgJSON)); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a decoder for decoding JSON strings into MyConfig.
+	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
+
+	// Construct a runtimevar.Variable pointing at f.
+	v, err := filevar.New(f.Name(), decoder, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer v.Close()
+
+	// Verify the variable value; it will be of type MyConfig.
+	snapshot, err := v.Watch(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
+
+	// Output:
+	// Value: filevar_test.MyConfig{Server:"foo.com", Port:80}
 }

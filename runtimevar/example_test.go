@@ -16,58 +16,60 @@ package runtimevar_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/filevar"
+	"gocloud.dev/runtimevar/constantvar"
 )
 
-type DBConfig struct {
-	Host     string
-	Port     string
-	Username string
-	Name     string
+func Example_jsonVariable() {
+
+	// DBConfig is the sample config struct we're going to parse our JSON into.
+	type DBConfig struct {
+		Host     string
+		Port     int
+		Username string
+	}
+
+	// Here's our sample JSON config.
+	const jsonConfig = `{"Host": "gocloud.dev", "Port": 8080, "Username": "testuser"}`
+
+	// We need a Decoder that decodes raw bytes into our config.
+	decoder := runtimevar.NewDecoder(DBConfig{}, runtimevar.JSONDecode)
+
+	// Next, a construct a *Variable using a constructor from one of the
+	// runtimevar subpackages. This example uses constantvar.
+	v := constantvar.NewBytes([]byte(jsonConfig), decoder)
+	defer v.Close()
+
+	// Call Watch to retrieve the value.
+	snapshot, err := v.Watch(context.Background())
+	if err != nil {
+		log.Fatalf("Error in retrieving variable: %v", err)
+	}
+	// snapshot.Value will be of type DBConfig.
+	fmt.Printf("Config: %+v\n", snapshot.Value.(DBConfig))
+
+	// Output:
+	// Config: {Host:gocloud.dev Port:8080 Username:testuser}
 }
 
-func initVariable() (*runtimevar.Variable, func()) {
-	// Construct a runtimevar.Variable object.
-	v, err := filevar.New("/etc/myapp/db.json", runtimevar.NewDecoder(&DBConfig{}, runtimevar.JSONDecode), nil)
+func Example_stringVariable() {
+	// Next, a construct a *Variable using a constructor from one of the
+	// runtimevar subpackages. This example uses constantvar.
+	// The variable value is of type string, so we use StringDecoder.
+	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
+	defer v.Close()
+
+	// Call Watch to retrieve the value.
+	snapshot, err := v.Watch(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error in retrieving variable: %v", err)
 	}
+	// snapshot.Value will be of type string.
+	fmt.Printf("%q\n", snapshot.Value.(string))
 
-	return v, func() {
-		v.Close()
-	}
-}
-
-func Example() {
-	v, cleanup := initVariable()
-	defer cleanup()
-
-	ctx := context.Background()
-	// Call Watch to retrieve initial value before proceeding.
-	snap, err := v.Watch(ctx)
-	if err != nil {
-		log.Fatalf("Error in retrieving initial variable: %v", err)
-	}
-	log.Printf("Value: %+v", snap.Value.(*DBConfig))
-
-	// Get a Context with cancel func to stop the Watch call.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// Have a separate goroutine that waits for changes.
-	go func() {
-		for ctx.Err() == nil {
-			snap, err := v.Watch(ctx)
-			if err != nil {
-				// Handle errors.
-				log.Printf("Error: %v", err)
-				continue
-			}
-			// Use updated configuration accordingly.
-			log.Printf("Value: %+v", snap.Value.(*DBConfig))
-		}
-	}()
+	// Output:
+	// "hello world"
 }

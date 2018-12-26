@@ -86,9 +86,9 @@ func (w *fakeWatcher) Close() error {
 	return nil
 }
 
-func (w *fakeWatcher) ErrorAs(err error, i interface{}) bool {
-	return false
-}
+func (*fakeWatcher) ErrorAs(err error, i interface{}) bool { return false }
+
+func (*fakeWatcher) IsNotExist(err error) bool { return false }
 
 // watchResp encapsulates the expected result of a Watch call.
 type watchResp struct {
@@ -213,7 +213,7 @@ func (b *erroringWatcher) WatchVariable(ctx context.Context, prev driver.State) 
 	return &state{err: errFake}, 0
 }
 
-func (r *erroringWatcher) Close() error {
+func (b *erroringWatcher) Close() error {
 	return errFake
 }
 

@@ -140,7 +140,7 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
 	// We wrap the provided http.Client to add a Go Cloud User-Agent.
-	c, err := storage.NewClient(ctx, option.WithHTTPClient(useragent.HTTPClient(&client.Client)))
+	c, err := storage.NewClient(ctx, option.WithHTTPClient(useragent.HTTPClient(&client.Client, "blob")))
 	if err != nil {
 		return nil, err
 	}
