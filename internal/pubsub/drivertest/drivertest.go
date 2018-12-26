@@ -273,11 +273,11 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	cancel()
 
 	m := &pubsub.Message{}
-	if err := top.Send(ctx, m); isCanceled(err) {
-		t.Errorf("top.Send returned %v, want context.Canceled", err)
+	if err := top.Send(ctx, m); !isCanceled(err) {
+		t.Errorf("top.Send returned %v (%T), want context.Canceled", err, err)
 	}
-	if _, err := sub.Receive(ctx); isCanceled(err) {
-		t.Errorf("sub.Receive returned %v, want context.Canceled", err)
+	if _, err := sub.Receive(ctx); !isCanceled(err) {
+		t.Errorf("sub.Receive returned %v (%T), want context.Canceled", err, err)
 	}
 }
 
