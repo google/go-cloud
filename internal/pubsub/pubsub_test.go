@@ -251,7 +251,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch})
 	go func() {
 		s.Receive(context.Background())
-		panic("Receive should never return")
+		t.Fatal("Receive should never return")
 	}()
 	<-inReceiveBatch
 	ctx, cancel := context.WithCancel(context.Background())
