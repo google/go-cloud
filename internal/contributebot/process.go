@@ -24,13 +24,27 @@ import (
 	"github.com/google/go-github/github"
 )
 
-// inProgressLabel is the name of the label used to indicate that an
-// issue is currently being worked on.
-const inProgressLabel = "in progress"
+// GitHub issue labels that Contribute Bot ascribes semantic meaning to.
+const (
+	// inProgressLabel is the name of the label used to indicate that an
+	// issue is currently being worked on.
+	inProgressLabel = "in progress"
 
-// branchesInForkCloseResponse is the comment response given when a
-// branch is created on the repository instead of a fork.
-const branchesInForkCloseResponse = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+	// syncLabel is the name of the label used to indicate that a pull
+	// request should be kept up to date with its upstream branch.
+	syncLabel = "ready to submit"
+)
+
+// Canned responses.
+const (
+	// branchesInForkCloseResponse is the comment response given when a
+	// branch is created on the repository instead of a fork.
+	branchesInForkCloseResponse = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
+
+	// syncAckResponse is the comment response given when Contribute Bot
+	// is going to proceed with syncing the pull request.
+	syncAckResponse = "Looks like this pull request is ready to merge! I'll start keeping it up-to-date. I'll let you know if I run into any problems."
+)
 
 type repoConfig struct {
 	RequirePullRequestForkBranch bool   `json:"require_pull_request_fork_branch"`
@@ -76,6 +90,16 @@ func (i *issueData) String() string {
 func hasLabel(iss *github.Issue, label string) bool {
 	for i := range iss.Labels {
 		if iss.Labels[i].GetName() == label {
+			return true
+		}
+	}
+	return false
+}
+
+// prHasLabel returns true iff the issue has the given label.
+func prHasLabel(pr *github.PullRequest, label string) bool {
+	for i := range pr.Labels {
+		if pr.Labels[i].GetName() == label {
 			return true
 		}
 	}
@@ -158,6 +182,8 @@ type pullRequestData struct {
 	// Possible values are: "assigned", "unassigned", "labeled", "unlabeled",
 	// "opened", "closed", "reopened", "edited".
 	Action string
+	// If Action == "labeled", then this is the name of the label that was added.
+	AddedLabel string
 	// OwnerLogin is the owner's name of the repository.
 	OwnerLogin string
 	// Repo is the name of the repository the pull request wants to commit to.
@@ -177,6 +203,13 @@ func (pr *pullRequestData) String() string {
 func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
 	pr := data.PullRequest
+
+	if data.Action == "closed" {
+		if prHasLabel(data.PullRequest, syncLabel) {
+			edits.RemoveLabels = append(edits.RemoveLabels, syncLabel)
+		}
+		return edits
+	}
 
 	// Skip the process when the PR is closed, we check this here instead of when
 	// calling processPullRequest so that it is easier to add any process in future
@@ -211,14 +244,38 @@ func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullReques
 		edits.AddComments = append(edits.AddComments, cfg.PullRequestTitleResponse)
 	}
 
+	// If the sync label has been added, then verify some basic preconditions
+	// about the PR. If the checks succeed, try to sync, otherwise, remove the
+	// sync label and add a comment.
+	if data.Action == "labeled" && data.AddedLabel == syncLabel && prHasLabel(data.PullRequest, syncLabel) {
+		if pr.GetMaintainerCanModify() || pr.GetHead().GetRepo().GetID() == pr.GetBase().GetRepo().GetID() {
+			edits.Sync = true
+			edits.AddComments = append(edits.AddComments, syncAckResponse)
+		} else {
+			edits.RemoveLabels = append(edits.RemoveLabels, syncLabel)
+			edits.AddComments = append(edits.AddComments, mergeRequestedButCantModifyResponse(pr.GetUser().GetLogin()))
+		}
+	}
+
 	return edits
+}
+
+// mergeRequestedButCantModify returns the comment response given when a
+// Contribute Bot-managed merge has been requested for a pull request, but the
+// pull request does not have the "maintainer can modify" checkbox enabled.
+func mergeRequestedButCantModifyResponse(author string) string {
+	return fmt.Sprintf("I was asked to merge this pull request, but I don't have "+
+		"permission to update the branch. @%s, can you please check the \"Maintainers "+
+		"Can Modify\" checkbox on this pull request and then comment back? Thanks!", author)
 }
 
 // pullRequestEdits captures all of the edits to be made to an issue.
 type pullRequestEdits struct {
-	Close       bool
-	AssignTo    []string
-	AddComments []string
+	Close        bool
+	Sync         bool
+	AssignTo     []string
+	RemoveLabels []string
+	AddComments  []string
 }
 
 func (i *pullRequestEdits) String() string {
@@ -226,8 +283,14 @@ func (i *pullRequestEdits) String() string {
 	if i.Close {
 		actions = append(actions, "close")
 	}
+	if i.Sync {
+		actions = append(actions, "merge base into head")
+	}
 	if len(i.AssignTo) > 0 {
 		actions = append(actions, fmt.Sprintf("assign to %s", strings.Join(i.AssignTo, " + ")))
+	}
+	for _, label := range i.RemoveLabels {
+		actions = append(actions, fmt.Sprintf("remove label %q", label))
 	}
 	for _, comment := range i.AddComments {
 		actions = append(actions, fmt.Sprintf("add comment %q", comment))
@@ -240,7 +303,13 @@ func (i *pullRequestEdits) String() string {
 }
 
 // Execute applies all of the requested edits, aborting on error.
-func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, data *pullRequestData) error {
+func (i *pullRequestEdits) Execute(ctx context.Context, gitPath string, auth *gitHubInstallAuth, client *github.Client, data *pullRequestData) error {
+	for _, label := range i.RemoveLabels {
+		_, err := client.Issues.RemoveLabelForIssue(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber(), label)
+		if err != nil {
+			return err
+		}
+	}
 	for _, comment := range i.AddComments {
 		// Note: Use the Issues service since we're adding a top-level comment:
 		// https://developer.github.com/v3/guides/working-with-comments/.
@@ -253,6 +322,21 @@ func (i *pullRequestEdits) Execute(ctx context.Context, client *github.Client, d
 	if len(i.AssignTo) > 0 {
 		_, _, err := client.Issues.AddAssignees(ctx, data.OwnerLogin, data.Repo, data.PullRequest.GetNumber(), i.AssignTo)
 		if err != nil {
+			return err
+		}
+	}
+	if i.Sync {
+		// Note below: GitHub's ref field is technically a branch name, not a ref name.
+		params := syncParams{
+			BaseOwner:  data.OwnerLogin,
+			BaseRepo:   data.Repo,
+			BaseBranch: data.PullRequest.GetBase().GetRef(),
+			PRNumber:   data.PullRequest.GetNumber(),
+			HeadOwner:  data.PullRequest.GetHead().GetUser().GetLogin(),
+			HeadRepo:   data.PullRequest.GetHead().GetRepo().GetName(),
+			HeadBranch: data.PullRequest.GetHead().GetRef(),
+		}
+		if err := syncPullRequest(ctx, gitPath, auth, client, params); err != nil {
 			return err
 		}
 	}

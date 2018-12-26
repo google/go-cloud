@@ -9,6 +9,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/wire v0.2.0
+	github.com/shurcooL/githubv4 v0.0.0-20181216014959-b89dc648a159
+	github.com/shurcooL/graphql v0.0.0-20181114023618-16b88644589a // indirect
 	go.opencensus.io v0.17.0
 	gocloud.dev v0.8.0
 	golang.org/x/oauth2 v0.0.0-20181017192945-9dcd33a902f4

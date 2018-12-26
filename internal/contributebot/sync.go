@@ -42,7 +42,9 @@ type syncParams struct {
 }
 
 // syncPullRequest merges the latest changes on the base branch into the head branch.
-// syncPullRequest only returns errors if the interactions with GitHub fail.
+// If the merge fails, it removes syncLabel from the pull request and leaves a
+// comment on the pull request indicating failure. syncPullRequest only returns
+// errors if the interactions with GitHub fail.
 func syncPullRequest(ctx context.Context, gitPath string, auth *gitHubInstallAuth, client *github.Client, params syncParams) error {
 	tok, err := auth.fetchToken(ctx)
 	if err != nil {
@@ -75,6 +77,18 @@ func syncPullRequest(ctx context.Context, gitPath string, auth *gitHubInstallAut
 	// Log the error in case there's a bigger issue.
 	prName := fmt.Sprintf("%s/%s#%d", params.BaseOwner, params.BaseRepo, params.PRNumber)
 	log.Printf("Could not sync %s: %v", prName, err)
+
+	// Remove syncLabel first. This prevents looping the failure on future events.
+	//
+	// TODO(light): In the case that mergeFromBase failed due to context cancel,
+	// then this operation should probably ignore the overall context deadline
+	// with some reasonable timeout. This will indicate to maintainers that
+	// something messed up, and the immediate recourse will be to try to start the
+	// merge again (which will correct things).
+	_, err = client.Issues.RemoveLabelForIssue(ctx, params.BaseOwner, params.BaseRepo, params.PRNumber, syncLabel)
+	if err != nil {
+		return fmt.Errorf("remove sync label from %s: %v", prName, err)
+	}
 
 	// Add comment to PR indicating failure.
 	msg := fmt.Sprintf("I was unable to merge %s:%s into %s:%s. This is likely due to merge conflicts. A project maintainer must merge the branches manually.", params.BaseOwner, params.BaseBranch, params.HeadOwner, params.HeadBranch)

@@ -149,19 +149,30 @@ func TestProcessPullRequestEvent(t *testing.T) {
 	tests := []struct {
 		description string
 		cfg         *repoConfig
-		action      string
-		state       string
-		reviewers   []string
-		title       string
-		prevTitle   string
-		headOwner   string
-		want        *pullRequestEdits
+
+		// Event data
+		action     string
+		addedLabel string
+		prevTitle  string
+
+		// PR data
+		title               string
+		author              string
+		headOwner           string
+		state               string
+		labels              []string
+		reviewers           []string
+		maintainerCanModify bool
+
+		// Expected results
+		want *pullRequestEdits
 	}{
 		// Skip processing when the PR is closed.
 		{
 			description: "closed with invalid title -> no change",
 			title:       defaultTitle,
 			state:       "closed",
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
@@ -170,6 +181,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with branch from fork -> no change",
 			action:      "opened",
 			title:       defaultTitle,
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
@@ -177,6 +189,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with branch from main repo -> close",
 			action:      "opened",
 			title:       defaultTitle,
+			author:      defaultAuthor,
 			headOwner:   mainRepoOwner,
 			want: &pullRequestEdits{
 				Close:       true,
@@ -197,6 +210,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo"},
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
 		},
@@ -205,6 +219,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo", "bar"},
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
 		},
@@ -214,6 +229,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			title:       defaultTitle,
 			state:       "closed",
 			reviewers:   []string{"foo"},
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
@@ -222,6 +238,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with invalid title -> add comment",
 			action:      "opened",
 			title:       "foo",
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want: &pullRequestEdits{
 				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
@@ -232,6 +249,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "foo",
 			prevTitle:   "foo",
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
@@ -240,9 +258,81 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "prev",
 			prevTitle:   "foo",
+			author:      defaultAuthor,
 			headOwner:   defaultAuthor,
 			want: &pullRequestEdits{
 				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
+			},
+		},
+		{
+			description:         "add sync label to maintainer-modifiable -> comment + sync",
+			action:              "labeled",
+			addedLabel:          syncLabel,
+			state:               "open",
+			title:               defaultTitle,
+			labels:              []string{syncLabel},
+			author:              defaultAuthor,
+			headOwner:           defaultAuthor,
+			maintainerCanModify: true,
+			want: &pullRequestEdits{
+				Sync:        true,
+				AddComments: []string{syncAckResponse},
+			},
+		},
+		{
+			description:         "add sync label but label gone -> no change",
+			action:              "labeled",
+			addedLabel:          syncLabel,
+			state:               "open",
+			title:               defaultTitle,
+			labels:              []string{ /* syncLabel not present */ },
+			author:              defaultAuthor,
+			headOwner:           defaultAuthor,
+			maintainerCanModify: true,
+			want:                &pullRequestEdits{},
+		},
+		{
+			description:         "add sync label to maintainer-unmodifiable -> add comment",
+			action:              "labeled",
+			addedLabel:          syncLabel,
+			state:               "open",
+			title:               defaultTitle,
+			labels:              []string{syncLabel},
+			author:              defaultAuthor,
+			headOwner:           defaultAuthor,
+			maintainerCanModify: false,
+			want: &pullRequestEdits{
+				RemoveLabels: []string{syncLabel},
+				AddComments:  []string{mergeRequestedButCantModifyResponse(defaultAuthor)},
+			},
+		},
+		{
+			description:         "add sync label to same repository branch when allowed -> comment + sync",
+			cfg:                 sameRepoBranchesCfg,
+			action:              "labeled",
+			addedLabel:          syncLabel,
+			state:               "open",
+			title:               defaultTitle,
+			labels:              []string{syncLabel},
+			author:              defaultAuthor,
+			headOwner:           mainRepoOwner,
+			maintainerCanModify: false,
+			want: &pullRequestEdits{
+				Sync:        true,
+				AddComments: []string{syncAckResponse},
+			},
+		},
+		{
+			description:         "close pull request with sync label -> remove sync label",
+			action:              "closed",
+			state:               "closed",
+			title:               defaultTitle,
+			labels:              []string{syncLabel},
+			author:              defaultAuthor,
+			headOwner:           defaultAuthor,
+			maintainerCanModify: true,
+			want: &pullRequestEdits{
+				RemoveLabels: []string{syncLabel},
 			},
 		},
 	}
@@ -250,6 +340,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
 			pr := &github.PullRequest{
+				User: &github.User{Login: github.String(tc.author)},
 				Base: &github.PullRequestBranch{
 					Repo: &github.Repository{
 						ID: github.Int64(1234),
@@ -264,8 +355,14 @@ func TestProcessPullRequestEvent(t *testing.T) {
 					// Repo will be filled in below.
 					Ref: github.String("feature"),
 				},
-				Title: github.String(tc.title),
-				State: github.String(tc.state),
+				Title:               github.String(tc.title),
+				State:               github.String(tc.state),
+				MaintainerCanModify: github.Bool(tc.maintainerCanModify),
+			}
+			for _, label := range tc.labels {
+				pr.Labels = append(pr.Labels, &github.Label{
+					Name: github.String(label),
+				})
 			}
 			for _, reviewer := range tc.reviewers {
 				pr.RequestedReviewers = append(pr.RequestedReviewers, &github.User{Login: github.String(reviewer)})
@@ -294,6 +391,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			}
 			data := &pullRequestData{
 				Action:      tc.action,
+				AddedLabel:  tc.addedLabel,
 				OwnerLogin:  mainRepoOwner,
 				Repo:        mainRepoName,
 				PullRequest: pr,

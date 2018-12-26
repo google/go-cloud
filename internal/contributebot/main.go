@@ -24,11 +24,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
+	"github.com/shurcooL/githubv4"
 )
 
 const userAgent = "google/go-cloud Contribute Bot"
@@ -38,6 +42,7 @@ type flagConfig struct {
 	subscription string
 	gitHubAppID  int64
 	keyPath      string
+	gitPath      string
 }
 
 func main() {
@@ -47,6 +52,7 @@ func main() {
 	flag.StringVar(&cfg.subscription, "subscription", "contributebot-github-events", "subscription name inside project")
 	flag.Int64Var(&cfg.gitHubAppID, "github_app", 0, "GitHub application ID")
 	flag.StringVar(&cfg.keyPath, "github_key", "", "path to GitHub application private key")
+	flag.StringVar(&cfg.gitPath, "git", "git", "name or path of Git executable to use")
 	flag.Parse()
 	if cfg.project == "" || cfg.gitHubAppID == 0 || cfg.keyPath == "" {
 		fmt.Fprintln(os.Stderr, "contributebot: must specify -project, -github_app, and -github_key")
@@ -66,19 +72,32 @@ func main() {
 
 // worker contains the connections used by this server.
 type worker struct {
-	sub  *pubsub.Subscription
-	auth *gitHubAppAuth
+	sub     *pubsub.Subscription
+	auth    *gitHubAppAuth
+	gitPath string
 
 	mu          sync.Mutex
 	configCache map[repoKey]*repoConfigCacheEntry
 }
 
-func newWorker(sub *pubsub.Subscription, auth *gitHubAppAuth) *worker {
+func newWorker(cfg flagConfig, sub *pubsub.Subscription, auth *gitHubAppAuth) (*worker, error) {
+	// If gitPath is relative, then look for it on PATH.
+	gitPath := cfg.gitPath
+	if !filepath.IsAbs(gitPath) {
+		var err error
+		gitPath, err = exec.LookPath(gitPath)
+		if err != nil {
+			return nil, fmt.Errorf("new worker: search for git: %v", err)
+		}
+		log.Printf("Using installed Git at %s", gitPath)
+	}
+
 	return &worker{
 		sub:         sub,
 		auth:        auth,
+		gitPath:     gitPath,
 		configCache: make(map[repoKey]*repoConfigCacheEntry),
-	}
+	}, nil
 }
 
 const configCacheTTL = 2 * time.Minute
@@ -122,7 +141,9 @@ func (w *worker) receive(ctx context.Context) error {
 			handleErr = w.receiveIssueEvent(ctx, event)
 		case *github.PullRequestEvent:
 			handleErr = w.receivePullRequestEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.CheckRunEvent, *github.CheckSuiteEvent, *github.PushEvent:
+		case *github.PushEvent:
+			handleErr = w.receivePushEvent(ctx, event)
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckRunEvent, *github.CheckSuiteEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -140,7 +161,10 @@ func (w *worker) receive(ctx context.Context) error {
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {
-	client := w.ghClient(e.GetInstallation().GetID())
+	client := github.NewClient(&http.Client{
+		Transport: w.auth.forInstall(e.GetInstallation().GetID()),
+	})
+	client.UserAgent = userAgent
 
 	// Pull out the interesting data from the event.
 	data := &issueData{
@@ -173,11 +197,16 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 }
 
 func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequestEvent) error {
-	client := w.ghClient(e.GetInstallation().GetID())
+	// Pull request actions need access to installation credentials for Git access.
+	// Make sure they use the same token source for caching.
+	installAuth := w.auth.forInstall(e.GetInstallation().GetID())
+	client := github.NewClient(&http.Client{Transport: installAuth})
+	client.UserAgent = userAgent
 
 	// Pull out the interesting data from the event.
 	data := &pullRequestData{
 		Action:      e.GetAction(),
+		AddedLabel:  e.GetLabel().GetName(),
 		OwnerLogin:  e.GetRepo().GetOwner().GetLogin(),
 		Repo:        e.GetRepo().GetName(),
 		PullRequest: e.GetPullRequest(),
@@ -202,7 +231,99 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	edits := processPullRequestEvent(cfg, data)
 	log.Printf("-> %v", edits)
 	// Execute the actions (if any).
-	return edits.Execute(ctx, client, data)
+	return edits.Execute(ctx, w.gitPath, installAuth, client, data)
+}
+
+func (w *worker) receivePushEvent(ctx context.Context, e *github.PushEvent) error {
+	const branchPrefix = "refs/heads/"
+	if !strings.HasPrefix(e.GetRef(), branchPrefix) {
+		// Ignore: not a branch (likely a tag).
+		return nil
+	}
+	branch := e.GetRef()[len(branchPrefix):]
+	owner := e.GetRepo().GetOwner().GetName()
+	repoName := e.GetRepo().GetName()
+
+	installAuth := w.auth.forInstall(e.GetInstallation().GetID())
+	restClient := github.NewClient(&http.Client{
+		Transport: installAuth,
+	})
+	restClient.UserAgent = userAgent
+	graphClient := githubv4.NewClient(&http.Client{
+		Transport: userAgentMiddleware{
+			rt: installAuth,
+		},
+	})
+
+	syncs := 0
+	start := time.Now()
+	for cur := (*githubv4.String)(nil); ; {
+		// Query for open pull requests to the affected branch that have the sync label.
+		type ref struct {
+			Name       githubv4.String
+			Repository struct {
+				Owner struct {
+					Login githubv4.String
+				}
+				Name githubv4.String
+			}
+		}
+		var query struct {
+			Node struct {
+				Repository struct {
+					PullRequests struct {
+						Nodes []struct {
+							Number  githubv4.Int
+							BaseRef ref
+							HeadRef ref
+						}
+						PageInfo struct {
+							HasNextPage githubv4.Boolean
+							EndCursor   githubv4.String
+						}
+						TotalCount githubv4.Int
+					} `graphql:"pullRequests(states: [OPEN], labels: $labels, baseRefName: $baseBranch, first: 100, after: $cursor)"`
+				} `graphql:"... on Repository"`
+			} `graphql:"node(id: $nodeId)"`
+		}
+		err := graphClient.Query(ctx, &query, map[string]interface{}{
+			"nodeId":     githubv4.ID(e.GetRepo().GetNodeID()),
+			"baseBranch": githubv4.String(branch),
+			"labels":     []githubv4.String{syncLabel},
+			"cursor":     cur,
+		})
+		if err != nil {
+			return err
+		}
+		if cur == nil {
+			// First run: log how much work to do.
+			log.Printf("Pushed to branch %s on %s/%s. Found %d affected, submittable PRs.", branch, owner, repoName, query.Node.Repository.PullRequests.TotalCount)
+		}
+
+		// For each of the pull requests, sync.
+		// TODO(light): Run syncs concurrently?
+		for _, pr := range query.Node.Repository.PullRequests.Nodes {
+			err := syncPullRequest(ctx, w.gitPath, installAuth, restClient, syncParams{
+				PRNumber:   int(pr.Number),
+				BaseOwner:  string(pr.BaseRef.Repository.Owner.Login),
+				BaseRepo:   string(pr.BaseRef.Repository.Name),
+				BaseBranch: string(pr.BaseRef.Name),
+				HeadOwner:  string(pr.HeadRef.Repository.Owner.Login),
+				HeadRepo:   string(pr.HeadRef.Repository.Name),
+				HeadBranch: string(pr.HeadRef.Name),
+			})
+			if err != nil {
+				return err
+			}
+			syncs++
+		}
+		if !query.Node.Repository.PullRequests.PageInfo.HasNextPage {
+			break
+		}
+		cur = githubv4.NewString(query.Node.Repository.PullRequests.PageInfo.EndCursor)
+	}
+	log.Printf("Synced %d pull requests in %s/%s in %v", syncs, owner, repoName, time.Since(start))
+	return nil
 }
 
 // repoConfig fetches the parsed Contribute Bot configuration for the given
@@ -278,11 +399,18 @@ func isClosed(c <-chan struct{}) bool {
 	}
 }
 
-// ghClient creates a GitHub client authenticated for the given installation.
-func (w *worker) ghClient(installID int64) *github.Client {
-	c := github.NewClient(&http.Client{Transport: w.auth.forInstall(installID)})
-	c.UserAgent = userAgent
-	return c
+type userAgentMiddleware struct {
+	rt http.RoundTripper
+}
+
+func (ua userAgentMiddleware) RoundTrip(req *http.Request) (*http.Response, error) {
+	// RoundTrippers must not modify the passed in request.
+	// Clone the headers then add the new authorization header.
+	req2 := new(http.Request)
+	*req2 = *req
+	req2.Header = cloneHeaders(req.Header)
+	req2.Header.Set("User-Agent", userAgent)
+	return ua.rt.RoundTrip(req2)
 }
 
 // ServeHTTP serves a page explaining that this port is only open for health checks.
