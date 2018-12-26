@@ -24,11 +24,18 @@ if [[ $# -ne 1 ]]; then
   exit 64
 fi
 
-GOPATH="$1"
+# Set GOPATH to argument. go requires an absolute path, so append to
+# working directory if need be.
+export GOPATH="$1"
+if ! [[ "$GOPATH" =~ ^/ ]]; then
+  GOPATH="$(pwd)/$GOPATH"
+fi
+
+# Script is in internal/proxy, so repository root is two levels up.
+repo_root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 
 # Download modules for each of the modules in our repo.
 for path in "." "./internal/contributebot" "./samples/appengine"; do
-  pushd ${path}
+  cd "$repo_root/$path"
   go mod download
-  popd
 done
