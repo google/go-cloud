@@ -189,7 +189,7 @@ func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullReques
 
 	// If the pull request is not from a fork, close it and request that it comes
 	// from a fork instead.
-	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
+	if data.Action == "opened" && pr.GetHead().GetRepo().GetID() == pr.GetBase().GetRepo().GetID() {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseResponse)
 		// Short circuit since we're closing anyway.
