@@ -48,6 +48,11 @@ function files_exist() {  # assumes nullglob
 }
 
 
+# Generate top-level index.html.
+echo "Generating gocloud.dev"
+mkdir -p "$OUTDIR"
+cat "$TEMPLATE" | sed -e "s|{{path}}||" > "$OUTDIR/index.html"
+
 # Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
 # directive to remove the initial './'.
 for pkg in $(find . -type d \( -name '.?*' -prune -o -name testdata -prune -o -printf '%P ' \)); do
@@ -55,7 +60,7 @@ for pkg in $(find . -type d \( -name '.?*' -prune -o -name testdata -prune -o -p
   if files_exist $pkg/*.go; then
     mkdir -p "$OUTDIR/$pkg"
     echo "Generating gocloud.dev/$pkg"
-    cat "$TEMPLATE" | sed -e "s|{{path}}|$pkg|" > "$OUTDIR/$pkg/index.html"
+    cat "$TEMPLATE" | sed -e "s|{{path}}|/$pkg|" > "$OUTDIR/$pkg/index.html"
   fi
 done
 
