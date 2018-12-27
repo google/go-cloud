@@ -89,8 +89,6 @@ func titleChanged(title string, edit *github.EditChange) bool {
 // event represented by data.
 func processIssueEvent(cfg *repoConfig, data *issueData) *issueEdits {
 	edits := &issueEdits{}
-	log.Printf("Identifying actions for issue: %v", data)
-	defer log.Printf("-> %v", edits)
 
 	if data.Action == "closed" {
 		if hasLabel(data.Issue, inProgressLabel) {
@@ -176,8 +174,6 @@ func (pr *pullRequestData) String() string {
 // pull request event represented by data.
 func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
-	log.Printf("Identifying actions for pull request: %v", data)
-	defer log.Printf("-> %v", edits)
 	pr := data.PullRequest
 
 	// Skip the process when the PR is closed, we check this here instead of when
