@@ -35,3 +35,24 @@ env:
   global:
   - GOPROXY=https://storage.googleapis.com/go-cloud-modules/
   - GO111MODULE=on
+
+jobs:
+  include:
+    - stage: imports
+      os: linux
+      script: ./internal/imports/makeimports.sh
+      deploy:
+        provider: pages
+        fqdn: gocloud.dev
+        skip-cleanup: true
+        local-dir: makeimports-output
+        github-token: $GITHUB_TOKEN  # set in the Settings page of the repo
+        keep-history: true
+        verbose: true  # temporarily, while verifying
+        on:
+          branch: master
+      
+stages:
+  - test
+  - name: imports
+    if: branch = master
