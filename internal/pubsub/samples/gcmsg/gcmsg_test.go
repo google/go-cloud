@@ -56,6 +56,7 @@ func TestPubAndSubCommands(t *testing.T) {
 		subURL := subs[i]
 		testName := fmt.Sprintf("%s+%s", topic, subURL)
 		t.Run(testName, func(t *testing.T) {
+			// Publish some messages.
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
 				pc := pubCmd{}
@@ -65,12 +66,16 @@ func TestPubAndSubCommands(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+
+			// Receive some messages from a subscription.
 			sc := subCmd{n: len(msgs)}
 			var buf bytes.Buffer
 			ctx := context.Background()
 			if err := sc.sub(ctx, subURL, &buf); err != nil {
 				t.Fatal(err)
 			}
+
+			// Check that the received messages match the sent ones.
 			lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 			sort.Strings(lines)
 			if diff := cmp.Diff(lines, msgs); diff != "" {
