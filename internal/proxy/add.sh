@@ -41,7 +41,7 @@ log "creating temp dir where we'll create a module download cache"
 tgp="$(mktemp -d)"
 if [[ $? != 0 ]]; then die 'failed'; fi
 function cleanup1() {
-	rm -rf $tgp
+	rm -rf "$tgp"
 }
 trap cleanup1 EXIT
 
@@ -55,13 +55,13 @@ log 'making temp download dir'
 if ! mkdir -p "$tgp/pkg/mod/cache/download"; then die 'failed'; fi
 if [[ $rsyncing == 1 ]]; then
   log "downloading current module cache, logging to $temp"
-  if ! gsutil -m rsync -r gs://go-cloud-modules "$tgp/pkg/mod/cache/download" > $temp 2>&1; then die 'failed'; fi
+  if ! gsutil -m rsync -r gs://go-cloud-modules "$tgp/pkg/mod/cache/download" > "$temp" 2>&1; then die 'failed'; fi
 else
   log 'skipping download of current module cache because -R was specified'
 fi
 
 log "filling cache with all module dependencies from current branch, logging to $temp"
-if ! ./internal/proxy/makeproxy.sh "$tgp" > $temp 2>&1; then die 'failed while running makeproxy.sh'; fi
+if ! ./internal/proxy/makeproxy.sh "$tgp" > "$temp" 2>&1; then die 'failed while running makeproxy.sh'; fi
 
 # TODO(#1043): see if we can do without this modvendor directory.
 log 'moving the temporary cache to modvendor'
@@ -87,7 +87,7 @@ read input
 if [[ $input != "yes" ]]; then die 'canceled'; fi
 
 log "running gsutil rsync in non-preview mode, sending output to $temp"
-if ! gsutil rsync -r -c -d modvendor gs://go-cloud-modules > $temp 2>&1; then die 'gsutil rsync failed'; fi
-
-log 'cleaning up'
-if ! rm $temp; then die "failed to remove $temp"; fi
+if ! gsutil rsync -r -c -d modvendor gs://go-cloud-modules > "$temp" 2>&1; then die 'gsutil rsync failed'; fi
+https://github.com/google/go-cloud/issues/
+log 'cleaning https://github.com/google/go-cloud/issues/up'
+if ! rm "$temp"; then die "failed to remove $temp"; fi
