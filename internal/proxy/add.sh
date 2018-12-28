@@ -1,6 +1,5 @@
 #!/bin/bash
-# add.sh adds new dependencies to the Go Cloud module proxy. This script
-# should be run from the root of the repository.
+# add.sh adds new dependencies to the Go Cloud module proxy.
 
 set -euo pipefail
 
@@ -12,6 +11,9 @@ function die() {
   log "$@"
   exit 1
 }
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)
+cd "$root"
 
 rsyncing=1
 while getopts ":R" opt; do
