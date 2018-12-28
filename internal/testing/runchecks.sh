@@ -28,11 +28,6 @@ fi
 
 result=0
 
-if [[ "$TRAVIS_OS_NAME" == "windows" && ( "$TRAVIS_EVENT_TYPE" == "push" || "$TRAVIS_EVENT_TYPE" == "pull_request" ) ]]; then
-	echo "Skipping windows build for event type '$TRAVIS_EVENT_TYPE'"
-	exit 0
-fi
-
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and Coveralls will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
