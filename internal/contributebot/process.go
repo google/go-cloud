@@ -121,10 +121,10 @@ type issueEdits struct {
 func (i *issueEdits) String() string {
 	var actions []string
 	for _, label := range i.RemoveLabels {
-		actions = append(actions, fmt.Sprintf("removing %q label", label))
+		actions = append(actions, fmt.Sprintf("remove label %q", label))
 	}
 	for _, comment := range i.AddComments {
-		actions = append(actions, fmt.Sprintf("adding comment %q", comment))
+		actions = append(actions, fmt.Sprintf("add comment %q", comment))
 	}
 	if len(actions) == 0 {
 		return "[no changes]"
