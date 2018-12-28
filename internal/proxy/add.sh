@@ -15,12 +15,12 @@ function die() {
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)
 cd "$root"
 
-rsyncing=1
+rsyncing=true
 while getopts ":R" opt; do
   case ${opt} in
     R)
       log 'disabling rsync step'
-      rsyncing=0
+      rsyncing=false
       ;;
     \?)
       echo "usage: add.sh [-R]
@@ -53,7 +53,7 @@ if [[ $? != 0 ]]; then die 'failed to create temp file for verbose command outpu
 # Copy current module cache into temporary directory as basis.
 log 'making temp download dir'
 if ! mkdir -p "$tgp/pkg/mod/cache/download"; then die 'failed'; fi
-if [[ $rsyncing == 1 ]]; then
+if "$rsyncing"; then
   log "downloading current module cache, logging to $temp"
   if ! gsutil -m rsync -r gs://go-cloud-modules "$tgp/pkg/mod/cache/download" > "$temp" 2>&1; then die 'failed'; fi
 else
