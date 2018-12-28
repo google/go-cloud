@@ -29,7 +29,7 @@ import (
 
 // -topics and -subs are parallel arrays of URLs* that specify topics and corresponding subscriptions.
 //
-// *in an extended sense, bringing the notion of URLs closer to its intended universality.
+// *in an extended sense, bringing URLs closer to being really universal.
 var topicsFlag = flag.String("topics", "gcppubsub://projects/go-cloud-test-216917/topics/test-topic,rabbitpubsub://guest:guest@localhost:5672/topics/test-topic", "comma-separated URLs for topics")
 var subsFlag = flag.String("subs", "gcppubsub://projects/go-cloud-test-216917/subscriptions/test-subscription-1,rabbitpubsub://guest:guest@localhost:5672/subscriptions/test-subscription-1", "comma-separated URLs for subscriptions")
 
