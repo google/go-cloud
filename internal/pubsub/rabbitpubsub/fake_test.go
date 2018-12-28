@@ -42,6 +42,7 @@ type fakeChannel struct {
 	closed          bool
 	deliveryTag     uint64 // counter; used to distinguish published messages
 	pubChans        []chan<- amqp.Confirmation
+	returnChans     []chan<- amqp.Return
 	closeChans      []chan<- *amqp.Error
 	consumerCancels map[string]func() // from consumer name to cancel func for the context
 }
@@ -155,22 +156,33 @@ func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
 		return err
 	}
 	if len(ex.queues) == 0 {
-		return ch.errorf(amqp.NoRoute, "NO_ROUTE: no queues bound to exchange %q", exchangeName)
-	}
-	// Each published message in the channel gets a new delivery tag, starting at 1.
-	ch.deliveryTag++
-	// Convert the Publishing into a Delivery.
-	del := amqp.Delivery{
-		Headers:     pub.Headers,
-		Body:        pub.Body,
-		DeliveryTag: ch.deliveryTag,
-		// We don't care about the other fields.
-	}
-	// All exchanges are "fanout" exchanges, so the message is sent to all queues.
-	for _, q := range ex.queues {
-		q.messages = append(q.messages, del)
+		// The message is unroutable. Send a Return to all channels registered with
+		// NotifyReturn.
+		ret := amqp.Return{
+			Exchange:  exchangeName,
+			ReplyCode: amqp.NoRoute,
+			ReplyText: "NO_ROUTE: no queues bound to exchange",
+		}
+		for _, c := range ch.returnChans {
+			c <- ret
+		}
+	} else {
+		// Each published message in the channel gets a new delivery tag, starting at 1.
+		ch.deliveryTag++
+		// Convert the Publishing into a Delivery.
+		del := amqp.Delivery{
+			Headers:     pub.Headers,
+			Body:        pub.Body,
+			DeliveryTag: ch.deliveryTag,
+			// We don't care about the other fields.
+		}
+		// All exchanges are "fanout" exchanges, so the message is sent to all queues.
+		for _, q := range ex.queues {
+			q.messages = append(q.messages, del)
+		}
 	}
 	// Every Go channel registered with NotifyPublish gets a confirmation message.
+	// Ack is true even if the message was unroutable.
 	for _, c := range ch.pubChans {
 		c <- amqp.Confirmation{DeliveryTag: ch.deliveryTag, Ack: true}
 	}
@@ -272,8 +284,12 @@ func (ch *fakeChannel) NotifyPublish(c chan amqp.Confirmation) chan amqp.Confirm
 	return c
 }
 
-// NotifyReturn is a no-op, because we reject bad publishings in Publish.
+// NotifyReturn remembers its argument channel so it can be notified for every
+// published message that's returned due to being unroutable.
 func (ch *fakeChannel) NotifyReturn(c chan amqp.Return) chan amqp.Return {
+	ch.conn.mu.Lock()
+	defer ch.conn.mu.Unlock()
+	ch.returnChans = append(ch.returnChans, c)
 	return c
 }
 

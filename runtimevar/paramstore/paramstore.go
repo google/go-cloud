@@ -205,3 +205,11 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	}
 	return false
 }
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	if awsErr, ok := err.(awserr.Error); ok {
+		return awsErr.Code() == "ParameterNotFound"
+	}
+	return false
+}
