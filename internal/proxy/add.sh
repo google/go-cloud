@@ -63,7 +63,7 @@ fi
 log "filling cache with all module dependencies from current branch, logging to $temp"
 if ! ./internal/proxy/makeproxy.sh "$tgp" > $temp 2>&1; then die 'failed while running makeproxy.sh'; fi
 
-# TODO: see if we can do without this modvendor directory.
+# TODO(#1043): see if we can do without this modvendor directory.
 log 'moving the temporary cache to modvendor'
 if ! rm -rf modvendor; then die 'failed to remove modvendor dir'; fi
 if ! cp -rp "$tgp/pkg/mod/cache/download/" modvendor; then die 'copy failed'; fi
