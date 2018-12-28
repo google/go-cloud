@@ -33,19 +33,21 @@ const inProgressLabel = "in progress"
 const branchesInForkCloseResponse = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
 
 type repoConfig struct {
-	IssueTitlePattern        string `json:"issue_title_pattern"`
-	IssueTitleResponse       string `json:"issue_title_response"`
-	PullRequestTitlePattern  string `json:"pull_request_title_pattern"`
-	PullRequestTitleResponse string `json:"pull_request_title_response"`
+	RequirePullRequestForkBranch bool   `json:"require_pull_request_fork_branch"`
+	IssueTitlePattern            string `json:"issue_title_pattern"`
+	IssueTitleResponse           string `json:"issue_title_response"`
+	PullRequestTitlePattern      string `json:"pull_request_title_pattern"`
+	PullRequestTitleResponse     string `json:"pull_request_title_response"`
 }
 
 func defaultRepoConfig() *repoConfig {
 	const titlePattern = `^([a-z0-9./-]+|[A-Z_]+): .*$`
 	return &repoConfig{
-		IssueTitlePattern:        titlePattern,
-		IssueTitleResponse:       "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`.",
-		PullRequestTitlePattern:  titlePattern,
-		PullRequestTitleResponse: "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`.",
+		RequirePullRequestForkBranch: true,
+		IssueTitlePattern:            titlePattern,
+		IssueTitleResponse:           "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`.",
+		PullRequestTitlePattern:      titlePattern,
+		PullRequestTitleResponse:     "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`.",
 	}
 }
 
@@ -89,8 +91,6 @@ func titleChanged(title string, edit *github.EditChange) bool {
 // event represented by data.
 func processIssueEvent(cfg *repoConfig, data *issueData) *issueEdits {
 	edits := &issueEdits{}
-	log.Printf("Identifying actions for issue: %v", data)
-	defer log.Printf("-> %v", edits)
 
 	if data.Action == "closed" {
 		if hasLabel(data.Issue, inProgressLabel) {
@@ -176,8 +176,6 @@ func (pr *pullRequestData) String() string {
 // pull request event represented by data.
 func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullRequestEdits {
 	edits := &pullRequestEdits{}
-	log.Printf("Identifying actions for pull request: %v", data)
-	defer log.Printf("-> %v", edits)
 	pr := data.PullRequest
 
 	// Skip the process when the PR is closed, we check this here instead of when
@@ -189,7 +187,7 @@ func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullReques
 
 	// If the pull request is not from a fork, close it and request that it comes
 	// from a fork instead.
-	if data.Action == "opened" && !pr.GetHead().GetRepo().GetFork() {
+	if cfg.RequirePullRequestForkBranch && data.Action == "opened" && pr.GetHead().GetRepo().GetID() == pr.GetBase().GetRepo().GetID() {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseResponse)
 		// Short circuit since we're closing anyway.
