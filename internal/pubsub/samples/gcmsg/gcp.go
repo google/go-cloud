@@ -15,9 +15,10 @@
 package main
 
 import (
-	raw "cloud.google.com/go/pubsub/apiv1"
 	"context"
 	"fmt"
+
+	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/gcppubsub"

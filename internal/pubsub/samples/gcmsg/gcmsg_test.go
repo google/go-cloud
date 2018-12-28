@@ -15,6 +15,8 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -39,9 +41,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestPubAndSubCommands(t *testing.T) {
-	if _, err := exec.LookPath("gcmsg"); err != nil {
-		t.Skip("gcmsg command not found")
-	}
+	// TODO: Handle possible unavailability of GCP pubsub or rabbit on Travis.
+	// Maybe use record/replay.
 	topics := strings.Split(*topicsFlag, ",")
 	subs := strings.Split(*subsFlag, ",")
 	if len(subs) != len(topics) {
@@ -52,23 +53,25 @@ func TestPubAndSubCommands(t *testing.T) {
 	}
 	for i := range topics {
 		topic := topics[i]
-		sub := subs[i]
-		testName := fmt.Sprintf("%s+%s", topic, sub)
+		subURL := subs[i]
+		testName := fmt.Sprintf("%s+%s", topic, subURL)
 		t.Run(testName, func(t *testing.T) {
 			msgs := []string{"alice", "bob"}
 			for _, msg := range msgs {
-				c := cmd{name: "gcmsg", args: []string{"pub", topic}}
-				if _, err := c.runWithInput(msg); err != nil {
+				pc := pubCmd{}
+				r := strings.NewReader(msg)
+				ctx := context.Background()
+				if err := pc.pub(ctx, topic, r); err != nil {
 					t.Fatal(err)
 				}
 			}
-			n := fmt.Sprintf("%d", len(msgs))
-			c := cmd{name: "gcmsg", args: []string{"sub", "-n", n, sub}}
-			subOut, err := c.run()
-			if err != nil {
+			sc := subCmd{n: len(msgs)}
+			var buf bytes.Buffer
+			ctx := context.Background()
+			if err := sc.sub(ctx, subURL, &buf); err != nil {
 				t.Fatal(err)
 			}
-			lines := strings.Split(strings.TrimSpace(subOut), "\n")
+			lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 			sort.Strings(lines)
 			if diff := cmp.Diff(lines, msgs); diff != "" {
 				t.Error(diff)

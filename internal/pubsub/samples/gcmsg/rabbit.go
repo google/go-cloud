@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/streadway/amqp"
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/rabbitpubsub"

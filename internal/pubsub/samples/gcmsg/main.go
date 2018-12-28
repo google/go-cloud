@@ -23,6 +23,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -51,23 +52,23 @@ func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitUsageError
 	}
 	topicURL := f.Arg(0)
-	if err := p.pub(ctx, topicURL); err != nil {
+	if err := p.pub(ctx, topicURL, os.Stdin); err != nil {
 		log.Print(err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
 }
 
-func (p *pubCmd) pub(ctx context.Context, topicURL string) error {
+func (p *pubCmd) pub(ctx context.Context, topicURL string, r io.Reader) error {
 	t, cleanup, err := openTopic(ctx, topicURL)
 	if err != nil {
 		return fmt.Errorf("opening topic: %v", err)
 	}
 	defer cleanup()
 
-	// Get lines from stdin and send them as messages to the topic.
+	// Get lines from r and send them as messages to the topic.
 	fmt.Fprintf(os.Stderr, "Enter messages, one per line to be published to \"%s\".\n", topicURL)
-	scanner := bufio.NewScanner(os.Stdin)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
 		m := &pubsub.Message{Body: []byte(line)}
@@ -142,28 +143,28 @@ func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 		f.Usage()
 		return subcommands.ExitUsageError
 	}
-	subscriptionID := f.Arg(0)
-	if err := s.sub(ctx, subscriptionID); err != nil {
+	subURL := f.Arg(0)
+	if err := s.sub(ctx, subURL, os.Stdout); err != nil {
 		log.Println(err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
 }
 
-func (s *subCmd) sub(ctx context.Context, subURL string) error {
+func (s *subCmd) sub(ctx context.Context, subURL string, w io.Writer) error {
 	sub, cleanup, err := openSubscription(ctx, subURL)
 	if err != nil {
 		return fmt.Errorf("opening subscription: %v", err)
 	}
 	defer cleanup()
 
-	// Receive messages and send them to stdout.
+	// Receive messages and send them to w.
 	for i := 0; s.n == 0 || i < s.n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s\n", m.Body)
+		fmt.Fprintf(w, "%s\n", m.Body)
 		m.Ack()
 	}
 	return nil
