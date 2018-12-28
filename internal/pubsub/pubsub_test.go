@@ -41,10 +41,6 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 	return nil
 }
 
-func (t *driverTopic) Close() error {
-	return nil
-}
-
 func (s *driverTopic) IsRetryable(error) bool { return false }
 
 func (s *driverTopic) As(i interface{}) bool { return false }
@@ -94,10 +90,6 @@ func (s *driverSub) grabQueue(maxMessages int) []*driver.Message {
 }
 
 func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	return nil
-}
-
-func (s *driverSub) Close() error {
 	return nil
 }
 
