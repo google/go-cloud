@@ -139,7 +139,9 @@ func TestProcessIssueEvent(t *testing.T) {
 func TestProcessPullRequestEvent(t *testing.T) {
 	const (
 		mainRepoOwner = "google"
+		mainRepoName  = "go-cloud"
 		defaultTitle  = "foo: bar"
+		defaultAuthor = "octocat"
 	)
 
 	tests := []struct {
@@ -149,7 +151,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		reviewers   []string
 		title       string
 		prevTitle   string
-		fork        bool
+		headOwner   string
 		want        *pullRequestEdits
 	}{
 		// Skip processing when the PR is closed.
@@ -157,7 +159,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "closed with invalid title -> no change",
 			title:       defaultTitle,
 			state:       "closed",
-			fork:        false,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
 		// If the pull request is from a branch of the main repo, close it.
@@ -165,13 +167,13 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with branch from fork -> no change",
 			action:      "opened",
 			title:       defaultTitle,
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
 		{
 			description: "open with branch from main repo -> close",
 			action:      "opened",
-			fork:        false,
+			headOwner:   mainRepoOwner,
 			want: &pullRequestEdits{
 				Close:       true,
 				AddComments: []string{branchesInForkCloseResponse},
@@ -183,7 +185,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo"},
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{AssignTo: []string{"foo"}},
 		},
 		{
@@ -191,7 +193,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "opened",
 			title:       defaultTitle,
 			reviewers:   []string{"foo", "bar"},
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{AssignTo: []string{"foo", "bar"}},
 		},
 		{
@@ -200,7 +202,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			title:       defaultTitle,
 			state:       "closed",
 			reviewers:   []string{"foo"},
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
 		// Check title looks like "foo: bar".
@@ -208,7 +210,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			description: "open with invalid title -> add comment",
 			action:      "opened",
 			title:       "foo",
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want: &pullRequestEdits{
 				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
 			},
@@ -218,7 +220,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "foo",
 			prevTitle:   "foo",
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
 		{
@@ -226,7 +228,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			action:      "edited",
 			title:       "prev",
 			prevTitle:   "foo",
-			fork:        true,
+			headOwner:   defaultAuthor,
 			want: &pullRequestEdits{
 				AddComments: []string{defaultRepoConfig().PullRequestTitleResponse},
 			},
@@ -235,20 +237,39 @@ func TestProcessPullRequestEvent(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			var reviewers []*github.User
-			for _, reviewer := range tc.reviewers {
-				reviewers = append(reviewers, &github.User{Login: github.String(reviewer)})
-			}
 			pr := &github.PullRequest{
-				Head: &github.PullRequestBranch{
+				Base: &github.PullRequestBranch{
 					Repo: &github.Repository{
-						Fork: github.Bool(tc.fork),
+						ID: github.Int64(1234),
+						Owner: &github.User{
+							Login: github.String(mainRepoOwner),
+						},
+						Name: github.String(mainRepoName),
 					},
+					Ref: github.String("master"),
 				},
-				Title:              github.String(tc.title),
-				State:              github.String(tc.state),
-				RequestedReviewers: reviewers,
+				Head: &github.PullRequestBranch{
+					// Repo will be filled in below.
+					Ref: github.String("feature"),
+				},
+				Title: github.String(tc.title),
+				State: github.String(tc.state),
 			}
+			for _, reviewer := range tc.reviewers {
+				pr.RequestedReviewers = append(pr.RequestedReviewers, &github.User{Login: github.String(reviewer)})
+			}
+			if tc.headOwner == mainRepoOwner {
+				pr.Head.Repo = pr.Base.Repo
+			} else {
+				pr.Head.Repo = &github.Repository{
+					ID: github.Int64(5678),
+					Owner: &github.User{
+						Login: github.String(tc.headOwner),
+					},
+					Name: github.String(mainRepoName),
+				}
+			}
+
 			var chg *github.EditChange
 			if tc.action == "edited" {
 				chg = &github.EditChange{}
@@ -262,6 +283,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			data := &pullRequestData{
 				Action:      tc.action,
 				OwnerLogin:  mainRepoOwner,
+				Repo:        mainRepoName,
 				PullRequest: pr,
 				Change:      chg,
 			}

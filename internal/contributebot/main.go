@@ -165,7 +165,9 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	data.Issue = iss
 
 	// Process the issue, deciding what actions to take (if any).
+	log.Printf("Identifying actions for issue: %v", data)
 	edits := processIssueEvent(cfg, data)
+	log.Printf("-> %v", edits)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
 }
@@ -196,7 +198,9 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	data.PullRequest = pr
 
 	// Process the pull request, deciding what actions to take (if any).
+	log.Printf("Identifying actions for pull request: %v", data)
 	edits := processPullRequestEvent(cfg, data)
+	log.Printf("-> %v", edits)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
 }
