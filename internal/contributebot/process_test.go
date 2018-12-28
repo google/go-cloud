@@ -143,9 +143,12 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		defaultTitle  = "foo: bar"
 		defaultAuthor = "octocat"
 	)
+	sameRepoBranchesCfg := defaultRepoConfig()
+	sameRepoBranchesCfg.RequirePullRequestForkBranch = false
 
 	tests := []struct {
 		description string
+		cfg         *repoConfig
 		action      string
 		state       string
 		reviewers   []string
@@ -162,7 +165,7 @@ func TestProcessPullRequestEvent(t *testing.T) {
 			headOwner:   defaultAuthor,
 			want:        &pullRequestEdits{},
 		},
-		// If the pull request is from a branch of the main repo, close it.
+		// If the pull request is from a branch of the main repo, close it (when configuration says to).
 		{
 			description: "open with branch from fork -> no change",
 			action:      "opened",
@@ -173,11 +176,20 @@ func TestProcessPullRequestEvent(t *testing.T) {
 		{
 			description: "open with branch from main repo -> close",
 			action:      "opened",
+			title:       defaultTitle,
 			headOwner:   mainRepoOwner,
 			want: &pullRequestEdits{
 				Close:       true,
 				AddComments: []string{branchesInForkCloseResponse},
 			},
+		},
+		{
+			description: "open with branch from main repo, config allows -> no change",
+			cfg:         sameRepoBranchesCfg,
+			action:      "opened",
+			title:       defaultTitle,
+			headOwner:   mainRepoOwner,
+			want:        &pullRequestEdits{},
 		},
 		// Assign to reviewers.
 		{
@@ -287,7 +299,11 @@ func TestProcessPullRequestEvent(t *testing.T) {
 				PullRequest: pr,
 				Change:      chg,
 			}
-			got := processPullRequestEvent(defaultRepoConfig(), data)
+			cfg := tc.cfg
+			if cfg == nil {
+				cfg = defaultRepoConfig()
+			}
+			got := processPullRequestEvent(cfg, data)
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
 			}
