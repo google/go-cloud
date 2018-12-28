@@ -35,7 +35,7 @@ fi
 repo_root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd )"
 
 # Download modules for each of the modules in our repo.
-for path in "." "./internal/contributebot" "./samples/appengine"; do
+for path in "." "internal/contributebot" "samples/appengine"; do
   cd "$repo_root/$path"
   go mod download
 done
