@@ -20,14 +20,11 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"net/url"
 	"os"
-	"regexp"
 
 	"github.com/google/subcommands"
 	"gocloud.dev/internal/pubsub"
@@ -60,7 +57,11 @@ func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 }
 
 func (p *pubCmd) pub(ctx context.Context, topicURL string, r io.Reader) error {
-	t, cleanup, err := openTopic(ctx, topicURL)
+	u, err := parseTopicURL(topicURL)
+	if err != nil {
+		return fmt.Errorf("parsing topic URL: %v", err)
+	}
+	t, cleanup, err := openTopic(ctx, u)
 	if err != nil {
 		return fmt.Errorf("opening topic: %v", err)
 	}
@@ -77,49 +78,6 @@ func (p *pubCmd) pub(ctx context.Context, topicURL string, r io.Reader) error {
 		}
 	}
 	return scanner.Err()
-}
-
-// openTopic opens a topic on a supported pubsub provider, given a topic URL in a format
-// specific to gcmsg.
-func openTopic(ctx context.Context, topicURL string) (*pubsub.Topic, func(), error) {
-	u, err := url.Parse(topicURL)
-	if err != nil {
-		return nil, nil, fmt.Errorf("parsing URL: %v", err)
-	}
-	rightPart := topicURL[len(u.Scheme+"://"):]
-	if rightPart == "" {
-		return nil, nil, errors.New("empty contents in topic URL")
-	}
-	switch u.Scheme {
-	case "gcppubsub":
-		rx, err := regexp.Compile(`^projects/([^/]+)/topics/([^/]+)$`)
-		if err != nil {
-			panic(fmt.Sprintf("gcppubsub topic regex failed to copile: %v", err))
-		}
-		m := rx.FindStringSubmatch(rightPart)
-		if len(m) != 3 {
-			return nil, nil, fmt.Errorf(`gcppubsub topic URL contents "%s" failed to match "%s"`, rightPart, rx)
-		}
-		proj := m[1]
-		topicID := m[2]
-		return openGCPTopic(ctx, proj, topicID)
-	case "rabbitpubsub":
-		rx, err := regexp.Compile(`^(\w+:\w+@\w+:\d+)/topics/([^ /]+)$`)
-		if err != nil {
-			panic(fmt.Sprintf(`rabbitpubsub topic regex failed to compile: %v`, err))
-		}
-		m := rx.FindStringSubmatch(rightPart)
-		if len(m) != 3 {
-			return nil, nil, fmt.Errorf(`rabbitpubsub topic URL contents "%s" failed to match "%s"`, rightPart, rx)
-		}
-		serverURL := "amqp://" + m[1]
-		topicID := m[2]
-		return openRabbitTopic(serverURL, topicID)
-	case "":
-		return nil, nil, fmt.Errorf(`scheme missing from URL: "%s"`, topicURL)
-	default:
-		return nil, nil, fmt.Errorf(`unrecognized scheme "%s" in URL "%s"`, u.Scheme, topicURL)
-	}
 }
 
 type subCmd struct {
@@ -152,7 +110,11 @@ func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 }
 
 func (s *subCmd) sub(ctx context.Context, subURL string, w io.Writer) error {
-	sub, cleanup, err := openSubscription(ctx, subURL)
+	u, err := parseSubscriptionURL(subURL)
+	if err != nil {
+		return fmt.Errorf("parsing subscription URL: %v", err)
+	}
+	sub, cleanup, err := openSubscription(ctx, u)
 	if err != nil {
 		return fmt.Errorf("opening subscription: %v", err)
 	}
@@ -168,47 +130,6 @@ func (s *subCmd) sub(ctx context.Context, subURL string, w io.Writer) error {
 		m.Ack()
 	}
 	return nil
-}
-
-func openSubscription(ctx context.Context, subURL string) (*pubsub.Subscription, func(), error) {
-	u, err := url.Parse(subURL)
-	if err != nil {
-		return nil, nil, fmt.Errorf("parsing URL: %v", err)
-	}
-	rightPart := subURL[len(u.Scheme+"://"):]
-	if rightPart == "" {
-		return nil, nil, errors.New("empty contents in subscription URL")
-	}
-	switch u.Scheme {
-	case "gcppubsub":
-		rx, err := regexp.Compile(`^projects/([^/]+)/subscriptions/([^/]+)$`)
-		if err != nil {
-			panic(fmt.Sprintf("gcppubsub topic regex failed to copile: %v", err))
-		}
-		m := rx.FindStringSubmatch(rightPart)
-		if len(m) != 3 {
-			return nil, nil, fmt.Errorf(`gcppubsub subscription URL contents "%s" failed to match "%s"`, rightPart, rx)
-		}
-		proj := m[1]
-		subID := m[2]
-		return openGCPSubscription(ctx, proj, subID)
-	case "rabbitpubsub":
-		rx, err := regexp.Compile(`^(\w+:\w+@\w+:\d+)/subscriptions/([^ /]+)$`)
-		if err != nil {
-			panic(fmt.Sprintf(`rabbitpubsub subscription regex failed to compile: %v`, err))
-		}
-		m := rx.FindStringSubmatch(rightPart)
-		if len(m) != 3 {
-			return nil, nil, fmt.Errorf(`rabbitpubsub subscription URL contents "%s" failed to match "%s"`, rightPart, rx)
-		}
-		serverURL := "amqp://" + m[1]
-		subID := m[2]
-		return openRabbitSubscription(serverURL, subID)
-	case "":
-		return nil, nil, fmt.Errorf(`scheme missing from URL: "%s"`, subURL)
-	default:
-		return nil, nil, fmt.Errorf(`unrecognized scheme "%s" in URL "%s"`, u.Scheme, subURL)
-	}
 }
 
 func main() {
