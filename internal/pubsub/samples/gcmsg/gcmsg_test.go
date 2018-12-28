@@ -79,38 +79,3 @@ func TestPubAndSubCommands(t *testing.T) {
 		})
 	}
 }
-
-type cmd struct {
-	name string
-	args []string
-}
-
-func (c *cmd) run() (string, error) {
-	c2 := exec.Command(c.name, c.args...)
-	out, err := c2.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("running %v: %s", c2.Args, out)
-	}
-	return string(out), nil
-}
-
-func (c *cmd) runWithInput(input string) (string, error) {
-	c2 := exec.Command(c.name, c.args...)
-	inPipe, err := c2.StdinPipe()
-	if err != nil {
-		return "", fmt.Errorf("opening pipe to stdin for %v: %v", c2.Args, err)
-	}
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer inPipe.Close()
-		inPipe.Write([]byte(input))
-	}()
-	out, err := c2.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("running %v: %s", c2.Args, out)
-	}
-	wg.Wait()
-	return string(out), nil
-}
