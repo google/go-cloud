@@ -12,22 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package filevar provides a runtimevar.Driver implementation that reads
-// variables from local files.
+// Package filevar provides a runtimevar implementation with variables
+// backed by the filesystem. Use New to construct a *runtimevar.Variable.
 //
-// User can update a configuration file using any commands (cp, mv) or tools/editors. This package
-// does not guarantee read consistency since it does not have control over the writes. It is highly
-// advisable to use this package only for local development or testing purposes and not in
-// production applications/services.
+// Configuration files can be updated using any commands (cp, mv) or
+// tools/editors. This package does not guarantee read consistency since
+// it does not have control over the writes. For example, some kinds of
+// updates might result in filevar temporarily receiving an error or an
+// empty value.
 //
 // Known Issues:
 //
-// * On Mac OSX, if user copies an empty file into a configuration file, Watch will not be able to
-// detect the change since event.Op is Chmod only.
-//
-// * Saving a configuration file in vim using :w will incur events Rename and Create. When the
-// Rename event occurs, the file is temporarily removed and hence Watch will return error.  A
-// follow-up Watch call will then detect the Create event.
+// * On macOS, if an empty file is copied into a configuration file,
+//   filevar will not detect the change.
 //
 // As
 //
@@ -49,9 +46,17 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// New constructs a runtimevar.Variable object with this package as the driver
-// implementation.  The decoder argument allows users to dictate the decoding function to parse the
-// file as well as the type to unmarshal into.
+// Options sets options.
+type Options struct {
+	// WaitDuration controls the frequency of retries after an error. For example,
+	// if the file does not exist. Defaults to 30 seconds.
+	WaitDuration time.Duration
+}
+
+// New constructs a *runtimevar.Variable backed by the file at path.
+// The file holds raw bytes; provide a decoder to decode the raw bytes into the
+// appropriate type for runtimevar.Snapshot.Value.
+// See the runtimevar package documentation for examples of decoders.
 func New(path string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := newWatcher(path, decoder, opts)
 	if err != nil {
@@ -96,6 +101,16 @@ func newWatcher(path string, decoder *runtimevar.Decoder, opts *Options) (*watch
 	}
 	go w.watch(ctx, notifier, abspath, decoder, driver.WaitDuration(opts.WaitDuration))
 	return w, nil
+}
+
+// errNotExist wraps an underlying error in cases where the file likely doesn't
+// exist.
+type errNotExist struct {
+	err error
+}
+
+func (e *errNotExist) Error() string {
+	return e.err.Error()
 }
 
 // state implements driver.State.
@@ -190,7 +205,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		// it's needed during renames, so just always try.
 		if err := notifier.Add(file); err != nil {
 			// File probably does not exist. Try again later.
-			cur = w.updateState(&state{err: err}, cur)
+			cur = w.updateState(&state{err: &errNotExist{err}}, cur)
 			continue
 		}
 
@@ -198,7 +213,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		b, err := ioutil.ReadFile(file)
 		if err != nil {
 			// File probably does not exist. Try again later.
-			cur = w.updateState(&state{err: err}, cur)
+			cur = w.updateState(&state{err: &errNotExist{err}}, cur)
 			continue
 		}
 
@@ -236,13 +251,6 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 	}
 }
 
-// Options sets options.
-type Options struct {
-	// WaitDuration controls the frequency of retries after an error. For example,
-	// if the file does not exist. Defaults to 30 seconds.
-	WaitDuration time.Duration
-}
-
 // Close implements driver.WatchVariable.
 func (w *watcher) Close() error {
 	// Tell the background goroutine to shut down by canceling its ctx.
@@ -255,6 +263,11 @@ func (w *watcher) Close() error {
 	return err
 }
 
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
-	return false
+// ErrorAs implements driver.ErrorAs.
+func (w *watcher) ErrorAs(err error, i interface{}) bool { return false }
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	_, ok := err.(*errNotExist)
+	return ok
 }

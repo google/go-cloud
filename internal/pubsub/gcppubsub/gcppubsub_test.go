@@ -25,7 +25,6 @@ import (
 	"gocloud.dev/internal/pubsub/driver"
 	"gocloud.dev/internal/pubsub/drivertest"
 	"gocloud.dev/internal/testing/setup"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -54,12 +53,12 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	conn, done := setup.NewGCPgRPCConn(ctx, t, EndPoint)
-	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(conn))
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "pubsub")
+	pubClient, err := PublisherClient(ctx, conn)
 	if err != nil {
 		return nil, fmt.Errorf("making publisher client: %v", err)
 	}
-	subClient, err := raw.NewSubscriberClient(ctx, option.WithGRPCConn(conn))
+	subClient, err := SubscriberClient(ctx, conn)
 	if err != nil {
 		return nil, fmt.Errorf("making subscription client: %v", err)
 	}

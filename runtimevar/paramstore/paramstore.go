@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore provides a runtimevar.Driver implementation
-// that reads variables from AWS Systems Manager Parameter Store.
-//
-// Construct a Client, then use NewVariable to construct any number of
-// runtimevar.Variable objects.
+// Package paramstore provides a runtimevar implementation with variables
+// read from AWS Systems Manager Parameter Store
+// (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
+// Use NewVariable to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -39,7 +38,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
-// NewVariable constructs a runtimevar.Variable that watches AWS Parameter Store.
+// Options sets options.
+type Options struct {
+	// WaitDuration controls the rate at which Parameter Store is polled.
+	// Defaults to 30 seconds.
+	WaitDuration time.Duration
+}
+
+// NewVariable constructs a *runtimevar.Variable backed by the variable name in
+// AWS Systems Manager Parameter Store.
+// Parameter Store returns raw bytes; provide a decoder to decode the raw bytes
+// into the appropriate type for runtimevar.Snapshot.Value.
+// See the runtimevar package documentation for examples of decoders.
 func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := newWatcher(sess, name, decoder, opts)
 	if err != nil {
@@ -58,12 +68,6 @@ func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Dec
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
 	}, nil
-}
-
-// Options sets options.
-type Options struct {
-	// WaitDuration controls how quickly Watch polls. Defaults to 30 seconds.
-	WaitDuration time.Duration
 }
 
 // state implements driver.State.
@@ -198,6 +202,14 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 			*p = v
 			return true
 		}
+	}
+	return false
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	if awsErr, ok := err.(awserr.Error); ok {
+		return awsErr.Code() == "ParameterNotFound"
 	}
 	return false
 }

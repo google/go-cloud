@@ -38,12 +38,12 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 	rawVal, found := h.vars[name]
 	if !found {
 		// The variable isn't set. Create a Variable that always returns an error.
-		return &watcher{err: errors.New("not found")}, nil
+		return &watcher{err: ErrNotExist}, nil
 	}
 	val, err := decoder.Decode(rawVal)
 	if err != nil {
 		// The variable didn't decode.
-		return &watcher{err: errors.New("not found")}, nil
+		return &watcher{err: err}, nil
 	}
 	return &watcher{value: val, t: time.Now()}, nil
 }
