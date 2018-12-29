@@ -60,8 +60,8 @@ func openGCPSubscriberClient(ctx context.Context, creds *google.Credentials) (*r
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
 	cleanup2 := func() {
-		cleanup()
 		subClient.Close()
+		cleanup()
 	}
 	return subClient, cleanup2, nil
 }
@@ -89,10 +89,6 @@ func openGCPTopic(ctx context.Context, proj, topicID string) (*pubsub.Topic, fun
 }
 
 func openGCPPubClient(ctx context.Context, creds *google.Credentials) (*raw.PublisherClient, func(), error) {
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
-	}
 	ts := gcp.CredentialsTokenSource(creds)
 	conn, cleanup, err := gcppubsub.Dial(ctx, ts)
 	if err != nil {
@@ -103,8 +99,8 @@ func openGCPPubClient(ctx context.Context, creds *google.Credentials) (*raw.Publ
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
 	cleanup2 := func() {
-		cleanup()
 		pubClient.Close()
+		cleanup()
 	}
 	return pubClient, cleanup2, nil
 }
