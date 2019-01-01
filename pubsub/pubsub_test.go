@@ -20,8 +20,8 @@ import (
 	"sync"
 	"testing"
 
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 type driverTopic struct {

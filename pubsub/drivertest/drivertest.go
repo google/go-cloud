@@ -14,7 +14,7 @@
 
 // Package drivertest provides a conformance test for implementations of
 // driver.
-package drivertest // import "gocloud.dev/internal/pubsub/drivertest"
+package drivertest // import "gocloud.dev/pubsub/drivertest"
 
 import (
 	"bytes"
@@ -25,8 +25,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 // Harness descibes the functionality test harnesses must provide to run

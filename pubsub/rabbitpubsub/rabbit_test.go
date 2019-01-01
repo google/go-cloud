@@ -32,9 +32,9 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
-	"gocloud.dev/internal/pubsub/drivertest"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
+	"gocloud.dev/pubsub/drivertest"
 )
 
 const rabbitURL = "amqp://guest:guest@localhost:5672/"
