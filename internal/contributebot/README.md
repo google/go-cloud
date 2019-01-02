@@ -78,8 +78,9 @@ To set up your own instance of Contribute Bot for local testing or deployment:
     project ID.
     *   Set the `Webhook secret` to the random webhook secret you created above.
     *   Make sure to give Read &amp; Write access to Issues, Pull Requests,
-        Checks, and Read-only access to Repository metadata.
-    *   Subscribe to pull request and issue events.
+        Checks, Repository Contents and Read-only access to Repository metadata
+        and Repository administration.
+    *   Subscribe to pull request, issue, check run, and push events.
 1.  Download a GitHub application secret key and copy the contents into a new
     Terraform [variable file][] in the `dev` directory, setting the
     `github_app_key` variable. It's useful to use a ["here doc"][]. Then run
