@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfigurator provides a runtimevar.Driver implementation
-// that reads variables from GCP Cloud Runtime Configurator.
-//
-// Construct a Client, then use NewVariable to construct any number of
-// runtimevar.Variable objects.
+// Package runtimeconfigurator provides a runtimevar implementation with
+// variables read from GCP Cloud Runtime Configurator
+// (https://cloud.google.com/deployment-manager/runtime-configurator).
+// Use NewVariable to construct a *runtimevar.Variable.
 //
 // As
 //
@@ -49,15 +48,17 @@ const (
 	endPoint = "runtimeconfig.googleapis.com:443"
 )
 
-// Dial opens a gRPC connection to the Runtime Configurator API.
+// Dial opens a gRPC connection to the Runtime Configurator API using
+// credentials from ts. It is provided as an optional helper with useful
+// defaults.
 //
-// The second return value is a function that can be called to clean up
+// The second return value is a function that should be called to clean up
 // the connection opened by Dial.
 func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClient, func(), error) {
 	conn, err := grpc.DialContext(ctx, endPoint,
 		grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, "")),
 		grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: ts}),
-		grpc.WithUserAgent(useragent.GoCloudUserAgent),
+		useragent.GRPCDialOption("runtimevar"),
 	)
 	if err != nil {
 		return nil, nil, err
@@ -65,9 +66,18 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 	return pb.NewRuntimeConfigManagerClient(conn), func() { conn.Close() }, nil
 }
 
-// NewVariable constructs a runtimevar.Variable object with this package as the driver
-// implementation. Provide a decoder to unmarshal updated configurations into similar
-// objects during the Watch call.
+// Options sets options.
+type Options struct {
+	// WaitDuration controls the rate at which Parameter Store is polled.
+	// Defaults to 30 seconds.
+	WaitDuration time.Duration
+}
+
+// NewVariable constructs a *runtimevar.Variable backed by the variable name in
+// GCP Cloud Runtime Configurator.
+// Runtime Configurator returns raw bytes; provide a decoder to decode the raw bytes
+// into the appropriate type for runtimevar.Snapshot.Value.
+// See the runtimevar package documentation for examples of decoders.
 func NewVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	w, err := newWatcher(client, name, decoder, opts)
 	if err != nil {
@@ -88,7 +98,7 @@ func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder
 	}, nil
 }
 
-// ResourceName identifies the full configuration variable path used by the service.
+// ResourceName identifies a configuration variable.
 type ResourceName struct {
 	ProjectID string
 	Config    string
@@ -102,12 +112,6 @@ func (r ResourceName) configPath() string {
 // String returns the full configuration variable path.
 func (r ResourceName) String() string {
 	return fmt.Sprintf("%s/variables/%s", r.configPath(), r.Variable)
-}
-
-// Options sets options.
-type Options struct {
-	// WaitDuration controls how quickly Watch polls. Defaults to 30 seconds.
-	WaitDuration time.Duration
 }
 
 // state implements driver.State.
@@ -214,6 +218,11 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 		return true
 	}
 	return false
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	return grpc.Code(err) == codes.NotFound
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {

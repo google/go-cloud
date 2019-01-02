@@ -42,10 +42,6 @@ func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error
 	return nil
 }
 
-func (s *scriptedSub) Close() error {
-	return nil
-}
-
 func (s *scriptedSub) IsRetryable(error) bool { return false }
 
 func (s *scriptedSub) As(i interface{}) bool { return false }

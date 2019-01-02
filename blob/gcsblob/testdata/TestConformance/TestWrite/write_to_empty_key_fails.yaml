@@ -2,16 +2,16 @@
 version: 1
 interactions:
 - request:
-    body: "--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4\r\nContent-Type:
+    body: "--c9b3310e420b962e02f76d78bf0f0ec3b8377790ee5200182cbf06ad48d3\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\"}\n\r\n--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\n\r\n--629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4--\r\n"
+      charset=utf-8\"}\n\r\n--c9b3310e420b962e02f76d78bf0f0ec3b8377790ee5200182cbf06ad48d3\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\n\r\n--c9b3310e420b962e02f76d78bf0f0ec3b8377790ee5200182cbf06ad48d3--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=629cfbd12ec319f639dde6d38da12e75295d542c3ecae2b32fd6a20b6bd4
+      - multipart/related; boundary=c9b3310e420b962e02f76d78bf0f0ec3b8377790ee5200182cbf06ad48d3
       User-Agent:
-      - google-api-go-client/0.5 go-cloud/0.1
+      - google-api-go-client/0.5 go-cloud/blob/0.9.0
       X-Goog-Api-Client:
       - gl-go/1.11.0 gccl/20180226
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
@@ -55,7 +55,7 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 17 Dec 2018 22:49:25 GMT
+      - Thu, 20 Dec 2018 23:16:26 GMT
       Server:
       - UploadServer
       Vary:
@@ -68,7 +68,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UreAklTaQXhjSEjYxPUxwSvx5efJC-sxzXBsRFBPfETAlVFq4O432ClqcI5XuoZx9sGl0eeheEahwv5tSV7XPIWcKXe5w
+      - AEnB2UoiiYiShTKb-FjJpn-Q4_uxCaaQWAW_oRZMcZuUVTrvSD5_4Ojyk_f9NTKujr1YkCw7TbMhYb0RoA0VLi5bik5n2Zx74A
     status: 400 Bad Request
     code: 400
     duration: ""
