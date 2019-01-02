@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
-	"gocloud.dev/internal/pubsub/drivertest"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
+	"gocloud.dev/pubsub/drivertest"
 	"gocloud.dev/internal/testing/setup"
 )
 
