@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"gocloud.dev/internal/pubsub"
 	"gocloud.dev/internal/pubsub/driver"
@@ -38,10 +39,6 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 			return ctx.Err()
 		}
 	}
-	return nil
-}
-
-func (t *driverTopic) Close() error {
 	return nil
 }
 
@@ -94,10 +91,6 @@ func (s *driverSub) grabQueue(maxMessages int) []*driver.Message {
 }
 
 func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	return nil
-}
-
-func (s *driverSub) Close() error {
 	return nil
 }
 
@@ -224,6 +217,46 @@ func TestCancelReceive(t *testing.T) {
 	// Without cancellation, this Receive would hang.
 	if _, err := s.Receive(ctx); err == nil {
 		t.Error("got nil, want cancellation error")
+	}
+}
+
+type blockingDriverSub struct {
+	driver.Subscription
+	inReceiveBatch chan int
+}
+
+func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	b.inReceiveBatch <- 0
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func TestCancelTwoReceives(t *testing.T) {
+	// We want to create the following situation:
+	// 1. Goroutine 1 calls Receive, obtains the lock (Subscription.mu),
+	//    and calls driver.ReceiveBatch, which hangs forever.
+	// 2. Goroutine 2 calls Receive.
+	// 3. The context passed to the Goroutine 2 call is canceled.
+	// We expect Goroutine 2's Receive to exit immediately. That won't
+	// happen if Receive holds the lock during the call to ReceiveBatch.
+	inReceiveBatch := make(chan int, 1)
+	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch})
+	go func() {
+		s.Receive(context.Background())
+		t.Fatal("Receive should never return")
+	}()
+	<-inReceiveBatch
+	ctx, cancel := context.WithCancel(context.Background())
+	errc := make(chan error)
+	go func() {
+		_, err := s.Receive(ctx)
+		errc <- err
+	}()
+	// Give the Receive call time to block on the mutex before canceling.
+	time.AfterFunc(100*time.Millisecond, cancel)
+	err := <-errc
+	if err != context.Canceled {
+		t.Errorf("got %v, want context.Canceled", err)
 	}
 }
 
