@@ -45,13 +45,9 @@ const (
 	// 2. Update the topicARN constant to your topic ARN, and the
 	//    qURL to your queue URL.
 	topicARN = "arn:aws:sns:us-east-2:221420415498:test-topic"
+	qURL     = "https://sqs.us-east-2.amazonaws.com/221420415498/test-q"
 	region   = "us-east-2"
 )
-
-var qURLs = []string{
-	"https://sqs.us-east-2.amazonaws.com/221420415498/test-subscription-1",
-	"https://sqs.us-east-2.amazonaws.com/221420415498/test-subscription-2",
-}
 
 type harness struct {
 	sess   *session.Session
@@ -77,10 +73,9 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, i int) (driver.Subscription, error) {
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (driver.Subscription, error) {
 	client := sqs.New(h.sess, h.cfg)
-	u := qURLs[i+1]
-	ds := openSubscription(ctx, client, u)
+	ds := openSubscription(ctx, client, qURL)
 	return ds, nil
 }
 

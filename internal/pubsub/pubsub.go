@@ -218,7 +218,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) error {
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				s.ackBatcher.Add(ctx, id)
+				s.ackBatcher.AddNoWait(id)
 			},
 		})
 	}
