@@ -63,10 +63,10 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gocloud.dev/blob"
@@ -95,18 +95,16 @@ func mungeURLPath(path string, pathSeparator uint8) string {
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
-	// URLSigner implements signing URLs to allow access to a resource without
-	// further authorization and serving a resource corresponding to a valid
-	// signed URL.
+	// URLSigner implements signing URLs (to allow access to a resource without
+	// further authorization) and verifying that a given string contains
+	// a signedURL produced by the URLSigner.
 	// URLSigner is only required for utilizing the SignedURL api.
 	URLSigner URLSigner
 }
 
 type bucket struct {
-	dir string
-
-	// urlSigner is supplied via Options, and is only required if one wants signed URLs.
-	urlSigner URLSigner
+	dir  string
+	opts Options
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
@@ -120,13 +118,7 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
-	b := &bucket{dir: dir}
-	if opts != nil && opts.URLSigner != nil {
-		b.urlSigner = opts.URLSigner
-	} else {
-		b.urlSigner = errorURLSigner{}
-	}
-	return b, nil
+	return &bucket{dir: dir, opts: opts}, nil
 }
 
 // OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
@@ -622,47 +614,107 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+//
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	path, err := b.path(key)
-	if err != nil {
-		return "", err
+	if b.opts.URLSigner == nil {
+		return "", errNotImplemented
 	}
-
-	return b.urlSigner.SignedFileURL(ctx, key, path, opts)
+	return b.opts.UrlSigner.Sign(ctx, key, opts)
 }
 
-// URLSigner defines an interface that describes functionality for
-// creating and verifying a signed URL (Signed path?) for objects
-// in a fileblob bucket.
+// VerifySignedURL takes a putative signed URL and returns
+// (theKey, true) if valid or (nil, false) if not valid.
+// It does not distinguish between expired vs bogus signatures.
+func (b *bucket) VerifySignedURL(su string) (string, bool) {
+	if b.opts.URLSigner == nil {
+		return "", errNotImplemented
+	}
+	return b.opts.URLSigner.Verify(su)
+}
+
+// URLSigner defines an interface for
+// creating and verifying a signed URL for objects
+// in a fileblob bucket. Signed URLs are typically used for
+// granting access to an otherwise-protected resource without
+// requiring further authentication, and callers should take care
+// to restrict the creation of signed URLs as is appropriate
+// for their application.
 type URLSigner interface {
-	//wraps the SignedFileURL method.
-	// SignedFileURL uses the full path of an object (includes the bucket dir), the path,
-	// and expiry information in opts to create a signature for the resource.
-	// It returns a string containing the path, expiry, and signature, to be used
-	// for accessing the resource without further authorization.
-	// Callers should ensure that creation of signed urls is restricted to properly
-	// authenticated entities, as appropriate for the application.
-	Sign(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error)
+	// URLFromKey defines how the bucket's object key will be turned
+	// into a URL. It is used by Sign.
+	// URLFromKey takes an object key and options and returns
+	// a string to be used as a URI for the object. The
+	// returned string must include all information that will be
+	// encoded by the signature.
+	// e.g. `my/object/key` => `www.example.com/my/object/key?expires=<TIME>`
+	URLFromKey(key string, opts *driver.SignedURLOptions) string
 
-	Verify(ctx context.Context, su string) bool
+	// Sign takes in a context, an object key, and options.
+	// It returns a signed URL as a string, and an error.
+	// e.g. (`www.example.com/my/object/key?expires=<TIME>&SIGNATURE=<sig>`, nil)
+	// or (nil, SomeError)
+	Sign(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
+
+	// KeyFromURL must be able to reverse the operation in URLFromKey.
+	// It is used by Verify.
+	// KeyfromURL takes a string and returns the object key
+	// that can be passed to NewReader.
+	KeyFromURL(url string) string
+
+	// Verify takes in a context and a signed URL and returns
+	// (key, true) if the signature is valid
+	// or (nil, false) if it is not.
+	// Verify must be able to validate the integrity of
+	// a URL returned from the Sign function.
+	Verify(ctx context.Context, surl string) (string, bool)
 }
 
-// errorURLSigner is a stub implementation of URLSigner used when no URLSigner is passed to OpenBucket.
-type errorURLSigner struct{}
-
-func (errorURLSigner) SignedFileURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
-	return "", errNotImplemented
+// FakeURLSigner is an implementation of the URLSigner interface that
+// is intended for test use.
+type FakeURLSigner struct {
+	prefix string
 }
 
-type FakeURLSigner struct{}
+func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
+	return strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
+}
 
-func (FakeURLSigner) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
-	//create and return the signed url
-	//need info: where to put it (from 'bucket' dir), base url
+func (f *FakeURLSigner) KeyFromURL(url string) string {
+	// not working?
+	re = regexp.MustCompile(`\A` + f.prefix + `(?P<key>.+)\?EXPIRES_AT=tomorrow`)
+
+}
+
+func (f *FakeURLSigner) Sign(ctx context.Context, url string) (string, error) {
 	return "", nil
 }
 
-func (FakeURLSigner) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// handle request for a putatively signed url
-	// check if its valid, if valid, write to http response eg http.ServeFile(resp writer, request, filepath)
+func (f *FakeURLSigner) Verify(su string) bool {
+	// does it contain the substring "SIGNTURE+SIGNED<f.tag>"
+}
+
+//
+type URLSignerHMAC struct {
+	prefix    string
+	secretKey []byte
+}
+
+func NewURLSignerHMAC(urlPrefix string, secretKey string) URLSignerHMAC {
+	return &URLSignerHMCA{urlPrefix, []byte(secretKey)}
+}
+
+func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
+
+}
+
+func (f *FakeURLSigner) KeyFromURL(url string) string {
+
+}
+
+func (u *URLSignerHMAC) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
+
+}
+
+func (f *FakeURLSigner) Verify(su string) bool {
+	// does it contain the substring "SIGNTURE+SIGNED<f.tag>"
 }
