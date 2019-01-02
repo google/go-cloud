@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"sync"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
