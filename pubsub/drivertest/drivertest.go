@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -272,12 +273,22 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	cancel()
 
 	m := &pubsub.Message{}
-	if err := top.Send(ctx, m); err != context.Canceled {
-		t.Errorf("top.Send returned %v, want context.Canceled", err)
+	if err := top.Send(ctx, m); !isCanceled(err) {
+		t.Errorf("top.Send returned %v (%T), want context.Canceled", err, err)
 	}
-	if _, err := sub.Receive(ctx); err != context.Canceled {
-		t.Errorf("sub.Receive returned %v, want context.Canceled", err)
+	if _, err := sub.Receive(ctx); !isCanceled(err) {
+		t.Errorf("sub.Receive returned %v (%T), want context.Canceled", err, err)
 	}
+}
+
+func isCanceled(err error) bool {
+	if err == context.Canceled {
+		return true
+	}
+	if cerr, ok := err.(*retry.ContextError); ok {
+		return cerr.CtxErr == context.Canceled
+	}
+	return false
 }
 
 func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
