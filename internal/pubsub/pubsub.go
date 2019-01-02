@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"sync"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/pubsub/driver"
 	"gocloud.dev/internal/retry"
@@ -257,18 +257,34 @@ func (s *Subscription) As(i interface{}) bool {
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
 	callCtx, cancel := context.WithCancel(context.Background())
-	handler := func(items interface{}) error {
-		ids := items.([]driver.AckID)
-		// TODO: Consider providing a way to stop this call. See #766.
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendAcks(callCtx, ids)
-		})
-	}
 	const maxHandlers = 1
-	ab := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+	handler := MakeAckBatchHandler(callCtx, d)
+	ackBatcher := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+	return NewSubscriptionWithBatcher(d, ackBatcher, cancel)
+}
+
+// NewSubscriptionWithBatcher creates a Subscription from a driver.Subscription
+// and a batcher that sends batches of acks to the provider. Typically the
+// batcher is constructed using the result of MakeAckBatchHandler.
+// NewSubscriptionWithBatcher is for use by provider implementations.
+func NewSubscriptionWithBatcher(d driver.Subscription, ab driver.Batcher, cancel func()) *Subscription {
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
 		cancel:     cancel,
+	}
+}
+
+// MakeAckBatchHandler makes a handler func suitable for constructing a Batcher
+// that can be used as an argument to NewSubscription. This handler wraps
+// d.SendAcks with retry logic. MakeAckBatchHandler is for use by provider
+// implementations.
+func MakeAckBatchHandler(ctx context.Context, d driver.Subscription) func(interface{}) error {
+	return func(items interface{}) error {
+		ids := items.([]driver.AckID)
+		// TODO: Consider providing a way to stop this call. See #766.
+		return retry.Call(ctx, gax.Backoff{}, d.IsRetryable, func() error {
+			return d.SendAcks(ctx, ids)
+		})
 	}
 }
