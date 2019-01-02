@@ -238,6 +238,51 @@ type gitHubInstallAuth struct {
 	cond   chan struct{}
 }
 
+// fetchToken obtains a reasonably fresh access token.
+func (auth *gitHubInstallAuth) fetchToken(ctx context.Context) (string, error) {
+	// Block if another goroutine is fetching a token.
+	auth.mu.Lock()
+	for auth.cond != nil {
+		c := auth.cond
+		auth.mu.Unlock()
+		select {
+		case <-c:
+			auth.mu.Lock()
+		case <-ctx.Done():
+			return "", fmt.Errorf("waiting for GitHub installation token: %v", ctx.Err())
+		}
+	}
+
+	// Lock held: is token still valid? (Renew a minute ahead of time to reduce
+	// clock skew issues.)
+	now := time.Now()
+	if auth.token != "" && now.Before(auth.expiry.Add(60*time.Second)) {
+		tok := auth.token
+		auth.mu.Unlock()
+		return tok, nil
+	}
+	// Invalid token. Set the condition variable and fetch the new token.
+	c := make(chan struct{})
+	auth.cond = c
+	auth.mu.Unlock()
+	tok, expiry, err := auth.app.fetchInstallToken(ctx, auth.id)
+	auth.mu.Lock()
+
+	// Report results back to caller, unlocking before doing so.
+	// Release condition variable even if we fail so others can attempt later.
+	close(c)
+	auth.cond = nil
+	if err != nil {
+		auth.mu.Unlock()
+		return "", err
+	}
+	// Token is valid.
+	auth.token = tok
+	auth.expiry = expiry
+	auth.mu.Unlock()
+	return tok, nil
+}
+
 // RoundTrip sends a request with an installation's credentials, possibly
 // fetching a new access token.
 func (auth *gitHubInstallAuth) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -259,42 +304,11 @@ func (auth *gitHubInstallAuth) RoundTrip(req *http.Request) (*http.Response, err
 		}()
 	}
 
-	// Block if another goroutine is fetching a token.
-	ctx := req.Context()
-	auth.mu.Lock()
-	for auth.cond != nil {
-		c := auth.cond
-		auth.mu.Unlock()
-		select {
-		case <-c:
-		case <-ctx.Done():
-			return nil, fmt.Errorf("waiting for GitHub installation token: %v", ctx.Err())
-		}
+	// Obtain token to use in header.
+	tok, err := auth.fetchToken(req.Context())
+	if err != nil {
+		return nil, err
 	}
-	// Lock held: is token still valid? (Renew a minute ahead of time to reduce
-	// clock skew issues.)
-	now := time.Now()
-	if auth.token == "" || now.After(auth.expiry.Add(60*time.Second)) {
-		// Invalid token. Set the condition variable and fetch the new token.
-		c := make(chan struct{})
-		auth.cond = c
-		auth.mu.Unlock()
-		tok, expiry, err := auth.app.fetchInstallToken(ctx, auth.id)
-		// Release condition variable so even if we fail, others can attempt later.
-		auth.mu.Lock()
-		close(c)
-		auth.cond = nil
-
-		if err != nil {
-			auth.mu.Unlock()
-			return nil, err
-		}
-		auth.token = tok
-		auth.expiry = expiry
-	}
-	// Now we have a valid token. Release the lock.
-	tok := auth.token
-	auth.mu.Unlock()
 
 	// RoundTrippers must not modify the passed in request.
 	// Clone the headers then add the new authorization header.

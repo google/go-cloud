@@ -50,6 +50,11 @@ The configuration file is in JSON format and has the following keys:
     match the title pattern. This can use
     <a href="https://help.github.com/articles/about-writing-and-formatting-on-github/">GitHub-flavored Markdown</a>.
   </dd>
+  <dt><code>require_pull_request_fork_branch</code></dt>
+  <dd>
+    If <code>true</code>, then pull requests coming from branches on the same
+    repository will be automatically closed. Defaults to <code>true</code>.
+  </dd>
 </dl>
 
 ## DevOps Setup
@@ -73,8 +78,9 @@ To set up your own instance of Contribute Bot for local testing or deployment:
     project ID.
     *   Set the `Webhook secret` to the random webhook secret you created above.
     *   Make sure to give Read &amp; Write access to Issues, Pull Requests,
-        Checks, and Read-only access to Repository metadata.
-    *   Subscribe to pull request and issue events.
+        Checks, Repository Contents and Read-only access to Repository metadata
+        and Repository administration.
+    *   Subscribe to pull request, issue, check run, and push events.
 1.  Download a GitHub application secret key and copy the contents into a new
     Terraform [variable file][] in the `dev` directory, setting the
     `github_app_key` variable. It's useful to use a ["here doc"][]. Then run

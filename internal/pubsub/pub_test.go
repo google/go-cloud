@@ -17,10 +17,6 @@ func (t *funcTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return t.sendBatch(ctx, ms)
 }
 
-func (t *funcTopic) Close() error {
-	return nil
-}
-
 func (s *funcTopic) IsRetryable(error) bool { return false }
 
 func (s *funcTopic) As(i interface{}) bool { return false }
