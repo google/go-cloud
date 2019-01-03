@@ -103,6 +103,16 @@ func newWatcher(path string, decoder *runtimevar.Decoder, opts *Options) (*watch
 	return w, nil
 }
 
+// errNotExist wraps an underlying error in cases where the file likely doesn't
+// exist.
+type errNotExist struct {
+	err error
+}
+
+func (e *errNotExist) Error() string {
+	return e.err.Error()
+}
+
 // state implements driver.State.
 type state struct {
 	val        interface{}
@@ -195,7 +205,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		// it's needed during renames, so just always try.
 		if err := notifier.Add(file); err != nil {
 			// File probably does not exist. Try again later.
-			cur = w.updateState(&state{err: err}, cur)
+			cur = w.updateState(&state{err: &errNotExist{err}}, cur)
 			continue
 		}
 
@@ -203,7 +213,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 		b, err := ioutil.ReadFile(file)
 		if err != nil {
 			// File probably does not exist. Try again later.
-			cur = w.updateState(&state{err: err}, cur)
+			cur = w.updateState(&state{err: &errNotExist{err}}, cur)
 			continue
 		}
 
@@ -254,6 +264,10 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
-func (w *watcher) ErrorAs(err error, i interface{}) bool {
-	return false
+func (w *watcher) ErrorAs(err error, i interface{}) bool { return false }
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	_, ok := err.(*errNotExist)
+	return ok
 }

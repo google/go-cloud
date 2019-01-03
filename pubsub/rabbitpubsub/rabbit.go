@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/streadway/amqp"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 type topic struct {
@@ -154,7 +155,7 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 	// message (successful or not), and one return for each undeliverable message.
 	// Since SendBatch (the only caller of this method) holds the lock, we expect
 	// exactly as many acks as messages.
-	var err error
+	var merr MultiError
 	nAcks := 0
 	for nAcks < nMessages {
 		select {
@@ -172,37 +173,54 @@ func (t *topic) receiveFromPublishChannels(ctx context.Context, nMessages int) e
 				// Channel closed. Handled in the pubc case below. But set
 				// the channel to nil to prevent it from being selected again.
 				t.retc = nil
-			} else if err == nil {
+			} else {
 				// The message was returned from the server because it is unroutable.
-				// This will be the error we return, but continue so we drain all
+				// Record the error and continue so we drain all
 				// items from pubc. We don't need to re-establish the channel on this
 				// error.
-				err = fmt.Errorf("rabbitpubsub: message returned from %s: %s (code %d)",
-					ret.Exchange, ret.ReplyText, ret.ReplyCode)
+				merr = append(merr, fmt.Errorf("rabbitpubsub: message returned from %s: %s (code %d)",
+					ret.Exchange, ret.ReplyText, ret.ReplyCode))
 			}
 
 		case conf, ok := <-t.pubc:
 			if !ok {
 				// t.pubc was closed unexpectedly.
 				t.ch = nil // re-create the channel on next use
-				if err != nil {
-					return err
+				if merr != nil {
+					return merr
 				}
 				// t.closec must be closed too. See if it has an error.
-				if err = closeErr(t.closec); err != nil {
-					return err
+				if err := closeErr(t.closec); err != nil {
+					merr = append(merr, err)
+					return merr
 				}
 				// We shouldn't be here, but if we are, we still want to return an
 				// error.
-				return errors.New("rabbitpubsub: publish listener closed unexpectedly")
+				merr = append(merr, errors.New("rabbitpubsub: publish listener closed unexpectedly"))
+				return merr
 			}
 			nAcks++
-			if !conf.Ack && err == nil {
-				err = errors.New("rabbitpubsub: ack failed on publish")
+			if !conf.Ack {
+				merr = append(merr, errors.New("rabbitpubsub: ack failed on publish"))
 			}
 		}
 	}
-	return err
+	if merr != nil {
+		return merr
+	}
+	// Returning a nil merr would mean the returned error interface value is non-nil, so return nil explicitly.
+	return nil
+}
+
+// A MultiError is an error that contains multiple errors.
+type MultiError []error
+
+func (m MultiError) Error() string {
+	var s []string
+	for _, e := range m {
+		s = append(s, e.Error())
+	}
+	return strings.Join(s, "; ")
 }
 
 // Return the error from a Go channel monitoring the closing of an AMQP channel.

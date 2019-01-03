@@ -18,7 +18,7 @@
 // It exposes the following types for As:
 // Topic: *raw.PublisherClient
 // Subscription: *raw.SubscriberClient
-package gcppubsub // import "gocloud.dev/internal/pubsub/gcppubsub"
+package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/internal/useragent"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
