@@ -82,7 +82,7 @@ type Options struct {
 }
 
 // Azure does not handle backslashes in the blob key well. As a workaround, all
-// backslashes are converted to forwardslashes during bucket operations.
+// backslashes are converted to forward slashes during bucket operations.
 // This is needed to ensure directories from Windows file systems are
 // represented correctly in Azure Storage.
 //
@@ -197,7 +197,7 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, serviceURL, u.Host, opts), err
+	return openBucket(ctx, serviceURL, u.Host, opts), nil
 }
 
 // bucket represents a Azure Storage Account Container, which handles read,
