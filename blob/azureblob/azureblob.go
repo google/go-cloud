@@ -54,6 +54,7 @@ package azureblob
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -279,16 +280,14 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		Size:        getSize(blobDownloadResponse.ContentLength(), blobDownloadResponse.ContentRange()),
 		ModTime:     blobDownloadResponse.LastModified(),
 	}
+	var body io.ReadCloser
 	if length == 0 {
-		// Return a metadata reader with empty body (length = 0)
-		return &reader{
-			body:  http.NoBody,
-			attrs: attrs,
-			raw:   &blockBlobURL,
-		}, nil
+		body = http.NoBody
+	} else {
+		body = blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: defaultMaxDownloadRetryRequests})
 	}
 	return &reader{
-		body:  blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: defaultMaxDownloadRetryRequests}),
+		body:  body,
 		attrs: attrs,
 		raw:   &blockBlobURL,
 	}, nil
