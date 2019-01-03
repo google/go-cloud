@@ -934,8 +934,12 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 // testAttributes tests Attributes.
 func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	const (
-		key         = "blob-for-attributes"
-		contentType = "text/plain"
+		key                = "blob-for-attributes"
+		contentType        = "text/plain"
+		cacheControl       = "no-cache"
+		contentDisposition = "inline"
+		contentEncoding    = "identity"
+		contentLanguage    = "en"
 	)
 	content := []byte("Hello World!")
 
@@ -953,7 +957,11 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 		}
 		b := blob.NewBucket(drv)
 		opts := &blob.WriterOptions{
-			ContentType: contentType,
+			ContentType:        contentType,
+			CacheControl:       cacheControl,
+			ContentDisposition: contentDisposition,
+			ContentEncoding:    contentEncoding,
+			ContentLanguage:    contentLanguage,
 		}
 		if err := b.WriteAll(ctx, key, content, opts); err != nil {
 			t.Fatal(err)
@@ -976,6 +984,18 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		t.Fatalf("failed Attributes: %v", err)
+	}
+	if a.CacheControl != cacheControl {
+		t.Errorf("got CacheControl %q want %q", a.CacheControl, cacheControl)
+	}
+	if a.ContentDisposition != contentDisposition {
+		t.Errorf("got ContentDisposition %q want %q", a.ContentDisposition, contentDisposition)
+	}
+	if a.ContentEncoding != contentEncoding {
+		t.Errorf("got ContentEncoding %q want %q", a.ContentEncoding, contentEncoding)
+	}
+	if a.ContentLanguage != contentLanguage {
+		t.Errorf("got ContentLanguage %q want %q", a.ContentLanguage, contentLanguage)
 	}
 	if a.ContentType != contentType {
 		t.Errorf("got ContentType %q want %q", a.ContentType, contentType)
