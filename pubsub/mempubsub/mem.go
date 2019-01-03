@@ -17,7 +17,7 @@
 // development and testing.
 //
 // mempubsub does not support any types for As.
-package mempubsub // import "gocloud.dev/internal/pubsub/mempubsub"
+package mempubsub // import "gocloud.dev/pubsub/mempubsub"
 
 import (
 	"context"
@@ -25,8 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 var errNotExist = errors.New("mempubsub: topic does not exist")

@@ -17,8 +17,8 @@ import (
 	"context"
 	"testing"
 
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 // scriptedSub returns batches of messages in a predefined order from
@@ -39,10 +39,6 @@ func (s *scriptedSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dri
 }
 
 func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	return nil
-}
-
-func (s *scriptedSub) Close() error {
 	return nil
 }
 

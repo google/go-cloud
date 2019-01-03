@@ -26,4 +26,4 @@
 // This package exposes the following types for As:
 // Topic: *amqp.Connection
 // Subscription: *amqp.Connection
-package rabbitpubsub // import "gocloud.dev/internal/pubsub/rabbitpubsub"
+package rabbitpubsub // import "gocloud.dev/pubsub/rabbitpubsub"

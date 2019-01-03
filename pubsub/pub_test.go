@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
 )
 
 type funcTopic struct {
@@ -15,10 +15,6 @@ type funcTopic struct {
 
 func (t *funcTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return t.sendBatch(ctx, ms)
-}
-
-func (t *funcTopic) Close() error {
-	return nil
 }
 
 func (s *funcTopic) IsRetryable(error) bool { return false }

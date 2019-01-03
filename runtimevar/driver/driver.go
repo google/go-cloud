@@ -106,4 +106,9 @@ type Watcher interface {
 	// ErrorAs allows providers to expose provider-specific types for returned
 	// errors; see State.As for more details.
 	ErrorAs(error, interface{}) bool
+
+	// IsNotExist should return true if err, an error returned from one
+	// of the other methods in this interface, represents a "variable does not exist"
+	// error.
+	IsNotExist(err error) bool
 }

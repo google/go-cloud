@@ -318,6 +318,14 @@ func ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
+// IsNotExist returns true iff err indicates that the referenced variable does not exist.
+func IsNotExist(err error) bool {
+	if e, ok := err.(*wrappedError); ok {
+		return e.w.IsNotExist(e.err)
+	}
+	return false
+}
+
 // Decode is a function type for unmarshaling/decoding a slice of bytes into
 // an arbitrary type. Decode functions are used when creating a Decoder via
 // NewDecoder. This package provides common Decode functions including
