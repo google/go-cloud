@@ -3,6 +3,7 @@ package setup // import "gocloud.dev/internal/testing/setup"
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"regexp"
@@ -19,6 +20,9 @@ import (
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
 // Record is true iff the tests are being run in "record" mode.
@@ -148,4 +152,85 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 		t.Fatal(err)
 	}
 	return conn, done
+}
+
+// NewAzureTestPipeline creates a new connection for testing against Azure Blob.
+func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string, accountKey string) (pipeline pipeline.Pipeline, done func(), httpClient *http.Client) {
+	mode := recorder.ModeReplaying
+	if *Record {
+		mode = recorder.ModeRecording
+	}
+
+	azMatchers := &replay.ProviderMatcher{
+		URLScrubbers: []*regexp.Regexp{
+			regexp.MustCompile(`se=[^?]*`),
+			regexp.MustCompile(`sig=[^?]*`),
+		},
+	}
+
+	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
+	if err != nil {
+		t.Fatalf("unable to initialize recorder: %v", err)
+	}
+
+	var credential azblob.Credential
+	if *Record {
+		credential, _ = azblob.NewSharedKeyCredential(accountName, accountKey)
+	} else {
+		credential = azblob.NewAnonymousCredential()
+	}
+
+	httpClient = azureHTTPClient(r)
+	p := newPipeline(credential, r)
+
+	return p, done, httpClient
+}
+
+func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
+	if c == nil {
+		panic("pipeline credential can't be nil")
+	}
+
+	f := []pipeline.Factory{
+		// sets User-Agent for recorder
+		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
+			Value: "X-Az-Target",
+		}),
+		// sets header X-Ms-Client-Request-Id, see https://msdn.microsoft.com/en-us/library/mt766820.aspx
+		azblob.NewUniqueRequestIDPolicyFactory(),
+	}
+
+	f = append(f, c)
+	f = append(f, pipeline.MethodFactoryMarker())
+
+	log := pipeline.LogOptions{
+		Log: func(level pipeline.LogLevel, message string) {
+			fmt.Println(message)
+		},
+		ShouldLog: func(level pipeline.LogLevel) bool {
+			return true
+		},
+	}
+
+	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: newDefaultHTTPClientFactory(azureHTTPClient(r)), Log: log})
+}
+
+func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Factory {
+	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
+		return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+			r, err := pipelineHTTPClient.Do(request.WithContext(ctx))
+			if err != nil {
+				err = pipeline.NewError(err, "HTTP request failed")
+			}
+			return pipeline.NewHTTPResponse(r), err
+		}
+	})
+}
+
+func azureHTTPClient(r *recorder.Recorder) *http.Client {
+	if r != nil {
+		return &http.Client{Transport: r}
+	} else {
+		return &http.Client{}
+	}
 }
