@@ -8,7 +8,7 @@ interactions:
       Content-Length:
       - "27"
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Blob-Cache-Control:
       - ""
       X-Ms-Blob-Content-Disposition:
@@ -22,12 +22,12 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Client-Request-Id:
-      - df799ad0-db16-44d5-73db-a9f9d00a3e06
+      - a8d86fb4-1194-4004-5be6-17807e8ef0b5
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:07 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: PUT
   response:
     body: ""
@@ -35,15 +35,15 @@ interactions:
       Content-Md5:
       - PflsWr6X8pZ9OAEIcAMKXw==
       Date:
-      - Thu, 03 Jan 2019 02:36:20 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       Etag:
-      - '"0x8D671243F28C6AD"'
+      - '"0x8D671B7E05F6EEC"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 0d44c39b-201e-0118-6e0d-a38d73000000
+      - c51ee5a6-f01e-001c-51a0-a34da3000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -56,16 +56,16 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - 2548b507-f01b-4261-69de-4baf33698962
+      - 19848046-afe8-41e3-45eb-ddfe14e0e1b7
       X-Ms-Range:
       - bytes=10-
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:07 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: GET
   response:
     body: klmnopqurstuvwxyz
@@ -81,11 +81,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 03 Jan 2019 02:36:20 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       Etag:
-      - '"0x8D671243F28C6AD"'
+      - '"0x8D671B7E05F6EEC"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Content-Md5:
@@ -93,13 +93,13 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 0d44c3a0-201e-0118-730d-a38d73000000
+      - c51ee5aa-f01e-001c-53a0-a34da3000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -112,28 +112,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - abe1dfa3-e868-4c15-7be8-fb33c5c731a2
+      - d28c5425-ae4c-4852-51c1-b8dfaabe4f78
       X-Ms-Delete-Snapshots:
       - include
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:07 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 03 Jan 2019 02:36:20 GMT
+      - Thu, 03 Jan 2019 20:13:07 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 0d44c3a2-201e-0118-750d-a38d73000000
+      - c51ee5ae-f01e-001c-57a0-a34da3000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted

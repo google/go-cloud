@@ -8,7 +8,7 @@ interactions:
       Content-Length:
       - "20"
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Blob-Cache-Control:
       - ""
       X-Ms-Blob-Content-Disposition:
@@ -22,12 +22,12 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Client-Request-Id:
-      - b4ea0221-3256-4747-4bad-1d4ed19e3dc8
+      - a97b6168-0706-4034-7d4f-3b0e933d4794
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:09 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: PUT
   response:
     body: ""
@@ -35,15 +35,15 @@ interactions:
       Content-Md5:
       - PzMJMSzDJkoTibLSY97OjQ==
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Etag:
-      - '"0x8D671243F7DACC0"'
+      - '"0x8D671B7E19AFBFE"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 0d44c4af-201e-0118-730d-a38d73000000
+      - c51ee626-f01e-001c-2ba0-a34da3000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -56,14 +56,14 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - 313378a8-e167-4590-5624-fdddcc42132d
+      - ffa86ae6-6c7b-401e-4173-257d0c174fac
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:09 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: GET
   response:
     body: This is a text file.
@@ -79,23 +79,23 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Etag:
-      - '"0x8D671243F7DACC0"'
+      - '"0x8D671B7E19AFBFE"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 0d44c4b3-201e-0118-760d-a38d73000000
+      - c51ee62f-f01e-001c-2fa0-a34da3000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -108,28 +108,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - 9c0d8634-623f-4914-684e-e50b53e3b95f
+      - d1b938d1-8d0c-4566-6419-e3c3d73da093
       X-Ms-Delete-Snapshots:
       - include
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:09 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 0d44c4b9-201e-0118-7b0d-a38d73000000
+      - c51ee631-f01e-001c-31a0-a34da3000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted
