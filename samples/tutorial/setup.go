@@ -17,19 +17,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/gcp"
-
-	azureblob "gocloud.dev/blob/azureblob"
 )
 
 // setupBucket creates a connection to a particular cloud provider's blob storage.
@@ -39,8 +34,6 @@ func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error
 		return setupAWS(ctx, bucket)
 	case "gcp":
 		return setupGCP(ctx, bucket)
-	case "azure":
-		return setupAzure(ctx, bucket)
 	default:
 		return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 	}
@@ -75,31 +68,4 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	}
 	s := session.Must(session.NewSession(c))
 	return s3blob.OpenBucket(ctx, s, bucket, nil)
-}
-
-func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
-	settings := azureblob.Settings{
-		AccountName: os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:  os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),
-		SASToken:    "", // Not used when bootstrapping with AccountName & AccountKey
-	}
-	return azureblob.OpenBucket(ctx, &settings, bucket)
-}
-
-func setupAzureWithSASToken(ctx context.Context, bucket string) (*blob.Bucket, error) {
-
-	// Use SASToken scoped at the Storage Account (full permission)
-	// with this sasToken, ContainerExists can be either true or false
-	sasToken := azureblob.GenerateSampleSASTokenForAccount(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), time.Now().UTC(), time.Now().UTC().Add(48*time.Hour))
-
-	// Use SASToken scoped to a container (limited permissions, cannot create new container)
-	// with this sasToken, ContainerExists should be true to avoid AuthenticationFailure exceptions
-	// sasToken2 := azureblob.GenerateSampleSASTokenForContainerBlob(os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"), os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"), bucket, "", time.Now().UTC(), time.Now().UTC().Add(48*time.Hour))
-
-	settings := azureblob.Settings{
-		AccountName: os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:  "", // Not used when bootstrapping with SASToken
-		SASToken:    sasToken,
-	}
-	return azureblob.OpenBucket(ctx, &settings, bucket)
 }

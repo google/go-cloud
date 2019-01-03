@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
@@ -168,7 +167,7 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string,
 			regexp.MustCompile(`sig=[^?]*`),
 		},
 	}
-	
+
 	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
@@ -193,18 +192,12 @@ func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
 	}
 
 	f := []pipeline.Factory{
-
+		// sets User-Agent for recorder
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: "X-Az-Target",
 		}),
+		// sets header X-Ms-Client-Request-Id, see https://msdn.microsoft.com/en-us/library/mt766820.aspx
 		azblob.NewUniqueRequestIDPolicyFactory(),
-		azblob.NewRetryPolicyFactory(azblob.RetryOptions{
-			Policy:        azblob.RetryPolicyExponential,
-			MaxTries:      3,
-			TryTimeout:    3 * time.Second,
-			RetryDelay:    1 * time.Second,
-			MaxRetryDelay: 3 * time.Second,
-		}),
 	}
 
 	f = append(f, c)
@@ -235,29 +228,9 @@ func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Facto
 }
 
 func azureHTTPClient(r *recorder.Recorder) *http.Client {
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).Dial,
-		MaxIdleConns:           0,
-		MaxIdleConnsPerHost:    1000,
-		IdleConnTimeout:        180 * time.Second,
-		TLSHandshakeTimeout:    10 * time.Second,
-		ExpectContinueTimeout:  1 * time.Second,
-		DisableKeepAlives:      false,
-		DisableCompression:     false,
-		MaxResponseHeaderBytes: 0,
-	}
-
 	if r != nil {
-		r.SetTransport(transport)
 		return &http.Client{Transport: r}
 	} else {
-		return &http.Client{
-			Transport: transport,
-		}
+		return &http.Client{}
 	}
 }

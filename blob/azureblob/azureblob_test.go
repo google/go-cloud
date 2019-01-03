@@ -22,6 +22,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/Azure/azure-storage-blob-go/azblob"
+
+	"github.com/Azure/azure-pipeline-go/pipeline"
+
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
 	"gocloud.dev/internal/testing/setup"
@@ -37,7 +41,7 @@ import (
 // Example: settings.json
 //	{
 //		"AccountName": "enter-your-storage-account-name",
-//		"AccountKey": "enter-your-storage-account-key",
+//		"AccountKey": "enter-your-storage-account-key"
 //	}
 //
 // 4. Create a container in your Storage Account > Blob. Update the bucketName constant to your container name.
@@ -49,19 +53,27 @@ import (
 // go.exe test -timeout 30s gocloud.dev/blob/azureblob -run ^TestConformance$ -v -record -settingsfile <path-to-settings.json>
 
 const (
-	bucketName = "go-cloud-bucket"
+	bucketName  = "go-cloud-bucket"
+	accountName = "gocloud"
 )
+
+// TestSettings sets the Azure Storage Account name and Key for constructing the test harness.
+type TestSettings struct {
+	AccountName string
+	AccountKey  string
+	pipeline    pipeline.Pipeline
+}
 
 var pathToSettingsFile = flag.String("settingsfile", "", "path to .json file containing Azure Storage AccountKey and AccountName(required for --record)")
 
 type harness struct {
-	settings   Settings
+	settings   TestSettings
 	closer     func()
 	httpClient *http.Client
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	s := &Settings{}
+	s := &TestSettings{}
 
 	if *setup.Record {
 		// Fetch the AccountName and AccountKey settings from file
@@ -79,12 +91,12 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		}
 	} else {
 		// In replay mode, the AccountName must match the name used for recording.
-		s.AccountName = "gocloud"
+		s.AccountName = accountName
 		s.AccountKey = "FAKE_KEY"
 	}
 
 	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, s.AccountName, s.AccountKey)
-	s.Pipeline = p
+	s.pipeline = p
 
 	return &harness{settings: *s, closer: done, httpClient: httpClient}, nil
 }
@@ -94,7 +106,15 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucketWithAccountKey(ctx, &h.settings, bucketName)
+	serviceURL, _ := ServiceURLFromAccountKey(h.settings.AccountName, h.settings.AccountKey)
+	serviceURLForRecorder := serviceURL.WithPipeline(h.settings.pipeline)
+
+	creds, _ := azblob.NewSharedKeyCredential(h.settings.AccountName, h.settings.AccountKey)
+	opts := Options{
+		Credential: *creds,
+	}
+
+	return openBucket(ctx, &serviceURLForRecorder, bucketName, &opts), nil
 }
 
 func (h *harness) Close() {

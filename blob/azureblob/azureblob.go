@@ -23,17 +23,24 @@
 // Authentication Options:
 //
 // Option 1: Use the Storage Account Name and Account Key (Primary or Secondary)
-// This option requires the following environment variables to be set: AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_ACCOUNT_KEY
+// To use this option, pass query parameter cred_path
+// Example URL: azblob://mybucket?cred_path=pathToCredentials
+// Example credentials file in JSON format:
+// 	{
+// 		"AccountName": "gocloud",
+//    	"AccountKey": "ENTER YOUR AZURE STORAGE KEY"
+//	}
 //
 // Option 2: Use a Shared Access Token (SASToken) for the Storage Account or Container
-// This option requires the following environment variables to be set: AZURE_STORAGE_ACCOUNT_NAME, AZURE_STORAGE_SASTOKEN
 // See documentation on Shared Access Signature: https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
+// To use this option, pass query parameter cred_path
+// Example URL: azblob://mybucket?cred_path=pathToCredentials
+// Example credentials file in JSON format:
+// 	{
+// 		"AccountName": "gocloud",
+//    	"SASToken": "ENTER YOUR AZURE STORAGE SAS TOKEN"
+//	}
 //
-// The following query options are supported:
-//  - backslashEscapeStr: Optional, defaults to forwardslash. Used to set the escape character for backslashes.
-//
-// Example URL:
-//  azblob://mybucket?backslashEscapeStr=%2F
 //
 // As
 //
@@ -48,15 +55,15 @@
 package azureblob
 
 import (
-	"strconv"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -65,153 +72,72 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 
-	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
-type bucket struct {
-	name             string
-	credential       *azblob.SharedKeyCredential // used for SignedURL
-	urls             serviceUrls
-	pageMarkers      map[string]azblob.Marker // temporary page marker map, until azblob.Marker is an exportable type
-	defaultDelimiter string                   // for escaping backslashes
+// Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
+type Options struct {
+	// Credential represents the authorizer for SignedURL.
+	// Required to use SignedURL.
+	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
+	// A SharedKeyCredential can be constructed with azblob.NewSharedKeyCredential("AccountName", "AccountKey")
+	Credential azblob.SharedKeyCredential
 }
 
-type serviceUrls struct {
-	serviceURL   *azblob.ServiceURL   // represents the Azure Storage Account
-	containerURL *azblob.ContainerURL // represents the Azure Storage Container
-	blockBlobURL *azblob.BlockBlobURL // represents the Azure Block Blob
-}
-
-// Settings to establish connection to Azure
-type Settings struct {
-	AccountName      string
-	AccountKey       string
-	DefaultDelimiter string
-	SASToken         string
-	Pipeline         pipeline.Pipeline
-}
-
+// Azure does not handle backslashes in the blob key well. As a workaround, all backslashes are converted to forwardslashes during bucket operations.
+// This is needed to ensure the directories from Windows file system is represented correctly in Azure Storage.
+// For example:
+// Windows path C:\Users\UserName\Test.json is converted to C:/Users/UserName/Test.json before uploads
+// This retains the original directory structure in Azure Storage as C:/Users/UserName/Test.json, where forwardslash represents the virtual directory
+// For more naming rules and limitations see https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
 const (
-	// BlobPathSeparator is used to escape backslashes
-	BlobPathSeparator = "/"
-	// OSPathSeparator or backslashes must be converted to forwardslashes
-	OSPathSeparator = "\\"
+	// blobPathSeparator is used to escape backslashes
+	blobPathSeparator = "/"
+	// osPathSeparator or backslashes must be converted to forwardslashes
+	osPathSeparator = "\\"
 )
 
 var (
-	maxDownloadRetryRequests = 3               // download retry policy
-	defaultPageSize          = 1000            // default page size for ListPaged
-	defaultUploadBuffers     = 5               // configure the number of rotating buffers that are used when uploading
-	defaultUploadBlockSize   = 8 * 1024 * 1024 //configure the upload buffer size
+	defaultMaxDownloadRetryRequests = 3               // download retry policy (Azure default is zero)
+	defaultPageSize                 = 1000            // default page size for ListPaged (Azure default is 5000)
+	defaultUploadBuffers            = 5               // configure the number of rotating buffers that are used when uploading (for degree of parallelism)
+	defaultUploadBlockSize          = 8 * 1024 * 1024 // configure the upload buffer size
 )
 
-func init() {
-	blob.Register("azblob", openURL)
+// ServiceURLFromAccountKey returns a URL to an Azure Blob Service using shared key authorization.
+// For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
+func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceURL, error) {
+	if accountName == "" {
+		return nil, fmt.Errorf("azureblob: fail, accountName is empty")
+	}
+	if accountKey == "" {
+		return nil, fmt.Errorf("azureblob: fail, accountKey is empty")
+	}
+	credential, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+	blobURL := makeBlobStorageURL(accountName)
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
+	return &serviceURL, nil
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	q := u.Query()
-	s := Settings{
-		AccountName:      os.Getenv("AZURE_STORAGE_ACCOUNT_NAME"),
-		AccountKey:       os.Getenv("AZURE_STORAGE_ACCOUNT_KEY"),
-		SASToken:         os.Getenv("AZURE_STORAGE_SASTOKEN"),
-		DefaultDelimiter: BlobPathSeparator,
+// ServiceURLFromSASToken returns a URL to an Azure Blob Service using shared access signature authorization.
+// For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
+func ServiceURLFromSASToken(accountName, sasToken string) (*azblob.ServiceURL, error) {
+	if accountName == "" {
+		return nil, fmt.Errorf("azureblob: fail, accountName is empty")
 	}
-
-	if backslashEscapeStr := q["backslashEscapeStr"]; len(backslashEscapeStr) > 0 {
-		s.DefaultDelimiter = backslashEscapeStr[0]
-	}
-
-	if s.SASToken != "" {
-		return openBucketWithSASToken(ctx, &s, u.Host)
-	} else {
-		return openBucketWithAccountKey(ctx, &s, u.Host)
-	}
-}
-
-// OpenBucket returns an Azure BlockBlob Bucket
-func OpenBucket(ctx context.Context, settings *Settings, containerName string) (*blob.Bucket, error) {
-
-	if settings.DefaultDelimiter == "" {
-		settings.DefaultDelimiter = BlobPathSeparator
-	}
-
-	if settings.SASToken != "" {
-		b, e := openBucketWithSASToken(ctx, settings, containerName)
-		if e != nil {
-			return nil, e
-		}
-		return blob.NewBucket(b), nil
-	} else {
-		b, e := openBucketWithAccountKey(ctx, settings, containerName)
-		if e != nil {
-			return nil, e
-		}
-		return blob.NewBucket(b), nil
-	}
-}
-
-func openBucketWithSASToken(ctx context.Context, settings *Settings, containerName string) (driver.Bucket, error) {
-	if settings.AccountName == "" {
-		return nil, fmt.Errorf("azureblob: fail, settings.AccountName is not set")
-	}
-	if settings.SASToken == "" {
-		return nil, fmt.Errorf("azureblob: fail, settings.SASToken is not set")
+	if sasToken == "" {
+		return nil, fmt.Errorf("azureblob: fail, sasToken is empty")
 	}
 
 	credential := azblob.NewAnonymousCredential()
-	pipeline := settings.Pipeline
-	if pipeline == nil {
-		pipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	}
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
 
-	blobURL := makeBlobStorageURL(settings.AccountName)
-	blobURL.RawQuery = settings.SASToken
-
+	blobURL := makeBlobStorageURL(accountName)
+	blobURL.RawQuery = sasToken
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
-	containerURL := serviceURL.NewContainerURL(containerName)
 
-	return &bucket{
-		name: containerName,
-		urls: serviceUrls{
-			serviceURL:   &serviceURL,
-			containerURL: &containerURL,
-		},
-		pageMarkers:      map[string]azblob.Marker{},
-		defaultDelimiter: settings.DefaultDelimiter,
-	}, nil
-}
-
-func openBucketWithAccountKey(ctx context.Context, settings *Settings, containerName string) (driver.Bucket, error) {
-	if settings.AccountName == "" {
-		return nil, fmt.Errorf("azureblob: fail, settings.AccountName is not set")
-	}
-
-	if settings.AccountKey == "" {
-		return nil, fmt.Errorf("azureblob: fail, settings.AccountKey is not set")
-	}
-
-	credential, _ := azblob.NewSharedKeyCredential(settings.AccountName, settings.AccountKey)
-	pipeline := settings.Pipeline
-	if pipeline == nil {
-		pipeline = azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	}
-
-	blobURL := makeBlobStorageURL(settings.AccountName)
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
-	containerURL := serviceURL.NewContainerURL(containerName)
-
-	return &bucket{
-		name:       containerName,
-		credential: credential,
-		urls: serviceUrls{
-			serviceURL:   &serviceURL,
-			containerURL: &containerURL,
-		},
-		pageMarkers:      map[string]azblob.Marker{},
-		defaultDelimiter: settings.DefaultDelimiter,
-	}, nil
+	return &serviceURL, nil
 }
 
 func makeBlobStorageURL(accountName string) *url.URL {
@@ -220,9 +146,93 @@ func makeBlobStorageURL(accountName string) *url.URL {
 	return u
 }
 
+func init() {
+	blob.Register("azblob", openURL)
+}
+
+func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
+	// local type to unmarshal cred_file
+	type AzureCreds struct {
+		AccountName string
+		AccountKey  string
+		SASToken    string
+	}
+
+	q := u.Query()
+	opts := &Options{}
+	ac := &AzureCreds{}
+
+	if credPath := q["cred_path"]; len(credPath) > 0 {
+
+		f, err := ioutil.ReadFile(credPath[0])
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(f, ac)
+		if err != nil {
+			return nil, err
+		}
+
+		if ac.AccountKey != "" {
+			serviceURL, err := ServiceURLFromAccountKey(ac.AccountName, ac.AccountKey)
+			if err != nil {
+				return nil, err
+			}
+
+			credential, err := azblob.NewSharedKeyCredential(ac.AccountName, ac.AccountKey)
+			if err != nil {
+				return nil, err
+			}
+
+			opts.Credential = *credential
+			return openBucket(ctx, serviceURL, u.Host, opts), err
+		} else {
+			serviceURL, err := ServiceURLFromSASToken(ac.AccountName, ac.SASToken)
+			if err != nil {
+				return nil, err
+			}
+
+			return openBucket(ctx, serviceURL, u.Host, opts), err
+		}
+
+	} else {
+		return nil, fmt.Errorf("azureblob: fail, missing querystring cred_path")
+	}
+}
+
+// bucket represents a Azure Storage Account Container, which handles read, write and delete operations
+// on objects within it.
+// See https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction.
+type bucket struct {
+	name        string
+	pageMarkers map[string]azblob.Marker
+	serviceURL  *azblob.ServiceURL
+	opts        *Options
+}
+
+// OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
+// documentation for an example.
+func OpenBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) (*blob.Bucket, error) {
+	b := openBucket(ctx, serviceURL, containerName, opts)
+	return blob.NewBucket(b), nil
+}
+
+func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) *bucket {
+	b := &bucket{
+		name:        containerName,
+		pageMarkers: map[string]azblob.Marker{},
+		serviceURL:  serviceURL,
+		opts:        opts,
+	}
+	return b
+}
+
+// Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-	blobURL := b.urls.containerURL.NewBlockBlobURL(key)
+	key = strings.Replace(key, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	blobURL := containerURL.NewBlockBlobURL(key)
 	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 
 	if err != nil {
@@ -258,8 +268,9 @@ func (r *reader) As(i interface{}) bool {
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
+	key = strings.Replace(key, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	blockBlobURL := containerURL.NewBlockBlobURL(key)
 
 	end := length
 	if end < 0 {
@@ -270,7 +281,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	attrs := driver.ReaderAttributes{
 		ContentType: blobDownloadResponse.ContentType(),
 		Size:        getSize(blobDownloadResponse.ContentLength(), blobDownloadResponse.ContentRange()),
@@ -279,13 +290,13 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 
 	if length != 0 {
 		return &reader{
-			body:  blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: maxDownloadRetryRequests}),
+			body:  blobDownloadResponse.Body(azblob.RetryReaderOptions{MaxRetryRequests: defaultMaxDownloadRetryRequests}),
 			attrs: attrs,
 			raw:   &blockBlobURL}, nil
 	} else {
 		// Return a metadata reader with empty body (length = 0)
 		return &reader{
-			body:  ioutil.NopCloser(strings.NewReader("")),
+			body:  http.NoBody,
 			attrs: attrs,
 			raw:   &blockBlobURL}, nil
 	}
@@ -308,15 +319,18 @@ func getSize(contentLength int64, contentRange string) int64 {
 	return size
 }
 
+// As implements driver.As.
 func (b *bucket) As(i interface{}) bool {
 	p, ok := i.(*azblob.ContainerURL)
 	if !ok {
 		return false
 	}
-	*p = *b.urls.containerURL
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	*p = containerURL
 	return true
 }
 
+// As implements driver.ErrorAs.
 func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
 	case azblob.StorageError:
@@ -328,6 +342,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
+// IsNotExist implements driver.IsNotExist.
 func (b *bucket) IsNotExist(err error) bool {
 	if serr, ok := err.(azblob.StorageError); ok {
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
@@ -338,14 +353,17 @@ func (b *bucket) IsNotExist(err error) bool {
 	return false
 }
 
+// IsNotImplemented implements driver.IsNotImplemented.
 func (b *bucket) IsNotImplemented(err error) bool {
 	return false
 }
 
+// Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
 
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
-	blockBlobURL := b.urls.containerURL.NewBlockBlobURL(key)
+	key = strings.Replace(key, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	blockBlobURL := containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 
 	if err != nil {
@@ -368,6 +386,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}, nil
 }
 
+// ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	pageSize := opts.PageSize
 	if pageSize == 0 {
@@ -381,9 +400,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 	}
 
-	opts.Prefix = strings.Replace(opts.Prefix, OSPathSeparator, b.defaultDelimiter, -1)
-
-	listBlob, err := b.urls.containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azblob.ListBlobsSegmentOptions{
+	opts.Prefix = strings.Replace(opts.Prefix, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	listBlob, err := containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azblob.ListBlobsSegmentOptions{
 		MaxResults: int32(pageSize),
 		Prefix:     opts.Prefix,
 	})
@@ -441,20 +460,26 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return page, nil
 }
 
+// SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
+	if &b.opts.Credential == nil {
+		return "", fmt.Errorf("azureblob: fail, missing bucket's opts.Credential for token signature")
+	}
 
-	blockBlobURL := b.urls.containerURL.NewBlobURL(key)
+	key = strings.Replace(key, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
+	blockBlobURL := containerURL.NewBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
+
 	var err error
 	srcBlobParts.SAS, err = azblob.BlobSASSignatureValues{
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(opts.Expiry),
 		ContainerName: b.name,
 		BlobName:      key,
-		Permissions:   azblob.BlobSASPermissions{Add: true, Create: true, Delete: true, Read: true, Write: true}.String(),
-	}.NewSASQueryParameters(b.credential)
+		Permissions:   azblob.BlobSASPermissions{Add: false, Create: false, Delete: false, Read: true, Write: false}.String(),
+	}.NewSASQueryParameters(&b.opts.Credential)
 
 	if err != nil {
 		return "", err
@@ -465,11 +490,11 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 }
 
 type writer struct {
-	ctx         context.Context
-	urls        *serviceUrls
-	key         string
-	contentType string
-	opts        *driver.WriterOptions
+	ctx          context.Context
+	blockBlobURL *azblob.BlockBlobURL
+	key          string
+	contentType  string
+	opts         *driver.WriterOptions
 
 	w     *io.PipeWriter
 	donec chan struct{}
@@ -478,8 +503,8 @@ type writer struct {
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	containerURL := b.urls.serviceURL.NewContainerURL(b.name)
-	key = strings.Replace(key, OSPathSeparator, b.defaultDelimiter, -1)
+	key = strings.Replace(key, osPathSeparator, blobPathSeparator, -1)
+	containerURL := b.serviceURL.NewContainerURL(b.name)
 	blockBlobURL := containerURL.NewBlockBlobURL(key)
 
 	if opts.Metadata == nil {
@@ -490,16 +515,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}
 
 	w := &writer{
-		ctx:         ctx,
-		key:         key,
-		contentType: contentType,
-		opts:        opts,
-		urls: &serviceUrls{
-			serviceURL:   b.urls.serviceURL,
-			containerURL: &containerURL,
-			blockBlobURL: &blockBlobURL,
-		},
-		donec: make(chan struct{}),
+		ctx:          ctx,
+		key:          key,
+		blockBlobURL: &blockBlobURL,
+		contentType:  contentType,
+		opts:         opts,
+		donec:        make(chan struct{}),
 	}
 
 	return w, nil
@@ -554,7 +575,7 @@ func (w *writer) open(pr *io.PipeReader) error {
 			Metadata:        w.opts.Metadata,
 			BlobHTTPHeaders: blobHTTPHeaders,
 		}
-		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.urls.blockBlobURL, opts)
+		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.blockBlobURL, opts)
 
 		if w.err != nil {
 			if pr != nil {

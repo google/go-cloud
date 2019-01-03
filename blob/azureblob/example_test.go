@@ -30,14 +30,19 @@ func Example() {
 	bucketName := "my-bucket"
 	key := "my-file.json"
 
-	// Create a *blob.Bucket for Azure using AccountName and AccountKey
-	b, _ := azureblob.OpenBucket(ctx, &azureblob.Settings{
-		DefaultDelimiter: "/",
-		AccountName:      accountName,
-		AccountKey:       accountKey,
-	}, bucketName)
+	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization
+	serviceURL, _ := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
 
-	// Obtain the Azure SDK type for attributes
+	// Credential represents the authorizer for SignedURL
+	creds, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
+	azureOpts := azureblob.Options{
+		Credential: *creds,
+	}
+
+	// Creates a *blob.Bucket backed by Azure Storage Account
+	b, _ := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
+
+	// Obtain the native blob attributes
 	var nativeAttrs azblob.BlobGetPropertiesResponse
 	attr, _ := b.Attributes(ctx, key)
 	if attr.As(&nativeAttrs) {

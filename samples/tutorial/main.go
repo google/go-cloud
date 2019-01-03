@@ -57,9 +57,3 @@ func main() {
 		log.Fatalf("Failed to close: %s", err)
 	}
 }
-
-func init() {
-	// must set to test Azure Blob
-	//os.Setenv("AZURE_STORAGE_ACCOUNT_NAME", "gocloud")
-	//os.Setenv("AZURE_STORAGE_ACCOUNT_KEY", "")
-}
