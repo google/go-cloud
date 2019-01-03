@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package gcsblob provides a blob implementation that uses GCS. Use OpenBucket
-// to construct a blob.Bucket.
+// to construct a *blob.Bucket.
 //
 // Open URLs
 //
