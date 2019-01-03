@@ -740,7 +740,7 @@ interactions:
       Content-Length:
       - "38430"
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Blob-Cache-Control:
       - ""
       X-Ms-Blob-Content-Disposition:
@@ -754,12 +754,12 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Client-Request-Id:
-      - 5941e2b3-8f39-4280-7f03-697fa999d63c
+      - d8a9bf0e-e89c-4180-5cf4-7e47d394f14c
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:09 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: PUT
   response:
     body: ""
@@ -767,15 +767,15 @@ interactions:
       Content-Md5:
       - YtQ/og5wv6H9siUQ0cBg0g==
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Etag:
-      - '"0x8D671243F83C851"'
+      - '"0x8D671B7E1C08EA6"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 0d44c4c7-201e-0118-070d-a38d73000000
+      - c51ee632-f01e-001c-32a0-a34da3000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -788,14 +788,14 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - 1af68936-04a0-4930-4975-5149fbd51488
+      - bec4506d-a328-4005-6965-b634a76e8677
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:10 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: GET
   response:
     body: !!binary |
@@ -1543,23 +1543,23 @@ interactions:
       Content-Type:
       - image/jpeg
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Etag:
-      - '"0x8D671243F83C851"'
+      - '"0x8D671B7E1C08EA6"'
       Last-Modified:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 0d44c4cb-201e-0118-0b0d-a38d73000000
+      - c51ee63a-f01e-001c-37a0-a34da3000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -1572,28 +1572,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - X-Az-Target Azure-Storage/0.3 (go1.11.2; Windows_NT)
+      - X-Az-Target Azure-Storage/0.3 (go1.11; linux)
       X-Ms-Client-Request-Id:
-      - 56445d5d-ec74-4172-5be9-c382c6cee0e2
+      - 7d04e732-373f-45a6-4eef-becc393656c3
       X-Ms-Delete-Snapshots:
       - include
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
-    url: https://gocloud.blob.core.windows.net/go-cloud-bucket/blob-for-reading
+      - Thu, 03 Jan 2019 20:13:10 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 03 Jan 2019 02:36:21 GMT
+      - Thu, 03 Jan 2019 20:13:09 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 0d44c4ce-201e-0118-0d0d-a38d73000000
+      - c51ee642-f01e-001c-3ca0-a34da3000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted
