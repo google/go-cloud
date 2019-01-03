@@ -161,7 +161,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHa
 	if err != nil {
 		t.Skipf("failed to make non-existent subscription: %v", err)
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 
 	_, err = sub.Receive(ctx)
@@ -290,7 +290,7 @@ func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscripti
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt)
-	s := pubsub.NewSubscription(ds)
+	s := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	cleanup := func() {
 		t.Shutdown(ctx)
 		s.Shutdown(ctx)

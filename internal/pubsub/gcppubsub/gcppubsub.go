@@ -131,7 +131,7 @@ type SubscriptionOptions struct{}
 // projectID and subscriptionName.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds)
+	return pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 }
 
 // openSubscription returns a driver.Subscription.

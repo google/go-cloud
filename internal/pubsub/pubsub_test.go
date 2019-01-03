@@ -110,7 +110,7 @@ func TestSendReceive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -133,7 +133,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ds)
+	s := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
@@ -210,7 +210,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ds)
+	s := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
@@ -257,7 +257,7 @@ func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
-	sub := pubsub.NewSubscription(fs)
+	sub := pubsub.NewSubscription(fs, pubsub.DefaultAckBatcher)
 	_, err := sub.Receive(context.Background())
 	if err != nil {
 		t.Errorf("Receive: got %v, want nil", err)

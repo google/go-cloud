@@ -65,7 +65,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -99,7 +99,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -151,7 +151,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -183,7 +183,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	defer cancel()
 	mr, err := sub.Receive(ctx)
@@ -206,7 +206,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -233,7 +233,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -276,7 +276,7 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)

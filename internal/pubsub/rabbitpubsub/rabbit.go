@@ -319,7 +319,7 @@ func (t *topic) As(i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name))
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), pubsub.DefaultAckBatcher)
 }
 
 type subscription struct {

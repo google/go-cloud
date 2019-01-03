@@ -253,21 +253,12 @@ func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription.
-// It is for use by provider implementations.
-func NewSubscription(d driver.Subscription) *Subscription {
-	callCtx, cancel := context.WithCancel(context.Background())
-	const maxHandlers = 1
-	handler := MakeAckBatchHandler(callCtx, d)
-	ackBatcher := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
-	return NewSubscriptionWithBatcher(d, ackBatcher, cancel)
-}
-
-// NewSubscriptionWithBatcher creates a Subscription from a driver.Subscription
-// and a batcher that sends batches of acks to the provider. Typically the
-// batcher is constructed using the result of MakeAckBatchHandler.
-// NewSubscriptionWithBatcher is for use by provider implementations.
-func NewSubscriptionWithBatcher(d driver.Subscription, ab driver.Batcher, cancel func()) *Subscription {
+// NewSubscription creates a Subscription from a driver.Subscription
+// and a function to make a batcher that sends batches of acks to the provider.
+// NewSubscription is for use by provider implementations.
+func NewSubscription(d driver.Subscription, newAckBatcher BatcherMaker) *Subscription {
+	ctx, cancel := context.WithCancel(context.Background())
+	ab := newAckBatcher(ctx, d)
 	return &Subscription{
 		driver:     d,
 		ackBatcher: ab,
@@ -275,16 +266,19 @@ func NewSubscriptionWithBatcher(d driver.Subscription, ab driver.Batcher, cancel
 	}
 }
 
-// MakeAckBatchHandler makes a handler func suitable for constructing a Batcher
-// that can be used as an argument to NewSubscription. This handler wraps
-// d.SendAcks with retry logic. MakeAckBatchHandler is for use by provider
-// implementations.
-func MakeAckBatchHandler(ctx context.Context, d driver.Subscription) func(interface{}) error {
-	return func(items interface{}) error {
+type BatcherMaker func(context.Context, driver.Subscription) driver.Batcher
+
+// DefaultAckBatcher creates a batcher for acknowledgements, for use with
+// NewSubscription.
+// MakeDefaultAckBatcher is for use by provider implementations.
+func DefaultAckBatcher(ctx context.Context, d driver.Subscription) driver.Batcher {
+	const maxHandlers = 1
+	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		// TODO: Consider providing a way to stop this call. See #766.
 		return retry.Call(ctx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(ctx, ids)
 		})
 	}
+	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
 }
