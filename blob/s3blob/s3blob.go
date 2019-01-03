@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
-// to construct a blob.Bucket.
+// to construct a *blob.Bucket.
 //
 // Open URLs
 //
