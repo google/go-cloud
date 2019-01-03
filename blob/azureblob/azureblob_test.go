@@ -54,7 +54,7 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = "gocloud"
+	accountName = "gocloudblobtests"
 )
 
 // TestSettings sets the Azure Storage Account name and Key for constructing the test harness.
