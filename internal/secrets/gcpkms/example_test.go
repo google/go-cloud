@@ -35,7 +35,7 @@ func ExampleCrypter_Encrypt() {
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",
-			KeyID:     "password",
+			Key:       "password",
 		},
 	)
 	encrypted, err := crypter.Encrypt(ctx, plaintext)
@@ -63,7 +63,7 @@ func ExampleCrypter_Decrypt() {
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",
-			KeyID:     "password",
+			Key:       "password",
 		},
 	)
 	decrypted, err := crypter.Decrypt(ctx, ciphertext)

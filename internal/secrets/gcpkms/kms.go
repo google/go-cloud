@@ -49,24 +49,25 @@ func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *Crypter {
 // See https://cloud.google.com/kms/docs/object-hierarchy#key for more
 // information.
 type KeyID struct {
-	ProjectID, Location, KeyRing, KeyID string
+	ProjectID, Location, KeyRing, Key string
+}
+
+func (ki *KeyID) String() string {
+	return fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
+		ki.ProjectID, ki.Location, ki.KeyRing, ki.Key)
 }
 
 // Crypter contains information to construct the pull path of a key.
+// TODO(#1066): make this unexported when there is a top-level portable API.
 type Crypter struct {
 	keyID  *KeyID
 	client *cloudkms.KeyManagementClient
 }
 
-func (ki *KeyID) keyPath() string {
-	return fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
-		ki.ProjectID, ki.Location, ki.KeyRing, ki.KeyID)
-}
-
 // Decrypt decrypts the ciphertext using the key constructed from ki.
 func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       c.keyID.keyPath(),
+		Name:       c.keyID.String(),
 		Ciphertext: ciphertext,
 	}
 	resp, err := c.client.Decrypt(ctx, req)
@@ -79,7 +80,7 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 // Encrypt encrypts the plaintext into a ciphertext.
 func (c *Crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      c.keyID.keyPath(),
+		Name:      c.keyID.String(),
 		Plaintext: plaintext,
 	}
 	resp, err := c.client.Encrypt(ctx, req)

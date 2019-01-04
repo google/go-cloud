@@ -25,12 +25,12 @@ import (
 	"google.golang.org/api/option"
 )
 
+// These constants capture values that were used during the last --record.
+// If you want to use --record mode,
+// 1. Update projectID to your GCP project name (not number!)
+// 2. Enable the Cloud KMS API.
+// 3. Create a key ring and a key, change their name below accordingly.
 const (
-	// These constants capture values that were used during the last --record.
-	// If you want to use --record mode,
-	// 1. Update projectID to your GCP project name (not number!)
-	// 2. Enable the Cloud KMS API.
-	// 3. Create a key ring and a key, change their name below accordingly.
 	projectID = "pledged-solved-practically"
 	location  = "global"
 	keyRing   = "test"
@@ -48,7 +48,7 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
 			ProjectID: projectID,
 			Location:  location,
 			KeyRing:   keyRing,
-			KeyID:     keyID,
+			Key:       keyID,
 		},
 		client: h.client,
 	}, nil
