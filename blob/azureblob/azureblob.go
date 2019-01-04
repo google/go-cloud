@@ -361,10 +361,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: blobPropertiesResponse.ContentType(),
-		Size:        blobPropertiesResponse.ContentLength(),
-		ModTime:     blobPropertiesResponse.LastModified(),
-		Metadata:    blobPropertiesResponse.NewMetadata(),
+		CacheControl:       blobPropertiesResponse.CacheControl(),
+		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
+		ContentEncoding:    blobPropertiesResponse.ContentEncoding(),
+		ContentLanguage:    blobPropertiesResponse.ContentLanguage(),
+		ContentType:        blobPropertiesResponse.ContentType(),
+		Size:               blobPropertiesResponse.ContentLength(),
+		ModTime:            blobPropertiesResponse.LastModified(),
+		Metadata:           blobPropertiesResponse.NewMetadata(),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)
 			if !ok {
@@ -521,7 +525,12 @@ func (w *writer) open(pr *io.PipeReader) error {
 	go func() {
 		defer close(w.donec)
 
-		var blobHTTPHeaders = azblob.BlobHTTPHeaders{}
+		var blobHTTPHeaders = azblob.BlobHTTPHeaders{
+			CacheControl:       w.opts.CacheControl,
+			ContentDisposition: w.opts.ContentDisposition,
+			ContentEncoding:    w.opts.ContentEncoding,
+			ContentLanguage:    w.opts.ContentLanguage,
+		}
 		if w.contentType != "" {
 			blobHTTPHeaders.ContentType = w.contentType
 		}

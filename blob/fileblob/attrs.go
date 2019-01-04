@@ -28,9 +28,13 @@ var errAttrsExt = fmt.Errorf("file extension %q is reserved", attrsExt)
 // filesystem extended attributes, see
 // https://www.freedesktop.org/wiki/CommonExtendedAttributes.
 type xattrs struct {
-	ContentType string            `json:"user.content_type"`
-	Metadata    map[string]string `json:"user.metadata"`
-	MD5         []byte            `json:"md5"`
+	CacheControl       string            `json:"user.cache_control"`
+	ContentDisposition string            `json:"user.content_disposition"`
+	ContentEncoding    string            `json:"user.content_encoding"`
+	ContentLanguage    string            `json:"user.content_language"`
+	ContentType        string            `json:"user.content_type"`
+	Metadata           map[string]string `json:"user.metadata"`
+	MD5                []byte            `json:"md5"`
 }
 
 // setAttrs creates a "path.attrs" file along with blob to store the attributes,
