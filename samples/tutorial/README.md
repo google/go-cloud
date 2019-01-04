@@ -63,7 +63,7 @@ both clouds. This will be the only step that requires cloud-specific APIs.
 ## GCP authentication & connection
 
 As a first pass, let's write the code to connect to a GCS bucket. Then, we will
-write the code to connect to S3 and Azure buckets. In both cases, we are going
+write the code to connect to S3 and Azure buckets. In all cases, we are going
 to create a pointer to a `blob.Bucket`, the cloud-agnostic blob storage type.
 
 ```go
@@ -178,7 +178,7 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 
 // setupAzure creates a connection to Azure Storage Account using shared key
 // authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
-// and AZURE_STORAGE_ACCOUNT_NAME are present.
+// and AZURE_STORAGE_ACCOUNT_KEY are present.
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
     accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
     accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")

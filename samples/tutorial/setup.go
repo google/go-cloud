@@ -76,7 +76,7 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 
 // setupAzure creates a connection to Azure Storage Account using shared key
 // authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
-// and AZURE_STORAGE_ACCOUNT_NAME are present.
+// and AZURE_STORAGE_ACCOUNT_KEY are present.
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
