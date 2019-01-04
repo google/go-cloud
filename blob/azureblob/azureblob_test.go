@@ -17,13 +17,16 @@ package azureblob
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
 	"gocloud.dev/internal/testing/setup"
@@ -121,5 +124,81 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	// See setup instructions above for more details.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+}
+
+const language = "nl"
+
+// verifyContentLanguage uses As to access the underlying Azure types and
+// read/write the ContentLanguage field.
+type verifyContentLanguage struct{}
+
+func (verifyContentLanguage) Name() string {
+	return "verify ContentLanguage can be written and read through As"
+}
+
+func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
+	var u *azblob.ContainerURL
+	if !b.As(&u) {
+		return errors.New("Bucket.As failed")
+	}
+	return nil
+}
+
+func (verifyContentLanguage) ErrorCheck(err error) error {
+	var to azblob.StorageError
+	if !blob.ErrorAs(err, &to) {
+		return errors.New("Bucket.ErrorAs failed")
+	}
+	return nil
+}
+
+func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+	var azOpts *azblob.UploadStreamToBlockBlobOptions
+	if !as(&azOpts) {
+		return errors.New("Writer.As failed")
+	}
+	azOpts.BlobHTTPHeaders.ContentLanguage = language
+	return nil
+}
+
+func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+	var azOpts *azblob.ListBlobsSegmentOptions
+	if !as(&azOpts) {
+		return errors.New("BeforeList.As failed")
+	}
+	return nil
+}
+
+func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
+	var resp azblob.BlobGetPropertiesResponse
+	if !attrs.As(&resp) {
+		return errors.New("Attributes.As returned false")
+	}
+	if got := resp.ContentLanguage(); got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
+	return nil
+}
+
+func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
+	var resp azblob.DownloadResponse
+	if !r.As(&resp) {
+		return errors.New("Reader.As returned false")
+	}
+	if got := resp.ContentLanguage(); got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
+	return nil
+}
+
+func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	var item azblob.BlobItem
+	if !o.As(&item) {
+		return errors.New("ListObject.As returned false")
+	}
+	if got := *item.Properties.ContentLanguage; got != language {
+		return fmt.Errorf("got %q want %q", got, language)
+	}
+	return nil
 }
