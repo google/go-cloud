@@ -17,12 +17,12 @@ package gcpkms_test
 import (
 	"context"
 
-	"github.com/google/go-cloud/internal/secrets/gcpkms"
+	"gocloud.dev/internal/secrets/gcpkms"
 )
 
 func ExampleCrypter_Encrypt() {
 	ctx := context.Background()
-	client, done, err := gcpkms.DefaultClient(ctx, nil)
+	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -30,13 +30,13 @@ func ExampleCrypter_Encrypt() {
 	plaintext := []byte("Hello, Secrets!")
 
 	crypter := gcpkms.NewCrypter(
+		client,
 		&gcpkms.KeyInfo{
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",
 			KeyID:     "password",
 		},
-		client,
 	)
 	encrypted, err := crypter.Encrypt(ctx, plaintext)
 	if err != nil {
@@ -48,7 +48,7 @@ func ExampleCrypter_Encrypt() {
 
 func ExampleCrypter_Decrypt() {
 	ctx := context.Background()
-	client, done, err := gcpkms.DefaultClient(ctx, nil)
+	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -58,13 +58,13 @@ func ExampleCrypter_Decrypt() {
 	var ciphertext []byte
 
 	crypter := gcpkms.NewCrypter(
+		client,
 		&gcpkms.KeyInfo{
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",
 			KeyID:     "password",
 		},
-		client,
 	)
 	decrypted, err := crypter.Decrypt(ctx, ciphertext)
 	if err != nil {

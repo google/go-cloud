@@ -18,12 +18,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cloud/internal/testing/setup"
-	"google.golang.org/api/option"
-
 	cloudkms "cloud.google.com/go/kms/apiv1"
-	"github.com/google/go-cloud/internal/secrets/driver"
-	"github.com/google/go-cloud/internal/secrets/drivertest"
+	"gocloud.dev/internal/secrets/driver"
+	"gocloud.dev/internal/secrets/drivertest"
+	"gocloud.dev/internal/testing/setup"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -60,7 +59,7 @@ func (h *harness) Close() {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint)
+	conn, done := setup.NewGCPgRPCConn(ctx, t, endPoint, "secrets")
 	client, err := cloudkms.NewKeyManagementClient(ctx, option.WithGRPCConn(conn))
 	if err != nil {
 		return nil, err

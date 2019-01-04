@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
-	"github.com/google/go-cloud/gcp"
+	"gocloud.dev/gcp"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -29,9 +29,9 @@ import (
 // endPoint is the address to access Google Cloud KMS API.
 const endPoint = "cloudkms.googleapis.com:443"
 
-// DefaultClient returns a client to use with Cloud KMS and a clean-up function
+// Dial returns a client to use with Cloud KMS and a clean-up function
 // to close the client after used.
-func DefaultClient(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClient, func(), error) {
+func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClient, func(), error) {
 	c, err := cloudkms.NewKeyManagementClient(ctx, option.WithTokenSource(ts))
 	return c, func() { c.Close() }, err
 }
