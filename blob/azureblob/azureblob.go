@@ -42,13 +42,13 @@
 // As
 //
 // azureblob exposes the following types for As:
-//  - Bucket: *azblob.BlockBlobURL
-//  - Error: *azblob.StorageError
-//  - ListObject: *azblob.BlobItem for objects, *azblob.BlobPrefix for "directories".
-//  - ListOptions.BeforeList: Not Implemented
-//  - Reader: *azblob.ContainerURL
-//  - Attributes: *azblob.BlobGetPropertiesResponse
-//  - WriterOptions.BeforeWrite: Not Implemented
+//  - Bucket: *azblob.ContainerURL
+//  - Error: azblob.StorageError
+//  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories".
+//  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
+//  - Reader: azblob.DownloadResponse
+//  - Attributes: azblob.BlobGetPropertiesResponse
+//  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
 package azureblob
 
 import (
@@ -65,12 +65,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/google/uuid"
-
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-
-	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
@@ -205,10 +203,11 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 // write and delete operations on objects within it.
 // See https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction.
 type bucket struct {
-	name        string
-	pageMarkers map[string]azblob.Marker
-	serviceURL  *azblob.ServiceURL
-	opts        *Options
+	name         string
+	pageMarkers  map[string]azblob.Marker
+	serviceURL   *azblob.ServiceURL
+	containerURL azblob.ContainerURL
+	opts         *Options
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
@@ -229,10 +228,11 @@ func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerNam
 		return nil, errors.New("azureblob.OpenBucket: containerName is required")
 	}
 	return &bucket{
-		name:        containerName,
-		pageMarkers: map[string]azblob.Marker{},
-		serviceURL:  serviceURL,
-		opts:        opts,
+		name:         containerName,
+		pageMarkers:  map[string]azblob.Marker{},
+		serviceURL:   serviceURL,
+		containerURL: serviceURL.NewContainerURL(containerName),
+		opts:         opts,
 	}, nil
 }
 
@@ -240,8 +240,7 @@ func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerNam
 // for it.
 func (b *bucket) blockBlobURL(key string) azblob.BlockBlobURL {
 	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	return containerURL.NewBlockBlobURL(key)
+	return b.containerURL.NewBlockBlobURL(key)
 }
 
 // Delete implements driver.Delete.
@@ -255,7 +254,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 type reader struct {
 	body  io.ReadCloser
 	attrs driver.ReaderAttributes
-	raw   *azblob.BlockBlobURL
+	raw   *azblob.DownloadResponse
 }
 
 func (r *reader) Read(p []byte) (int, error) {
@@ -268,7 +267,7 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 	return r.attrs
 }
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*azblob.BlockBlobURL)
+	p, ok := i.(*azblob.DownloadResponse)
 	if !ok {
 		return false
 	}
@@ -303,7 +302,7 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	return &reader{
 		body:  body,
 		attrs: attrs,
-		raw:   &blockBlobURL,
+		raw:   blobDownloadResponse,
 	}, nil
 }
 
@@ -326,12 +325,11 @@ func getSize(contentLength int64, contentRange string) int64 {
 
 // As implements driver.As.
 func (b *bucket) As(i interface{}) bool {
-	p, ok := i.(*azblob.ContainerURL)
+	p, ok := i.(**azblob.ContainerURL)
 	if !ok {
 		return false
 	}
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	*p = containerURL
+	*p = &b.containerURL
 	return true
 }
 
@@ -405,11 +403,24 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	}
 
 	opts.Prefix = strings.Replace(opts.Prefix, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	listBlob, err := containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azblob.ListBlobsSegmentOptions{
+	azOpts := azblob.ListBlobsSegmentOptions{
 		MaxResults: int32(pageSize),
 		Prefix:     opts.Prefix,
-	})
+	}
+	if opts.BeforeList != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**azblob.ListBlobsSegmentOptions)
+			if !ok {
+				return false
+			}
+			*p = &azOpts
+			return true
+		}
+		if err := opts.BeforeList(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	listBlob, err := b.containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -466,7 +477,6 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.Credential == nil {
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.Credential")
 	}
-
 	blockBlobURL := b.blockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
 
@@ -488,9 +498,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 type writer struct {
 	ctx          context.Context
 	blockBlobURL *azblob.BlockBlobURL
-	key          string
-	contentType  string
-	opts         *driver.WriterOptions
+	uploadOpts   *azblob.UploadStreamToBlockBlobOptions
 
 	w     *io.PipeWriter
 	donec chan struct{}
@@ -506,12 +514,36 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
 	}
+	uploadOpts := &azblob.UploadStreamToBlockBlobOptions{
+		BufferSize: opts.BufferSize,
+		MaxBuffers: defaultUploadBuffers,
+		Metadata:   opts.Metadata,
+		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
+			CacheControl:       opts.CacheControl,
+			ContentDisposition: opts.ContentDisposition,
+			ContentEncoding:    opts.ContentEncoding,
+			ContentLanguage:    opts.ContentLanguage,
+			ContentMD5:         opts.ContentMD5,
+			ContentType:        contentType,
+		},
+	}
+	if opts.BeforeWrite != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**azblob.UploadStreamToBlockBlobOptions)
+			if !ok {
+				return false
+			}
+			*p = uploadOpts
+			return true
+		}
+		if err := opts.BeforeWrite(asFunc); err != nil {
+			return nil, err
+		}
+	}
 	return &writer{
 		ctx:          ctx,
-		key:          key,
 		blockBlobURL: &blockBlobURL,
-		contentType:  contentType,
-		opts:         opts,
+		uploadOpts:   uploadOpts,
 		donec:        make(chan struct{}),
 	}, nil
 }
@@ -535,34 +567,13 @@ func (w *writer) open(pr *io.PipeReader) error {
 	go func() {
 		defer close(w.donec)
 
-		var blobHTTPHeaders = azblob.BlobHTTPHeaders{
-			CacheControl:       w.opts.CacheControl,
-			ContentDisposition: w.opts.ContentDisposition,
-			ContentEncoding:    w.opts.ContentEncoding,
-			ContentLanguage:    w.opts.ContentLanguage,
-		}
-		if w.contentType != "" {
-			blobHTTPHeaders.ContentType = w.contentType
-		}
-		if len(w.opts.ContentMD5) > 0 {
-			blobHTTPHeaders.ContentMD5 = w.opts.ContentMD5
-		}
-
 		var body io.Reader
 		if pr == nil {
 			body = http.NoBody
 		} else {
 			body = pr
 		}
-
-		opts := azblob.UploadStreamToBlockBlobOptions{
-			BufferSize:      w.opts.BufferSize,
-			MaxBuffers:      defaultUploadBuffers,
-			Metadata:        w.opts.Metadata,
-			BlobHTTPHeaders: blobHTTPHeaders,
-		}
-		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.blockBlobURL, opts)
-
+		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.blockBlobURL, *w.uploadOpts)
 		if w.err != nil {
 			if pr != nil {
 				pr.CloseWithError(w.err)
