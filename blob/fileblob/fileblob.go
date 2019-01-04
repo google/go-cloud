@@ -688,21 +688,21 @@ func NewURLSignerHMAC(urlScheme string, urlHost string, secretKey string) *URLSi
 
 // URLFromKey uses the scheme and host in URLSignerHMAC, and uses the passed key as the path.
 func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
-	url := &url.URL{
+	sURL := &url.URL{
 		Host:   h.urlHost,
 		Scheme: h.urlScheme,
 		Path:   key,
 	}
-	q := url.Query()
+	q := sURL.Query()
 	q.Set("expiry", "tomorrow") //TODO get expiry from options
 	q.Set("signature", "")
-	url.RawQuery = q.Encode()
+	sURL.RawQuery = q.Encode()
 
-	mac := string(h.getMAC(url.String()))
+	mac := string(h.getMAC(sURL.String()))
 	q.Set("signature", mac)
-	url.RawQuery = q.Encode()
+	sURL.RawQuery = q.Encode()
 
-	return url, nil
+	return sURL, nil
 }
 
 func (h *URLSignerHMAC) getMAC(message string) []byte {
