@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
-	"golang.org/x/sys/unix"
 )
 
 // syncParams is the set of parameters to syncPullRequest.
@@ -174,7 +173,7 @@ func runCommand(ctx context.Context, dir string, exe string, args []string) erro
 		select {
 		case <-ctx.Done():
 			// Ignore error: if we can't signal, it's likely because the process already exited.
-			_ = c.Process.Signal(unix.SIGTERM)
+			_ = c.Process.Signal(os.Interrupt)
 		case <-waitDone:
 		}
 		// No further synchronization back to the main goroutine, because signal is uninterruptable and
