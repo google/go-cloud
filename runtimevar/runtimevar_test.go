@@ -223,6 +223,7 @@ func (w *fakeStableWatcher) WatchVariable(ctx context.Context, prev driver.State
 
 func (*fakeStableWatcher) Close() error                          { return nil }
 func (*fakeStableWatcher) ErrorAs(err error, i interface{}) bool { return false }
+func (*fakeStableWatcher) IsNotExist(err error) bool             { return false }
 
 func TestVariable_Latest(t *testing.T) {
 	const content1, content2 = "foo", "bar"
