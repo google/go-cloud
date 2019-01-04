@@ -165,10 +165,8 @@ func TestOpenBucket(t *testing.T) {
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
-			if drv != nil {
-				if drv.name != test.want {
-					t.Errorf("got %q want %q", drv.name, test.want)
-				}
+			if err == nil && drv != nil && drv.name != test.want {
+				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 
 			// Create concrete type.
@@ -188,7 +186,7 @@ func TestOpenURL(t *testing.T) {
 		sasToken    = "my-sas-token"
 	)
 
-	makeCredFile := func(name string, content string) *os.File {
+	makeCredFile := func(name, content string) *os.File {
 		f, err := ioutil.TempFile("", "key")
 		if err != nil {
 			t.Fatal(err)
