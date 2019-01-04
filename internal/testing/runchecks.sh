@@ -21,6 +21,8 @@
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euxo pipefail
 
+echo "in runchecks"
+
 if [[ $# -gt 0 ]]; then
   echo "usage: runchecks.sh" 1>&2
   exit 64
@@ -38,6 +40,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     goveralls -coverprofile=coverage2.out -service=travis-ci
   fi
 else
+  echo "running tests..."
   go test -race ./... || result=1
 fi
 wire check ./... || result=1
