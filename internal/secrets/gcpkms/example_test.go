@@ -31,7 +31,7 @@ func ExampleCrypter_Encrypt() {
 
 	crypter := gcpkms.NewCrypter(
 		client,
-		&gcpkms.KeyInfo{
+		&gcpkms.KeyID{
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",
@@ -59,7 +59,7 @@ func ExampleCrypter_Decrypt() {
 
 	crypter := gcpkms.NewCrypter(
 		client,
-		&gcpkms.KeyInfo{
+		&gcpkms.KeyID{
 			ProjectID: "pledged-solved-practically",
 			Location:  "global",
 			KeyRing:   "test",

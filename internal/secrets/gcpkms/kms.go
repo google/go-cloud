@@ -29,34 +29,36 @@ import (
 // endPoint is the address to access Google Cloud KMS API.
 const endPoint = "cloudkms.googleapis.com:443"
 
-// Dial returns a client to use with Cloud KMS and a clean-up function
-// to close the client after used.
+// Dial returns a client to use with Cloud KMS and a clean-up function to close
+// the client after used.
 func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClient, func(), error) {
 	c, err := cloudkms.NewKeyManagementClient(ctx, option.WithTokenSource(ts))
 	return c, func() { c.Close() }, err
 }
 
 // NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyInfo) *Crypter {
+func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *Crypter {
 	return &Crypter{
-		keyInfo: ki,
-		client:  client,
+		keyID:  ki,
+		client: client,
 	}
 }
 
-// KeyInfo includes related information to construct a key name that is managed
+// KeyID includes related information to construct a key name that is managed
 // by Cloud KMS.
-type KeyInfo struct {
+// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+// information.
+type KeyID struct {
 	ProjectID, Location, KeyRing, KeyID string
 }
 
 // Crypter contains information to construct the pull path of a key.
 type Crypter struct {
-	keyInfo *KeyInfo
-	client  *cloudkms.KeyManagementClient
+	keyID  *KeyID
+	client *cloudkms.KeyManagementClient
 }
 
-func (ki *KeyInfo) keyPath() string {
+func (ki *KeyID) keyPath() string {
 	return fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
 		ki.ProjectID, ki.Location, ki.KeyRing, ki.KeyID)
 }
@@ -64,7 +66,7 @@ func (ki *KeyInfo) keyPath() string {
 // Decrypt decrypts the ciphertext using the key constructed from ki.
 func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       c.keyInfo.keyPath(),
+		Name:       c.keyID.keyPath(),
 		Ciphertext: ciphertext,
 	}
 	resp, err := c.client.Decrypt(ctx, req)
@@ -77,7 +79,7 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 // Encrypt encrypts the plaintext into a ciphertext.
 func (c *Crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      c.keyInfo.keyPath(),
+		Name:      c.keyID.keyPath(),
 		Plaintext: plaintext,
 	}
 	resp, err := c.client.Encrypt(ctx, req)
