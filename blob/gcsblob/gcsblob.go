@@ -309,11 +309,15 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: attrs.ContentType,
-		Metadata:    attrs.Metadata,
-		ModTime:     attrs.Updated,
-		Size:        attrs.Size,
-		MD5:         attrs.MD5,
+		CacheControl:       attrs.CacheControl,
+		ContentDisposition: attrs.ContentDisposition,
+		ContentEncoding:    attrs.ContentEncoding,
+		ContentLanguage:    attrs.ContentLanguage,
+		ContentType:        attrs.ContentType,
+		Metadata:           attrs.Metadata,
+		ModTime:            attrs.Updated,
+		Size:               attrs.Size,
+		MD5:                attrs.MD5,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*storage.ObjectAttrs)
 			if !ok {
@@ -350,6 +354,10 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
+	w.CacheControl = opts.CacheControl
+	w.ContentDisposition = opts.ContentDisposition
+	w.ContentEncoding = opts.ContentEncoding
+	w.ContentLanguage = opts.ContentLanguage
 	w.ContentType = contentType
 	w.ChunkSize = bufferSize(opts.BufferSize)
 	w.Metadata = opts.Metadata
