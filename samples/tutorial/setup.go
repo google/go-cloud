@@ -74,8 +74,9 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	return s3blob.OpenBucket(ctx, s, bucket, nil)
 }
 
-// setupAzure creates a connection to Azure Storage Account using shared key authorization.
-// This operation assumes environment variables AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_NAME are present.
+// setupAzure creates a connection to Azure Storage Account using shared key
+// authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
+// and AZURE_STORAGE_ACCOUNT_NAME are present.
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
 	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
@@ -83,5 +84,5 @@ func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return azureblob.OpenBucket(ctx, serviceURL, bucket, &azureblob.Options{})
+	return azureblob.OpenBucket(ctx, serviceURL, bucket, nil)
 }
