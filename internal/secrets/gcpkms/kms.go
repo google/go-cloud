@@ -37,7 +37,7 @@ func DefaultClient(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManage
 }
 
 // NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(ki *KeyInfo, client *cloudkms.KeyManagementClient) *Crypter {
+func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyInfo) *Crypter {
 	return &Crypter{
 		keyInfo: ki,
 		client:  client,
