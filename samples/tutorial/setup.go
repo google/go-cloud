@@ -17,11 +17,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
+	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/gcp"
@@ -34,6 +36,8 @@ func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error
 		return setupAWS(ctx, bucket)
 	case "gcp":
 		return setupGCP(ctx, bucket)
+	case "azure":
+		return setupAzure(ctx, bucket)
 	default:
 		return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
 	}
@@ -68,4 +72,16 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 	}
 	s := session.Must(session.NewSession(c))
 	return s3blob.OpenBucket(ctx, s, bucket, nil)
+}
+
+// setupAzure creates a connection to Azure Storage Account using shared key authorization.
+// This operation assumes environment variables AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_NAME are present.
+func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
+	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
+	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
+	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	if err != nil {
+		return nil, err
+	}
+	return azureblob.OpenBucket(ctx, serviceURL, bucket, &azureblob.Options{})
 }
