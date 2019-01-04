@@ -36,7 +36,7 @@ func Example() {
 	// Credential represents the authorizer for SignedURL
 	creds, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 	azureOpts := azureblob.Options{
-		Credential: *creds,
+		Credential: creds,
 	}
 
 	// Creates a *blob.Bucket backed by Azure Storage Account
