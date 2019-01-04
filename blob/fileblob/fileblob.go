@@ -412,11 +412,15 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: xa.ContentType,
-		Metadata:    xa.Metadata,
-		ModTime:     info.ModTime(),
-		Size:        info.Size(),
-		MD5:         xa.MD5,
+		CacheControl:       xa.CacheControl,
+		ContentDisposition: xa.ContentDisposition,
+		ContentEncoding:    xa.ContentEncoding,
+		ContentLanguage:    xa.ContentLanguage,
+		ContentType:        xa.ContentType,
+		Metadata:           xa.Metadata,
+		ModTime:            info.ModTime(),
+		Size:               info.Size(),
+		MD5:                xa.MD5,
 	}, nil
 }
 
@@ -499,8 +503,12 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		metadata = opts.Metadata
 	}
 	attrs := xattrs{
-		ContentType: contentType,
-		Metadata:    metadata,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		ContentType:        contentType,
+		Metadata:           metadata,
 	}
 	w := &writer{
 		ctx:   ctx,

@@ -359,10 +359,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: blobPropertiesResponse.ContentType(),
-		Size:        blobPropertiesResponse.ContentLength(),
-		ModTime:     blobPropertiesResponse.LastModified(),
-		Metadata:    blobPropertiesResponse.NewMetadata(),
+		CacheControl:       blobPropertiesResponse.CacheControl(),
+		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
+		ContentEncoding:    blobPropertiesResponse.ContentEncoding(),
+		ContentLanguage:    blobPropertiesResponse.ContentLanguage(),
+		ContentType:        blobPropertiesResponse.ContentType(),
+		Size:               blobPropertiesResponse.ContentLength(),
+		ModTime:            blobPropertiesResponse.LastModified(),
+		Metadata:           blobPropertiesResponse.NewMetadata(),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)
 			if !ok {
@@ -504,12 +508,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		BufferSize: opts.BufferSize,
 		MaxBuffers: defaultUploadBuffers,
 		Metadata:   opts.Metadata,
-	}
-	if contentType != "" {
-		uploadOpts.BlobHTTPHeaders.ContentType = contentType
-	}
-	if len(opts.ContentMD5) > 0 {
-		uploadOpts.BlobHTTPHeaders.ContentMD5 = opts.ContentMD5
+		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
+			CacheControl:       opts.CacheControl,
+			ContentDisposition: opts.ContentDisposition,
+			ContentEncoding:    opts.ContentEncoding,
+			ContentLanguage:    opts.ContentLanguage,
+			ContentMD5:         opts.ContentMD5,
+			ContentType:        contentType,
+		},
 	}
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
@@ -557,9 +563,7 @@ func (w *writer) open(pr *io.PipeReader) error {
 		} else {
 			body = pr
 		}
-
 		_, w.err = azblob.UploadStreamToBlockBlob(w.ctx, body, *w.blockBlobURL, *w.uploadOpts)
-
 		if w.err != nil {
 			if pr != nil {
 				pr.CloseWithError(w.err)
