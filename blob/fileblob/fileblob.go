@@ -729,25 +729,3 @@ func (h *URLSignerHMAC) checkMAC(message string, mac string) bool {
 	expected := h.getMAC(message)
 	return hmac.Equal([]byte(mac), expected)
 }
-
-// URLSignerDB obfuscates the object key to a UUID stored in a database
-type URLSignerDB struct {
-	prefix string
-	// database connection??
-}
-
-func NewURLSignerDB(urlPrefix string) URLSignerDB {
-	return &URLSignerDB{urlPrefix}
-}
-
-func (f *URLSignerDB) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	// uuid := NewUUID()
-	// store key, UUID, expiry in database
-	// return prefix/UUID
-}
-
-func (f *URLSignerDB) KeyFromURL(ctx context.Context, surl string) (string, bool) {
-	// split the prefix off of the UUID
-	// look key, expiry up in database by UUID
-	// return key if not expired
-}
