@@ -4,7 +4,9 @@ interactions:
 - request:
     body: ""
     form: {}
-    headers: {}
+    headers:
+      User-Agent:
+      - ' go-cloud/blob/0.9.0'
     url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-canceled-write
     method: GET
   response:
@@ -20,9 +22,9 @@ interactions:
       Content-Type:
       - application/xml; charset=UTF-8
       Date:
-      - Thu, 13 Dec 2018 20:25:45 GMT
+      - Thu, 20 Dec 2018 23:16:33 GMT
       Expires:
-      - Thu, 13 Dec 2018 20:25:45 GMT
+      - Thu, 20 Dec 2018 23:16:33 GMT
       Server:
       - UploadServer
       X-Guploader-Customer:
@@ -32,14 +34,16 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UrL3b9k32AdQDC70KNxaVQN58wLFTIK1-BqoHy1DbskGN74SvwFsrCKEd2GrmnIqGUjFViycG7NElqbyS7720f7iA6nqw
+      - AEnB2Uq7mVP1o32VMaaqrPdLnN50iGa7wtyz9evQP6UFkTpimcSKHcMrvVxs-0W_YeL49B1Wf4VDvnlvPvUyCbKqkzUpDd3fxA
     status: 404 Not Found
     code: 404
     duration: ""
 - request:
     body: ""
     form: {}
-    headers: {}
+    headers:
+      User-Agent:
+      - ' go-cloud/blob/0.9.0'
     url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-canceled-write
     method: GET
   response:
@@ -55,9 +59,9 @@ interactions:
       Content-Type:
       - application/xml; charset=UTF-8
       Date:
-      - Thu, 13 Dec 2018 20:25:46 GMT
+      - Thu, 20 Dec 2018 23:16:33 GMT
       Expires:
-      - Thu, 13 Dec 2018 20:25:46 GMT
+      - Thu, 20 Dec 2018 23:16:33 GMT
       Server:
       - UploadServer
       X-Guploader-Customer:
@@ -67,7 +71,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2Urr4kd38v4dpIjjs1qmcmdGFIuy-Mehk95l4f_Pbvu0oyuHS4AHjcw9_0_-ha9-f6Ov7LUm22RX3GGKp7RBRcOrLnrg4Q
+      - AEnB2UqdYTl8hipKs9fWLxM9n2uNr6t8awr24QZw7f8f59KscrBL5HyXQ_PQt8c_GMUpg-L23sWL_BJyPRTeTXUhN2edQ5HtmA
     status: 404 Not Found
     code: 404
     duration: ""

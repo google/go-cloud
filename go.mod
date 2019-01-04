@@ -15,10 +15,12 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.30.0
+	cloud.google.com/go v0.34.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20180906190126-dd54a7ef511e
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
 	contrib.go.opencensus.io/integrations/ocsql v0.1.2
+	github.com/Azure/azure-pipeline-go v0.1.8
+	github.com/Azure/azure-storage-blob-go v0.0.0-20181023070848-cf01652132cc
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181009230506-ac834ce67862
 	github.com/aws/aws-sdk-go v1.15.57
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
@@ -27,7 +29,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20181012123002-c6f51f82210d // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/dnaeon/go-vcr v0.0.0-20180920040454-5637cf3d8a31
+	github.com/dnaeon/go-vcr v1.0.1
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-ini/ini v1.39.0 // indirect
@@ -38,6 +40,7 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
+	github.com/google/uuid v1.1.0
 	github.com/google/wire v0.2.0
 	github.com/googleapis/gax-go v2.0.0+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect

@@ -122,7 +122,7 @@ func (w *worker) receive(ctx context.Context) error {
 			handleErr = w.receiveIssueEvent(ctx, event)
 		case *github.PullRequestEvent:
 			handleErr = w.receivePullRequestEvent(ctx, event)
-		case *github.PingEvent, *github.InstallationEvent, *github.CheckSuiteEvent:
+		case *github.PingEvent, *github.InstallationEvent, *github.CheckRunEvent, *github.CheckSuiteEvent, *github.PushEvent:
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
@@ -165,7 +165,9 @@ func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) e
 	data.Issue = iss
 
 	// Process the issue, deciding what actions to take (if any).
+	log.Printf("Identifying actions for issue: %v", data)
 	edits := processIssueEvent(cfg, data)
+	log.Printf("-> %v", edits)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
 }
@@ -196,7 +198,9 @@ func (w *worker) receivePullRequestEvent(ctx context.Context, e *github.PullRequ
 	data.PullRequest = pr
 
 	// Process the pull request, deciding what actions to take (if any).
+	log.Printf("Identifying actions for pull request: %v", data)
 	edits := processPullRequestEvent(cfg, data)
+	log.Printf("-> %v", edits)
 	// Execute the actions (if any).
 	return edits.Execute(ctx, client, data)
 }
@@ -237,6 +241,7 @@ func (w *worker) repoConfig(ctx context.Context, client *github.Client, owner, r
 		ready:  done,
 		config: *defaultRepoConfig(),
 	}
+	w.configCache[cacheKey] = ent
 	w.mu.Unlock()
 	defer func() {
 		ent.fetched = time.Now()

@@ -12,12 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package etcdvar provides a runtimevar.Driver implementation to read
-// variables from etcd.
+// Package etcdvar provides a runtimevar implementation with variables
+// backed by etcd. Use New to construct a *runtimevar.Variable.
+//
+// As
+//
+// etcdvar exposes the following types for As:
+//  - Snapshot: *clientv3.GetResponse
+//  - Error: rpctypes.EtcdError
 package etcdvar // import "gocloud.dev/runtimevar/etcdvar"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,11 +39,12 @@ import (
 // It is provided for future extensibility.
 type Options struct{}
 
-// New constructs a runtimevar.Variable object that uses client to watch
-// variables in etcd.
-// Provide a decoder to unmarshal updated configurations into similar
-// objects during the Watch call.
-func New(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
+// New constructs a *runtimevar.Variable that uses client to watch the variable
+// name on an etcd server.
+// etcd returns raw bytes; provide a decoder to decode the raw bytes into the
+// appropriate type for runtimevar.Snapshot.Value.
+// See the runtimevar package documentation for examples of decoders.
+func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(name, cli, decoder)), nil
 }
 
@@ -53,20 +61,39 @@ func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) 
 	return w
 }
 
+// errNotExist is a sentinel error for nonexistent variables.
+var errNotExist = errors.New("variable does not exist")
+
 // state implements driver.State.
 type state struct {
 	val        interface{}
+	raw        *clientv3.GetResponse
 	updateTime time.Time
 	version    int64
 	err        error
 }
 
+// Value implements driver.State.Value.
 func (s *state) Value() (interface{}, error) {
 	return s.val, s.err
 }
 
+// UpdateTime implements driver.State.UpdateTime.
 func (s *state) UpdateTime() time.Time {
 	return s.updateTime
+}
+
+// As implements driver.State.As.
+func (s *state) As(i interface{}) bool {
+	if s.raw == nil {
+		return false
+	}
+	p, ok := i.(**clientv3.GetResponse)
+	if !ok {
+		return false
+	}
+	*p = s.raw
+	return true
 }
 
 // watcher implements driver.Watcher.
@@ -137,7 +164,7 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 		if err != nil {
 			cur = w.updateState(&state{err: err}, cur)
 		} else if len(resp.Kvs) == 0 {
-			cur = w.updateState(&state{err: fmt.Errorf("%q not found", name)}, cur)
+			cur = w.updateState(&state{err: errNotExist}, cur)
 		} else if len(resp.Kvs) > 1 {
 			cur = w.updateState(&state{err: fmt.Errorf("%q has multiple values", name)}, cur)
 		} else {
@@ -147,7 +174,7 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 				if err != nil {
 					cur = w.updateState(&state{err: err}, cur)
 				} else {
-					cur = w.updateState(&state{val: val, updateTime: time.Now(), version: kv.Version}, cur)
+					cur = w.updateState(&state{val: val, raw: resp, updateTime: time.Now(), version: kv.Version}, cur)
 				}
 			}
 		}
@@ -166,7 +193,24 @@ func (w *watcher) Close() error {
 	// Tell the background goroutine to shut down by canceling its ctx.
 	w.shutdown()
 	// Wait for it to exit.
-	for _ = range w.ch {
+	for range w.ch {
 	}
 	return nil
+}
+
+// ErrorAs implements driver.ErrorAs.
+func (w *watcher) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case rpctypes.EtcdError:
+		if p, ok := i.(*rpctypes.EtcdError); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
+}
+
+// IsNotExist implements driver.IsNotExist.
+func (*watcher) IsNotExist(err error) bool {
+	return err == errNotExist
 }

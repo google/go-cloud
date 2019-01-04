@@ -32,7 +32,7 @@
 //  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
 //  ...
 //
-// Then, write your application code using the *Bucket type, and you can easily
+// Then, write your application code using the *Bucket type. You can easily
 // reconfigure your initialization code to choose a different provider.
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
@@ -103,7 +103,22 @@ func (r *Reader) As(i interface{}) bool {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
 	// ContentType is the MIME type of the blob. It will not be empty.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
 	// Keys are guaranteed to be in lowercase, even if the backend provider
@@ -319,7 +334,7 @@ type Bucket struct {
 }
 
 // NewBucket creates a new *Bucket based on a specific driver implementation.
-// Most end users should use subpackages to construct a *Bucket instead of this
+// End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
 // It is intended for use by provider implementations.
 func NewBucket(b driver.Bucket) *Bucket {
@@ -371,7 +386,6 @@ func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
 // List returns a ListIterator that can be used to iterate over blobs in a
 // bucket, in lexicographical order of UTF-8 encoded keys. The underlying
 // implementation fetches results in pages.
-// Use ListOptions to control the page size and filtering.
 //
 // A nil ListOptions is treated the same as the zero value.
 //
@@ -409,12 +423,16 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 		}
 	}
 	return Attributes{
-		ContentType: a.ContentType,
-		Metadata:    md,
-		ModTime:     a.ModTime,
-		Size:        a.Size,
-		MD5:         a.MD5,
-		asFunc:      a.AsFunc,
+		CacheControl:       a.CacheControl,
+		ContentDisposition: a.ContentDisposition,
+		ContentEncoding:    a.ContentEncoding,
+		ContentLanguage:    a.ContentLanguage,
+		ContentType:        a.ContentType,
+		Metadata:           md,
+		ModTime:            a.ModTime,
+		Size:               a.Size,
+		MD5:                a.MD5,
+		asFunc:             a.AsFunc,
 	}, nil
 }
 
@@ -424,7 +442,7 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 }
 
 // NewRangeReader returns a Reader to read content from the blob stored at key.
-// It reads at most length (!= 0) bytes starting at offset (>= 0).
+// It reads at most length bytes starting at offset (>= 0).
 // If length is negative, it will read till the end of the blob.
 //
 // If the blob does not exist, NewRangeReader returns an error for which
@@ -437,9 +455,6 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (*Reader, error) {
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
-	}
-	if length == 0 {
-		return nil, errors.New("blob.NewRangeReader: length cannot be 0")
 	}
 	if opts == nil {
 		opts = &ReaderOptions{}
@@ -487,9 +502,13 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		opts = &WriterOptions{}
 	}
 	dopts = &driver.WriterOptions{
-		ContentMD5:  opts.ContentMD5,
-		BufferSize:  opts.BufferSize,
-		BeforeWrite: opts.BeforeWrite,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		ContentMD5:         opts.ContentMD5,
+		BufferSize:         opts.BufferSize,
+		BeforeWrite:        opts.BeforeWrite,
 	}
 	if len(opts.Metadata) > 0 {
 		// Providers are inconsistent, but at least some treat keys
@@ -591,9 +610,28 @@ type WriterOptions struct {
 	// smaller BufferSize may reduce memory usage.
 	BufferSize int
 
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
+
 	// ContentType specifies the MIME type of the blob being written. If not set,
 	// it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 
 	// ContentMD5 may be used as a message integrity check (MIC).

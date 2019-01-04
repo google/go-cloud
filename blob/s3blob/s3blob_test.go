@@ -62,7 +62,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, bucketName, h.session, nil)
+	return openBucket(ctx, h.session, bucketName, nil)
 }
 
 func (h *harness) Close() {
@@ -184,18 +184,16 @@ func TestOpenBucket(t *testing.T) {
 			}
 
 			// Create driver impl.
-			drv, err := openBucket(ctx, test.bucketName, sess, nil)
+			drv, err := openBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
-			if drv != nil {
-				if drv.name != test.want {
-					t.Errorf("got %q want %q", drv.name, test.want)
-				}
+			if err == nil && drv != nil && drv.name != test.want {
+				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 
 			// Create concrete type.
-			_, err = OpenBucket(ctx, test.bucketName, sess, nil)
+			_, err = OpenBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}

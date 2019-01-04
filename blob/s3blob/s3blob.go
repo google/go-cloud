@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
-// to construct a blob.Bucket.
+// to construct a *blob.Bucket.
 //
 // Open URLs
 //
@@ -47,7 +47,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -81,14 +81,14 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, u.Host, sess, nil)
+	return openBucket(ctx, sess, u.Host, nil)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct{}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, _ *Options) (*bucket, error) {
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
 	if sess == nil {
 		return nil, errors.New("s3blob.OpenBucket: sess is required")
 	}
@@ -104,15 +104,13 @@ func openBucket(ctx context.Context, bucketName string, sess client.ConfigProvid
 
 // OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
 // for an example.
-func OpenBucket(ctx context.Context, bucketName string, sess client.ConfigProvider, opts *Options) (*blob.Bucket, error) {
-	drv, err := openBucket(ctx, bucketName, sess, opts)
+func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*blob.Bucket, error) {
+	drv, err := openBucket(ctx, sess, bucketName, opts)
 	if err != nil {
 		return nil, err
 	}
 	return blob.NewBucket(drv), nil
 }
-
-var emptyBody = ioutil.NopCloser(strings.NewReader(""))
 
 // reader reads an S3 object. It implements io.ReadCloser.
 type reader struct {
@@ -145,7 +143,7 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 
 // writer writes an S3 object, it implements io.WriteCloser.
 type writer struct {
-	w *io.PipeWriter
+	w *io.PipeWriter // created when the first byte is written
 
 	ctx      context.Context
 	uploader *s3manager.Uploader
@@ -157,8 +155,17 @@ type writer struct {
 
 // Write appends p to w. User must call Close to close the w after done writing.
 func (w *writer) Write(p []byte) (int, error) {
+	// Avoid opening the pipe for a zero-length write;
+	// the concrete can do these for empty blobs.
+	if len(p) == 0 {
+		return 0, nil
+	}
 	if w.w == nil {
-		if err := w.open(); err != nil {
+		// We'll write into pw and use pr as an io.Reader for the
+		// Upload call to S3.
+		pr, pw := io.Pipe()
+		w.w = pw
+		if err := w.open(pr); err != nil {
 			return 0, err
 		}
 	}
@@ -170,18 +177,24 @@ func (w *writer) Write(p []byte) (int, error) {
 	return w.w.Write(p)
 }
 
-func (w *writer) open() error {
-	pr, pw := io.Pipe()
-	w.w = pw
+// pr may be nil if we're Closing and no data was written.
+func (w *writer) open(pr *io.PipeReader) error {
 
 	go func() {
 		defer close(w.donec)
 
-		w.req.Body = pr
+		if pr == nil {
+			// AWS doesn't like a nil Body.
+			w.req.Body = http.NoBody
+		} else {
+			w.req.Body = pr
+		}
 		_, err := w.uploader.UploadWithContext(w.ctx, w.req)
 		if err != nil {
 			w.err = err
-			pr.CloseWithError(err)
+			if pr != nil {
+				pr.CloseWithError(err)
+			}
 			return
 		}
 	}()
@@ -193,23 +206,13 @@ func (w *writer) open() error {
 // create an empty file at the given key.
 func (w *writer) Close() error {
 	if w.w == nil {
-		w.touch()
+		// We never got any bytes written. We'll write an http.NoBody.
+		w.open(nil)
 	} else if err := w.w.Close(); err != nil {
 		return err
 	}
 	<-w.donec
 	return w.err
-}
-
-// touch creates an empty object in the bucket. It is called if user creates a
-// new writer but never calls write before closing it.
-func (w *writer) touch() {
-	if w.w != nil {
-		return
-	}
-	defer close(w.donec)
-	w.req.Body = emptyBody
-	_, w.err = w.uploader.UploadWithContext(w.ctx, w.req)
 }
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
@@ -356,11 +359,15 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		}
 	}
 	return driver.Attributes{
-		ContentType: aws.StringValue(resp.ContentType),
-		Metadata:    md,
-		ModTime:     aws.TimeValue(resp.LastModified),
-		Size:        aws.Int64Value(resp.ContentLength),
-		MD5:         eTagToMD5(resp.ETag),
+		CacheControl:       aws.StringValue(resp.CacheControl),
+		ContentDisposition: aws.StringValue(resp.ContentDisposition),
+		ContentEncoding:    aws.StringValue(resp.ContentEncoding),
+		ContentLanguage:    aws.StringValue(resp.ContentLanguage),
+		ContentType:        aws.StringValue(resp.ContentType),
+		Metadata:           md,
+		ModTime:            aws.TimeValue(resp.LastModified),
+		Size:               aws.Int64Value(resp.ContentLength),
+		MD5:                eTagToMD5(resp.ETag),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*s3.HeadObjectOutput)
 			if !ok {
@@ -380,15 +387,23 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	if offset > 0 && length < 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-", offset))
-	} else if length > 0 {
+	} else if length == 0 {
+		// AWS doesn't support a zero-length read; we'll read 1 byte and then
+		// ignore it in favor of http.NoBody below.
+		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
+	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
 	req, resp := b.client.GetObjectRequest(in)
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
+	body := resp.Body
+	if length == 0 {
+		body = http.NoBody
+	}
 	return &reader{
-		body: resp.Body,
+		body: body,
 		attrs: driver.ReaderAttributes{
 			ContentType: aws.StringValue(resp.ContentType),
 			ModTime:     aws.TimeValue(resp.LastModified),
@@ -460,6 +475,18 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    metadata,
+	}
+	if opts.CacheControl != "" {
+		req.CacheControl = aws.String(opts.CacheControl)
+	}
+	if opts.ContentDisposition != "" {
+		req.ContentDisposition = aws.String(opts.ContentDisposition)
+	}
+	if opts.ContentEncoding != "" {
+		req.ContentEncoding = aws.String(opts.ContentEncoding)
+	}
+	if opts.ContentLanguage != "" {
+		req.ContentLanguage = aws.String(opts.ContentLanguage)
 	}
 	if len(opts.ContentMD5) > 0 {
 		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))

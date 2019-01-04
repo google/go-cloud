@@ -38,6 +38,27 @@ type State interface {
 	Value() (interface{}, error)
 	// UpdateTime returns the update time for the variable.
 	UpdateTime() time.Time
+
+	// As allows providers to expose provider-specific types.
+	//
+	// i will be a pointer to the type the user wants filled in.
+	// As should either fill it in and return true, or return false.
+	//
+	// A provider should document the type(s) it support in package
+	// comments, and add conformance tests verifying them.
+	//
+	// A sample implementation might look like this, for supporting foo.MyType:
+	//   mt, ok := i.(*foo.MyType)
+	//   if !ok {
+	//     return false
+	//   }
+	//   *i = foo.MyType{}  // or, more likely, the existing value
+	//   return true
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	As(interface{}) bool
 }
 
 // Watcher watches for updates on a variable and returns an updated Variable object if
@@ -46,11 +67,13 @@ type State interface {
 // An application can have more than one Watcher, one for each variable.  It is typical
 // to only have one Watcher per variable.
 //
-// A Watcher provider can dictate the type of Variable.Value if the backend service dictates
-// a particular format and type.  If the backend service has the flexibility to store bytes and
-// allow clients to dictate the format, it is better for a Watcher provider to allow users to
-// dictate the type of Variable.Value and a decoding function.  The Watcher provider can use the
-// runtimevar.Decoder to facilitate the decoding logic.
+// Many Watcher providers store their configuration data as raw bytes; such
+// providers should include a runtimevar.Decoder in their constructor to allow
+// users to decode the raw bytes into a particular format (e.g., parsing a
+// JSON string).
+//
+// Providers that don't have raw bytes may dictate the type of the exposed
+// Snapshot.Value, or expose custom decoding logic.
 type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil.
@@ -79,4 +102,13 @@ type Watcher interface {
 
 	// Close cleans up any resources used by the Watcher object.
 	Close() error
+
+	// ErrorAs allows providers to expose provider-specific types for returned
+	// errors; see State.As for more details.
+	ErrorAs(error, interface{}) bool
+
+	// IsNotExist should return true if err, an error returned from one
+	// of the other methods in this interface, represents a "variable does not exist"
+	// error.
+	IsNotExist(err error) bool
 }

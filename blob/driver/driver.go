@@ -49,6 +49,20 @@ type WriterOptions struct {
 	// write in a single request, if supported. Larger objects will be split into
 	// multiple requests.
 	BufferSize int
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
 	// ContentMD5 may be used as a message integrity check (MIC).
 	// https://tools.ietf.org/html/rfc1864
 	ContentMD5 []byte
@@ -67,6 +81,7 @@ type WriterOptions struct {
 // accessible from Reader.
 type ReaderAttributes struct {
 	// ContentType is the MIME type of the blob object. It must not be empty.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// ModTime is the time the blob object was last modified.
 	ModTime time.Time
@@ -76,7 +91,22 @@ type ReaderAttributes struct {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
 	// ContentType is the MIME type of the blob object. It must not be empty.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
 	// Keys will be lowercased by the concrete type before being returned
@@ -97,7 +127,6 @@ type Attributes struct {
 }
 
 // ListOptions sets options for listing objects in the bucket.
-// TODO(Issue #541): Add Delimiter.
 type ListOptions struct {
 	// Prefix indicates that only results with the given prefix should be
 	// returned.
@@ -116,7 +145,7 @@ type ListOptions struct {
 	Delimiter string
 	// PageSize sets the maximum number of objects to be returned.
 	// 0 means no maximum; driver implementations should choose a reasonable
-	// max.
+	// max. It is guaranteed to be >= 0.
 	PageSize int
 	// PageToken may be filled in with the NextPageToken from a previous
 	// ListPaged call.
@@ -151,7 +180,7 @@ type ListObject struct {
 
 // ListPage represents a page of results return from ListPaged.
 type ListPage struct {
-	// Objects is the slice of objects found. If ListOptions.PageSize != 0,
+	// Objects is the slice of objects found. If ListOptions.PageSize > 0,
 	// it should have at most ListOptions.PageSize entries.
 	//
 	// Objects should be returned in lexicographical order of UTF-8 encoded keys,
