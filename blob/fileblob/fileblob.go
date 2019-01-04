@@ -57,7 +57,9 @@ package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"hash"
@@ -66,7 +68,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"gocloud.dev/blob"
@@ -619,17 +620,17 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.URLSigner == nil {
 		return "", errNotImplemented
 	}
-	return b.opts.UrlSigner.Sign(ctx, key, opts)
+	return b.opts.UrlSigner.URLFromKey(ctx, key, opts)
 }
 
-// VerifySignedURL takes a putative signed URL and returns
-// (theKey, true) if valid or (nil, false) if not valid.
-// It does not distinguish between expired vs bogus signatures.
+// VerifySignedURL takes a string and returns
+// (theObjectKey, true) if it's a valid signed URL
+// or (nil, false) if not valid.
 func (b *bucket) VerifySignedURL(su string) (string, bool) {
 	if b.opts.URLSigner == nil {
 		return "", errNotImplemented
 	}
-	return b.opts.URLSigner.Verify(su)
+	return b.opts.URLSigner.KeyFromURL(su)
 }
 
 // URLSigner defines an interface for
@@ -641,80 +642,112 @@ func (b *bucket) VerifySignedURL(su string) (string, bool) {
 // for their application.
 type URLSigner interface {
 	// URLFromKey defines how the bucket's object key will be turned
-	// into a URL. It is used by Sign.
-	// URLFromKey takes an object key and options and returns
-	// a string to be used as a URI for the object. The
-	// returned string must include all information that will be
-	// encoded by the signature.
-	// e.g. `my/object/key` => `www.example.com/my/object/key?expires=<TIME>`
-	URLFromKey(key string, opts *driver.SignedURLOptions) string
-
-	// Sign takes in a context, an object key, and options.
-	// It returns a signed URL as a string, and an error.
+	// into a signed URL.
+	// URLFromKey takes in a context, object key and options.
+	// It returns a signed URL string, and an error.
 	// e.g. (`www.example.com/my/object/key?expires=<TIME>&SIGNATURE=<sig>`, nil)
 	// or (nil, SomeError)
-	Sign(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
+	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
 
-	// KeyFromURL must be able to reverse the operation in URLFromKey.
-	// It is used by Verify.
-	// KeyfromURL takes a string and returns the object key
-	// that can be passed to NewReader.
-	KeyFromURL(url string) string
-
-	// Verify takes in a context and a signed URL and returns
-	// (key, true) if the signature is valid
-	// or (nil, false) if it is not.
-	// Verify must be able to validate the integrity of
-	// a URL returned from the Sign function.
-	Verify(ctx context.Context, surl string) (string, bool)
+	// KeyFromURL takes in a context and a signed URL string.
+	// It returns an object key string and a bool.
+	// e.g. (key, true) if the signature is valid (authentic && unexpired),
+	// or (nil, false) if it is invalid.
+	// KeyFromURL must be able to validate a URL from the URLFromKey function.
+	KeyFromURL(ctx context.Context, surl string) (string, bool)
 }
 
 // FakeURLSigner is an implementation of the URLSigner interface that
 // is intended for test use.
-type FakeURLSigner struct {
-	prefix string
-}
+// type FakeURLSigner struct {
+// 	prefix string
+// }
 
-func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
-	return strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
-}
+// func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
+// 	return strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
+// }
 
-func (f *FakeURLSigner) KeyFromURL(url string) string {
-	// not working?
-	re = regexp.MustCompile(`\A` + f.prefix + `(?P<key>.+)\?EXPIRES_AT=tomorrow`)
+// func (f *FakeURLSigner) KeyFromURL(url string) string {
+// 	return url == strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
+// }
 
-}
-
-func (f *FakeURLSigner) Sign(ctx context.Context, url string) (string, error) {
-	return "", nil
-}
-
-func (f *FakeURLSigner) Verify(su string) bool {
-	// does it contain the substring "SIGNTURE+SIGNED<f.tag>"
-}
-
-//
+// URLSignerHMAC uses the crypto/hmac package to create a message authentication code
 type URLSignerHMAC struct {
-	prefix    string
+	urlScheme string
+	urlHost   string
 	secretKey []byte
 }
 
-func NewURLSignerHMAC(urlPrefix string, secretKey string) URLSignerHMAC {
-	return &URLSignerHMCA{urlPrefix, []byte(secretKey)}
+func NewURLSignerHMAC(urlScheme string, urlHost string, secretKey string) *URLSignerHMAC {
+	return &URLSignerHMAC{
+		urlScheme: urlScheme,
+		urlHost:   urlHost,
+		secretKey: []byte(secretKey),
+	}
 }
 
-func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
+// URLFromKey uses the scheme and host in URLSignerHMAC, and uses the passed key as the path.
+func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
+	url := &url.URL{
+		Host:   h.urlHost,
+		Scheme: h.urlScheme,
+		Path:   key,
+	}
+	q := url.Query()
+	q.Set("expiry", "tomorrow") //TODO get expiry from options
+	q.Set("signature", "")
+	url.RawQuery = q.Encode()
 
+	mac := string(h.getMAC(url.String()))
+	q.Set("signature", mac)
+	url.RawQuery = q.Encode()
+
+	return url, nil
 }
 
-func (f *FakeURLSigner) KeyFromURL(url string) string {
-
+func (h *URLSignerHMAC) getMAC(message string) []byte {
+	hsh := hmac.New(sha256.New, h.secretKey)
+	hsh.Write([]byte(message))
+	return hsh.Sum(nil)
 }
 
-func (u *URLSignerHMAC) SignedURL(ctx context.Context, key string, path string, opts *driver.SignedURLOptions) (string, error) {
+func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bool) {
+	sURL, _ := url.Parse(surl) //todo handle error
+	q := sURL.Query()
+	sig := q.Get("signature")
+	q.Set("signature", "")
+	sURL.RawQuery = q.Encode()
 
+	if !h.checkMAC(sURL.String(), sig) {
+		return "", false
+	}
+	//key := strings.TrimLeft(sURL.Path, "/")
+	return key, true
 }
 
-func (f *FakeURLSigner) Verify(su string) bool {
-	// does it contain the substring "SIGNTURE+SIGNED<f.tag>"
+func (h *URLSignerHMAC) checkMAC(message string, mac string) bool {
+	expected := h.getMAC(message)
+	return hmac.Equal([]byte(mac), expected)
+}
+
+// URLSignerDB obfuscates the object key to a UUID stored in a database
+type URLSignerDB struct {
+	prefix string
+	// database connection??
+}
+
+func NewURLSignerDB(urlPrefix string) URLSignerDB {
+	return &URLSignerDB{urlPrefix}
+}
+
+func (f *URLSignerDB) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	// uuid := NewUUID()
+	// store key, UUID, expiry in database
+	// return prefix/UUID
+}
+
+func (f *URLSignerDB) KeyFromURL(ctx context.Context, surl string) (string, bool) {
+	// split the prefix off of the UUID
+	// look key, expiry up in database by UUID
+	// return key if not expired
 }
