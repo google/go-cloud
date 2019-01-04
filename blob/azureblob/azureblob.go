@@ -226,12 +226,18 @@ func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerNam
 	}
 }
 
-// Delete implements driver.Delete.
-func (b *bucket) Delete(ctx context.Context, key string) error {
+// blockBlobURL replaces backslashes in key and returns an azblob.BlockBlobURL
+// for it.
+func (b *bucket) blockBlobURL(key string) azblob.BlockBlobURL {
 	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
 	containerURL := b.serviceURL.NewContainerURL(b.name)
-	blobURL := containerURL.NewBlockBlobURL(key)
-	_, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
+	return containerURL.NewBlockBlobURL(key)
+}
+
+// Delete implements driver.Delete.
+func (b *bucket) Delete(ctx context.Context, key string) error {
+	blockBlobURL := b.blockBlobURL(key)
+	_, err := blockBlobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 	return err
 }
 
@@ -262,9 +268,7 @@ func (r *reader) As(i interface{}) bool {
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	blockBlobURL := containerURL.NewBlockBlobURL(key)
+	blockBlobURL := b.blockBlobURL(key)
 
 	end := length
 	if end < 0 {
@@ -351,9 +355,7 @@ func (b *bucket) IsNotImplemented(err error) bool {
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	blockBlobURL := containerURL.NewBlockBlobURL(key)
+	blockBlobURL := b.blockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
 		return driver.Attributes{}, err
@@ -455,9 +457,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.Credential")
 	}
 
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	blockBlobURL := containerURL.NewBlobURL(key)
+	blockBlobURL := b.blockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
 
 	var err error
@@ -489,10 +489,7 @@ type writer struct {
 
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	containerURL := b.serviceURL.NewContainerURL(b.name)
-	blockBlobURL := containerURL.NewBlockBlobURL(key)
-
+	blockBlobURL := b.blockBlobURL(key)
 	if opts.Metadata == nil {
 		opts.Metadata = map[string]string{}
 	}
