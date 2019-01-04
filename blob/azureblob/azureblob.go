@@ -77,7 +77,7 @@ type Options struct {
 	// Required to use SignedURL.
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
 	// A SharedKeyCredential can be constructed with azblob.NewSharedKeyCredential("AccountName", "AccountKey").
-	Credential azblob.SharedKeyCredential
+	Credential *azblob.SharedKeyCredential
 }
 
 // Azure does not handle backslashes in the blob key well. As a workaround, all
@@ -110,10 +110,10 @@ const (
 // For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
 func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceURL, error) {
 	if accountName == "" {
-		return nil, fmt.Errorf("azureblob: accountName is required")
+		return nil, errors.New("azureblob: accountName is required")
 	}
 	if accountKey == "" {
-		return nil, fmt.Errorf("azureblob: accountKey is required")
+		return nil, errors.New("azureblob: accountKey is required")
 	}
 	credential, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -126,10 +126,10 @@ func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceUR
 // For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
 func ServiceURLFromSASToken(accountName, sasToken string) (*azblob.ServiceURL, error) {
 	if accountName == "" {
-		return nil, fmt.Errorf("azureblob: accountName is required")
+		return nil, errors.New("azureblob: accountName is required")
 	}
 	if sasToken == "" {
-		return nil, fmt.Errorf("azureblob: sasToken is required")
+		return nil, errors.New("azureblob: sasToken is required")
 	}
 	credential := azblob.NewAnonymousCredential()
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -164,7 +164,7 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	ac := &AzureCreds{}
 	credPath := q["cred_path"]
 	if len(credPath) == 0 {
-		return nil, fmt.Errorf("azureblob: cred_path query parameter is required")
+		return nil, errors.New("azureblob: cred_path query parameter is required")
 	}
 
 	f, err := ioutil.ReadFile(credPath[0])
@@ -188,15 +188,15 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 			return nil, err
 		}
 
-		opts.Credential = *credential
-		return openBucket(ctx, serviceURL, u.Host, opts), err
+		opts.Credential = credential
+		return openBucket(ctx, serviceURL, u.Host, opts)
 	}
 
 	serviceURL, err := ServiceURLFromSASToken(ac.AccountName, ac.SASToken)
 	if err != nil {
 		return nil, err
 	}
-	return openBucket(ctx, serviceURL, u.Host, opts), nil
+	return openBucket(ctx, serviceURL, u.Host, opts)
 }
 
 // bucket represents a Azure Storage Account Container, which handles read,
@@ -213,17 +213,27 @@ type bucket struct {
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
 // documentation for an example.
 func OpenBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) (*blob.Bucket, error) {
-	return blob.NewBucket(openBucket(ctx, serviceURL, containerName, opts)), nil
+	b, err := openBucket(ctx, serviceURL, containerName, opts)
+	if err != nil {
+		return nil, err
+	}
+	return blob.NewBucket(b), nil
 }
 
-func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) *bucket {
+func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) (*bucket, error) {
+	if serviceURL == nil {
+		return nil, errors.New("azureblob.OpenBucket: serviceURL is required")
+	}
+	if containerName == "" {
+		return nil, errors.New("azureblob.OpenBucket: containerName is required")
+	}
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
 		serviceURL:   serviceURL,
 		containerURL: serviceURL.NewContainerURL(containerName),
 		opts:         opts,
-	}
+	}, nil
 }
 
 // blockBlobURL replaces backslashes in key and returns an azblob.BlockBlobURL
@@ -464,7 +474,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	if &b.opts.Credential == nil {
+	if b.opts.Credential == nil {
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.Credential")
 	}
 	blockBlobURL := b.blockBlobURL(key)
@@ -477,7 +487,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		ContainerName: b.name,
 		BlobName:      key,
 		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
-	}.NewSASQueryParameters(&b.opts.Credential)
+	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {
 		return "", err
 	}
