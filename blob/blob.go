@@ -103,7 +103,22 @@ func (r *Reader) As(i interface{}) bool {
 
 // Attributes contains attributes about a blob.
 type Attributes struct {
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
 	// ContentType is the MIME type of the blob. It will not be empty.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
 	// Keys are guaranteed to be in lowercase, even if the backend provider
@@ -408,12 +423,16 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error)
 		}
 	}
 	return Attributes{
-		ContentType: a.ContentType,
-		Metadata:    md,
-		ModTime:     a.ModTime,
-		Size:        a.Size,
-		MD5:         a.MD5,
-		asFunc:      a.AsFunc,
+		CacheControl:       a.CacheControl,
+		ContentDisposition: a.ContentDisposition,
+		ContentEncoding:    a.ContentEncoding,
+		ContentLanguage:    a.ContentLanguage,
+		ContentType:        a.ContentType,
+		Metadata:           md,
+		ModTime:            a.ModTime,
+		Size:               a.Size,
+		MD5:                a.MD5,
+		asFunc:             a.AsFunc,
 	}, nil
 }
 
@@ -483,9 +502,13 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		opts = &WriterOptions{}
 	}
 	dopts = &driver.WriterOptions{
-		ContentMD5:  opts.ContentMD5,
-		BufferSize:  opts.BufferSize,
-		BeforeWrite: opts.BeforeWrite,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		ContentMD5:         opts.ContentMD5,
+		BufferSize:         opts.BufferSize,
+		BeforeWrite:        opts.BeforeWrite,
 	}
 	if len(opts.Metadata) > 0 {
 		// Providers are inconsistent, but at least some treat keys
@@ -587,9 +610,28 @@ type WriterOptions struct {
 	// smaller BufferSize may reduce memory usage.
 	BufferSize int
 
+	// CacheControl specifies caching attributes that providers may use
+	// when serving the blob.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
+	CacheControl string
+
+	// ContentDisposition specifies whether the blob content is expected to be
+	// displayed inline or as an attachment.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition
+	ContentDisposition string
+
+	// ContentEncoding specifies the encoding used for the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding
+	ContentEncoding string
+
+	// ContentLanguage specifies the language used in the blob's content, if any.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
+	ContentLanguage string
+
 	// ContentType specifies the MIME type of the blob being written. If not set,
 	// it will be inferred from the content using the algorithm described at
 	// http://mimesniff.spec.whatwg.org/.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 
 	// ContentMD5 may be used as a message integrity check (MIC).
