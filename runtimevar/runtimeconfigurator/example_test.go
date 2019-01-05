@@ -83,7 +83,8 @@ func ExampleNewVariable() {
 		fmt.Println("Watch failed due to invalid credentials")
 		return
 	}
-	// The resulting runtimevar.Snapshot.Value would be of type MyConfig.
+	// We'll never get here when running this sample, but the resulting
+	// runtimevar.Snapshot.Value would be of type MyConfig.
 	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
 
 	// Output:
