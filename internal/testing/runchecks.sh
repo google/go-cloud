@@ -39,7 +39,10 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   fi
 else
   go test -race ./... || result=1
+  # No need to run wire checks or other module tests on OSs other than linux.
+  exit $result
 fi
+
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
