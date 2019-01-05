@@ -79,14 +79,10 @@ type Options struct {
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
 func NewVariable(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := newWatcher(client, name, decoder, opts)
-	if err != nil {
-		return nil, err
-	}
-	return runtimevar.New(w), nil
+	return runtimevar.New(newWatcher(client, name, decoder, opts)), nil
 }
 
-func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) (driver.Watcher, error) {
+func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder *runtimevar.Decoder, opts *Options) driver.Watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -95,7 +91,7 @@ func newWatcher(client pb.RuntimeConfigManagerClient, name ResourceName, decoder
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		name:    name.String(),
 		decoder: decoder,
-	}, nil
+	}
 }
 
 // ResourceName identifies a configuration variable.
