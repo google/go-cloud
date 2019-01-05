@@ -58,12 +58,15 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // AsTest represents a test of As functionality.
 // The conformance test:
 // 1. Calls BucketCheck.
-// 2. Creates a blob using BeforeWrite as a WriterOption.
+// 2. Creates a blob in a directory, using BeforeWrite as a WriterOption.
 // 3. Fetches the blob's attributes and calls AttributeCheck.
 // 4. Creates a Reader for the blob and calls ReaderCheck.
-// 5. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
-//    on the single list entry returned.
-// 6. Tries to read a non-existent blob, and calls ErrorCheck with the error.
+// 5. Calls List using BeforeList as a ListOption, with Delimiter set so
+//    that only the directory is returned, and calls ListObjectCheck
+//    on the single directory list entry returned.
+// 6. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
+//    on the single blob entry returned.
+// 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
 //
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
@@ -1684,7 +1687,10 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 // testAs tests the various As functions, using AsTest.
 func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
-	const key = "as-test"
+	const (
+		dir = "mydir"
+		key = dir + "/as-test"
+	)
 	var content = []byte("hello world")
 	ctx := context.Background()
 
@@ -1729,9 +1735,29 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	// Verify ListObject.As.
-	iter := b.List(&blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
+	// Verify ListObject.As for the directory.
+	iter := b.List(&blob.ListOptions{Prefix: dir, Delimiter: "/", BeforeList: st.BeforeList})
 	found := false
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if found {
+			t.Fatal("got a second object returned from List, only wanted one")
+		}
+		found = true
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := st.ListObjectCheck(obj); err != nil {
+			t.Error(err)
+		}
+	}
+
+	// Verify ListObject.As for the blob.
+	iter = b.List(&blob.ListOptions{Prefix: key, BeforeList: st.BeforeList})
+	found = false
 	for {
 		obj, err := iter.Next(ctx)
 		if err == io.EOF {

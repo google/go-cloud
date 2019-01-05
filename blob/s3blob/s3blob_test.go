@@ -140,9 +140,16 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 }
 
 func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	if o.IsDir {
+		var commonPrefix s3.CommonPrefix
+		if !o.As(&commonPrefix) {
+			return errors.New("ListObject.As for directory returned false")
+		}
+		return nil
+	}
 	var obj s3.Object
 	if !o.As(&obj) {
-		return errors.New("ListObject.As returned false")
+		return errors.New("ListObject.As for blob returned false")
 	}
 	// Nothing to check.
 	return nil

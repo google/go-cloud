@@ -44,7 +44,7 @@
 // azureblob exposes the following types for As:
 //  - Bucket: *azblob.ContainerURL
 //  - Error: azblob.StorageError
-//  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories".
+//  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories"
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
 //  - Attributes: azblob.BlobGetPropertiesResponse
