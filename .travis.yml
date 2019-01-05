@@ -39,7 +39,7 @@ jobs:
     # but matrix expansion does not allow conditionals. See:
     # https://docs.travis-ci.com/user/conditional-builds-stages-jobs/#conditional-jobs
     - os: windows
-      if: branch = master #AND type = push
+      if: branch = master AND type = push
     # Generate imports for GitHub Pages.
     - stage: imports
       os: linux
