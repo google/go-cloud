@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
-	"golang.org/x/sys/unix"
 )
 
 // syncParams is the set of parameters to syncPullRequest.
@@ -157,7 +156,8 @@ func gitSync(ctx context.Context, gitPath string, dst, src remoteGitBranch) erro
 // runCommand starts a subprocess and waits for it to finish. If the subprocess
 // exits with failure, the returned error's message will include the combined
 // stdout and stderr. If the context is cancelled, then runCommand sends the
-// subprocess SIGTERM (this differs from CommandContext, which sends SIGKILL).
+// subprocess os.Interrupt (this differs from CommandContext, which sends
+// os.Kill).
 func runCommand(ctx context.Context, dir string, exe string, args []string) error {
 	c := exec.Command(exe, args...)
 	c.Dir = dir
@@ -174,7 +174,7 @@ func runCommand(ctx context.Context, dir string, exe string, args []string) erro
 		select {
 		case <-ctx.Done():
 			// Ignore error: if we can't signal, it's likely because the process already exited.
-			_ = c.Process.Signal(unix.SIGTERM)
+			_ = c.Process.Signal(os.Interrupt)
 		case <-waitDone:
 		}
 		// No further synchronization back to the main goroutine, because signal is uninterruptable and

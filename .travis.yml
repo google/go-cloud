@@ -56,11 +56,7 @@ jobs:
         verbose: true  # temporarily, while verifying
         on:
           branch: master
-  # Windows is in early access and has been unreliable. Don't block builds on it,
-  # but provide data (for now).
-  allow_failures:
-    - os: windows
-      
+
 stages:
   - test
   - name: imports

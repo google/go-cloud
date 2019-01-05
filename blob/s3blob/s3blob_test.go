@@ -188,10 +188,8 @@ func TestOpenBucket(t *testing.T) {
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
-			if drv != nil {
-				if drv.name != test.want {
-					t.Errorf("got %q want %q", drv.name, test.want)
-				}
+			if err == nil && drv != nil && drv.name != test.want {
+				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 
 			// Create concrete type.
