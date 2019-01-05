@@ -22,22 +22,31 @@ import (
 
 func ExampleCrypter_Encrypt() {
 	ctx := context.Background()
+
+	// Get a client to use with the KMS API.
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
+	// Make sure to close the connection when done.
 	defer done()
+
 	plaintext := []byte("Hello, Secrets!")
 
 	crypter := gcpkms.NewCrypter(
 		client,
+		// Get the key resource ID.
+		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+		// information.
 		&gcpkms.KeyID{
-			ProjectID: "pledged-solved-practically",
+			ProjectID: "project-id",
 			Location:  "global",
 			KeyRing:   "test",
-			Key:       "password",
+			Key:       "key-name",
 		},
 	)
+
+	// Makes the request to the KMS API to encrypt the plain text into a binary.
 	encrypted, err := crypter.Encrypt(ctx, plaintext)
 	if err != nil {
 		panic(err)
@@ -48,10 +57,13 @@ func ExampleCrypter_Encrypt() {
 
 func ExampleCrypter_Decrypt() {
 	ctx := context.Background()
+
+	// Get a client to use with the KMS API.
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		panic(err)
 	}
+	// Make sure to close the connection when done.
 	defer done()
 
 	// Get the secret to be decrypted from some kind of storage.
@@ -59,13 +71,18 @@ func ExampleCrypter_Decrypt() {
 
 	crypter := gcpkms.NewCrypter(
 		client,
+		// Get the key resource ID.
+		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+		// information.
 		&gcpkms.KeyID{
-			ProjectID: "pledged-solved-practically",
+			ProjectID: "project-id",
 			Location:  "global",
 			KeyRing:   "test",
-			Key:       "password",
+			Key:       "key-name",
 		},
 	)
+
+	// Makes the request to the KMS API to decrypt the binary into plain text.
 	decrypted, err := crypter.Decrypt(ctx, ciphertext)
 	if err != nil {
 		panic(err)
