@@ -594,6 +594,10 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err := st.ErrorCheck(gotErr); err != nil {
 		t.Error(err)
 	}
+	var dummy string
+	if s.As(&dummy) {
+		t.Error(errors.New("want Snapshot.As to return false when Snapshot is zero value"))
+	}
 	if err := v.Close(); err != nil {
 		t.Error(err)
 	}
