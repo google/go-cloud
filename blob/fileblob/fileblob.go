@@ -615,8 +615,8 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// SignedURL takes a context, an object key, and a SignedURLOptions struct and returns
-// a string containing a URI and an error
+// SignedURL takes a context, an object key, and a SignedURLOptions struct
+// and returns a string containing a URI and an error
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
 		return "", errNotImplemented
@@ -646,7 +646,7 @@ type URLSigner interface {
 	// into a signed URL.
 	// URLFromKey takes in a context, object key and options.
 	// It returns a signed URL string, and an error.
-	// e.g. (`www.example.com/my/object/key?expires=<TIME>&SIGNATURE=<sig>`, nil)
+	// e.g. (`www.example.com/index.html?obj=obj=%2Fan%2Fobject%2Fkey&expires=<TIME>&SIGNATURE=<sig>`, nil)
 	// or (nil, SomeError)
 	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
 
