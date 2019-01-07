@@ -1,7 +1,3 @@
-os:
-  - linux
-  - osx
-
 language: go
 go_import_path: gocloud.dev
 go: "1.11.x"
@@ -37,6 +33,8 @@ env:
 
 jobs:
   include:
+    - os: linux
+    - os: osx
     # Only run Windows build job on master. This would be listed in `os:` above,
     # but matrix expansion does not allow conditionals. See:
     # https://docs.travis-ci.com/user/conditional-builds-stages-jobs/#conditional-jobs
