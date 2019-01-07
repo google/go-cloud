@@ -105,7 +105,7 @@ type Options struct {
 
 type bucket struct {
 	dir  string
-	opts Options
+	opts *Options
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
@@ -615,22 +615,23 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-//
+// SignedURL takes a context, an object key, and a SignedURLOptions struct and returns
+// a string containing a URI and an error
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
 		return "", errNotImplemented
 	}
-	return b.opts.UrlSigner.URLFromKey(ctx, key, opts)
+	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
 }
 
 // VerifySignedURL takes a string and returns
 // (theObjectKey, true) if it's a valid signed URL
 // or (nil, false) if not valid.
-func (b *bucket) VerifySignedURL(su string) (string, bool) {
+func (b *bucket) VerifySignedURL(ctx context.Context, su string) (string, bool) {
 	if b.opts.URLSigner == nil {
-		return "", errNotImplemented
+		return "", false
 	}
-	return b.opts.URLSigner.KeyFromURL(su)
+	return b.opts.URLSigner.KeyFromURL(ctx, su)
 }
 
 // URLSigner defines an interface for
@@ -657,43 +658,33 @@ type URLSigner interface {
 	KeyFromURL(ctx context.Context, surl string) (string, bool)
 }
 
-// FakeURLSigner is an implementation of the URLSigner interface that
-// is intended for test use.
-// type FakeURLSigner struct {
-// 	prefix string
-// }
-
-// func (f *FakeURLSigner) URLFromKey(key string, opts *driver.SignedURLOptions) string {
-// 	return strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
-// }
-
-// func (f *FakeURLSigner) KeyFromURL(url string) string {
-// 	return url == strings.Join([]string{f.prefix, key, `?EXPIRES_AT=tomorrow`}, "")
-// }
-
 // URLSignerHMAC uses the crypto/hmac package to create a message authentication code
+// using a sha256 hash
 type URLSignerHMAC struct {
 	urlScheme string
 	urlHost   string
+	urlPath   string
 	secretKey []byte
 }
 
-func NewURLSignerHMAC(urlScheme string, urlHost string, secretKey string) *URLSignerHMAC {
+func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerHMAC {
 	return &URLSignerHMAC{
 		urlScheme: urlScheme,
 		urlHost:   urlHost,
+		urlPath:   urlPath,
 		secretKey: []byte(secretKey),
 	}
 }
 
 // URLFromKey uses the scheme and host in URLSignerHMAC, and uses the passed key as the path.
-func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
+func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	sURL := &url.URL{
 		Host:   h.urlHost,
 		Scheme: h.urlScheme,
-		Path:   key,
+		Path:   h.urlPath,
 	}
 	q := sURL.Query()
+	q.Set("obj", key)
 	q.Set("expiry", "tomorrow") //TODO get expiry from options
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
@@ -702,7 +693,7 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("signature", mac)
 	sURL.RawQuery = q.Encode()
 
-	return sURL, nil
+	return sURL.String(), nil
 }
 
 func (h *URLSignerHMAC) getMAC(message string) []byte {
@@ -714,6 +705,9 @@ func (h *URLSignerHMAC) getMAC(message string) []byte {
 func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bool) {
 	sURL, _ := url.Parse(surl) //todo handle error
 	q := sURL.Query()
+
+	// todo check expiry
+
 	sig := q.Get("signature")
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
@@ -721,8 +715,7 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bo
 	if !h.checkMAC(sURL.String(), sig) {
 		return "", false
 	}
-	//key := strings.TrimLeft(sURL.Path, "/")
-	return key, true
+	return q.Get("obj"), true
 }
 
 func (h *URLSignerHMAC) checkMAC(message string, mac string) bool {
