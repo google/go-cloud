@@ -46,6 +46,7 @@ module "go_cloud_repo" {
     "go",
     "aws",
     "gcp",
+    "azure",
   ]
 }
 

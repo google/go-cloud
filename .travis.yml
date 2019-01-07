@@ -1,7 +1,3 @@
-os:
-  - linux
-  - osx
-
 language: go
 go_import_path: gocloud.dev
 go: "1.11.x"
@@ -37,11 +33,14 @@ env:
 
 jobs:
   include:
-    # Only run Windows build job on master. This would be listed in `os:` above,
-    # but matrix expansion does not allow conditionals. See:
-    # https://docs.travis-ci.com/user/conditional-builds-stages-jobs/#conditional-jobs
-    - os: windows
-      if: branch = master AND type = push
+    - os: linux
+    - os: osx
+    # TODO(#1075): Uncomment the lines below to re-enable the Windows build on
+    # master once it passes; currently it always fails due to a Travis bug
+    # regarding secrets.
+    # # Only run Windows build job on master; it's very slow.
+    # - os: windows
+    #   if: branch = master AND type = push
     # Generate imports for GitHub Pages.
     - stage: imports
       os: linux

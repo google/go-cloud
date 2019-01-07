@@ -89,5 +89,5 @@ if [[ $input != "yes" ]]; then die 'canceled'; fi
 log "running gsutil rsync in non-preview mode, sending output to $temp"
 if ! gsutil rsync -r -c -d modvendor gs://go-cloud-modules > "$temp" 2>&1; then die 'gsutil rsync failed'; fi
 
-log 'cleaning https://github.com/google/go-cloud/issues/up'
+log 'cleaning up'
 if ! rm "$temp"; then die "failed to remove $temp"; fi
