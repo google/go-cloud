@@ -171,6 +171,9 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	if !o.As(&oa) {
 		return errors.New("ListObject.As returned false")
 	}
+	if o.IsDir {
+		return nil
+	}
 	if got := oa.ContentLanguage; got != language {
 		return fmt.Errorf("got %q want %q", got, language)
 	}
