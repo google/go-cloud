@@ -204,7 +204,7 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	}
 	var item azblob.BlobItem
 	if !o.As(&item) {
-		return errors.New("ListObject.As for blob returned false")
+		return errors.New("ListObject.As for object returned false")
 	}
 	if got := *item.Properties.ContentLanguage; got != language {
 		return fmt.Errorf("got %q want %q", got, language)

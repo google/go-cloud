@@ -149,7 +149,7 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 	}
 	var obj s3.Object
 	if !o.As(&obj) {
-		return errors.New("ListObject.As for blob returned false")
+		return errors.New("ListObject.As for object returned false")
 	}
 	// Nothing to check.
 	return nil
