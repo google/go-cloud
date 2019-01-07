@@ -25,8 +25,8 @@ import (
 
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
-	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/internal/retry"
+	"gocloud.dev/pubsub/driver"
 )
 
 // Message contains data to be published.
@@ -208,7 +208,7 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 		s.waitc = make(chan struct{})
 		s.mu.Unlock()
 		// Even though the mutex is unlocked, only one goroutine can be here.
-		// The only way here is if s.waitc == nil. This goroutine just set
+		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
 		msgs, err := getNextBatch(ctx, s.driver, s.ackBatcher)
 		s.mu.Lock()
