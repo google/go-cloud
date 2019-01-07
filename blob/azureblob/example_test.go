@@ -17,108 +17,55 @@ package azureblob_test
 import (
 	"context"
 	"io"
+	"log"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
 )
 
-func Example() {
-	ctx := context.Background()
+func openAzureBucket(ctx context.Context) (*blob.Bucket, error) {
 
 	accountName, accountKey := "", ""
 	bucketName := "my-bucket"
-	key := "my-file.json"
 
-	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization
-	serviceURL, _ := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
+	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	if err != nil {
+		// This is expected since accountName and accountKey is empty.
+		return nil, err
+	}
 
-	// Credential represents the authorizer for SignedURL
-	creds, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
+	// Credential represents the authorizer for SignedURL.
+	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set credential for the SignedURL operation.
 	azureOpts := azureblob.Options{
 		Credential: creds,
 	}
 
-	// Creates a *blob.Bucket backed by Azure Storage Account
-	b, _ := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
-
-	// Get the native blob attributes
-	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobGetPropertiesResponse
-	var nativeAttrs azblob.BlobGetPropertiesResponse
-	attr, _ := b.Attributes(ctx, key)
-	if attr.As(&nativeAttrs) {
-		// Use the native SDK type
-	}
-
-	// Get the native type from a bucket
-	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob
-	var nativeBucket *azblob.ContainerURL
-	if b.As(&nativeBucket) {
-		// Use the native SDK type
-	}
-
-	// Write data to a new blob
-	beforeWrite := func(as func(i interface{}) bool) error {
-		// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#UploadStreamToBlockBlobOptions
-		var nativeWriteOptions *azblob.UploadStreamToBlockBlobOptions
-		if as(&nativeWriteOptions) {
-			// Use the native SDK type
-		}
-		return nil
-	}
-	opts := &blob.WriterOptions{
-		ContentType: "application/json",
-		BeforeWrite: beforeWrite,
-	}
-	w, _ := b.NewWriter(ctx, key, opts)
-	w.Write([]byte("{"))
-	w.Write([]byte(" message: 'hello' "))
-	w.Write([]byte("}"))
-	w.Close()
-
-	// Read data from a blob
-	r, _ := b.NewRangeReader(ctx, key, 0, -1, nil)
-	got := make([]byte, 100)
-	r.Read(got)
-
-	// Get the native type from reader
-	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse
-	var nativeReader azblob.DownloadResponse
-	if r.As(&nativeReader) {
-		// Use the native SDK type
-	}
-
-	beforeList := func(as func(i interface{}) bool) error {
-		// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#ListBlobsSegmentOptions
-		var nativeListOptions *azblob.ListBlobsSegmentOptions
-		if as(&nativeListOptions) {
-			// Use the native SDK type
-		}
-		return nil
-	}
-
-	// Iterate through a virtual directory
-	iter := b.List(&blob.ListOptions{Prefix: "blob-for-delimiters", Delimiter: "/", BeforeList: beforeList})
-	for {
-		if p, err := iter.Next(ctx); err == io.EOF {
-			break
-		} else if err == nil {
-			if p.IsDir {
-				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobPrefix
-				var nativeDirObj azblob.BlobPrefix
-				if p.As(&nativeDirObj) {
-					// Use the native SDK type
-				}
-			} else {
-				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobItem
-				var nativeBlobObj azblob.BlobItem
-				if p.As(&nativeBlobObj) {
-					// Use the native SDK type
-				}
-			}
-		}
-	}
+	// Creates a *blob.Bucket backed by Azure Storage Account.
+	return azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
 }
+
+func Example() {
+	ctx := context.Background()
+	b, err := openAzureBucket(ctx)
+
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	_, _ = b.ReadAll(ctx, "my-key")
+
+	// Output:
+	// azureblob: accountName is required
+}
+
 func Example_open() {
 
 	// Open creates a *Bucket from a URL.
@@ -127,7 +74,103 @@ func Example_open() {
 	// The host "my-bucket" represents the blob bucket (Azure Storage Account's Container).
 	// The queryString "cred_path: represents the credentials file in JSON format. See the package documentation for credentials file schema.
 
-	_, _ = blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
+	_, err := blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	// Output:
+	// The system cannot find the file specified.
+}
+
+func Example_as() {
+	key := "my-key"
+	ctx := context.Background()
+	b, err := openAzureBucket(ctx)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// Use Attribute.As to obtain SDK type azblob.BlobGetPropertiesResponse.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobGetPropertiesResponse for more information.
+	var nativeAttrs azblob.BlobGetPropertiesResponse
+	attr, _ := b.Attributes(ctx, key)
+	if attr.As(&nativeAttrs) {
+
+	}
+
+	// Use Bucket.As to obtain SDK type azblob.ContainerURL.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob for more information.
+	var nativeBucket *azblob.ContainerURL
+	if b.As(&nativeBucket) {
+
+	}
+
+	// Use WriterOptions.BeforeWrite to obtain SDK type azblob.UploadStreamToBlockBlobOptions.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#UploadStreamToBlockBlobOptions for more information.
+	beforeWrite := func(as func(i interface{}) bool) error {
+		var nativeWriteOptions *azblob.UploadStreamToBlockBlobOptions
+		if as(&nativeWriteOptions) {
+
+		}
+		return nil
+	}
+	opts := &blob.WriterOptions{
+		ContentType: "application/json",
+		BeforeWrite: beforeWrite,
+	}
+	// Create a *blob.Writer.
+	w, _ := b.NewWriter(ctx, key, opts)
+	w.Write([]byte("{"))
+	w.Write([]byte(" message: 'hello' "))
+	w.Write([]byte("}"))
+	w.Close()
+
+	// Create a *blob.Reader.
+	r, _ := b.NewReader(ctx, key, &blob.ReaderOptions{})
+
+	// Use Reader.As to obtain SDK type azblob.DownloadResponse.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse for more information.
+	var nativeReader azblob.DownloadResponse
+	if r.As(&nativeReader) {
+
+	}
+
+	// Use ListOptions.BeforeList to obtain SDK type azblob.ListBlobsSegmentOptions.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#ListBlobsSegmentOptions for more information.
+	beforeList := func(as func(i interface{}) bool) error {
+		var nativeListOptions *azblob.ListBlobsSegmentOptions
+		if as(&nativeListOptions) {
+
+		}
+		return nil
+	}
+
+	// Iterate through a virtual directory.
+	iter := b.List(&blob.ListOptions{Prefix: "blob-for-delimiters", Delimiter: "/", BeforeList: beforeList})
+	for {
+		if p, err := iter.Next(ctx); err == io.EOF {
+			break
+		} else if err == nil {
+			if p.IsDir {
+				// Use ListObject.As to obtain SDK type azblob.BlobPrefix.
+				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobPrefix for more information.
+				var nativeDirObj azblob.BlobPrefix
+				if p.As(&nativeDirObj) {
+
+				}
+			} else {
+				// Use ListObject.As to obtain SDK type azblob.BlobItem.
+				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobItem for more information.
+				var nativeBlobObj azblob.BlobItem
+				if p.As(&nativeBlobObj) {
+
+				}
+			}
+		}
+	}
 
 	// Output:
+	// azureblob: accountName is required
 }
