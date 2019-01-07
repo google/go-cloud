@@ -1037,6 +1037,7 @@ func loadTestData(t *testing.T, name string) []byte {
 // testWrite tests the functionality of NewWriter and Writer.
 func testWrite(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-reading"
+	const existingContent = "existing content"
 	smallText := loadTestData(t, "test-small.txt")
 	mediumHTML := loadTestData(t, "test-medium.html")
 	largeJpg := loadTestData(t, "test-large.jpg")
@@ -1046,19 +1047,26 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 	tests := []struct {
 		name            string
 		key             string
+		exists          bool
 		content         []byte
 		contentType     string
 		contentMD5      []byte
 		firstChunk      int
 		wantContentType string
 		wantErr         bool
+		wantReadErr     bool // if wantErr is true, and Read after err should fail with something other than NotExists
 	}{
 		{
-			name:    "write to empty key fails",
-			wantErr: true,
+			name:        "write to empty key fails",
+			wantErr:     true,
+			wantReadErr: true, // read from empty key fails, but not always with NotExists
 		},
 		{
 			name: "no write then close results in empty blob",
+			key:  key,
+		},
+		{
+			name: "no write then close results in empty blob, blob existed",
 			key:  key,
 		},
 		{
@@ -1088,6 +1096,14 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 		},
 		{
 			name:       "Content md5 did not match",
+			key:        key,
+			content:    []byte("not hello world"),
+			contentMD5: helloWorldMD5[:],
+			wantErr:    true,
+		},
+		{
+			name:       "Content md5 did not match, blob existed",
+			exists:     true,
 			key:        key,
 			content:    []byte("not hello world"),
 			contentMD5: helloWorldMD5[:],
@@ -1138,6 +1154,16 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			}
 			b := blob.NewBucket(drv)
 
+			// If the test wants the blob to already exist, write it.
+			if tc.exists {
+				if err := b.WriteAll(ctx, key, []byte(existingContent), nil); err != nil {
+					t.Fatal(err)
+				}
+				defer func() {
+					_ = b.Delete(ctx, key)
+				}()
+			}
+
 			// Write the content.
 			opts := &blob.WriterOptions{
 				ContentType: tc.contentType,
@@ -1165,6 +1191,21 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 				t.Errorf("NewWriter or Close got err %v want error %v", err, tc.wantErr)
 			}
 			if err != nil {
+				// The write failed; verify that it had no effect.
+				buf, err := b.ReadAll(ctx, tc.key)
+				if tc.exists {
+					// Verify the previous content is still there.
+					if !bytes.Equal(buf, []byte(existingContent)) {
+						t.Errorf("Write failed as expected, but content doesn't match expected previous content; got \n%s\n want \n%s", string(buf), existingContent)
+					}
+				} else {
+					// Verify that the read fails with IsNotExist.
+					if err == nil {
+						t.Error("Write failed as expected, but Read after that didn't return an error")
+					} else if !tc.wantReadErr && !blob.IsNotExist(err) {
+						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
+					}
+				}
 				return
 			}
 			defer func() { _ = b.Delete(ctx, tc.key) }()
@@ -1418,8 +1459,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	}
 	b := blob.NewBucket(drv)
 
-	// Write the two blobs. Include an MD5 hash while writing in case provider
-	// implementations use that to produce the MD5 for List/Attributes.
+	// Write the two blobs.
 	if err := b.WriteAll(ctx, aKey, aContent, nil); err != nil {
 		t.Fatal(err)
 	}
