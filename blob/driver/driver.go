@@ -67,7 +67,7 @@ type WriterOptions struct {
 	// The concrete type checks that the MD5 hash of the bytes written matches
 	// ContentMD5.
 	// If len(ContentMD5) > 0, driver implementations may pass it to their
-	// underlying/ network service to guarantee the integrity of the bytes in
+	// underlying network service to guarantee the integrity of the bytes in
 	// transit.
 	ContentMD5 []byte
 	// Metadata holds key/value strings to be associated with the blob.
