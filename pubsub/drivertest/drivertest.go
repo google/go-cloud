@@ -96,6 +96,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestSendReceive", func(t *testing.T) {
 		testSendReceive(t, newHarness)
 	})
+	t.Run("TestSendReceiveTwo", func(t *testing.T) {
+		testSendReceiveTwo(t, newHarness)
+	})
 	t.Run("TestErrorOnSendToClosedTopic", func(t *testing.T) {
 		testErrorOnSendToClosedTopic(t, newHarness)
 	})
@@ -185,9 +188,61 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	// Send to the topic.
-	var want []*pubsub.Message
-	for i := 0; i < 3; i++ {
+	want := publishN(t, ctx, top, 3)
+	got := receiveN(t, ctx, sub, len(want))
+
+	// Check that the received messages match the sent ones.
+	if diff := diffMessageSets(got, want); diff != "" {
+		t.Error(diff)
+	}
+}
+
+// Receive from two subscriptions to the same topic.
+// Verify both get all the messages.
+func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	dt, err := h.MakeTopic(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	top := pubsub.NewTopic(dt)
+	defer top.Shutdown(ctx)
+
+	makeSub := func(i int) *pubsub.Subscription {
+		ds, err := h.MakeSubscription(ctx, dt, i)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return pubsub.NewSubscription(ds)
+	}
+	s0 := makeSub(0)
+	s1 := makeSub(1)
+	defer s0.Shutdown(ctx)
+	defer s1.Shutdown(ctx)
+
+	want := publishN(t, ctx, top, 3)
+	gotc := make(chan []*pubsub.Message, 2)
+	go func() { gotc <- receiveN(t, ctx, s0, len(want)) }()
+	go func() { gotc <- receiveN(t, ctx, s1, len(want)) }()
+	for i := 0; i < 2; i++ {
+		got := <-gotc
+		if diff := diffMessageSets(got, want); diff != "" {
+			t.Error(diff)
+		}
+	}
+}
+
+// Publish n different messages to the topic. Return the messages.
+func publishN(t *testing.T, ctx context.Context, top *pubsub.Topic, n int) []*pubsub.Message {
+	var ms []*pubsub.Message
+	for i := 0; i < n; i++ {
 		m := &pubsub.Message{
 			Body:     []byte(strconv.Itoa(i)),
 			Metadata: map[string]string{"a": strconv.Itoa(i)},
@@ -195,25 +250,29 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
-		want = append(want, m)
+		ms = append(ms, m)
 	}
+	return ms
+}
 
-	// Receive from the subscription.
-	var got []*pubsub.Message
-	for i := 0; i < len(want); i++ {
+// Receive and ack n messages from sub.
+func receiveN(t *testing.T, ctx context.Context, sub *pubsub.Subscription, n int) []*pubsub.Message {
+	var ms []*pubsub.Message
+	for i := 0; i < n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = append(got, m)
+		ms = append(ms, m)
 		m.Ack()
 	}
+	return ms
+}
 
-	// Check that the received messages match the sent ones.
+// Find the differences between two sets of messages.
+func diffMessageSets(got, want []*pubsub.Message) string {
 	less := func(x, y *pubsub.Message) bool { return bytes.Compare(x.Body, y.Body) < 0 }
-	if diff := cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
-		t.Error(diff)
-	}
+	return cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{}))
 }
 
 func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
