@@ -10,24 +10,24 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190107T214931Z
+      - 20190107T214924Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-reading</Key><RequestId>E0303363EBE23DD2</RequestId><HostId>gYav95DhIT8hG23FAF3FF/BFGgYmjfq/XYuPQISXSjvD6jJ494B/gAPR2lw9H8xwd+talGJzy9g=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-reading</Key><RequestId>78C5692A2C853BAD</RequestId><HostId>dWWEoR3ODHLNDXBDsv6OX7FJiPzNICDfKF01irSLkuAD/aq4tOooT3YCzMWkcW2JsvX7h/TPGl8=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Mon, 07 Jan 2019 21:49:32 GMT
+      - Mon, 07 Jan 2019 21:49:24 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - gYav95DhIT8hG23FAF3FF/BFGgYmjfq/XYuPQISXSjvD6jJ494B/gAPR2lw9H8xwd+talGJzy9g=
+      - dWWEoR3ODHLNDXBDsv6OX7FJiPzNICDfKF01irSLkuAD/aq4tOooT3YCzMWkcW2JsvX7h/TPGl8=
       X-Amz-Request-Id:
-      - E0303363EBE23DD2
+      - 78C5692A2C853BAD
     status: 404 Not Found
     code: 404
     duration: ""

@@ -63,8 +63,12 @@ type WriterOptions struct {
 	// ContentLanguage specifies the language used in the blob's content, if any.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
 	ContentLanguage string
-	// ContentMD5 may be used as a message integrity check (MIC).
-	// https://tools.ietf.org/html/rfc1864
+	// ContentMD5 is used as a message integrity check.
+	// The concrete type checks that the MD5 hash of the bytes written matches
+	// ContentMD5.
+	// If len(ContentMD5) > 0, driver implementations may pass it to their
+	// underlying/ network service to guarantee the integrity of the bytes in
+	// transit.
 	ContentMD5 []byte
 	// Metadata holds key/value strings to be associated with the blob.
 	// Keys are guaranteed to be non-empty and lowercased.
