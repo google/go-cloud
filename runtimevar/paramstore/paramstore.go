@@ -51,14 +51,10 @@ type Options struct {
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
 func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	w, err := newWatcher(sess, name, decoder, opts)
-	if err != nil {
-		return nil, err
-	}
-	return runtimevar.New(w), nil
+	return runtimevar.New(newWatcher(sess, name, decoder, opts)), nil
 }
 
-func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) (*watcher, error) {
+func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) *watcher  {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -67,7 +63,7 @@ func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Dec
 		name:    name,
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
-	}, nil
+	}
 }
 
 // state implements driver.State.
