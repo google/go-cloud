@@ -24,8 +24,8 @@ import (
 	"gocloud.dev/blob/azureblob"
 )
 
-func openAzureBucket(ctx context.Context) (*blob.Bucket, error) {
-
+func Example() {
+	ctx := context.Background()
 	accountName, accountKey := "", ""
 	bucketName := "my-bucket"
 
@@ -33,13 +33,15 @@ func openAzureBucket(ctx context.Context) (*blob.Bucket, error) {
 	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
 	if err != nil {
 		// This is expected since accountName and accountKey is empty.
-		return nil, err
+		log.Fatal(err)
+		return
 	}
 
 	// Credential represents the authorizer for SignedURL.
 	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
+		return
 	}
 
 	// Set credential for the SignedURL operation.
@@ -47,14 +49,8 @@ func openAzureBucket(ctx context.Context) (*blob.Bucket, error) {
 		Credential: creds,
 	}
 
-	// Creates a *blob.Bucket backed by Azure Storage Account.
-	return azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
-}
-
-func Example() {
-	ctx := context.Background()
-	b, err := openAzureBucket(ctx)
-
+	// Create a *blob.Bucket.
+	b, err := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -84,9 +80,33 @@ func Example_open() {
 }
 
 func Example_as() {
-	key := "my-key"
+
 	ctx := context.Background()
-	b, err := openAzureBucket(ctx)
+	accountName, accountKey := "", ""
+	bucketName, key := "my-bucket", "my-key"
+	
+	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
+	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	if err != nil {
+		// This is expected since accountName and accountKey is empty.
+		log.Fatal(err)
+		return
+	}
+
+	// Credential represents the authorizer for SignedURL.
+	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// Set credential for the SignedURL operation.
+	azureOpts := azureblob.Options{
+		Credential: creds,
+	}
+
+	// Create a *blob.Bucket.
+	b, err := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
 	if err != nil {
 		log.Fatal(err)
 		return
