@@ -244,3 +244,4 @@ func Example_as() {
 	// Output:
 	// ReadAll failed due to invalid credentials
 }
+
