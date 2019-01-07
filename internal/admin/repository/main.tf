@@ -158,3 +158,10 @@ resource "github_issue_label" "needs_info" {
   color       = "d876e3"
   description = "Further discussion or clarification is necessary"
 }
+
+resource "github_issue_label" "ready_to_submit" {
+  repository  = "${github_repository.repo.name}"
+  name        = "ready to submit"
+  color       = "0e8a16"
+  description = "Pull request has been approved and should be merged once tests pass"
+}
