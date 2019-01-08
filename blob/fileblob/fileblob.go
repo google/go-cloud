@@ -51,10 +51,8 @@
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
-	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash"
@@ -412,11 +410,15 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 	return driver.Attributes{
-		ContentType: xa.ContentType,
-		Metadata:    xa.Metadata,
-		ModTime:     info.ModTime(),
-		Size:        info.Size(),
-		MD5:         xa.MD5,
+		CacheControl:       xa.CacheControl,
+		ContentDisposition: xa.ContentDisposition,
+		ContentEncoding:    xa.ContentEncoding,
+		ContentLanguage:    xa.ContentLanguage,
+		ContentType:        xa.ContentType,
+		Metadata:           xa.Metadata,
+		ModTime:            info.ModTime(),
+		Size:               info.Size(),
+		MD5:                xa.MD5,
 	}, nil
 }
 
@@ -499,17 +501,21 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		metadata = opts.Metadata
 	}
 	attrs := xattrs{
-		ContentType: contentType,
-		Metadata:    metadata,
+		CacheControl:       opts.CacheControl,
+		ContentDisposition: opts.ContentDisposition,
+		ContentEncoding:    opts.ContentEncoding,
+		ContentLanguage:    opts.ContentLanguage,
+		ContentType:        contentType,
+		Metadata:           metadata,
 	}
 	w := &writer{
-		ctx:   ctx,
-		f:     f,
-		path:  path,
-		attrs: attrs,
+		ctx:        ctx,
+		f:          f,
+		path:       path,
+		attrs:      attrs,
+		contentMD5: opts.ContentMD5,
+		md5hash:    md5.New(),
 	}
-	w.contentMD5 = opts.ContentMD5
-	w.md5hash = md5.New()
 	return w, nil
 }
 
@@ -519,7 +525,9 @@ type writer struct {
 	path       string
 	attrs      xattrs
 	contentMD5 []byte
-	md5hash    hash.Hash
+	// We compute the MD5 hash so that we can store it with the file attributes,
+	// not for verification.
+	md5hash hash.Hash
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
@@ -548,16 +556,6 @@ func (w *writer) Close() error {
 	md5sum := w.md5hash.Sum(nil)
 	w.attrs.MD5 = md5sum
 
-	// Check MD5 hash if necessary.
-	if len(w.contentMD5) > 0 {
-		if !bytes.Equal(md5sum, w.contentMD5) {
-			return fmt.Errorf(
-				"the ContentMD5 you specified did not match what we received (%s != %s)",
-				base64.StdEncoding.EncodeToString(md5sum),
-				base64.StdEncoding.EncodeToString(w.contentMD5),
-			)
-		}
-	}
 	// Write the attributes file.
 	if err := setAttrs(w.path, w.attrs); err != nil {
 		return err

@@ -16,11 +16,12 @@ package runtimeconfigurator_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
-	"gocloud.dev/gcp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
+	"golang.org/x/oauth2/google"
 )
 
 // MyConfig is a sample configuration struct.
@@ -29,11 +30,24 @@ type MyConfig struct {
 	Port   int
 }
 
+// jsonCreds is a fake GCP JSON credentials file.
+const jsonCreds = `
+{
+  "type": "service_account",
+  "project_id": "my-project-id"
+}
+`
+
 func ExampleNewVariable() {
 	ctx := context.Background()
 
 	// Get GCP credentials and dial the server.
-	creds, err := gcp.DefaultCredentials(ctx)
+	// Here we use a fake JSON credentials file, but you could also use
+	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
+	// the environment.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
+	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,10 +77,16 @@ func ExampleNewVariable() {
 	defer v.Close()
 
 	// You can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
+	snapshot, err := v.Watch(ctx)
 	if err != nil {
-		log.Fatal(err)
+		// This is expected due to the fake credentials we used above.
+		fmt.Println("Watch failed due to invalid credentials")
+		return
 	}
-	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
+	// We'll never get here when running this sample, but the resulting
+	// runtimevar.Snapshot.Value would be of type MyConfig.
 	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
+
+	// Output:
+	// Watch failed due to invalid credentials
 }
