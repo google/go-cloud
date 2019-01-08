@@ -195,9 +195,16 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 }
 
 func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	if o.IsDir {
+		var prefix azblob.BlobPrefix
+		if !o.As(&prefix) {
+			return errors.New("ListObject.As for directory returned false")
+		}
+		return nil
+	}
 	var item azblob.BlobItem
 	if !o.As(&item) {
-		return errors.New("ListObject.As returned false")
+		return errors.New("ListObject.As for object returned false")
 	}
 	if got := *item.Properties.ContentLanguage; got != language {
 		return fmt.Errorf("got %q want %q", got, language)

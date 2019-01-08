@@ -33,9 +33,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"hash"
 	"io"
 	"net/url"
@@ -278,8 +276,10 @@ type writer struct {
 	contentType string
 	metadata    map[string]string
 	opts        *driver.WriterOptions
-	md5hash     hash.Hash
 	buf         bytes.Buffer
+	// We compute the MD5 hash so that we can store it with the file attributes,
+	// not for verification.
+	md5hash hash.Hash
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
@@ -295,15 +295,7 @@ func (w *writer) Close() error {
 		return err
 	}
 
-	// Check MD5 hash if necessary.
 	md5sum := w.md5hash.Sum(nil)
-	if len(w.opts.ContentMD5) > 0 && !bytes.Equal(md5sum, w.opts.ContentMD5) {
-		return fmt.Errorf(
-			"the ContentMD5 you specified did not match what we received (%s != %s)",
-			base64.StdEncoding.EncodeToString(md5sum),
-			base64.StdEncoding.EncodeToString(w.opts.ContentMD5),
-		)
-	}
 	content := w.buf.Bytes()
 	entry := &blobEntry{
 		Content: content,
