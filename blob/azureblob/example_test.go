@@ -52,7 +52,7 @@ func Example() {
 	opts := azblob.PipelineOptions{
 		Retry: azblob.RetryOptions{
 			Policy:        azblob.RetryPolicyFixed,
-			TryTimeout:    10 * time.Second,
+			TryTimeout:    5 * time.Second,
 			MaxTries:      1,
 			RetryDelay:    0 * time.Second,
 			MaxRetryDelay: 0 * time.Second,
@@ -99,12 +99,11 @@ func Example_open() {
 
 	_, err := blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
 	if err != nil {
-		// Windows will return error: replace-with-path-to-credentials-file: The system cannot find the file specified.
-		// macOS and Linux will return error: open replace-with-path-to-credentials-file: no such file or directory
-		fmt.Println(err)
+		// This is expected due to the invalid cred_path argument used above.
+		fmt.Println("blob.Open failed due to invalid creds_path argument")
 	}
 	// Output:
-	// open replace-with-path-to-credentials-file: no such file or directory
+	// blob.Open failed due to invalid creds_path argument
 }
 
 func Example_as() {
@@ -133,7 +132,7 @@ func Example_as() {
 	pipelineOpts := azblob.PipelineOptions{
 		Retry: azblob.RetryOptions{
 			Policy:        azblob.RetryPolicyFixed,
-			TryTimeout:    10 * time.Second,
+			TryTimeout:    5 * time.Second,
 			MaxTries:      1,
 			RetryDelay:    0 * time.Second,
 			MaxRetryDelay: 0 * time.Second,
@@ -157,10 +156,14 @@ func Example_as() {
 	// Create a *blob.Reader.
 	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{})
 	if err != nil {
-		// This is expected due to the fake credentials we used above.
 		fmt.Println("ReadAll failed due to invalid credentials")
+
+		// IMPORTANT: Due to the fake credentials used above, this test terminates here.
 		return
 	}
+
+	// IMPORTANT: The calls below are intended to show how to use As() to obtain the Azure Blob Storage SDK types.
+	// Due to the fake credentials used above, below calls are not executed.
 
 	// Use Reader.As to obtain SDK type azblob.DownloadResponse.
 	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse for more information.
