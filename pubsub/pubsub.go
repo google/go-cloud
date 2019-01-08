@@ -158,16 +158,12 @@ type Subscription struct {
 
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher driver.Batcher
+	cancel     func() // for canceling all SendAcks calls
 
-	mu sync.Mutex
-
-	// q is the local queue of messages downloaded from the server.
-	q     []*Message
-	err   error
+	mu    sync.Mutex    // protects everything below
+	q     []*Message    // local queue of messages downloaded from server
+	err   error         // permanent error
 	waitc chan struct{} // for goroutines waiting on ReceiveBatch
-
-	// cancel cancels all SendAcks calls.
-	cancel func()
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -210,7 +206,7 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 		// Even though the mutex is unlocked, only one goroutine can be here.
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
-		msgs, err := getNextBatch(ctx, s.driver, s.ackBatcher)
+		msgs, err := s.getNextBatch(ctx)
 		s.mu.Lock()
 		close(s.waitc)
 		s.waitc = nil
@@ -226,14 +222,14 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func getNextBatch(ctx context.Context, d driver.Subscription, ackBatcher driver.Batcher) ([]*Message, error) {
+func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
 	var msgs []*driver.Message
 	for len(msgs) == 0 {
-		err := retry.Call(ctx, gax.Backoff{}, d.IsRetryable, func() error {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 			var err error
 			// TODO(#691): dynamically adjust maxMessages
 			const maxMessages = 10
-			msgs, err = d.ReceiveBatch(ctx, maxMessages)
+			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
 			return err
 		})
 		if err != nil {
@@ -247,7 +243,9 @@ func getNextBatch(ctx context.Context, d driver.Subscription, ackBatcher driver.
 			Body:     m.Body,
 			Metadata: m.Metadata,
 			ack: func() {
-				ackBatcher.AddNoWait(id)
+				// Ignore the error channel. Errors are dealt with
+				// in the ackBatcher handler.
+				_ = s.ackBatcher.AddNoWait(id)
 			},
 		})
 	}
@@ -286,18 +284,25 @@ func (s *Subscription) As(i interface{}) bool {
 // It is for use by provider implementations.
 func NewSubscription(d driver.Subscription) *Subscription {
 	callCtx, cancel := context.WithCancel(context.Background())
+	s := &Subscription{
+		driver: d,
+		cancel: cancel,
+	}
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		// TODO: Consider providing a way to stop this call. See #766.
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
+		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
 			return d.SendAcks(callCtx, ids)
 		})
+		// Remember a non-retryable error from SendAcks. It will be returned on the
+		// next call to Receive.
+		if err != nil {
+			s.mu.Lock()
+			s.err = err
+			s.mu.Unlock()
+		}
+		return err
 	}
 	const maxHandlers = 1
-	ab := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
-	return &Subscription{
-		driver:     d,
-		ackBatcher: ab,
-		cancel:     cancel,
-	}
+	s.ackBatcher = batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+	return s
 }
