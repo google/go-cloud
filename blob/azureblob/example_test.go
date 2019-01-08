@@ -124,26 +124,58 @@ func Example_sasToken() {
 	// ReadAll failed due to invalid SAS token
 }
 
-func Example_open() {
+func ExampleURLOpener() {
 	ctx := context.Background()
 
-	// Open creates a *Bucket from a URL.
-	// This URL will open the container "mycontainer" using default
-	// credentials found in the environment variables
-	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
-	// and AZURE_STORAGE_SAS_TOKEN.
-	_, err := blob.Open(ctx, "azblob://mycontainer")
-
-	// Alternatively, you can use the query parameter "cred_path" to load
-	// credentials from a file in JSON format.
-	// See the package documentation for the credentials file schema.
-	_, err = blob.Open(ctx, "azblob://mycontainer?cred_path=replace-with-path-to-credentials-file")
+	// Get Azure Storage account credentials.
+	accountName, err := azureblob.DefaultAccountName()
 	if err != nil {
-		// This is expected due to the invalid cred_path argument used above.
-		fmt.Println("blob.Open failed due to invalid creds_path argument")
+		log.Fatal(err)
 	}
-	// Output:
-	// blob.Open failed due to invalid creds_path argument
+	sasToken, err := azureblob.DefaultSASToken()
+	if err != nil {
+		log.Fatal(err)
+	}
+	pipeline := azureblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
+
+	// Create a URL mux with the azureblob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		azureblob.Scheme: &azureblob.URLOpener{
+			AccountName: accountName,
+			Pipeline:    pipeline,
+			Options: azureblob.Options{
+				SASToken: sasToken,
+			},
+		},
+	})
+
+	// Open creates a *Bucket from a URL.
+	// This URL will open the container "mycontainer".
+	bucket, err := mux.Open(ctx, "azblob://mycontainer")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = bucket
+}
+
+func ExampleURLOpener_optionsInURL() {
+	ctx := context.Background()
+
+	// Create a URL mux with the azureblob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		azureblob.Scheme: &azureblob.URLOpener{AllowURLOverrides: true},
+	})
+
+	// You can use the query parameter "cred_path" to load
+	// credentials from a file in JSON format.
+	// See the URLOpener documentation for the credentials file schema.
+	bucket, err := mux.Open(ctx, "azblob://mycontainer?cred_path=replace-with-path-to-credentials-file")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = bucket
 }
 
 func Example_as() {

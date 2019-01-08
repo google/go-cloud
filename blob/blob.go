@@ -37,10 +37,6 @@
 // You can develop your application locally using fileblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
-//
-// Alternatively, you can construct a *Bucket using blob.Open by providing
-// a URL that's supported by a blob subpackage that you have linked
-// in to your application.
 package blob // import "gocloud.dev/blob"
 
 import (
@@ -52,12 +48,10 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"gocloud.dev/blob/driver"
@@ -696,65 +690,53 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// FromURLFunc is intended for use by provider implementations.
-// It allows providers to convert a parsed URL from Open to a driver.Bucket.
-type FromURLFunc func(context.Context, *url.URL) (driver.Bucket, error)
+// A type that implements BucketURLOpener can open buckets based on a URL.
+// The URL argument must not be modified.
+type BucketURLOpener interface {
+	OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error)
+}
 
-var (
-	// registry maps scheme strings to provider-specific instantiation functions.
-	registry = map[string]FromURLFunc{}
-	// registryMu protected registry.
-	registryMu sync.Mutex
-)
+// URLMux is a type that implements BucketURLOpener by calling
+// other openers based on the URL scheme. The zero value is an empty
+// mapping, causing OpenBucketURL to always return an error.
+type URLMux struct {
+	schemes map[string]BucketURLOpener
+}
 
-// Register is for use by provider implementations. It allows providers to
-// register an instantiation function for URLs with the given scheme. It is
-// expected to be called from the provider implementation's package init
-// function.
-//
-// fn will be called from Open, with a bucket name and options parsed from
-// the URL. All option keys will be lowercased.
-//
-// Register panics if a provider has already registered for scheme.
-func Register(scheme string, fn FromURLFunc) {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-
-	if _, found := registry[scheme]; found {
-		log.Fatalf("a provider has already registered for scheme %q", scheme)
+// NewURLMux returns a new mux that maps from the URL schemes to
+// the given openers.
+func NewURLMux(schemes map[string]BucketURLOpener) *URLMux {
+	// Make a defensive copy of the map.
+	schemesCopy := make(map[string]BucketURLOpener, len(schemes))
+	for k, v := range schemes {
+		schemesCopy[k] = v
 	}
-	registry[scheme] = fn
+	return &URLMux{schemes: schemesCopy}
 }
 
-// fromRegistry looks up the registered function for scheme.
-// It returns nil if scheme has not been registered for.
-func fromRegistry(scheme string) FromURLFunc {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-
-	return registry[scheme]
-}
-
-// Open creates a *Bucket from a URL.
-// See the package documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
-func Open(ctx context.Context, urlstr string) (*Bucket, error) {
+// Open opens a bucket for the given URL string. This behaves the same
+// as OpenBucketURL, but parses the URL for you.
+func (mux *URLMux) Open(ctx context.Context, urlstr string) (*Bucket, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open bucket %q: %v", urlstr, err)
 	}
+	return mux.OpenBucketURL(ctx, u)
+}
+
+// OpenBucketURL implements BucketURLOpener.
+func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
 	if u.Scheme == "" {
-		return nil, fmt.Errorf("invalid URL %q, missing scheme", urlstr)
+		return nil, fmt.Errorf("open bucket %q: no scheme in URL", u)
 	}
-	fn := fromRegistry(u.Scheme)
-	if fn == nil {
-		return nil, fmt.Errorf("no provider registered for scheme %q", u.Scheme)
+	var opener BucketURLOpener
+	if mux != nil {
+		opener = mux.schemes[u.Scheme]
 	}
-	drv, err := fn(ctx, u)
-	if err != nil {
-		return nil, err
+	if opener == nil {
+		return nil, fmt.Errorf("open bucket %q: no provider registered for %s", u, u.Scheme)
 	}
-	return NewBucket(drv), nil
+	return opener.OpenBucketURL(ctx, u)
 }
 
 // wrappedError is used to wrap all errors returned by drivers so that users

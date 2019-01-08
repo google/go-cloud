@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -28,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
@@ -222,44 +224,65 @@ func TestOpenBucket(t *testing.T) {
 	}
 }
 
-func TestOpenURL(t *testing.T) {
-	ctx := context.Background()
-
+func TestURLOpenerForParams(t *testing.T) {
+	defaultConfig := &aws.Config{
+		Region: aws.String("us-west-1"),
+	}
 	tests := []struct {
-		url      string
-		wantName string
-		wantErr  bool
+		name       string
+		query      url.Values
+		wantRegion string
+		wantErr    bool
 	}{
 		{
-			url:      "s3://mybucket?region=foo",
-			wantName: "mybucket",
+			name:       "NoOverrides",
+			query:      url.Values{},
+			wantRegion: "us-west-1",
 		},
 		{
-			url:      "s3://mybucket2?region=bar",
-			wantName: "mybucket2",
+			name:       "Region",
+			query:      url.Values{"region": {"foo"}},
+			wantRegion: "foo",
 		},
 	}
 
+	ctx := context.Background()
+	opener := &URLOpener{
+		ConfigProvider:    fakeConfigProvider{defaultConfig},
+		AllowURLOverrides: true,
+	}
 	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			u, err := url.Parse(test.url)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := openURL(ctx, u)
+		t.Run(test.name, func(t *testing.T) {
+			o, err := opener.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 			if err != nil {
 				return
 			}
-			gotB, ok := got.(*bucket)
-			if !ok {
-				t.Fatalf("got type %T want *bucket", got)
+			got := o.ConfigProvider.ClientConfig(s3.EndpointsID).Config
+			want := &aws.Config{
+				Region: aws.String(test.wantRegion),
 			}
-			if gotB.name != test.wantName {
-				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
+			diff := cmp.Diff(want, got,
+				cmp.FilterPath(func(p cmp.Path) bool {
+					if p.Index(-2).Type() != reflect.TypeOf(aws.Config{}) {
+						return false
+					}
+					step := p.Last().(cmp.StructField)
+					return step.Name() != "Region"
+				}, cmp.Ignore()))
+			if diff != "" {
+				t.Errorf("forParams(...).ConfigProvider.ClientConfig(...).Config (-want +got):\n%s", diff)
 			}
 		})
 	}
+}
+
+type fakeConfigProvider struct {
+	cfg *aws.Config
+}
+
+func (fake fakeConfigProvider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
+	return client.Config{Config: fake.cfg}
 }

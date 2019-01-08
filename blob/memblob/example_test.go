@@ -30,8 +30,11 @@ func Example() {
 	// Output:
 }
 
-func Example_open() {
-	_, err := blob.Open(context.Background(), "mem://")
+func ExampleURLOpener() {
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		memblob.Scheme: &memblob.URLOpener{},
+	})
+	_, err := mux.Open(context.Background(), "mem://")
 	if err != nil {
 		log.Fatal(err)
 	}

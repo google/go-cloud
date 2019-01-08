@@ -297,66 +297,51 @@ func TestOpenURL(t *testing.T) {
 	defer os.Remove(sasFile.Name())
 
 	tests := []struct {
-		url      string
-		wantName string
-		wantErr  bool
+		name    string
+		query   url.Values
+		wantErr bool
 		// If we use a key, we should get a non-nil *Credentials in Options.
 		wantCreds bool
 	}{
 		{
-			url:       "azblob://mybucket?cred_path=" + keyFile.Name(),
-			wantName:  "mybucket",
+			name:      "AccountKey",
+			query:     url.Values{"cred_path": {keyFile.Name()}},
 			wantCreds: true,
 		},
 		{
-			url:       "azblob://mybucket2?cred_path=" + keyFile.Name(),
-			wantName:  "mybucket2",
-			wantCreds: true,
+			name:      "SASToken",
+			query:     url.Values{"cred_path": {sasFile.Name()}},
+			wantCreds: false,
 		},
 		{
-			url:      "azblob://mybucket?cred_path=" + sasFile.Name(),
-			wantName: "mybucket",
-		},
-		{
-			url:      "azblob://mybucket2?cred_path=" + sasFile.Name(),
-			wantName: "mybucket2",
-		},
-		{
-			url:     "azblob://foo?cred_path=" + badJSONFile.Name(),
+			name:    "BadJSON",
+			query:   url.Values{"cred_path": {badJSONFile.Name()}},
 			wantErr: true,
 		},
 		{
-			url:     "azblob://foo?cred_path=" + badKeyFile.Name(),
+			name:    "BadKey",
+			query:   url.Values{"cred_path": {badKeyFile.Name()}},
 			wantErr: true,
 		},
 		{
-			url:     "azblob://foo?cred_path=/path/does/not/exist",
+			name:    "MissingFile",
+			query:   url.Values{"cred_path": {"/path/does/not/exist"}},
 			wantErr: true,
 		},
 	}
 
 	ctx := context.Background()
+	opener := &URLOpener{AllowURLOverrides: true}
 	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			u, err := url.Parse(test.url)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := openURL(ctx, u)
+		t.Run(test.name, func(t *testing.T) {
+			got, err := opener.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 			if err != nil {
 				return
 			}
-			gotB, ok := got.(*bucket)
-			if !ok {
-				t.Fatalf("got type %T want *bucket", got)
-			}
-			if gotB.name != test.wantName {
-				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
-			}
-			if gotCreds := (gotB.opts.Credential != nil); gotCreds != test.wantCreds {
+			if gotCreds := (got.Options.Credential != nil); gotCreds != test.wantCreds {
 				t.Errorf("got creds? %v want %v", gotCreds, test.wantCreds)
 			}
 		})

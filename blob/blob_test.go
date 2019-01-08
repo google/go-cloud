@@ -211,20 +211,20 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("SignedURL", err)
 }
 
-// TestOpen tests blob.Open.
-func TestOpen(t *testing.T) {
+func TestURLMux(t *testing.T) {
 	ctx := context.Background()
 	var got *url.URL
 
-	// Register scheme foo to always return nil. Sets got as a side effect
-	Register("foo", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		got = u
-		return nil, nil
-	})
-
-	// Register scheme err to always return an error.
-	Register("err", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return nil, errors.New("fail")
+	opener := NewURLMux(map[string]BucketURLOpener{
+		// Register scheme foo to always return nil. Sets got as a side effect
+		"foo": bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+			got = u
+			return nil, nil
+		}),
+		// Register scheme err to always return an error.
+		"err": bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+			return nil, errors.New("fail")
+		}),
 	})
 
 	for _, tc := range []struct {
@@ -278,7 +278,7 @@ func TestOpen(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, gotErr := Open(ctx, tc.url)
+			_, gotErr := opener.Open(ctx, tc.url)
 			if (gotErr != nil) != tc.wantErr {
 				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
 			}
@@ -294,6 +294,12 @@ func TestOpen(t *testing.T) {
 			}
 		})
 	}
+}
+
+type bucketURLOpenFunc func(context.Context, *url.URL) (*Bucket, error)
+
+func (f bucketURLOpenFunc) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
+	return f(ctx, u)
 }
 
 func TestCallsWithUnwrappedError(t *testing.T) {

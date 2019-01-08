@@ -15,15 +15,6 @@
 // Package memblob provides an in-memory blob implementation.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
-//
-// For blob.Open URLs, memblob registers for the scheme "mem"; URLs start
-// with "mem://".
-//
-// The URL's Path and Host are ignored, and no query options are supported.
-// Example:
-//  - mem://
-//
 // As
 //
 // memblob does not support any types for As.
@@ -53,10 +44,15 @@ var (
 	errNotImplemented = errors.New("not implemented")
 )
 
-func init() {
-	blob.Register("mem", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return openBucket(nil), nil
-	})
+// Scheme is the URL scheme conventionally used for in-memory buckets in a URLMux.
+const Scheme = "mem"
+
+// URLOpener opens URLs like "mem://".
+type URLOpener struct{}
+
+// OpenBucketURL returns a new in-memory bucket.
+func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	return OpenBucket(nil), nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by memory.

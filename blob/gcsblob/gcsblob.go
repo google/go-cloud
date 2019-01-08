@@ -15,23 +15,6 @@
 // Package gcsblob provides a blob implementation that uses GCS. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
-//
-// For blob.Open URLs, gcsblob registers for the scheme "gs"; URLs start
-// with "gs://".
-//
-// The URL's Host is used as the bucket name.
-// The following query options are supported:
-//
-//  - cred_path: Sets path to the Google credentials file. If unset, default
-//    credentials are loaded.
-//    See https://cloud.google.com/docs/authentication/production.
-//  - access_id: Sets Options.GoogleAccessID.
-//  - private_key_path: Sets path to a private key, which is read and used
-//    to set Options.PrivateKey.
-// Example URL:
-//  gs://mybucket
-//
 // As
 //
 // gcsblob exposes the following types for As:
@@ -47,6 +30,7 @@ package gcsblob // import "gocloud.dev/blob/gcsblob"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -54,12 +38,11 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/useragent"
-
-	"cloud.google.com/go/storage"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
@@ -68,49 +51,85 @@ import (
 
 const defaultPageSize = 1000
 
-func init() {
-	blob.Register("gs", openURL)
+// Scheme is the URL scheme conventionally used for GCS in a URLMux.
+const Scheme = "gs"
+
+// URLOpener opens GCS URLs like "gs://mybucket".
+type URLOpener struct {
+	Client  *gcp.HTTPClient
+	Options Options
+
+	// AllowURLOverrides permits the fields above to be overridden in the
+	// URL using the following query parameters:
+	//
+	//     access_id: sets Options.GoogleAccessID
+	//     cred_path: path to credentials for the Client
+	//     private_key_path: path to read for Options.PrivateKey
+	//
+	// If this is true and Client is nil and cred_path is not given, then
+	// OpenBucketURL will use Application Default Credentials.
+	AllowURLOverrides bool
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	q := u.Query()
-	opts := &Options{}
-
-	if accessID := q["access_id"]; len(accessID) > 0 {
-		opts.GoogleAccessID = accessID[0]
-	}
-
-	if keyPath := q["private_key_path"]; len(keyPath) > 0 {
-		pk, err := ioutil.ReadFile(keyPath[0])
-		if err != nil {
-			return nil, err
-		}
-		opts.PrivateKey = pk
-	}
-
-	var creds *google.Credentials
-	if credPath := q["cred_path"]; len(credPath) == 0 {
-		var err error
-		creds, err = gcp.DefaultCredentials(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		jsonCreds, err := ioutil.ReadFile(credPath[0])
-		if err != nil {
-			return nil, err
-		}
-		creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+// OpenBucketURL opens the GCS bucket with the same name of the URL's host.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	var err error
+	o, err = o.forParams(ctx, u.Query())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	return openBucket(ctx, client, u.Host, opts)
+	return OpenBucket(ctx, o.Client, u.Host, &o.Options)
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*URLOpener, error) {
+	for k := range q {
+		if !o.AllowURLOverrides || k != "access_id" && k != "cred_path" && k != "private_key_path" {
+			return nil, fmt.Errorf("unknown GCS query parameter %s", k)
+		}
+	}
+	if !o.AllowURLOverrides {
+		return o, nil
+	}
+	o2 := new(URLOpener)
+	*o2 = *o
+	if accessID := q.Get("access_id"); accessID != "" {
+		o2.Options.GoogleAccessID = accessID
+	}
+
+	if keyPath := q.Get("private_key_path"); keyPath != "" {
+		pk, err := ioutil.ReadFile(keyPath)
+		if err != nil {
+			return nil, err
+		}
+		o2.Options.PrivateKey = pk
+	}
+
+	if credPath := q.Get("cred_path"); credPath != "" {
+		jsonCreds, err := ioutil.ReadFile(credPath)
+		if err != nil {
+			return nil, err
+		}
+		creds, err := google.CredentialsFromJSON(ctx, jsonCreds)
+		if err != nil {
+			return nil, err
+		}
+		o2.Client, err = gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if o2.Client == nil {
+		var err error
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			return nil, err
+		}
+		o2.Client, err = gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return o2, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.

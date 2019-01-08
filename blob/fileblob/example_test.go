@@ -19,14 +19,14 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
+	"strings"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 )
 
 func Example() {
-
 	// For this example, create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
@@ -35,15 +35,14 @@ func Example() {
 	defer os.RemoveAll(dir)
 
 	// Create a file-based bucket.
-	_, err = fileblob.OpenBucket(dir, nil)
+	bucket, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
+	_ = bucket
 }
 
-func Example_open() {
+func ExampleURLOpener() {
 	// For this example, create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
@@ -51,10 +50,16 @@ func Example_open() {
 	}
 	defer os.RemoveAll(dir)
 
-	_, err = blob.Open(context.Background(), path.Join("file://", dir))
+	// Create a URL mux with the fileblob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		fileblob.Scheme: &fileblob.URLOpener{},
+	})
+
+	// Open a bucket from a URL.
+	bucket, err := mux.Open(context.Background(), "file:///"+strings.Replace(dir, string(filepath.Separator), "/", -1))
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
+	_ = bucket
 }

@@ -15,22 +15,6 @@
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
-//
-// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
-// with "s3://".
-//
-// The URL's Host is used as the bucket name.
-// The AWS session is created as described in
-// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
-// The following query options are supported:
-//  - region: The AWS region for requests; sets aws.Config.Region.
-//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
-//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
-//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
-// Example URL:
-//  s3://mybucket?region=us-east-1
-//
 // As
 //
 // s3blob exposes the following types for As:
@@ -69,31 +53,72 @@ import (
 
 const defaultPageSize = 1000
 
-func init() {
-	blob.Register("s3", openURL)
+// Scheme is the URL scheme conventionally used for S3 in a URLMux.
+const Scheme = "s3"
+
+// URLOpener opens S3 URLs like "s3://mybucket".
+type URLOpener struct {
+	ConfigProvider client.ConfigProvider
+
+	// AllowURLOverrides permits the configuration to be overridden in the
+	// URL using the following query parameters:
+	//
+	//     region: the AWS region for requests; sets aws.Config.Region.
+	//     endpoint: the endpoint URL (hostname only or fully qualified
+	//               URI); sets aws.Config.Endpoint.
+	//     disableSSL: a value of "true" disables SSL when sending
+	//                 requests; sets aws.Config.DisableSSL.
+	//     s3ForcePathStyle: a value of "true" forces the request to use
+	//                       path-style addressing; sets aws.Config.S3ForcePathStyle.
+	AllowURLOverrides bool
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	q := u.Query()
-	cfg := &aws.Config{}
-
-	if region := q["region"]; len(region) > 0 {
-		cfg.Region = aws.String(region[0])
-	}
-	if endpoint := q["endpoint"]; len(endpoint) > 0 {
-		cfg.Endpoint = aws.String(endpoint[0])
-	}
-	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
-		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
-	}
-	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
-		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
-	}
-	sess, err := session.NewSession(cfg)
+// OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	var err error
+	o, err = o.forParams(ctx, u.Query())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	return openBucket(ctx, sess, u.Host, nil)
+	return OpenBucket(ctx, o.ConfigProvider, u.Host, nil)
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*URLOpener, error) {
+	for k := range q {
+		if !o.AllowURLOverrides || k != "region" && k != "endpoint" && k != "disableSSL" && k != "s3ForcePathStyle" {
+			return nil, fmt.Errorf("unknown S3 query parameter %s", k)
+		}
+	}
+	if !o.AllowURLOverrides {
+		return o, nil
+	}
+
+	cfg := &aws.Config{}
+	if region := q.Get("region"); region != "" {
+		cfg.Region = aws.String(region)
+	}
+	if endpoint := q.Get("endpoint"); endpoint != "" {
+		cfg.Endpoint = aws.String(endpoint)
+	}
+	if disableSSL := q.Get("disableSSL"); disableSSL != "" {
+		cfg.DisableSSL = aws.Bool(disableSSL == "true")
+	}
+	if s3ForcePathStyle := q.Get("s3ForcePathStyle"); s3ForcePathStyle != "" {
+		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle == "true")
+	}
+	if o.ConfigProvider == nil {
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return &URLOpener{ConfigProvider: sess}, nil
+	}
+	return &URLOpener{
+		ConfigProvider: configOverrider{
+			original: o.ConfigProvider,
+			cfg:      cfg,
+		},
+	}, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
@@ -544,4 +569,15 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	}
 	req, _ := b.client.GetObjectRequest(in)
 	return req.Presign(opts.Expiry)
+}
+
+type configOverrider struct {
+	original client.ConfigProvider
+	cfg      *aws.Config
+}
+
+func (co configOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
+	clientCfg := co.original.ClientConfig(serviceName, cfgs...)
+	clientCfg.Config.MergeIn(co.cfg)
+	return clientCfg
 }

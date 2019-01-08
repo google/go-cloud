@@ -319,18 +319,19 @@ func ExampleBucket_As() {
 	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
 }
 
-func ExampleOpen() {
+// A URLMux needs openers which are present in other packages.
+func ExampleURLMux() {
+	ctx := context.Background()
+
 	// Connect to a bucket using a URL.
 	// This example uses the file-based implementation, which registers for
 	// the "file" scheme.
 	dir, cleanup := newTempDir()
 	defer cleanup()
 
-	ctx := context.Background()
-	if _, err := blob.Open(ctx, "file:///nonexistentpath"); err == nil {
-		log.Fatal("Expected an error opening nonexistent path")
-	}
-	fmt.Println("Got expected error opening a nonexistent path")
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		fileblob.Scheme: &fileblob.URLOpener{},
+	})
 
 	// Ensure the path has a leading slash; fileblob ignores the URL's
 	// Host field, so URLs should always start with "file:///". On
@@ -340,14 +341,13 @@ func ExampleOpen() {
 	if !strings.HasPrefix(urlpath, "/") {
 		urlpath = "/" + urlpath
 	}
-	if _, err := blob.Open(ctx, "file://"+urlpath); err != nil {
+
+	// Open a bucket using the mux.
+	bucket, err := mux.Open(ctx, "file://"+urlpath)
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Got a bucket for valid path")
-
-	// Output:
-	// Got expected error opening a nonexistent path
-	// Got a bucket for valid path
+	_ = bucket
 }
 
 func newTempDir() (string, func()) {

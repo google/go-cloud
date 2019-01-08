@@ -30,21 +30,6 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
-// Open URLs
-//
-// For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
-// with "file://".
-//
-// The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != "/", any leading "/" from the Path is dropped.
-// No query options are supported. Examples:
-//  - file:///a/directory
-//    -> Passes "/a/directory" to OpenBucket.
-//  - file://localhost/a/directory
-//    -> Also passes "/a/directory".
-//  - file:///c:/foo/bar
-//    -> Passes "c:/foo/bar".
-//
 // As
 //
 // fileblob does not support any types for As.
@@ -69,14 +54,28 @@ import (
 
 const defaultPageSize = 1000
 
-func init() {
-	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		path := u.Path
-		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
-			path = path[1:]
-		}
-		return openBucket(path, nil)
-	})
+// Scheme is the URL scheme conventionally used for the filesystem in a URLMux.
+const Scheme = "file"
+
+// URLOpener opens file bucket URLs like "file:///foo/bar/baz".
+type URLOpener struct{}
+
+// OpenBucketURL opens the file bucket at the URL's path. The URL's host is
+// ignored. If os.PathSeparator != "/", any leading "/" from the path is dropped.
+// No query options are supported. Examples:
+//
+//  - file:///a/directory
+//    -> Passes "/a/directory" to OpenBucket.
+//  - file://localhost/a/directory
+//    -> Also passes "/a/directory".
+//  - file:///c:/foo/bar
+//    -> Passes "c:/foo/bar".
+func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	path := u.Path
+	if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
+	return OpenBucket(path, nil)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.

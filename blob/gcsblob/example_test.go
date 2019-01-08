@@ -70,8 +70,33 @@ func Example() {
 	// ReadAll failed due to invalid credentials
 }
 
-func Example_open() {
-	_, _ = blob.Open(context.Background(), "gs://my-bucket")
+func ExampleURLOpener() {
+	ctx := context.Background()
 
-	// Output:
+	// Get GCP credentials.
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create an HTTP client.
+	// This example uses the default HTTP transport and the credentials created
+	// above.
+	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a URL mux with the gcsblob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		gcsblob.Scheme: &gcsblob.URLOpener{Client: client},
+	})
+
+	// Open a bucket using the mux.
+	bucket, err := mux.Open(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = bucket
 }

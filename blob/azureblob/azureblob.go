@@ -15,36 +15,6 @@
 // Package azureblob provides a blob implementation that uses Azure Storage’s
 // BlockBlob. Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
-//
-// For blob.Open URLs, azureblob registers for the scheme "azblob"; URLs start
-// with "azblob://".
-//
-// The URL's Host is used as the bucket name.
-//
-// By default, credentials are retrieved from the environment variables
-// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
-// AZURE_STORAGE_ACCOUNT is required, along with one of the other two. See
-// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
-// for more on SAS tokens. Alternatively, credentials can be loaded from a file;
-// see the cred_path query parameter below.
-//
-// The following query options are supported:
-//  - cred_path: Sets path to a credentials file in JSON format. The
-//    AccountName field must be specified, and either AccountKey or SASToken.
-// Example credentials file using AccountKey:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "AccountKey": "PRIMARY OR SECONDARY ACCOUNT KEY"
-//     }
-// Example credentials file using SASToken:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "SASToken": "ENTER YOUR AZURE STORAGE SAS TOKEN"
-//     }
-// Example URL:
-//  azblob://mybucket?cred_path=pathToCredentials
-//
 // As
 //
 // azureblob exposes the following types for As:
@@ -120,54 +90,123 @@ const (
 	defaultUploadBlockSize          = 8 * 1024 * 1024 // configure the upload buffer size
 )
 
-func init() {
-	blob.Register("azblob", openURL)
+// Scheme is the URL scheme conventionally used for Azure Storage in a URLMux.
+const Scheme = "azblob"
+
+// URLOpener opens Azure URLs like "azblob://mybucket".
+type URLOpener struct {
+	AccountName AccountName
+	Pipeline    pipeline.Pipeline
+	Options     Options
+
+	// AllowURLOverrides permits the fields above to be overridden in the
+	// URL using the following query parameters:
+	//
+	//     cred_path: path to a credentials file in JSON format. The
+	//     AccountName field must be specified, and either AccountKey or
+	//     SASToken.
+	//
+	//     Example credentials file using AccountKey:
+	//
+	//     {
+	//       "AccountName": "STORAGE ACCOUNT NAME",
+	//       "AccountKey": "PRIMARY OR SECONDARY ACCOUNT KEY"
+	//     }
+	//
+	//     Example credentials file using SASToken:
+	//     {
+	//       "AccountName": "STORAGE ACCOUNT NAME",
+	//       "SASToken": "ENTER YOUR AZURE STORAGE SAS TOKEN"
+	//     }
+	//
+	// If AllowURLOverrides is true, cred_path is not given, and AccountName
+	// is empty, the AZURE_STORAGE_ACCOUNT environment variable will be used.
+	// Similarly, Pipeline, Options.Credential, and Options.SASToken will be
+	// derived from the environment variables AZURE_STORAGE_KEY and
+	// AZURE_STORAGE_SAS_TOKEN if AllowURLOverrides is true and creds_path is
+	// not given.
+	AllowURLOverrides bool
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	type AzureCreds struct {
+// OpenBucketURL opens the Azure Storage Account Container with the same name as
+// the host in the URL.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	var err error
+	o, err = o.forParams(ctx, u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+	}
+	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*URLOpener, error) {
+	for k := range q {
+		if !o.AllowURLOverrides || k != "cred_path" {
+			return nil, fmt.Errorf("unknown Azure query parameter %s", k)
+		}
+	}
+	if !o.AllowURLOverrides {
+		return o, nil
+	}
+
+	o2 := new(URLOpener)
+	*o2 = *o
+	credPath := q.Get("cred_path")
+	if credPath == "" {
+		// Use default credential info from the environment for missing fields.
+		// Ignore errors from environment, as we'll get errors from OpenBucket later.
+		if o2.AccountName == "" {
+			o2.AccountName, _ = DefaultAccountName()
+		}
+		if o2.Options.SASToken == "" {
+			o2.Options.SASToken, _ = DefaultSASToken()
+		}
+		if o2.Pipeline == nil || o2.Options.Credential == nil {
+			accountKey, _ := DefaultAccountKey()
+			pipeline, cred, err := credFileToOptions(o2.AccountName, accountKey, o2.Options.SASToken)
+			if err != nil {
+				return nil, err
+			}
+			if o2.Pipeline == nil {
+				o2.Pipeline = pipeline
+			}
+			if o2.Options.Credential == nil {
+				o2.Options.Credential = cred
+			}
+		}
+		return o2, nil
+	}
+	var ac struct {
 		AccountName AccountName
 		AccountKey  AccountKey
 		SASToken    SASToken
 	}
-	ac := AzureCreds{}
-	if credPath := u.Query()["cred_path"]; len(credPath) > 0 {
-		f, err := ioutil.ReadFile(credPath[0])
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(f, &ac)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Use default credential info from the environment.
-		// Ignore errors, as we'll get errors from OpenBucket later.
-		ac.AccountName, _ = DefaultAccountName()
-		ac.AccountKey, _ = DefaultAccountKey()
-		ac.SASToken, _ = DefaultSASToken()
+	f, err := ioutil.ReadFile(credPath)
+	if err != nil {
+		return nil, err
 	}
+	if err := json.Unmarshal(f, &ac); err != nil {
+		return nil, err
+	}
+	o2.AccountName = ac.AccountName
+	o2.Options.SASToken = ac.SASToken
+	o2.Pipeline, o2.Options.Credential, err = credFileToOptions(ac.AccountName, ac.AccountKey, ac.SASToken)
+	if err != nil {
+		return nil, err
+	}
+	return o2, nil
+}
 
-	// azblob.Credential is an interface; we will use either a SharedKeyCredential
-	// or anonymous credentials. If the former, we will also fill in
-	// Options.Credential so that SignedURL will work.
-	var credential azblob.Credential
-	var sharedKeyCred *azblob.SharedKeyCredential
-	if ac.AccountKey != "" {
-		var err error
-		sharedKeyCred, err = NewCredential(ac.AccountName, ac.AccountKey)
-		if err != nil {
-			return nil, err
-		}
-		credential = sharedKeyCred
-	} else {
-		credential = azblob.NewAnonymousCredential()
+func credFileToOptions(account AccountName, key AccountKey, token SASToken) (pipeline.Pipeline, *azblob.SharedKeyCredential, error) {
+	if key == "" {
+		cred := azblob.NewAnonymousCredential()
+		return NewPipeline(cred, azblob.PipelineOptions{}), nil, nil
 	}
-	pipeline := NewPipeline(credential, azblob.PipelineOptions{})
-	return openBucket(ctx, pipeline, ac.AccountName, u.Host, &Options{
-		Credential: sharedKeyCred,
-		SASToken:   ac.SASToken,
-	})
+	cred, err := NewCredential(account, key)
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewPipeline(cred, azblob.PipelineOptions{}), cred, nil
 }
 
 // DefaultIdentity is a Wire provider set that provides an Azure storage
@@ -196,7 +235,9 @@ type AccountName string
 type AccountKey string
 
 // SASToken is an Azure shared access signature.
-// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
+//
+// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
+// for more details.
 type SASToken string
 
 // DefaultAccountName loads the Azure storage account name from the

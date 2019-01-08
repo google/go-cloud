@@ -62,8 +62,55 @@ func Example() {
 	// ReadAll failed due to invalid credentials
 }
 
-func Example_open() {
-	_, _ = blob.Open(context.Background(), "s3://my-bucket")
+func ExampleURLOpener() {
+	ctx := context.Background()
 
-	// Output:
+	// Establish an AWS session.
+	session, err := session.NewSession(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a URL mux with the s3blob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		s3blob.Scheme: &s3blob.URLOpener{
+			ConfigProvider: session,
+		},
+	})
+
+	// Open creates a *Bucket from a URL.
+	// This URL will open the bucket "my-bucket".
+	bucket, err := mux.Open(ctx, "s3://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = bucket
+}
+
+func ExampleURLOpener_optionsInURL() {
+	ctx := context.Background()
+
+	// Establish an AWS session.
+	session, err := session.NewSession(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create a URL mux with the s3blob.URLOpener.
+	// This would typically happen once in your application.
+	mux := blob.NewURLMux(map[string]blob.BucketURLOpener{
+		s3blob.Scheme: &s3blob.URLOpener{
+			ConfigProvider:    session,
+			AllowURLOverrides: true,
+		},
+	})
+
+	// Open creates a *Bucket from a URL.
+	// This URL will open the bucket "my-bucket" in us-west-1.
+	bucket, err := mux.Open(ctx, "s3://my-bucket?region=us-west-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = bucket
 }
