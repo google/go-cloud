@@ -35,11 +35,12 @@ jobs:
   include:
     - os: linux
     - os: osx
-    # Only run Windows build job on master. This would be listed in `os:` above,
-    # but matrix expansion does not allow conditionals. See:
-    # https://docs.travis-ci.com/user/conditional-builds-stages-jobs/#conditional-jobs
-    - os: windows
-      if: branch = master AND type = push
+    # TODO(#1075): Uncomment the lines below to re-enable the Windows build on
+    # master once it passes; currently it always fails due to a Travis bug
+    # regarding secrets.
+    # # Only run Windows build job on master; it's very slow.
+    # - os: windows
+    #   if: branch = master AND type = push
     # Generate imports for GitHub Pages.
     - stage: imports
       os: linux

@@ -59,7 +59,6 @@ func Example() {
 	b, err := gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 	_, err = b.ReadAll(ctx, "my-key")
 	if err != nil {

@@ -46,7 +46,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(h.session, name, decoder, nil)
+	return newWatcher(h.session, name, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
