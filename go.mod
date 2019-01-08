@@ -15,10 +15,12 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.30.0
+	cloud.google.com/go v0.34.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20180906190126-dd54a7ef511e
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
 	contrib.go.opencensus.io/integrations/ocsql v0.1.2
+	github.com/Azure/azure-pipeline-go v0.1.8
+	github.com/Azure/azure-storage-blob-go v0.0.0-20181023070848-cf01652132cc
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181009230506-ac834ce67862
 	github.com/aws/aws-sdk-go v1.15.57
 	github.com/coreos/bbolt v1.3.1-coreos.6 // indirect
@@ -39,6 +41,7 @@ require (
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/google/subcommands v0.0.0-20181012225330-46f0354f6315
+	github.com/google/uuid v1.1.0
 	github.com/google/wire v0.2.0
 	github.com/googleapis/gax-go v2.0.0+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect

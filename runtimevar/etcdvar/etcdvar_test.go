@@ -21,6 +21,7 @@ import (
 
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/embed"
+	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -101,6 +102,11 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 }
 
 func (verifyAs) ErrorCheck(err error) error {
-	// etcdvar returns a fmt.Errorf error for "not found", so we can't do much here.
+	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
+	// to fail.
+	var to rpctypes.EtcdError
+	if runtimevar.ErrorAs(err, &to) {
+		return errors.New("ErrorAs expected to fail")
+	}
 	return nil
 }

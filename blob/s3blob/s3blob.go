@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
-// to construct a blob.Bucket.
+// to construct a *blob.Bucket.
 //
 // Open URLs
 //
@@ -33,7 +33,7 @@
 // s3blob exposes the following types for As:
 //  - Bucket: *s3.S3
 //  - Error: awserr.Error
-//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
+//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories"
 //  - ListOptions.BeforeList: *s3.ListObjectsV2Input
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
@@ -359,11 +359,15 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		}
 	}
 	return driver.Attributes{
-		ContentType: aws.StringValue(resp.ContentType),
-		Metadata:    md,
-		ModTime:     aws.TimeValue(resp.LastModified),
-		Size:        aws.Int64Value(resp.ContentLength),
-		MD5:         eTagToMD5(resp.ETag),
+		CacheControl:       aws.StringValue(resp.CacheControl),
+		ContentDisposition: aws.StringValue(resp.ContentDisposition),
+		ContentEncoding:    aws.StringValue(resp.ContentEncoding),
+		ContentLanguage:    aws.StringValue(resp.ContentLanguage),
+		ContentType:        aws.StringValue(resp.ContentType),
+		Metadata:           md,
+		ModTime:            aws.TimeValue(resp.LastModified),
+		Size:               aws.Int64Value(resp.ContentLength),
+		MD5:                eTagToMD5(resp.ETag),
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*s3.HeadObjectOutput)
 			if !ok {
@@ -471,6 +475,18 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
 		Metadata:    metadata,
+	}
+	if opts.CacheControl != "" {
+		req.CacheControl = aws.String(opts.CacheControl)
+	}
+	if opts.ContentDisposition != "" {
+		req.ContentDisposition = aws.String(opts.ContentDisposition)
+	}
+	if opts.ContentEncoding != "" {
+		req.ContentEncoding = aws.String(opts.ContentEncoding)
+	}
+	if opts.ContentLanguage != "" {
+		req.ContentLanguage = aws.String(opts.ContentLanguage)
 	}
 	if len(opts.ContentMD5) > 0 {
 		req.ContentMD5 = aws.String(base64.StdEncoding.EncodeToString(opts.ContentMD5))

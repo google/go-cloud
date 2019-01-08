@@ -140,9 +140,16 @@ func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
 }
 
 func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
+	if o.IsDir {
+		var commonPrefix s3.CommonPrefix
+		if !o.As(&commonPrefix) {
+			return errors.New("ListObject.As for directory returned false")
+		}
+		return nil
+	}
 	var obj s3.Object
 	if !o.As(&obj) {
-		return errors.New("ListObject.As returned false")
+		return errors.New("ListObject.As for object returned false")
 	}
 	// Nothing to check.
 	return nil
@@ -188,10 +195,8 @@ func TestOpenBucket(t *testing.T) {
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
-			if drv != nil {
-				if drv.name != test.want {
-					t.Errorf("got %q want %q", drv.name, test.want)
-				}
+			if err == nil && drv != nil && drv.name != test.want {
+				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 
 			// Create concrete type.

@@ -2,80 +2,39 @@
 version: 1
 interactions:
 - request:
-    body: "--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864\r\nContent-Type:
-      application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\",\"md5Hash\":\"XrY7u+Ae7tCTyyK7j1rNww==\",\"name\":\"blob-for-reading\"}\n\r\n--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\nnot hello world\r\n--b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864--\r\n"
+    body: ""
     form: {}
     headers:
-      Content-Type:
-      - multipart/related; boundary=b835aa144f0cd9848a225700559822ddaf33aa8447f998b5d26a1dcf2864
       User-Agent:
-      - google-api-go-client/0.5 go-cloud/blob/0.9.0
-      X-Goog-Api-Client:
-      - gl-go/1.11.0 gccl/20180226
-    url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
-    method: POST
+      - ' go-cloud/blob/0.9.0'
+    url: https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-reading
+    method: GET
   response:
-    body: '{"error":{"errors":[{"domain":"global","reason":"invalid","message":"Provided
-      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".","debugInfo":"com.google.api.server.core.Fault:
-      ImmutableErrorDefinition{base=INVALID_VALUE, category=USER_ERROR, cause=null,
-      debugInfo=null, domain=global, extendedHelp=null, httpHeaders={}, httpStatus=badRequest,
-      internalReason=Reason{arguments={}, cause=null, code=gdata.CoreErrorDomain.INVALID_VALUE,
-      createdByBackend=true, debugMessage=null, errorProtoCode=INVALID_VALUE, errorProtoDomain=gdata.CoreErrorDomain,
-      filteredMessage=null, location=entity.resource.md5_hash_base64, message=Provided
-      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".,
-      unnamedArguments=[XrY7u+Ae7tCTyyK7j1rNww==]}, location=entity.resource.md5_hash_base64,
-      message=Provided MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated
-      MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\"., reason=invalid, rpcCode=400} Provided
-      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\".\n\tat
-      com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
-      com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
-      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat
-      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat
-      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
-      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
-      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
-      com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.complete(AbstractFuture.java:963)\n\tat
-      com.google.common.util.concurrent.AbstractFuture.set(AbstractFuture.java:731)\n\tat
-      com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
-      com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
-      com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
-      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:824)\n\tat
-      com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
-      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
-      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
-      com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:311)\n\tat
-      com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:457)\n\tat
-      com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"}],"code":400,"message":"Provided
-      MD5 hash \"XrY7u+Ae7tCTyyK7j1rNww==\" doesn''t match calculated MD5 hash \"Ez8VjWWFa3iojnEMdt3EXA==\"."}}'
+    body: '<?xml version=''1.0'' encoding=''UTF-8''?><Error><Code>NoSuchKey</Code><Message>The
+      specified key does not exist.</Message><Details>No such object: go-cloud-blob-test-bucket/blob-for-reading</Details></Error>'
     headers:
       Alt-Svc:
       - quic=":443"; ma=2592000; v="44,43,39,35"
+      Cache-Control:
+      - private, max-age=0
       Content-Length:
-      - "3515"
+      - "204"
       Content-Type:
-      - application/json; charset=UTF-8
+      - application/xml; charset=UTF-8
       Date:
-      - Thu, 20 Dec 2018 23:16:29 GMT
+      - Mon, 07 Jan 2019 21:48:27 GMT
+      Expires:
+      - Mon, 07 Jan 2019 21:48:27 GMT
       Server:
       - UploadServer
-      Vary:
-      - Origin
-      - X-Origin
       X-Guploader-Customer:
-      - apiary_cloudstorage_single_post_uploads
+      - cloud-storage
       X-Guploader-Request-Result:
       - agent_rejected
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2Uoycwk2g0XXRVdpnDaP4ICIT5sDCvSrLJApuNY0TYYAhOoyI3AeNlU8J9VXJwAGPR7xfqzFzGsxKp2JHONwlFPtfLP9og
-    status: 400 Bad Request
-    code: 400
+      - AEnB2Uo0BlP4dmeMvla88ZUynQvEX1Ycr3cAVTtQy75BRGJQ-dDQ8N52uzz1QQfoswWyXnYIvYLHSEwbwifG42o5RsuCQdd3nA
+    status: 404 Not Found
+    code: 404
     duration: ""

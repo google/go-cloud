@@ -33,19 +33,21 @@ const inProgressLabel = "in progress"
 const branchesInForkCloseResponse = "Please create pull requests from your own fork instead of from branches in the main repository. Also, please delete this branch."
 
 type repoConfig struct {
-	IssueTitlePattern        string `json:"issue_title_pattern"`
-	IssueTitleResponse       string `json:"issue_title_response"`
-	PullRequestTitlePattern  string `json:"pull_request_title_pattern"`
-	PullRequestTitleResponse string `json:"pull_request_title_response"`
+	RequirePullRequestForkBranch bool   `json:"require_pull_request_fork_branch"`
+	IssueTitlePattern            string `json:"issue_title_pattern"`
+	IssueTitleResponse           string `json:"issue_title_response"`
+	PullRequestTitlePattern      string `json:"pull_request_title_pattern"`
+	PullRequestTitleResponse     string `json:"pull_request_title_response"`
 }
 
 func defaultRepoConfig() *repoConfig {
 	const titlePattern = `^([a-z0-9./-]+|[A-Z_]+): .*$`
 	return &repoConfig{
-		IssueTitlePattern:        titlePattern,
-		IssueTitleResponse:       "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`.",
-		PullRequestTitlePattern:  titlePattern,
-		PullRequestTitleResponse: "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`.",
+		RequirePullRequestForkBranch: true,
+		IssueTitlePattern:            titlePattern,
+		IssueTitleResponse:           "Please edit the title of this issue with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the issue. Example: `blob/gcsblob: not blobby enough`.",
+		PullRequestTitlePattern:      titlePattern,
+		PullRequestTitleResponse:     "Please edit the title of this pull request with the name of the affected package, or \"all\", followed by a colon, followed by a short summary of the change. Example: `blob/gcsblob: improve comments`.",
 	}
 }
 
@@ -119,10 +121,10 @@ type issueEdits struct {
 func (i *issueEdits) String() string {
 	var actions []string
 	for _, label := range i.RemoveLabels {
-		actions = append(actions, fmt.Sprintf("removing %q label", label))
+		actions = append(actions, fmt.Sprintf("remove label %q", label))
 	}
 	for _, comment := range i.AddComments {
-		actions = append(actions, fmt.Sprintf("adding comment %q", comment))
+		actions = append(actions, fmt.Sprintf("add comment %q", comment))
 	}
 	if len(actions) == 0 {
 		return "[no changes]"
@@ -185,7 +187,7 @@ func processPullRequestEvent(cfg *repoConfig, data *pullRequestData) *pullReques
 
 	// If the pull request is not from a fork, close it and request that it comes
 	// from a fork instead.
-	if data.Action == "opened" && pr.GetHead().GetRepo().GetID() == pr.GetBase().GetRepo().GetID() {
+	if cfg.RequirePullRequestForkBranch && data.Action == "opened" && pr.GetHead().GetRepo().GetID() == pr.GetBase().GetRepo().GetID() {
 		edits.Close = true
 		edits.AddComments = append(edits.AddComments, branchesInForkCloseResponse)
 		// Short circuit since we're closing anyway.
