@@ -15,6 +15,7 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"testing"
@@ -295,5 +296,36 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 	case <-done:
 	case <-time.After(tooLong):
 		t.Fatalf("waited too long (%v) for Shutdown to run", tooLong)
+	}
+}
+
+func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
+	ctx := context.Background()
+	serr := errors.New("SendAcks failed")
+	ackChan := make(chan struct{})
+	ds := &ackingDriverSub{
+		q: []*driver.Message{
+			&driver.Message{AckID: 0},
+			&driver.Message{AckID: 1},
+		},
+		sendAcks: func(context.Context, []driver.AckID) error {
+			close(ackChan)
+			return serr
+		},
+	}
+	sub := pubsub.NewSubscription(ds)
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+	// Wait for the ack to be sent.
+	<-ackChan
+	// Wait a little longer for the logic after SendAcks returns to happen.
+	time.Sleep(10 * time.Millisecond)
+	_, err = sub.Receive(ctx)
+	if err != serr {
+		t.Errorf("got %v, want %v", err, serr)
 	}
 }

@@ -16,22 +16,35 @@ package gcsblob_test
 
 import (
 	"context"
+	"fmt"
+	"log"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
+	"golang.org/x/oauth2/google"
 )
+
+// jsonCreds is a fake GCP JSON credentials file.
+const jsonCreds = `
+{
+  "type": "service_account",
+  "project_id": "my-project-id"
+}
+`
 
 func Example() {
 	ctx := context.Background()
 
-	// Load credentials for GCP.
-	// This example uses the default approach; see
-	// https://cloud.google.com/docs/authentication/production
+	// Get GCP credentials.
+	// Here we use a fake JSON credentials file, but you could also use
+	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
+	// the environment.
+	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := gcp.DefaultCredentials(ctx)
+	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	// Create an HTTP client.
@@ -43,9 +56,18 @@ func Example() {
 	}
 
 	// Create a *blob.Bucket.
-	_, _ = gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
+	b, err := gcsblob.OpenBucket(ctx, client, "my-bucket", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = b.ReadAll(ctx, "my-key")
+	if err != nil {
+		// This is expected due to the fake credentials we used above.
+		fmt.Println("ReadAll failed due to invalid credentials")
+	}
 
 	// Output:
+	// ReadAll failed due to invalid credentials
 }
 
 func Example_open() {

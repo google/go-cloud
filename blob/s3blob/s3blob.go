@@ -33,7 +33,7 @@
 // s3blob exposes the following types for As:
 //  - Bucket: *s3.S3
 //  - Error: awserr.Error
-//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories".
+//  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories"
 //  - ListOptions.BeforeList: *s3.ListObjectsV2Input
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
