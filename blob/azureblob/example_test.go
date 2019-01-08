@@ -29,6 +29,7 @@ import (
 
 func Example() {
 	ctx := context.Background()
+	// Set a fake key which must be base64 encoded. The Azure Storage Access Keys are already base64 encoded.
 	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
 	bucketName := "my-bucket"
 
@@ -98,15 +99,18 @@ func Example_open() {
 
 	_, err := blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
 	if err != nil {
-		fmt.Println(err)		
+		// Windows will return error: replace-with-path-to-credentials-file: The system cannot find the file specified.
+		// macOS and Linux will return error: open replace-with-path-to-credentials-file: no such file or directory
+		fmt.Println(err)
 	}
 	// Output:
-	// open replace-with-path-to-credentials-file: The system cannot find the file specified.
+	// open replace-with-path-to-credentials-file: no such file or directory
 }
 
 func Example_as() {
 
 	ctx := context.Background()
+	// Set a fake key which must be base64 encoded. The Azure Storage Access Keys are already base64 encoded.
 	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
 	bucketName, key := "my-bucket", "my-key"
 
