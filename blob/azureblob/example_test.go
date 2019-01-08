@@ -16,8 +16,11 @@ package azureblob_test
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"gocloud.dev/blob"
@@ -26,13 +29,12 @@ import (
 
 func Example() {
 	ctx := context.Background()
-	accountName, accountKey := "", ""
+	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
 	bucketName := "my-bucket"
 
 	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
 	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
 	if err != nil {
-		// This is expected since accountName and accountKey is empty.
 		log.Fatal(err)
 		return
 	}
@@ -40,6 +42,26 @@ func Example() {
 	// Credential represents the authorizer for SignedURL.
 	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// Override the default retry policy so calls can return promptly for this test. Please review the timeout guidelines and set accordingly.
+	// See https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations for more information.
+	opts := azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{
+			Policy:        azblob.RetryPolicyFixed,
+			TryTimeout:    10 * time.Second,
+			MaxTries:      1,
+			RetryDelay:    0 * time.Second,
+			MaxRetryDelay: 0 * time.Second,
+		},
+	}
+	p := azblob.NewPipeline(creds, opts)
+	*serviceURL = serviceURL.WithPipeline(p)
+
+	if err != nil {
+		// This is expected since accountName and accountKey is empty.
 		log.Fatal(err)
 		return
 	}
@@ -56,10 +78,14 @@ func Example() {
 		return
 	}
 
-	_, _ = b.ReadAll(ctx, "my-key")
+	_, err = b.ReadAll(ctx, "my-key")
+	if err != nil {
+		// This is expected due to the fake credentials we used above.
+		fmt.Println("ReadAll failed due to invalid credentials")
+	}
 
 	// Output:
-	// azureblob: accountName is required
+	// ReadAll failed due to invalid credentials
 }
 
 func Example_open() {
@@ -72,23 +98,21 @@ func Example_open() {
 
 	_, err := blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
 	if err != nil {
-		log.Fatal(err)
-		return
+		fmt.Println(err)		
 	}
 	// Output:
-	// The system cannot find the file specified.
+	// open replace-with-path-to-credentials-file: The system cannot find the file specified.
 }
 
 func Example_as() {
 
 	ctx := context.Background()
-	accountName, accountKey := "", ""
+	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
 	bucketName, key := "my-bucket", "my-key"
-	
+
 	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
 	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
 	if err != nil {
-		// This is expected since accountName and accountKey is empty.
 		log.Fatal(err)
 		return
 	}
@@ -100,6 +124,20 @@ func Example_as() {
 		return
 	}
 
+	// Override the default retry policy so calls can return promptly for this test. Please review the timeout guidelines and set accordingly.
+	// See https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations for more information.
+	pipelineOpts := azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{
+			Policy:        azblob.RetryPolicyFixed,
+			TryTimeout:    10 * time.Second,
+			MaxTries:      1,
+			RetryDelay:    0 * time.Second,
+			MaxRetryDelay: 0 * time.Second,
+		},
+	}
+	p := azblob.NewPipeline(creds, pipelineOpts)
+	*serviceURL = serviceURL.WithPipeline(p)
+
 	// Set credential for the SignedURL operation.
 	azureOpts := azureblob.Options{
 		Credential: creds,
@@ -110,6 +148,21 @@ func Example_as() {
 	if err != nil {
 		log.Fatal(err)
 		return
+	}
+
+	// Create a *blob.Reader.
+	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{})
+	if err != nil {
+		// This is expected due to the fake credentials we used above.
+		fmt.Println("ReadAll failed due to invalid credentials")
+		return
+	}
+
+	// Use Reader.As to obtain SDK type azblob.DownloadResponse.
+	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse for more information.
+	var nativeReader azblob.DownloadResponse
+	if r.As(&nativeReader) {
+
 	}
 
 	// Use Attribute.As to obtain SDK type azblob.BlobGetPropertiesResponse.
@@ -147,16 +200,6 @@ func Example_as() {
 	w.Write([]byte("}"))
 	w.Close()
 
-	// Create a *blob.Reader.
-	r, _ := b.NewReader(ctx, key, &blob.ReaderOptions{})
-
-	// Use Reader.As to obtain SDK type azblob.DownloadResponse.
-	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse for more information.
-	var nativeReader azblob.DownloadResponse
-	if r.As(&nativeReader) {
-
-	}
-
 	// Use ListOptions.BeforeList to obtain SDK type azblob.ListBlobsSegmentOptions.
 	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#ListBlobsSegmentOptions for more information.
 	beforeList := func(as func(i interface{}) bool) error {
@@ -192,5 +235,5 @@ func Example_as() {
 	}
 
 	// Output:
-	// azureblob: accountName is required
+	// ReadAll failed due to invalid credentials
 }
