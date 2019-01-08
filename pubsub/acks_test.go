@@ -313,7 +313,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 			return serr
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, pubsub.DefaultAckBatcher)
 	defer sub.Shutdown(ctx)
 	m, err := sub.Receive(ctx)
 	if err != nil {

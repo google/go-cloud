@@ -240,7 +240,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
 	inReceiveBatch := make(chan int, 1)
-	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch})
+	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, pubsub.DefaultAckBatcher)
 	go func() {
 		s.Receive(context.Background())
 		t.Fatal("Receive should never return")
