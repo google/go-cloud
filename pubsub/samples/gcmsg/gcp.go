@@ -23,7 +23,6 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
 	"golang.org/x/oauth2/google"
-	"google.golang.org/api/option"
 )
 
 // openGCPSubscription returns the GCP topic based on the subscription ID.
@@ -55,7 +54,7 @@ func openGCPSubscriberClient(ctx context.Context, creds *google.Credentials) (*r
 	if err != nil {
 		return nil, nil, fmt.Errorf("dialing grpc endpoint: %v", err)
 	}
-	subClient, err := raw.NewSubscriberClient(ctx, option.WithGRPCConn(conn))
+	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
@@ -94,7 +93,7 @@ func openGCPPubClient(ctx context.Context, creds *google.Credentials) (*raw.Publ
 	if err != nil {
 		return nil, nil, fmt.Errorf("dialing grpc endpoint: %v", err)
 	}
-	pubClient, err := raw.NewPublisherClient(ctx, option.WithGRPCConn(conn))
+	pubClient, err := gcppubsub.PublisherClient(ctx, conn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("making publisher client: %v", err)
 	}
