@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/pubsub"
 )
 
 // URL contains the parse result of a URL for a topic or subscription.

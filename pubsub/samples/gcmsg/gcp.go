@@ -20,8 +20,8 @@ import (
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/gcppubsub"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/gcppubsub"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )

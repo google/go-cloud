@@ -18,8 +18,8 @@ import (
 	"fmt"
 
 	"github.com/streadway/amqp"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/rabbitpubsub"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/rabbitpubsub"
 )
 
 // openRabbitTopic returns the RabbitMQ topic for the given topic ID.

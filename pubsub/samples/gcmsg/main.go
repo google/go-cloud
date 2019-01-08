@@ -27,7 +27,7 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
-	"gocloud.dev/internal/pubsub"
+	"gocloud.dev/pubsub"
 )
 
 type pubCmd struct{}
