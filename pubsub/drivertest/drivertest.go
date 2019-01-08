@@ -222,19 +222,15 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		}
 		return pubsub.NewSubscription(ds)
 	}
-	s0 := makeSub(0)
-	s1 := makeSub(1)
-	defer s0.Shutdown(ctx)
-	defer s1.Shutdown(ctx)
-
+	ss := []*pubsub.Subscription{makeSub(0), makeSub(1)}
+	for _, s := range ss {
+		defer s.Shutdown(ctx)
+	}
 	want := publishN(t, ctx, top, 3)
-	gotc := make(chan []*pubsub.Message, 2)
-	go func() { gotc <- receiveN(t, ctx, s0, len(want)) }()
-	go func() { gotc <- receiveN(t, ctx, s1, len(want)) }()
-	for i := 0; i < 2; i++ {
-		got := <-gotc
+	for i, s := range ss {
+		got := receiveN(t, ctx, s, len(want))
 		if diff := diffMessageSets(got, want); diff != "" {
-			t.Error(diff)
+			t.Errorf("sub #%d: %s", i, diff)
 		}
 	}
 }
