@@ -28,6 +28,8 @@ func (h harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
 	return NewKeeper(ByteKey("very secret secret")), nil
 }
 
+func (h harness) Close() {}
+
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return harness{}, nil
 }
