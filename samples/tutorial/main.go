@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command upload saves files to blob storage on GCP and AWS.
+// Command upload saves files to blob storage on GCP, AWS, and Azure.
 package main
 
 import (
