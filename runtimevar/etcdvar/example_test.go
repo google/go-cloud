@@ -16,7 +16,9 @@ package etcdvar_test
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/coreos/etcd/clientv3"
 	"gocloud.dev/runtimevar"
@@ -42,7 +44,9 @@ func ExampleNew() {
 	// Construct a *runtimevar.Variable that watches the variable.
 	// For this example, the etcd variable being referenced should have a
 	// JSON string that decodes into MyConfig.
-	v, err := etcdvar.New(client, "myconfig", decoder, nil)
+	// The example uses a very short timeout since the there's no real etcd server
+	// running at the URL provided, so  we might as well give up quickly.
+	v, err := etcdvar.New(client, "myconfig", decoder, &etcdvar.Options{Timeout: 1 * time.Millisecond})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,8 +55,14 @@ func ExampleNew() {
 	// You can now read the current value of the variable from v.
 	snapshot, err := v.Watch(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		// This is expected because we can't connect to the fake server URL.
+		fmt.Println("Watch returned an error")
+		return
 	}
-	// The resulting runtimevar.Snapshot.Value will be of type MyConfig.
+	// We'll never get here when running this sample, but the resulting
+	// runtimevar.Snapshot.Value would be of type MyConfig.
 	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
+
+	// Output:
+	// Watch returned an error
 }

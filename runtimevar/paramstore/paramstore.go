@@ -54,7 +54,7 @@ func NewVariable(sess client.ConfigProvider, name string, decoder *runtimevar.De
 	return runtimevar.New(newWatcher(sess, name, decoder, opts)), nil
 }
 
-func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) *watcher  {
+func newWatcher(sess client.ConfigProvider, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
