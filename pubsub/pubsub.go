@@ -158,12 +158,12 @@ type Subscription struct {
 
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher driver.Batcher
+	cancel     func() // for canceling all SendAcks calls
 
-	mu     sync.Mutex
-	q      []*Message    // local queue of messages downloaded from server
-	err    error         // permanent error
-	waitc  chan struct{} // for goroutines waiting on ReceiveBatch
-	cancel func()        // for canceling all SendAcks calls.
+	mu    sync.Mutex    // protects everything below
+	q     []*Message    // local queue of messages downloaded from server
+	err   error         // permanent error
+	waitc chan struct{} // for goroutines waiting on ReceiveBatch
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
