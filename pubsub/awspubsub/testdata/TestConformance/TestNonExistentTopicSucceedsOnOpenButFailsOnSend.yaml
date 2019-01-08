@@ -1,0 +1,49 @@
+---
+version: 1
+interactions:
+- request:
+    body: Action=Publish&Message=&MessageAttributes=&TopicArn=nonexistent-topic&Version=2010-03-31
+    form:
+      Action:
+      - Publish
+      Message:
+      - ""
+      MessageAttributes:
+      - ""
+      TopicArn:
+      - nonexistent-topic
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "88"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190108T064034Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <ErrorResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <Error>
+          <Type>Sender</Type>
+          <Code>InvalidParameter</Code>
+          <Message>Invalid parameter: TopicArn Reason: An ARN must have at least 6 elements, not 1</Message>
+        </Error>
+        <RequestId>f4c405c1-7093-5dc1-b7ee-516f38b00456</RequestId>
+      </ErrorResponse>
+    headers:
+      Content-Length:
+      - "326"
+      Content-Type:
+      - text/xml
+      Date:
+      - Tue, 08 Jan 2019 06:40:35 GMT
+      X-Amzn-Requestid:
+      - f4c405c1-7093-5dc1-b7ee-516f38b00456
+    status: 400 Bad Request
+    code: 400
+    duration: ""
