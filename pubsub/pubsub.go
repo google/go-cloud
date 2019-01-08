@@ -283,7 +283,7 @@ func (s *Subscription) As(i interface{}) bool {
 // NewSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // NewSubscription is for use by provider implementations.
-func NewSubscription(d driver.Subscription, newAckBatcher BatcherMaker) *Subscription {
+func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
@@ -292,8 +292,6 @@ func NewSubscription(d driver.Subscription, newAckBatcher BatcherMaker) *Subscri
 	s.ackBatcher = newAckBatcher(ctx, s)
 	return s
 }
-
-type BatcherMaker func(context.Context, *Subscription) driver.Batcher
 
 // DefaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
