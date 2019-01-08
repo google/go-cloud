@@ -25,9 +25,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"gocloud.dev/internal/pubsub"
-	"gocloud.dev/internal/pubsub/driver"
-	"gocloud.dev/internal/pubsub/drivertest"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
+	"gocloud.dev/pubsub/drivertest"
 	"gocloud.dev/internal/testing/setup"
 )
 
