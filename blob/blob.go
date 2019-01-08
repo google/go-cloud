@@ -46,8 +46,10 @@ package blob // import "gocloud.dev/blob"
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"log"
@@ -151,17 +153,19 @@ func (a *Attributes) As(i interface{}) bool {
 // It implements io.WriteCloser (https://golang.org/pkg/io/#Closer), and must be
 // closed after all writes are done.
 type Writer struct {
-	b driver.Bucket
-	w driver.Writer
+	b          driver.Bucket
+	w          driver.Writer
+	cancel     func() // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	contentMD5 []byte
+	md5hash    hash.Hash
 
-	// These fields exist only when w is not created in the first place when
-	// NewWriter is called.
+	// These fields exist only when w is not yet created.
 	//
 	// A ctx is stored in the Writer since we need to pass it into NewTypedWriter
 	// when we finish detecting the content type of the blob and create the
 	// underlying driver.Writer. This step happens inside Write or Close and
-	// neither of them take a context.Context as an argument. The ctx must be set
-	// to nil after we have passed it.
+	// neither of them take a context.Context as an argument. The ctx is set
+	// to nil after we have passed it to NewTypedWriter.
 	ctx  context.Context
 	key  string
 	opts *driver.WriterOptions
@@ -177,6 +181,11 @@ const sniffLen = 512
 // even if the actual write eventually fails. The write is only guaranteed to
 // have succeeded if Close returns no error.
 func (w *Writer) Write(p []byte) (n int, err error) {
+	if len(w.contentMD5) > 0 {
+		if _, err := w.md5hash.Write(p); err != nil {
+			return 0, err
+		}
+	}
 	if w.w != nil {
 		n, err := w.w.Write(p)
 		return n, wrapError(w.b, err)
@@ -204,6 +213,22 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Close may return an error if the context provided to create the Writer is
 // canceled or reaches its deadline.
 func (w *Writer) Close() error {
+	if len(w.contentMD5) > 0 {
+		// Verify the MD5 hash of what was written matches the ContentMD5 provided
+		// by the user.
+		md5sum := w.md5hash.Sum(nil)
+		if !bytes.Equal(md5sum, w.contentMD5) {
+			// No match! Return an error, but first cancel the context and call the
+			// driver's Close function to ensure the write is aborted.
+			w.cancel()
+			if w.w != nil {
+				_ = w.w.Close()
+			}
+			return fmt.Errorf("blob: the ContentMD5 you specified (%X) did not match what was written (%X)", w.contentMD5, md5sum)
+		}
+	}
+
+	defer w.cancel()
 	if w.w != nil {
 		return wrapError(w.b, w.w.Close())
 	}
@@ -527,24 +552,36 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		}
 		dopts.Metadata = md
 	}
+	ctx, cancel := context.WithCancel(ctx)
 	if opts.ContentType != "" {
 		t, p, err := mime.ParseMediaType(opts.ContentType)
 		if err != nil {
+			cancel()
 			return nil, err
 		}
 		ct := mime.FormatMediaType(t, p)
 		w, err = b.b.NewTypedWriter(ctx, key, ct, dopts)
 		if err != nil {
+			cancel()
 			return nil, wrapError(b.b, err)
 		}
-		return &Writer{b: b.b, w: w}, nil
+		return &Writer{
+			b:          b.b,
+			w:          w,
+			cancel:     cancel,
+			contentMD5: opts.ContentMD5,
+			md5hash:    md5.New(),
+		}, nil
 	}
 	return &Writer{
-		ctx:  ctx,
-		b:    b.b,
-		key:  key,
-		opts: dopts,
-		buf:  bytes.NewBuffer([]byte{}),
+		ctx:        ctx,
+		cancel:     cancel,
+		b:          b.b,
+		key:        key,
+		opts:       dopts,
+		buf:        bytes.NewBuffer([]byte{}),
+		contentMD5: opts.ContentMD5,
+		md5hash:    md5.New(),
 	}, nil
 }
 
@@ -634,7 +671,9 @@ type WriterOptions struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 
-	// ContentMD5 may be used as a message integrity check (MIC).
+	// ContentMD5 is used as a message integrity check.
+	// If len(ContentMD5) > 0, the MD5 hash of the bytes written must match
+	// ContentMD5, or Close will return an error without completing the write.
 	// https://tools.ietf.org/html/rfc1864
 	ContentMD5 []byte
 
