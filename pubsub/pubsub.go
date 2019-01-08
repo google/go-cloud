@@ -285,27 +285,34 @@ func (s *Subscription) As(i interface{}) bool {
 // NewSubscription is for use by provider implementations.
 func NewSubscription(d driver.Subscription, newAckBatcher BatcherMaker) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
-	ab := newAckBatcher(ctx, d)
-	return &Subscription{
-		driver:     d,
-		ackBatcher: ab,
-		cancel:     cancel,
+	s := &Subscription{
+		driver: d,
+		cancel: cancel,
 	}
+	s.ackBatcher = newAckBatcher(ctx, s)
+	return s
 }
 
-type BatcherMaker func(context.Context, driver.Subscription) driver.Batcher
+type BatcherMaker func(context.Context, *Subscription) driver.Batcher
 
 // DefaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
 // MakeDefaultAckBatcher is for use by provider implementations.
-func DefaultAckBatcher(ctx context.Context, d driver.Subscription) driver.Batcher {
+func DefaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		// TODO: Consider providing a way to stop this call. See #766.
-		return retry.Call(ctx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendAcks(ctx, ids)
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+			return s.driver.SendAcks(ctx, ids)
 		})
+		// Remember a non-retryable error from SendAcks. It will be returned on the
+		// next call to Receive.
+		if err != nil {
+			s.mu.Lock()
+			s.err = err
+			s.mu.Unlock()
+		}
+		return err
 	}
 	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
 }
