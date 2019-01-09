@@ -44,7 +44,7 @@
 // azureblob exposes the following types for As:
 //  - Bucket: *azblob.ContainerURL
 //  - Error: azblob.StorageError
-//  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories".
+//  - ListObject: azblob.BlobItem for objects, azblob.BlobPrefix for "directories"
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
 //  - Attributes: azblob.BlobGetPropertiesResponse
@@ -375,6 +375,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		ContentLanguage:    blobPropertiesResponse.ContentLanguage(),
 		ContentType:        blobPropertiesResponse.ContentType(),
 		Size:               blobPropertiesResponse.ContentLength(),
+		MD5:                blobPropertiesResponse.ContentMD5(),
 		ModTime:            blobPropertiesResponse.LastModified(),
 		Metadata:           blobPropertiesResponse.NewMetadata(),
 		AsFunc: func(i interface{}) bool {
@@ -447,6 +448,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			Key:     blobInfo.Name,
 			ModTime: blobInfo.Properties.LastModified,
 			Size:    *blobInfo.Properties.ContentLength,
+			MD5:     blobInfo.Properties.ContentMD5,
 			IsDir:   false,
 			AsFunc: func(i interface{}) bool {
 				p, ok := i.(*azblob.BlobItem)
