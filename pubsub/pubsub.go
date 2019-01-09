@@ -282,9 +282,9 @@ func (s *Subscription) As(i interface{}) bool {
 
 // NewSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
-// If newAckBatcher is nil, a default batcher implementation will be used.
-// NewSubscription is for use by provider implementations.
-func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+// If newAckBatcher is nil, a default batcher implementation is used.
+// NewSubscription is for use by provider implementations,.
+func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, driver.Subscription, func(error)) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
@@ -293,25 +293,28 @@ func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, 
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
 	}
-	s.ackBatcher = newAckBatcher(ctx, s)
+	setPermanentError := func(err error) {
+		// Remember a non-retryable error from SendAcks. It will be returned on the
+		// next call to Receive.
+		s.mu.Lock()
+		s.err = err
+		s.mu.Unlock()
+	}
+	s.ackBatcher = newAckBatcher(ctx, d, setPermanentError)
 	return s
 }
 
 // defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
-func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
+func defaultAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(err error)) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-			return s.driver.SendAcks(ctx, ids)
+		err := retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() error {
+			return ds.SendAcks(ctx, ids)
 		})
-		// Remember a non-retryable error from SendAcks. It will be returned on the
-		// next call to Receive.
 		if err != nil {
-			s.mu.Lock()
-			s.err = err
-			s.mu.Unlock()
+			setPermanentError(err)
 		}
 		return err
 	}
