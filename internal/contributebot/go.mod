@@ -3,7 +3,7 @@ module gocloud.dev/internal/contributebot
 replace gocloud.dev => ../..
 
 require (
-	cloud.google.com/go v0.30.0
+	cloud.google.com/go v0.34.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/go-cmp v0.2.0
 	github.com/google/go-github v17.0.0+incompatible
