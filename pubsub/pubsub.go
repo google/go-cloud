@@ -282,6 +282,7 @@ func (s *Subscription) As(i interface{}) bool {
 
 // NewSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
+// If newAckBatcher is nil, a default batcher implementation will be used.
 // NewSubscription is for use by provider implementations.
 func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -289,14 +290,16 @@ func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, 
 		driver: d,
 		cancel: cancel,
 	}
+	if newAckBatcher == nil {
+		newAckBatcher = defaultAckBatcher
+	}
 	s.ackBatcher = newAckBatcher(ctx, s)
 	return s
 }
 
-// DefaultAckBatcher creates a batcher for acknowledgements, for use with
+// defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
-// MakeDefaultAckBatcher is for use by provider implementations.
-func DefaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
+func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
