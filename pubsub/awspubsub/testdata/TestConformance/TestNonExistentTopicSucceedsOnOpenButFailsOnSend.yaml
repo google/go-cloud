@@ -22,7 +22,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190108T064034Z
+      - 20190109T022340Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -33,7 +33,7 @@ interactions:
           <Code>InvalidParameter</Code>
           <Message>Invalid parameter: TopicArn Reason: An ARN must have at least 6 elements, not 1</Message>
         </Error>
-        <RequestId>f4c405c1-7093-5dc1-b7ee-516f38b00456</RequestId>
+        <RequestId>84110122-5d25-5799-bb32-558d004914c9</RequestId>
       </ErrorResponse>
     headers:
       Content-Length:
@@ -41,9 +41,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Tue, 08 Jan 2019 06:40:35 GMT
+      - Wed, 09 Jan 2019 02:23:40 GMT
       X-Amzn-Requestid:
-      - f4c405c1-7093-5dc1-b7ee-516f38b00456
+      - 84110122-5d25-5799-bb32-558d004914c9
     status: 400 Bad Request
     code: 400
     duration: ""
