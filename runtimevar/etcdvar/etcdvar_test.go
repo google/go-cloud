@@ -101,7 +101,7 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(driver driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
 	// to fail.
 	var to rpctypes.EtcdError
@@ -109,7 +109,7 @@ func (verifyAs) ErrorCheck(driver driver.Watcher, err error) error {
 		return errors.New("ErrorAs expected to fail")
 	}
 	// Try with a real etcd error.
-	if !driver.ErrorAs(rpctypes.ErrUnhealthy, &to) {
+	if !w.ErrorAs(rpctypes.ErrUnhealthy, &to) {
 		return errors.New("ErrorAs expected to succeed with real etcd error")
 	}
 	return nil

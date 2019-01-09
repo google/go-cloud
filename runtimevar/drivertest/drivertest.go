@@ -65,7 +65,7 @@ type AsTest interface {
 	// ErrorCheck will be called to allow verification of Variable.ErrorAs.
 	// driver is provided so that errors other than err can be checked;
 	// Variable.ErrorAs won't work since it expects driver errors to be wrapped.
-	ErrorCheck(driver driver.Watcher, err error) error
+	ErrorCheck(w driver.Watcher, err error) error
 }
 
 type verifyAsFailsOnNil struct{}
