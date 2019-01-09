@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"sync"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
@@ -280,18 +280,31 @@ func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription.
-// It is for use by provider implementations.
-func NewSubscription(d driver.Subscription) *Subscription {
-	callCtx, cancel := context.WithCancel(context.Background())
+// NewSubscription creates a Subscription from a driver.Subscription
+// and a function to make a batcher that sends batches of acks to the provider.
+// If newAckBatcher is nil, a default batcher implementation will be used.
+// NewSubscription is for use by provider implementations.
+func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
 		cancel: cancel,
 	}
+	if newAckBatcher == nil {
+		newAckBatcher = defaultAckBatcher
+	}
+	s.ackBatcher = newAckBatcher(ctx, s)
+	return s
+}
+
+// defaultAckBatcher creates a batcher for acknowledgements, for use with
+// NewSubscription.
+func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
+	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendAcks(callCtx, ids)
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+			return s.driver.SendAcks(ctx, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
 		// next call to Receive.
@@ -302,7 +315,5 @@ func NewSubscription(d driver.Subscription) *Subscription {
 		}
 		return err
 	}
-	const maxHandlers = 1
-	s.ackBatcher = batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
-	return s
+	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
 }
