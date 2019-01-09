@@ -50,13 +50,15 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Top
 	return &topic{client: client, arn: topicARN}
 }
 
+var stringDataType = aws.String("String")
+
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	for _, dm := range dms {
 		attrs := map[string]*sns.MessageAttributeValue{}
 		for k, v := range dm.Metadata {
 			attrs[k] = &sns.MessageAttributeValue{
-				DataType:    aws.String("String"),
+				DataType:    stringDataType,
 				StringValue: aws.String(v),
 			}
 		}
@@ -116,12 +118,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	}
 	var ms []*driver.Message
 	for _, m := range output.Messages {
-		type Attribute struct {
-			Value string
-		}
 		type MsgBody struct {
 			Message           string
-			MessageAttributes map[string]Attribute
+			MessageAttributes map[string]struct{ Value string }
 		}
 		var body MsgBody
 		if err := json.Unmarshal([]byte(*m.Body), &body); err != nil {
