@@ -81,7 +81,7 @@ func (verifyAsFailsOnNil) SnapshotCheck(v *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(driver driver.Watcher, err error) error {
+func (verifyAsFailsOnNil) ErrorCheck(_ driver.Watcher, err error) error {
 	if runtimevar.ErrorAs(err, nil) {
 		return errors.New("want ErrorAs to return false when passed nil")
 	}
