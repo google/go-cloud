@@ -102,7 +102,7 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL))
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), nil)
 }
 
 // openSubscription returns a driver.Subscription.
