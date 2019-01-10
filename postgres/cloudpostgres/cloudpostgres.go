@@ -43,7 +43,6 @@ type Params struct {
 	// User is the database user to connect as.
 	User string
 	// Password is the database user password to use.
-	// May be empty, see https://cloud.google.com/sql/docs/sql-proxy#user
 	Password string
 	// Database is the PostgreSQL database name to connect to.
 	Database string
