@@ -17,11 +17,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/blob/gcsblob"
@@ -78,11 +78,12 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 // authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
 // and AZURE_STORAGE_ACCOUNT_KEY are present.
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
-	accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-	accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
-	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	accountName := azureblob.DefaultAccountName()
+	accountKey := azureblob.DefaultAccountKey()
+	credential, err := azureblob.NewCredential(accountName, accountKey)
 	if err != nil {
 		return nil, err
 	}
-	return azureblob.OpenBucket(ctx, serviceURL, bucket, nil)
+	p := azureblob.NewPipeline(credential, azblob.PipelineOptions{})
+	return azureblob.OpenBucket(ctx, p, accountName, bucket, nil)
 }
