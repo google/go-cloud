@@ -487,7 +487,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(opts.Expiry),
 		ContainerName: b.name,
-		BlobName:      key,
+		BlobName:      srcBlobParts.BlobName,
 		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {
