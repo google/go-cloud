@@ -26,9 +26,9 @@ import (
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"gocloud.dev/internal/useragent"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
@@ -131,7 +131,7 @@ type SubscriptionOptions struct{}
 // projectID and subscriptionName.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds)
+	return pubsub.NewSubscription(ds, nil)
 }
 
 // openSubscription returns a driver.Subscription.

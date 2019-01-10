@@ -15,6 +15,7 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"testing"
@@ -65,7 +66,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -99,7 +100,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -151,7 +152,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -183,7 +184,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 	defer cancel()
 	mr, err := sub.Receive(ctx)
@@ -206,7 +207,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -233,7 +234,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -276,7 +277,7 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	sub := pubsub.NewSubscription(ds)
+	sub := pubsub.NewSubscription(ds, nil)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -295,5 +296,46 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 	case <-done:
 	case <-time.After(tooLong):
 		t.Fatalf("waited too long (%v) for Shutdown to run", tooLong)
+	}
+}
+
+func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
+	// If SendAcks fails, the error is returned via receive.
+	ctx := context.Background()
+	serr := errors.New("SendAcks failed")
+	ackChan := make(chan struct{})
+	ds := &ackingDriverSub{
+		q: []*driver.Message{
+			&driver.Message{AckID: 0},
+			&driver.Message{AckID: 1},
+			&driver.Message{AckID: 2},
+			&driver.Message{AckID: 3},
+		},
+		sendAcks: func(context.Context, []driver.AckID) error {
+			close(ackChan)
+			return serr
+		},
+	}
+	sub := pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+	// Wait for the ack to be sent.
+	<-ackChan
+	// It might take a bit longer for the logic after SendAcks returns to happen, so
+	// keep calling Receive.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	for {
+		_, err = sub.Receive(ctx)
+		if err == serr {
+			break // success
+		}
+		if err != nil {
+			t.Fatalf("got %v, want %v", err, serr)
+		}
 	}
 }
