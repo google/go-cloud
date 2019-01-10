@@ -69,6 +69,8 @@ import (
 	"github.com/google/uuid"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+
+	"gocloud.dev/internal/useragent"
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
@@ -116,7 +118,11 @@ func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceUR
 		return nil, errors.New("azureblob: accountKey is required")
 	}
 	credential, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
-	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{
+		Telemetry: azblob.TelemetryOptions{
+			Value: useragent.AzureUserAgentPrefix("blob"),
+		},
+	})
 	blobURL := makeBlobStorageURL(accountName)
 	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &serviceURL, nil
@@ -132,7 +138,11 @@ func ServiceURLFromSASToken(accountName, sasToken string) (*azblob.ServiceURL, e
 		return nil, errors.New("azureblob: sasToken is required")
 	}
 	credential := azblob.NewAnonymousCredential()
-	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{
+		Telemetry: azblob.TelemetryOptions{
+			Value: useragent.AzureUserAgentPrefix("blob"),
+		},
+	})
 
 	blobURL := makeBlobStorageURL(accountName)
 	blobURL.RawQuery = sasToken
