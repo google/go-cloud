@@ -162,7 +162,9 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api, accountName, a
 	}
 
 	azMatchers := &replay.ProviderMatcher{
-		Headers: []string{"User-Agent"},
+		// Note: We can't match the User-Agent header because Azure includes the
+		// "go" version in it.
+		// Headers: []string{"User-Agent"},
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`se=[^?]*`),
 			regexp.MustCompile(`sig=[^?]*`),
@@ -193,7 +195,7 @@ func newPipeline(c azblob.Credential, api string, r *recorder.Recorder) pipeline
 	}
 
 	f := []pipeline.Factory{
-		// sets User-Agent for recorder
+		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
 			Value: useragent.AzureUserAgentPrefix(api),
 		}),
