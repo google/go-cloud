@@ -300,6 +300,7 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 }
 
 func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
+	// If SendAcks fails, the error is returned via receive.
 	ctx := context.Background()
 	serr := errors.New("SendAcks failed")
 	ackChan := make(chan struct{})
@@ -307,6 +308,8 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 		q: []*driver.Message{
 			&driver.Message{AckID: 0},
 			&driver.Message{AckID: 1},
+			&driver.Message{AckID: 2},
+			&driver.Message{AckID: 3},
 		},
 		sendAcks: func(context.Context, []driver.AckID) error {
 			close(ackChan)
@@ -322,10 +325,17 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 	m.Ack()
 	// Wait for the ack to be sent.
 	<-ackChan
-	// Wait a little longer for the logic after SendAcks returns to happen.
-	time.Sleep(10 * time.Millisecond)
-	_, err = sub.Receive(ctx)
-	if err != serr {
-		t.Errorf("got %v, want %v", err, serr)
+	// It might take a bit longer for the logic after SendAcks returns to happen, so
+	// keep calling Receive.
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	for {
+		_, err = sub.Receive(ctx)
+		if err == serr {
+			break // success
+		}
+		if err != nil {
+			t.Fatalf("got %v, want %v", err, serr)
+		}
 	}
 }
