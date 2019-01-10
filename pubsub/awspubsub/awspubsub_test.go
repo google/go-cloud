@@ -19,8 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/googleapis/gax-go"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 	"net/http"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -99,14 +101,43 @@ func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentErr
 		}
 		return err
 	}
-	return &simpleBatcher{handler: h, batch: nil}
+	b := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, h)
+	return &wrappedBatcher{b}
+	// return &simpleBatcher{handler: h, batch: nil}
 }
+
+type wrappedBatcher struct {
+	b *batcher.Batcher
+}
+
+// Add adds an item to the batcher.
+func (wb *wrappedBatcher) Add(ctx context.Context, item interface{}) error {
+	return wb.b.Add(ctx, item)
+}
+
+// AddNoWait adds an item to the batcher. Unlike the method with the
+// same name on the production batcher (internal/batcher), this method
+// blocks in order to make acking and receiving happen in a deterministic
+// order, to support record/replay.
+func (wb *wrappedBatcher) AddNoWait(item interface{}) <-chan error {
+	c := make(chan error, 1)
+	defer close(c)
+	c <- wb.b.Add(context.Background(), item)
+	return c
+}
+
+// Shutdown waits for all active calls to Add to finish, then returns. After
+// Shutdown is called, all calls to Add fail.
+func (wb *wrappedBatcher) Shutdown() {
+	wb.b.Shutdown()
+}
+
 
 type simpleBatcher struct {
 	mu      sync.Mutex
 	done    bool
+
 	handler func(items interface{}) error
-	batch   []*pubsub.Message
 }
 
 // Add adds an item to the batcher.
