@@ -375,6 +375,20 @@ func testUpdate(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("got %q want %q", got, content1)
 	}
 
+	// The variable hasn't changed, so drv.WatchVariable should either
+	// return nil or block.
+	cancelCtx, cancel := context.WithTimeout(ctx, waitTimeForBlockingCheck())
+	defer cancel()
+	unchangedState, _ := drv.WatchVariable(cancelCtx, state)
+	if unchangedState == nil {
+		// OK
+	} else {
+		got, err = unchangedState.Value()
+		if err != context.DeadlineExceeded {
+			t.Fatalf("got state %v/%v, wanted nil or nil/DeadlineExceeded after no change", got, err)
+		}
+	}
+
 	// Update the variable and verify WatchVariable sees the updated value.
 	if err := h.UpdateVariable(ctx, name, []byte(content2)); err != nil {
 		t.Fatal(err)
