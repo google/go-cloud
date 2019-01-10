@@ -120,7 +120,7 @@ func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceUR
 	credential, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{
 		Telemetry: azblob.TelemetryOptions{
-			Value: useragent.AzureUserAgentPrefix(),
+			Value: useragent.AzureUserAgentPrefix("blob"),
 		},
 	})
 	blobURL := makeBlobStorageURL(accountName)
@@ -140,7 +140,7 @@ func ServiceURLFromSASToken(accountName, sasToken string) (*azblob.ServiceURL, e
 	credential := azblob.NewAnonymousCredential()
 	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{
 		Telemetry: azblob.TelemetryOptions{
-			Value: useragent.AzureUserAgentPrefix(),
+			Value: useragent.AzureUserAgentPrefix("blob"),
 		},
 	})
 

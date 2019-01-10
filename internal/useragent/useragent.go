@@ -40,8 +40,8 @@ func GRPCDialOption(api string) grpc.DialOption {
 }
 
 // AzureUserAgentPrefix returns a prefix that is used to set Azure SDK User-Agent to help with diagnostics.
-func AzureUserAgentPrefix() string {
-	return fmt.Sprintf("%s/%s", prefix, version)
+func AzureUserAgentPrefix(api string) string {
+	return userAgentString(api)
 }
 
 func userAgentString(api string) string {
