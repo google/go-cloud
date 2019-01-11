@@ -60,7 +60,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(name, h.client, decoder), nil
+	return newWatcher(name, h.client, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
@@ -101,12 +101,38 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(err error) error {
+func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
 	// to fail.
 	var to rpctypes.EtcdError
 	if runtimevar.ErrorAs(err, &to) {
 		return errors.New("ErrorAs expected to fail")
 	}
+	// Try with a real etcd error.
+	if !w.ErrorAs(rpctypes.ErrUnhealthy, &to) {
+		return errors.New("ErrorAs expected to succeed with real etcd error")
+	}
 	return nil
+}
+
+// Etcd-specific tests.
+
+func TestEquivalentError(t *testing.T) {
+	tests := []struct {
+		Err1, Err2 error
+		Want       bool
+	}{
+		{Err1: errors.New("not etcd"), Err2: errors.New("not etcd"), Want: true},
+		{Err1: errors.New("not etcd"), Err2: errors.New("not etcd but different")},
+		{Err1: errors.New("not etcd"), Err2: rpctypes.ErrUnhealthy},
+		{Err1: rpctypes.ErrUnhealthy, Err2: rpctypes.ErrRequestTooLarge},
+		{Err1: rpctypes.ErrUnhealthy, Err2: rpctypes.ErrUnhealthy, Want: true},
+	}
+
+	for _, test := range tests {
+		got := equivalentError(test.Err1, test.Err2)
+		if got != test.Want {
+			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
+		}
+	}
 }
