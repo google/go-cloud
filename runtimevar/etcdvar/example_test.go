@@ -45,7 +45,7 @@ func ExampleNew() {
 	// For this example, the etcd variable being referenced should have a
 	// JSON string that decodes into MyConfig.
 	// The example uses a very short timeout since the there's no real etcd server
-	// running at the URL provided, so  we might as well give up quickly.
+	// running at the URL provided, so we might as well give up quickly.
 	v, err := etcdvar.New(client, "myconfig", decoder, &etcdvar.Options{Timeout: 1 * time.Millisecond})
 	if err != nil {
 		log.Fatal(err)
