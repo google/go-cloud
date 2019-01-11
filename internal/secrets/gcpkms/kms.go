@@ -22,6 +22,7 @@ import (
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/secrets"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -37,11 +38,11 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 }
 
 // NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *Crypter {
-	return &Crypter{
+func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *secrets.Crypter {
+	return secrets.NewCrypter(&crypter{
 		keyID:  ki,
 		client: client,
-	}
+	}, nil)
 }
 
 // KeyID includes related information to construct a key name that is managed
@@ -57,15 +58,14 @@ func (ki *KeyID) String() string {
 		ki.ProjectID, ki.Location, ki.KeyRing, ki.Key)
 }
 
-// Crypter contains information to construct the pull path of a key.
-// TODO(#1066): make this unexported when there is a top-level portable API.
-type Crypter struct {
+// crypter contains information to construct the pull path of a key.
+type crypter struct {
 	keyID  *KeyID
 	client *cloudkms.KeyManagementClient
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
-func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+func (c *crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
 		Name:       c.keyID.String(),
 		Ciphertext: ciphertext,
@@ -78,7 +78,7 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 }
 
 // Encrypt encrypts the plaintext into a ciphertext.
-func (c *Crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+func (c *crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
 		Name:      c.keyID.String(),
 		Plaintext: plaintext,

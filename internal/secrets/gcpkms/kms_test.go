@@ -43,7 +43,7 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
-	return &Crypter{
+	return &crypter{
 		keyID: &KeyID{
 			ProjectID: projectID,
 			Location:  location,
