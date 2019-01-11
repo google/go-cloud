@@ -75,7 +75,7 @@ func (h *harness) newName(prefix string) string {
 	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&h.uid, 1))
 }
 
-func (h *harness) MakeTopic(context.Context) (dt driver.Topic, cleanup func(), err error) {
+func (h *harness) CreateTopic(context.Context) (dt driver.Topic, cleanup func(), err error) {
 	exchange := h.newName("t")
 	if err := declareExchange(h.conn, exchange); err != nil {
 		return nil, nil, err
@@ -94,7 +94,7 @@ func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, "nonexistent-topic"), nil
 }
 
-func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
+func (h *harness) CreateSubscription(_ context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
 	queue := h.newName("s")
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
 		return nil, nil, err

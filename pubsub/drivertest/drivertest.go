@@ -32,17 +32,21 @@ import (
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
+//
+// The Create* funcs create new topics and subscriptions that may have to be
+// cleaned up manually if the test is abruptly terminated or the network
+// connection fails.
 type Harness interface {
-	// MakeTopic makes a driver.Topic for testing.
-	MakeTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error)
+	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
+	CreateTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error)
 
 	// MakeNonexistentTopic makes a driver.Topic referencing a topic that
 	// does not exist.
 	MakeNonexistentTopic(ctx context.Context) (driver.Topic, error)
 
-	// MakeSubscription makes a driver.Subscription subscribed to the given
-	// driver.Topic.
-	MakeSubscription(ctx context.Context, t driver.Topic) (ds driver.Subscription, cleanup func(), err error)
+	// CreateSubscription creates a new subscription in the provider, subscribed to the given topic, and returns
+	// a driver.Subscription for testing.
+	CreateSubscription(ctx context.Context, t driver.Topic) (ds driver.Subscription, cleanup func(), err error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
 	// subscription that does not exist.
@@ -207,7 +211,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	dt, cleanup, err := h.MakeTopic(ctx)
+	dt, cleanup, err := h.CreateTopic(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +221,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 
 	var ss []*pubsub.Subscription
 	for i := 0; i < 2; i++ {
-		ds, cleanup, err := h.MakeSubscription(ctx, dt)
+		ds, cleanup, err := h.CreateSubscription(ctx, dt)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -347,11 +351,11 @@ func isCanceled(err error) bool {
 }
 
 func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	dt, topicCleanup, err := h.MakeTopic(ctx)
+	dt, topicCleanup, err := h.CreateTopic(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, subCleanup, err := h.MakeSubscription(ctx, dt)
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt)
 	if err != nil {
 		return nil, nil, nil, err
 	}

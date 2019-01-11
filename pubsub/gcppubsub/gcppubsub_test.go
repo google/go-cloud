@@ -65,7 +65,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{done, pubClient, subClient}, nil
 }
 
-func (h *harness) MakeTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error) {
+func (h *harness) CreateTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error) {
 	topicName := fmt.Sprintf("test-topic-%d", rand.Int())
 	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 	_, err = h.pubClient.CreateTopic(ctx, &pubsubpb.Topic{ Name: topicPath })
@@ -84,7 +84,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
 	subName := fmt.Sprintf("test-subscription-%d", rand.Int())
 	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
 	t := dt.(*topic)
