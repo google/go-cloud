@@ -98,10 +98,32 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(err error) error {
+func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
 	var e awserr.Error
 	if !runtimevar.ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil
+}
+
+// Paramstore-specific tests.
+
+func TestEquivalentError(t *testing.T) {
+	tests := []struct {
+		Err1, Err2 error
+		Want       bool
+	}{
+		{Err1: errors.New("not aws"), Err2: errors.New("not aws"), Want: true},
+		{Err1: errors.New("not aws"), Err2: errors.New("not aws but different")},
+		{Err1: errors.New("not aws"), Err2: awserr.New("code1", "fail", nil)},
+		{Err1: awserr.New("code1", "fail", nil), Err2: awserr.New("code2", "fail", nil)},
+		{Err1: awserr.New("code1", "fail", nil), Err2: awserr.New("code1", "fail", nil), Want: true},
+	}
+
+	for _, test := range tests {
+		got := equivalentError(test.Err1, test.Err2)
+		if got != test.Want {
+			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
+		}
+	}
 }
