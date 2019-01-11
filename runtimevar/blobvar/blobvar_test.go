@@ -70,7 +70,7 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(err error) error {
+func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
 	var blobe error
 	if !runtimevar.ErrorAs(err, &blobe) {
 		return errors.New("runtimevar.ErrorAs failed")
