@@ -34,7 +34,7 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeTopic makes a driver.Topic for testing.
-	MakeTopic(ctx context.Context) (driver.Topic, error)
+	MakeTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error)
 
 	// MakeNonexistentTopic makes a driver.Topic referencing a topic that
 	// does not exist.
@@ -42,8 +42,7 @@ type Harness interface {
 
 	// MakeSubscription makes a driver.Subscription subscribed to the given
 	// driver.Topic.
-	// n must be 0 or 1, to select between two different subscriptions. Any other value is an error.
-	MakeSubscription(ctx context.Context, t driver.Topic, n int) (driver.Subscription, error)
+	MakeSubscription(ctx context.Context, t driver.Topic) (ds driver.Subscription, cleanup func(), err error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
 	// subscription that does not exist.
@@ -208,23 +207,24 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	dt, err := h.MakeTopic(ctx)
+	dt, cleanup, err := h.MakeTopic(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 	top := pubsub.NewTopic(dt)
 	defer top.Shutdown(ctx)
 
-	makeSub := func(i int) *pubsub.Subscription {
-		ds, err := h.MakeSubscription(ctx, dt, i)
+	var ss []*pubsub.Subscription
+	for i := 0; i < 2; i++ {
+		ds, cleanup, err := h.MakeSubscription(ctx, dt)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return pubsub.NewSubscription(ds, nil)
-	}
-	ss := []*pubsub.Subscription{makeSub(0), makeSub(1)}
-	for _, s := range ss {
+		defer cleanup()
+		s := pubsub.NewSubscription(ds, nil)
 		defer s.Shutdown(ctx)
+		ss = append(ss, s)
 	}
 	want := publishN(t, ctx, top, 3)
 	for i, s := range ss {
@@ -347,17 +347,19 @@ func isCanceled(err error) bool {
 }
 
 func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	dt, err := h.MakeTopic(ctx)
+	dt, topicCleanup, err := h.MakeTopic(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, err := h.MakeSubscription(ctx, dt, 0)
+	ds, subCleanup, err := h.MakeSubscription(ctx, dt)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt)
 	s := pubsub.NewSubscription(ds, nil)
 	cleanup := func() {
+		topicCleanup()
+		subCleanup()
 		t.Shutdown(ctx)
 		s.Shutdown(ctx)
 	}

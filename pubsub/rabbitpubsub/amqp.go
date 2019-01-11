@@ -57,6 +57,8 @@ type amqpChannel interface {
 	NotifyClose(chan *amqp.Error) chan *amqp.Error
 	ExchangeDeclare(string) error
 	QueueDeclareAndBind(qname, ename string) error
+	ExchangeDelete(string) error
+	QueueDelete(qname string) error
 }
 
 // connection adapts an *amqp.Connection to the amqpConnection interface.
@@ -149,4 +151,13 @@ func (ch *channel) QueueDeclareAndBind(queueName, exchangeName string) error {
 		return err
 	}
 	return ch.ch.QueueBind(q.Name, q.Name, exchangeName, wait, nil)
+}
+
+func (ch *channel) ExchangeDelete(name string) error {
+	return ch.ch.ExchangeDelete(name, false, false)
+}
+
+func (ch *channel) QueueDelete(qname string) error {
+	_, err := ch.ch.QueueDelete(qname, false, false, false)
+	return err
 }

@@ -16,7 +16,6 @@ package mempubsub
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -30,8 +29,9 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{}, nil
 }
 
-func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	return &topic{}, nil
+func (h *harness) MakeTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error) {
+	cleanup = func() {}
+	return &topic{}, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
@@ -39,11 +39,10 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return (*topic)(nil), nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
-	if n < 0 || n >= 2 {
-		return nil, errors.New("n must be 0 or 1")
-	}
-	return newSubscription(dt.(*topic), time.Second), nil
+func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
+	ds = newSubscription(dt.(*topic), time.Second)
+	cleanup = func() {}
+	return ds, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
