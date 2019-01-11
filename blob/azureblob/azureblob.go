@@ -169,6 +169,7 @@ var DefaultIdentity = wire.NewSet(
 	DefaultAccountName,
 	DefaultAccountKey,
 	NewCredential,
+	wire.Bind(new(azblob.Credential), new(azblob.SharedKeyCredential)),
 	wire.Value(azblob.PipelineOptions{}),
 )
 
@@ -209,7 +210,7 @@ func DefaultSASToken() SASToken {
 	return SASToken(os.Getenv("AZURE_STORAGE_SAS_TOKEN"))
 }
 
-// NewCredential created a SharedKeyCredential.
+// NewCredential creates a SharedKeyCredential.
 func NewCredential(accountName AccountName, accountKey AccountKey) (*azblob.SharedKeyCredential, error) {
 	return azblob.NewSharedKeyCredential(string(accountName), string(accountKey))
 }
