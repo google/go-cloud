@@ -63,7 +63,9 @@ type AsTest interface {
 	// SnapshotCheck will be called to allow verification of Snapshot.As.
 	SnapshotCheck(s *runtimevar.Snapshot) error
 	// ErrorCheck will be called to allow verification of Variable.ErrorAs.
-	ErrorCheck(err error) error
+	// driver is provided so that errors other than err can be checked;
+	// Variable.ErrorAs won't work since it expects driver errors to be wrapped.
+	ErrorCheck(w driver.Watcher, err error) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -79,7 +81,7 @@ func (verifyAsFailsOnNil) SnapshotCheck(v *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(err error) error {
+func (verifyAsFailsOnNil) ErrorCheck(_ driver.Watcher, err error) error {
 	if runtimevar.ErrorAs(err, nil) {
 		return errors.New("want ErrorAs to return false when passed nil")
 	}
@@ -605,7 +607,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if gotErr == nil {
 		t.Fatalf("got nil error and %v, expected non-nil error", v)
 	}
-	if err := st.ErrorCheck(gotErr); err != nil {
+	if err := st.ErrorCheck(drv, gotErr); err != nil {
 		t.Error(err)
 	}
 	var dummy string
