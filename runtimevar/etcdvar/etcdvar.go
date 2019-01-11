@@ -36,19 +36,25 @@ import (
 )
 
 // Options sets options.
-// It is provided for future extensibility.
-type Options struct{}
+type Options struct {
+	// Timeout controls the timeout on RPCs to etcd; timeouts will result in
+	// errors being returned from Watch. Defaults to 30 seconds.
+	Timeout time.Duration
+}
 
 // New constructs a *runtimevar.Variable that uses client to watch the variable
 // name on an etcd server.
 // etcd returns raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, _ *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(name, cli, decoder)), nil
+func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	return runtimevar.New(newWatcher(name, cli, decoder, opts)), nil
 }
 
-func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) *watcher {
+func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, opts *Options) *watcher {
+	if opts == nil {
+		opts = &Options{}
+	}
 	// Create a ctx for the background goroutine that does all of the reading.
 	// The cancel function will be used to shut it down during Close.
 	ctx, cancel := context.WithCancel(context.Background())
@@ -57,7 +63,7 @@ func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder) 
 		ch:       make(chan *state, 1),
 		shutdown: cancel,
 	}
-	go w.watch(ctx, cli, name, decoder)
+	go w.watch(ctx, cli, name, decoder, driver.WaitDuration(opts.Timeout))
 	return w
 }
 
@@ -159,13 +165,21 @@ func equivalentError(err1, err2 error) bool {
 // watch is run by a background goroutine.
 // It watches file using cli.Watch, and writes new states to w.ch.
 // It exits when ctx is canceled, and closes w.ch.
-func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, decoder *runtimevar.Decoder) {
+func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, decoder *runtimevar.Decoder, timeout time.Duration) {
 	var cur *state
 	defer close(w.ch)
 
-	watchCh := cli.Watch(ctx, name)
+	var watchCh clientv3.WatchChan
 	for {
-		resp, err := cli.Get(ctx, name)
+		if watchCh == nil {
+			ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
+			watchCh = cli.Watch(ctxWithTimeout, name)
+			cancel()
+		}
+
+		ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
+		resp, err := cli.Get(ctxWithTimeout, name)
+		cancel()
 		if err != nil {
 			cur = w.updateState(&state{err: err}, cur)
 		} else if len(resp.Kvs) == 0 {
@@ -188,7 +202,11 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 		select {
 		case <-ctx.Done():
 			return
-		case <-watchCh:
+		case _, ok := <-watchCh:
+			if !ok {
+				// watchCh has closed; retry in next loop iteration.
+				watchCh = nil
+			}
 		}
 	}
 }
