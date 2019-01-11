@@ -114,21 +114,27 @@ func errorState(err error, prevS driver.State) driver.State {
 		// New error.
 		return s
 	}
-	if err == prev.err || err.Error() == prev.err.Error() {
+	if equivalentError(err, prev.err) {
 		// Same error, return nil to indicate no change.
 		return nil
 	}
-	var code, prevCode string
-	if awsErr, ok := err.(awserr.Error); ok {
-		code = awsErr.Code()
-	}
-	if awsErr, ok := prev.err.(awserr.Error); ok {
-		prevCode = awsErr.Code()
-	}
-	if code != "" && code == prevCode {
-		return nil
-	}
 	return s
+}
+
+// equivalentError returns true iff err1 and err2 represent an equivalent error;
+// i.e., we don't want to return it to the user as a different error.
+func equivalentError(err1, err2 error) bool {
+	if err1 == err2 || err1.Error() == err2.Error() {
+		return true
+	}
+	var code1, code2 string
+	if awsErr, ok := err1.(awserr.Error); ok {
+		code1 = awsErr.Code()
+	}
+	if awsErr, ok := err2.(awserr.Error); ok {
+		code2 = awsErr.Code()
+	}
+	return code1 != "" && code1 == code2
 }
 
 type watcher struct {

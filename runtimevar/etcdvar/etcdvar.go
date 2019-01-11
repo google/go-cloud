@@ -130,19 +130,8 @@ func (w *watcher) WatchVariable(ctx context.Context, _ driver.State) (driver.Sta
 // It always return s.
 func (w *watcher) updateState(s, prev *state) *state {
 	if s.err != nil && prev != nil && prev.err != nil {
-		if s.err == prev.err || s.err.Error() == prev.err.Error() {
+		if equivalentError(s.err, prev.err) {
 			// s represents the same error as prev.
-			return s
-		}
-		var code, prevCode codes.Code
-		if etcdErr, ok := s.err.(rpctypes.EtcdError); ok {
-			code = etcdErr.Code()
-		}
-		if etcdErr, ok := prev.err.(rpctypes.EtcdError); ok {
-			prevCode = etcdErr.Code()
-		}
-		if code != codes.OK && code == prevCode {
-			// s represents the same etcd error code error as prev.
 			return s
 		}
 	}
@@ -155,6 +144,22 @@ func (w *watcher) updateState(s, prev *state) *state {
 	// size of 1, and we just read anything that was buffered.
 	w.ch <- s
 	return s
+}
+
+// equivalentError returns true iff err1 and err2 represent an equivalent error;
+// i.e., we don't want to return it to the user as a different error.
+func equivalentError(err1, err2 error) bool {
+	if err1 == err2 || err1.Error() == err2.Error() {
+		return true
+	}
+	var code1, code2 codes.Code
+	if etcdErr, ok := err1.(rpctypes.EtcdError); ok {
+		code1 = etcdErr.Code()
+	}
+	if etcdErr, ok := err2.(rpctypes.EtcdError); ok {
+		code2 = etcdErr.Code()
+	}
+	return code1 != codes.OK && code1 == code2
 }
 
 // watch is run by a background goroutine.
