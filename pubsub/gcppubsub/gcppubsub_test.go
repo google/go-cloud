@@ -15,17 +15,16 @@
 package gcppubsub
 
 import (
+	raw "cloud.google.com/go/pubsub/apiv1"
 	"context"
 	"fmt"
-	"testing"
-	"time"
-
-	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"math/rand"
+	"testing"
 )
 
 const (
@@ -67,7 +66,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error) {
-	topicName := fmt.Sprintf("test-topic-%d", time.Now().UnixNano())
+	topicName := fmt.Sprintf("test-topic-%d", rand.Int())
 	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
 	_, err = h.pubClient.CreateTopic(ctx, &pubsubpb.Topic{ Name: topicPath })
 	if err != nil {
@@ -86,7 +85,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
-	subName := fmt.Sprintf("test-subscription-%d", time.Now().UnixNano())
+	subName := fmt.Sprintf("test-subscription-%d", rand.Int())
 	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
 	t := dt.(*topic)
 	_, err = h.subClient.CreateSubscription(ctx, &pubsubpb.Subscription {
