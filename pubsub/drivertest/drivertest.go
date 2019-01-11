@@ -32,12 +32,9 @@ import (
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
-//
-// The Create* funcs create new topics and subscriptions that may have to be
-// cleaned up manually if the test is abruptly terminated or the network
-// connection fails.
 type Harness interface {
 	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
+	// The topic may have to be cleaned up manually if the test is abruptly terminated or the network connection fails.
 	CreateTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error)
 
 	// MakeNonexistentTopic makes a driver.Topic referencing a topic that
@@ -46,6 +43,8 @@ type Harness interface {
 
 	// CreateSubscription creates a new subscription in the provider, subscribed to the given topic, and returns
 	// a driver.Subscription for testing.
+	// The subscription may have to be cleaned up manually if the test is abruptly terminated or the network connection
+	// fails.
 	CreateSubscription(ctx context.Context, t driver.Topic) (ds driver.Subscription, cleanup func(), err error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
