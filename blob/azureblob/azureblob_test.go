@@ -99,7 +99,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		s.AccountKey = "FAKE_KEY"
 	}
 
-	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, s.AccountName, s.AccountKey)
+	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, "blob", s.AccountName, s.AccountKey)
 	s.pipeline = p
 
 	return &harness{settings: *s, closer: done, httpClient: httpClient}, nil
