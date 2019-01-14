@@ -52,8 +52,8 @@ type harness struct {
 	closer    func()
 	pubClient *raw.PublisherClient
 	subClient *raw.SubscriberClient
-	numTopics uint32
-	numSubs   uint32
+	numTopics uint32 // atomic
+	numSubs   uint32 // atomic
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
