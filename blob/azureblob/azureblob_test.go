@@ -211,7 +211,7 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 func TestOpenBucket(t *testing.T) {
 	tests := []struct {
 		description   string
-		nilPipeline bool
+		nilPipeline   bool
 		accountName   AccountName
 		containerName string
 		want          string
@@ -219,7 +219,7 @@ func TestOpenBucket(t *testing.T) {
 	}{
 		{
 			description:   "nil pipeline results in error",
-			nilPipeline: true,
+			nilPipeline:   true,
 			accountName:   "myaccount",
 			containerName: "foo",
 			wantErr:       true,

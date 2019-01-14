@@ -78,8 +78,14 @@ func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
 // authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
 // and AZURE_STORAGE_ACCOUNT_KEY are present.
 func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
-	accountName := azureblob.DefaultAccountName()
-	accountKey := azureblob.DefaultAccountKey()
+	accountName, err := azureblob.DefaultAccountName()
+	if err != nil {
+		return nil, err
+	}
+	accountKey, err := azureblob.DefaultAccountKey()
+	if err != nil {
+		return nil, err
+	}
 	credential, err := azureblob.NewCredential(accountName, accountKey)
 	if err != nil {
 		return nil, err

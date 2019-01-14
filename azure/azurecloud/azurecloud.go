@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azurecloud contains Wire providers for GCP services.
+// Package azurecloud contains Wire providers for Azure services.
 package azurecloud // import "gocloud.dev/azure/azurecloud"
 
 import (

@@ -21,11 +21,17 @@
 // with "azblob://".
 //
 // The URL's Host is used as the bucket name.
+//
+// By default, credentials are retrieved from the environment variables
+// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
+// AZURE_STORAGE_ACCOUNT is required, along with one of the other two. See
+// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
+// for more on SAS tokens. Alternatively, credentials can be loaded from a file;
+// see the cred_path query parameter below.
+//
 // The following query options are supported:
 //  - cred_path: Sets path to a credentials file in JSON format. The
-//    AccountName field must be specified, and either AccountKey or
-//    SASToken (Shared Access Token,
-//    https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature).
+//    AccountName field must be specified, and either AccountKey or SASToken.
 // Example credentials file using AccountKey:
 //     {
 //       "AccountName": "STORAGE ACCOUNT NAME",
@@ -136,9 +142,10 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 		}
 	} else {
 		// Use default credential info from the environment.
-		ac.AccountKey = DefaultAccountKey()
-		ac.AccountName = DefaultAccountName()
-		ac.SASToken = DefaultSASToken()
+		// Ignore errors, as we'll get errors from OpenBucket later.
+		ac.AccountName, _ = DefaultAccountName()
+		ac.AccountKey, _ = DefaultAccountKey()
+		ac.SASToken, _ = DefaultSASToken()
 	}
 
 	// azblob.Credential is an interface; we will use either a SharedKeyCredential
@@ -194,20 +201,32 @@ type SASToken string
 
 // DefaultAccountName loads the Azure storage account name from the
 // AZURE_STORAGE_ACCOUNT environment variable.
-func DefaultAccountName() AccountName {
-	return AccountName(os.Getenv("AZURE_STORAGE_ACCOUNT"))
+func DefaultAccountName() (AccountName, error) {
+	s := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_ACCOUNT not set")
+	}
+	return AccountName(s), nil
 }
 
 // DefaultAccountKey loads the Azure storage account key (primary or secondary)
 // from the AZURE_STORAGE_KEY environment variable.
-func DefaultAccountKey() AccountKey {
-	return AccountKey(os.Getenv("AZURE_STORAGE_KEY"))
+func DefaultAccountKey() (AccountKey, error) {
+	s := os.Getenv("AZURE_STORAGE_KEY")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_KEY not set")
+	}
+	return AccountKey(s), nil
 }
 
 // DefaultSASToken loads a Azure SAS token from the AZURE_STORAGE_SAS_TOKEN
 // environment variable.
-func DefaultSASToken() SASToken {
-	return SASToken(os.Getenv("AZURE_STORAGE_SAS_TOKEN"))
+func DefaultSASToken() (SASToken, error) {
+	s := os.Getenv("AZURE_STORAGE_SAS_TOKEN")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_SAS_TOKEN not set")
+	}
+	return SASToken(s), nil
 }
 
 // NewCredential creates a SharedKeyCredential.
