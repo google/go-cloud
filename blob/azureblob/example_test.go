@@ -29,27 +29,23 @@ import (
 
 func Example() {
 	ctx := context.Background()
-	// Set a fake key which must be base64 encoded. The Azure Storage Access Keys are already base64 encoded.
-	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
+	// A fake account name and key. The key must be base64 encoded;
+	// real Azure Storage Access Keys are already base64 encoded.
+	accountName := azureblob.AccountName("myaccount")
+	accountKey := azureblob.AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS")))
 	bucketName := "my-bucket"
 
-	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
-	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	// Create a credentials object.
+	credential, err := azureblob.NewCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
-	// Credential represents the authorizer for SignedURL.
-	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	// Override the default retry policy so calls can return promptly for this test. Please review the timeout guidelines and set accordingly.
+	// Create a Pipeline, using whatever PipelineOptions you need.
+	// This example overrides the default retry policy so calls can return promptly
+	// for this test. Please review the timeout guidelines and set accordingly.
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations for more information.
-	opts := azblob.PipelineOptions{
+	popts := azblob.PipelineOptions{
 		Retry: azblob.RetryOptions{
 			Policy:        azblob.RetryPolicyFixed,
 			TryTimeout:    5 * time.Second,
@@ -58,27 +54,21 @@ func Example() {
 			MaxRetryDelay: 0 * time.Second,
 		},
 	}
-	p := azblob.NewPipeline(creds, opts)
-	*serviceURL = serviceURL.WithPipeline(p)
-
-	if err != nil {
-		// This is expected since accountName and accountKey is empty.
-		log.Fatal(err)
-		return
-	}
-
-	// Set credential for the SignedURL operation.
-	azureOpts := azureblob.Options{
-		Credential: creds,
-	}
+	pipeline := azureblob.NewPipeline(credential, popts)
 
 	// Create a *blob.Bucket.
-	b, err := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
+	opts := &azureblob.Options{
+		// This credential is required only if you're going to use the SignedURL
+		// function.
+		Credential: credential,
+	}
+	b, err := azureblob.OpenBucket(ctx, pipeline, accountName, bucketName, opts)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
+	// Now we can use b!
 	_, err = b.ReadAll(ctx, "my-key")
 	if err != nil {
 		// This is expected due to the fake credentials we used above.
@@ -88,16 +78,66 @@ func Example() {
 	// Output:
 	// ReadAll failed due to invalid credentials
 }
+func Example_sasToken() {
+	ctx := context.Background()
+	// A fake account name and SASToken.
+	accountName := azureblob.AccountName("myaccount")
+	sasToken := azureblob.SASToken("https://myaccount.blob.core.windows.net/sascontainer/sasblob.txt?sv=2015-04-05&st=2015-04-29T22%3A18%3A26Z&se=2015-04-30T02%3A23%3A26Z&sr=b&sp=rw&sip=168.1.5.60-168.1.5.70&spr=https&sig=Z%2FRHIX5Xcg0Mq2rqI3OlWTjEg2tYkboXr1P9ZUXDtkk%3D")
+	bucketName := "my-bucket"
+
+	// Since we're using a SASToken, we can use anonymous credentials.
+	credential := azblob.NewAnonymousCredential()
+
+	// Create a Pipeline, using whatever PipelineOptions you need.
+	// This example overrides the default retry policy so calls can return promptly
+	// for this test. Please review the timeout guidelines and set accordingly.
+	// See https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations for more information.
+	popts := azblob.PipelineOptions{
+		Retry: azblob.RetryOptions{
+			Policy:        azblob.RetryPolicyFixed,
+			TryTimeout:    5 * time.Second,
+			MaxTries:      1,
+			RetryDelay:    0 * time.Second,
+			MaxRetryDelay: 0 * time.Second,
+		},
+	}
+	pipeline := azureblob.NewPipeline(credential, popts)
+
+	// Create a blob.Bucket.
+	// Note that we're not supplying azureblob.Options.Credential, so SignedURL
+	// won't work. To use SignedURL, you need a real credential (see the other
+	// example).
+	b, err := azureblob.OpenBucket(ctx, pipeline, accountName, bucketName, &azureblob.Options{SASToken: sasToken})
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	// Now we can use b!
+	_, err = b.ReadAll(ctx, "my-key")
+	if err != nil {
+		// This is expected due to the fake SAS token we used above.
+		fmt.Println("ReadAll failed due to invalid SAS token")
+	}
+
+	// Output:
+	// ReadAll failed due to invalid SAS token
+}
 
 func Example_open() {
+	ctx := context.Background()
 
 	// Open creates a *Bucket from a URL.
-	// Example URL: azblob://my-bucket?cred_path=replace-with-path-to-credentials-file
-	// The schema "azblob" represents the provider for Azure Blob (Azure Storage Account).
-	// The host "my-bucket" represents the blob bucket (Azure Storage Account's Container).
-	// The queryString "cred_path: represents the credentials file in JSON format. See the package documentation for credentials file schema.
+	// This URL will open the container "mycontainer" using default
+	// credentials found in the environment variables
+	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
+	// and AZURE_STORAGE_SAS_TOKEN.
+	_, err := blob.Open(ctx, "azblob://mycontainer")
 
-	_, err := blob.Open(context.Background(), "azblob://my-bucket?cred_path=replace-with-path-to-credentials-file")
+	// Alternatively, you can use the query parameter "cred_path" to load
+	// credentials from a file in JSON format.
+	// See the package documentation for the credentials file schema.
+	_, err = blob.Open(ctx, "azblob://mycontainer?cred_path=replace-with-path-to-credentials-file")
 	if err != nil {
 		// This is expected due to the invalid cred_path argument used above.
 		fmt.Println("blob.Open failed due to invalid creds_path argument")
@@ -107,29 +147,24 @@ func Example_open() {
 }
 
 func Example_as() {
-
 	ctx := context.Background()
-	// Set a fake key which must be base64 encoded. The Azure Storage Access Keys are already base64 encoded.
-	accountName, accountKey := "gocloudblobtests", base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))
-	bucketName, key := "my-bucket", "my-key"
+	// A fake account name and key. The key must be base64 encoded;
+	// real Azure Storage Access Keys are already base64 encoded.
+	accountName := azureblob.AccountName("myaccount")
+	accountKey := azureblob.AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS")))
+	bucketName := "my-bucket"
 
-	// Initializes an azblob.ServiceURL which represents the Azure Storage Account using Shared Key authorization.
-	serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
+	// Create a credentials object.
+	credential, err := azureblob.NewCredential(accountName, accountKey)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
-	// Credential represents the authorizer for SignedURL.
-	creds, err := azblob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
-	// Override the default retry policy so calls can return promptly for this test. Please review the timeout guidelines and set accordingly.
+	// Create a Pipeline, using whatever PipelineOptions you need.
+	// This example overrides the default retry policy so calls can return promptly
+	// for this test. Please review the timeout guidelines and set accordingly.
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/setting-timeouts-for-blob-service-operations for more information.
-	pipelineOpts := azblob.PipelineOptions{
+	popts := azblob.PipelineOptions{
 		Retry: azblob.RetryOptions{
 			Policy:        azblob.RetryPolicyFixed,
 			TryTimeout:    5 * time.Second,
@@ -138,27 +173,26 @@ func Example_as() {
 			MaxRetryDelay: 0 * time.Second,
 		},
 	}
-	p := azblob.NewPipeline(creds, pipelineOpts)
-	*serviceURL = serviceURL.WithPipeline(p)
-
-	// Set credential for the SignedURL operation.
-	azureOpts := azureblob.Options{
-		Credential: creds,
-	}
+	pipeline := azureblob.NewPipeline(credential, popts)
 
 	// Create a *blob.Bucket.
-	b, err := azureblob.OpenBucket(ctx, serviceURL, bucketName, &azureOpts)
+	opts := &azureblob.Options{
+		// This credential is required only if you're going to use the SignedURL
+		// function.
+		Credential: credential,
+	}
+	b, err := azureblob.OpenBucket(ctx, pipeline, accountName, bucketName, opts)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 
 	// Create a *blob.Reader.
-	r, err := b.NewReader(ctx, key, &blob.ReaderOptions{})
+	r, err := b.NewReader(ctx, "key", &blob.ReaderOptions{})
 	if err != nil {
 		fmt.Println("ReadAll failed due to invalid credentials")
 
-		// IMPORTANT: Due to the fake credentials used above, this test terminates here.
+		// Due to the fake credentials used above, this test terminates here.
 		return
 	}
 
@@ -169,22 +203,19 @@ func Example_as() {
 	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#DownloadResponse for more information.
 	var nativeReader azblob.DownloadResponse
 	if r.As(&nativeReader) {
-
 	}
 
 	// Use Attribute.As to obtain SDK type azblob.BlobGetPropertiesResponse.
 	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobGetPropertiesResponse for more information.
 	var nativeAttrs azblob.BlobGetPropertiesResponse
-	attr, _ := b.Attributes(ctx, key)
+	attr, _ := b.Attributes(ctx, "key")
 	if attr.As(&nativeAttrs) {
-
 	}
 
 	// Use Bucket.As to obtain SDK type azblob.ContainerURL.
 	// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob for more information.
 	var nativeBucket *azblob.ContainerURL
 	if b.As(&nativeBucket) {
-
 	}
 
 	// Use WriterOptions.BeforeWrite to obtain SDK type azblob.UploadStreamToBlockBlobOptions.
@@ -192,16 +223,15 @@ func Example_as() {
 	beforeWrite := func(as func(i interface{}) bool) error {
 		var nativeWriteOptions *azblob.UploadStreamToBlockBlobOptions
 		if as(&nativeWriteOptions) {
-
 		}
 		return nil
 	}
-	opts := &blob.WriterOptions{
+	wopts := &blob.WriterOptions{
 		ContentType: "application/json",
 		BeforeWrite: beforeWrite,
 	}
 	// Create a *blob.Writer.
-	w, _ := b.NewWriter(ctx, key, opts)
+	w, _ := b.NewWriter(ctx, "key", wopts)
 	w.Write([]byte("{"))
 	w.Write([]byte(" message: 'hello' "))
 	w.Write([]byte("}"))
@@ -212,7 +242,6 @@ func Example_as() {
 	beforeList := func(as func(i interface{}) bool) error {
 		var nativeListOptions *azblob.ListBlobsSegmentOptions
 		if as(&nativeListOptions) {
-
 		}
 		return nil
 	}
@@ -228,14 +257,12 @@ func Example_as() {
 				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobPrefix for more information.
 				var nativeDirObj azblob.BlobPrefix
 				if p.As(&nativeDirObj) {
-
 				}
 			} else {
 				// Use ListObject.As to obtain SDK type azblob.BlobItem.
 				// See https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob#BlobItem for more information.
 				var nativeBlobObj azblob.BlobItem
 				if p.As(&nativeBlobObj) {
-
 				}
 			}
 		}
