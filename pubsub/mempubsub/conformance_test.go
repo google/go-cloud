@@ -29,7 +29,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{}, nil
 }
 
-func (h *harness) CreateTopic(ctx context.Context) (dt driver.Topic, cleanup func(), err error) {
+func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	cleanup = func() {}
 	return &topic{}, cleanup, nil
 }
@@ -39,7 +39,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return (*topic)(nil), nil
 }
 
-func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic) (ds driver.Subscription, cleanup func(), err error) {
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	ds = newSubscription(dt.(*topic), time.Second)
 	cleanup = func() {}
 	return ds, cleanup, nil
