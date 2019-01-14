@@ -21,11 +21,17 @@
 // with "azblob://".
 //
 // The URL's Host is used as the bucket name.
+//
+// By default, credentials are retrieved from the environment variables
+// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
+// AZURE_STORAGE_ACCOUNT is required, along with one of the other two. See
+// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
+// for more on SAS tokens. Alternatively, credentials can be loaded from a file;
+// see the cred_path query parameter below.
+//
 // The following query options are supported:
 //  - cred_path: Sets path to a credentials file in JSON format. The
-//    AccountName field must be specified, and either AccountKey or
-//    SASToken (Shared Access Token,
-//    https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature).
+//    AccountName field must be specified, and either AccountKey or SASToken.
 // Example credentials file using AccountKey:
 //     {
 //       "AccountName": "STORAGE ACCOUNT NAME",
@@ -60,24 +66,32 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/google/uuid"
+	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+
+	"gocloud.dev/internal/useragent"
 )
 
 // Options sets options for constructing a *blob.Bucket backed by Azure Block Blob.
 type Options struct {
 	// Credential represents the authorizer for SignedURL.
 	// Required to use SignedURL.
-	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
-	// A SharedKeyCredential can be constructed with azblob.NewSharedKeyCredential("AccountName", "AccountKey").
 	Credential *azblob.SharedKeyCredential
+
+	// SASToken can be provided along with anonymous credentials to use
+	// delegated privileges.
+	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
+	SASToken SASToken
 }
 
 // Azure does not handle backslashes in the blob key well. As a workaround, all
@@ -106,97 +120,124 @@ const (
 	defaultUploadBlockSize          = 8 * 1024 * 1024 // configure the upload buffer size
 )
 
-// ServiceURLFromAccountKey returns a URL to an Azure Blob Service using shared key authorization.
-// For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
-func ServiceURLFromAccountKey(accountName, accountKey string) (*azblob.ServiceURL, error) {
-	if accountName == "" {
-		return nil, errors.New("azureblob: accountName is required")
-	}
-	if accountKey == "" {
-		return nil, errors.New("azureblob: accountKey is required")
-	}
-	credential, _ := azblob.NewSharedKeyCredential(accountName, accountKey)
-	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-	blobURL := makeBlobStorageURL(accountName)
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
-	return &serviceURL, nil
-}
-
-// ServiceURLFromSASToken returns a URL to an Azure Blob Service using shared access signature authorization.
-// For more information, see https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob.
-func ServiceURLFromSASToken(accountName, sasToken string) (*azblob.ServiceURL, error) {
-	if accountName == "" {
-		return nil, errors.New("azureblob: accountName is required")
-	}
-	if sasToken == "" {
-		return nil, errors.New("azureblob: sasToken is required")
-	}
-	credential := azblob.NewAnonymousCredential()
-	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
-
-	blobURL := makeBlobStorageURL(accountName)
-	blobURL.RawQuery = sasToken
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
-
-	return &serviceURL, nil
-}
-
-func makeBlobStorageURL(accountName string) *url.URL {
-	endpoint := fmt.Sprintf("https://%s.blob.core.windows.net", accountName)
-	u, _ := url.Parse(endpoint)
-	return u
-}
-
 func init() {
 	blob.Register("azblob", openURL)
 }
 
 func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	// local type to unmarshal cred_file
 	type AzureCreds struct {
-		AccountName string
-		AccountKey  string
-		SASToken    string
+		AccountName AccountName
+		AccountKey  AccountKey
+		SASToken    SASToken
+	}
+	ac := AzureCreds{}
+	if credPath := u.Query()["cred_path"]; len(credPath) > 0 {
+		f, err := ioutil.ReadFile(credPath[0])
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(f, &ac)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Use default credential info from the environment.
+		// Ignore errors, as we'll get errors from OpenBucket later.
+		ac.AccountName, _ = DefaultAccountName()
+		ac.AccountKey, _ = DefaultAccountKey()
+		ac.SASToken, _ = DefaultSASToken()
 	}
 
-	q := u.Query()
-	opts := &Options{}
-	ac := &AzureCreds{}
-	credPath := q["cred_path"]
-	if len(credPath) == 0 {
-		return nil, errors.New("azureblob: cred_path query parameter is required")
-	}
-
-	f, err := ioutil.ReadFile(credPath[0])
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(f, ac)
-	if err != nil {
-		return nil, err
-	}
-
+	// azblob.Credential is an interface; we will use either a SharedKeyCredential
+	// or anonymous credentials. If the former, we will also fill in
+	// Options.Credential so that SignedURL will work.
+	var credential azblob.Credential
+	var sharedKeyCred *azblob.SharedKeyCredential
 	if ac.AccountKey != "" {
-		serviceURL, err := ServiceURLFromAccountKey(ac.AccountName, ac.AccountKey)
+		var err error
+		sharedKeyCred, err = NewCredential(ac.AccountName, ac.AccountKey)
 		if err != nil {
 			return nil, err
 		}
-
-		credential, err := azblob.NewSharedKeyCredential(ac.AccountName, ac.AccountKey)
-		if err != nil {
-			return nil, err
-		}
-
-		opts.Credential = credential
-		return openBucket(ctx, serviceURL, u.Host, opts)
+		credential = sharedKeyCred
+	} else {
+		credential = azblob.NewAnonymousCredential()
 	}
+	pipeline := NewPipeline(credential, azblob.PipelineOptions{})
+	return openBucket(ctx, pipeline, ac.AccountName, u.Host, &Options{
+		Credential: sharedKeyCred,
+		SASToken:   ac.SASToken,
+	})
+}
 
-	serviceURL, err := ServiceURLFromSASToken(ac.AccountName, ac.SASToken)
-	if err != nil {
-		return nil, err
+// DefaultIdentity is a Wire provider set that provides an Azure storage
+// account name, key, and SharedKeyCredential from environment variables.
+var DefaultIdentity = wire.NewSet(
+	DefaultAccountName,
+	DefaultAccountKey,
+	NewCredential,
+	wire.Bind(new(azblob.Credential), new(azblob.SharedKeyCredential)),
+	wire.Value(azblob.PipelineOptions{}),
+)
+
+// SASTokenIdentity is a Wire provider set that provides an Azure storage
+// account name, SASToken, and anonymous credential from environment variables.
+var SASTokenIdentity = wire.NewSet(
+	DefaultAccountName,
+	DefaultSASToken,
+	azblob.NewAnonymousCredential,
+	wire.Value(azblob.PipelineOptions{}),
+)
+
+// AccountName is an Azure storage account name.
+type AccountName string
+
+// AccountKey is an Azure storage account key (primary or secondary).
+type AccountKey string
+
+// SASToken is an Azure shared access signature.
+// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1
+type SASToken string
+
+// DefaultAccountName loads the Azure storage account name from the
+// AZURE_STORAGE_ACCOUNT environment variable.
+func DefaultAccountName() (AccountName, error) {
+	s := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_ACCOUNT not set")
 	}
-	return openBucket(ctx, serviceURL, u.Host, opts)
+	return AccountName(s), nil
+}
+
+// DefaultAccountKey loads the Azure storage account key (primary or secondary)
+// from the AZURE_STORAGE_KEY environment variable.
+func DefaultAccountKey() (AccountKey, error) {
+	s := os.Getenv("AZURE_STORAGE_KEY")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_KEY not set")
+	}
+	return AccountKey(s), nil
+}
+
+// DefaultSASToken loads a Azure SAS token from the AZURE_STORAGE_SAS_TOKEN
+// environment variable.
+func DefaultSASToken() (SASToken, error) {
+	s := os.Getenv("AZURE_STORAGE_SAS_TOKEN")
+	if s == "" {
+		return "", errors.New("azureblob: environment variable AZURE_STORAGE_SAS_TOKEN not set")
+	}
+	return SASToken(s), nil
+}
+
+// NewCredential creates a SharedKeyCredential.
+func NewCredential(accountName AccountName, accountKey AccountKey) (*azblob.SharedKeyCredential, error) {
+	return azblob.NewSharedKeyCredential(string(accountName), string(accountKey))
+}
+
+// NewPipeline creates a Pipeline for making HTTP requests to Azure.
+func NewPipeline(credential azblob.Credential, opts azblob.PipelineOptions) pipeline.Pipeline {
+	opts.Telemetry.Value = useragent.AzureUserAgentPrefix("blob") + opts.Telemetry.Value
+	return azblob.NewPipeline(credential, opts)
 }
 
 // bucket represents a Azure Storage Account Container, which handles read,
@@ -211,26 +252,42 @@ type bucket struct {
 }
 
 // OpenBucket returns a *blob.Bucket backed by Azure Storage Account. See the package
-// documentation for an example.
-func OpenBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) (*blob.Bucket, error) {
-	b, err := openBucket(ctx, serviceURL, containerName, opts)
+// documentation for an example and
+// https://godoc.org/github.com/Azure/azure-storage-blob-go/azblob
+// for more details.
+func OpenBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName AccountName, containerName string, opts *Options) (*blob.Bucket, error) {
+	b, err := openBucket(ctx, pipeline, accountName, containerName, opts)
 	if err != nil {
 		return nil, err
 	}
 	return blob.NewBucket(b), nil
 }
 
-func openBucket(ctx context.Context, serviceURL *azblob.ServiceURL, containerName string, opts *Options) (*bucket, error) {
-	if serviceURL == nil {
-		return nil, errors.New("azureblob.OpenBucket: serviceURL is required")
+func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName AccountName, containerName string, opts *Options) (*bucket, error) {
+	if pipeline == nil {
+		return nil, errors.New("azureblob.OpenBucket: pipeline is required")
+	}
+	if accountName == "" {
+		return nil, errors.New("azureblob.OpenBucket: accountName is required")
 	}
 	if containerName == "" {
 		return nil, errors.New("azureblob.OpenBucket: containerName is required")
 	}
+	if opts == nil {
+		opts = &Options{}
+	}
+	blobURL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net", accountName))
+	if err != nil {
+		return nil, err
+	}
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
+	if opts.SASToken != "" {
+		blobURL.RawQuery = string(opts.SASToken)
+	}
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
-		serviceURL:   serviceURL,
+		serviceURL:   &serviceURL,
 		containerURL: serviceURL.NewContainerURL(containerName),
 		opts:         opts,
 	}, nil
@@ -477,7 +534,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 // SignedURL implements driver.SignedURL.
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.Credential == nil {
-		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.Credential")
+		return "", errors.New("to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
 	blockBlobURL := b.blockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
@@ -487,7 +544,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 		Protocol:      azblob.SASProtocolHTTPS,
 		ExpiryTime:    time.Now().UTC().Add(opts.Expiry),
 		ContainerName: b.name,
-		BlobName:      key,
+		BlobName:      srcBlobParts.BlobName,
 		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
 	}.NewSASQueryParameters(b.opts.Credential)
 	if err != nil {

@@ -25,6 +25,9 @@
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
 // The following query options are supported:
 //  - region: The AWS region for requests; sets aws.Config.Region.
+//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
+//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
 // Example URL:
 //  s3://mybucket?region=us-east-1
 //
@@ -76,6 +79,15 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 
 	if region := q["region"]; len(region) > 0 {
 		cfg.Region = aws.String(region[0])
+	}
+	if endpoint := q["endpoint"]; len(endpoint) > 0 {
+		cfg.Endpoint = aws.String(endpoint[0])
+	}
+	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
+		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
+	}
+	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
+		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
 	}
 	sess, err := session.NewSession(cfg)
 	if err != nil {
