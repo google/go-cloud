@@ -30,7 +30,7 @@ type Crypter struct {
 
 // NewCrypter is intended for use by a specific provider implementation to
 // create a Crypter.
-func NewCrypter(c driver.Crypter, opts *CrypterOptions) *Crypter {
+func NewCrypter(c driver.Crypter) *Crypter {
 	return &Crypter{c: c}
 }
 
@@ -51,10 +51,6 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 	}
 	return b, nil
 }
-
-// CrypterOptions controls Crypter behaviors.
-// It is provided for future extensibility.
-type CrypterOptions struct{}
 
 // wrappedError is used to wrap all errors returned by drivers so that users are
 // not given access to provider-specific errors.

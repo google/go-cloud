@@ -38,11 +38,11 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 }
 
 // NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *secrets.Crypter {
+func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID, opts *CrypterOptions) *secrets.Crypter {
 	return secrets.NewCrypter(&crypter{
 		keyID:  ki,
 		client: client,
-	}, nil)
+	})
 }
 
 // KeyID includes related information to construct a key name that is managed
@@ -89,3 +89,7 @@ func (c *crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 	}
 	return resp.GetCiphertext(), nil
 }
+
+// CrypterOptions controls Crypter behaviors.
+// It is provided for future extensibility.
+type CrypterOptions struct{}
