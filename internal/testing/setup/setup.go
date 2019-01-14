@@ -155,13 +155,16 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 }
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
-func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string, accountKey string) (pipeline pipeline.Pipeline, done func(), httpClient *http.Client) {
+func NewAzureTestPipeline(ctx context.Context, t *testing.T, api, accountName, accountKey string) (pipeline pipeline.Pipeline, done func(), httpClient *http.Client) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
 
 	azMatchers := &replay.ProviderMatcher{
+		// Note: We can't match the User-Agent header because Azure includes the
+		// "go" version in it.
+		// Headers: []string{"User-Agent"},
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`se=[^?]*`),
 			regexp.MustCompile(`sig=[^?]*`),
@@ -181,23 +184,21 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string,
 	}
 
 	httpClient = azureHTTPClient(r)
-	p := newPipeline(credential, r)
+	p := newPipeline(credential, api, r)
 
 	return p, done, httpClient
 }
 
-func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
+func newPipeline(c azblob.Credential, api string, r *recorder.Recorder) pipeline.Pipeline {
 	if c == nil {
 		panic("pipeline credential can't be nil")
 	}
 
 	f := []pipeline.Factory{
-		// sets User-Agent for recorder
+		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
-			Value: "X-Az-Target",
+			Value: useragent.AzureUserAgentPrefix(api),
 		}),
-		// sets header X-Ms-Client-Request-Id, see https://msdn.microsoft.com/en-us/library/mt766820.aspx
-		azblob.NewUniqueRequestIDPolicyFactory(),
 	}
 
 	f = append(f, c)
@@ -230,7 +231,6 @@ func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Facto
 func azureHTTPClient(r *recorder.Recorder) *http.Client {
 	if r != nil {
 		return &http.Client{Transport: r}
-	} else {
-		return &http.Client{}
 	}
+	return &http.Client{}
 }
