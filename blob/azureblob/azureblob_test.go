@@ -16,6 +16,7 @@ package azureblob
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -59,29 +60,27 @@ import (
 
 const (
 	bucketName  = "go-cloud-bucket"
-	accountName = "gocloudblobtests"
+	accountName = AccountName("gocloudblobtests")
 )
 
 var pathToSettingsFile = flag.String("settingsfile", "", "path to .json file containing Azure Storage AccountKey and AccountName(required for --record)")
 
-// TestSettings sets the Azure Storage Account name and Key for constructing the test harness.
-type TestSettings struct {
-	AccountName string
-	AccountKey  string
-	pipeline    pipeline.Pipeline
-}
-
 type harness struct {
-	settings   TestSettings
+	pipeline   pipeline.Pipeline
+	credential *azblob.SharedKeyCredential
 	closer     func()
 	httpClient *http.Client
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	s := &TestSettings{}
-
+	var key AccountKey
 	if *setup.Record {
-		// Fetch the AccountName and AccountKey settings from the setting file.
+		// In Record mode, we load credentials from a JSON settings file.
+		type TestSettings struct {
+			AccountName AccountName
+			AccountKey  AccountKey
+		}
+		s := &TestSettings{}
 		if *pathToSettingsFile == "" {
 			t.Fatalf("--settingsfile is required in --record mode.")
 		}
@@ -93,16 +92,20 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		if err != nil {
 			t.Fatalf("Cannot load settings file %v: %v", *pathToSettingsFile, err)
 		}
+		if s.AccountName != accountName {
+			t.Fatalf("Please update the accountName constant to match your settings file so future records work (%q vs %q)", s.AccountName, accountName)
+		}
+		key = s.AccountKey
 	} else {
-		// In replay mode, the AccountName must match the name used for recording.
-		s.AccountName = accountName
-		s.AccountKey = "FAKE_KEY"
+		// In replay mode, we use fake credentials.
+		key = AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS")))
 	}
-
-	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, s.AccountName, s.AccountKey)
-	s.pipeline = p
-
-	return &harness{settings: *s, closer: done, httpClient: httpClient}, nil
+	credential, err := NewCredential(accountName, key)
+	if err != nil {
+		return nil, err
+	}
+	p, done, httpClient := setup.NewAzureTestPipeline(ctx, t, "blob", credential, string(accountName))
+	return &harness{pipeline: p, credential: credential, closer: done, httpClient: httpClient}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -110,14 +113,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	serviceURL, _ := ServiceURLFromAccountKey(h.settings.AccountName, h.settings.AccountKey)
-	serviceURLForRecorder := serviceURL.WithPipeline(h.settings.pipeline)
-
-	creds, _ := azblob.NewSharedKeyCredential(h.settings.AccountName, h.settings.AccountKey)
-	opts := Options{
-		Credential: creds,
-	}
-	return openBucket(ctx, &serviceURLForRecorder, bucketName, &opts)
+	return openBucket(ctx, h.pipeline, accountName, bucketName, &Options{Credential: h.credential})
 }
 
 func (h *harness) Close() {
@@ -215,23 +211,32 @@ func (verifyContentLanguage) ListObjectCheck(o *blob.ListObject) error {
 func TestOpenBucket(t *testing.T) {
 	tests := []struct {
 		description   string
+		nilPipeline   bool
+		accountName   AccountName
 		containerName string
-		nilServiceURL bool
 		want          string
 		wantErr       bool
 	}{
 		{
-			description: "empty container name results in error",
-			wantErr:     true,
-		},
-		{
-			description:   "nil serviceURL results in error",
+			description:   "nil pipeline results in error",
+			nilPipeline:   true,
+			accountName:   "myaccount",
 			containerName: "foo",
-			nilServiceURL: true,
 			wantErr:       true,
 		},
 		{
+			description:   "empty account name results in error",
+			containerName: "foo",
+			wantErr:       true,
+		},
+		{
+			description: "empty container name results in error",
+			accountName: "myaccount",
+			wantErr:     true,
+		},
+		{
 			description:   "success",
+			accountName:   "myaccount",
 			containerName: "foo",
 			want:          "foo",
 		},
@@ -240,22 +245,20 @@ func TestOpenBucket(t *testing.T) {
 	ctx := context.Background()
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			var serviceURL *azblob.ServiceURL
-			if !test.nilServiceURL {
-				serviceURL, _ = ServiceURLFromAccountKey("x", "y")
+			var p pipeline.Pipeline
+			if !test.nilPipeline {
+				p = NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
 			}
-
 			// Create driver impl.
-			drv, err := openBucket(ctx, serviceURL, test.containerName, nil)
+			drv, err := openBucket(ctx, p, test.accountName, test.containerName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 			if err == nil && drv != nil && drv.name != test.want {
 				t.Errorf("got %q want %q", drv.name, test.want)
 			}
-
 			// Create concrete type.
-			_, err = OpenBucket(ctx, serviceURL, test.containerName, nil)
+			_, err = OpenBucket(ctx, p, test.accountName, test.containerName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
