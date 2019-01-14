@@ -33,17 +33,19 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeTopic makes a driver.Topic for testing.
-	MakeTopic(ctx context.Context) (driver.Topic, error)
+	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
+	// The topic may have to be removed manually if the test is abruptly terminated or the network connection fails.
+	CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error)
 
 	// MakeNonexistentTopic makes a driver.Topic referencing a topic that
 	// does not exist.
 	MakeNonexistentTopic(ctx context.Context) (driver.Topic, error)
 
-	// MakeSubscription makes a driver.Subscription subscribed to the given
-	// driver.Topic.
-	// n must be 0 or 1, to select between two different subscriptions. Any other value is an error.
-	MakeSubscription(ctx context.Context, t driver.Topic, n int) (driver.Subscription, error)
+	// CreateSubscription creates a new subscription in the provider, subscribed to the given topic, and returns
+	// a driver.Subscription for testing.
+	// The subscription may have to be cleaned up manually if the test is abruptly terminated or the network connection
+	// fails.
+	CreateSubscription(ctx context.Context, t driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error)
 
 	// MakeNonexistentSubscription makes a driver.Subscription referencing a
 	// subscription that does not exist.
@@ -182,7 +184,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,23 +210,24 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	dt, err := h.MakeTopic(ctx)
+	dt, cleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer cleanup()
 	top := pubsub.NewTopic(dt)
 	defer top.Shutdown(ctx)
 
-	makeSub := func(i int) *pubsub.Subscription {
-		ds, err := h.MakeSubscription(ctx, dt, i)
+	var ss []*pubsub.Subscription
+	for i := 0; i < 2; i++ {
+		ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
 		if err != nil {
 			t.Fatal(err)
 		}
-		return pubsub.NewSubscription(ds, nil)
-	}
-	ss := []*pubsub.Subscription{makeSub(0), makeSub(1)}
-	for _, s := range ss {
+		defer cleanup()
+		s := pubsub.NewSubscription(ds, nil)
 		defer s.Shutdown(ctx)
+		ss = append(ss, s)
 	}
 	want := publishN(t, ctx, top, 3)
 	for i, s := range ss {
@@ -279,7 +282,7 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, _, cleanup, err := makePair(ctx, h)
+	top, _, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +304,7 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 		t.Fatal(err)
 	}
 	defer h.Close()
-	_, sub, cleanup, err := makePair(ctx, h)
+	_, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +322,7 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,18 +349,20 @@ func isCanceled(err error) bool {
 	return false
 }
 
-func makePair(ctx context.Context, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	dt, err := h.MakeTopic(ctx)
+func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
+	dt, topicCleanup, err := h.CreateTopic(ctx, testName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, err := h.MakeSubscription(ctx, dt, 0)
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt, testName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt)
 	s := pubsub.NewSubscription(ds, nil)
 	cleanup := func() {
+		topicCleanup()
+		subCleanup()
 		t.Shutdown(ctx)
 		s.Shutdown(ctx)
 	}
@@ -372,7 +377,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h)
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
