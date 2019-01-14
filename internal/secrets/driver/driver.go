@@ -29,7 +29,3 @@ type Keeper interface {
 	// Encrypt encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 }
-
-// CrypterOptions controls Crypter behaviors.
-// It is provided for future extensibility.
-type CrypterOptions struct{}
