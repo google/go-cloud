@@ -44,6 +44,7 @@ func ExampleCrypter_Encrypt() {
 			KeyRing:   "test",
 			Key:       "key-name",
 		},
+		nil,
 	)
 
 	// Makes the request to the KMS API to encrypt the plain text into a binary.
@@ -80,6 +81,7 @@ func ExampleCrypter_Decrypt() {
 			KeyRing:   "test",
 			Key:       "key-name",
 		},
+		nil,
 	)
 
 	// Makes the request to the KMS API to decrypt the binary into plain text.

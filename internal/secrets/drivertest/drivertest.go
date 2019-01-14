@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/secrets"
 	"gocloud.dev/internal/secrets/driver"
 )
 
@@ -54,10 +55,11 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer harness.Close()
 
-	crypter, err := harness.MakeDriver(ctx)
+	drv, err := harness.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+	crypter := secrets.NewCrypter(drv)
 
 	msg := []byte("I'm a secret message!")
 	encryptedMsg, err := crypter.Encrypt(ctx, msg)
