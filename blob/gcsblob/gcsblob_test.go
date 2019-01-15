@@ -98,6 +98,20 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func BenchmarkGcsblob(b *testing.B) {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		b.Fatal(err)
+	}
+	bkt, err := OpenBucket(context.Background(), client, bucketName, nil)
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying GCS types and

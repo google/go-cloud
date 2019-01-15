@@ -17,9 +17,7 @@ package azureblob
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -42,28 +40,21 @@ import (
 //
 // 3. Locate the Access Key (Primary or Secondary) under your Storage Account > Settings > Access Keys.
 //
-// 4. Create a file in JSON format with the AccountName and AccountKey values.
+// 4. Set the environment variables AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY to
+//    the storage account name and your access key.
 //
-// Example: settings.json
-//  {
-//    "AccountName": "enter-your-storage-account-name",
-//    "AccountKey": "enter-your-storage-account-key"
-//  }
-//
-// 4. Create a container in your Storage Account > Blob. Update the bucketName
+// 5. Create a container in your Storage Account > Blob. Update the bucketName
 // constant to your container name.
 //
 // Here is a step-by-step walkthrough using the Azure Portal
 // https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal
 //
-// 5. Run the tests with -record and -settingsfile flags.
+// 5. Run the tests with -record.
 
 const (
 	bucketName  = "go-cloud-bucket"
 	accountName = AccountName("gocloudblobtests")
 )
-
-var pathToSettingsFile = flag.String("settingsfile", "", "path to .json file containing Azure Storage AccountKey and AccountName(required for --record)")
 
 type harness struct {
 	pipeline   pipeline.Pipeline
@@ -75,27 +66,17 @@ type harness struct {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	var key AccountKey
 	if *setup.Record {
-		// In Record mode, we load credentials from a JSON settings file.
-		type TestSettings struct {
-			AccountName AccountName
-			AccountKey  AccountKey
-		}
-		s := &TestSettings{}
-		if *pathToSettingsFile == "" {
-			t.Fatalf("--settingsfile is required in --record mode.")
-		}
-		b, err := ioutil.ReadFile(*pathToSettingsFile)
+		name, err := DefaultAccountName()
 		if err != nil {
-			t.Fatalf("Couldn't find settings file at %v: %v", *pathToSettingsFile, err)
+			t.Fatal(err)
 		}
-		err = json.Unmarshal(b, s)
+		if name != accountName {
+			t.Fatalf("Please update the accountName constant to match your settings file so future records work (%q vs %q)", name, accountName)
+		}
+		key, err = DefaultAccountKey()
 		if err != nil {
-			t.Fatalf("Cannot load settings file %v: %v", *pathToSettingsFile, err)
+			t.Fatal(err)
 		}
-		if s.AccountName != accountName {
-			t.Fatalf("Please update the accountName constant to match your settings file so future records work (%q vs %q)", s.AccountName, accountName)
-		}
-		key = s.AccountKey
 	} else {
 		// In replay mode, we use fake credentials.
 		key = AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS")))
@@ -123,6 +104,24 @@ func (h *harness) Close() {
 func TestConformance(t *testing.T) {
 	// See setup instructions above for more details.
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+}
+
+func BenchmarkAzureblob(b *testing.B) {
+	name, err := DefaultAccountName()
+	if err != nil {
+		b.Fatal(err)
+	}
+	key, err := DefaultAccountKey()
+	if err != nil {
+		b.Fatal(err)
+	}
+	credential, err := NewCredential(name, key)
+	if err != nil {
+		b.Fatal(err)
+	}
+	p := NewPipeline(credential, azblob.PipelineOptions{})
+	bkt, err := OpenBucket(context.Background(), p, name, bucketName, nil)
+	drivertest.RunBenchmarks(b, bkt)
 }
 
 const language = "nl"

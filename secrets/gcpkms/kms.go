@@ -22,6 +22,7 @@ import (
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	"gocloud.dev/gcp"
+	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
@@ -36,12 +37,12 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 	return c, func() { c.Close() }, err
 }
 
-// NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID) *Crypter {
-	return &Crypter{
+// NewKeeper returns a new Keeper to to encryption and decryption.
+func NewKeeper(client *cloudkms.KeyManagementClient, ki *KeyID, opts *KeeperOptions) *secrets.Keeper {
+	return secrets.NewKeeper(&keeper{
 		keyID:  ki,
 		client: client,
-	}
+	})
 }
 
 // KeyID includes related information to construct a key name that is managed
@@ -57,20 +58,19 @@ func (ki *KeyID) String() string {
 		ki.ProjectID, ki.Location, ki.KeyRing, ki.Key)
 }
 
-// Crypter contains information to construct the pull path of a key.
-// TODO(#1066): make this unexported when there is a top-level portable API.
-type Crypter struct {
+// keeper contains information to construct the pull path of a key.
+type keeper struct {
 	keyID  *KeyID
 	client *cloudkms.KeyManagementClient
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
-func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       c.keyID.String(),
+		Name:       k.keyID.String(),
 		Ciphertext: ciphertext,
 	}
-	resp, err := c.client.Decrypt(ctx, req)
+	resp, err := k.client.Decrypt(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -78,14 +78,18 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 }
 
 // Encrypt encrypts the plaintext into a ciphertext.
-func (c *Crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      c.keyID.String(),
+		Name:      k.keyID.String(),
 		Plaintext: plaintext,
 	}
-	resp, err := c.client.Encrypt(ctx, req)
+	resp, err := k.client.Encrypt(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.GetCiphertext(), nil
 }
+
+// KeeperOptions controls Keeper behaviors.
+// It is provided for future extensibility.
+type KeeperOptions struct{}
