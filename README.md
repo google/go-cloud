@@ -44,6 +44,8 @@ talk at Next 2018:
 ## Installation instructions
 
 ```shell
+# First "cd" into your project directory if you have one to ensure "go get" uses
+# Go modules (or not) appropriately. See "go help modules" for more info.
 go get gocloud.dev
 go get github.com/google/wire/cmd/wire
 ```
