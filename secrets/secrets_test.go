@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"gocloud.dev/internal/secrets/driver"
+	"gocloud.dev/secrets/driver"
 )
 
 var errFake = errors.New("fake")
