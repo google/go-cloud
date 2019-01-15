@@ -28,7 +28,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1866,16 +1866,11 @@ func benchmarkWriteReadDelete(b *testing.B, bkt *blob.Bucket) {
 	const baseKey = "writereaddeletebenchmark-blob-"
 
 	content := loadTestData(b, "test-large.jpg")
-
-	var mu sync.Mutex
-	nextID := 0 // protected by mu
+	var nextID uint32
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
-		mu.Lock()
-		key := fmt.Sprintf("%s%d", baseKey, nextID)
-		nextID++
-		mu.Unlock()
+		key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
 		for pb.Next() {
 			if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
 				b.Error(err)
