@@ -14,7 +14,7 @@
 
 // Package driver defines interfaces to be implemented for providers of the
 // secrets package.
-package driver // import "gocloud.dev/internal/secrets/driver"
+package driver // import "gocloud.dev/secrets/driver"
 
 import "context"
 
