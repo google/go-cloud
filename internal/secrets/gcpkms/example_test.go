@@ -20,7 +20,7 @@ import (
 	"gocloud.dev/internal/secrets/gcpkms"
 )
 
-func ExampleKeeper_Encrypt() {
+func Example_encrypt() {
 	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
@@ -56,7 +56,7 @@ func ExampleKeeper_Encrypt() {
 	_ = encrypted
 }
 
-func ExampleKeeper_Decrypt() {
+func Example_decrypt() {
 	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
