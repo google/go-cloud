@@ -65,6 +65,7 @@ to automatically provision the resources needed.
 
 [tutorial]: https://github.com/google/go-cloud/tree/master/samples/tutorial
 [guestbook]: https://github.com/google/go-cloud/tree/master/samples/guestbook
+[gcmsg]: https://github.com/google/go-cloud/tree/master/pubsub/samples/gcmsg
 
 ## Project status
 
@@ -77,6 +78,7 @@ While in alpha, the API is subject to breaking changes.
 Go Cloud provides generic APIs for:
 
 *   Unstructured binary (blob) storage
+*   Publish/Subscribe (pubsub)
 *   Variables that change at runtime (configuration)
 *   Connecting to MySQL databases
 *   Server startup and diagnostics: request logging, tracing, and health
