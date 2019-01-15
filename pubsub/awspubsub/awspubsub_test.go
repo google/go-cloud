@@ -21,9 +21,12 @@ import (
 	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
+	"log"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -36,44 +39,34 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const (
-	// These constants capture values that were used during the last -record.
-	//
-	// If you want to use --record mode,
-	// 1a. Create an SNS topic in your AWS project by browsing to
-	//    https://console.aws.amazon.com/sns/v2/home
-	//    and clicking "Topics", "Create new topic".
-	// 1b. Create a subscription queue by browsing to
-	//    https://console.aws.amazon.com/sqs/home
-	//    and clicking "Create New Queue", typing the queue name, then
-	//    "Quick-Create Queue".
-	// 2. Update the topicARN constant to your topic ARN, and the
-	//    qURL to your queue URL.
-	topicARN = "arn:aws:sns:us-east-2:221420415498:test-topic"
-	region   = "us-east-2"
-)
-
-var qURLs = []string{
-	"https://sqs.us-east-2.amazonaws.com/221420415498/test-q-0",
-	"https://sqs.us-east-2.amazonaws.com/221420415498/test-q-1",
-}
+const region   = "us-east-2"
 
 type harness struct {
 	sess   *session.Session
 	cfg    *aws.Config
 	rt     http.RoundTripper
 	closer func()
+	numTopics uint32
+	numSubs   uint32
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, rt, done := setup.NewAWSSession(t, region)
-	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done}, nil
+	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
 }
 
-func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
+func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	client := sns.New(h.sess, h.cfg)
-	dt := openTopic(ctx, client, topicARN)
-	return dt, nil
+	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+	out, err := client.CreateTopic(&sns.CreateTopicInput{Name: aws.String(topicName)})
+	if err != nil {
+		return nil, nil, fmt.Errorf(`creating topic "%s": %v`, topicName, err)
+	}
+	dt = openTopic(ctx, client, *out.TopicArn)
+	cleanup = func() {
+		// client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
+	}
+	return dt, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
@@ -82,11 +75,64 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	client := sqs.New(h.sess, h.cfg)
-	u := qURLs[n]
-	ds := openSubscription(ctx, client, u)
-	return ds, nil
+	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+	out, err := client.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(subName)})
+	if err != nil {
+		return nil, nil, fmt.Errorf(`creating subscription queue "%s": %v`, subName, err)
+	}
+	ds = openSubscription(ctx, client, *out.QueueUrl)
+	snsClient := sns.New(h.sess, h.cfg)
+	log.Printf("getting queue ARN")
+	out2, err := client.GetQueueAttributes(&sqs.GetQueueAttributesInput{
+		QueueUrl: out.QueueUrl,
+		AttributeNames: []*string{aws.String("QueueArn")},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("getting queue ARN for %s: %v", *out.QueueUrl, err)
+	}
+	qARN := out2.Attributes["QueueArn"]
+	t := dt.(*topic)
+	log.Printf("subscribing")
+	_, err = snsClient.Subscribe(&sns.SubscribeInput{
+		TopicArn: aws.String(t.arn),
+		Endpoint: qARN,
+		Protocol: aws.String("sqs"),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("subscribing: %v", err)
+	}
+	// Get the confirmation from the queue.
+	out3, err := client.ReceiveMessage(&sqs.ReceiveMessageInput{
+			QueueUrl: out.QueueUrl,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
+	}
+	ms := out3.Messages
+	var token *string
+	switch len(ms) {
+	case 0:
+		return nil, nil, errors.New("no subscription confirmation message found in queue")
+	case 1:
+		m := ms[0]
+		token = m.Body
+	default:
+		return nil, nil, fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
+	}
+	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
+		TopicArn: aws.String(t.arn),
+		Token: token,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("confirming subscription: %v", err)
+	}
+	cleanup = func() {
+		client.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
+	}
+	log.Printf("returning from CreateSubscription")
+	return ds, cleanup, nil
 }
 
 func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(error)) driver.Batcher {
@@ -132,10 +178,9 @@ func (wb *wrappedBatcher) Shutdown() {
 	wb.b.Shutdown()
 }
 
-
 type simpleBatcher struct {
-	mu      sync.Mutex
-	done    bool
+	mu   sync.Mutex
+	done bool
 
 	handler func(items interface{}) error
 }
@@ -215,4 +260,8 @@ func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 		return fmt.Errorf("cast failed for %T", s)
 	}
 	return nil
+}
+
+func sanitize(testName string) string {
+	return strings.Replace(testName, "/", "_", -1)
 }

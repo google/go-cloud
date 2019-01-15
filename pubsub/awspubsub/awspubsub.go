@@ -62,12 +62,12 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 				StringValue: aws.String(v),
 			}
 		}
-		req, _ := t.client.PublishRequest(&sns.PublishInput{
+		_, err := t.client.Publish(&sns.PublishInput{
 			Message:           aws.String(string(dm.Body)),
 			MessageAttributes: attrs,
 			TopicArn:          &t.arn,
 		})
-		if err := req.Send(); err != nil {
+		if err != nil {
 			return err
 		}
 	}
@@ -112,7 +112,9 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	output, err := s.receiveMessages()
+	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
+		QueueUrl: &s.qURL,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -138,16 +140,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		ms = append(ms, m)
 	}
 	return ms, nil
-}
-
-func (s *subscription) receiveMessages() (*sqs.ReceiveMessageOutput, error) {
-	req, output := s.client.ReceiveMessageRequest(&sqs.ReceiveMessageInput{
-		QueueUrl: &s.qURL,
-	})
-	if err := req.Send(); err != nil {
-		return nil, err
-	}
-	return output, nil
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
