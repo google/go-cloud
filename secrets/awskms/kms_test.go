@@ -21,8 +21,8 @@ import (
 	"gocloud.dev/internal/testing/setup"
 
 	"github.com/aws/aws-sdk-go/service/kms"
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
+	"gocloud.dev/secrets/driver"
+	"gocloud.dev/secrets/drivertest"
 )
 
 const (

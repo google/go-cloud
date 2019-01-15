@@ -22,7 +22,7 @@ import (
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	"gocloud.dev/gcp"
-	"gocloud.dev/internal/secrets"
+	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )

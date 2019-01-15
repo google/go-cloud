@@ -14,12 +14,12 @@
 
 // Package secrets provides a set of portable APIs for message encryption and
 // decryption.
-package secrets // import "gocloud.dev/internal/secrets"
+package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
 
-	"gocloud.dev/internal/secrets/driver"
+	"gocloud.dev/secrets/driver"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
