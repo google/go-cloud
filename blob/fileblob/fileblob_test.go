@@ -59,6 +59,18 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
 
+func BenchmarkFileblob(b *testing.B) {
+	dir := path.Join(os.TempDir(), "go-cloud-fileblob")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		b.Fatal(err)
+	}
+	bkt, err := OpenBucket(dir, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 // File-specific unit tests.
 func TestNewBucket(t *testing.T) {
 	t.Run("BucketDirMissing", func(t *testing.T) {

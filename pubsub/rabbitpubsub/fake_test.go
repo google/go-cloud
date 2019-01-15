@@ -321,3 +321,13 @@ func (ch *fakeChannel) closeLocked() {
 		c <- amqp.ErrClosed
 	}
 }
+
+func (ch *fakeChannel) ExchangeDelete(name string) error {
+	delete(ch.conn.exchanges, name)
+	return nil
+}
+
+func (ch *fakeChannel) QueueDelete(name string) error {
+	delete(ch.conn.queues, name)
+	return nil
+}

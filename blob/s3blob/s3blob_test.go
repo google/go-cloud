@@ -73,6 +73,20 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func BenchmarkS3blob(b *testing.B) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	bkt, err := OpenBucket(context.Background(), sess, bucketName, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying GCS types and
