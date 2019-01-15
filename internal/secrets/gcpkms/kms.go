@@ -37,9 +37,9 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 	return c, func() { c.Close() }, err
 }
 
-// NewCrypter returns a new Crypter to to encryption and decryption.
-func NewCrypter(client *cloudkms.KeyManagementClient, ki *KeyID, opts *CrypterOptions) *secrets.Crypter {
-	return secrets.NewCrypter(&crypter{
+// NewKeeper returns a new Keeper to to encryption and decryption.
+func NewKeeper(client *cloudkms.KeyManagementClient, ki *KeyID, opts *KeeperOptions) *secrets.Keeper {
+	return secrets.NewKeeper(&keeper{
 		keyID:  ki,
 		client: client,
 	})
@@ -58,19 +58,19 @@ func (ki *KeyID) String() string {
 		ki.ProjectID, ki.Location, ki.KeyRing, ki.Key)
 }
 
-// crypter contains information to construct the pull path of a key.
-type crypter struct {
+// keeper contains information to construct the pull path of a key.
+type keeper struct {
 	keyID  *KeyID
 	client *cloudkms.KeyManagementClient
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
-func (c *crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       c.keyID.String(),
+		Name:       k.keyID.String(),
 		Ciphertext: ciphertext,
 	}
-	resp, err := c.client.Decrypt(ctx, req)
+	resp, err := k.client.Decrypt(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -78,18 +78,18 @@ func (c *crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 }
 
 // Encrypt encrypts the plaintext into a ciphertext.
-func (c *crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      c.keyID.String(),
+		Name:      k.keyID.String(),
 		Plaintext: plaintext,
 	}
-	resp, err := c.client.Encrypt(ctx, req)
+	resp, err := k.client.Encrypt(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 	return resp.GetCiphertext(), nil
 }
 
-// CrypterOptions controls Crypter behaviors.
+// KeeperOptions controls Keeper behaviors.
 // It is provided for future extensibility.
-type CrypterOptions struct{}
+type KeeperOptions struct{}

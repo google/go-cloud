@@ -18,10 +18,10 @@ package driver // import "gocloud.dev/internal/secrets/driver"
 
 import "context"
 
-// Crypter holds the key information to encrypt a plain text message into a
+// Keeper holds the key information to encrypt a plain text message into a
 // cipher message, as well as decrypt a cipher message into a plain text message
 // encrypted by the same key.
-type Crypter interface {
+type Keeper interface {
 
 	// Decrypt decrypts the ciphertext and returns the plaintext or an error.
 	Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)

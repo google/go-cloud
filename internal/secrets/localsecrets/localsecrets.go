@@ -22,18 +22,21 @@ import (
 	"errors"
 	"io"
 
+	"gocloud.dev/internal/secrets"
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
 // keeper holds a secret for use in symmetric encryption,
-// and implements driver.Crypter.
+// and implements driver.Keeper.
 type keeper struct {
 	secretKey [32]byte // secretbox key size
 }
 
 // NewKeeper takes a secret key and returns a Keeper.
-func NewKeeper(sk [32]byte) *keeper {
-	return &keeper{secretKey: sk}
+func NewKeeper(sk [32]byte) *secrets.Keeper {
+	return secrets.NewKeeper(
+		&keeper{secretKey: sk},
+	)
 }
 
 // ByteKey takes a secret key as a string and converts it

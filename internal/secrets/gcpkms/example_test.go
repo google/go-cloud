@@ -20,7 +20,7 @@ import (
 	"gocloud.dev/internal/secrets/gcpkms"
 )
 
-func ExampleCrypter_Encrypt() {
+func ExampleKeeper_Encrypt() {
 	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
@@ -33,7 +33,7 @@ func ExampleCrypter_Encrypt() {
 
 	plaintext := []byte("Hello, Secrets!")
 
-	crypter := gcpkms.NewCrypter(
+	keeper := gcpkms.NewKeeper(
 		client,
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
@@ -48,7 +48,7 @@ func ExampleCrypter_Encrypt() {
 	)
 
 	// Makes the request to the KMS API to encrypt the plain text into a binary.
-	encrypted, err := crypter.Encrypt(ctx, plaintext)
+	encrypted, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func ExampleCrypter_Encrypt() {
 	_ = encrypted
 }
 
-func ExampleCrypter_Decrypt() {
+func ExampleKeeper_Decrypt() {
 	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
@@ -70,7 +70,7 @@ func ExampleCrypter_Decrypt() {
 	// Get the secret to be decrypted from some kind of storage.
 	var ciphertext []byte
 
-	crypter := gcpkms.NewCrypter(
+	keeper := gcpkms.NewKeeper(
 		client,
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
@@ -85,7 +85,7 @@ func ExampleCrypter_Decrypt() {
 	)
 
 	// Makes the request to the KMS API to decrypt the binary into plain text.
-	decrypted, err := crypter.Decrypt(ctx, ciphertext)
+	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	if err != nil {
 		panic(err)
 	}

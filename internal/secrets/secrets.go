@@ -22,32 +22,32 @@ import (
 	"gocloud.dev/internal/secrets/driver"
 )
 
-// Crypter does encryption and decryption. To create a Crypter, use constructors
+// Keeper does encryption and decryption. To create a Keeper, use constructors
 // found in provider-specific subpackages.
-type Crypter struct {
-	c driver.Crypter
+type Keeper struct {
+	k driver.Keeper
 }
 
-// NewCrypter is intended for use by a specific provider implementation to
-// create a Crypter.
-func NewCrypter(c driver.Crypter) *Crypter {
-	return &Crypter{c: c}
+// NewKeeper is intended for use by a specific provider implementation to
+// create a Keeper.
+func NewKeeper(k driver.Keeper) *Keeper {
+	return &Keeper{k: k}
 }
 
 // Encrypt encrypts the plaintext and returns the cipher message.
-func (c *Crypter) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
-	b, err := c.Encrypt(ctx, plaintext)
+func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
-		return nil, wrapError(c, err)
+		return nil, wrapError(k, err)
 	}
 	return b, nil
 }
 
 // Decrypt decrypts the ciphertext and returns the plaintext or an error.
-func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	b, err := c.Decrypt(ctx, ciphertext)
+func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
-		return nil, wrapError(c, err)
+		return nil, wrapError(k, err)
 	}
 	return b, nil
 }
@@ -56,14 +56,14 @@ func (c *Crypter) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error
 // not given access to provider-specific errors.
 type wrappedError struct {
 	err error
-	c   driver.Crypter
+	k   driver.Keeper
 }
 
-func wrapError(c driver.Crypter, err error) error {
+func wrapError(k driver.Keeper, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &wrappedError{c: c, err: err}
+	return &wrappedError{k: k, err: err}
 }
 
 func (w *wrappedError) Error() string {
