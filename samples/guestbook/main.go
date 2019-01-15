@@ -49,6 +49,7 @@ type cliFlags struct {
 	motdVar         string
 	motdVarWaitTime time.Duration
 
+	// GCP only.
 	cloudSQLRegion    string
 	runtimeConfigName string
 }
@@ -58,7 +59,7 @@ var envFlag string
 func main() {
 	// Determine environment to set up based on flag.
 	cf := new(cliFlags)
-	flag.StringVar(&envFlag, "env", "local", "environment to run under")
+	flag.StringVar(&envFlag, "env", "local", "environment to run under (gcp, aws, azure, or local)")
 	addr := flag.String("listen", ":8080", "port to listen for HTTP on")
 	flag.StringVar(&cf.bucket, "bucket", "", "bucket name")
 	flag.StringVar(&cf.dbHost, "db_host", "", "database host or Cloud SQL instance name")
@@ -80,6 +81,14 @@ func main() {
 		app, cleanup, err = setupGCP(ctx, cf)
 	case "aws":
 		app, cleanup, err = setupAWS(ctx, cf)
+	case "azure":
+		if cf.dbHost == "" {
+			cf.dbHost = "localhost"
+		}
+		if cf.dbPassword == "" {
+			cf.dbPassword = "xyzzy"
+		}
+		app, cleanup, err = setupAzure(ctx, cf)
 	case "local":
 		// The default MySQL instance is running on localhost
 		// with this root password.
@@ -178,6 +187,9 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 	case "aws":
 		data.Env = "AWS"
 		data.BannerSrc = "/blob/aws.png"
+	case "azure":
+		data.Env = "Azure"
+		data.BannerSrc = "/blob/azure.png"
 	case "local":
 		data.Env = "Local"
 		data.BannerSrc = "/blob/gophers.jpg"
