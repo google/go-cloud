@@ -16,6 +16,7 @@ package awskms_test
 
 import (
 	"context"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -27,13 +28,13 @@ func Example_encrypt() {
 		Region: aws.String("us-west-1"),
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Get a client to use with the KMS API.
 	client, err := awskms.Dial(sess)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	plaintext := []byte("Hello, Secrets!")
@@ -50,7 +51,7 @@ func Example_encrypt() {
 	// Makes the request to the KMS API to encrypt the plain text into a binary.
 	encrypted, err := keeper.Encrypt(context.Background(), plaintext)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Store the encrypted secret.
 	_ = encrypted

@@ -16,6 +16,7 @@ package gcpkms_test
 
 import (
 	"context"
+	"log"
 
 	"gocloud.dev/internal/secrets/gcpkms"
 )
@@ -26,7 +27,7 @@ func Example_encrypt() {
 	// Get a client to use with the KMS API.
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Make sure to close the connection when done.
 	defer done()
@@ -50,7 +51,7 @@ func Example_encrypt() {
 	// Makes the request to the KMS API to encrypt the plain text into a binary.
 	encrypted, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Store the encrypted secret.
 	_ = encrypted
@@ -62,7 +63,7 @@ func Example_decrypt() {
 	// Get a client to use with the KMS API.
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Make sure to close the connection when done.
 	defer done()
@@ -87,7 +88,7 @@ func Example_decrypt() {
 	// Makes the request to the KMS API to decrypt the binary into plain text.
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Use the decrypted secret.
 	_ = decrypted
