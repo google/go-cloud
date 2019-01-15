@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
 	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/secrets/driver"
+	"gocloud.dev/secrets/drivertest"
 	"google.golang.org/api/option"
 )
 

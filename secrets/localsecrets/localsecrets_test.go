@@ -18,8 +18,8 @@ import (
 	"context"
 	"testing"
 
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
+	"gocloud.dev/secrets/driver"
+	"gocloud.dev/secrets/drivertest"
 )
 
 type harness struct{}

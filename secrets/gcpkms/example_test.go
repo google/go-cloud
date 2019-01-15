@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,44 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package awskms_test
+package gcpkms_test
 
 import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"gocloud.dev/internal/secrets/awskms"
+	"gocloud.dev/secrets/gcpkms"
 )
 
 func Example_encrypt() {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
+	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(sess)
+	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Make sure to close the connection when done.
+	defer done()
 
 	plaintext := []byte("Hello, Secrets!")
 
-	keeper := awskms.NewKeeper(
+	keeper := gcpkms.NewKeeper(
 		client,
-		// Get the key resource ID. Here is an example of using an alias. See
-		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-		// for more details.
-		"alias/test-secrets",
+		// Get the key resource ID.
+		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+		// information.
+		&gcpkms.KeyID{
+			ProjectID: "project-id",
+			Location:  "global",
+			KeyRing:   "test",
+			Key:       "key-name",
+		},
 		nil,
 	)
 
 	// Makes the request to the KMS API to encrypt the plain text into a binary.
-	encrypted, err := keeper.Encrypt(context.Background(), plaintext)
+	encrypted, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,29 +58,37 @@ func Example_encrypt() {
 }
 
 func Example_decrypt() {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	})
-	if err != nil {
-		panic(err)
-	}
+	ctx := context.Background()
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(sess)
+	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
+	// Make sure to close the connection when done.
+	defer done()
 
 	// Get the secret to be decrypted from some kind of storage.
 	var ciphertext []byte
 
-	// keyID is not needed when doing decryption.
-	keeper := awskms.NewKeeper(client, "", nil)
+	keeper := gcpkms.NewKeeper(
+		client,
+		// Get the key resource ID.
+		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+		// information.
+		&gcpkms.KeyID{
+			ProjectID: "project-id",
+			Location:  "global",
+			KeyRing:   "test",
+			Key:       "key-name",
+		},
+		nil,
+	)
 
 	// Makes the request to the KMS API to decrypt the binary into plain text.
-	decrypted, err := keeper.Decrypt(context.Background(), ciphertext)
+	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	// Use the decrypted secret.
 	_ = decrypted

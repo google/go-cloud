@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/kms"
-	"gocloud.dev/internal/secrets"
+	"gocloud.dev/secrets"
 )
 
 // NewKeeper returns a new Keeper to do encryption and decryption.
