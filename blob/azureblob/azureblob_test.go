@@ -106,6 +106,24 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func BenchmarkAzureblob(b *testing.B) {
+	name, err := DefaultAccountName()
+	if err != nil {
+		b.Fatal(err)
+	}
+	key, err := DefaultAccountKey()
+	if err != nil {
+		b.Fatal(err)
+	}
+	credential, err := NewCredential(name, key)
+	if err != nil {
+		b.Fatal(err)
+	}
+	p := NewPipeline(credential, azblob.PipelineOptions{})
+	bkt, err := OpenBucket(context.Background(), p, name, bucketName, nil)
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying Azure types and
