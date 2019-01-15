@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -195,6 +196,16 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				testAs(t, newHarness, st)
 			})
 		}
+	})
+}
+
+// RunBenchmarks runs benchmarks for provider implementations of blob.
+func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
+	b.Run("BenchmarkRead", func(b *testing.B) {
+		benchmarkRead(b, bkt)
+	})
+	b.Run("BenchmarkWriteReadDelete", func(b *testing.B) {
+		benchmarkWriteReadDelete(b, bkt)
 	})
 }
 
@@ -1029,7 +1040,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 }
 
 // loadTestData loads test data, inlined using go-bindata.
-func loadTestData(t *testing.T, name string) []byte {
+func loadTestData(t testing.TB, name string) []byte {
 	data, err := Asset(name)
 	if err != nil {
 		t.Fatal(err)
@@ -1822,4 +1833,65 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err := st.ErrorCheck(gotErr); err != nil {
 		t.Error(err)
 	}
+}
+
+func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
+	ctx := context.Background()
+	const key = "readbenchmark-blob"
+
+	content := loadTestData(b, "test-large.jpg")
+	if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
+		b.Fatal(err)
+	}
+	defer func() {
+		_ = bkt.Delete(ctx, key)
+	}()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			buf, err := bkt.ReadAll(ctx, key)
+			if err != nil {
+				b.Error(err)
+			}
+			if !bytes.Equal(buf, content) {
+				b.Error("read didn't match write")
+			}
+		}
+	})
+}
+
+func benchmarkWriteReadDelete(b *testing.B, bkt *blob.Bucket) {
+	ctx := context.Background()
+	const baseKey = "writereaddeletebenchmark-blob-"
+
+	content := loadTestData(b, "test-large.jpg")
+
+	var mu sync.Mutex
+	nextID := 0 // protected by mu
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		mu.Lock()
+		key := fmt.Sprintf("%s%d", baseKey, nextID)
+		nextID++
+		mu.Unlock()
+		for pb.Next() {
+			if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
+				b.Error(err)
+				continue
+			}
+			buf, err := bkt.ReadAll(ctx, key)
+			if err != nil {
+				b.Error(err)
+			}
+			if !bytes.Equal(buf, content) {
+				b.Error("read didn't match write")
+			}
+			if err := bkt.Delete(ctx, key); err != nil {
+				b.Error(err)
+				continue
+			}
+		}
+	})
 }
