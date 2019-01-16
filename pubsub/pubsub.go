@@ -158,11 +158,11 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// NewTopic creates a new *Topic based on a specific driver implementation.
-// End users should use subpackages to construct a *Topic instead of this
-// function; see the package documentation for details.
-// It is intended for use by provider implementations.
-func NewTopic(d driver.Topic) *Topic {
+// NewTopic is for use by provider implementations.
+var NewTopic = newTopic
+
+// newTopic makes a pubsub.Topic from a driver.Topic.
+func newTopic(d driver.Topic) *Topic {
 	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
@@ -313,13 +313,13 @@ func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a new *Subscription based on a specific driver
-// implementation.
-// End users should use subpackages to construct a *Subscription instead of this
-// function; see the package documentation for details.
-// It is intended for use by provider implementations.
+// NewSubscription is for use by provider implementations.
+var NewSubscription = newSubscription
+
+// newSubscription creates a Subscription from a driver.Subscription
+// and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
