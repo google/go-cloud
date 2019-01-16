@@ -17,68 +17,56 @@ package errors
 
 import "fmt"
 
-// A Code describes the error's category. Programs should act upon an error's
+// An ErrorCode describes the error's category. Programs should act upon an error's
 // code, not its message.
-type Code int
+type ErrorCode int
 
 const (
-	OK Code = iota
+	// Returned by the Code function on a nil error. It is not a valid
+	// code for an error.
+	OK ErrorCode = 0
 
 	// The error could not be categorized.
-	Unknown
+	Unknown = 1
 
 	// The resource was not found.
-	NotFound
+	NotFound = 2
 
 	// The resource exists, but it should not.
-	AlreadyExists
-
-	// The caller is not authorized to perform the operation.
-	PermissionDenied
+	AlreadyExists = 3
 
 	// A value given to a Go Cloud API is incorrect.
-	InvalidArgument
+	InvalidArgument = 4
 
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
-	Internal
+	Internal = 5
 )
 
-var codeStrings = []string{
-	"Unknown",
-	"NotFound",
-	"AlreadyExists",
-	"PermissionDenied",
-	"InvalidArgument",
-	"Internal",
-}
+// To get stringer: go get golang.org/x/tools/cmd/stringer
+
+//go:generate stringer -type=ErrorCode
 
 // An Error described a Go Cloud error.
 type Error struct {
-	Code Code
+	Code ErrorCode
 	msg  string
 	err  error
 }
 
 func (e *Error) Error() string {
-	cs := "?badCode?"
-	if e.Code >= 0 && int(e.Code) < len(codeStrings) {
-		cs = codeStrings[e.Code]
-	}
-	return fmt.Sprintf("%s: %s", cs, e.msg)
+	return fmt.Sprintf("%v: %s", e.Code, e.msg)
 }
-
-// TODO(jba): use the new errors formatting code to print the underlying error.
 
 // Unwrap returns the error underlying the receiver.
 func (e *Error) Unwrap() error {
 	return e.err
 }
 
-// ErrorCode returns the Code of err if it is an *Error.
+// Code returns the ErrorCode of err if it is an *Error.
 // It returns Unknown if err is a non-nil error of a different type.
 // If err is nil, it returns the special code OK.
-func ErrorCode(err error) Code {
+func Code(err error) ErrorCode {
 	if err == nil {
 		return OK
 	}
@@ -89,7 +77,7 @@ func ErrorCode(err error) Code {
 }
 
 // New returns a new error with the given code, underlying error and message.
-func New(c Code, err error, msg string) *Error {
+func New(c ErrorCode, err error, msg string) *Error {
 	return &Error{
 		Code: c,
 		msg:  msg,
@@ -98,6 +86,6 @@ func New(c Code, err error, msg string) *Error {
 }
 
 // Newf uses format and args to format a message, then calls New.
-func Newf(c Code, err error, format string, args ...interface{}) *Error {
+func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, fmt.Sprintf(format, args...))
 }
