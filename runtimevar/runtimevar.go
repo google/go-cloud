@@ -98,10 +98,11 @@ type Variable struct {
 	prev     driver.State
 }
 
-// New creates a new *Variable based on a specific driver implementation.
-// End users should use subpackages to construct a *Variable instead of this
-// function; see the package documentation for details.
-func New(w driver.Watcher) *Variable {
+// New is intended for use by provider implementations.
+var New = newVar
+
+// newVar creates a new *Variable based on a specific driver implementation.
+func newVar(w driver.Watcher) *Variable {
 	return &Variable{watcher: w}
 }
 
