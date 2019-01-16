@@ -22,8 +22,10 @@ import "fmt"
 type Code int
 
 const (
+	OK Code = iota
+
 	// The error could not be categorized.
-	Unknown Code = iota
+	Unknown
 
 	// The resource was not found.
 	NotFound
@@ -71,6 +73,19 @@ func (e *Error) Error() string {
 // Unwrap returns the error underlying the receiver.
 func (e *Error) Unwrap() error {
 	return e.err
+}
+
+// ErrorCode returns the Code of err if it is an *Error.
+// It returns Unknown if err is a non-nil error of a different type.
+// If err is nil, it returns the special code OK.
+func ErrorCode(err error) Code {
+	if err == nil {
+		return OK
+	}
+	if e, ok := err.(*Error); ok {
+		return e.Code
+	}
+	return Unknown
 }
 
 // New returns a new error with the given code, underlying error and message.
