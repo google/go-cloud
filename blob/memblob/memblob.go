@@ -44,6 +44,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 )
 
 const defaultPageSize = 1000
@@ -84,14 +85,15 @@ func OpenBucket(opts *Options) *blob.Bucket {
 	return blob.NewBucket(openBucket(opts))
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return err == errNotFound
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return err == errNotImplemented
+func (b *bucket) ErrorCode(err error) gerrors.Code {
+	switch err {
+	case errNotFound:
+		return gerrors.NotFound
+	case errNotImplemented:
+		return gerrors.NotImplemented
+	default:
+		return gerrors.Unknown
+	}
 }
 
 // ListPaged implements driver.ListPaged.

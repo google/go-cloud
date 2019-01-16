@@ -58,6 +58,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -234,17 +235,17 @@ type bucket struct {
 	client *s3.S3
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
-		return true
+func (b *bucket) ErrorCode(err error) gerrors.Code {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return gerrors.Unknown
 	}
-	return false
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
+	switch {
+	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
+		return gerrors.NotFound
+	default:
+		return gerrors.Unknown
+	}
 }
 
 // ListPaged implements driver.ListPaged.

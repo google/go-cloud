@@ -22,8 +22,11 @@ import "fmt"
 type Code int
 
 const (
+	// Not an error.
+	OK Code = iota
+
 	// The error could not be categorized.
-	Unknown Code = iota
+	Unknown
 
 	// The resource was not found.
 	NotFound
@@ -40,15 +43,20 @@ const (
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
 	Internal
+
+	// The feature is not implemented by the driver.
+	NotImplemented
 )
 
 var codeStrings = []string{
+	"OK",
 	"Unknown",
 	"NotFound",
 	"AlreadyExists",
 	"PermissionDenied",
 	"InvalidArgument",
 	"Internal",
+	"NotImplemented",
 }
 
 // An Error described a Go Cloud error.
@@ -71,6 +79,16 @@ func (e *Error) Error() string {
 // Unwrap returns the error underlying the receiver.
 func (e *Error) Unwrap() error {
 	return e.err
+}
+
+func ErrorCode(err error) Code {
+	if err == nil {
+		return OK
+	}
+	if e, ok := err.(*Error); ok {
+		return e.Code
+	}
+	return Unknown
 }
 
 // New returns a new error with the given code, underlying error and message.

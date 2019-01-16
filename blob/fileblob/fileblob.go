@@ -65,6 +65,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 )
 
 const defaultPageSize = 1000
@@ -246,16 +247,17 @@ func unescape(s string) (string, error) {
 	return unescaped, nil
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
 var errNotImplemented = errors.New("not implemented")
 
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return err == errNotImplemented
+func (b *bucket) ErrorCode(err error) gerrors.Code {
+	switch {
+	case os.IsNotExist(err):
+		return gerrors.NotFound
+	case err == errNotImplemented:
+		return gerrors.NotImplemented
+	default:
+		return gerrors.Unknown
+	}
 }
 
 // path returns the full path for a key

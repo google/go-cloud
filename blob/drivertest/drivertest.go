@@ -35,6 +35,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -77,8 +78,6 @@ type AsTest interface {
 	Name() string
 	// BucketCheck will be called to allow verification of Bucket.As.
 	BucketCheck(b *blob.Bucket) error
-	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
-	ErrorCheck(err error) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -105,13 +104,6 @@ func (verifyAsFailsOnNil) Name() string {
 func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	if b.As(nil) {
 		return errors.New("want Bucket.As to return false when passed nil")
-	}
-	return nil
-}
-
-func (verifyAsFailsOnNil) ErrorCheck(err error) error {
-	if blob.ErrorAs(err, nil) {
-		return errors.New("want ErrorAs to return false when passed nil")
 	}
 	return nil
 }
@@ -1216,7 +1208,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 					// Verify that the read fails with IsNotExist.
 					if err == nil {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
-					} else if !tc.wantReadErr && !blob.IsNotExist(err) {
+					} else if !tc.wantReadErr && gerrors.ErrorCode(err) != gerrors.NotFound {
 						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
 					}
 				}
@@ -1546,7 +1538,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
 			t.Errorf("want error, got nil")
-		} else if !blob.IsNotExist(err) {
+		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
 			t.Errorf("want IsNotExist error, got %v", err)
 		}
 	})
@@ -1575,15 +1567,15 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete want error, got nil")
-		} else if !blob.IsNotExist(err) {
-			t.Errorf("read after delete want IsNotExist error, got %v", err)
+		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
+			t.Errorf("read after delete want NotFound error, got %v", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
 		if err == nil {
 			t.Errorf("delete after delete want error, got nil")
-		} else if !blob.IsNotExist(err) {
-			t.Errorf("delete after delete want IsNotExist error, got %v", err)
+		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
+			t.Errorf("delete after delete want NotFound error, got %v", err)
 		}
 	})
 }
@@ -1703,7 +1695,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// Try to generate a real signed URL.
 	url, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
-		if blob.IsNotImplemented(err) {
+		if gerrors.ErrorCode(err) == gerrors.NotImplemented {
 			t.Skipf("SignedURL not supported")
 			return
 		}
@@ -1829,9 +1821,6 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	_, gotErr := b.NewReader(ctx, "key-does-not-exist", nil)
 	if gotErr == nil {
 		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
-	}
-	if err := st.ErrorCheck(gotErr); err != nil {
-		t.Error(err)
 	}
 }
 

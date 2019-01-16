@@ -78,6 +78,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 
 	"gocloud.dev/internal/useragent"
 )
@@ -390,32 +391,17 @@ func (b *bucket) As(i interface{}) bool {
 	return true
 }
 
-// As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool {
-	switch v := err.(type) {
-	case azblob.StorageError:
-		if p, ok := i.(*azblob.StorageError); ok {
-			*p = v
-			return true
-		}
-	}
-	return false
-}
-
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	if serr, ok := err.(azblob.StorageError); ok {
+func (b *bucket) ErrorCode(err error) gerrors.Code {
+	serr, ok := err.(azblob.StorageError)
+	switch {
+	case !ok:
+		return gerrors.Unknown
+	case serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404:
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
-		if serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404 {
-			return true
-		}
+		return gerrors.NotFound
+	default:
+		return gerrors.Unknown
 	}
-	return false
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
 }
 
 // Attributes implements driver.Attributes.

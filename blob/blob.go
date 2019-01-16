@@ -61,6 +61,7 @@ import (
 	"time"
 
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 )
 
 // Reader reads bytes from a blob.
@@ -755,13 +756,6 @@ func Open(ctx context.Context, urlstr string) (*Bucket, error) {
 	return NewBucket(drv), nil
 }
 
-// wrappedError is used to wrap all errors returned by drivers so that users
-// are not given access to provider-specific errors.
-type wrappedError struct {
-	err error
-	b   driver.Bucket
-}
-
 func wrapError(b driver.Bucket, err error) error {
 	if err == nil {
 		return nil
@@ -769,38 +763,5 @@ func wrapError(b driver.Bucket, err error) error {
 	if err == io.EOF {
 		return err
 	}
-	return &wrappedError{b: b, err: err}
-}
-
-func (w *wrappedError) Error() string {
-	return "blob: " + w.err.Error()
-}
-
-// IsNotExist returns true iff err indicates that the referenced blob does not exist.
-func IsNotExist(err error) bool {
-	if e, ok := err.(*wrappedError); ok {
-		return e.b.IsNotExist(e.err)
-	}
-	return false
-}
-
-// IsNotImplemented returns true iff err indicates that the provider does not
-// support the given operation.
-func IsNotImplemented(err error) bool {
-	if e, ok := err.(*wrappedError); ok {
-		return e.b.IsNotImplemented(e.err)
-	}
-	return false
-}
-
-// ErrorAs converts i to provider-specific types.
-// See Bucket.As for more details.
-func ErrorAs(err error, i interface{}) bool {
-	if err == nil || i == nil {
-		return false
-	}
-	if e, ok := err.(*wrappedError); ok {
-		return e.b.ErrorAs(e.err, i)
-	}
-	return false
+	return gerrors.Newf(b.ErrorCode(err), err, "blob: %v", err)
 }

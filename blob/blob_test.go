@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 )
 
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.
@@ -153,10 +154,8 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if unwrapped, ok := err.(*wrappedError); !ok {
+		} else if _, ok := err.(*gerrors.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
-		} else if du, ok := unwrapped.err.(*wrappedError); ok {
-			t.Errorf("%s: double wrapped: %v", description, du)
 		}
 		if s := err.Error(); !strings.HasPrefix(s, "blob: ") {
 			t.Errorf("%s: Error() for wrapped error doesn't start with blob: prefix: %s", description, s)
@@ -293,23 +292,5 @@ func TestOpen(t *testing.T) {
 				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 			}
 		})
-	}
-}
-
-func TestCallsWithUnwrappedError(t *testing.T) {
-	errFail := errors.New("fail")
-
-	if got := IsNotExist(errFail); got {
-		t.Errorf("IsNotExist got true with unwrapped error, wanted false")
-	}
-	if got := IsNotImplemented(errFail); got {
-		t.Errorf("IsNotImplemented got true with unwrapped error, wanted false")
-	}
-	if got := ErrorAs(errFail, nil); got {
-		t.Errorf("ErrorAs got true with unwrapped error conversion to nil, wanted false")
-	}
-	var s string
-	if got := ErrorAs(errFail, &s); got {
-		t.Errorf("ErrorAs got true with unwrapped error conversion to string, wanted false")
 	}
 }

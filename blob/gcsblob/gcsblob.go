@@ -56,6 +56,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	gerrors "gocloud.dev/errors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/useragent"
 
@@ -199,14 +200,11 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return err == storage.ErrObjectNotExist
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
+func (b *bucket) ErrorCode(err error) gerrors.Code {
+	if err == storage.ErrObjectNotExist {
+		return gerrors.NotFound
+	}
+	return gerrors.Unknown
 }
 
 // ListPaged implements driver.ListPaged.
