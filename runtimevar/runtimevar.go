@@ -101,7 +101,7 @@ type Variable struct {
 // New is intended for use by provider implementations.
 var New = newVar
 
-// newVar creates a new *Variable based on a specific driver implementation.
+// newVar  creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	return &Variable{watcher: w}
 }
