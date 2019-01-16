@@ -14,6 +14,23 @@
 
 // Package pubsub provides an easy and portable way to interact with publish/
 // subscribe systems.
+//
+// Subpackages contain distinct implementations of pubsub for various providers,
+// including Cloud and on-prem solutions. For example, "gcspubsub" supports
+// Google Cloud Pub/Sub. Your application should import one of these
+// provider-specific subpackages and use its exported function(s) to create a
+// *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
+// functions in this package. For example:
+//
+//  topic := mempubsub.NewTopic()
+//  err := topic.Send(ctx.Background(), &pubsub.Message{Body: []byte("hi"))
+//  ...
+//
+// Then, write your application code using the *Topic/*Subscription types. You
+// can easily reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using memblob, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
@@ -113,8 +130,26 @@ func (t *Topic) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
+// As converts i to provider-specific types.
+//
+// This function (and the other As functions in this package) are inherently
+// provider-specific, and using them will make that part of your application
+// non-portable, so use with care.
+//
+// See the documentation for the subpackage used to instantiate Bucket to see
 // which type(s) are supported.
+//
+// Usage:
+//
+// 1. Declare a variable of the provider-specific type you want to access.
+//
+// 2. Pass a pointer to it to As.
+//
+// 3. If the type is supported, As will return true and copy the
+// provider-specific type into your variable. Otherwise, it will return false.
+//
+// Provider-specific types that are intended to be mutable will be exposed
+// as a pointer to the underlying type.
 //
 // See
 // https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
@@ -123,8 +158,10 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic.
-// It is for use by provider implementations.
+// NewTopic creates a new *Topic based on a specific driver implementation.
+// End users should use subpackages to construct a *Topic instead of this
+// function; see the package documentation for details.
+// It is intended for use by provider implementations.
 func NewTopic(d driver.Topic) *Topic {
 	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
@@ -270,20 +307,18 @@ func (s *Subscription) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
-// which type(s) are supported.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// As converts i to provider-specific types.
+// See Topic.As for more details.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription
-// and a function to make a batcher that sends batches of acks to the provider.
+// NewSubscription creates a new *Subscription based on a specific driver
+// implementation.
+// End users should use subpackages to construct a *Subscription instead of this
+// function; see the package documentation for details.
+// It is intended for use by provider implementations.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-// NewSubscription is for use by provider implementations.
 func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
