@@ -37,6 +37,7 @@ require (
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20180924190550-6f2cf27854a4 // indirect
 	github.com/golang/protobuf v1.2.0
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/go-cmp v0.2.0
 	github.com/google/martian v2.1.0+incompatible // indirect
@@ -51,16 +52,25 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.5.1 // indirect
+	github.com/hashicorp/go-multierror v1.0.0 // indirect
+	github.com/hashicorp/go-retryablehttp v0.5.1 // indirect
+	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
+	github.com/hashicorp/go-sockaddr v0.0.0-20190103214136-e92cdb5343bb // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/hashicorp/vault v1.0.2
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.0.0
+	github.com/mitchellh/mapstructure v1.1.2 // indirect
+	github.com/pierrec/lz4 v2.0.5+incompatible // indirect
 	github.com/pkg/errors v0.8.0 // indirect
 	github.com/prometheus/client_golang v0.9.0 // indirect
 	github.com/prometheus/common v0.0.0-20181015124227-bcb74de08d37 // indirect
 	github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d // indirect
+	github.com/ryanuber/go-glob v0.0.0-20170128012129-256dc444b735 // indirect
 	github.com/sirupsen/logrus v1.1.1 // indirect
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
