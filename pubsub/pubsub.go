@@ -18,7 +18,7 @@
 // Subpackages contain distinct implementations of pubsub for various providers,
 // including Cloud and on-prem solutions. For example, "gcspubsub" supports
 // Google Cloud Pub/Sub. Your application should import one of these
-// provider-specific subpackages and use its exported function(s) to create a
+// provider-specific subpackages and use its exported functions to get a
 // *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
 // functions in this package. For example:
 //

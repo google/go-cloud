@@ -39,7 +39,7 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
-// OpenTopic creates a *pubsub.Topic corresponding to the named exchange.
+// OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
 // See the package documentation for an example.
 //
 // The exchange should already exist (for instance, by using
@@ -308,7 +308,7 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
-// OpenSubscription creates a *pubsub.Subscription corresponding to the named queue.
+// OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
 // See the package documentation for an example.
 //
 // The queue must have been previously created (for instance, by using

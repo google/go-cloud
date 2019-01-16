@@ -75,8 +75,9 @@ func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.Subscrib
 // TopicOptions will contain configuration for topics.
 type TopicOptions struct{}
 
-// OpenTopic creates a *pubsub.Topic backed by GCP PubSub for the given projectID
-// and topicName. See the package documentation for an example.
+// OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
+// topicName in the given projectID. See the package documentation for an
+// example.
 func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(ctx, client, proj, topicName)
 	return pubsub.NewTopic(dt)
@@ -130,9 +131,9 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription creates a *pubsub.Subscription backed by GCP PubSub for the
-// given projectID and subscriptionName. See the package documentation for an
-// example.
+// OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
+// PubSub subscription subscriptionName in the given projectID. See the package
+// documentation for an example.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, proj, subscriptionName)
 	return pubsub.NewSubscription(ds, nil)
