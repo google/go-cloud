@@ -47,7 +47,7 @@ const (
 
 //go:generate stringer -type=ErrorCode
 
-// An Error described a Go Cloud error.
+// An Error describes a Go Cloud error.
 type Error struct {
 	Code ErrorCode
 	msg  string
