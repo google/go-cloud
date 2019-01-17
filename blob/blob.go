@@ -61,6 +61,7 @@ import (
 	"time"
 
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/internal/trace"
 )
 
 // Reader reads bytes from a blob.
@@ -401,7 +402,10 @@ func (b *Bucket) As(i interface{}) bool {
 
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
-func (b *Bucket) ReadAll(ctx context.Context, key string) ([]byte, error) {
+func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.ReadAll")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
@@ -434,7 +438,10 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 //
 // If the blob does not exist, Attributes returns an error for which
 // IsNotExist will return true.
-func (b *Bucket) Attributes(ctx context.Context, key string) (Attributes, error) {
+func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Attributes")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
 		return Attributes{}, wrapError(b.b, err)
@@ -479,7 +486,10 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 // A nil ReaderOptions is treated the same as the zero value.
 //
 // The caller must call Close on the returned Reader when done reading.
-func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (*Reader, error) {
+func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
 	}
@@ -495,7 +505,10 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
-func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) error {
+func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.WriteAll")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	w, err := b.NewWriter(ctx, key, opts)
 	if err != nil {
 		return err
@@ -522,7 +535,10 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 //
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
-func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (*Writer, error) {
+func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.NewWriter")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	var dopts *driver.WriterOptions
 	var w driver.Writer
 	if opts == nil {
@@ -591,7 +607,9 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 //
 // If the blob does not exist, Delete returns an error for which
 // IsNotExist will return true.
-func (b *Bucket) Delete(ctx context.Context, key string) error {
+func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Delete")
+	defer func() { trace.EndSpan(ctx, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key))
 }
 
