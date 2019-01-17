@@ -16,26 +16,20 @@ package vault
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/transit"
+	vhttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/vault"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
 
-// These constants cpature values that were used druing the last --record.
-// If you want to use --record mode,
-// 1. Install Vault. (https://learn.hashicorp.com/vault/getting-started/install)
-// 2. Run a dev Vault server: `vault server -dev`.
-// 3. Set API address: `export VAULT_ADDR='http://127.0.0.1:8200'`
-// 4. Copy the "Root Token" displayed and run:
-// `export VAULT_DEV_ROOT_TOKEN_ID=<Root Token>`.
-// 5. Enable the transit API: `vault secrets enable transit`.
-// 6. Create a key ring: `vault write -f transit/keys/my-key`
 const (
-	keyID      = "my-key"
-	apiAddress = "http://127.0.0.1:8200"
+	keyID      = "test-secrets"
+	apiAddress = "http://127.0.0.1:0"
 )
 
 type harness struct {
@@ -50,19 +44,42 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
 	}, nil
 }
 
-func (h *harness) Close() {}
+func (h *harness) Close() {
+	h.close()
+}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	c, err := api.NewClient(&api.Config{
-		Address: apiAddress,
+	// Start a new test server.
+	c, cleanup := testVaultServer(t)
+	// Enable the transit API.
+	c.Logical().Write("sys/mounts/transit", map[string]interface{}{
+		"type": "transit",
 	})
-	if err != nil {
-		return nil, err
-	}
-	c.SetToken(os.Getenv("VAULT_DEV_ROOT_TOKEN_ID"))
+
 	return &harness{
 		client: c,
+		close:  cleanup,
 	}, nil
+}
+
+func testVaultServer(t *testing.T) (*api.Client, func()) {
+	coreCfg := &vault.CoreConfig{
+		DisableMlock: true,
+		DisableCache: true,
+		// Enable the testing transit backend.
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreCfg, &vault.TestClusterOptions{
+		HandlerFunc: vhttp.Handler,
+	})
+	cluster.Start()
+	tc := cluster.Cores[0]
+	vault.TestWaitActive(t, tc.Core)
+
+	tc.Client.SetToken(cluster.RootToken)
+	return tc.Client, cluster.Cleanup
 }
 
 func TestConformance(t *testing.T) {
