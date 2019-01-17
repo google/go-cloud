@@ -81,7 +81,7 @@ func (e *Error) FormatError(p xerrors.Printer) (next error) {
 	return e.err
 }
 
-// Unwrap returns the error underlying the receiver.
+// Unwrap returns the error underlying the receiver, which may be nil.
 func (e *Error) Unwrap() error {
 	return e.err
 }
