@@ -27,7 +27,7 @@ func Example_encrypt() {
 
 	// Get a client to use with the Vault API.
 	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "s.7JEtNpToqUaF3k6SYD3NAxPP",
+		Token: "<Client (Root) Token>",
 		APIConfig: &api.Config{
 			Address: "http://127.0.0.1:8200",
 		},
@@ -56,14 +56,14 @@ func Example_decrypt() {
 
 	// Get a client to use with the Vault API.
 	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "s.7JEtNpToqUaF3k6SYD3NAxPP",
+		Token: "<Client (Root) Token>",
 		APIConfig: &api.Config{
 			Address: "http://127.0.0.1:8200",
 		},
 	})
 
 	// Get the secret to be decrypted from some kind of storage.
-	ciphertext := []byte("vault:v1:m6vypxT3lxQOriQZT4mKQMuVsfVH0tc7DSVJowwX1k8HMMNiwYMPUO3KVQ==")
+	ciphertext := []byte("vault:v1:RCWHyq64IWZo1s1YhCdjbe5DweJ9UNHKl0TK6NhpaGvv0tXs0QNpTuf8Sg==")
 
 	keeper := vault.NewKeeper(
 		client,
