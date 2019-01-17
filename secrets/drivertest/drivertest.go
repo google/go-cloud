@@ -44,7 +44,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestEncryptDecrypt", func(t *testing.T) {
 		testEncryptDecrypt(t, newHarness)
 	})
-	t.Run("TestMultipleEncryptioinsNotEqual", func(t *testing.T) {
+	t.Run("TestMultipleEncryptionsNotEqual", func(t *testing.T) {
 		testMultipleEncryptionsNotEqual(t, newHarness)
 	})
 }
