@@ -15,7 +15,12 @@
 package errors
 
 import (
+	stderrors "errors"
+	"fmt"
 	"io"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -41,5 +46,76 @@ func TestCode(t *testing.T) {
 		if got != test.want {
 			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
 		}
+	}
+}
+
+func TestFormatting(t *testing.T) {
+	for i, test := range []struct {
+		err  *Error
+		verb string
+		want []string // regexps, one per line
+	}{
+		{
+			New(NotFound, nil, "message"),
+			"%v",
+			[]string{`^NotFound: message$`},
+		},
+		{
+			New(NotFound, nil, "message"),
+			"%+v",
+			[]string{
+				`^NotFound: message:$`,
+				`\s+gocloud.dev/errors.TestFormatting$`,
+				`\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`^\s*$`, // blank line at end
+			},
+		},
+		{
+			New(AlreadyExists, stderrors.New("wrapped"), "message"),
+			"%v",
+			[]string{`^AlreadyExists: message: wrapped$`},
+		},
+		{
+			New(AlreadyExists, stderrors.New("wrapped"), "message"),
+			"%+v",
+			[]string{
+				`^AlreadyExists: message:$`,
+				`^\s+gocloud.dev/errors.TestFormatting$`,
+				`^\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`^\s+- wrapped$`,
+			},
+		},
+		{
+			New(AlreadyExists, stderrors.New("wrapped"), ""),
+			"%v",
+			[]string{`^AlreadyExists: wrapped`},
+		},
+		{
+			New(AlreadyExists, stderrors.New("wrapped"), ""),
+			"%+v",
+			[]string{
+				`^AlreadyExists:`,
+				`^\s+gocloud.dev/errors.TestFormatting$`,
+				`^\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`^\s+- wrapped$`,
+			},
+		},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			gotString := fmt.Sprintf(test.verb, test.err)
+			gotLines := strings.Split(gotString, "\n")
+			if got, want := len(gotLines), len(test.want); got != want {
+				t.Fatalf("got %d lines, want %d. got:\n%s", got, want, gotString)
+			}
+			for j, gl := range gotLines {
+				matched, err := regexp.MatchString(test.want[j], gl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !matched {
+					t.Fatalf("line #%d: got %q, which doesn't match %q", j, gl, test.want[j])
+				}
+			}
+		})
 	}
 }

@@ -13,9 +13,15 @@
 // limitations under the License.
 
 // Package errors provides an error type for Go Cloud APIs.
+//
+// This package is EXPERIMENTAL and subject to change without notice.
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	xerrors "golang.org/x/exp/errors"
+	xfmt "golang.org/x/exp/errors/fmt"
+)
 
 // An ErrorCode describes the error's category. Programs should act upon an error's
 // code, not its message.
@@ -43,19 +49,36 @@ const (
 	Internal = 5
 )
 
-// To get stringer: go get golang.org/x/tools/cmd/stringer
+// Call "go generate" whenever you change the above list of error codes.
+// To get stringer:
+//   go get golang.org/x/tools/cmd/stringer
+//   Make sure $GOPATH/bin or $GOBIN in on your path.
 
 //go:generate stringer -type=ErrorCode
 
 // An Error describes a Go Cloud error.
 type Error struct {
-	Code ErrorCode
-	msg  string
-	err  error
+	Code  ErrorCode
+	msg   string
+	frame xerrors.Frame
+	err   error
 }
 
 func (e *Error) Error() string {
+	if e.msg == "" {
+		return fmt.Sprintf("%v", e.Code)
+	}
 	return fmt.Sprintf("%v: %s", e.Code, e.msg)
+}
+
+func (e *Error) Format(s fmt.State, c rune) {
+	xfmt.FormatError(s, c, e)
+}
+
+func (e *Error) FormatError(p xerrors.Printer) (next error) {
+	p.Print(e.Error())
+	e.frame.Format(p)
+	return e.err
 }
 
 // Unwrap returns the error underlying the receiver.
@@ -79,9 +102,10 @@ func Code(err error) ErrorCode {
 // New returns a new error with the given code, underlying error and message.
 func New(c ErrorCode, err error, msg string) *Error {
 	return &Error{
-		Code: c,
-		msg:  msg,
-		err:  err,
+		Code:  c,
+		msg:   msg,
+		frame: xerrors.Caller(1),
+		err:   err,
 	}
 }
 
