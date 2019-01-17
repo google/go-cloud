@@ -99,7 +99,7 @@ type msgErrChan struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Send")
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	// Check for doneness before we do any work.
@@ -218,7 +218,7 @@ type Subscription struct {
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Receive")
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	s.mu.Lock()
