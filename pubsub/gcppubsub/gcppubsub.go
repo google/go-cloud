@@ -92,19 +92,31 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	var ms []*pb.PubsubMessage
-	for _, dm := range dms {
-		ms = append(ms, &pb.PubsubMessage{
-			Data:       dm.Body,
-			Attributes: dm.Metadata,
-		})
+	// The PubSub service limits the number of messages in a single Publish RPC.
+	const maxPublishCount = 1000
+	for len(dms) > 0 {
+		n := len(dms)
+		if n > maxPublishCount {
+			n = maxPublishCount
+		}
+		batch := dms[:n]
+		dms = dms[n:]
+		var ms []*pb.PubsubMessage
+		for _, dm := range batch {
+			ms = append(ms, &pb.PubsubMessage{
+				Data:       dm.Body,
+				Attributes: dm.Metadata,
+			})
+		}
+		req := &pb.PublishRequest{
+			Topic:    t.path,
+			Messages: ms,
+		}
+		if _, err := t.client.Publish(ctx, req); err != nil {
+			return err
+		}
 	}
-	req := &pb.PublishRequest{
-		Topic:    t.path,
-		Messages: ms,
-	}
-	_, err := t.client.Publish(ctx, req)
-	return err
+	return nil
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
