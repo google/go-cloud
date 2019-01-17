@@ -13,8 +13,13 @@
 // limitations under the License.
 
 // Package mempubsub provides an in-memory pubsub implementation.
-// This should not be used for production: it is intended for local
+// Use NewTopic to construct a *pubsub.Topic, and/or NewSubscription
+// to construct a *pubsub.Subscription.
+//
+// mempubsub should not be used for production: it is intended for local
 // development and testing.
+//
+// As
 //
 // mempubsub does not support any types for As.
 package mempubsub // import "gocloud.dev/pubsub/mempubsub"
@@ -90,7 +95,7 @@ type subscription struct {
 }
 
 // NewSubscription creates a new subscription for the given topic.
-// It panics if the giventopic did not come from mempubsub.
+// It panics if the given topic did not come from mempubsub.
 func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
 	if !top.As(&t) {
