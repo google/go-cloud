@@ -12,8 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package secrets provides a set of portable APIs for message encryption and
-// decryption.
+// Package secrets provides an easy and portable way to encrypt and decrypt
+// messages.
+//
+// Subpackages contain distinct implementations of secrets for various
+// providers, including Cloud and on-prem solutions. For example, "localsecrets"
+// supports encryption/decryption using a locally provided key. Your application
+// should import one of these provider-specific subpackages and use its exported
+// function(s) to create a *Keeper; do not use the NewKeeper function in this
+// package. For example:
+//
+//  keeper := localsecrets.NewKeeper(myKey)
+//  encrypted, err := keeper.Encrypt(ctx.Background(), []byte("text"))
+//  ...
+//
+// Then, write your application code using the *Keeper type. You can easily
+// reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using localsecrets, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
 package secrets // import "gocloud.dev/secrets"
 
 import (
@@ -45,7 +62,7 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	return b, nil
 }
 
-// Decrypt decrypts the ciphertext and returns the plaintext or an error.
+// Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
