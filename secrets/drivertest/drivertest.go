@@ -44,6 +44,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestEncryptDecrypt", func(t *testing.T) {
 		testEncryptDecrypt(t, newHarness)
 	})
+	t.Run("TestMultipleEncryptioinsNotEqual", func(t *testing.T) {
+		testMultipleEncryptionsNotEqual(t, newHarness)
+	})
 }
 
 // testEncryptDecrypt tests the functionality of encryption and decryption
@@ -77,4 +80,34 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 		t.Errorf("Got decrypted message %v, want it to match original message %v", string(msg), string(decryptedMsg))
 	}
 
+}
+
+// testMultipleEncryptionsNotEqual tests the results of multiple encryptions
+// with the same key should be different.
+func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	harness, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer harness.Close()
+
+	drv, err := harness.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := secrets.NewKeeper(drv)
+
+	msg := []byte("I'm a secret message!")
+	encryptedMsg1, err := keeper.Encrypt(ctx, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encryptedMsg2, err := keeper.Encrypt(ctx, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmp.Equal(encryptedMsg1, encryptedMsg2) {
+		t.Errorf("Got same encrypted messages from multiple encryptions %v, want them to be different", string(encryptedMsg1))
+	}
 }
