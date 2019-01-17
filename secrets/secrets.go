@@ -28,9 +28,11 @@ type Keeper struct {
 	k driver.Keeper
 }
 
-// NewKeeper is intended for use by a specific provider implementation to
-// create a Keeper.
-func NewKeeper(k driver.Keeper) *Keeper {
+// NewKeeper is intended for use by provider implementations.
+var NewKeeper = newKeeper
+
+// newKeeper creates a Keeper.
+func newKeeper(k driver.Keeper) *Keeper {
 	return &Keeper{k: k}
 }
 
