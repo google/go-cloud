@@ -66,7 +66,7 @@ func TestFormatting(t *testing.T) {
 			[]string{
 				`^NotFound: message:$`,
 				`\s+gocloud.dev/gcerrors.TestFormatting$`,
-				`\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
+				`\s+.*/gcerrors/errors_test.go:\d+$`,
 				`^\s*$`, // blank line at end
 			},
 		},
@@ -81,7 +81,7 @@ func TestFormatting(t *testing.T) {
 			[]string{
 				`^AlreadyExists: message:$`,
 				`^\s+gocloud.dev/gcerrors.TestFormatting$`,
-				`^\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
+				`^\s+.*/gcerrors/errors_test.go:\d+$`,
 				`^\s+- wrapped$`,
 			},
 		},
@@ -96,7 +96,7 @@ func TestFormatting(t *testing.T) {
 			[]string{
 				`^AlreadyExists:`,
 				`^\s+gocloud.dev/gcerrors.TestFormatting$`,
-				`^\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
+				`^\s+.*/gcerrors/errors_test.go:\d+$`,
 				`^\s+- wrapped$`,
 			},
 		},
