@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package fileblob provides a blob implementation that uses the filesystem.
-// Use OpenBucket to construct a blob.Bucket.
+// Use OpenBucket to construct a *blob.Bucket.
 //
 // Blob keys are escaped before being used as filenames, and filenames are
 // unescaped when they are passed back as blob keys during List. The escape

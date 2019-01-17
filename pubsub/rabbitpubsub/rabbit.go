@@ -39,8 +39,10 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
-// OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
-// exchange should already exist (for instance, by using
+// OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
+// See the package documentation for an example.
+//
+// The exchange should already exist (for instance, by using
 // amqp.Channel.ExchangeDeclare), although this won't be checked until the first call
 // to SendBatch. For the model of Go Cloud Pub/Sub to make sense, the exchange should
 // be a fanout exchange, although nothing in this package enforces that.
@@ -53,7 +55,6 @@ type topic struct {
 // publishing and subscribing.
 func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
 	return pubsub.NewTopic(newTopic(&connection{conn}, name))
-
 }
 
 func newTopic(conn amqpConnection, name string) *topic {
@@ -308,6 +309,8 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
+// See the package documentation for an example.
+//
 // The queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
 //
