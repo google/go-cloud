@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
 	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/secrets/driver"
+	"gocloud.dev/secrets/drivertest"
 	"google.golang.org/api/option"
 )
 
@@ -42,8 +42,8 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
-	return &Crypter{
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
+	return &keeper{
 		keyID: &KeyID{
 			ProjectID: projectID,
 			Location:  location,

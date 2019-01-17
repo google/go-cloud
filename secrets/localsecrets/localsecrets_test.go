@@ -18,18 +18,18 @@ import (
 	"context"
 	"testing"
 
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
+	"gocloud.dev/secrets/driver"
+	"gocloud.dev/secrets/drivertest"
 )
 
 type harness struct{}
 
-func (h harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
 	return NewKeeper(ByteKey("very secret secret")), nil
 }
 
-func (h harness) Close() {}
+func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return harness{}, nil
+	return &harness{}, nil
 }

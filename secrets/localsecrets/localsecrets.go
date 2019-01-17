@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package localsecrets provides a way to encrypt and decrypt small messages
-// without making network calls to a third party service.
-package localsecrets // import "gocloud.dev/internal/secrets/localsecrets"
+// Package localsecrets provides a secrets implementation using a locally
+// locally provided symmetric key.
+// Use NewKeeper to construct a *secrets.Keeper.
+package localsecrets // import "gocloud.dev/secrets/localsecrets"
 
 import (
 	"context"
@@ -22,18 +23,22 @@ import (
 	"errors"
 	"io"
 
+	"gocloud.dev/secrets"
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
-// Keeper holds a secret for use in symmetric encryption,
-// and implements driver.Crypter.
-type Keeper struct {
+// keeper holds a secret for use in symmetric encryption,
+// and implements driver.Keeper.
+type keeper struct {
 	secretKey [32]byte // secretbox key size
 }
 
-// NewKeeper takes a secret key and returns a Keeper.
-func NewKeeper(sk [32]byte) *Keeper {
-	return &Keeper{secretKey: sk}
+// NewKeeper returns a *secrets.Keeper that uses the given symmetric
+// key. See the package documentation for an example.
+func NewKeeper(sk [32]byte) *secrets.Keeper {
+	return secrets.NewKeeper(
+		&keeper{secretKey: sk},
+	)
 }
 
 // ByteKey takes a secret key as a string and converts it
@@ -48,7 +53,7 @@ const nonceSize = 24
 
 // Encrypt encrypts a message using a per-message generated nonce and
 // the secret held in the Keeper.
-func (k *Keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
+func (k *keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var nonce [nonceSize]byte
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
@@ -61,7 +66,7 @@ func (k *Keeper) Encrypt(ctx context.Context, message []byte) ([]byte, error) {
 
 // Decrypt decryptes a message using a nonce that is read out of the first nonceSize bytes
 // of the message and a secret held in the Keeper.
-func (k *Keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
+func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	var decryptNonce [nonceSize]byte
 	copy(decryptNonce[:], message[:nonceSize])
 

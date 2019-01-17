@@ -44,6 +44,8 @@ talk at Next 2018:
 ## Installation instructions
 
 ```shell
+# First "cd" into your project directory if you have one to ensure "go get" uses
+# Go modules (or not) appropriately. See "go help modules" for more info.
 go get gocloud.dev
 go get github.com/google/wire/cmd/wire
 ```
@@ -65,6 +67,7 @@ to automatically provision the resources needed.
 
 [tutorial]: https://github.com/google/go-cloud/tree/master/samples/tutorial
 [guestbook]: https://github.com/google/go-cloud/tree/master/samples/guestbook
+[gcmsg]: https://github.com/google/go-cloud/tree/master/pubsub/samples/gcmsg
 
 ## Project status
 
@@ -77,6 +80,7 @@ While in alpha, the API is subject to breaking changes.
 Go Cloud provides generic APIs for:
 
 *   Unstructured binary (blob) storage
+*   Publish/Subscribe (pubsub)
 *   Variables that change at runtime (configuration)
 *   Connecting to MySQL databases
 *   Server startup and diagnostics: request logging, tracing, and health

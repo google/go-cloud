@@ -42,3 +42,7 @@ func (h *harness) Close() {}
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
+
+func BenchmarkMemblob(b *testing.B) {
+	drivertest.RunBenchmarks(b, OpenBucket(nil))
+}
