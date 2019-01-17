@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package memblob provides an in-memory blob implementation.
-// Use OpenBucket to construct a blob.Bucket.
+// Use OpenBucket to construct a *blob.Bucket.
 //
 // Open URLs
 //

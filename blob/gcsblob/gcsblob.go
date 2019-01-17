@@ -150,8 +150,8 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by GCS. See the package
-// documentation for an example.
+// OpenBucket returns a *blob.Bucket backed by an existing GCS bucket. See the
+// package documentation for an example.
 func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
