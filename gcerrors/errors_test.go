@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package errors
+package gcerrors
 
 import (
-	stderrors "errors"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -65,38 +65,38 @@ func TestFormatting(t *testing.T) {
 			"%+v",
 			[]string{
 				`^NotFound: message:$`,
-				`\s+gocloud.dev/errors.TestFormatting$`,
-				`\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`\s+gocloud.dev/gcerrors.TestFormatting$`,
+				`\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
 				`^\s*$`, // blank line at end
 			},
 		},
 		{
-			New(AlreadyExists, stderrors.New("wrapped"), "message"),
+			New(AlreadyExists, errors.New("wrapped"), "message"),
 			"%v",
 			[]string{`^AlreadyExists: message: wrapped$`},
 		},
 		{
-			New(AlreadyExists, stderrors.New("wrapped"), "message"),
+			New(AlreadyExists, errors.New("wrapped"), "message"),
 			"%+v",
 			[]string{
 				`^AlreadyExists: message:$`,
-				`^\s+gocloud.dev/errors.TestFormatting$`,
-				`^\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`^\s+gocloud.dev/gcerrors.TestFormatting$`,
+				`^\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
 				`^\s+- wrapped$`,
 			},
 		},
 		{
-			New(AlreadyExists, stderrors.New("wrapped"), ""),
+			New(AlreadyExists, errors.New("wrapped"), ""),
 			"%v",
 			[]string{`^AlreadyExists: wrapped`},
 		},
 		{
-			New(AlreadyExists, stderrors.New("wrapped"), ""),
+			New(AlreadyExists, errors.New("wrapped"), ""),
 			"%+v",
 			[]string{
 				`^AlreadyExists:`,
-				`^\s+gocloud.dev/errors.TestFormatting$`,
-				`^\s+.*/go-cloud/errors/errors_test.go:\d+$`,
+				`^\s+gocloud.dev/gcerrors.TestFormatting$`,
+				`^\s+.*/go-cloud/gcerrors/errors_test.go:\d+$`,
 				`^\s+- wrapped$`,
 			},
 		},

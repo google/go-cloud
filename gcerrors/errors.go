@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package errors provides an error type for Go Cloud APIs.
+// Package gcerrors provides an error type for Go Cloud APIs.
 //
 // This package is EXPERIMENTAL and subject to change without notice.
-package errors
+package gcerrors
 
 import (
 	"fmt"
@@ -33,20 +33,20 @@ const (
 	OK ErrorCode = 0
 
 	// The error could not be categorized.
-	Unknown = 1
+	Unknown ErrorCode = 1
 
 	// The resource was not found.
-	NotFound = 2
+	NotFound ErrorCode = 2
 
 	// The resource exists, but it should not.
-	AlreadyExists = 3
+	AlreadyExists ErrorCode = 3
 
 	// A value given to a Go Cloud API is incorrect.
-	InvalidArgument = 4
+	InvalidArgument ErrorCode = 4
 
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
-	Internal = 5
+	Internal ErrorCode = 5
 )
 
 // Call "go generate" whenever you change the above list of error codes.
