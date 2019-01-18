@@ -10,11 +10,11 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limtations under the License.
+// limitations under the License.
 
-// Package awskms provides functionality to encrypt and decrypt secrets using
-// AWS KMS.
-package awskms
+// Package awskms provides a secrets implementation backed by AWS KMS.
+// Use NewKeeper to construct a *secrets.Keeper.
+package awskms // import "gocloud.dev/secrets/awskms"
 
 import (
 	"context"
@@ -26,7 +26,8 @@ import (
 	"gocloud.dev/secrets"
 )
 
-// NewKeeper returns a new Keeper to do encryption and decryption.
+// NewKeeper returns a *secrets.Keeper that uses AWS KMS.
+// See the package documentation for an example.
 func NewKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  keyID,

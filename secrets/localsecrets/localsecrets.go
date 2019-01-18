@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package localsecrets provides a way to encrypt and decrypt small messages
-// without making network calls to a third party service.
+// Package localsecrets provides a secrets implementation using a locally
+// locally provided symmetric key.
+// Use NewKeeper to construct a *secrets.Keeper.
 package localsecrets // import "gocloud.dev/secrets/localsecrets"
 
 import (
@@ -32,7 +33,8 @@ type keeper struct {
 	secretKey [32]byte // secretbox key size
 }
 
-// NewKeeper takes a secret key and returns a Keeper.
+// NewKeeper returns a *secrets.Keeper that uses the given symmetric
+// key. See the package documentation for an example.
 func NewKeeper(sk [32]byte) *secrets.Keeper {
 	return secrets.NewKeeper(
 		&keeper{secretKey: sk},

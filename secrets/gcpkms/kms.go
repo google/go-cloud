@@ -10,11 +10,11 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limtations under the License.
+// limitations under the License.
 
-// Package gcpkms provides functionality to encrypt and decrypt secrets using
-// Google Cloud KMS.
-package gcpkms
+// Package gcpkms provides a secrets implementation backed by Google Cloud KMS.
+// Use NewKeeper to construct a *secrets.Keeper.
+package gcpkms // import "gocloud.dev/secrets/gcpkms"
 
 import (
 	"context"
@@ -37,7 +37,8 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 	return c, func() { c.Close() }, err
 }
 
-// NewKeeper returns a new Keeper to to encryption and decryption.
+// NewKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
+// See the package documentation for an example.
 func NewKeeper(client *cloudkms.KeyManagementClient, ki *KeyID, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  ki,

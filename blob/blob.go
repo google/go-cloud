@@ -358,11 +358,13 @@ type Bucket struct {
 	b driver.Bucket
 }
 
-// NewBucket creates a new *Bucket based on a specific driver implementation.
+// NewBucket is intended for use by provider implementations.
+var NewBucket = newBucket
+
+// newBucket creates a new *Bucket based on a specific driver implementation.
 // End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
-// It is intended for use by provider implementations.
-func NewBucket(b driver.Bucket) *Bucket {
+func newBucket(b driver.Bucket) *Bucket {
 	return &Bucket{b: b}
 }
 
