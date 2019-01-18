@@ -68,8 +68,9 @@ import (
 // It implements io.ReadCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b driver.Bucket
-	r driver.Reader
+	b    driver.Bucket
+	r    driver.Reader
+	tctx context.Context // trace context
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
@@ -80,7 +81,9 @@ func (r *Reader) Read(p []byte) (int, error) {
 
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
 func (r *Reader) Close() error {
-	return wrapError(r.b, r.r.Close())
+	err := wrapError(r.b, r.r.Close())
+	trace.EndSpan(r.tctx, err)
+	return err
 }
 
 // ContentType returns the MIME type of the blob.
@@ -171,6 +174,7 @@ type Writer struct {
 	key  string
 	opts *driver.WriterOptions
 	buf  *bytes.Buffer
+	tctx context.Context // context for tracing only
 }
 
 // sniffLen is the byte size of Writer.buf used to detect content-type.
@@ -213,7 +217,8 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Close returns with no error.
 // Close may return an error if the context provided to create the Writer is
 // canceled or reaches its deadline.
-func (w *Writer) Close() error {
+func (w *Writer) Close() (err error) {
+	defer func() { trace.EndSpan(w.tctx, err) }()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
 		// by the user.
@@ -403,7 +408,6 @@ func (b *Bucket) As(i interface{}) bool {
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.ReadAll")
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	r, err := b.NewReader(ctx, key, nil)
@@ -487,9 +491,6 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
 	}
@@ -497,18 +498,16 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		opts = &ReaderOptions{}
 	}
 	dopts := &driver.ReaderOptions{}
+	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
 	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
-	return &Reader{b: b.b, r: r}, nil
+	return &Reader{b: b.b, r: r, tctx: tctx}, nil
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
 func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.WriteAll")
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	w, err := b.NewWriter(ctx, key, opts)
 	if err != nil {
 		return err
@@ -536,9 +535,6 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.NewWriter")
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	var dopts *driver.WriterOptions
 	var w driver.Writer
 	if opts == nil {
@@ -571,6 +567,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		dopts.Metadata = md
 	}
 	ctx, cancel := context.WithCancel(ctx)
+	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewWriter")
 	if opts.ContentType != "" {
 		t, p, err := mime.ParseMediaType(opts.ContentType)
 		if err != nil {
@@ -589,6 +586,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 			cancel:     cancel,
 			contentMD5: opts.ContentMD5,
 			md5hash:    md5.New(),
+			tctx:       tctx,
 		}, nil
 	}
 	return &Writer{
@@ -600,6 +598,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		buf:        bytes.NewBuffer([]byte{}),
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
+		tctx:       tctx,
 	}, nil
 }
 
