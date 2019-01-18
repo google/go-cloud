@@ -99,7 +99,7 @@ type msgErrChan struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Send")
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	// Check for doneness before we do any work.
@@ -183,7 +183,7 @@ func newTopic(d driver.Topic) *Topic {
 		}
 
 		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
-			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub.SendBatch")
+			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
 			defer func() { trace.EndSpan(ctx, err) }()
 			return d.SendBatch(ctx, dms)
 		})
@@ -218,7 +218,7 @@ type Subscription struct {
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Receive")
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	s.mu.Lock()
@@ -354,7 +354,7 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
-			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.SendAcks")
+			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub/driver.Subscription.SendAcks")
 			defer func() { trace.EndSpan(ctx, err) }()
 			return s.driver.SendAcks(ctx, ids)
 		})
