@@ -84,17 +84,20 @@ func (e *Error) Unwrap() error {
 	return e.err
 }
 
-// New returns a new error with the given code, underlying error and message.
-func New(c ErrorCode, err error, msg string) *Error {
+// New returns a new error with the given code, underlying error and message. Pass 1
+// for the call depth if New is called from the function raising the error; pass 2 if
+// it is called from a helper function that was invoked by the original function; and
+// so on.
+func New(c ErrorCode, err error, callDepth int, msg string) *Error {
 	return &Error{
 		Code:  c,
 		msg:   msg,
-		frame: xerrors.Caller(1),
+		frame: xerrors.Caller(callDepth),
 		err:   err,
 	}
 }
 
 // Newf uses format and args to format a message, then calls New.
 func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
-	return New(c, err, fmt.Sprintf(format, args...))
+	return New(c, err, 1, fmt.Sprintf(format, args...))
 }

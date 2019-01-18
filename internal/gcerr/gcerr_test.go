@@ -39,12 +39,12 @@ func TestFormatting(t *testing.T) {
 		want []string // regexps, one per line
 	}{
 		{
-			New(NotFound, nil, "message"),
+			New(NotFound, nil, 1, "message"),
 			"%v",
 			[]string{`^NotFound: message$`},
 		},
 		{
-			New(NotFound, nil, "message"),
+			New(NotFound, nil, 1, "message"),
 			"%+v",
 			[]string{
 				`^NotFound: message:$`,
@@ -54,12 +54,12 @@ func TestFormatting(t *testing.T) {
 			},
 		},
 		{
-			New(AlreadyExists, errors.New("wrapped"), "message"),
+			New(AlreadyExists, errors.New("wrapped"), 1, "message"),
 			"%v",
 			[]string{`^AlreadyExists: message: wrapped$`},
 		},
 		{
-			New(AlreadyExists, errors.New("wrapped"), "message"),
+			New(AlreadyExists, errors.New("wrapped"), 1, "message"),
 			"%+v",
 			[]string{
 				`^AlreadyExists: message:$`,
@@ -69,12 +69,12 @@ func TestFormatting(t *testing.T) {
 			},
 		},
 		{
-			New(AlreadyExists, errors.New("wrapped"), ""),
+			New(AlreadyExists, errors.New("wrapped"), 1, ""),
 			"%v",
 			[]string{`^AlreadyExists: wrapped`},
 		},
 		{
-			New(AlreadyExists, errors.New("wrapped"), ""),
+			New(AlreadyExists, errors.New("wrapped"), 1, ""),
 			"%+v",
 			[]string{
 				`^AlreadyExists:`,
