@@ -498,11 +498,11 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		opts = &ReaderOptions{}
 	}
 	dopts := &driver.ReaderOptions{}
-	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
 	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
+	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
 	return &Reader{b: b.b, r: r, tctx: tctx}, nil
 }
 
