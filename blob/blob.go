@@ -498,11 +498,17 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		opts = &ReaderOptions{}
 	}
 	dopts := &driver.ReaderOptions{}
+	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
+	defer func() {
+		if err != nil {
+			trace.EndSpan(tctx, err)
+		}
+	}()
 	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
-		return nil, wrapError(b.b, err)
+		err = wrapError(b.b, err)
+		return nil, err
 	}
-	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
 	return &Reader{b: b.b, r: r, tctx: tctx}, nil
 }
 
@@ -568,6 +574,12 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewWriter")
+	defer func() {
+		if err != nil {
+			trace.EndSpan(tctx, err)
+		}
+	}()
+
 	if opts.ContentType != "" {
 		t, p, err := mime.ParseMediaType(opts.ContentType)
 		if err != nil {
