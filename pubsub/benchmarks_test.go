@@ -16,6 +16,7 @@ package pubsub_test
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"testing"
 
@@ -23,7 +24,6 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -32,7 +32,7 @@ var (
 )
 
 func BenchmarkReceive(b *testing.B) {
-	if *projectID == "" || *topicName == "" {
+	if *topicName == "" {
 		b.Skip("missing -benchmark-project or -benchmark-topic")
 	}
 	attrs := map[string]string{"label": "value"}
@@ -67,6 +67,18 @@ func openGCPTopicAndSub() (*pubsub.Topic, *pubsub.Subscription, func(), error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	var projID gcp.ProjectID
+	if *projectID != "" {
+		projID = gcp.ProjectID(*projectID)
+	} else {
+		projID, err = gcp.DefaultProjectID(creds)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if projID == "" {
+			return nil, nil, nil, errors.New("could not get project ID")
+		}
+	}
 	conn, cleanup, err := gcppubsub.Dial(ctx, gcp.CredentialsTokenSource(creds))
 	if err != nil {
 		return nil, nil, nil, err
@@ -81,8 +93,8 @@ func openGCPTopicAndSub() (*pubsub.Topic, *pubsub.Subscription, func(), error) {
 		cleanup()
 		return nil, nil, nil, err
 	}
-	topic := gcppubsub.OpenTopic(ctx, pc, gcp.ProjectID(*projectID), *topicName, nil)
-	sub := gcppubsub.OpenSubscription(ctx, sc, gcp.ProjectID(*projectID), *topicName, nil)
+	topic := gcppubsub.OpenTopic(ctx, pc, projID, *topicName, nil)
+	sub := gcppubsub.OpenSubscription(ctx, sc, projID, *topicName, nil)
 	return topic, sub, cleanup, nil
 }
 
@@ -102,19 +114,21 @@ func receiveN(sub *pubsub.Subscription, nMessages, nGoroutines int) error {
 	})
 }
 
-// Call function f n times concurrently, with a maximum number of maxg goroutines.
+// Call function f n times concurrently, using g goroutines. g must divide n.
 // Wait until all calls complete. If any fail, cancel the remaining ones.
-func runConcurrently(n, maxg int, f func(context.Context) error) error {
-	g, ctx := errgroup.WithContext(context.Background())
-	sem := semaphore.NewWeighted(int64(maxg))
-	for i := 0; i < n; i++ {
-		if err := sem.Acquire(ctx, 1); err != nil {
-			break // Don't return the context cancelation, return the error that caused it.
-		}
-		g.Go(func() error {
-			defer sem.Release(1)
-			return f(ctx)
+func runConcurrently(n, g int, f func(context.Context) error) error {
+	gr, ctx := errgroup.WithContext(context.Background())
+	ng := n / g
+	for i := 0; i < g; i++ {
+		gr.Go(func() error {
+			for j := 0; j < ng; j++ {
+				if err := f(ctx); err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 	}
-	return g.Wait()
+	return gr.Wait()
+
 }
