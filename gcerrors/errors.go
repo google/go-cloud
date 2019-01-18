@@ -14,8 +14,6 @@
 
 // Package gcerrors provides support for getting error codes from
 // errors returned by Go Cloud APIs.
-//
-// This package is EXPERIMENTAL and subject to change without notice.
 package gcerrors
 
 import "gocloud.dev/internal/gcerr"
