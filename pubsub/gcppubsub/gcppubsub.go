@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcppubsub provides an implementation of pubsub that uses GCP
-// PubSub.
+// Package gcppubsub provides a pubsub implementation that uses GCP
+// PubSub. Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
+// to construct a *pubsub.Subscription.
 //
-// It exposes the following types for As:
-// Topic: *raw.PublisherClient
-// Subscription: *raw.SubscriberClient
+// As
+//
+// gcspubsub exposes the following types for As:
+//  - Topic: *raw.PublisherClient
+//  - Subscription: *raw.SubscriberClient
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (
@@ -72,8 +75,9 @@ func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.Subscrib
 // TopicOptions will contain configuration for topics.
 type TopicOptions struct{}
 
-// OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName.
+// OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
+// topicName in the given projectID. See the package documentation for an
+// example.
 func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(ctx, client, proj, topicName)
 	return pubsub.NewTopic(dt)
@@ -88,19 +92,31 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	var ms []*pb.PubsubMessage
-	for _, dm := range dms {
-		ms = append(ms, &pb.PubsubMessage{
-			Data:       dm.Body,
-			Attributes: dm.Metadata,
-		})
+	// The PubSub service limits the number of messages in a single Publish RPC.
+	const maxPublishCount = 1000
+	for len(dms) > 0 {
+		n := len(dms)
+		if n > maxPublishCount {
+			n = maxPublishCount
+		}
+		batch := dms[:n]
+		dms = dms[n:]
+		var ms []*pb.PubsubMessage
+		for _, dm := range batch {
+			ms = append(ms, &pb.PubsubMessage{
+				Data:       dm.Body,
+				Attributes: dm.Metadata,
+			})
+		}
+		req := &pb.PublishRequest{
+			Topic:    t.path,
+			Messages: ms,
+		}
+		if _, err := t.client.Publish(ctx, req); err != nil {
+			return err
+		}
 	}
-	req := &pb.PublishRequest{
-		Topic:    t.path,
-		Messages: ms,
-	}
-	_, err := t.client.Publish(ctx, req)
-	return err
+	return nil
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -127,8 +143,9 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName.
+// OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
+// PubSub subscription subscriptionName in the given projectID. See the package
+// documentation for an example.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, proj, subscriptionName)
 	return pubsub.NewSubscription(ds, nil)
