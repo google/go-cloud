@@ -36,8 +36,10 @@ package pubsub // import "gocloud.dev/pubsub"
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
+	"time"
 
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
@@ -211,11 +213,32 @@ type Subscription struct {
 	ackBatcher driver.Batcher
 	cancel     func() // for canceling all SendAcks calls
 
-	mu    sync.Mutex    // protects everything below
-	q     []*Message    // local queue of messages downloaded from server
-	err   error         // permanent error
-	waitc chan struct{} // for goroutines waiting on ReceiveBatch
+	mu                  sync.Mutex    // protects everything below
+	q                   []*Message    // local queue of messages downloaded from server
+	err                 error         // permanent error
+	waitc               chan struct{} // for goroutines waiting on ReceiveBatch
+	lastReceiveReturn   time.Time     // time that the last call to Receive returned
+	processTimeAverager *averager     // keeps a running average of the seconds to process a message
 }
+
+const (
+	// The desired length of a subscription's queue of messages (the messages pulled
+	// and waiting in memory to be doled out to Receive callers). The length is
+	// expressed in time; the relationship to number of messages is
+	//
+	//      lengthInMessages = desiredQueueLength / averageProcessTimePerMessage
+	//
+	// In other words, if it takes 100ms to process a message on average, and we want
+	// 2s worth of queued messages, then we need 2/.1 = 20 messages.
+	//
+	// If desiredQueueLength is too small, then there won't be a large enough buffer
+	// of messages to handle fluctuations in processing time, and the queue is likely
+	// to become empty, reducing throughput. If desiredQueueLength is too large, then
+	// messages will wait in memory for a long time, possibly timing out (that is,
+	// their ack deadline will be exceeded). Those messages could have been handled
+	// by another process receiving from the same subscription.
+	desiredQueueLength = 2 * time.Second
+)
 
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking and polling if none are available. This method can be called
@@ -228,6 +251,12 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	defer func() { s.lastReceiveReturn = time.Now() }()
+
+	if !s.lastReceiveReturn.IsZero() {
+		s.processTimeAverager.add(float64(time.Since(s.lastReceiveReturn).Seconds()))
+	}
+
 	for {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
@@ -238,10 +267,12 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// At least one message is available. Return it.
 			m := s.q[0]
 			s.q = s.q[1:]
+			// TODO(jba): pre-fetch more messages if the queue gets too small.
 			return m, nil
 		}
 		if s.waitc != nil {
 			// A call to ReceiveBatch is in flight. Wait for it.
+			// TODO(jba): support multiple calls in flight simultaneously.
 			waitc := s.waitc
 			s.mu.Unlock()
 			select {
@@ -255,12 +286,31 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		}
 		// No messages are available and there are no calls to ReceiveBatch in flight.
 		// Make a call.
+		//
+		// Ask for a number of messages that will give us the desired queue length.
+		// Unless we don't have information about process time (at the beginning), in
+		// which case just get one message.
+		nMessages := 1
+		avgProcessTime := s.processTimeAverager.average()
+		if !math.IsNaN(avgProcessTime) {
+			// Using Ceil guarantees at least one message.
+			n := math.Ceil(desiredQueueLength.Seconds() / avgProcessTime)
+			// Cap nMessages at some non-ridiculous value.
+			// Slight hack: we should be using a larger cap, like MaxInt32. But
+			// that messes up replay: since the tests take very little time to ack,
+			// n is very large, and since our averaging process is time-sensitive,
+			// values can differ slightly from run to run. The current cap happens
+			// to work, but we should come up with a more robust solution.
+			// (Currently it doesn't matter for performance, because gcppubsub can't
+			// caps to 1000 anyway.)
+			nMessages = int(math.Min(n, 10000))
+		}
 		s.waitc = make(chan struct{})
 		s.mu.Unlock()
 		// Even though the mutex is unlocked, only one goroutine can be here.
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
-		msgs, err := s.getNextBatch(ctx)
+		msgs, err := s.getNextBatch(ctx, nMessages)
 		s.mu.Lock()
 		close(s.waitc)
 		s.waitc = nil
@@ -276,14 +326,12 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
+func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
 	for len(msgs) == 0 {
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 			var err error
-			// TODO(#691): dynamically adjust maxMessages
-			const maxMessages = 10
-			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			msgs, err = s.driver.ReceiveBatch(ctx, nMessages)
 			return err
 		})
 		if err != nil {
@@ -342,8 +390,9 @@ var NewSubscription = newSubscription
 func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver: d,
-		cancel: cancel,
+		driver:              d,
+		cancel:              cancel,
+		processTimeAverager: newAverager(time.Minute, 4),
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
