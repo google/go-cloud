@@ -506,8 +506,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}()
 	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
-		err = wrapError(b.b, err)
-		return nil, err
+		return nil, wrapError(b.b, err)
 	}
 	return &Reader{b: b.b, r: r, tctx: tctx}, nil
 }
