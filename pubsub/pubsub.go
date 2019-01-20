@@ -43,6 +43,7 @@ import (
 	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -97,13 +98,16 @@ type msgErrChan struct {
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
-func (t *Topic) Send(ctx context.Context, m *Message) error {
+func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	t.mu.Lock()
-	err := t.err
+	err = t.err
 	t.mu.Unlock()
 	if err != nil {
 		return err
@@ -113,7 +117,10 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
-func (t *Topic) Shutdown(ctx context.Context) error {
+func (t *Topic) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
@@ -175,8 +182,10 @@ func newTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendBatch(callCtx, dms)
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
+			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
+			defer func() { trace.EndSpan(ctx, err) }()
+			return d.SendBatch(ctx, dms)
 		})
 	}
 	maxHandlers := 1
@@ -208,7 +217,10 @@ type Subscription struct {
 // concurrently from multiple goroutines. The Ack() method of the returned
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
-func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
+func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for {
@@ -290,7 +302,10 @@ func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
 }
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
-func (s *Subscription) Shutdown(ctx context.Context) error {
+func (s *Subscription) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
@@ -338,7 +353,9 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
+			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub/driver.Subscription.SendAcks")
+			defer func() { trace.EndSpan(ctx, err) }()
 			return s.driver.SendAcks(ctx, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
