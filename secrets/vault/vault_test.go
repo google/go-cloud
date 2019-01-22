@@ -51,7 +51,7 @@ func (h *harness) Close() {
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	// Start a new test server.
 	c, cleanup := testVaultServer(t)
-	// Enable the transit API.
+	// Enable the Transit Secrets Engine to use Vault as an Encryption as a Service.
 	c.Logical().Write("sys/mounts/transit", map[string]interface{}{
 		"type": "transit",
 	})

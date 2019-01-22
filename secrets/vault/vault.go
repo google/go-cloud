@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limtations under the License.
 
-// Package vault provides functionality to access and decrypt secrets using
-// Hashicorp Vault transit API.
+// Package vault provides a secrets implementation using the Transit Secrets
+// Engine of Vault by Hashicorp.
+// Use NewKeeper to construct a *secrets.Keeper.
 package vault
 
 import (
@@ -47,7 +48,9 @@ func Dial(ctx context.Context, cfg *Config) (*api.Client, error) {
 	return c, nil
 }
 
-// NewKeeper returns a new Keeper to do encryption and decryption.
+// NewKeeper returns a *secrets.Keeper that uses the Transit Secrets Engine of
+// Vault by Hashicorp.
+// See the package documentation for an example.
 func NewKeeper(client *api.Client, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  keyID,
@@ -56,6 +59,7 @@ func NewKeeper(client *api.Client, keyID string, opts *KeeperOptions) *secrets.K
 }
 
 type keeper struct {
+	// keyID is an encryption key ring name used by the Vault's transit API.
 	keyID  string
 	client *api.Client
 }
