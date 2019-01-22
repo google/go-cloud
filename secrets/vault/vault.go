@@ -29,6 +29,9 @@ import (
 
 // Config is the authentication configurations of the Vault server.
 type Config struct {
+	// Token is the access token the Vault client uses to talk to the server.
+	// See https://www.vaultproject.io/docs/concepts/tokens.html for more
+	// information.
 	Token     string
 	APIConfig *api.Config
 }

@@ -38,14 +38,18 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return &keeper{
-		keyID:  keyID,
-		client: h.client,
-	}, nil
+	return newKeeper(keyID, h.client), nil
 }
 
 func (h *harness) Close() {
 	h.close()
+}
+
+func newKeeper(keyID string, client *api.Client) driver.Keeper {
+	return &keeper{
+		keyID:  keyID,
+		client: client,
+	}
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
