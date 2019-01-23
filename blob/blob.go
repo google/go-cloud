@@ -50,8 +50,8 @@
 // The Code function from gocloud.dev/gcerrors will return an error code, also
 // defined in that package, when invoked on an error.
 //
-// The As function from the package golang.org/x/xerrors can retrieve the driver
-// error underlying the returned error. The Bucket.ErrorAs method does the same.
+// The Bucket.ErrorAs method can retrieve the driver error underlying the returned
+// error.
 package blob // import "gocloud.dev/blob"
 
 import (
