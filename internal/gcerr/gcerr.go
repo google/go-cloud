@@ -45,6 +45,9 @@ const (
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
 	Internal ErrorCode = 5
+
+	// The feature is not implemented.
+	Unimplemented ErrorCode = 6
 )
 
 // Call "go generate" whenever you change the above list of error codes.
@@ -64,9 +67,9 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.msg == "" {
-		return fmt.Sprintf("%v", e.Code)
+		return fmt.Sprintf("code=%v", e.Code)
 	}
-	return fmt.Sprintf("%v: %s", e.Code, e.msg)
+	return fmt.Sprintf("%s (code=%v)", e.msg, e.Code)
 }
 
 func (e *Error) Format(s fmt.State, c rune) {

@@ -20,6 +20,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"gocloud.dev/gcerrors"
 )
 
 // ReaderOptions controls Reader behaviors.
@@ -202,15 +204,9 @@ type ListPage struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
-	// IsNotExist should return true if err, an error returned from one
-	// of the other methods in this interface, represents a "key does not exist"
-	// error.
-	IsNotExist(err error) bool
-
-	// IsNotImplemented should return true if err, an error returned from one
-	// of the other methods in this interface, indicates that the method is not
-	// implemented for this provider.
-	IsNotImplemented(err error) bool
+	// ErrorCode should return a Code that describes the error, which was returned by
+	// one of the other methods in this interface.
+	ErrorCode(error) gcerrors.ErrorCode
 
 	// As allows providers to expose provider-specific types.
 	//
