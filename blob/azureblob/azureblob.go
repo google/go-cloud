@@ -78,7 +78,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 
 	"gocloud.dev/internal/useragent"
 )
@@ -391,16 +391,16 @@ func (b *bucket) As(i interface{}) bool {
 	return true
 }
 
-func (b *bucket) ErrorCode(err error) gerrors.Code {
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:
-		return gerrors.Unknown
+		return gcerrors.Unknown
 	case serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404:
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
-		return gerrors.NotFound
+		return gcerrors.NotFound
 	default:
-		return gerrors.Unknown
+		return gcerrors.Unknown
 	}
 }
 

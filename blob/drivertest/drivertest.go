@@ -35,7 +35,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -1208,7 +1208,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 					// Verify that the read fails with IsNotExist.
 					if err == nil {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
-					} else if !tc.wantReadErr && gerrors.ErrorCode(err) != gerrors.NotFound {
+					} else if !tc.wantReadErr && gcerrors.Code(err) != gcerrors.NotFound {
 						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
 					}
 				}
@@ -1538,8 +1538,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
 			t.Errorf("want error, got nil")
-		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
-			t.Errorf("want IsNotExist error, got %v", err)
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("want NotFound error, got %v", err)
 		}
 	})
 
@@ -1567,14 +1567,14 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete want error, got nil")
-		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("read after delete want NotFound error, got %v", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
 		if err == nil {
 			t.Errorf("delete after delete want error, got nil")
-		} else if gerrors.ErrorCode(err) != gerrors.NotFound {
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("delete after delete want NotFound error, got %v", err)
 		}
 	})
@@ -1695,7 +1695,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// Try to generate a real signed URL.
 	url, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
-		if gerrors.ErrorCode(err) == gerrors.NotImplemented {
+		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skipf("SignedURL not supported")
 			return
 		}

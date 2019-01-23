@@ -56,7 +56,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/useragent"
 
@@ -151,8 +151,8 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by GCS. See the package
-// documentation for an example.
+// OpenBucket returns a *blob.Bucket backed by an existing GCS bucket. See the
+// package documentation for an example.
 func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
@@ -200,11 +200,11 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func (b *bucket) ErrorCode(err error) gerrors.Code {
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if err == storage.ErrObjectNotExist {
-		return gerrors.NotFound
+		return gcerrors.NotFound
 	}
-	return gerrors.Unknown
+	return gcerrors.Unknown
 }
 
 // ListPaged implements driver.ListPaged.

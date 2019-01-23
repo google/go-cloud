@@ -25,7 +25,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 )
 
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.
@@ -78,7 +79,7 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
 }
 
-var errFake = errors.New("fake")
+var errFake = errors.New("something is wrong")
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
@@ -143,6 +144,10 @@ func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver
 	return "", errFake
 }
 
+func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerrors.Unknown
+}
+
 // TestErrorsAreWrapped tests that all errors returned from the driver are
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
@@ -154,10 +159,13 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if _, ok := err.(*gerrors.Error); !ok {
+		} else if _, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		}
 		if s := err.Error(); !strings.HasPrefix(s, "blob: ") {
+			t.Logf("short form of error: %v", err)
+			t.Logf("with details: %+v", err)
+
 			t.Errorf("%s: Error() for wrapped error doesn't start with blob: prefix: %s", description, s)
 		}
 	}

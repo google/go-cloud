@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,5 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package samples contains sample programs using the pubsub API.
-package samples
+package gcerrors
+
+import (
+	"io"
+	"testing"
+
+	"gocloud.dev/internal/gcerr"
+)
+
+func TestCode(t *testing.T) {
+	for _, test := range []struct {
+		in   error
+		want ErrorCode
+	}{
+		{nil, OK},
+		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
+		{io.EOF, Unknown},
+	} {
+		got := Code(test.in)
+		if got != test.want {
+			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
+		}
+	}
+}

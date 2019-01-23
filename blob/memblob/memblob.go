@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package memblob provides an in-memory blob implementation.
-// Use OpenBucket to construct a blob.Bucket.
+// Use OpenBucket to construct a *blob.Bucket.
 //
 // Open URLs
 //
@@ -44,7 +44,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 )
 
 const defaultPageSize = 1000
@@ -85,14 +85,14 @@ func OpenBucket(opts *Options) *blob.Bucket {
 	return blob.NewBucket(openBucket(opts))
 }
 
-func (b *bucket) ErrorCode(err error) gerrors.Code {
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	switch err {
 	case errNotFound:
-		return gerrors.NotFound
+		return gcerrors.NotFound
 	case errNotImplemented:
-		return gerrors.NotImplemented
+		return gcerrors.Unimplemented
 	default:
-		return gerrors.Unknown
+		return gcerrors.Unknown
 	}
 }
 

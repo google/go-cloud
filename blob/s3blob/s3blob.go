@@ -58,7 +58,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
-	gerrors "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -235,16 +235,16 @@ type bucket struct {
 	client *s3.S3
 }
 
-func (b *bucket) ErrorCode(err error) gerrors.Code {
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	e, ok := err.(awserr.Error)
 	if !ok {
-		return gerrors.Unknown
+		return gcerrors.Unknown
 	}
 	switch {
 	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
-		return gerrors.NotFound
+		return gcerrors.NotFound
 	default:
-		return gerrors.Unknown
+		return gcerrors.Unknown
 	}
 }
 

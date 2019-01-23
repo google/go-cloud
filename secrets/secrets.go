@@ -12,13 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package secrets provides a set of portable APIs for message encryption and
-// decryption.
+// Package secrets provides an easy and portable way to encrypt and decrypt
+// messages.
+//
+// Subpackages contain distinct implementations of secrets for various
+// providers, including Cloud and on-prem solutions. For example, "localsecrets"
+// supports encryption/decryption using a locally provided key. Your application
+// should import one of these provider-specific subpackages and use its exported
+// function(s) to create a *Keeper; do not use the NewKeeper function in this
+// package. For example:
+//
+//  keeper := localsecrets.NewKeeper(myKey)
+//  encrypted, err := keeper.Encrypt(ctx.Background(), []byte("text"))
+//  ...
+//
+// Then, write your application code using the *Keeper type. You can easily
+// reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using localsecrets, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
 package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
 
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -28,14 +46,19 @@ type Keeper struct {
 	k driver.Keeper
 }
 
-// NewKeeper is intended for use by a specific provider implementation to
-// create a Keeper.
-func NewKeeper(k driver.Keeper) *Keeper {
+// NewKeeper is intended for use by provider implementations.
+var NewKeeper = newKeeper
+
+// newKeeper creates a Keeper.
+func newKeeper(k driver.Keeper) *Keeper {
 	return &Keeper{k: k}
 }
 
 // Encrypt encrypts the plaintext and returns the cipher message.
-func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Encrypt")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
 		return nil, wrapError(k, err)
@@ -43,8 +66,11 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	return b, nil
 }
 
-// Decrypt decrypts the ciphertext and returns the plaintext or an error.
-func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+// Decrypt decrypts the ciphertext and returns the plaintext.
+func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Decrypt")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
 		return nil, wrapError(k, err)

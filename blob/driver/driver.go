@@ -21,7 +21,7 @@ import (
 	"io"
 	"time"
 
-	"gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 )
 
 // ReaderOptions controls Reader behaviors.
@@ -206,7 +206,7 @@ type ListPage struct {
 type Bucket interface {
 	// ErrorCode should return a Code that describes the error, which was returned by
 	// one of the other methods in this interface.
-	ErrorCode(error) errors.Code
+	ErrorCode(error) gcerrors.ErrorCode
 
 	// As allows providers to expose provider-specific types.
 	//
