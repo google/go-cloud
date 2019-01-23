@@ -63,7 +63,6 @@ import (
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/trace"
-	xerrors "golang.org/x/exp/errors"
 )
 
 // Reader reads bytes from a blob.
@@ -405,6 +404,12 @@ func (b *Bucket) As(i interface{}) bool {
 		return false
 	}
 	return b.b.As(i)
+}
+
+// ErrorAs converts i to provider-specific types.
+// See Bucket.As for more details.
+func (b *Bucket) ErrorAs(err error, i interface{}) bool {
+	return b.b.ErrorAs(err, i)
 }
 
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
@@ -795,10 +800,4 @@ func wrapError(b driver.Bucket, err error) error {
 		return err
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
-}
-
-// ErrorAs converts i to provider-specific types.
-// See Bucket.As for more details.
-func ErrorAs(err error, i interface{}) bool {
-	return xerrors.As(err, i)
 }

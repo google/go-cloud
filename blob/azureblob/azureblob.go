@@ -391,6 +391,18 @@ func (b *bucket) As(i interface{}) bool {
 	return true
 }
 
+// As implements driver.ErrorAs.
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	switch v := err.(type) {
+	case azblob.StorageError:
+		if p, ok := i.(*azblob.StorageError); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
+}
+
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	serr, ok := err.(azblob.StorageError)
 	switch {
