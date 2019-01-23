@@ -78,6 +78,8 @@ type AsTest interface {
 	Name() string
 	// BucketCheck will be called to allow verification of Bucket.As.
 	BucketCheck(b *blob.Bucket) error
+	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
+	ErrorCheck(b *blob.Bucket, err error) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -104,6 +106,13 @@ func (verifyAsFailsOnNil) Name() string {
 func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	if b.As(nil) {
 		return errors.New("want Bucket.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) error {
+	if b.ErrorAs(err, nil) {
+		return errors.New("want ErrorAs to return false when passed nil")
 	}
 	return nil
 }

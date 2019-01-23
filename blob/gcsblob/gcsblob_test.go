@@ -130,6 +130,18 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
+	// Can't really verify this one because the storage library returns
+	// a sentinel error, storage.ErrObjectNotExist, for "not exists"
+	// instead of the supported As type googleapi.Error.
+	// Call ErrorAs anyway, and expect it to fail.
+	var to *googleapi.Error
+	if b.ErrorAs(err, &to) {
+		return errors.New("expected ErrorAs to fail")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var sw *storage.Writer
 	if !as(&sw) {

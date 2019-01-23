@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -100,6 +101,14 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	var client *s3.S3
 	if !b.As(&client) {
 		return errors.New("Bucket.As failed")
+	}
+	return nil
+}
+
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
+	var e awserr.Error
+	if !b.ErrorAs(err, &e) {
+		return errors.New("blob.ErrorAs failed")
 	}
 	return nil
 }

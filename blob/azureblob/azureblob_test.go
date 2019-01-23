@@ -142,6 +142,14 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
+	var to azblob.StorageError
+	if !b.ErrorAs(err, &to) {
+		return errors.New("Bucket.ErrorAs failed")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	var azOpts *azblob.UploadStreamToBlockBlobOptions
 	if !as(&azOpts) {
