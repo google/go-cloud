@@ -7,7 +7,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/google/go-cmp v0.2.0
 	github.com/google/go-github v17.0.0+incompatible
-	go.opencensus.io v0.18.0
+	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	gocloud.dev v0.9.0
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
 	golang.org/x/sys v0.0.0-20190122071731-054c452bb702
