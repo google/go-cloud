@@ -141,9 +141,9 @@ concrete type backed by GCS.
 -   Order arguments that are less likely to change across multiple calls to the
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
-    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
-    "mybucket", client)```.
--   All public constructors should take an `Options` struct (see next section).
+    `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
+    "mybucket", client)`. - All public constructors should take an `Options`
+    struct (see next section).
 
 ### Option Structs
 
@@ -208,38 +208,35 @@ Concrete types should:
     end users, so that users can't peek into provider-specific error details
     without using `As`. Make sure not to double-wrap.
 
-- Use `internal/gcerr.New` when wrapping driver errors, like so:
-    ```
-    if err := driver.Call(xyz); err != nil {
-        return gcerr.New(code, err, 1, "blob")
-    }
-    ```
-    The first argument is an error code. See below for advice on choosing the
+-   Use `internal/gcerr.New` when wrapping driver errors, like so: `if err :=
+    driver.Call(xyz); err != nil { return gcerr.New(code, err, 1, "blob") }` The
+    first argument is an error code. See below for advice on choosing the
     appropriate code.
 
     The third argument is the distance in stack frames from the function whose
     location should be associated with the error. It should be `1` if you are
     calling `New` from the same function that made the driver call, `2` if you
-    are calling new from a helper function, and son on. The fourth argument is
-    an additional string that will display with the error. You should pass
-    the API name.
+    are calling new from a helper function, and so on. The fourth argument is
+    an additional string that will display with the error. You should pass the
+    API name.
 
 -   By default, choose the code `Unknown`, keeping details of returned `error`s
     unspecified. The most common case is that the caller will only care whether
     an operation succeeds or not.
 
--   If certain `error`s are interesting for callers to distinguish, choose
-    one of the other codes from the `gcerrors.ErrorCode` enum, so user programs
-    can act on the kind of error without having to look at provider-specific
-    errors.
-    - If more than one error code makes sense, choose the most specific one.
-    - If none make sense, choose `Unknown`.
-    - If none make sense but you want something more specific than `Unknown`:
-      - If you can generalize your code to make it applicable to more than just your
-        API, add it to `gcerrors.ErrorCode`. Look at the [gRPC error
-        codes](https://github.com/grpc/grpc-go/blob/master/codes/codes.go) for inspiration.
-      - Otherwise, you can define a custom code in your API's concrete package.
-        Your code should use a negative integer.
+-   If certain `error`s are interesting for callers to distinguish, choose one
+    of the other codes from the `gcerrors.ErrorCode` enum, so user programs can
+    act on the kind of error without having to look at provider-specific errors.
+
+    -   If more than one error code makes sense, choose the most specific one.
+    -   If none make sense, choose `Unknown`.
+    -   If none make sense but you want something more specific than `Unknown`:
+        -   If you can generalize your code to make it applicable to more than
+            just your API, add it to `gcerrors.ErrorCode`. Look at the
+            [gRPC error codes](https://github.com/grpc/grpc-go/blob/master/codes/codes.go)
+            for inspiration.
+        -   Otherwise, you can define a custom code in your API's concrete
+            package. Your code should use a negative integer.
 
 -   If your package already exposes an `ErrorAs` function to allow users to
     access provider-specific error types, there is no need to remove it at
@@ -432,8 +429,8 @@ wiki page. We also adopt the following guidelines:
 -   Order arguments that are less likely to change across multiple calls to the
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
-    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
-    "mybucket", client)```.
+    `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
+    "mybucket", client)`.
 
 ## Tests
 
