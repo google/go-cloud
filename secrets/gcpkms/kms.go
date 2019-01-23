@@ -22,6 +22,7 @@ import (
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/useragent"
 	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
@@ -33,7 +34,7 @@ const endPoint = "cloudkms.googleapis.com:443"
 // Dial returns a client to use with Cloud KMS and a clean-up function to close
 // the client after used.
 func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClient, func(), error) {
-	c, err := cloudkms.NewKeyManagementClient(ctx, option.WithTokenSource(ts))
+	c, err := cloudkms.NewKeyManagementClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("secrets"))
 	return c, func() { c.Close() }, err
 }
 
