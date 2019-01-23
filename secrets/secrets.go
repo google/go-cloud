@@ -86,9 +86,6 @@ type wrappedError struct {
 }
 
 func wrapError(k driver.Keeper, err error) error {
-	if err == nil {
-		return nil
-	}
 	return &wrappedError{k: k, err: err}
 }
 
