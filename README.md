@@ -98,7 +98,7 @@ your needs!
 The GitHub repository at [google/go-cloud][go-cloud] contains some provider
 implementations for each portable API. We intend to include [Google Cloud
 Platform][gcp], [Amazon Web Services][aws], and
-[Azure][https://azure.microsoft.com/] implementations, as well as prominent open
+[Azure][azure] implementations, as well as prominent open
 source providers and at least one implementation suitable for use in local
 testing. Unfortunately, we cannot support every cloud provider directly from the
 project; however, we encourage contributions in separate repositories.
