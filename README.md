@@ -95,7 +95,7 @@ documentation, bug reports, feature requests, or anything else. We encourage you
 to experiment with Go Cloud and make contributions to help evolve it to meet
 your needs!
 
-The GitHub repository at [google/go-cloud[go-cloud] contains some provider
+The GitHub repository at [google/go-cloud][go-cloud] contains some provider
 implementations for each portable API. We intend to include [Google Cloud
 Platform][gcp], [Amazon Web Services][aws], and
 [Azure][https://azure.microsoft.com/] implementations, as well as prominent open
