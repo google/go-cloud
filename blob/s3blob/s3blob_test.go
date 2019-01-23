@@ -105,9 +105,9 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	var e awserr.Error
-	if !blob.ErrorAs(err, &e) {
+	if !b.ErrorAs(err, &e) {
 		return errors.New("blob.ErrorAs failed")
 	}
 	return nil
