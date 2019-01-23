@@ -82,7 +82,7 @@ Go Cloud provides generic APIs for:
 *   Unstructured binary (blob) storage
 *   Publish/Subscribe (pubsub)
 *   Variables that change at runtime (runtimevar)
-*   Connecting to MySQL and Postgres databases (mysql, postgres)
+*   Connecting to MySQL and PostgreSQL databases (mysql, postgres)
 *   Server startup and diagnostics: request logging, tracing, and health
     checking (server)
 
