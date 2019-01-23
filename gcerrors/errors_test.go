@@ -27,7 +27,7 @@ func TestCode(t *testing.T) {
 		want ErrorCode
 	}{
 		{nil, OK},
-		{gcerr.New(AlreadyExists, nil, ""), AlreadyExists},
+		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
 		{io.EOF, Unknown},
 	} {
 		got := Code(test.in)

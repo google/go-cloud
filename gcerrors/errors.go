@@ -16,7 +16,10 @@
 // errors returned by Go Cloud APIs.
 package gcerrors
 
-import "gocloud.dev/internal/gcerr"
+import (
+	"gocloud.dev/internal/gcerr"
+	xerrors "golang.org/x/exp/errors"
+)
 
 // An ErrorCode describes the error's category. Programs should act upon an error's
 // code, not its message.
@@ -51,7 +54,8 @@ func Code(err error) ErrorCode {
 	if err == nil {
 		return OK
 	}
-	if e, ok := err.(*gcerr.Error); ok {
+	var e *gcerr.Error
+	if xerrors.As(err, &e) {
 		return e.Code
 	}
 	return Unknown
