@@ -29,7 +29,7 @@
 //  if err != nil {
 //      return fmt.Errorf("could not open bucket: %v", err)
 //  }
-//  buf, err := bucket.ReadAll(ctx.Background(), "myfile.txt")
+//  buf, err := bucket.ReadAll(context.Background(), "myfile.txt")
 //  ...
 //
 // Then, write your application code using the *Bucket type. You can easily
@@ -41,6 +41,17 @@
 // Alternatively, you can construct a *Bucket using blob.Open by providing
 // a URL that's supported by a blob subpackage that you have linked
 // in to your application.
+//
+//
+// Errors
+//
+// The errors returned from this package can be inspected in several ways:
+//
+// The Code function from gocloud.dev/gcerrors will return an error code, also
+// defined in that package, when invoked on an error.
+//
+// The As function from the package golang.org/x/xerrors can retrieve the driver
+// error underlying the returned error. The Bucket.ErrorAs method does the same.
 package blob // import "gocloud.dev/blob"
 
 import (
@@ -448,7 +459,7 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 // Attributes returns attributes for the blob stored at key.
 //
 // If the blob does not exist, Attributes returns an error for which
-// IsNotExist will return true.
+// gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
 	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Attributes")
 	defer func() { trace.EndSpan(ctx, err) }()
@@ -491,8 +502,8 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 // If length is negative, it will read till the end of the blob.
 //
 // If the blob does not exist, NewRangeReader returns an error for which
-// IsNotExist will return true. Attributes is a lighter-weight way
-// to check for existence.
+// gcerrors.Code will return gcerrors.NotFound. Attributes is a lighter-weight way to
+// check for existence.
 //
 // A nil ReaderOptions is treated the same as the zero value.
 //
@@ -623,7 +634,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // Delete deletes the blob stored at key.
 //
 // If the blob does not exist, Delete returns an error for which
-// IsNotExist will return true.
+// gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Delete")
 	defer func() { trace.EndSpan(ctx, err) }()
@@ -638,7 +649,7 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 // It is valid to call SignedURL for a key that does not exist.
 //
 // If the provider implementation does not support this functionality, SignedURL
-// will return an error for which IsNotImplemented will return true.
+// will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	if opts == nil {
 		opts = &SignedURLOptions{}
