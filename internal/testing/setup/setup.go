@@ -137,12 +137,20 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 		opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
 		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
 	} else {
-		// Establish a local listener for Dial to connect to and update endPoint
+		// Establish a local gRPC server for Dial to connect to and update endPoint
 		// to point to it.
+		// As of grpc 1.18, we must create a true gRPC server.
+		srv := grpc.NewServer()
 		l, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatal(err)
 		}
+		go func() {
+			if err := srv.Serve(l); err != nil {
+				t.Error(err)
+			}
+		}()
+		defer srv.Stop()
 		endPoint = l.Addr().String()
 		opts = append(opts, grpc.WithInsecure())
 	}
