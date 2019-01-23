@@ -159,7 +159,9 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if _, ok := err.(*gcerr.Error); !ok {
+			return
+		}
+		if _, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		}
 		if s := err.Error(); !strings.HasPrefix(s, "blob ") {

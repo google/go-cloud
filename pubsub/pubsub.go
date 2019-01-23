@@ -35,13 +35,14 @@ package pubsub // import "gocloud.dev/pubsub"
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"sync"
 
 	"github.com/googleapis/gax-go"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/internal/trace"
 	"gocloud.dev/pubsub/driver"
@@ -104,13 +105,13 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
-		return err
+		return err // Return context errors unwrapped.
 	}
 	t.mu.Lock()
 	err = t.err
 	t.mu.Unlock()
 	if err != nil {
-		return err
+		return err // t.err wrapped when set
 	}
 	return t.batcher.Add(ctx, m)
 }
@@ -122,7 +123,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	t.mu.Lock()
-	t.err = errors.New("pubsub: Topic closed")
+	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic closed")
 	t.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -182,11 +183,12 @@ func newTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
+		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
 			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
 			defer func() { trace.EndSpan(ctx, err) }()
 			return d.SendBatch(ctx, dms)
 		})
+		return wrapError(d, err)
 	}
 	maxHandlers := 1
 	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
@@ -227,7 +229,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
-			return nil, s.err
+			return nil, s.err // s.err wrapped when set
 		}
 		if len(s.q) > 0 {
 			// At least one message is available. Return it.
@@ -282,7 +284,7 @@ func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
 			return err
 		})
 		if err != nil {
-			return nil, err
+			return nil, wrapError(s.driver, err)
 		}
 	}
 	var q []*Message
@@ -307,7 +309,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	defer func() { trace.EndSpan(ctx, err) }()
 
 	s.mu.Lock()
-	s.err = errors.New("pubsub: Subscription closed")
+	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription closed")
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -361,6 +363,7 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 		// Remember a non-retryable error from SendAcks. It will be returned on the
 		// next call to Receive.
 		if err != nil {
+			err = wrapError(s.driver, err)
 			s.mu.Lock()
 			s.err = err
 			s.mu.Unlock()
@@ -368,4 +371,23 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 		return err
 	}
 	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+}
+
+type errorCoder interface {
+	ErrorCode(error) gcerrors.ErrorCode
+}
+
+func wrapError(ec errorCoder, err error) error {
+	if err == nil {
+		return nil
+	}
+	// Don't wrap context errors.
+	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
+		return err
+	}
+	// Don't double-wrap.
+	if _, ok := err.(*gcerr.Error); ok {
+		return err
+	}
+	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
 }

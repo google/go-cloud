@@ -10,6 +10,7 @@ import (
 )
 
 type funcTopic struct {
+	driver.Topic
 	sendBatch func(ctx context.Context, ms []*driver.Message) error
 }
 
@@ -18,8 +19,6 @@ func (t *funcTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 }
 
 func (s *funcTopic) IsRetryable(error) bool { return false }
-
-func (s *funcTopic) As(i interface{}) bool { return false }
 
 func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	dt := &funcTopic{

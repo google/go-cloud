@@ -28,7 +28,9 @@ import (
 	"fmt"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -135,6 +137,10 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
+}
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -207,4 +213,8 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = s.client
 	return true
+}
+
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
 }
