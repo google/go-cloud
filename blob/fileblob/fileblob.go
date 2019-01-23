@@ -487,7 +487,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, err
 	}
-	f, err := ioutil.TempFile("", "fileblob")
+	f, err := ioutil.TempFile(filepath.Dir(path), "fileblob")
 	if err != nil {
 		return nil, err
 	}
