@@ -36,6 +36,7 @@ package secrets // import "gocloud.dev/secrets"
 import (
 	"context"
 
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -54,7 +55,10 @@ func newKeeper(k driver.Keeper) *Keeper {
 }
 
 // Encrypt encrypts the plaintext and returns the cipher message.
-func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
+func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Encrypt")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
 		return nil, wrapError(k, err)
@@ -63,7 +67,10 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 }
 
 // Decrypt decrypts the ciphertext and returns the plaintext.
-func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Decrypt")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
 		return nil, wrapError(k, err)

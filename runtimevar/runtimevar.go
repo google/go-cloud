@@ -46,6 +46,7 @@ import (
 	"sync"
 	"time"
 
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -125,7 +126,10 @@ func newVar(w driver.Watcher) *Variable {
 //
 // Alternatively, use Latest (and optionally InitLatest) to retrieve the latest
 // good config. If Latest or InitLatest has been called, Watch panics.
-func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	c.mu.Lock()
 	if c.w != nil {
 		panic("Watch called after InitLatest")
