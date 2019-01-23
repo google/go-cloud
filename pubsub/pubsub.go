@@ -14,6 +14,23 @@
 
 // Package pubsub provides an easy and portable way to interact with publish/
 // subscribe systems.
+//
+// Subpackages contain distinct implementations of pubsub for various providers,
+// including Cloud and on-prem solutions. For example, "gcspubsub" supports
+// Google Cloud Pub/Sub. Your application should import one of these
+// provider-specific subpackages and use its exported functions to get a
+// *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
+// functions in this package. For example:
+//
+//  topic := mempubsub.NewTopic()
+//  err := topic.Send(ctx.Background(), &pubsub.Message{Body: []byte("hi"))
+//  ...
+//
+// Then, write your application code using the *Topic/*Subscription types. You
+// can easily reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using memblob, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
@@ -26,6 +43,7 @@ import (
 	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -80,13 +98,16 @@ type msgErrChan struct {
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
-func (t *Topic) Send(ctx context.Context, m *Message) error {
+func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	t.mu.Lock()
-	err := t.err
+	err = t.err
 	t.mu.Unlock()
 	if err != nil {
 		return err
@@ -96,7 +117,10 @@ func (t *Topic) Send(ctx context.Context, m *Message) error {
 
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
-func (t *Topic) Shutdown(ctx context.Context) error {
+func (t *Topic) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	t.mu.Lock()
 	t.err = errors.New("pubsub: Topic closed")
 	t.mu.Unlock()
@@ -113,8 +137,26 @@ func (t *Topic) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
+// As converts i to provider-specific types.
+//
+// This function (and the other As functions in this package) are inherently
+// provider-specific, and using them will make that part of your application
+// non-portable, so use with care.
+//
+// See the documentation for the subpackage used to instantiate Bucket to see
 // which type(s) are supported.
+//
+// Usage:
+//
+// 1. Declare a variable of the provider-specific type you want to access.
+//
+// 2. Pass a pointer to it to As.
+//
+// 3. If the type is supported, As will return true and copy the
+// provider-specific type into your variable. Otherwise, it will return false.
+//
+// Provider-specific types that are intended to be mutable will be exposed
+// as a pointer to the underlying type.
 //
 // See
 // https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
@@ -123,9 +165,11 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic.
-// It is for use by provider implementations.
-func NewTopic(d driver.Topic) *Topic {
+// NewTopic is for use by provider implementations.
+var NewTopic = newTopic
+
+// newTopic makes a pubsub.Topic from a driver.Topic.
+func newTopic(d driver.Topic) *Topic {
 	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
@@ -138,8 +182,10 @@ func NewTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendBatch(callCtx, dms)
+		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
+			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
+			defer func() { trace.EndSpan(ctx, err) }()
+			return d.SendBatch(ctx, dms)
 		})
 	}
 	maxHandlers := 1
@@ -171,7 +217,10 @@ type Subscription struct {
 // concurrently from multiple goroutines. The Ack() method of the returned
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
-func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
+func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for {
@@ -253,7 +302,10 @@ func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
 }
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
-func (s *Subscription) Shutdown(ctx context.Context) error {
+func (s *Subscription) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
 	s.err = errors.New("pubsub: Subscription closed")
 	s.mu.Unlock()
@@ -270,21 +322,19 @@ func (s *Subscription) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
-// which type(s) are supported.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// As converts i to provider-specific types.
+// See Topic.As for more details.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription
+// NewSubscription is for use by provider implementations.
+var NewSubscription = newSubscription
+
+// newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-// NewSubscription is for use by provider implementations.
-func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
@@ -303,7 +353,9 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
+			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub/driver.Subscription.SendAcks")
+			defer func() { trace.EndSpan(ctx, err) }()
 			return s.driver.SendAcks(ctx, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
