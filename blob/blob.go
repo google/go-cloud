@@ -794,8 +794,7 @@ func wrapError(b driver.Bucket, err error) error {
 	if err == io.EOF {
 		return err
 	}
-	fmt.Println("b", b)
-	return gcerr.New(b.ErrorCode(err), err, 2, "")
+	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
 }
 
 // ErrorAs converts i to provider-specific types.

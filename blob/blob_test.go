@@ -79,7 +79,7 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
 }
 
-var errFake = errors.New("something is wrong")
+var errFake = errors.New("fake")
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.
@@ -162,10 +162,9 @@ func TestErrorsAreWrapped(t *testing.T) {
 		} else if _, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		}
-		if s := err.Error(); !strings.HasPrefix(s, "blob: ") {
+		if s := err.Error(); !strings.HasPrefix(s, "blob ") {
 			t.Logf("short form of error: %v", err)
 			t.Logf("with details: %+v", err)
-
 			t.Errorf("%s: Error() for wrapped error doesn't start with blob: prefix: %s", description, s)
 		}
 	}

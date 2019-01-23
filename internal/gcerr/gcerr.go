@@ -67,9 +67,9 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.msg == "" {
-		return fmt.Sprintf("%v", e.Code)
+		return fmt.Sprintf("code=%v", e.Code)
 	}
-	return fmt.Sprintf("%v: %s", e.Code, e.msg)
+	return fmt.Sprintf("%s (code=%v)", e.msg, e.Code)
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
