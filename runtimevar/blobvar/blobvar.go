@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 )
@@ -148,5 +149,5 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 
 // IsNotExist implements driver.IsNotExist.
 func (*watcher) IsNotExist(err error) bool {
-	return blob.IsNotExist(err)
+	return gcerrors.Code(err) == gcerrors.NotFound
 }
