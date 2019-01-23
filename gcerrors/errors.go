@@ -45,6 +45,9 @@ const (
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
 	Internal ErrorCode = gcerr.Internal
+
+	// The feature is not implemented.
+	Unimplemented ErrorCode = gcerr.Unimplemented
 )
 
 // Code returns the ErrorCode of err if it is an *Error.
