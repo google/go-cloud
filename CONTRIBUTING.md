@@ -5,9 +5,9 @@ how you can help.
 
 ## Filing issues
 
-Filing issues is an important way you can contribute to the Go Cloud Project. We
-want your feedback on things like bugs, desired API changes, or just anything
-that isn't working for you.
+Filing issues is an important way you can contribute to the Go Cloud Development
+Kit. We want your feedback on things like bugs, desired API changes, or just
+anything that isn't working for you.
 
 ### Bugs
 
@@ -22,13 +22,13 @@ of the issue, like "blob/gcsblob: not blobby enough".
 ### Changes
 
 Unlike the core Go project, we do not have a formal proposal process for
-changes. If you have a change you would like to see in Go Cloud, please file an
-issue with the necessary details.
+changes. If you have a change you would like to see in the Go CDK, please file
+an issue with the necessary details.
 
 ### Triaging
 
-The Go Cloud team triages issues at least every two weeks, but usually within
-two business days. Bugs or feature requests are either placed into a **Sprint**
+The Go CDK team triages issues at least every two weeks, but usually within two
+business days. Bugs or feature requests are either placed into a **Sprint**
 milestone which means the issue is intended to be worked on. Issues that we
 would like to address but do not have time for are placed into the [Unplanned][]
 milestone.
@@ -77,10 +77,10 @@ Tests that interact with cloud providers are written using a replay method,
 where the test is run and actually performs the operations, and the
 requests/results of the operations are stored in a replay file. This replay file
 is then read back in unit tests on Travis, so the tests get to operate with real
-data. Unfortunately, while the Go Cloud team can generate these replay files
-against our test cloud infrastructure, it is not yet possible for external
-contributors to do the same. We want to improve this process in the future and
-are researching how we can do this. If you have any ideas, please file an issue!
+data. Unfortunately, while the GCDK team can generate these replay files against
+our test cloud infrastructure, it is not yet possible for external contributors
+to do the same. We want to improve this process in the future and are
+researching how we can do this. If you have any ideas, please file an issue!
 
 #### Writing and running tests against a cloud environment
 
@@ -97,7 +97,7 @@ generate new ones to be used by others.
 
 *   Follow the normal
     [pull request flow](https://help.github.com/articles/creating-a-pull-request/)
-*   Build your changes using Go 1.11 with Go modules enabled. Go Cloud's
+*   Build your changes using Go 1.11 with Go modules enabled. The GCDK's
     continuous integration uses Go modules in order to ensure
     [reproducible builds](https://research.swtch.com/vgo-repro).
 *   Test your changes using `go test ./...`. Please add tests that show the
@@ -130,8 +130,7 @@ request. GitHub notifications can be noisy, and it is unfortunately easy for
 things to be lost in the shuffle.
 
 Once your PR is approved (hooray!) the reviewer will squash your commits into a
-single commit, and then merge the commit onto the Go Cloud master branch. Thank
-you!
+single commit, and then merge the commit onto the GCDK master branch. Thank you!
 
 ## Github code review workflow conventions
 
