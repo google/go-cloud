@@ -28,9 +28,17 @@ import (
 func Example() {
 	// Set the environment variables AWS uses to load the session.
 	// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
+	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
+	prevRegion := os.Getenv("AWS_REGION")
 	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
 	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
 	os.Setenv("AWS_REGION", "us-east-1")
+	defer func() {
+		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
+		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
+		os.Setenv("AWS_REGION", prevRegion)
+	}()
 
 	// Establish an AWS session.
 	session, err := session.NewSession(nil)

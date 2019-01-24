@@ -154,15 +154,21 @@ func errorState(err error, prevS driver.State) driver.State {
 		// New error.
 		return s
 	}
-	if err == prev.err || err.Error() == prev.err.Error() {
+	if equivalentError(err, prev.err) {
 		// Same error, return nil to indicate no change.
 		return nil
 	}
-	code, prevCode := grpc.Code(err), grpc.Code(prev.err)
-	if code != codes.OK && code == prevCode {
-		return nil
-	}
 	return s
+}
+
+// equivalentError returns true iff err1 and err2 represent an equivalent error;
+// i.e., we don't want to return it to the user as a different error.
+func equivalentError(err1, err2 error) bool {
+	if err1 == err2 || err1.Error() == err2.Error() {
+		return true
+	}
+	code1, code2 := grpc.Code(err1), grpc.Code(err2)
+	return code1 != codes.OK && code1 != codes.Unknown && code1 == code2
 }
 
 // watcher implements driver.Watcher for configurations provided by the Runtime Configurator

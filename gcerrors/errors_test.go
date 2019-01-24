@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package localsecrets
+package gcerrors
 
 import (
-	"context"
+	"io"
 	"testing"
 
-	"gocloud.dev/internal/secrets/driver"
-	"gocloud.dev/internal/secrets/drivertest"
+	"gocloud.dev/internal/gcerr"
 )
 
-type harness struct{}
-
-func (h harness) MakeDriver(ctx context.Context) (driver.Crypter, error) {
-	return NewKeeper(ByteKey("very secret secret")), nil
-}
-
-func (h harness) Close() {}
-
-func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	return harness{}, nil
+func TestCode(t *testing.T) {
+	for _, test := range []struct {
+		in   error
+		want ErrorCode
+	}{
+		{nil, OK},
+		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
+		{io.EOF, Unknown},
+	} {
+		got := Code(test.in)
+		if got != test.want {
+			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
+		}
+	}
 }

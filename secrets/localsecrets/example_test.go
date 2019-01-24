@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log"
 
-	"gocloud.dev/internal/secrets/localsecrets"
+	"gocloud.dev/secrets/localsecrets"
 )
 
 func Example() {

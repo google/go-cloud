@@ -26,7 +26,7 @@ import (
 
 const (
 	prefix  = "go-cloud"
-	version = "0.9.0"
+	version = "0.1.0"
 )
 
 // ClientOption returns an option.ClientOption that sets a Go Cloud User-Agent.
@@ -37,6 +37,11 @@ func ClientOption(api string) option.ClientOption {
 // GRPCDialOption returns a grpc.DialOption that sets a Go Cloud User-Agent.
 func GRPCDialOption(api string) grpc.DialOption {
 	return grpc.WithUserAgent(userAgentString(api))
+}
+
+// AzureUserAgentPrefix returns a prefix that is used to set Azure SDK User-Agent to help with diagnostics.
+func AzureUserAgentPrefix(api string) string {
+	return userAgentString(api)
 }
 
 func userAgentString(api string) string {

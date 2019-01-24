@@ -1,23 +1,25 @@
 # Guestbook Sample
 
 Guestbook is a sample application that records visitors' messages, displays a
-cloud banner, and an administrative message. The main business logic is
-written in a cloud-agnostic manner using MySQL, the generic blob API, and the
-generic runtimevar API. All platform-specific code is set up by 
+cloud banner, and an administrative message. The main business logic is written
+in a cloud-agnostic manner using MySQL, the generic blob API, and the generic
+runtimevar API. All platform-specific code is set up by
 [Wire](https://github.com/google/wire).
 
 ## Prerequisites
 
 You will need to install the following software to run this sample:
 
-- [Go](https://golang.org/doc/install)
-- [Wire](https://github.com/google/wire/blob/master/README.md#installing)
-- [Docker](https://docs.docker.com/install/)
-- [Terraform][TF]
-- [jq](https://stedolan.github.io/jq/download/)
-- [gcloud CLI](https://cloud.google.com/sdk/downloads), if you want to use GCP
-- [aws CLI](https://docs.aws.amazon.com/cli/latest/userguide/installing.html),
-  if you want to use AWS
+-   [Go](https://golang.org/doc/install)
+-   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
+-   [Docker](https://docs.docker.com/install/)
+
+To run the sample on a Cloud provider (GCP or AWS), you will also need:
+
+-   [Terraform][TF]
+-   [gcloud CLI](https://cloud.google.com/sdk/downloads), if you want to use GCP
+-   [aws CLI](https://docs.aws.amazon.com/cli/latest/userguide/installing.html),
+    if you want to use AWS
 
 ## Building
 
@@ -29,26 +31,29 @@ go generate && go build
 
 ## Running Locally
 
-You will need to run a local MySQL database server, set up a directory that
-simulates a bucket, and create a local message of the day. `localdb/main.go` is a
-program that runs a temporary database using Docker:
+You will need to run a local MySQL database server and create a local message of
+the day. `localdb/main.go` runs the local MySQL database server using Docker:
 
 ```shell
 go get ./localdb/... # Get package dependencies.
 go run localdb/main.go
 ```
 
-In another terminal, you can run:
+In another terminal, run the `guestbook` application:
 
 ```shell
-# Set a local Message of the Day
+# Set a local Message of the Day.
 echo 'Hello, World!' > motd.txt
 
 # Run the server.
+# For blob, it uses fileblob, pointing at the local directory ./blobs.
+# For runtimevar, it uses filevar, pointing at the local file ./motd.txt.
+#   You can update the ./motd.txt while the server is running, refresh
+#   the page, and see it change.
 ./guestbook -env=local -bucket=blobs -motd_var=motd.txt
 ```
 
-Your server should be running on http://localhost:8080/.
+Your server is now running on http://localhost:8080/.
 
 You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
 (SIGINT).
@@ -58,7 +63,7 @@ You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
 If you want to run this sample on GCP, you need to create a project, download
 the gcloud SDK, install `kubectl` and log in.
 
-``` shell
+```shell
 # Install kubectl.
 gcloud components install kubectl
 
@@ -91,13 +96,18 @@ directory using the same variables you entered during `terraform apply`.
 ## Running on Amazon Web Services (AWS)
 
 If you want to run this sample on AWS, you need to set up an account, download
-the AWS command line interface, and log in. You will also need an SSH key. If you
-don't already have one, you can follow [this guide from GitHub][GitHub SSH]. Follow the instructions for "Adding your key to the ssh-agent" if you want the key to persist across terminal sessions.
+the AWS command line interface, and log in. You will also need an SSH key. If
+you don't already have one, you can follow [this guide from GitHub][GitHub SSH].
+Follow the instructions for "Adding your key to the ssh-agent" if you want the
+key to persist across terminal sessions.
 
 ### Agree to the AWS Terms and Conditions
-You have to agree to the [AWS Terms and Conditions][AWS T&C] in order to provision the resources.
+
+You have to agree to the [AWS Terms and Conditions][AWS T&C] in order to
+provision the resources.
 
 ### Provision resources with Terraform
+
 With the SSH keys generated and AWS Terms and Conditions signed, you can then
 use Terraform, a tool for initializing cloud resources, to set up your project.
 This will create an EC2 instance you can SSH to and run your binary.
@@ -119,7 +129,10 @@ terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.p
 ```
 
 ### Connect to the new server and run the guestbook binary
-You now need to connect to the new remote server to execute the `guestbook` binary. The final output of `terraform apply` lists the required variables `guestbook` requires to execute. Here's an example (with redacted output!):
+
+You now need to connect to the new remote server to execute the `guestbook`
+binary. The final output of `terraform apply` lists the required variables
+`guestbook` requires to execute. Here's an example (with redacted output!):
 
 ```shell
 localhost$ terraform apply
@@ -140,16 +153,18 @@ localhost$ ssh "admin@$( terraform output instance_host )"
 
 server$ AWS_REGION=us-west-1 ./guestbook -env=aws \
   -bucket=guestbook[timestamp] \
-	-db_host=guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com \
-	-motd_var=/guestbook/motd
+    -db_host=guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com \
+    -motd_var=/guestbook/motd
 ```
 
 ### View the guestbook application
+
 You can then visit the server at `http://INSTANCE_HOST:8080/`, where
 `INSTANCE_HOST` is the value of `terraform output instance_host` run on your
 local machine.
 
 ### Cleanup
+
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
 
@@ -158,7 +173,8 @@ directory using the same variables you entered during `terraform apply`.
 
 ## Gophers
 
-The Go gopher was designed by Renee French and used under the [Creative Commons
-3.0 Attributions](https://creativecommons.org/licenses/by/3.0/) license.
+The Go gopher was designed by Renee French and used under the
+[Creative Commons 3.0 Attributions](https://creativecommons.org/licenses/by/3.0/)
+license.
 
 [TF]: https://www.terraform.io/intro/getting-started/install.html

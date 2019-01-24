@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package fileblob provides a blob implementation that uses the filesystem.
-// Use OpenBucket to construct a blob.Bucket.
+// Use OpenBucket to construct a *blob.Bucket.
 //
 // Blob keys are escaped before being used as filenames, and filenames are
 // unescaped when they are passed back as blob keys during List. The escape
@@ -65,6 +65,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 )
 
 const defaultPageSize = 1000
@@ -246,16 +247,17 @@ func unescape(s string) (string, error) {
 	return unescaped, nil
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
 var errNotImplemented = errors.New("not implemented")
 
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return err == errNotImplemented
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	switch {
+	case os.IsNotExist(err):
+		return gcerrors.NotFound
+	case err == errNotImplemented:
+		return gcerrors.Unimplemented
+	default:
+		return gcerrors.Unknown
+	}
 }
 
 // path returns the full path for a key
@@ -487,7 +489,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, err
 	}
-	f, err := ioutil.TempFile("", "fileblob")
+	f, err := ioutil.TempFile(filepath.Dir(path), "fileblob")
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,7 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limtations under the License.
+// limitations under the License.
 
 // Package runtimevar provides an easy and portable way to watch runtime
 // configuration variables.
@@ -44,6 +44,7 @@ import (
 	"reflect"
 	"time"
 
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -98,10 +99,11 @@ type Variable struct {
 	prev     driver.State
 }
 
-// New creates a new *Variable based on a specific driver implementation.
-// End users should use subpackages to construct a *Variable instead of this
-// function; see the package documentation for details.
-func New(w driver.Watcher) *Variable {
+// New is intended for use by provider implementations.
+var New = newVar
+
+// newVar  creates a new *Variable based on a specific driver implementation.
+func newVar(w driver.Watcher) *Variable {
 	return &Variable{watcher: w}
 }
 
@@ -116,7 +118,10 @@ func New(w driver.Watcher) *Variable {
 //
 // Watch is not goroutine-safe; typical use is to call it in a single
 // goroutine in a loop.
-func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {

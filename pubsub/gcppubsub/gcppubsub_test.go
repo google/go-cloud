@@ -16,15 +16,17 @@ package gcppubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"strings"
+	"sync/atomic"
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
-	"gocloud.dev/internal/testing/setup"
+	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 const (
@@ -50,6 +52,8 @@ type harness struct {
 	closer    func()
 	pubClient *raw.PublisherClient
 	subClient *raw.SubscriberClient
+	numTopics uint32 // atomic
+	numSubs   uint32 // atomic
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -62,12 +66,21 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err != nil {
 		return nil, fmt.Errorf("making subscription client: %v", err)
 	}
-	return &harness{done, pubClient, subClient}, nil
+	return &harness{closer: done, pubClient: pubClient, subClient: subClient, numTopics: 0, numSubs: 0}, nil
 }
 
-func (h *harness) MakeTopic(ctx context.Context) (driver.Topic, error) {
-	dt := openTopic(ctx, h.pubClient, projectID, topicName)
-	return dt, nil
+func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
+	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+	_, err = h.pubClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicPath})
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating topic: %v", err)
+	}
+	dt = openTopic(ctx, h.pubClient, projectID, topicName)
+	cleanup = func() {
+		h.pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
+	}
+	return dt, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
@@ -75,17 +88,22 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) MakeSubscription(ctx context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
-	var sname string
-	switch n {
-	case 0:
-		sname = subscriptionName0
-	case 1:
-		sname = subscriptionName1
-	default:
-		return nil, errors.New("n must be 0 or 1")
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
+	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
+	t := dt.(*topic)
+	_, err = h.subClient.CreateSubscription(ctx, &pubsubpb.Subscription{
+		Name:  subPath,
+		Topic: t.path,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating subscription: %v", err)
 	}
-	return openSubscription(ctx, h.subClient, projectID, sname), nil
+	ds = openSubscription(ctx, h.subClient, projectID, subName)
+	cleanup = func() {
+		h.subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
+	}
+	return ds, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
@@ -133,4 +151,8 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
+}
+
+func sanitize(testName string) string {
+	return strings.Replace(testName, "/", "_", -1)
 }

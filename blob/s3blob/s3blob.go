@@ -25,6 +25,9 @@
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
 // The following query options are supported:
 //  - region: The AWS region for requests; sets aws.Config.Region.
+//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
+//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
 // Example URL:
 //  s3://mybucket?region=us-east-1
 //
@@ -55,6 +58,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -76,6 +80,15 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 
 	if region := q["region"]; len(region) > 0 {
 		cfg.Region = aws.String(region[0])
+	}
+	if endpoint := q["endpoint"]; len(endpoint) > 0 {
+		cfg.Endpoint = aws.String(endpoint[0])
+	}
+	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
+		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
+	}
+	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
+		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
 	}
 	sess, err := session.NewSession(cfg)
 	if err != nil {
@@ -222,17 +235,17 @@ type bucket struct {
 	client *s3.S3
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
-		return true
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return gcerrors.Unknown
 	}
-	return false
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
+	switch {
+	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
+		return gcerrors.NotFound
+	default:
+		return gcerrors.Unknown
+	}
 }
 
 // ListPaged implements driver.ListPaged.

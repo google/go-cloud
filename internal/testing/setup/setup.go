@@ -3,7 +3,6 @@ package setup // import "gocloud.dev/internal/testing/setup"
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net"
 	"net/http"
 	"regexp"
@@ -138,12 +137,20 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 		opts = append(opts, grpc.WithTransportCredentials(grpccreds.NewClientTLSFromCert(nil, "")))
 		opts = append(opts, grpc.WithPerRPCCredentials(oauth.TokenSource{TokenSource: gcp.CredentialsTokenSource(creds)}))
 	} else {
-		// Establish a local listener for Dial to connect to and update endPoint
+		// Establish a local gRPC server for Dial to connect to and update endPoint
 		// to point to it.
+		// As of grpc 1.18, we must create a true gRPC server.
+		srv := grpc.NewServer()
 		l, err := net.Listen("tcp", "127.0.0.1:0")
 		if err != nil {
 			t.Fatal(err)
 		}
+		go func() {
+			if err := srv.Serve(l); err != nil {
+				t.Error(err)
+			}
+		}()
+		defer srv.Stop()
 		endPoint = l.Addr().String()
 		opts = append(opts, grpc.WithInsecure())
 	}
@@ -155,82 +162,46 @@ func NewGCPgRPCConn(ctx context.Context, t *testing.T, endPoint, api string) (*g
 }
 
 // NewAzureTestPipeline creates a new connection for testing against Azure Blob.
-func NewAzureTestPipeline(ctx context.Context, t *testing.T, accountName string, accountKey string) (pipeline pipeline.Pipeline, done func(), httpClient *http.Client) {
+func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credential azblob.Credential, accountName string) (pipeline.Pipeline, func(), *http.Client) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
 	}
 
 	azMatchers := &replay.ProviderMatcher{
+		// Note: We can't match the User-Agent header because Azure includes the
+		// "go" version in it.
+		// Headers: []string{"User-Agent"},
 		URLScrubbers: []*regexp.Regexp{
 			regexp.MustCompile(`se=[^?]*`),
 			regexp.MustCompile(`sig=[^?]*`),
 		},
 	}
-
 	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
-
-	var credential azblob.Credential
-	if *Record {
-		credential, _ = azblob.NewSharedKeyCredential(accountName, accountKey)
-	} else {
-		credential = azblob.NewAnonymousCredential()
-	}
-
-	httpClient = azureHTTPClient(r)
-	p := newPipeline(credential, r)
-
-	return p, done, httpClient
-}
-
-func newPipeline(c azblob.Credential, r *recorder.Recorder) pipeline.Pipeline {
-	if c == nil {
-		panic("pipeline credential can't be nil")
-	}
-
 	f := []pipeline.Factory{
-		// sets User-Agent for recorder
+		// Sets User-Agent for recorder.
 		azblob.NewTelemetryPolicyFactory(azblob.TelemetryOptions{
-			Value: "X-Az-Target",
+			Value: useragent.AzureUserAgentPrefix(api),
 		}),
-		// sets header X-Ms-Client-Request-Id, see https://msdn.microsoft.com/en-us/library/mt766820.aspx
-		azblob.NewUniqueRequestIDPolicyFactory(),
+		credential,
+		pipeline.MethodFactoryMarker(),
 	}
 
-	f = append(f, c)
-	f = append(f, pipeline.MethodFactoryMarker())
-
-	log := pipeline.LogOptions{
-		Log: func(level pipeline.LogLevel, message string) {
-			fmt.Println(message)
-		},
-		ShouldLog: func(level pipeline.LogLevel) bool {
-			return true
-		},
-	}
-
-	return pipeline.NewPipeline(f, pipeline.Options{HTTPSender: newDefaultHTTPClientFactory(azureHTTPClient(r)), Log: log})
-}
-
-func newDefaultHTTPClientFactory(pipelineHTTPClient *http.Client) pipeline.Factory {
-	return pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
-		return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
-			r, err := pipelineHTTPClient.Do(request.WithContext(ctx))
-			if err != nil {
-				err = pipeline.NewError(err, "HTTP request failed")
+	httpClient := &http.Client{Transport: r}
+	// Create a pipeline that uses httpClient to make requests.
+	p := pipeline.NewPipeline(f, pipeline.Options{
+		HTTPSender: pipeline.FactoryFunc(func(next pipeline.Policy, po *pipeline.PolicyOptions) pipeline.PolicyFunc {
+			return func(ctx context.Context, request pipeline.Request) (pipeline.Response, error) {
+				r, err := httpClient.Do(request.WithContext(ctx))
+				if err != nil {
+					err = pipeline.NewError(err, "HTTP request failed")
+				}
+				return pipeline.NewHTTPResponse(r), err
 			}
-			return pipeline.NewHTTPResponse(r), err
-		}
+		}),
 	})
-}
-
-func azureHTTPClient(r *recorder.Recorder) *http.Client {
-	if r != nil {
-		return &http.Client{Transport: r}
-	} else {
-		return &http.Client{}
-	}
+	return p, done, httpClient
 }

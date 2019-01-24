@@ -17,6 +17,7 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
+	"google.golang.org/grpc/codes"
 	"testing"
 
 	"gocloud.dev/internal/testing/setup"
@@ -24,6 +25,7 @@ import (
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
@@ -131,10 +133,32 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(err error) error {
+func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
 	var s *status.Status
 	if !runtimevar.ErrorAs(err, &s) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil
+}
+
+// Runtimeconfigurator-specific tests.
+
+func TestEquivalentError(t *testing.T) {
+	tests := []struct {
+		Err1, Err2 error
+		Want       bool
+	}{
+		{Err1: errors.New("not grpc"), Err2: errors.New("not grpc"), Want: true},
+		{Err1: errors.New("not grpc"), Err2: errors.New("not grpc but different")},
+		{Err1: errors.New("not grpc"), Err2: grpc.Errorf(codes.Internal, "fail")},
+		{Err1: grpc.Errorf(codes.Internal, "fail"), Err2: grpc.Errorf(codes.InvalidArgument, "fail")},
+		{Err1: grpc.Errorf(codes.Internal, "fail"), Err2: grpc.Errorf(codes.Internal, "fail"), Want: true},
+	}
+
+	for _, test := range tests {
+		got := equivalentError(test.Err1, test.Err2)
+		if got != test.Want {
+			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
+		}
+	}
 }

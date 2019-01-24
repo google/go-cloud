@@ -67,35 +67,44 @@ func TestConformance(t *testing.T) {
 }
 
 type harness struct {
-	conn amqpConnection
-	uid  int32 // atomic. Unique ID, so tests don't interact with each other.
+	conn      amqpConnection
+	numTopics uint32
+	numSubs   uint32
 }
 
-func (h *harness) newName(prefix string) string {
-	return fmt.Sprintf("%s%d", prefix, atomic.AddInt32(&h.uid, 1))
-}
-
-func (h *harness) MakeTopic(context.Context) (driver.Topic, error) {
-	exchange := h.newName("t")
+func (h *harness) CreateTopic(_ context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
+	exchange := fmt.Sprintf("%s-topic-%d", testName, atomic.AddUint32(&h.numTopics, 1))
 	if err := declareExchange(h.conn, exchange); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return newTopic(h.conn, exchange), nil
+	cleanup = func() {
+		ch, err := h.conn.Channel()
+		if err != nil {
+			panic(err)
+		}
+		ch.ExchangeDelete(exchange)
+	}
+	return newTopic(h.conn, exchange), cleanup, nil
 }
 
 func (h *harness) MakeNonexistentTopic(context.Context) (driver.Topic, error) {
 	return newTopic(h.conn, "nonexistent-topic"), nil
 }
 
-func (h *harness) MakeSubscription(_ context.Context, dt driver.Topic, n int) (driver.Subscription, error) {
-	if n < 0 || n >= 2 {
-		return nil, errors.New("n must be 0 or 1")
-	}
-	queue := h.newName("s")
+func (h *harness) CreateSubscription(_ context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
+	queue := fmt.Sprintf("%s-subscription-%d", testName, atomic.AddUint32(&h.numSubs, 1))
 	if err := bindQueue(h.conn, queue, dt.(*topic).exchange); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return newSubscription(h.conn, queue), nil
+	cleanup = func() {
+		ch, err := h.conn.Channel()
+		if err != nil {
+			panic(err)
+		}
+		ch.QueueDelete(queue)
+	}
+	ds = newSubscription(h.conn, queue)
+	return ds, cleanup, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscription, error) {

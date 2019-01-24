@@ -28,12 +28,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -77,7 +79,7 @@ type AsTest interface {
 	// BucketCheck will be called to allow verification of Bucket.As.
 	BucketCheck(b *blob.Bucket) error
 	// ErrorCheck will be called to allow verification of Bucket.ErrorAs.
-	ErrorCheck(err error) error
+	ErrorCheck(b *blob.Bucket, err error) error
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
@@ -108,8 +110,8 @@ func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(err error) error {
-	if blob.ErrorAs(err, nil) {
+func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) error {
+	if b.ErrorAs(err, nil) {
 		return errors.New("want ErrorAs to return false when passed nil")
 	}
 	return nil
@@ -195,6 +197,16 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				testAs(t, newHarness, st)
 			})
 		}
+	})
+}
+
+// RunBenchmarks runs benchmarks for provider implementations of blob.
+func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
+	b.Run("BenchmarkRead", func(b *testing.B) {
+		benchmarkRead(b, bkt)
+	})
+	b.Run("BenchmarkWriteReadDelete", func(b *testing.B) {
+		benchmarkWriteReadDelete(b, bkt)
 	})
 }
 
@@ -1029,7 +1041,7 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 }
 
 // loadTestData loads test data, inlined using go-bindata.
-func loadTestData(t *testing.T, name string) []byte {
+func loadTestData(t testing.TB, name string) []byte {
 	data, err := Asset(name)
 	if err != nil {
 		t.Fatal(err)
@@ -1205,7 +1217,7 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 					// Verify that the read fails with IsNotExist.
 					if err == nil {
 						t.Error("Write failed as expected, but Read after that didn't return an error")
-					} else if !tc.wantReadErr && !blob.IsNotExist(err) {
+					} else if !tc.wantReadErr && gcerrors.Code(err) != gcerrors.NotFound {
 						t.Errorf("Write failed as expected, but Read after that didn't return the right error; got %v want IsNotExist", err)
 					}
 				}
@@ -1535,8 +1547,8 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
 			t.Errorf("want error, got nil")
-		} else if !blob.IsNotExist(err) {
-			t.Errorf("want IsNotExist error, got %v", err)
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("want NotFound error, got %v", err)
 		}
 	})
 
@@ -1564,15 +1576,15 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
 			t.Errorf("read after delete want error, got nil")
-		} else if !blob.IsNotExist(err) {
-			t.Errorf("read after delete want IsNotExist error, got %v", err)
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("read after delete want NotFound error, got %v", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
 		if err == nil {
 			t.Errorf("delete after delete want error, got nil")
-		} else if !blob.IsNotExist(err) {
-			t.Errorf("delete after delete want IsNotExist error, got %v", err)
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("delete after delete want NotFound error, got %v", err)
 		}
 	})
 }
@@ -1692,7 +1704,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	// Try to generate a real signed URL.
 	url, err := b.SignedURL(ctx, key, nil)
 	if err != nil {
-		if blob.IsNotImplemented(err) {
+		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skipf("SignedURL not supported")
 			return
 		}
@@ -1819,7 +1831,63 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if gotErr == nil {
 		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
 	}
-	if err := st.ErrorCheck(gotErr); err != nil {
+	if err := st.ErrorCheck(b, gotErr); err != nil {
 		t.Error(err)
 	}
+}
+
+func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
+	ctx := context.Background()
+	const key = "readbenchmark-blob"
+
+	content := loadTestData(b, "test-large.jpg")
+	if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
+		b.Fatal(err)
+	}
+	defer func() {
+		_ = bkt.Delete(ctx, key)
+	}()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			buf, err := bkt.ReadAll(ctx, key)
+			if err != nil {
+				b.Error(err)
+			}
+			if !bytes.Equal(buf, content) {
+				b.Error("read didn't match write")
+			}
+		}
+	})
+}
+
+func benchmarkWriteReadDelete(b *testing.B, bkt *blob.Bucket) {
+	ctx := context.Background()
+	const baseKey = "writereaddeletebenchmark-blob-"
+
+	content := loadTestData(b, "test-large.jpg")
+	var nextID uint32
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		key := fmt.Sprintf("%s%d", baseKey, atomic.AddUint32(&nextID, 1))
+		for pb.Next() {
+			if err := bkt.WriteAll(ctx, key, content, nil); err != nil {
+				b.Error(err)
+				continue
+			}
+			buf, err := bkt.ReadAll(ctx, key)
+			if err != nil {
+				b.Error(err)
+			}
+			if !bytes.Equal(buf, content) {
+				b.Error("read didn't match write")
+			}
+			if err := bkt.Delete(ctx, key); err != nil {
+				b.Error(err)
+				continue
+			}
+		}
+	})
 }

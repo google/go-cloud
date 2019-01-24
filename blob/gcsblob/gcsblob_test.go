@@ -98,6 +98,20 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func BenchmarkGcsblob(b *testing.B) {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		b.Fatal(err)
+	}
+	bkt, err := OpenBucket(context.Background(), client, bucketName, nil)
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying GCS types and
@@ -116,13 +130,13 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	// Can't really verify this one because the storage library returns
 	// a sentinel error, storage.ErrObjectNotExist, for "not exists"
 	// instead of the supported As type googleapi.Error.
 	// Call ErrorAs anyway, and expect it to fail.
 	var to *googleapi.Error
-	if blob.ErrorAs(err, &to) {
+	if b.ErrorAs(err, &to) {
 		return errors.New("expected ErrorAs to fail")
 	}
 	return nil

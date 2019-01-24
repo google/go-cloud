@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,5 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package samples contains sample programs using the pubsub API.
-package samples
+// Package azurecloud contains Wire providers for Azure services.
+package azurecloud // import "gocloud.dev/azure/azurecloud"
+
+import (
+	"github.com/google/wire"
+	"gocloud.dev/blob/azureblob"
+)
+
+// Azure is a Wire provider set that includes the default wiring for all
+// Microsoft Azure services in this repository, but does not include
+// credentials. Individual services may require additional configuration.
+var Azure = wire.NewSet(
+	azureblob.NewPipeline,
+)
