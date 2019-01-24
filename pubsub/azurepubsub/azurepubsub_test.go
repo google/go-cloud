@@ -1,6 +1,7 @@
 package azurepubsub
 
 import (
+
 	"os"
 	"strings"
 	"sync/atomic"
@@ -9,14 +10,14 @@ import (
 	"testing"
 
 	"gocloud.dev/pubsub"
-
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
+	"gocloud.dev/internal/testing/setup"
 
 	"github.com/Azure/azure-service-bus-go"
 )
 var (
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING") 
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING") 	
 )
 
 const (
@@ -62,7 +63,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	// Azure subscription name has to be less than 50 characters.
-	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))	
 	t := dt.(*topic)
 
 	err = createSubscription(ctx, t.name, subName, h.connString, nil)
@@ -88,15 +89,22 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+// Please run the TestConformance with an extended timeout since each test needs to preform CRUD for ServiceBus Topics and Subscriptions.
+// Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azurepubsub -run ^TestConformance$
 func TestConformance(t *testing.T) {
-	asTests := []drivertest.AsTest{sbAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests)
+	if !*setup.Record {
+        t.Skip("replaying is not yet supported for Azure pubsub")
+    
+	} else {
+		asTests := []drivertest.AsTest{sbAsTest{}}
+		drivertest.RunConformanceTests(t, newHarness, asTests)
+	}
 }
 
 type sbAsTest struct{}
 
 func (sbAsTest) Name() string {
-	return "azure servicebus test"
+	return "sb"
 }
 
 func (sbAsTest) TopicCheck(top *pubsub.Topic) error {	
@@ -125,5 +133,11 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 }
 
 func sanitize(testName string) string {
-	return strings.Replace(testName, "/", "_", -1)
+	// Keep the entity name under 50 characters as per Azure limits.
+	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
+	name := strings.Replace(testName, "/", "_", -1)
+	if len(name) > 40 {
+		name = name[:len(name)-20]
+	}
+	return name
 }
