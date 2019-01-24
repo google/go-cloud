@@ -31,6 +31,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Open a gRPC connection to the GCP Pub Sub API.
 	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
