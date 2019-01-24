@@ -43,8 +43,6 @@ func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error
 	return nil
 }
 
-func (s *scriptedSub) IsRetryable(error) bool { return false }
-
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &scriptedSub{

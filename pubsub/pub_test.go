@@ -18,8 +18,6 @@ func (t *funcTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return t.sendBatch(ctx, ms)
 }
 
-func (s *funcTopic) IsRetryable(error) bool { return false }
-
 func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	dt := &funcTopic{
 		sendBatch: func(ctx context.Context, ms []*driver.Message) error {

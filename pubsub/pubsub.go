@@ -39,7 +39,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/googleapis/gax-go"
+	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
@@ -383,10 +383,6 @@ func wrapError(ec errorCoder, err error) error {
 	}
 	// Don't wrap context errors.
 	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
-		return err
-	}
-	// Don't double-wrap.
-	if _, ok := err.(*gcerr.Error); ok {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
