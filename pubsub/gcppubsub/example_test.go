@@ -16,7 +16,6 @@ package gcppubsub_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/gcp"
@@ -49,24 +48,14 @@ func Example() {
 	defer subClient.Close()
 	proj := gcp.ProjectID("gcppubsub-example-project")
 
-	// Create a *pubsub.Topic
 	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
-
-	// Create a *pubsub.Subscription
-	s := gcppubsub.OpenSubscription(ctx, subClient, proj, "example-subscription", nil)
-
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 
+	s := gcppubsub.OpenSubscription(ctx, subClient, proj, "example-subscription", nil)
 	_, err = s.Receive(ctx)
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
-
-	// Error messages are expected because we don't expect a project named gcppubsub-example-project to exist.
-
-	// Output:
-	// rpc error: code = NotFound desc = Requested project not found or user does not have access to it (project=gcppubsub-example-project). Make sure to specify the unique project identifier and not the Google Cloud Console display name.
-	// rpc error: code = NotFound desc = Requested project not found or user does not have access to it (project=gcppubsub-example-project). Make sure to specify the unique project identifier and not the Google Cloud Console display name.
 }
