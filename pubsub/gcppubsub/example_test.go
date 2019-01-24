@@ -16,6 +16,7 @@ package gcppubsub_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"gocloud.dev/gcp"
@@ -24,7 +25,7 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-func Example() {
+func ExampleOpenTopic() {
 	ctx := context.Background()
 	scope := "https://www.googleapis.com/auth/cloud-platform"
 	creds, err := google.FindDefaultCredentials(ctx, scope)
@@ -42,21 +43,41 @@ func Example() {
 		log.Fatal(err)
 	}
 	defer pubClient.Close()
+	proj := gcp.ProjectID("gcppubsub-example-project")
+	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
+	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ExampleOpenSubscription() {
+	ctx := context.Background()
+	scope := "https://www.googleapis.com/auth/cloud-platform"
+	creds, err := google.FindDefaultCredentials(ctx, scope)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Open a gRPC connection to the GCP Pub Sub API.
+	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+	pubClient, err := gcppubsub.PublisherClient(ctx, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pubClient.Close()
+	proj := gcp.ProjectID("gcppubsub-example-project")
 	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer subClient.Close()
-	proj := gcp.ProjectID("gcppubsub-example-project")
-
-	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
-	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
-		log.Fatal(err)
-	}
-
 	s := gcppubsub.OpenSubscription(ctx, subClient, proj, "example-subscription", nil)
-	_, err = s.Receive(ctx)
+	m, err := s.Receive(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("%s\n", m.Body)
 }
