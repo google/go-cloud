@@ -35,7 +35,7 @@ resource "github_branch_protection" "default_branch" {
   enforce_admins = true
 
   required_status_checks {
-    strict = true
+    strict = false
 
     contexts = [
       "Travis CI - Pull Request",
