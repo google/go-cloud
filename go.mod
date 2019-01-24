@@ -37,8 +37,7 @@ require (
 	github.com/centrify/cloud-golang-sdk v0.0.0-20180119173102-7c97cc6fde16 // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0 // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
-	github.com/coreos/etcd v3.3.10+incompatible
-	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
+	github.com/coreos/etcd v3.3.11+incompatible
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dancannon/gorethink v4.0.0+incompatible // indirect
