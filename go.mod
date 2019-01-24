@@ -123,9 +123,10 @@ require (
 	golang.org/x/exp/errors v0.0.0-20190123073158-f1c91bc264ca
 	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
+	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
 	google.golang.org/api v0.1.0
 	google.golang.org/genproto v0.0.0-20190122204518-eef12c790cc0
-	google.golang.org/grpc v1.17.0
+	google.golang.org/grpc v1.18.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
 	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect

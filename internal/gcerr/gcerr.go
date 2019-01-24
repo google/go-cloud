@@ -20,6 +20,8 @@ import (
 
 	xerrors "golang.org/x/exp/errors"
 	xfmt "golang.org/x/exp/errors/fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // An ErrorCode describes the error's category.
@@ -45,6 +47,9 @@ const (
 	// Something unexpected happened. Internal errors always indicate
 	// bugs in Go Cloud (or possibly the underlying provider).
 	Internal ErrorCode = 5
+
+	// The feature is not implemented.
+	Unimplemented ErrorCode = 6
 )
 
 // Call "go generate" whenever you change the above list of error codes.
@@ -64,9 +69,9 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.msg == "" {
-		return fmt.Sprintf("%v", e.Code)
+		return fmt.Sprintf("code=%v", e.Code)
 	}
-	return fmt.Sprintf("%v: %s", e.Code, e.msg)
+	return fmt.Sprintf("%s (code=%v)", e.msg, e.Code)
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
@@ -100,4 +105,23 @@ func New(c ErrorCode, err error, callDepth int, msg string) *Error {
 // Newf uses format and args to format a message, then calls New.
 func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, 1, fmt.Sprintf(format, args...))
+}
+
+// GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
+// It returns Unknown if the error isn't from gRPC.
+func GRPCCode(err error) ErrorCode {
+	switch status.Code(err) {
+	case codes.NotFound:
+		return NotFound
+	case codes.AlreadyExists:
+		return AlreadyExists
+	case codes.InvalidArgument:
+		return InvalidArgument
+	case codes.Internal:
+		return Internal
+	case codes.Unimplemented:
+		return Unimplemented
+	default:
+		return Unknown
+	}
 }

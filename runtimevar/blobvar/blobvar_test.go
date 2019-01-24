@@ -21,6 +21,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/memblob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -75,11 +76,11 @@ func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
 	if !runtimevar.ErrorAs(err, &blobe) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
-	if blob.IsNotExist(err) {
-		return errors.New("expected blob.IsNotExist to return false for wrapped error")
+	if gcerrors.Code(err) == gcerrors.NotFound {
+		return errors.New("expected error code to be other than NotFound to return false for wrapped error")
 	}
-	if !blob.IsNotExist(blobe) {
-		return errors.New("expected blob.IsNotExist to return true for unwrapped error")
+	if gcerrors.Code(blobe) != gcerrors.NotFound {
+		return errors.New("expected error code to be NotFound for unwrapped error")
 	}
 	return nil
 }
