@@ -81,10 +81,10 @@ Go Cloud provides generic APIs for:
 
 *   Unstructured binary (blob) storage
 *   Publish/Subscribe (pubsub)
-*   Variables that change at runtime (configuration)
-*   Connecting to MySQL databases
+*   Variables that change at runtime (runtimevar)
+*   Connecting to MySQL and PostgreSQL databases (mysql, postgres)
 *   Server startup and diagnostics: request logging, tracing, and health
-    checking
+    checking (server)
 
 ## Contributing
 
@@ -95,13 +95,16 @@ documentation, bug reports, feature requests, or anything else. We encourage you
 to experiment with Go Cloud and make contributions to help evolve it to meet
 your needs!
 
-The GitHub repository at [google/go-cloud][go-cloud] currently contains
-[Google Cloud Platform][gcp] and [Amazon Web Services][aws] implementations as
-examples to prove everything is working. Unfortunately, we cannot support every
-cloud provider directly from the project.
+The GitHub repository at [google/go-cloud][go-cloud] contains some provider
+implementations for each portable API. We intend to include [Google Cloud
+Platform][gcp], [Amazon Web Services][aws], and
+[Azure][azure] implementations, as well as prominent open
+source providers and at least one implementation suitable for use in local
+testing. Unfortunately, we cannot support every cloud provider directly from the
+project; however, we encourage contributions in separate repositories.
 
 If you create a repository that implements the Go Cloud interfaces for other
-cloud providers, let us know! We would be happy to link to it here and give you
+providers, let us know! We would be happy to link to it here and give you
 a heads-up before making any breaking changes.
 
 See [the contributing guide](./CONTRIBUTING.md) for more details.
@@ -109,6 +112,7 @@ See [the contributing guide](./CONTRIBUTING.md) for more details.
 [go-cloud]: https://github.com/google/go-cloud
 [gcp]: http://cloud.google.com
 [aws]: http://aws.amazon.com
+[azure]: https://azure.microsoft.com/
 
 ## Community
 

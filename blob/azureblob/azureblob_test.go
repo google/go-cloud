@@ -142,9 +142,9 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	var to azblob.StorageError
-	if !blob.ErrorAs(err, &to) {
+	if !b.ErrorAs(err, &to) {
 		return errors.New("Bucket.ErrorAs failed")
 	}
 	return nil

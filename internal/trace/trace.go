@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"go.opencensus.io/trace"
-	// "gocloud.dev/errors"
+	"gocloud.dev/gcerrors"
 )
 
 // StartSpan adds a span to the trace with the given name.
@@ -40,6 +40,5 @@ func EndSpan(ctx context.Context, err error) {
 // toStatus interrogates an error and converts it to an appropriate
 // OpenCensus status.
 func toStatus(err error) trace.Status {
-	// TODO(jba): see if err is a *gocloud.dev/errors.Error, and use its code.
-	return trace.Status{Code: -1, Message: err.Error()}
+	return trace.Status{Code: int32(gcerrors.Code(err)), Message: err.Error()}
 }
