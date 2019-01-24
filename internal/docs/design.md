@@ -141,8 +141,8 @@ concrete type backed by GCS.
 -   Order arguments that are less likely to change across multiple calls to the
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
-    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
-    "mybucket", client)```.
+    `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
+    "mybucket", client)`. 
 -   All public constructors should take an `Options` struct (see next section).
 
 ### Option Structs
@@ -208,22 +208,39 @@ Concrete types should:
     end users, so that users can't peek into provider-specific error details
     without using `As`. Make sure not to double-wrap.
 
--   Prefix errors with the package name (e.g., `blob: fail`). For most errors,
-    this can be done as part of the wrapping.
+-   Use `internal/gcerr.New` when wrapping driver errors, like so: `if err :=
+    driver.Call(xyz); err != nil { return gcerr.New(code, err, 1, "blob") }` The
+    first argument is an error code. See below for advice on choosing the
+    appropriate code.
 
--   Prefer to keep details of returned `error`s unspecified. The most common
-    case is that the caller will only care whether an operation succeeds or not.
+    The third argument is the distance in stack frames from the function whose
+    location should be associated with the error. It should be `1` if you are
+    calling `New` from the same function that made the driver call, `2` if you
+    are calling new from a helper function, and so on. The fourth argument is an
+    additional string that will display with the error. You should pass the API
+    name.
 
--   If certain `error`s are interesting for callers to distinguish, expose
-    predicate functions like
-    [`os.IsNotExist`](https://golang.org/pkg/os/#IsNotExist). This allows the
-    internal representation of the `error` to change over time while being
-    simple to use. In most cases, these predicate functions will translate into
-    a driver interface function to do the check. The concrete type must pass
-    such functions the raw error that the driver returned (not a wrapped error).
+-   By default, choose the code `Unknown`, keeping details of returned `error`s
+    unspecified. The most common case is that the caller will only care whether
+    an operation succeeds or not.
 
--   Expose an `ErrorAs` function to allow users to access provider-specific
-    error types.
+-   If certain `error`s are interesting for callers to distinguish, choose one
+    of the other codes from the `gcerrors.ErrorCode` enum, so user programs can
+    act on the kind of error without having to look at provider-specific errors.
+
+    -   If more than one error code makes sense, choose the most specific one.
+    -   If none make sense, choose `Unknown`.
+    -   If none make sense but you want something more specific than `Unknown`:
+        -   If you can generalize your code to make it applicable to more than
+            just your API, add it to `gcerrors.ErrorCode`. Look at the
+            [gRPC error codes](https://github.com/grpc/grpc-go/blob/master/codes/codes.go)
+            for inspiration.
+        -   Otherwise, you can define a custom code in your API's concrete
+            package. Your code should use a negative integer.
+
+-   For now, your package should expose an `ErrorAs` function to allow users to
+    access provider-specific error types. We may review this choice if
+    `golang.org/x/xerrors.As` becomes part of the standard library.
 
 -   Handle transient network errors. Retry logic is best handled as low in the
     stack as possible to avoid [cascading failure][]. APIs should try to surface
@@ -410,8 +427,8 @@ wiki page. We also adopt the following guidelines:
 -   Order arguments that are less likely to change across multiple calls to the
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
-    ```OpenBucket(ctx, client, "mybucket")``` instead of ```OpenBucket(ctx,
-    "mybucket", client)```.
+    `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
+    "mybucket", client)`.
 
 ## Tests
 
