@@ -216,9 +216,9 @@ Concrete types should:
     The third argument is the distance in stack frames from the function whose
     location should be associated with the error. It should be `1` if you are
     calling `New` from the same function that made the driver call, `2` if you
-    are calling new from a helper function, and so on. The fourth argument is
-    an additional string that will display with the error. You should pass the
-    API name.
+    are calling new from a helper function, and so on. The fourth argument is an
+    additional string that will display with the error. You should pass the API
+    name.
 
 -   By default, choose the code `Unknown`, keeping details of returned `error`s
     unspecified. The most common case is that the caller will only care whether
@@ -238,11 +238,9 @@ Concrete types should:
         -   Otherwise, you can define a custom code in your API's concrete
             package. Your code should use a negative integer.
 
--   If your package already exposes an `ErrorAs` function to allow users to
-    access provider-specific error types, there is no need to remove it at
-    present. But you should direct users to `golang.org/x/xerrors.As` in your
-    documentation. (This is likely to become `errors.As`, part of the standard
-    library, as of Go 1.13.)
+-   For now, your package should expose an `ErrorAs` function to allow users to
+    access provider-specific error types. We may review this choice if
+    `golang.org/x/xerrors.As` becomes part of the standard library.
 
 -   Handle transient network errors. Retry logic is best handled as low in the
     stack as possible to avoid [cascading failure][]. APIs should try to surface
