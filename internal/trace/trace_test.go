@@ -20,6 +20,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	octrace "go.opencensus.io/trace"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 )
 
 func TestToStatus(t *testing.T) {
@@ -29,7 +31,11 @@ func TestToStatus(t *testing.T) {
 	}{
 		{
 			errors.New("some random error"),
-			octrace.Status{Code: -1, Message: "some random error"},
+			octrace.Status{Code: int32(gcerrors.Unknown), Message: "some random error"},
+		},
+		{
+			gcerr.New(gcerrors.NotFound, nil, 1, "not found"),
+			octrace.Status{Code: int32(gcerrors.NotFound), Message: "not found (code=NotFound)"},
 		},
 	} {
 		got := toStatus(testcase.input)

@@ -1831,6 +1831,9 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if gotErr == nil {
 		t.Fatalf("got nil error from NewReader for nonexistent key, want an error")
 	}
+	if err := st.ErrorCheck(b, gotErr); err != nil {
+		t.Error(err)
+	}
 }
 
 func benchmarkRead(b *testing.B, bkt *blob.Bucket) {
