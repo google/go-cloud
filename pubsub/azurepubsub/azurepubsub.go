@@ -20,7 +20,7 @@
 // Subscription: *servicebus.Subscription
 package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
 
-import (
+import (	
 	"context"
 	"fmt"	
 	"pack.ag/amqp"
@@ -30,6 +30,7 @@ import (
 	
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"gocloud.dev/internal/useragent"
 
 	"github.com/Azure/azure-amqp-common-go/cbs"
 	"github.com/Azure/azure-amqp-common-go/rpc"
@@ -38,7 +39,6 @@ import (
 )
 
 const (
-	rootUserAgent = "/golang-service-bus"
 	completedStatus  = "completed"	
 	listenerTimeout = 1 * time.Second
 	rpcTries = 5
@@ -345,7 +345,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		amqp.ConnProperty("version", servicebus.Version),
 		amqp.ConnProperty("platform", runtime.GOOS),
 		amqp.ConnProperty("framework", runtime.Version()),
-		amqp.ConnProperty("user-agent", rootUserAgent),
+		amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
 	)
 	if err != nil {
 		return err
