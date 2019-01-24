@@ -20,7 +20,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/etcdvar"
 )
