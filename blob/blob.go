@@ -420,6 +420,9 @@ func (b *Bucket) As(i interface{}) bool {
 // ErrorAs converts i to provider-specific types.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
+	if e, ok := err.(*gcerr.Error); ok {
+		return b.b.ErrorAs(e.Unwrap(), i)
+	}
 	return b.b.ErrorAs(err, i)
 }
 
