@@ -80,4 +80,5 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	fmt.Printf("%s\n", m.Body)
+	m.Ack()
 }
