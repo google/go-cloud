@@ -19,6 +19,6 @@ because:
 - The `makeimports.sh` script is invoked by Travis after a successful build when
   new changes are pushed to the `master` branch. This is configured in the
   project's [.travis.yml
-  file][https://github.com/google/go-cloud/blob/master/.travis.yml]. For details
+  file](https://github.com/google/go-cloud/blob/master/.travis.yml). For details
   on GitHub Pages deployment with Travis see [this
-  doc][https://docs.travis-ci.com/user/deployment/pages/].
+  doc](https://docs.travis-ci.com/user/deployment/pages/).
