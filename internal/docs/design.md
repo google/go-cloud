@@ -142,8 +142,8 @@ concrete type backed by GCS.
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
     `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
-    "mybucket", client)`. - All public constructors should take an `Options`
-    struct (see next section).
+    "mybucket", client)`. 
+-   All public constructors should take an `Options` struct (see next section).
 
 ### Option Structs
 
