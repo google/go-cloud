@@ -41,7 +41,7 @@ const rabbitURL = "amqp://guest:guest@localhost:5672/"
 
 var logOnce sync.Once
 
-func mustDialRabbit(t *testing.T) amqpConnection {
+func mustDialRabbit(t testing.TB) amqpConnection {
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
 		logOnce.Do(func() {
@@ -64,6 +64,22 @@ func TestConformance(t *testing.T) {
 		rabbitAsTest{isFake},
 	}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
+}
+
+func BenchmarkRabbit(b *testing.B) {
+	ctx := context.Background()
+	h := &harness{conn: mustDialRabbit(b)}
+	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	ds, cleanup, err := h.CreateSubscription(ctx, dt, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt), pubsub.NewSubscription(ds, nil))
 }
 
 type harness struct {
