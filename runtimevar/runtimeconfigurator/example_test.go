@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"log"
 
+	"gocloud.dev/gcp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
-	"golang.org/x/oauth2/google"
 )
 
 // MyConfig is a sample configuration struct.

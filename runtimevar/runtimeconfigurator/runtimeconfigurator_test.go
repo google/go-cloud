@@ -17,8 +17,9 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/codes"
 	"testing"
+
+	"google.golang.org/grpc/codes"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
