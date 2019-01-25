@@ -436,10 +436,11 @@ func publishNConcurrently(topic *pubsub.Topic, nMessages, nGoroutines int, attrs
 func receiveNConcurrently(sub *pubsub.Subscription, nMessages, nGoroutines int) error {
 	return runConcurrently(nMessages, nGoroutines, func(ctx context.Context) error {
 		m, err := sub.Receive(ctx)
-		if err == nil {
-			m.Ack()
+		if err != nil {
+			return err
 		}
-		return err
+		m.Ack()
+		return nil
 	})
 }
 
