@@ -14,7 +14,7 @@
 
 // gcmsg is a sample application that publishes messages from stdin to an
 // existing topic or receives messages from an existing subscription and
-// sends them to stdout. The name gcmsg is short for Go Cloud Messages.
+// sends them to stdout. The name gcmsg is short for Go CDK Messages.
 package main
 
 import (
