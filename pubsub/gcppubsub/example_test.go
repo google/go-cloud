@@ -43,15 +43,15 @@ func ExampleOpenTopic() {
 		log.Fatal(err)
 	}
 	defer pubClient.Close()
-	proj := gcp.ProjectID("gcppubsub-example-project")
+	proj := gcp.DefaultProjectID(creds)
 	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
 	defer t.Shutdown(ctx)
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
-		fmt.Println("Message send failure is expected due to the fake project name.")
+		fmt.Println("Message send failure is expected due to the fake credentials.")
 	}
 
 	// Output:
-	// Message send failure is expected due to the fake project name.
+	// Message send failure is expected due to the fake credentials.
 }
 
 func ExampleOpenSubscription() {
@@ -67,7 +67,7 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	proj := gcp.ProjectID("gcppubsub-example-project")
+	proj := gcp.DefaultProjectID(creds)
 	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
@@ -77,12 +77,12 @@ func ExampleOpenSubscription() {
 	defer s.Shutdown(ctx)
 	m, err := s.Receive(ctx)
 	if err != nil {
-		fmt.Println("Message receive failure is expected due to the fake project name.")
+		fmt.Println("Message receive failure is expected due to the fake credentials.")
 		return
 	}
 	fmt.Printf("%s\n", m.Body)
 	m.Ack()
 
 	// Output:
-	// Message receive failure is expected due to the fake project name.
+	// Message receive failure is expected due to the fake credentials.
 }
