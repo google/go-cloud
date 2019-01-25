@@ -26,21 +26,9 @@ import (
 )
 
 // openGCPSubscription returns the GCP topic based on the subscription ID.
-func openGCPSubscription(ctx context.Context, proj, subID string) (*pubsub.Subscription, func(), error) {
-	creds, err := gcp.DefaultCredentials(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting default credentials: %v", err)
-	}
-	subClient, cleanup, err := openGCPSubscriberClient(ctx, creds)
-	if err != nil {
-		return nil, nil, err
-	}
-	sub := gcppubsub.OpenSubscription(ctx, subClient, gcp.ProjectID(proj), subID, nil)
-	cleanup2 := func() {
-		sub.Shutdown(ctx)
-		cleanup()
-	}
-	return sub, cleanup2, nil
+func openGCPSubscription(ctx context.Context, proj gcp.ProjectID, subID string) (*pubsub.Subscription, func(), error) {
+	wire.Build(gcp.DefaultCredentials, openGCPSubscriberClient, gcp.OpenSubscription)
+	return nil, nil, nil
 }
 
 // openGCPSubscriberClient opens a GCP SubscriberClient with default credentials.

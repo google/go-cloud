@@ -45,6 +45,7 @@ func ExampleOpenTopic() {
 	defer pubClient.Close()
 	proj := gcp.ProjectID("gcppubsub-example-project")
 	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
+	defer t.Shutdown(ctx)
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
 		log.Fatal(err)
 	}
@@ -70,6 +71,7 @@ func ExampleOpenSubscription() {
 	}
 	defer subClient.Close()
 	s := gcppubsub.OpenSubscription(ctx, subClient, proj, "example-subscription", nil)
+	defer s.Shutdown(ctx)
 	m, err := s.Receive(ctx)
 	if err != nil {
 		log.Fatal(err)
