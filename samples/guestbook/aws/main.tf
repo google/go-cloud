@@ -25,7 +25,7 @@ provider "random" {
 
 resource "aws_security_group" "guestbook" {
   name_prefix = "guestbook"
-  description = "Sandbox for the Guestbook Go Cloud sample app."
+  description = "Sandbox for the Guestbook Go CDK sample app."
 
   ingress {
     from_port   = 22
