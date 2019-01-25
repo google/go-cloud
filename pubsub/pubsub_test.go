@@ -48,6 +48,8 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 
 func (s *driverTopic) IsRetryable(error) bool { return false }
 
+func (s *driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+
 type driverSub struct {
 	driver.Subscription
 	sem chan struct{}

@@ -55,6 +55,8 @@ const (
 	FailedPrecondition ErrorCode = 7
 )
 
+// TODO(jba) call stringer after it's fixed for modules
+
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
 //   go get golang.org/x/tools/cmd/stringer

@@ -188,7 +188,10 @@ func newTopic(d driver.Topic) *Topic {
 			defer func() { trace.EndSpan(ctx, err) }()
 			return d.SendBatch(ctx, dms)
 		})
-		return wrapError(d, err)
+		if err != nil {
+			return wrapError(d, err)
+		}
+		return nil
 	}
 	maxHandlers := 1
 	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
@@ -378,9 +381,6 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
-	if err == nil {
-		return nil
-	}
 	// Don't wrap context errors.
 	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
 		return err
