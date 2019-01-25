@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,15 +17,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
 
 type driverTopic struct {
+	driver.Topic
 	subs []*driverSub
 }
 
@@ -44,9 +48,10 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 
 func (s *driverTopic) IsRetryable(error) bool { return false }
 
-func (s *driverTopic) As(i interface{}) bool { return false }
+func (s *driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
 type driverSub struct {
+	driver.Subscription
 	sem chan struct{}
 	// Normally this queue would live on a separate server in the cloud.
 	q []*driver.Message
@@ -96,7 +101,7 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 
 func (s *driverSub) IsRetryable(error) bool { return false }
 
-func (s *driverSub) As(i interface{}) bool { return false }
+func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -296,6 +301,8 @@ func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
 
+func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
 	sub := pubsub.NewSubscription(fs, nil)
@@ -324,3 +331,53 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
 // TODO(jba): add a test for retry of SendAcks.
+
+var errDriver = errors.New("driver error")
+
+type erroringTopic struct {
+	driver.Topic
+}
+
+func (erroringTopic) SendBatch(context.Context, []*driver.Message) error { return errDriver }
+func (erroringTopic) IsRetryable(err error) bool                         { return isRetryable(err) }
+func (erroringTopic) ErrorCode(error) gcerrors.ErrorCode                 { return gcerrors.AlreadyExists }
+
+type erroringSubscription struct {
+	driver.Subscription
+}
+
+func (erroringSubscription) ReceiveBatch(context.Context, int) ([]*driver.Message, error) {
+	return nil, errDriver
+}
+
+func (erroringSubscription) SendAcks(context.Context, []driver.AckID) error { return errDriver }
+func (erroringSubscription) IsRetryable(err error) bool                     { return isRetryable(err) }
+func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
+
+// TestErrorsAreWrapped tests that all errors returned from the driver are
+// wrapped exactly once by the concrete type.
+func TestErrorsAreWrapped(t *testing.T) {
+	ctx := context.Background()
+	top := pubsub.NewTopic(erroringTopic{})
+	sub := pubsub.NewSubscription(erroringSubscription{}, nil)
+
+	verify := func(err error) {
+		t.Helper()
+		if err == nil {
+			t.Errorf("got nil error, wanted non-nil")
+			return
+		}
+		if e, ok := err.(*gcerr.Error); !ok {
+			t.Errorf("not wrapped: %v", err)
+		} else if got := e.Unwrap(); got != errDriver {
+			t.Errorf("got %v for wrapped error, not errDriver", got)
+		}
+		if s := err.Error(); !strings.HasPrefix(s, "pubsub ") {
+			t.Errorf("Error() for wrapped error doesn't start with 'pubsub': prefix: %s", s)
+		}
+	}
+
+	verify(top.Send(ctx, &pubsub.Message{}))
+	_, err := sub.Receive(ctx)
+	verify(err)
+}

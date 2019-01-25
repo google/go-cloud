@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcerr provides an error type for Go Cloud APIs.
+// Package gcerr provides an error type for Go CDK APIs.
 package gcerr
 
 import (
@@ -20,6 +20,8 @@ import (
 
 	xerrors "golang.org/x/exp/errors"
 	xfmt "golang.org/x/exp/errors/fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // An ErrorCode describes the error's category.
@@ -39,13 +41,21 @@ const (
 	// The resource exists, but it should not.
 	AlreadyExists ErrorCode = 3
 
-	// A value given to a Go Cloud API is incorrect.
+	// A value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = 4
 
 	// Something unexpected happened. Internal errors always indicate
-	// bugs in Go Cloud (or possibly the underlying provider).
+	// bugs in the Go CDK (or possibly the underlying provider).
 	Internal ErrorCode = 5
+
+	// The feature is not implemented.
+	Unimplemented ErrorCode = 6
+
+	// The system was in the wrong state.
+	FailedPrecondition ErrorCode = 7
 )
+
+// TODO(jba) call stringer after it's fixed for modules
 
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
@@ -54,7 +64,7 @@ const (
 
 //go:generate stringer -type=ErrorCode
 
-// An Error describes a Go Cloud error.
+// An Error describes a Go CDK error.
 type Error struct {
 	Code  ErrorCode
 	msg   string
@@ -64,9 +74,9 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.msg == "" {
-		return fmt.Sprintf("%v", e.Code)
+		return fmt.Sprintf("code=%v", e.Code)
 	}
-	return fmt.Sprintf("%v: %s", e.Code, e.msg)
+	return fmt.Sprintf("%s (code=%v)", e.msg, e.Code)
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
@@ -100,4 +110,23 @@ func New(c ErrorCode, err error, callDepth int, msg string) *Error {
 // Newf uses format and args to format a message, then calls New.
 func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, 1, fmt.Sprintf(format, args...))
+}
+
+// GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
+// It returns Unknown if the error isn't from gRPC.
+func GRPCCode(err error) ErrorCode {
+	switch status.Code(err) {
+	case codes.NotFound:
+		return NotFound
+	case codes.AlreadyExists:
+		return AlreadyExists
+	case codes.InvalidArgument:
+		return InvalidArgument
+	case codes.Internal:
+		return Internal
+	case codes.Unimplemented:
+		return Unimplemented
+	default:
+		return Unknown
+	}
 }

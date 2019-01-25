@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -142,9 +142,9 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	var to azblob.StorageError
-	if !blob.ErrorAs(err, &to) {
+	if !b.ErrorAs(err, &to) {
 		return errors.New("Bucket.ErrorAs failed")
 	}
 	return nil

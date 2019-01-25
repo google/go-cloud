@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package gcp // import "gocloud.dev/gcp"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/google/wire"
@@ -73,6 +74,24 @@ func DefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 		return nil, err
 	}
 	return adc, nil
+}
+
+// FakeDefaultCredentials gets GCP credentials from a fake JSON credentials
+// file in memory. This function is meant for use as a helper in example code,
+// to be replaced by gcp.DefaultCredentials or google.CredentialsFromJSON in
+// non-example code.
+func FakeDefaultCredentials(ctx context.Context) (*google.Credentials, error) {
+	const jsonCreds = `
+{
+  "type": "service_account",
+  "project_id": "my-project-id"
+}
+`
+	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
+	if err != nil {
+		return nil, fmt.Errorf("gcp: parsing credentials from JSON: %v", jsonCreds)
+	}
+	return creds, nil
 }
 
 // CredentialsTokenSource extracts the token source from GCP credentials.

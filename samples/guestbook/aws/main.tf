@@ -1,4 +1,4 @@
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ provider "random" {
 
 resource "aws_security_group" "guestbook" {
   name_prefix = "guestbook"
-  description = "Sandbox for the Guestbook Go Cloud sample app."
+  description = "Sandbox for the Guestbook Go CDK sample app."
 
   ingress {
     from_port   = 22

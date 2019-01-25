@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 
 	"gocloud.dev/internal/useragent"
 )
@@ -402,20 +403,17 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	if serr, ok := err.(azblob.StorageError); ok {
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	serr, ok := err.(azblob.StorageError)
+	switch {
+	case !ok:
+		return gcerrors.Unknown
+	case serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404:
 		// Check and fail both the SDK ServiceCode and the Http Response Code for NotFound
-		if serr.ServiceCode() == azblob.ServiceCodeBlobNotFound || serr.Response().StatusCode == 404 {
-			return true
-		}
+		return gcerrors.NotFound
+	default:
+		return gcerrors.Unknown
 	}
-	return false
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
 }
 
 // Attributes implements driver.Attributes.

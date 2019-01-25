@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -130,13 +130,13 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	// Can't really verify this one because the storage library returns
 	// a sentinel error, storage.ErrObjectNotExist, for "not exists"
 	// instead of the supported As type googleapi.Error.
 	// Call ErrorAs anyway, and expect it to fail.
 	var to *googleapi.Error
-	if blob.ErrorAs(err, &to) {
+	if b.ErrorAs(err, &to) {
 		return errors.New("expected ErrorAs to fail")
 	}
 	return nil

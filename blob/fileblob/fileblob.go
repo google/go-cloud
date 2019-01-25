@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,14 +36,18 @@
 // with "file://".
 //
 // The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != "/", any leading "/" from the Path is dropped.
-// No query options are supported. Examples:
+// If os.PathSeparator != '/', any leading '/' from the Path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+// No query options are supported.
+// Examples:
 //  - file:///a/directory
 //    -> Passes "/a/directory" to OpenBucket.
 //  - file://localhost/a/directory
 //    -> Also passes "/a/directory".
 //  - file:///c:/foo/bar
-//    -> Passes "c:/foo/bar".
+//    -> Passes "c:\foo\bar".
+//  - file://localhost/c:/foo/bar
+//    -> Also passes "c:\foo\bar".
 //
 // As
 //
@@ -65,18 +69,26 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 )
 
 const defaultPageSize = 1000
 
 func init() {
 	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		path := u.Path
-		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
-			path = path[1:]
-		}
-		return openBucket(path, nil)
+		return openBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
 	})
+}
+
+func mungeURLPath(path string, pathSeparator uint8) string {
+	if pathSeparator != '/' {
+		path = strings.TrimPrefix(path, "/")
+		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
+		// from this function. Test Windows behavior by opening a bucket on Windows.
+		// See #1075 for why Windows is disabled.
+		path = strings.Replace(path, "/", string(pathSeparator), -1)
+	}
+	return path
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
@@ -246,16 +258,17 @@ func unescape(s string) (string, error) {
 	return unescaped, nil
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
 var errNotImplemented = errors.New("not implemented")
 
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return err == errNotImplemented
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	switch {
+	case os.IsNotExist(err):
+		return gcerrors.NotFound
+	case err == errNotImplemented:
+		return gcerrors.Unimplemented
+	default:
+		return gcerrors.Unknown
+	}
 }
 
 // path returns the full path for a key

@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 func TestNewf(t *testing.T) {
 	e := Newf(Internal, nil, "a %d b", 3)
 	got := e.Error()
-	want := "Internal: a 3 b"
+	want := "a 3 b (code=Internal)"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -41,13 +41,13 @@ func TestFormatting(t *testing.T) {
 		{
 			New(NotFound, nil, 1, "message"),
 			"%v",
-			[]string{`^NotFound: message$`},
+			[]string{`^message \(code=NotFound\)$`},
 		},
 		{
 			New(NotFound, nil, 1, "message"),
 			"%+v",
 			[]string{
-				`^NotFound: message:$`,
+				`^message \(code=NotFound\):$`,
 				`\s+gocloud.dev/internal/gcerr.TestFormatting$`,
 				`\s+.*/internal/gcerr/gcerr_test.go:\d+$`,
 				`^\s*$`, // blank line at end
@@ -56,13 +56,13 @@ func TestFormatting(t *testing.T) {
 		{
 			New(AlreadyExists, errors.New("wrapped"), 1, "message"),
 			"%v",
-			[]string{`^AlreadyExists: message: wrapped$`},
+			[]string{`^message \(code=AlreadyExists\): wrapped$`},
 		},
 		{
 			New(AlreadyExists, errors.New("wrapped"), 1, "message"),
 			"%+v",
 			[]string{
-				`^AlreadyExists: message:$`,
+				`^message \(code=AlreadyExists\):`,
 				`^\s+gocloud.dev/internal/gcerr.TestFormatting$`,
 				`^\s+.*/internal/gcerr/gcerr_test.go:\d+$`,
 				`^\s+- wrapped$`,
@@ -71,13 +71,13 @@ func TestFormatting(t *testing.T) {
 		{
 			New(AlreadyExists, errors.New("wrapped"), 1, ""),
 			"%v",
-			[]string{`^AlreadyExists: wrapped`},
+			[]string{`^code=AlreadyExists: wrapped`},
 		},
 		{
 			New(AlreadyExists, errors.New("wrapped"), 1, ""),
 			"%+v",
 			[]string{
-				`^AlreadyExists:`,
+				`^code=AlreadyExists:`,
 				`^\s+gocloud.dev/internal/gcerr.TestFormatting$`,
 				`^\s+.*/internal/gcerr/gcerr_test.go:\d+$`,
 				`^\s+- wrapped$`,
