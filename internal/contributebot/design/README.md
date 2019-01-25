@@ -1,4 +1,4 @@
-# Go Cloud Contribute Bot Design
+# Go Cloud Development Kit Contribute Bot Design
 
 Author: [@zombiezen][]<br>
 Date: 2018-08-01<br>
@@ -9,10 +9,10 @@ Part of [#216][]
 
 ## Objective
 
-As a maintainer of Go Cloud, there are a number of conventions about format of
+As a maintainer of the Go CDK, there are a number of conventions about format of
 issues, pull requests, and commits that keep the project tidy and easy to
 navigate. However, new contributors (and even seasoned contributors) forget to
-meet these conventions. It adds toil for maintainers of Go Cloud to correct
+meet these conventions. It adds toil for maintainers of the Go CDK to correct
 contributions to match these conventions. The objective is to eliminate
 maintainer toil by notifying contributors of convention violations (or even
 correcting them automatically where possible).
@@ -25,7 +25,8 @@ added):
 
 -   Issue title format
 -   PR title format
--   Commit message format (one line summary, "Fixes" on last line of description)
+-   Commit message format (one line summary, "Fixes" on last line of
+    description)
 -   License headers in new files
 -   Branches are in a fork, not on the main repository
 -   Removing the "In Progress" label from closed issues
@@ -39,8 +40,8 @@ integration (CI) must be responsible for such checks.
 
 From the [GitHub documentation][about-github-apps]:
 
-> GitHub Apps are first-class actors within GitHub. A GitHub App acts on its
-> own behalf, taking actions via the API directly using its own identity, which
+> GitHub Apps are first-class actors within GitHub. A GitHub App acts on its own
+> behalf, taking actions via the API directly using its own identity, which
 > means you don't need to maintain a bot or service account as a separate user.
 >
 > GitHub Apps can be installed directly on organizations and user accounts and
@@ -67,10 +68,10 @@ event worker (running on Google Kubernetes Engine) will process the event queue
 and communicate with the GitHub API to make changes.
 
 Running the webhook on App Engine Standard keeps the availability of the webhook
-high and comes with a built-in domain name (appspot.com) and [HTTPS
-certificate][App Engine HTTPS certificate]. However, Go Cloud [does not support
-App Engine Standard][#210]. This is fine, since the endpoint is going to be
-quite fixed and not expected to change frequently.
+high and comes with a built-in domain name (appspot.com) and
+[HTTPS certificate][App Engine HTTPS certificate]. However, the Go CDK
+[does not support App Engine Standard][#210]. This is fine, since the endpoint
+is going to be quite fixed and not expected to change frequently.
 
 The event worker must only be running one instance and one subscription, since
 running multiple instances can cause confusing concurrent modifications. To
@@ -85,10 +86,10 @@ event worker will run on Google Kubernetes Engine.
 The primary logic of the event worker will be determining if an event matches
 some condition and then taking appropriate action (adding a comment or running
 checks). Event payloads include a snapshot of the affected resource, which
-allows the event worker to make checks without affecting the [GitHub API rate
-limit][]. Since the events are delivered asynchronously, the event worker must
-only use the event payload as a hint: if action might be required, it should
-query GitHub for the latest state.
+allows the event worker to make checks without affecting the
+[GitHub API rate limit][]. Since the events are delivered asynchronously, the
+event worker must only use the event payload as a hint: if action might be
+required, it should query GitHub for the latest state.
 
 It is expected that more checks will be added over time, but they will likely be
 refinements of the rules below. Any increase in permission scope should be
@@ -98,10 +99,11 @@ accompanied by a design doc.
 
 #### Issue Title Format Check
 
-When an [IssuesEvent][] is received indicating an issue has been created or the title has changed:
+When an [IssuesEvent][] is received indicating an issue has been created or the
+title has changed:
 
-1.  The issue title is queried to see whether it follows the regex
-    `^[a-z0-9/]+: .*$`.
+1.  The issue title is queried to see whether it follows the regex `^[a-z0-9/]+:
+    .*$`.
 1.  If the title does not follow the regex, then the issue's comments are
     queried to see whether the bot has commented on the improper format since
     the title change.
@@ -115,12 +117,13 @@ When an [IssuesEvent][] is received indicating an issue has been created or the 
 When an [IssuesEvent][] is received and it indicates the issue has been closed:
 
 1.  The issue is queried to see whether it is still closed and check its labels.
-1.  If the issue is closed and its set of labels contains "In Progress", the
-    "In Progress" label is removed.
+1.  If the issue is closed and its set of labels contains "In Progress", the "In
+    Progress" label is removed.
 
 #### Branches in Fork Check
 
-When an [PullRequestEvent][] is received and it indicates a pull request has been created:
+When an [PullRequestEvent][] is received and it indicates a pull request has
+been created:
 
 1.  Query the current pull request metadata.
 1.  If it is in the same repository and it is open, close it with a message to
@@ -193,13 +196,13 @@ This GitHub application will have the following permissions:
 GitHub applications are scoped to particular installed repositories, so they
 cannot act beyond the repositories that a human has explicitly "installed" them
 on. This prevents a compromised server or credentials from impacting more than
-just the Go Cloud repository.
+just the Go CDK repository.
 
 Communication between GitHub and the webhook endpoint will take place over
 HTTPS, and the webhook endpoint will [verify the webhook secret][] in the
-payload to ensure that the event came from GitHub.  Communication with Cloud
-Pub/Sub occurs over HTTPS, and messages in Cloud Pub/Sub are [encrypted at
-rest][Cloud Pub/Sub benefits].
+payload to ensure that the event came from GitHub. Communication with Cloud
+Pub/Sub occurs over HTTPS, and messages in Cloud Pub/Sub are
+[encrypted at rest][Cloud Pub/Sub benefits].
 
 [Read repository metadata]: https://developer.github.com/v3/apps/permissions/#metadata-permissions
 [Read & write checks]: https://developer.github.com/v3/apps/permissions/#permission-on-checks
@@ -247,11 +250,11 @@ two possible approaches:
 
 ## Related Work
 
-This bot serves a similar purpose to [GopherBot][], but Go Cloud only uses
+This bot serves a similar purpose to [GopherBot][], but the Go CDK only uses
 GitHub data, not Gerrit. While [Maintner][] exists as an eventual consistency
-cache to serve GitHub data, Go Cloud is not at the scale yet where rate limiting
-would be an issue, so the Contribute Bot just makes direct calls to the GitHub
-API.
+cache to serve GitHub data, the Go CDK is not at the scale yet where rate
+limiting would be an issue, so the Contribute Bot just makes direct calls to the
+GitHub API.
 
 [GopherBot]: https://github.com/golang/go/wiki/gopherbot
 [Maintner]: https://godoc.org/golang.org/x/build/maintner
