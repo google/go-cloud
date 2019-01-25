@@ -26,7 +26,7 @@ provider "google" {
 
 resource "aws_security_group" "app" {
   name_prefix = "go-cloud-test-app"
-  description = "Sandbox for the Go Cloud test app."
+  description = "Sandbox for the Go CDK test app."
 
   ingress {
     from_port   = 22
