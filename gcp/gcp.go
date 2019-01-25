@@ -78,10 +78,8 @@ func DefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 
 // FakeDefaultCredentials gets GCP credentials from a fake JSON credentials
 // file in memory. This function is meant for use as a helper in example code,
-// to be replaced by gcp.DefaultCredentials(ctx) or google.CredentialsFromJSON
-// in non-example code.
-// See https://cloud.google.com/docs/authentication/production
-// for more info on alternatives.
+// to be replaced by gcp.DefaultCredentials or google.CredentialsFromJSON in
+// non-example code.
 func FakeDefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 	// Here we use a fake JSON credentials file, but you could also use
 	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
