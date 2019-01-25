@@ -45,10 +45,10 @@
 //  - file:///c:/foo/bar
 //    -> Passes "c:/foo/bar".
 //
-// As and ErrorAs
+// As
 //
-// fileblob does not support any types for As.
-// It supports *os.PathError for ErrorAs
+// fileblob exposes the following types for As:
+//  - Error: *os.PathError
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
