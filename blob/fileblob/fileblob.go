@@ -82,9 +82,10 @@ func init() {
 
 func mungeURLPath(path string, pathSeparator uint8) string {
 	if pathSeparator != '/' {
-		if strings.HasPrefix(path, "/") {
-			path = path[1:]
-		}
+		path = strings.TrimPrefix(path, "/")
+		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
+		// from this function. Test Windows behavior by opening a bucket on Windows.
+		// See #1075 for why Windows is disabled.
 		path = strings.Replace(path, "/", string(pathSeparator), -1)
 	}
 	return path
