@@ -32,6 +32,8 @@ type MyConfig struct {
 
 func ExampleNewVariable() {
 	ctx := context.Background()
+
+	// Get GCP credentials and dial the server.
 	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)

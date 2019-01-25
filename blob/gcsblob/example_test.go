@@ -26,6 +26,8 @@ import (
 
 func Example() {
 	ctx := context.Background()
+
+	// Get GCP credentials.
 	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
