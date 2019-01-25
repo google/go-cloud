@@ -204,7 +204,7 @@ type ListPage struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
-	// ErrorCode should return a Code that describes the error, which was returned by
+	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
 

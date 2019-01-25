@@ -24,6 +24,7 @@ import (
 // scriptedSub returns batches of messages in a predefined order from
 // ReceiveBatch.
 type scriptedSub struct {
+	driver.Subscription
 	// batches contains slices of messages to return from ReceiveBatch, one
 	// after the other.
 	batches [][]*driver.Message
@@ -41,10 +42,6 @@ func (s *scriptedSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dri
 func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
-
-func (s *scriptedSub) IsRetryable(error) bool { return false }
-
-func (s *scriptedSub) As(i interface{}) bool { return false }
 
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()

@@ -50,7 +50,12 @@ const (
 
 	// The feature is not implemented.
 	Unimplemented ErrorCode = 6
+
+	// The system was in the wrong state.
+	FailedPrecondition ErrorCode = 7
 )
+
+// TODO(jba) call stringer after it's fixed for modules
 
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
