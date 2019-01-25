@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 usage() { echo "Usage: $0 gcp_project_id ssh_key_path [region]"; exit 1; }
 log() {
-    echo "tests/aws/test.sh:" "$@" 1>&2 
+    echo "tests/aws/test.sh:" "$@" 1>&2
 }
 
 set -o pipefail
