@@ -24,6 +24,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/vault/api"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/secrets"
 )
 
@@ -93,6 +94,12 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return []byte(secret.Data["ciphertext"].(string)), nil
+}
+
+// ErrorCode implements driver.ErrorCode.
+func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
+	// TODO(shantuo): try to classify vault error codes
+	return gcerrors.Unknown
 }
 
 // KeeperOptions controls Keeper behaviors.
