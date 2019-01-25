@@ -72,6 +72,11 @@ type AsTest interface {
 	TopicCheck(t *pubsub.Topic) error
 	// SubscriptionCheck will be called to allow verification of Subscription.As.
 	SubscriptionCheck(s *pubsub.Subscription) error
+	// ErrorCheck will be called to allow verification of Topic.ErrorAs.
+	// (It is assumed that Subscription.ErrorAs shares the same implementation.)
+	// The error will be the one returned from SendBatch when called with
+	// a non-existent subscription.
+	ErrorCheck(t *pubsub.Topic, err error) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -91,6 +96,10 @@ func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 	if s.As(nil) {
 		return errors.New("want Subscription.As to return false when passed nil")
 	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) error {
 	return nil
 }
 
@@ -394,6 +403,15 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 	if err := st.SubscriptionCheck(sub); err != nil {
+		t.Error(err)
+	}
+	dt, err := h.MakeNonexistentTopic(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	top = pubsub.NewTopic(dt)
+	defer top.Shutdown(ctx)
+	if err := st.ErrorCheck(top, top.Send(ctx, &pubsub.Message{})); err != nil {
 		t.Error(err)
 	}
 }

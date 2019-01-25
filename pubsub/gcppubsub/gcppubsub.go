@@ -21,6 +21,7 @@
 // gcspubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
+//  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (
@@ -39,6 +40,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/status"
 )
 
 const endPoint = "pubsub.googleapis.com:443"
@@ -137,6 +139,21 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	if s, ok := status.FromError(err); ok {
+		if p, ok := target.(**status.Status); ok {
+			*p = s
+			return true
+		}
+	}
+	return false
+}
+
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
@@ -213,6 +230,11 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = s.client
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }
 
 func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {

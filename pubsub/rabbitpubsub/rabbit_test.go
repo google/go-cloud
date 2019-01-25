@@ -293,3 +293,14 @@ func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	}
 	return nil
 }
+
+func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var aerr *amqp.Error
+	if !t.ErrorAs(err, &aerr) {
+		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
+	}
+	if aerr.Code != amqp.NotFound {
+		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
+	}
+	return nil
+}
