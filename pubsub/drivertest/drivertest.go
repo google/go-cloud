@@ -28,6 +28,7 @@ import (
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -126,6 +127,13 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				testAs(t, newHarness, st)
 			})
 		}
+	})
+}
+
+// RunBenchmarks runs benchmarks for provider implementations of pubsub.
+func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
+	b.Run("BenchmarkReceive", func(b *testing.B) {
+		benchmarkReceive(b, topic, sub)
 	})
 }
 
@@ -388,4 +396,68 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err := st.SubscriptionCheck(sub); err != nil {
 		t.Error(err)
 	}
+}
+
+// Publishes a large number of messages to topic concurrently, and then times
+// how long it takes to receive them all.
+func benchmarkReceive(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
+	attrs := map[string]string{"label": "value"}
+	body := []byte("hello, world")
+	const (
+		nMessages          = 10000
+		concurrencySend    = 100
+		concurrencyReceive = 1
+	)
+	if nMessages%concurrencySend != 0 || nMessages%concurrencyReceive != 0 {
+		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		if err := publishNConcurrently(topic, nMessages, concurrencySend, attrs, body); err != nil {
+			b.Fatalf("publishing: %v", err)
+		}
+		b.Logf("published %d messages", nMessages)
+		b.StartTimer()
+		if err := receiveNConcurrently(sub, nMessages, concurrencyReceive); err != nil {
+			b.Fatalf("receiving: %v", err)
+		}
+		b.SetBytes(nMessages * 1e6)
+		b.Log("MB/s is actually number of messages received per second")
+	}
+}
+
+func publishNConcurrently(topic *pubsub.Topic, nMessages, nGoroutines int, attrs map[string]string, body []byte) error {
+	return runConcurrently(nMessages, nGoroutines, func(ctx context.Context) error {
+		return topic.Send(ctx, &pubsub.Message{Metadata: attrs, Body: body})
+	})
+}
+
+func receiveNConcurrently(sub *pubsub.Subscription, nMessages, nGoroutines int) error {
+	return runConcurrently(nMessages, nGoroutines, func(ctx context.Context) error {
+		m, err := sub.Receive(ctx)
+		if err == nil {
+			m.Ack()
+		}
+		return err
+	})
+}
+
+// Call function f n times concurrently, using g goroutines. g must divide n.
+// Wait until all calls complete. If any fail, cancel the remaining ones.
+func runConcurrently(n, g int, f func(context.Context) error) error {
+	gr, ctx := errgroup.WithContext(context.Background())
+	ng := n / g
+	for i := 0; i < g; i++ {
+		gr.Go(func() error {
+			for j := 0; j < ng; j++ {
+				if err := f(ctx); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
+	return gr.Wait()
+
 }
