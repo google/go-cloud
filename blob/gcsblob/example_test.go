@@ -22,7 +22,6 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
-	"golang.org/x/oauth2/google"
 )
 
 func Example() {

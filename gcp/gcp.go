@@ -18,6 +18,7 @@ package gcp // import "gocloud.dev/gcp"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/google/wire"
@@ -85,8 +86,6 @@ func FakeDefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 	// Here we use a fake JSON credentials file, but you could also use
 	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
 	// the environment.
-
-	// jsonCreds is a fake GCP JSON credentials file.
 	const jsonCreds = `
 {
   "type": "service_account",
@@ -95,8 +94,9 @@ func FakeDefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 `
 	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("gcp: parsing credentials from JSON: %v", jsonCreds)
 	}
+	return creds, nil
 }
 
 // CredentialsTokenSource extracts the token source from GCP credentials.
