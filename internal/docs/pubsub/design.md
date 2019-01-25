@@ -27,7 +27,7 @@ Go CDK could lower the cost of such experiments and migrations.
 
 *   Publish messages to an existing topic.
 *   Receive messages from an existing subscription.
-*   Peform not much worse than 90% compared to directly using the APIs of
+*   Perform not much worse than 90% compared to directly using the APIs of
     various pubsub systems.
 *   Work well with managed pubsub services on AWS, Azure, GCP and the most used
     open source pubsub systems.
@@ -874,14 +874,16 @@ and usefulness, it makes sense to support message acking in the Go CDK.
 
 As of this writing, it is an open question as to what should be done about
 pubsub systems that do not support acks. Some possibilities have been discussed,
-but no clear best option has emerged yet: 1. simulating acknowledgement by
-constructing queues on the server. Con: the magically created queues would
-probably be a less than pleasant surprise for some users. 2. making ack a no-op
-for systems that don't support it. With this, do we return a sentinel error from
-`Ack`, and if so then doesn't that unduly complicate the code for apps that
-never use non-acking systems? This option is also potentially misleading for
-developers who would naturally assume that un-acked messages would be
-redelivered.
+but no clear best option has emerged yet:
+
+1.  simulating acknowledgement by constructing queues on the server. Con: the
+    magically created queues would probably be a less than pleasant surprise for
+    some users.
+2.  making ack a no-op for systems that don't support it. With this, do we
+    return a sentinel error from `Ack`, and if so then doesn't that unduly
+    complicate the code for apps that never use non-acking systems? This option
+    is also potentially misleading for developers who would naturally assume
+    that un-acked messages would be redelivered.
 
 ### Rejected acknowledgement API: `Receive` method returns an `ack` func
 
