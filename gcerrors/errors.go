@@ -48,6 +48,9 @@ const (
 
 	// The feature is not implemented.
 	Unimplemented ErrorCode = gcerr.Unimplemented
+
+	// The system was in the wrong state.
+	FailedPrecondition ErrorCode = gcerr.FailedPrecondition
 )
 
 // Code returns the ErrorCode of err if it is an *Error.

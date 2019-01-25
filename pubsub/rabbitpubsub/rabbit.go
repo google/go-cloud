@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -262,6 +263,37 @@ func (*topic) IsRetryable(err error) bool {
 	return isRetryable(err)
 }
 
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
+	aerr, ok := err.(*amqp.Error)
+	if !ok {
+		return gcerrors.Unknown
+	}
+	switch aerr.Code {
+	case amqp.NotFound:
+		return gcerrors.NotFound
+
+	case amqp.PreconditionFailed:
+		return gcerrors.FailedPrecondition
+
+	case amqp.SyntaxError, amqp.CommandInvalid:
+		// These indicate a bug in our driver, not the user's code.
+		return gcerrors.Internal
+
+	case amqp.InternalError:
+		return gcerrors.Internal
+
+	case amqp.NotImplemented:
+		return gcerrors.Unimplemented
+
+	default:
+		return gcerrors.Unknown
+	}
+}
+
 func isRetryable(err error) bool {
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
@@ -473,6 +505,10 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (*subscription) IsRetryable(err error) bool {
 	return isRetryable(err)
+}
+
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
 }
 
 // As implements driver.Subscription.As.
