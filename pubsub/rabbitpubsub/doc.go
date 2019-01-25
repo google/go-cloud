@@ -17,7 +17,7 @@
 // to construct a *pubsub.Subscription.
 //
 // RabbitMQ follows the AMQP specification, which uses different terminology
-// than Go Cloud Pub/Sub.
+// than the Go CDK Pub/Sub.
 //
 // A Pub/Sub topic is an AMQP exchange. The exchange kind should be "fanout" to match
 // the Pub/Sub model, although publishing will work with any kind of exchange.

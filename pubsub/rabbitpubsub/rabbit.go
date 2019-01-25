@@ -44,7 +44,7 @@ type topic struct {
 //
 // The exchange should already exist (for instance, by using
 // amqp.Channel.ExchangeDeclare), although this won't be checked until the first call
-// to SendBatch. For the model of Go Cloud Pub/Sub to make sense, the exchange should
+// to SendBatch. For the Go CDK Pub/Sub model to make sense, the exchange should
 // be a fanout exchange, although nothing in this package enforces that.
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the
