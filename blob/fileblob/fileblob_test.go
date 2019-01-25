@@ -16,6 +16,8 @@ package fileblob
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,6 +25,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
 )
@@ -56,7 +59,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyPathError{}})
 }
 
 func BenchmarkFileblob(b *testing.B) {
@@ -167,4 +170,27 @@ func TestUnescape(t *testing.T) {
 			t.Errorf("%s: got unescaped %q want %q", tc.filename, got, tc.want)
 		}
 	}
+}
+
+type verifyPathError struct{}
+
+func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
+
+func (verifyPathError) BucketCheck(b *blob.Bucket) error             { return nil }
+func (verifyPathError) BeforeWrite(as func(interface{}) bool) error  { return nil }
+func (verifyPathError) BeforeList(as func(interface{}) bool) error   { return nil }
+func (verifyPathError) AttributesCheck(attrs *blob.Attributes) error { return nil }
+func (verifyPathError) ReaderCheck(r *blob.Reader) error             { return nil }
+func (verifyPathError) ListObjectCheck(o *blob.ListObject) error     { return nil }
+
+func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
+	var perr *os.PathError
+	if !b.ErrorAs(err, &perr) {
+		return errors.New("want ErrorAs to succeed for PathError")
+	}
+	const want = "/tmp/go-cloud-fileblob/key-does-not-exist"
+	if got := perr.Path; got != want {
+		return fmt.Errorf("got path %q, want %q", got, want)
+	}
+	return nil
 }
