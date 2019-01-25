@@ -47,8 +47,11 @@ func ExampleOpenTopic() {
 	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
 	defer t.Shutdown(ctx)
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
-		log.Fatal(err)
+		fmt.Println("Message send failure is expected due to the fake project name.")
 	}
+
+	// Output:
+	// Message send failure is expected due to the fake project name.
 }
 
 func ExampleOpenSubscription() {
@@ -74,8 +77,12 @@ func ExampleOpenSubscription() {
 	defer s.Shutdown(ctx)
 	m, err := s.Receive(ctx)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Message receive failure is expected due to the fake project name.")
+		return
 	}
 	fmt.Printf("%s\n", m.Body)
 	m.Ack()
+
+	// Output:
+	// Message receive failure is expected due to the fake project name.
 }
