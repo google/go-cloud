@@ -22,16 +22,22 @@ import (
 	"gocloud.dev/gcp"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/gcppubsub"
-	"golang.org/x/oauth2/google"
 )
 
 func ExampleOpenTopic() {
 	ctx := context.Background()
-	scope := "https://www.googleapis.com/auth/cloud-platform"
-	creds, err := google.FindDefaultCredentials(ctx, scope)
+
+	// Get GCP credentials.
+	// Here we use a fake JSON credentials file, but you could also use
+	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
+	// the environment.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
+	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// Open a gRPC connection to the GCP Pub Sub API.
 	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
 	if err != nil {
@@ -56,11 +62,18 @@ func ExampleOpenTopic() {
 
 func ExampleOpenSubscription() {
 	ctx := context.Background()
-	scope := "https://www.googleapis.com/auth/cloud-platform"
-	creds, err := google.FindDefaultCredentials(ctx, scope)
+
+	// Get GCP credentials.
+	// Here we use a fake JSON credentials file, but you could also use
+	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
+	// the environment.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
+	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	// Open a gRPC connection to the GCP Pub Sub API.
 	conn, cleanup, err := gcppubsub.Dial(ctx, creds.TokenSource)
 	if err != nil {
