@@ -49,7 +49,10 @@ func ExampleOpenTopic() {
 		log.Fatal(err)
 	}
 	defer pubClient.Close()
-	proj := gcp.DefaultProjectID(creds)
+	proj, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		log.Fatal(err)
+	}
 	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
 	defer t.Shutdown(ctx)
 	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
@@ -80,7 +83,10 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	proj := gcp.DefaultProjectID(creds)
+	proj, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		log.Fatal(err)
+	}
 	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
