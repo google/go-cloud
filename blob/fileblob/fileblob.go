@@ -51,7 +51,8 @@
 //
 // As
 //
-// fileblob does not support any types for As.
+// fileblob exposes the following types for As:
+//  - Error: *os.PathError
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
@@ -414,7 +415,15 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 func (b *bucket) As(i interface{}) bool { return false }
 
 // As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	if perr, ok := err.(*os.PathError); ok {
+		if p, ok := i.(**os.PathError); ok {
+			*p = perr
+			return true
+		}
+	}
+	return false
+}
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
