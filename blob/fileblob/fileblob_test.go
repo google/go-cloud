@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gocloud.dev/blob"
@@ -188,9 +189,9 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 	if !b.ErrorAs(err, &perr) {
 		return errors.New("want ErrorAs to succeed for PathError")
 	}
-	const want = "/tmp/go-cloud-fileblob/key-does-not-exist"
-	if got := perr.Path; got != want {
-		return fmt.Errorf("got path %q, want %q", got, want)
+	const wantSuffix = "go-cloud-fileblob/key-does-not-exist"
+	if got := perr.Path; !strings.HasSuffix(got, wantSuffix) {
+		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)
 	}
 	return nil
 }
