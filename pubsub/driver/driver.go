@@ -18,6 +18,8 @@ package driver // import "gocloud.dev/pubsub/driver"
 
 import (
 	"context"
+
+	"gocloud.dev/gcerrors"
 )
 
 // Batcher should gather items into batches to be sent to the pubsub service.
@@ -84,6 +86,10 @@ type Topic interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// ErrorCode should return a code that describes the error, which was returned by
+	// one of the other methods in this interface.
+	ErrorCode(error) gcerrors.ErrorCode
 }
 
 // Subscription receives published messages.
@@ -130,4 +136,8 @@ type Subscription interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// ErrorCode should return a code that describes the error, which was returned by
+	// one of the other methods in this interface.
+	ErrorCode(error) gcerrors.ErrorCode
 }

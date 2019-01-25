@@ -157,7 +157,7 @@ func Example() {
 
 	// In this example, we'll write a blob and then read it.
 	ctx := context.Background()
-	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), nil); err != nil {
+	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud Development Kit"), nil); err != nil {
 		log.Fatal(err)
 	}
 	b, err := bucket.ReadAll(ctx, "foo.txt")
@@ -167,7 +167,7 @@ func Example() {
 	fmt.Println(string(b))
 
 	// Output:
-	// Go Cloud
+	// Go Cloud Development Kit
 }
 
 func ExampleBucket_List() {
@@ -185,7 +185,7 @@ func ExampleBucket_List() {
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud"), nil); err != nil {
+		if err := bucket.WriteAll(ctx, fmt.Sprintf("foo%d.txt", i), []byte("Go Cloud Development Kit"), nil); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -233,7 +233,7 @@ func ExampleBucket_List_withDelimiter() {
 		"dir2/c.txt",
 		"d.txt",
 	} {
-		if err := bucket.WriteAll(ctx, key, []byte("Go Cloud"), nil); err != nil {
+		if err := bucket.WriteAll(ctx, key, []byte("Go Cloud Development Kit"), nil); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -311,7 +311,7 @@ func ExampleBucket_As() {
 		return nil
 	}
 	ctx := context.Background()
-	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud"), &blob.WriterOptions{BeforeWrite: fn}); err != nil {
+	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud Development Kit"), &blob.WriterOptions{BeforeWrite: fn}); err != nil {
 		log.Fatal(err)
 	}
 	// Output:

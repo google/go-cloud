@@ -25,7 +25,7 @@ import (
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface
-// implementations in Go Cloud and authenticates using the default session.
+// implementations in the Go CDK and authenticates using the default session.
 var AWS = wire.NewSet(
 	Services,
 	aws.DefaultSession,
@@ -33,7 +33,7 @@ var AWS = wire.NewSet(
 )
 
 // Services is a Wire provider set that includes the default wiring for all
-// Amazon Web Services interface implementations in Go Cloud but unlike the
+// Amazon Web Services interface implementations in the Go CDK but unlike the
 // AWS set, does not include credentials. Individual services may require
 // additional configuration.
 var Services = wire.NewSet(
