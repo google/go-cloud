@@ -30,14 +30,6 @@ type MyConfig struct {
 	Port   int
 }
 
-// jsonCreds is a fake GCP JSON credentials file.
-const jsonCreds = `
-{
-  "type": "service_account",
-  "project_id": "my-project-id"
-}
-`
-
 func ExampleNewVariable() {
 	ctx := context.Background()
 

@@ -30,24 +30,9 @@ type MyConfig struct {
 	Port   int
 }
 
-// jsonCreds is a fake GCP JSON credentials file.
-const jsonCreds = `
-{
-  "type": "service_account",
-  "project_id": "my-project-id"
-}
-`
-
 func ExampleNewVariable() {
 	ctx := context.Background()
-
-	// Get GCP credentials and dial the server.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
-	// See https://cloud.google.com/docs/authentication/production
-	// for more info on alternatives.
-	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
+	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

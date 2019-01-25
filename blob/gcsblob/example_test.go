@@ -25,24 +25,9 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-// jsonCreds is a fake GCP JSON credentials file.
-const jsonCreds = `
-{
-  "type": "service_account",
-  "project_id": "my-project-id"
-}
-`
-
 func Example() {
 	ctx := context.Background()
-
-	// Get GCP credentials.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
-	// See https://cloud.google.com/docs/authentication/production
-	// for more info on alternatives.
-	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
+	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
