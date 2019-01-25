@@ -54,3 +54,9 @@ func (h *harness) Close() {}
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
+
+func BenchmarkMemPubSub(b *testing.B) {
+	topic := NewTopic()
+	sub := NewSubscription(topic, time.Second)
+	drivertest.RunBenchmarks(b, topic, sub)
+}

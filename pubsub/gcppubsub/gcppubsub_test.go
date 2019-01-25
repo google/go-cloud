@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -46,6 +47,9 @@ const (
 	subscriptionName0 = "test-subscription-1"
 	subscriptionName1 = "test-subscription-2"
 	projectID         = "go-cloud-test-216917"
+
+	benchmarkTopicName        = "benchmark-topic"
+	benchmarkSubscriptionName = "benchmark-subscription"
 )
 
 type harness struct {
@@ -121,6 +125,30 @@ func (h *harness) Close() {
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
+}
+
+func BenchmarkGcpPubSub(b *testing.B) {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	pc, err := PublisherClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	sc, err := SubscriberClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	topic := OpenTopic(ctx, pc, projectID, benchmarkTopicName, nil)
+	sub := OpenSubscription(ctx, sc, projectID, benchmarkSubscriptionName, nil)
+	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 type gcpAsTest struct{}
