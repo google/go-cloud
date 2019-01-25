@@ -1,5 +1,5 @@
 #!/bin/bash
-# add.sh adds new dependencies to the Go Cloud Development Kit module proxy.
+# add.sh adds new dependencies to the module proxy.
 
 set -euo pipefail
 

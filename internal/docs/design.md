@@ -5,9 +5,9 @@ attempts to provide succinct rationales. Recording these decisions helps
 maintain consistency across packages, especially as an open source project where
 contributors can join at any point during development.
 
-A broad design goal for the Go Cloud Development Kit (GCDK) is for the API style
-to be consistent. Consistency aids users in building a mental model of how to
-use the APIs. As such, the design of individual packages must also consider
+A broad design goal for the Go Cloud Development Kit (Go CDK) is for the API
+style to be consistent. Consistency aids users in building a mental model of how
+to use the APIs. As such, the design of individual packages must also consider
 their impact on the Go CDK as a whole.
 
 This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The

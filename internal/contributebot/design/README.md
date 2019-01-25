@@ -1,4 +1,4 @@
-# Go Cloud Development Kit Contribute Bot Design
+# Contribute Bot Design
 
 Author: [@zombiezen][]<br>
 Date: 2018-08-01<br>

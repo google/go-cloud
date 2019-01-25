@@ -1,4 +1,4 @@
-# Import Redirects for Go Cloud Development Kit
+# Import Redirects
 
 The packages in this repo have import paths beginning `gocloud.dev`. This works
 because:
