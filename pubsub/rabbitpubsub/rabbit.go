@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -44,7 +45,7 @@ type topic struct {
 //
 // The exchange should already exist (for instance, by using
 // amqp.Channel.ExchangeDeclare), although this won't be checked until the first call
-// to SendBatch. For the model of Go Cloud Pub/Sub to make sense, the exchange should
+// to SendBatch. For the Go CDK Pub/Sub model to make sense, the exchange should
 // be a fanout exchange, although nothing in this package enforces that.
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the
@@ -262,6 +263,37 @@ func (*topic) IsRetryable(err error) bool {
 	return isRetryable(err)
 }
 
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
+	aerr, ok := err.(*amqp.Error)
+	if !ok {
+		return gcerrors.Unknown
+	}
+	switch aerr.Code {
+	case amqp.NotFound:
+		return gcerrors.NotFound
+
+	case amqp.PreconditionFailed:
+		return gcerrors.FailedPrecondition
+
+	case amqp.SyntaxError, amqp.CommandInvalid:
+		// These indicate a bug in our driver, not the user's code.
+		return gcerrors.Internal
+
+	case amqp.InternalError:
+		return gcerrors.Internal
+
+	case amqp.NotImplemented:
+		return gcerrors.Unimplemented
+
+	default:
+		return gcerrors.Unknown
+	}
+}
+
 func isRetryable(err error) bool {
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
@@ -473,6 +505,10 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (*subscription) IsRetryable(err error) bool {
 	return isRetryable(err)
+}
+
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
 }
 
 // As implements driver.Subscription.As.
