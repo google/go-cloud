@@ -81,9 +81,6 @@ func DefaultCredentials(ctx context.Context) (*google.Credentials, error) {
 // to be replaced by gcp.DefaultCredentials or google.CredentialsFromJSON in
 // non-example code.
 func FakeDefaultCredentials(ctx context.Context) (*google.Credentials, error) {
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
 	const jsonCreds = `
 {
   "type": "service_account",
