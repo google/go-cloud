@@ -18,6 +18,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -95,6 +96,49 @@ func TestNewBucket(t *testing.T) {
 			t.Error("want error, got nil")
 		}
 	})
+}
+
+func TestMungePath(t *testing.T) {
+	tests := []struct {
+		URL       string
+		Separator uint8
+		Want      string
+	}{
+		{
+			URL:       "file:///a/directory",
+			Separator: '/',
+			Want:      "/a/directory",
+		},
+		{
+			URL:       "file://localhost/a/directory",
+			Separator: '/',
+			Want:      "/a/directory",
+		},
+		{
+			URL:       "file://localhost/mybucket",
+			Separator: '/',
+			Want:      "/mybucket",
+		},
+		{
+			URL:       "file:///c:/a/directory",
+			Separator: '\\',
+			Want:      "c:\\a\\directory",
+		},
+		{
+			URL:       "file://localhost/c:/a/directory",
+			Separator: '\\',
+			Want:      "c:\\a\\directory",
+		},
+	}
+	for _, tc := range tests {
+		u, err := url.Parse(tc.URL)
+		if err != nil {
+			t.Fatalf("%s: failed to parse URL: %v", tc.URL, err)
+		}
+		if got := mungeURLPath(u.Path, tc.Separator); got != tc.Want {
+			t.Errorf("%s: got %q want %q", tc.URL, got, tc.Want)
+		}
+	}
 }
 
 func TestEscape(t *testing.T) {
