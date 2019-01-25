@@ -63,11 +63,6 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	pubClient, err := gcppubsub.PublisherClient(ctx, conn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer pubClient.Close()
 	proj := gcp.ProjectID("gcppubsub-example-project")
 	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
