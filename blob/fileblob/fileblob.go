@@ -36,14 +36,18 @@
 // with "file://".
 //
 // The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != "/", any leading "/" from the Path is dropped.
-// No query options are supported. Examples:
+// If os.PathSeparator != '/', any leading '/' from the Path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+// No query options are supported.
+// Examples:
 //  - file:///a/directory
 //    -> Passes "/a/directory" to OpenBucket.
 //  - file://localhost/a/directory
 //    -> Also passes "/a/directory".
 //  - file:///c:/foo/bar
-//    -> Passes "c:/foo/bar".
+//    -> Passes "c:\foo\bar".
+//  - file://localhost/c:/foo/bar
+//    -> Also passes "c:\foo\bar".
 //
 // As
 //
@@ -72,12 +76,18 @@ const defaultPageSize = 1000
 
 func init() {
 	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		path := u.Path
-		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
+		return openBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
+	})
+}
+
+func mungeURLPath(path string, pathSeparator uint8) string {
+	if pathSeparator != '/' {
+		if strings.HasPrefix(path, "/") {
 			path = path[1:]
 		}
-		return openBucket(path, nil)
-	})
+		path = strings.Replace(path, "/", string(pathSeparator), -1)
+	}
+	return path
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
