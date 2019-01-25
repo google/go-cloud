@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -81,13 +82,14 @@ func (verifyAsFailsOnNil) SnapshotCheck(v *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(_ driver.Watcher, err error) (ret error) {
+func (verifyAsFailsOnNil) ErrorCheck(w driver.Watcher, err error) (ret error) {
 	defer func() {
 		if recover() == nil {
 			ret = errors.New("want ErrorAs to panic when passed nil")
 		}
 	}()
-	runtimevar.ErrorAs(err, nil)
+	v := runtimevar.New(w)
+	v.ErrorAs(err, nil)
 	return nil
 }
 
@@ -168,7 +170,7 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v expected not-found error", got.Value)
-	} else if !runtimevar.IsNotExist(err) {
+	} else if gcerrors.Code(err) != gcerrors.NotFound {
 		t.Error("got IsNotExist false, expected true")
 	}
 }

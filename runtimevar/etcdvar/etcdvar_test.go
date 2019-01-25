@@ -105,7 +105,7 @@ func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
 	// to fail.
 	var to rpctypes.EtcdError
-	if runtimevar.ErrorAs(err, &to) {
+	if runtimevar.New(w).ErrorAs(err, &to) {
 		return errors.New("ErrorAs expected to fail")
 	}
 	// Try with a real etcd error.

@@ -83,7 +83,7 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 
 func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	var perr *os.PathError
-	if !runtimevar.ErrorAs(err, &perr) {
+	if !runtimevar.New(w).ErrorAs(err, &perr) {
 		return errors.New("runtimevar.ErrorAs failed with *os.PathError")
 	}
 	return nil

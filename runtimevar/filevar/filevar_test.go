@@ -98,9 +98,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	var ss string
-	if runtimevar.ErrorAs(err, &ss) {
+	if runtimevar.New(w).ErrorAs(err, &ss) {
 		return errors.New("runtimevar.ErrorAs expected to fail")
 	}
 	return nil

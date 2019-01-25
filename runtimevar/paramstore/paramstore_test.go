@@ -17,8 +17,9 @@ package paramstore
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -98,9 +99,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
 	var e awserr.Error
-	if !runtimevar.ErrorAs(err, &e) {
+	if !runtimevar.New(w).ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil

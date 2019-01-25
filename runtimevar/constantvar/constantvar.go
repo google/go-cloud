@@ -26,13 +26,14 @@ import (
 	"errors"
 	"time"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 )
 
-// ErrNotExist is a sentinel error that can be used with NewError to return an
+// errNotExist is a sentinel error that can be used with NewError to return an
 // error for which IsNotExist returns true.
-var ErrNotExist = errors.New("variable does not exist")
+var errNotExist = errors.New("variable does not exist")
 
 // New constructs a *runtimevar.Variable holding value.
 func New(value interface{}) *runtimevar.Variable {
@@ -97,5 +98,10 @@ func (*watcher) Close() error { return nil }
 // ErrorAs implements driver.ErrorAs.
 func (*watcher) ErrorAs(err error, i interface{}) bool { return false }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool { return err == ErrNotExist }
+// ErrorCode implements driver.ErrorCode
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}

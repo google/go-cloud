@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"time"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 
@@ -208,10 +209,10 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	if awsErr, ok := err.(awserr.Error); ok {
-		return awsErr.Code() == "ParameterNotFound"
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	if awsErr, ok := err.(awserr.Error); ok && awsErr.Code() == "ParameterNotFound" {
+		return gcerrors.NotFound
 	}
-	return false
+	return gcerrors.Unknown
 }

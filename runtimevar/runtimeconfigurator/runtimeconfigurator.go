@@ -31,7 +31,9 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -222,9 +224,9 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	return grpc.Code(err) == codes.NotFound
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
 }
 
 func bytesFromProto(vpb *pb.Variable) []byte {

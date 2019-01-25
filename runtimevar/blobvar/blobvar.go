@@ -145,7 +145,11 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return w.bucket.ErrorAs(err, i)
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	return gcerrors.Code(err) == gcerrors.NotFound
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	// err might have come from blob, in which case use its code.
+	if c := gcerrors.Code(err); c != gcerrors.Unknown {
+		return c
+	}
+	return gcerrors.Unknown
 }
