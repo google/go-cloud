@@ -1,9 +1,10 @@
-# Getting Started with Go Cloud
+# Getting Started With The Go Cloud Development Kit
 
-The best way to understand Go Cloud is to write some code and use it. Let's
-build a command line application that uploads files to blob storage on both AWS
-and GCP. Blob storage stores binary data under a string key, and is one of the
-most frequently used cloud services. We'll call the tool `upload`.
+The best way to understand the Go Cloud Development Kit (Go CDK) is to write
+some code and use it. Let's build a command line application that uploads files
+to blob storage on both AWS and GCP. Blob storage stores binary data under a
+string key, and is one of the most frequently used cloud services. We'll call
+the tool `upload`.
 
 Before we start with any code, it helps to think about possible designs. We
 could very well write a code path for Amazon's Simple Storage Service (S3) and
@@ -14,7 +15,7 @@ effectively do the same thing, but would have to be maintained separately
 (ugh!). It would be much nicer if we could write the upload logic once and reuse
 it across providers. That's exactly the kind of
 [separation of concerns](https://en.wikipedia.org/wiki/Separation_of_concerns)
-that Go Cloud makes possible. So, let's write some code!
+that the Go CDK makes possible. So, let's write some code!
 
 When we're done, our command line application will work like this:
 
@@ -63,8 +64,8 @@ both clouds. This will be the only step that requires cloud-specific APIs.
 ## GCP authentication & connection
 
 As a first pass, let's write the code to connect to a GCS bucket. Then, we will
-write the code to connect to S3 and Azure buckets. In all cases, we are going
-to create a pointer to a `blob.Bucket`, the cloud-agnostic blob storage type.
+write the code to connect to S3 and Azure buckets. In all cases, we are going to
+create a pointer to a `blob.Bucket`, the cloud-agnostic blob storage type.
 
 ```go
 package main
@@ -127,13 +128,13 @@ The cloud-specific setup is the tricky part as each cloud has its own series of
 invocations to create a bucket. It's worth thinking about this point for a
 moment.
 
-Without Go Cloud, both your setup code and your business logic are platform
+Without the Go CDK, both your setup code and your business logic are platform
 dependent. That's a bad thing because business logic has a tendency to grow
 increasingly complex over time and if that logic is coupled to a particular
 platform, your application will likely become tightly coupled to the plaform as
 well.
 
-With Go Cloud, only your setup code is platform dependent. The business logic
+With the Go CDK, only your setup code is platform dependent. The business logic
 makes no demands on a particular platform, which means your application itself
 requires less work to move from one cloud to another. In any case, the setup
 code in an application grows far less than the business logic does. Anything we
@@ -198,7 +199,7 @@ leaking throughout our application code. In other words, by using `blob.Bucket`
 we avoid being tightly coupled to one cloud provider.
 
 With the setup done, we're ready to use the bucket connection. Note, as a design
-principle of Go Cloud, `blob.Bucket` does not support creating a bucket and
+principle of the Go CDK, `blob.Bucket` does not support creating a bucket and
 instead focuses solely on interacting with it. This separates the concerns of
 provisioning infrastructure and using infrastructure.
 
