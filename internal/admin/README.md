@@ -1,9 +1,10 @@
-# Go Cloud Project Terraform Setup
+# The Go CDK Project Terraform Setup
 
-This is a [Terraform][] configuration for the Go Cloud open source project. It
+This is a [Terraform][] configuration for the Go CDK open source project. It
 manages GitHub ACLs, issue labels, and the module proxy buckets on GCS. To apply
-the configuration to the project's resources, [sign into the gcloud CLI][gcloud
-auth login], grab a [GitHub access token][], and then do the following:
+the configuration to the project's resources, [sign into the gcloud
+CLI][gcloud auth login], grab a [GitHub access token][], and then do the
+following:
 
 ```bash
 internal/admin$ echo 'github_token = "INSERT TOKEN HERE"' > terraform.tfvars
