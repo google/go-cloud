@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 // gcmsg is a sample application that publishes messages from stdin to an
 // existing topic or receives messages from an existing subscription and
-// sends them to stdout. The name gcmsg is short for Go Cloud Messages.
+// sends them to stdout. The name gcmsg is short for Go CDK Messages.
 package main
 
 import (
