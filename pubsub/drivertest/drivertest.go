@@ -198,8 +198,8 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	want := publishN(t, ctx, top, 3)
-	got := receiveN(t, ctx, sub, len(want))
+	want := publishN(ctx, t, top, 3)
+	got := receiveN(ctx, t, sub, len(want))
 
 	// Check that the received messages match the sent ones.
 	if diff := diffMessageSets(got, want); diff != "" {
@@ -237,9 +237,9 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		defer s.Shutdown(ctx)
 		ss = append(ss, s)
 	}
-	want := publishN(t, ctx, top, 3)
+	want := publishN(ctx, t, top, 3)
 	for i, s := range ss {
-		got := receiveN(t, ctx, s, len(want))
+		got := receiveN(ctx, t, s, len(want))
 		if diff := diffMessageSets(got, want); diff != "" {
 			t.Errorf("sub #%d: %s", i, diff)
 		}
@@ -247,7 +247,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 }
 
 // Publish n different messages to the topic. Return the messages.
-func publishN(t *testing.T, ctx context.Context, top *pubsub.Topic, n int) []*pubsub.Message {
+func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pubsub.Message {
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
 		m := &pubsub.Message{
@@ -263,7 +263,7 @@ func publishN(t *testing.T, ctx context.Context, top *pubsub.Topic, n int) []*pu
 }
 
 // Receive and ack n messages from sub.
-func receiveN(t *testing.T, ctx context.Context, sub *pubsub.Subscription, n int) []*pubsub.Message {
+func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
 		m, err := sub.Receive(ctx)
