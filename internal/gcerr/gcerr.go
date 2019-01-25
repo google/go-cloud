@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcerr provides an error type for Go Cloud APIs.
+// Package gcerr provides an error type for Go CDK APIs.
 package gcerr
 
 import (
@@ -41,11 +41,11 @@ const (
 	// The resource exists, but it should not.
 	AlreadyExists ErrorCode = 3
 
-	// A value given to a Go Cloud API is incorrect.
+	// A value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = 4
 
 	// Something unexpected happened. Internal errors always indicate
-	// bugs in Go Cloud (or possibly the underlying provider).
+	// bugs in the Go CDK (or possibly the underlying provider).
 	Internal ErrorCode = 5
 
 	// The feature is not implemented.
@@ -64,7 +64,7 @@ const (
 
 //go:generate stringer -type=ErrorCode
 
-// An Error describes a Go Cloud error.
+// An Error describes a Go CDK error.
 type Error struct {
 	Code  ErrorCode
 	msg   string
