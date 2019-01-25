@@ -34,6 +34,11 @@ func ExampleNewVariable() {
 	ctx := context.Background()
 
 	// Get GCP credentials and dial the server.
+	// Here we use a fake JSON credentials file, but you could also use
+	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
+	// the environment.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
 	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
