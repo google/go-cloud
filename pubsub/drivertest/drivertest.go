@@ -99,10 +99,10 @@ func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) error {
+func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) (ret error) {
 	defer func() {
 		if recover() == nil {
-			err = errors.New("want Topic.ErrorAs to panic when passed nil")
+			ret = errors.New("want Topic.ErrorAs to panic when passed nil")
 		}
 	}()
 	t.ErrorAs(err, nil)
