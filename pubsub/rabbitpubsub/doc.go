@@ -28,5 +28,5 @@
 // As
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection
-//  - Error: *amqp.Error
+//  - Error: *amqp.Error and MultiError
 package rabbitpubsub // import "gocloud.dev/pubsub/rabbitpubsub"
