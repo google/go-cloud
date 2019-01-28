@@ -145,13 +145,16 @@ func (*topic) ErrorAs(err error, target interface{}) bool {
 }
 
 func errorAs(err error, target interface{}) bool {
-	if s, ok := status.FromError(err); ok {
-		if p, ok := target.(**status.Status); ok {
-			*p = s
-			return true
-		}
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
 	}
-	return false
+	p, ok := target.(**status.Status)
+	if !ok {
+		return false
+	}
+	*p = s
+	return true
 }
 
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {

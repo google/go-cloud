@@ -100,6 +100,12 @@ func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 }
 
 func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) error {
+	defer func() {
+		if recover() == nil {
+			err = errors.New("want Topic.ErrorAs to panic when passed nil")
+		}
+	}()
+	t.ErrorAs(err, nil)
 	return nil
 }
 

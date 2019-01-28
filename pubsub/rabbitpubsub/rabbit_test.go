@@ -302,5 +302,11 @@ func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	if aerr.Code != amqp.NotFound {
 		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
 	}
+
+	err = MultiError{err}
+	var merr MultiError
+	if !t.ErrorAs(err, &merr) {
+		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+	}
 	return nil
 }

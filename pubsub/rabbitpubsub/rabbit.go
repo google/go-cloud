@@ -352,9 +352,15 @@ func (*topic) ErrorAs(err error, target interface{}) bool {
 }
 
 func errorAs(err error, target interface{}) bool {
-	if aerr, ok := err.(*amqp.Error); ok {
+	switch e := err.(type) {
+	case *amqp.Error:
 		if p, ok := target.(**amqp.Error); ok {
-			*p = aerr
+			*p = e
+			return true
+		}
+	case MultiError:
+		if p, ok := target.(*MultiError); ok {
+			*p = e
 			return true
 		}
 	}
