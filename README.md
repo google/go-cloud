@@ -1,5 +1,3 @@
-<img src="logo-gopherblue.png" alt="" width="448" height="221">
-
 # The Go Cloud Development Kit (Go CDK)
 
 _Write once, run on any cloud ☁️_
@@ -47,7 +45,6 @@ talk at Next 2018:
 # First "cd" into your project directory if you have one to ensure "go get" uses
 # Go modules (or not) appropriately. See "go help modules" for more info.
 go get gocloud.dev
-go get github.com/google/wire/cmd/wire
 ```
 
 The Go CDK builds at the latest stable release of Go. Previous Go versions may
