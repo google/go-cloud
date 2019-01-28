@@ -301,9 +301,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// n is very large, and since our averaging process is time-sensitive,
 			// values can differ slightly from run to run. The current cap happens
 			// to work, but we should come up with a more robust solution.
-			// (Currently it doesn't matter for performance, because gcppubsub can't
-			// caps to 1000 anyway.)
-			nMessages = int(math.Min(n, 10000))
+			// (Currently it doesn't matter for performance, because gcppubsub
+			// caps maxMessages to 1000 anyway.)
+			nMessages = int(math.Min(n, 1000))
 		}
 		s.waitc = make(chan struct{})
 		s.mu.Unlock()

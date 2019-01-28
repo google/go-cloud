@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,8 +29,8 @@ type averager struct {
 }
 
 type bucket struct {
+	total float64 // total of points in the bucket
 	count float64 // number of points in the bucket
-	avg   float64 // average value of the bucket
 }
 
 // newAverager returns an averager that will average a value over dur,
@@ -49,10 +49,10 @@ func newAverager(dur time.Duration, nBuckets int) *averager {
 func (a *averager) average() float64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	var n, total float64
+	var total, n float64
 	for _, b := range a.buckets {
+		total += b.total
 		n += b.count
-		total += b.count * b.avg
 	}
 	return total / n
 }
@@ -75,7 +75,6 @@ func (a *averager) addInternal(x float64, t time.Time) {
 		panic("time too early")
 	}
 	b := &a.buckets[len(a.buckets)-1]
-	// The new average is (old total + x) / (old count + 1).
-	b.avg = (b.count*b.avg + x) / (b.count + 1)
+	b.total += x
 	b.count++
 }
