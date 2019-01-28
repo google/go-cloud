@@ -419,6 +419,7 @@ func (b *Bucket) As(i interface{}) bool {
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {

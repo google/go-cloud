@@ -178,6 +178,7 @@ func (w *wrappedError) Error() string {
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Snapshot.As for more details.
 func ErrorAs(err error, i interface{}) bool {
 	if err == nil {
