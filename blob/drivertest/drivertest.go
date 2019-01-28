@@ -110,10 +110,13 @@ func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) error {
-	if b.ErrorAs(err, nil) {
-		return errors.New("want ErrorAs to return false when passed nil")
-	}
+func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want ErrorAs to panic when passed nil")
+		}
+	}()
+	b.ErrorAs(err, nil)
 	return nil
 }
 
