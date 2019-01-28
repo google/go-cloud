@@ -180,8 +180,11 @@ func (w *wrappedError) Error() string {
 // ErrorAs converts i to provider-specific types.
 // See Snapshot.As for more details.
 func ErrorAs(err error, i interface{}) bool {
-	if err == nil || i == nil {
+	if err == nil {
 		return false
+	}
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("runtimevar: ErrorAs i must be a non-nil pointer")
 	}
 	if e, ok := err.(*wrappedError); ok {
 		return e.w.ErrorAs(e.err, i)
