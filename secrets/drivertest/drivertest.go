@@ -47,6 +47,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestMultipleEncryptionsNotEqual", func(t *testing.T) {
 		testMultipleEncryptionsNotEqual(t, newHarness)
 	})
+	t.Run("TestDecryptMalformedError", func(t *testing.T) {
+		testDecryptMalformedError(t, newHarness)
+	})
 }
 
 // testEncryptDecrypt tests the functionality of encryption and decryption
@@ -109,5 +112,26 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 	}
 	if cmp.Equal(encryptedMsg1, encryptedMsg2) {
 		t.Errorf("Got same encrypted messages from multiple encryptions %v, want them to be different", string(encryptedMsg1))
+	}
+}
+
+// testDecryptMalformedError tests decryption returns an error when the
+// ciphertext is malformed.
+func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	harness, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer harness.Close()
+
+	drv, err := harness.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := secrets.NewKeeper(drv)
+
+	if _, err := keeper.Decrypt(ctx, []byte("malformed cipher message")); err == nil {
+		t.Error("Got nil, want decrypt error")
 	}
 }
