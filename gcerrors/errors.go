@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package gcerrors provides support for getting error codes from
-// errors returned by Go Cloud APIs.
+// errors returned by Go CDK APIs.
 package gcerrors
 
 import (
@@ -39,15 +39,18 @@ const (
 	// The resource exists, but it should not.
 	AlreadyExists ErrorCode = gcerr.AlreadyExists
 
-	// a value given to a Go Cloud API is incorrect.
+	// A value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = gcerr.InvalidArgument
 
 	// Something unexpected happened. Internal errors always indicate
-	// bugs in Go Cloud (or possibly the underlying provider).
+	// bugs in the Go CDK (or possibly the underlying provider).
 	Internal ErrorCode = gcerr.Internal
 
 	// The feature is not implemented.
 	Unimplemented ErrorCode = gcerr.Unimplemented
+
+	// The system was in the wrong state.
+	FailedPrecondition ErrorCode = gcerr.FailedPrecondition
 )
 
 // Code returns the ErrorCode of err if it is an *Error.

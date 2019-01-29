@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,13 +16,18 @@ package fileblob
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
 )
@@ -56,7 +61,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyPathError{}})
 }
 
 func BenchmarkFileblob(b *testing.B) {
@@ -95,6 +100,49 @@ func TestNewBucket(t *testing.T) {
 			t.Error("want error, got nil")
 		}
 	})
+}
+
+func TestMungePath(t *testing.T) {
+	tests := []struct {
+		URL       string
+		Separator uint8
+		Want      string
+	}{
+		{
+			URL:       "file:///a/directory",
+			Separator: '/',
+			Want:      "/a/directory",
+		},
+		{
+			URL:       "file://localhost/a/directory",
+			Separator: '/',
+			Want:      "/a/directory",
+		},
+		{
+			URL:       "file://localhost/mybucket",
+			Separator: '/',
+			Want:      "/mybucket",
+		},
+		{
+			URL:       "file:///c:/a/directory",
+			Separator: '\\',
+			Want:      "c:\\a\\directory",
+		},
+		{
+			URL:       "file://localhost/c:/a/directory",
+			Separator: '\\',
+			Want:      "c:\\a\\directory",
+		},
+	}
+	for _, tc := range tests {
+		u, err := url.Parse(tc.URL)
+		if err != nil {
+			t.Fatalf("%s: failed to parse URL: %v", tc.URL, err)
+		}
+		if got := mungeURLPath(u.Path, tc.Separator); got != tc.Want {
+			t.Errorf("%s: got %q want %q", tc.URL, got, tc.Want)
+		}
+	}
 }
 
 func TestEscape(t *testing.T) {
@@ -167,4 +215,27 @@ func TestUnescape(t *testing.T) {
 			t.Errorf("%s: got unescaped %q want %q", tc.filename, got, tc.want)
 		}
 	}
+}
+
+type verifyPathError struct{}
+
+func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
+
+func (verifyPathError) BucketCheck(b *blob.Bucket) error             { return nil }
+func (verifyPathError) BeforeWrite(as func(interface{}) bool) error  { return nil }
+func (verifyPathError) BeforeList(as func(interface{}) bool) error   { return nil }
+func (verifyPathError) AttributesCheck(attrs *blob.Attributes) error { return nil }
+func (verifyPathError) ReaderCheck(r *blob.Reader) error             { return nil }
+func (verifyPathError) ListObjectCheck(o *blob.ListObject) error     { return nil }
+
+func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
+	var perr *os.PathError
+	if !b.ErrorAs(err, &perr) {
+		return errors.New("want ErrorAs to succeed for PathError")
+	}
+	const wantSuffix = "go-cloud-fileblob/key-does-not-exist"
+	if got := perr.Path; !strings.HasSuffix(got, wantSuffix) {
+		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)
+	}
+	return nil
 }

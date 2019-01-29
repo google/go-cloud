@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -204,7 +204,7 @@ type ListPage struct {
 // Bucket provides read, write and delete operations on objects within it on the
 // blob service.
 type Bucket interface {
-	// ErrorCode should return a Code that describes the error, which was returned by
+	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
 

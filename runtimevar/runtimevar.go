@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -178,10 +178,14 @@ func (w *wrappedError) Error() string {
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Snapshot.As for more details.
 func ErrorAs(err error, i interface{}) bool {
-	if err == nil || i == nil {
+	if err == nil {
 		return false
+	}
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("runtimevar: ErrorAs i must be a non-nil pointer")
 	}
 	if e, ok := err.(*wrappedError); ok {
 		return e.w.ErrorAs(e.err, i)

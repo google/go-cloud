@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,9 +25,10 @@
 # except x is too verbose
 set -euo pipefail
 
+INDIR=internal/imports
 OUTDIR=makeimports-output
 
-TEMPLATE=internal/imports/makeimports.template.html
+TEMPLATE=$INDIR/makeimports.template.html
 
 if [ ! -f "$TEMPLATE" ]; then
   echo "Template not found: $TEMPLATE"
@@ -48,14 +49,11 @@ function files_exist() {  # assumes nullglob
 }
 
 
-# Generate top-level index.html.
 echo "Generating gocloud.dev"
 mkdir -p "$OUTDIR"
-# Replace the redirect URL with the github repo home page.
-cat "$TEMPLATE" | sed \
-        -e "s|url=https://godoc.org/gocloud.dev{{path}}|url=https://github.com/google/go-cloud|" \
-         -e "s|{{path}}||" > "$OUTDIR/index.html"
 
+# Copy top-level index.html.
+cp $INDIR/index.html $OUTDIR
 
 # Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
 # directive to remove the initial './'.

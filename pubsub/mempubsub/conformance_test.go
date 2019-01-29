@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,4 +53,10 @@ func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
+}
+
+func BenchmarkMemPubSub(b *testing.B) {
+	topic := NewTopic()
+	sub := NewSubscription(topic, time.Second)
+	drivertest.RunBenchmarks(b, topic, sub)
 }

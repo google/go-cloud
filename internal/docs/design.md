@@ -5,26 +5,26 @@ attempts to provide succinct rationales. Recording these decisions helps
 maintain consistency across packages, especially as an open source project where
 contributors can join at any point during development.
 
-A broad design goal for Go Cloud is for the API style to be consistent.
-Consistency aids users in building a mental model of how to use the APIs. As
-such, the design of individual packages must also consider their impact on Go
-Cloud as a whole.
+A broad design goal for the Go Cloud Development Kit (Go CDK) is for the API
+style to be consistent. Consistency aids users in building a mental model of how
+to use the APIs. As such, the design of individual packages must also consider
+their impact on the Go CDK as a whole.
 
 This is a [Living Document](https://en.wikipedia.org/wiki/Living_document). The
 decisions in here are not set in stone, but simply describe our current thinking
-about how to guide the Go Cloud project. While it is useful to link to this
-document when having discussions in an issue, it is not to be used as a means of
-closing issues without discussion at all. Discussion on an issue can lead to
-revisions of this document.
+about how to guide the Go Cloud Development Kit project. While it is useful to
+link to this document when having discussions in an issue, it is not to be used
+as a means of closing issues without discussion at all. Discussion on an issue
+can lead to revisions of this document.
 
 ## Developers and Operators
 
-Go Cloud is designed with two different personas in mind: the developer and the
-operator. In the world of DevOps, these may be the same person. A developer may
-be directly deploying their application into production, especially on smaller
-teams. In a larger organization, these may be different teams entirely, but
-working closely together. Regardless, these two personas have two very different
-ways of looking at a Go program:
+The Go CDK is designed with two different personas in mind: the developer and
+the operator. In the world of DevOps, these may be the same person. A developer
+may be directly deploying their application into production, especially on
+smaller teams. In a larger organization, these may be different teams entirely,
+but working closely together. Regardless, these two personas have two very
+different ways of looking at a Go program:
 
 -   The developer persona wants to write business logic that is agnostic of
     underlying cloud provider. Their focus is on making software correct for the
@@ -34,10 +34,10 @@ ways of looking at a Go program:
     focus is making software run predictably and reliably with the resources at
     hand.
 
-Go Cloud uses Go interfaces at the boundary between these two personas: a
+The Go CDK uses Go interfaces at the boundary between these two personas: a
 developer is meant to use an interface, and an operator is meant to provide an
-implementation of that interface. This distinction prevents Go Cloud going down
-a path of complexity that makes application portability difficult. The
+implementation of that interface. This distinction prevents the Go CDK going
+down a path of complexity that makes application portability difficult. The
 [`blob.Bucket`][] type is a prime example: the API does not provide a way of
 creating a new bucket. To properly and safely create such a bucket requires
 careful consideration, getting something like ACLs wrong could lead to a
@@ -45,9 +45,9 @@ catastrophic data leak. To generate the ACLs correctly requires modeling of IAM
 users and roles for each cloud platform, and some way of mapping those users and
 roles across clouds. While not impossible, the level of complexity and the high
 likelihood of a leaky abstraction leads us to believe this is not the right
-direction for Go Cloud.
+direction for the Go CDK.
 
-Instead of adding large amounts of leaky complexity to Go Cloud, we expect the
+Instead of adding large amounts of leaky complexity to the Go CDK, we expect the
 operator role to handle the management of non-portable platform-specific
 resources. An implementor of the `Bucket` interface does not need to determine
 the content type of incoming data, as that is a developer's concern. This
@@ -58,7 +58,7 @@ language while focusing on their respective areas of expertise.
 
 ## Drivers and User-Facing Types
 
-The generic APIs that Go Cloud exports (like [`blob.Bucket`][] or
+The generic APIs that the Go CDK exports (like [`blob.Bucket`][] or
 [`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
@@ -97,8 +97,7 @@ user-facing type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
-New Go Cloud APIs should always follow this driver plus user-facing type
-pattern.
+New Go CDK APIs should always follow this driver plus user-facing type pattern.
 
 [`runtimevar.Variable`]:
 https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
@@ -108,7 +107,7 @@ https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 
 ## No Global State
 
-As a library, Go Cloud should not introduce global state. Global state is
+As a library, the Go CDK should not introduce global state. Global state is
 difficult to reason about in large codebases, where it can be necessary for
 different parts of the application to use different states. Instead of adding
 global state, push responsibility to the application to inject the state where
@@ -142,7 +141,7 @@ concrete type backed by GCS.
     constructor before ones that are likely to change. For example, connection
     and authorization related arguments should go before names, so
     `OpenBucket(ctx, client, "mybucket")` instead of `OpenBucket(ctx,
-    "mybucket", client)`. 
+    "mybucket", client)`.
 -   All public constructors should take an `Options` struct (see next section).
 
 ### Option Structs
@@ -267,12 +266,13 @@ wants to access provider-specific functionality, which might consist of:
 1.  **Options**. Different providers may support different options for
     functionality.
 
-**As** functions in the APIs provide the user a way to escape the Go Cloud
+**As** functions in the APIs provide the user a way to escape the Go CDK
 abstraction to access provider-specific types. They might be used as an interim
-solution until a feature request to Go Cloud is implemented. Or, Go Cloud may
-choose not to support specific features, and the use of `As` will be permanent.
-As an example, both S3 and GCS blobs have the concept of ACLs, but it might be
-difficult to represent them in a generic way (although, we have not tried).
+solution until a feature request to the Go CDK is implemented. Or, the Go CDK
+may choose not to support specific features, and the use of `As` will be
+permanent. As an example, both S3 and GCS blobs have the concept of ACLs, but it
+might be difficult to represent them in a generic way (although, we have not
+tried).
 
 Using `As`implies that the resulting code is no longer portable; the
 provider-specific code will need to be ported in order to switch providers.
@@ -302,18 +302,18 @@ Each provider implementation documents what type(s) it supports for each of the
 ### Other Ways To Access Provider-Specific Features
 
 Users can always access the provider service directly, by constructing the
-top-level handle and making API calls, bypassing Go Cloud.
+top-level handle and making API calls, bypassing the Go CDK.
 
 *   For top-level operations, this may be fine, although it might require a
     bunch of plumbing code to pass the provider service handle to where it is
     needed.
-*   For data objects, it implies dropping Go Cloud entirely; for example,
+*   For data objects, it implies dropping the Go CDK entirely; for example,
     instead of using `blob.Reader` to read a blob, the user would have to use
     the provider-specific method for reading.
 
 ## Enforcing Portability
 
-Go Cloud APIs will end up exposing functionality that is not supported by all
+The Go CDK APIs will end up exposing functionality that is not supported by all
 provider implementations. In addition, some functionality details will differ
 across providers. Some theoretical examples using [`blob.Bucket`][]:
 
@@ -349,7 +349,7 @@ user as soon as possible. From best to worst:
     support the intersection of all provider implementations. For example, if
     not all providers allow unicode characters in names, then **blob** would not
     allow it either.
-1.  **Enforced feature codes**: Go Cloud APIs could enumerate the ways in which
+1.  **Enforced feature codes**: Go CDK APIs could enumerate the ways in which
     providers differ as a `FeatureCode` enum.
     *   Provider implementations would declare which feature codes they support,
         enforced by extensions to the existing conformance tests.
@@ -527,11 +527,11 @@ With the advent of [Go modules], there are mechanisms to release different parts
 of a repository on different schedules. This permits one API to be in alpha/beta
 (pre-1.0), whereas another API can be stable (1.0 or later).
 
-As of 2018-09-13, Go Cloud as a whole still is not stable enough to call any
-part 1.0 yet. Until this milestone is reached, all of the Go Cloud libraries
-will be placed under a single module. The exceptions are standalone tools like
+As of 2018-09-13, the Go CDK as a whole still is not stable enough to call any
+part 1.0 yet. Until this milestone is reached, all of the Go CDK libraries will
+be placed under a single module. The exceptions are standalone tools like
 [Contribute Bot][] that are part of the project, but not part of the library.
-After 1.0 is released, it is expected that each interface in Go Cloud will be
+After 1.0 is released, it is expected that each interface in the Go CDK will be
 released as one module. Provider implementations will live in separate modules.
 The exact details remain to be determined.
 

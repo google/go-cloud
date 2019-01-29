@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcerr provides an error type for Go Cloud APIs.
+// Package gcerr provides an error type for Go CDK APIs.
 package gcerr
 
 import (
@@ -41,16 +41,21 @@ const (
 	// The resource exists, but it should not.
 	AlreadyExists ErrorCode = 3
 
-	// A value given to a Go Cloud API is incorrect.
+	// A value given to a Go CDK API is incorrect.
 	InvalidArgument ErrorCode = 4
 
 	// Something unexpected happened. Internal errors always indicate
-	// bugs in Go Cloud (or possibly the underlying provider).
+	// bugs in the Go CDK (or possibly the underlying provider).
 	Internal ErrorCode = 5
 
 	// The feature is not implemented.
 	Unimplemented ErrorCode = 6
+
+	// The system was in the wrong state.
+	FailedPrecondition ErrorCode = 7
 )
+
+// TODO(jba) call stringer after it's fixed for modules
 
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
@@ -59,7 +64,7 @@ const (
 
 //go:generate stringer -type=ErrorCode
 
-// An Error describes a Go Cloud error.
+// An Error describes a Go CDK error.
 type Error struct {
 	Code  ErrorCode
 	msg   string

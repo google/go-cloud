@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,24 +17,32 @@ package blobvar
 import (
 	"context"
 	"errors"
+	"os"
+	"path"
 	"testing"
 
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/memblob"
-	"gocloud.dev/gcerrors"
+	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
 )
 
 type harness struct {
+	dir    string
 	bucket *blob.Bucket
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	return &harness{
-		bucket: memblob.OpenBucket(nil),
-	}, nil
+	dir := path.Join(os.TempDir(), "go-cloud-blobvar")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return nil, err
+	}
+	b, err := fileblob.OpenBucket(dir, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &harness{dir: dir, bucket: b}, nil
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
@@ -53,7 +61,9 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 	return h.bucket.Delete(ctx, name)
 }
 
-func (h *harness) Close() {}
+func (h *harness) Close() {
+	_ = os.RemoveAll(h.dir)
+}
 
 func (h *harness) Mutable() bool { return true }
 
@@ -71,16 +81,10 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
-	var blobe error
-	if !runtimevar.ErrorAs(err, &blobe) {
-		return errors.New("runtimevar.ErrorAs failed")
-	}
-	if gcerrors.Code(err) == gcerrors.NotFound {
-		return errors.New("expected error code to be other than NotFound to return false for wrapped error")
-	}
-	if gcerrors.Code(blobe) != gcerrors.NotFound {
-		return errors.New("expected error code to be NotFound for unwrapped error")
+func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
+	var perr *os.PathError
+	if !runtimevar.ErrorAs(err, &perr) {
+		return errors.New("runtimevar.ErrorAs failed with *os.PathError")
 	}
 	return nil
 }
