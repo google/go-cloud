@@ -18,7 +18,7 @@ package gcerrors
 
 import (
 	"gocloud.dev/internal/gcerr"
-	xerrors "golang.org/x/exp/errors"
+	"golang.org/x/xerrors"
 )
 
 // An ErrorCode describes the error's category. Programs should act upon an error's
