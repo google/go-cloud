@@ -25,7 +25,7 @@ import (
 type harness struct{}
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return NewKeeper(ByteKey("very secret secret")), nil
+	return &keeper{secretKey: ByteKey("very secret secret")}, nil
 }
 
 func (h *harness) Close() {}

@@ -38,18 +38,14 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return newKeeper(keyID, h.client), nil
+	return &keeper{
+		keyID:  keyID,
+		client: h.client,
+	}, nil
 }
 
 func (h *harness) Close() {
 	h.close()
-}
-
-func newKeeper(keyID string, client *api.Client) driver.Keeper {
-	return &keeper{
-		keyID:  keyID,
-		client: client,
-	}
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -88,4 +84,33 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// Vault-specific tests.
+
+func TestNoSessionProvidedError(t *testing.T) {
+	if _, err := Dial(context.Background(), nil); err == nil {
+		t.Error("got nil, want no auth Config provided")
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+
+	// Dial calls vault's NewClient method, which doesn't make the connection. Try
+	// doing encryption which should fail by no connection.
+	client, err := Dial(ctx, &Config{
+		Token: "<Client (Root) Token>",
+		APIConfig: &api.Config{
+			Address: apiAddress,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keeper := NewKeeper(client, "my-key", nil)
+	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
+		t.Error("got nil, want connection refused")
+	}
 }

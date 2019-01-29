@@ -20,6 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -37,6 +39,8 @@ func (k *erroringKeeper) Encrypt(ctx context.Context, b []byte) ([]byte, error) 
 	return nil, errFake
 }
 
+func (k *erroringKeeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	k := NewKeeper(&erroringKeeper{})
@@ -45,12 +49,12 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if unwrapped, ok := err.(*wrappedError); !ok {
+		} else if unwrapped, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
-		} else if du, ok := unwrapped.err.(*wrappedError); ok {
+		} else if du, ok := unwrapped.Unwrap().(*gcerr.Error); ok {
 			t.Errorf("%s: double wrapped: %v", description, du)
 		}
-		if s := err.Error(); !strings.HasPrefix(s, "secrets: ") {
+		if s := err.Error(); !strings.HasPrefix(s, "secrets ") {
 			t.Errorf("%s: Error() for wrapped error doesn't start with secrets: prefix: %s", description, s)
 		}
 	}

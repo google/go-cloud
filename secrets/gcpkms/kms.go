@@ -21,7 +21,9 @@ import (
 	"fmt"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
@@ -90,6 +92,11 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return resp.GetCiphertext(), nil
+}
+
+// ErrorCode implements driver.ErrorCode.
+func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
 }
 
 // KeeperOptions controls Keeper behaviors.
