@@ -207,7 +207,8 @@ type WidgetURLOpener interface {
 }
 
 // A type that implements NamedWidgetURLOpener has a preferred scheme for
-// the URLs it opens.
+// the URLs it opens. WidgetURLScheme must be safe to call from multiple
+// goroutines.
 type NamedWidgetURLOpener interface {
   WidgetURLOpener
   WidgetURLScheme() string
@@ -235,6 +236,7 @@ func (mux *URLMux) RegisterWidget(scheme string, opener WidgetURL) {
 }
 
 // OpenWidget calls OpenWidgetURL with the URL parsed from urlstr.
+// OpenWidget is safe to call from multiple goroutines.
 func (mux *URLMux) OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
   u, err := url.Parse(urlstr)
   if err != nil {
@@ -244,7 +246,7 @@ func (mux *URLMux) OpenWidget(ctx context.Context, urlstr string) (*Widget, erro
 }
 
 // OpenWidgetURL dispatches the URL to the opener that is registered with the
-// URL's scheme.
+// URL's scheme. OpenWidget is safe to call from multiple goroutines.
 func (mux *URLMux) OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error) {
   // ...
 }
