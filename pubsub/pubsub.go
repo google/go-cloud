@@ -213,12 +213,12 @@ type Subscription struct {
 	ackBatcher driver.Batcher
 	cancel     func() // for canceling all SendAcks calls
 
-	mu                  sync.Mutex    // protects everything below
-	q                   []*Message    // local queue of messages downloaded from server
-	err                 error         // permanent error
-	waitc               chan struct{} // for goroutines waiting on ReceiveBatch
-	lastReceiveReturn   time.Time     // time that the last call to Receive returned
-	processTimeAverager *averager     // keeps a running average of the seconds to process a message
+	mu                sync.Mutex    // protects everything below
+	q                 []*Message    // local queue of messages downloaded from server
+	err               error         // permanent error
+	waitc             chan struct{} // for goroutines waiting on ReceiveBatch
+	lastReceiveReturn time.Time     // time that the last call to Receive returned
+	avgProcessTime    float64       // moving average of the seconds to process a message
 }
 
 const (
@@ -238,6 +238,11 @@ const (
 	// their ack deadline will be exceeded). Those messages could have been handled
 	// by another process receiving from the same subscription.
 	desiredQueueLength = 2 * time.Second
+
+	// The factor by which old points decay when a new point is added to the moving
+	// average. The larger this number, the more weight will be given to the newest
+	// point in preference to older ones.
+	decay = 0.05
 )
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -254,7 +259,8 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 	defer func() { s.lastReceiveReturn = time.Now() }()
 
 	if !s.lastReceiveReturn.IsZero() {
-		s.processTimeAverager.add(float64(time.Since(s.lastReceiveReturn).Seconds()))
+		t := float64(time.Since(s.lastReceiveReturn).Seconds())
+		s.avgProcessTime = s.avgProcessTime*(1-decay) + t*decay
 	}
 
 	for {
@@ -291,10 +297,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// Unless we don't have information about process time (at the beginning), in
 		// which case just get one message.
 		nMessages := 1
-		avgProcessTime := s.processTimeAverager.average()
-		if !math.IsNaN(avgProcessTime) {
+		if s.avgProcessTime > 0 {
 			// Using Ceil guarantees at least one message.
-			n := math.Ceil(desiredQueueLength.Seconds() / avgProcessTime)
+			n := math.Ceil(desiredQueueLength.Seconds() / s.avgProcessTime)
 			// Cap nMessages at some non-ridiculous value.
 			// Slight hack: we should be using a larger cap, like MaxInt32. But
 			// that messes up replay: since the tests take very little time to ack,
@@ -390,9 +395,8 @@ var NewSubscription = newSubscription
 func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver:              d,
-		cancel:              cancel,
-		processTimeAverager: newAverager(time.Minute, 4),
+		driver: d,
+		cancel: cancel,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
