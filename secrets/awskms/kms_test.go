@@ -37,7 +37,10 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return NewKeeper(h.client, keyID, nil), nil
+	return &keeper{
+		keyID:  keyID,
+		client: h.client,
+	}, nil
 }
 
 func (h *harness) Close() {
