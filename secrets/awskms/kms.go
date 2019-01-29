@@ -79,7 +79,7 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 
 // ErrorCode implements driver.ErrorCode.
 func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
-	// TODO(shantuo): try to classify vault error codes
+	// TODO(shantuo): try to classify aws error codes
 	return gcerrors.Unknown
 }
 
