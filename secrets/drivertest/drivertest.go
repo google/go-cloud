@@ -115,6 +115,8 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
+// testDecryptMalformedError tests decryption returns an error when the
+// ciphertext is malformed.
 func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	harness, err := newHarness(ctx, t)
