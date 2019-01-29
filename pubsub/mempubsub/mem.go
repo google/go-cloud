@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -86,6 +87,9 @@ func (t *topic) As(i interface{}) bool {
 	*x = t
 	return true
 }
+
+// ErrorCode implements driver.Topic.ErrorCode
+func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
 type subscription struct {
 	mu          sync.Mutex
@@ -217,3 +221,6 @@ func (*subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool { return false }
+
+// ErrorCode implements driver.Subscription.ErrorCode
+func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }

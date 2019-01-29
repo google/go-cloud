@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -159,7 +159,9 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if _, ok := err.(*gcerr.Error); !ok {
+			return
+		}
+		if _, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
 		}
 		if s := err.Error(); !strings.HasPrefix(s, "blob ") {

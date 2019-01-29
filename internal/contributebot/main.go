@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// contributebot is a service for keeping the Go Cloud project tidy.
+// contributebot is a service for keeping the Go Cloud Development Kit
+// project tidy.
 package main
 
 import (
@@ -292,8 +293,8 @@ func (w *worker) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 	const responseData = `<!DOCTYPE html>
-<title>Go Cloud Contribute Bot Worker</title>
-<h1>Go Cloud Contribute Bot Worker</h1>
+<title>Go Cloud Development Kit Contribute Bot Worker</title>
+<h1>Go Cloud Development Kit Contribute Bot Worker</h1>
 <p>This HTTP port is only open to serve health checks.</p>`
 	resp.Header().Set("Content-Length", fmt.Sprint(len(responseData)))
 	resp.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -110,10 +110,13 @@ func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) error {
-	if b.ErrorAs(err, nil) {
-		return errors.New("want ErrorAs to return false when passed nil")
-	}
+func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want ErrorAs to panic when passed nil")
+		}
+	}()
+	b.ErrorAs(err, nil)
 	return nil
 }
 

@@ -34,7 +34,7 @@ variable "region" {
 
 resource "aws_security_group" "main" {
   name_prefix = "testdb"
-  description = "Security group for Go Cloud MySQL test database."
+  description = "Security group for the Go CDK MySQL test database."
 
   ingress {
     from_port   = 3306

@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package useragent includes constants and utilitiesfor setting the User-Agent
-// for Go Cloud connections to GCP.
+// for Go CDK connections to GCP.
 package useragent // import "gocloud.dev/internal/useragent"
 
 import (
@@ -29,12 +29,12 @@ const (
 	version = "0.1.0"
 )
 
-// ClientOption returns an option.ClientOption that sets a Go Cloud User-Agent.
+// ClientOption returns an option.ClientOption that sets a Go CDK User-Agent.
 func ClientOption(api string) option.ClientOption {
 	return option.WithUserAgent(userAgentString(api))
 }
 
-// GRPCDialOption returns a grpc.DialOption that sets a Go Cloud User-Agent.
+// GRPCDialOption returns a grpc.DialOption that sets a Go CDK User-Agent.
 func GRPCDialOption(api string) grpc.DialOption {
 	return grpc.WithUserAgent(userAgentString(api))
 }
@@ -67,7 +67,7 @@ func (t *userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.base.RoundTrip(&newReq)
 }
 
-// HTTPClient wraps client and appends a Go Cloud string to the User-Agent
+// HTTPClient wraps client and appends a Go CDK string to the User-Agent
 // header for all requests.
 func HTTPClient(client *http.Client, api string) *http.Client {
 	c := *client

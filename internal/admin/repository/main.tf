@@ -1,4 +1,4 @@
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ resource "github_branch_protection" "default_branch" {
   enforce_admins = true
 
   required_status_checks {
-    strict = true
+    strict = false
 
     contexts = [
       "Travis CI - Pull Request",

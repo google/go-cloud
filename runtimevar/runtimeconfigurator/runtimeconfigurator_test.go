@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,9 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/codes"
 	"testing"
+
+	"google.golang.org/grpc/codes"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"

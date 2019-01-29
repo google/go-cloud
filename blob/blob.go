@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -418,8 +419,12 @@ func (b *Bucket) As(i interface{}) bool {
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("blob: ErrorAs i must be a non-nil pointer")
+	}
 	if e, ok := err.(*gcerr.Error); ok {
 		return b.b.ErrorAs(e.Unwrap(), i)
 	}
