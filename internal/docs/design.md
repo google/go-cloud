@@ -114,7 +114,7 @@ global state, push responsibility to the application to inject the state where
 it is needed.
 
 The exception we permit is URL scheme registration as documented under
-[URLs][#urls].
+[URLs](#urls).
 
 ## Package Naming Conventions
 
