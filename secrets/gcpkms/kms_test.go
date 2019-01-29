@@ -22,6 +22,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
 
@@ -43,15 +44,12 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return &keeper{
-		keyID: &KeyID{
-			ProjectID: projectID,
-			Location:  location,
-			KeyRing:   keyRing,
-			Key:       keyID,
-		},
-		client: h.client,
-	}, nil
+	return NewKeeper(h.client, &KeyID{
+		ProjectID: projectID,
+		Location:  location,
+		KeyRing:   keyRing,
+		Key:       keyID,
+	}, nil), nil
 }
 
 func (h *harness) Close() {
@@ -75,4 +73,28 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// KMS-specific tests.
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+	client, close, err := Dial(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: "fake",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer close()
+
+	plaintext := []byte("test")
+	keeper := NewKeeper(
+		client,
+		&KeyID{},
+		nil,
+	)
+
+	if _, err := keeper.Encrypt(ctx, plaintext); err == nil {
+		t.Error("got nil, want rpc error")
+	}
 }
