@@ -85,12 +85,14 @@ func TestConformance(t *testing.T) {
 
 // Vault-specific tests.
 
-func TestNoConnectionError(t *testing.T) {
-	ctx := context.Background()
-
-	if _, err := Dial(ctx, nil); err == nil {
+func TestNoSessionProvidedError(t *testing.T) {
+	if _, err := Dial(context.Background(), nil); err == nil {
 		t.Error("got nil, want no auth Config provided")
 	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
 
 	// Dial calls vault's NewClient method, which doesn't make the connection. Try
 	// doing encryption which should fail by no connection.
@@ -104,10 +106,8 @@ func TestNoConnectionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	plaintext := []byte("test")
 	keeper := NewKeeper(client, "my-key", nil)
-
-	if _, err := keeper.Encrypt(ctx, plaintext); err == nil {
+	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want connection refused")
 	}
 }

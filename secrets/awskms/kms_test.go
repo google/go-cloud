@@ -58,11 +58,13 @@ func TestConformance(t *testing.T) {
 
 // KMS-specific tests.
 
-func TestNoConnectionError(t *testing.T) {
+func TestNoSessionProvidedError(t *testing.T) {
 	if _, err := Dial(nil); err == nil {
 		t.Error("got nil, want no AWS session provided")
 	}
+}
 
+func TestNoConnectionError(t *testing.T) {
 	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
 	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
 	os.Setenv("AWS_REGION", "us-east-1")
@@ -70,12 +72,14 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.Background()
+
 	client, err := Dial(sess)
-	plaintext := []byte("test")
+	if err != nil {
+		t.Fatal(err)
+	}
 	keeper := NewKeeper(client, keyID, nil)
 
-	if _, err := keeper.Encrypt(ctx, plaintext); err == nil {
+	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
 		t.Error("got nil, want UnrecognizedClientException")
 	}
 }

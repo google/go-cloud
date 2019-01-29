@@ -87,14 +87,8 @@ func TestNoConnectionError(t *testing.T) {
 	}
 	defer close()
 
-	plaintext := []byte("test")
-	keeper := NewKeeper(
-		client,
-		&KeyID{},
-		nil,
-	)
-
-	if _, err := keeper.Encrypt(ctx, plaintext); err == nil {
+	keeper := NewKeeper(client, &KeyID{}, nil)
+	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want rpc error")
 	}
 }
