@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
 
 import (	
+	"gocloud.dev/gcerrors"
 	"context"
 	"fmt"	
 	"pack.ag/amqp"
@@ -172,6 +173,10 @@ func (t *topic) As(i interface{}) bool{
 	return true
 }
 
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
 type subscription struct {
 	name string
 	topicName string
@@ -293,6 +298,11 @@ func (s *subscription) As(i interface{}) bool {
 	return true
 }
 
+
+func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {			
 	sbSub, err := s.getSbSubscription(ctx)
@@ -402,4 +412,27 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}	
 	_, err = link.RetryableRPC(ctx, rpcTries, rpcRetryDelay, msg)
 	return err	
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
+	aerr, ok := err.(*amqp.Error)
+	if !ok {
+		return gcerrors.Unknown
+	}
+	switch aerr.Condition {
+	case amqp.ErrorCondition(servicebus.ErrorNotFound):
+		return gcerrors.NotFound
+
+	case amqp.ErrorCondition(servicebus.ErrorPreconditionFailed):
+		return gcerrors.FailedPrecondition
+
+	case amqp.ErrorCondition(servicebus.ErrorInternalError):
+		return gcerrors.Internal
+
+	case amqp.ErrorCondition(servicebus.ErrorNotImplemented):
+		return gcerrors.Unimplemented
+		
+	default:
+		return gcerrors.Unknown
+	}
 }
