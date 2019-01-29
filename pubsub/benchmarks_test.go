@@ -18,7 +18,10 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"os"
 	"testing"
+
+	"gocloud.dev/pubsub/azurepubsub"
 
 	"gocloud.dev/gcp"
 	"gocloud.dev/pubsub"
@@ -28,22 +31,50 @@ import (
 
 var (
 	projectID = flag.String("benchmark-project", "", "project ID")
-	topicName = flag.String("benchmark-topic", "", "topic name")
+	topicName = flag.String("benchmark-topic", "benchmark", "topic name")
+
+	providerName = flag.String("benchmark-provider", "", "provider name")
+
+	sbConnString = os.Getenv("SERVICEBUS_CONNECTION_STRING")	
 )
 
 func BenchmarkReceive(b *testing.B) {
-	if *topicName == "" {
-		b.Skip("missing -benchmark-project or -benchmark-topic")
+
+	if *providerName == "" {
+		b.Skip("missing -benchmark-provider, accepted values: gcp, asb")
 	}
+
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const nMessages = 10000
-	topic, sub, cleanup, err := openGCPTopicAndSub()
+
+	var topic *pubsub.Topic
+	var sub *pubsub.Subscription
+	var cleanup func()
+	var err error
+
+	switch *providerName {
+	case "gcp":
+		if *topicName == "" {
+			b.Skip("missing -benchmark-project or -benchmark-topic")
+		}
+		topic, sub, cleanup, err = openGCPTopicAndSub()
+
+	case "asb": // Use "asb" for Azure Service Bus pubsub provider.
+		if sbConnString == "" {
+			b.Skip("missing EnvironmentVariable SERVICEBUS_CONNECTION_STRING")
+		}
+		if *topicName == "" {
+			b.Skip("missing -benchmark-topic")
+		}
+		topic, sub, cleanup, err = openAzureSbTopicAndSub()
+	}
+
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	b.Run("gcp", func(b *testing.B) {
+	b.Run(*providerName, func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
@@ -59,6 +90,17 @@ func BenchmarkReceive(b *testing.B) {
 			b.Log("MB/s is actually number of messages received per second")
 		}
 	})
+}
+
+func openAzureSbTopicAndSub() (*pubsub.Topic, *pubsub.Subscription, func(), error) {
+	ctx := context.Background()
+
+	t := azurepubsub.OpenTopic(ctx, *topicName, sbConnString, nil)
+
+	// Use the topicName token for both SB Topic and Subscription Entities.
+	sub, err := azurepubsub.OpenSubscription(ctx, *topicName, *topicName, sbConnString, nil)
+
+	return t, sub, func() {}, err
 }
 
 func openGCPTopicAndSub() (*pubsub.Topic, *pubsub.Subscription, func(), error) {

@@ -17,13 +17,11 @@ import (
 	"github.com/Azure/azure-service-bus-go"
 )
 var (
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING") 	
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING") 		
 )
 
 const (
 	topicName         = "test-topic"
-	subscriptionName0 = "test-subscription-1"
-	subscriptionName1 = "test-subscription-2"
 )
 
 type harness struct {
@@ -61,9 +59,14 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, err
 }
 
-func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	// Azure subscription name has to be less than 50 characters.
-	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))	
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {	
+	// Keep the subscription entity name under 50 characters as per Azure limits.
+	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
+	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+	if len(subName) > 50 {	
+		subName = subName[:50]
+	}
+	
 	t := dt.(*topic)
 
 	err = createSubscription(ctx, t.name, subName, h.connString, nil)
@@ -104,7 +107,7 @@ func TestConformance(t *testing.T) {
 type sbAsTest struct{}
 
 func (sbAsTest) Name() string {
-	return "sb"
+	return "asb"
 }
 
 func (sbAsTest) TopicCheck(top *pubsub.Topic) error {	
@@ -133,11 +136,5 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 }
 
 func sanitize(testName string) string {
-	// Keep the entity name under 50 characters as per Azure limits.
-	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
-	name := strings.Replace(testName, "/", "_", -1)
-	if len(name) > 40 {
-		name = name[:len(name)-20]
-	}
-	return name
+	return strings.Replace(testName, "/", "_", -1)		
 }

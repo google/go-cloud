@@ -176,10 +176,13 @@ type subscription struct {
 	name string
 	topicName string
 	ns *servicebus.Namespace
+	opts *SubscriptionOptions
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
-type SubscriptionOptions struct{}
+type SubscriptionOptions struct{
+	ListenerTimeout time.Duration
+}
 
 // OpenSubscription opens a ServiceBus Subscription on the given topicName and namespace connection string.
 func OpenSubscription(ctx context.Context, topicName string, subscriptionName string, connString string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
@@ -197,10 +200,21 @@ func openSubscription(ctx context.Context, topicName string, subscriptionName st
 	if err != nil{
 		return nil, err
 	}
+
+	defaultTimeout := listenerTimeout
+	if opts != nil {
+		if opts.ListenerTimeout > 0 {
+			defaultTimeout = opts.ListenerTimeout
+		}
+	}
+
 	return &subscription {		
 		name : subscriptionName,
 		topicName: topicName,		
 		ns: ns,
+		opts : &SubscriptionOptions {
+			ListenerTimeout: defaultTimeout,
+		},
 	}, nil
 }
 
@@ -289,7 +303,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		sbSub.Close(ctx)
 	}()
 	
-	receiverCtx, cancelCtx := context.WithTimeout(ctx, listenerTimeout)
+	receiverCtx, cancelCtx := context.WithTimeout(ctx, s.opts.ListenerTimeout)
 	defer cancelCtx()
 	
 	subReceiver, err := sbSub.NewReceiver(ctx)
