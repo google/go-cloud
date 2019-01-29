@@ -23,6 +23,7 @@ import (
 	"errors"
 	"io"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/secrets"
 	"golang.org/x/crypto/nacl/secretbox"
 )
@@ -76,3 +77,6 @@ func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	}
 	return decrypted, nil
 }
+
+// ErrorCode implements driver.ErrorCode.
+func (k *keeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
