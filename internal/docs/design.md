@@ -105,13 +105,16 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
-## No Global State
+## Minimize Global State
 
 As a library, the Go CDK should not introduce global state. Global state is
 difficult to reason about in large codebases, where it can be necessary for
 different parts of the application to use different states. Instead of adding
 global state, push responsibility to the application to inject the state where
 it is needed.
+
+The exception we permit is URL scheme registration as documented under
+[URLs][#urls].
 
 ## Package Naming Conventions
 
@@ -183,6 +186,100 @@ with `foo.New(...)` and later add `foo.NewWithOptions(..., opts *Options)` if
 needed). However, this would result in inconsistent names over time (e.g., some
 packages would expose `New` with an `Options`, while others would expose
 `NewWithOptions`).
+
+### URLs
+
+To enable the [Backing services factor][] of a Twelve-Factor Application, Go
+Cloud includes the ability to construct each of its API objects using
+identifying URLs. The concrete type should have API like this:
+
+```go
+package foo
+
+// A type that implements WidgetURLOpener can open widgets based on a URL.
+// The opener must not modify the URL argument. OpenWidgetURL must be safe to
+// call from multiple goroutines.
+//
+// For maximum flexibility, WidgetURLOpeners should not assume that the URL
+// has a particular scheme.
+type WidgetURLOpener interface {
+  OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error)
+}
+
+// A type that implements NamedWidgetURLOpener has a preferred scheme for
+// the URLs it opens.
+type NamedWidgetURLOpener interface {
+  WidgetURLOpener
+  WidgetURLScheme() string
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a URLMux with no registered schemes.
+type URLMux struct {
+  // ...
+}
+
+// AddWidget registers the opener with its preferred scheme. If an opener
+// already exists for the scheme, AddWidget panics.
+func (mux *URLMux) AddWidget(opener NamedWidgetURLOpener) {
+  mux.RegisterWidget(opener.WidgetURLScheme(), opener)
+}
+
+// RegisterWidget registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterWidget panics.
+func (mux *URLMux) RegisterWidget(scheme string, opener WidgetURL) {
+  // ...
+}
+
+// OpenWidget calls OpenWidgetURL with the URL parsed from urlstr.
+func (mux *URLMux) OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
+  u, err := url.Parse(urlstr)
+  if err != nil {
+    return nil, fmt.Errorf("open widget: %v", err)
+  }
+  return mux.OpenWidgetURL(ctx, u)
+}
+
+// OpenWidgetURL dispatches the URL to the opener that is registered with the
+// URL's scheme.
+func (mux *URLMux) OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error) {
+  // ...
+}
+
+// DefaultURLMux returns the URLMux used by OpenWidget.
+func DefaultURLMux() *URLMux {
+  return defaultURLMux
+}
+
+var defaultURLMux = new(URLMux)
+
+// OpenWidget opens the Widget identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+func OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
+  return DefaultURLMux().OpenWidget(urlstr)
+}
+```
+
+The repetition of `Widget` in the method names permits a type to handle multiple
+resources within the API. Exporting the `URLMux` allows applications to build
+their own muxes, potentially wrapping existing.
+
+Driver packages should include their own `URLOpener` struct type which
+implements all the relevant `WidgetURLOpener` methods. The URL should only serve
+to identify which resource to open. Any credentials or other complex values
+should be taken in as struct fields, not as input from URL. If the driver
+package registers its `URLOpener` with the `DefaultURLMux`, then it should
+populate these complex fields from environment variables. If doing so is
+undesirable or expensive, then it should not register with the `DefaultURLMux`
+and instead rely on users to create their own mux. If there already exists a
+well-established URI format for the backend (like S3 URLs or database connection
+URIs), then drivers should honor them where possible.
+
+[Backing services factor]: https://12factor.net/backing-services
 
 ## Errors
 
