@@ -22,6 +22,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
 
@@ -75,4 +76,22 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// KMS-specific tests.
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+	client, close, err := Dial(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: "fake",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer close()
+
+	keeper := NewKeeper(client, &KeyID{}, nil)
+	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
+		t.Error("got nil, want rpc error")
+	}
 }

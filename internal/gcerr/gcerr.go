@@ -18,8 +18,7 @@ package gcerr
 import (
 	"fmt"
 
-	xerrors "golang.org/x/exp/errors"
-	xfmt "golang.org/x/exp/errors/fmt"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -80,7 +79,7 @@ func (e *Error) Error() string {
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
-	xfmt.FormatError(s, c, e)
+	xerrors.FormatError(e, s, c)
 }
 
 func (e *Error) FormatError(p xerrors.Printer) (next error) {
