@@ -20,8 +20,8 @@
 // Subscription: *servicebus.Subscription
 package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
 
-import (	
-	"gocloud.dev/gcerrors"
+import (			
+	"errors"
 	"context"
 	"fmt"	
 	"pack.ag/amqp"
@@ -30,6 +30,7 @@ import (
 	"time"
 	
 	"gocloud.dev/pubsub"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/internal/useragent"
 
@@ -46,130 +47,66 @@ const (
 	rpcRetryDelay = 1 * time.Second
 )
 
-type topic struct {		
-	name string
-	ns *servicebus.Namespace	
+type topic struct {			
+	sbTopic *servicebus.Topic	
 }
 
 // TopicOptions provides configuration options for an Azure SB Topic.
 type TopicOptions struct {}
 
-// OpenTopic opens the topic on Azure ServiceBus PubSub for the given topicName.
-func OpenTopic(ctx context.Context, topicName string, connString string, opts *TopicOptions) (*pubsub.Topic) {
-	t, err := openTopic(ctx, topicName, connString, opts)
-	if err != nil {
-		return nil
-	}
+// NewNamespaceFromConnectionString returns a *servicebus.Namespace from a Service Bus connection string.
+func NewNamespaceFromConnectionString(connectionString string) (*servicebus.Namespace, error){
+	nsOptions := servicebus.NamespaceWithConnectionString(connectionString)
+	return servicebus.NewNamespace(nsOptions)
+}
+// NewTopic returns a *servicebus.Topic associated with a Service Bus Namespace.
+func NewTopic(topicName string, ns *servicebus.Namespace, opts[] servicebus.TopicOption) (*servicebus.Topic, error) {
+	return ns.NewTopic(topicName, opts...)	
+}
+// NewSubscription returns a *servicebus.Subscription associated with a Service Bus Topic.
+func NewSubscription(subscriptionName string, parentTopic *servicebus.Topic, opts[] servicebus.SubscriptionOption) (*servicebus.Subscription, error) {
+	return parentTopic.NewSubscription(subscriptionName, opts...)	
+}
+
+// OpenTopic initializes a pubsub Topic on a given Service Bus Topic.
+func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOptions) (*pubsub.Topic) {
+	t := openTopic(ctx, sbTopic)	
 	return pubsub.NewTopic(t)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, topicName, connectionString string, opts *TopicOptions) (driver.Topic, error) {		
-	ns, err := getSbNamespace(connectionString)
-	if err != nil {
-		return nil, err
-	}
-
-	t := &topic {
-		name: topicName,		
-		ns : ns,		
-	}
-	return t, nil
-}
-
-func createTopic(ctx context.Context, topicName, connectionString string, opts[] servicebus.TopicManagementOption) (error) {		
-	ns, err := getSbNamespace(connectionString)
-	if err != nil{
-		return err
+func openTopic(ctx context.Context, sbTopic *servicebus.Topic) (driver.Topic) {			
+	return &topic {		
+		sbTopic : sbTopic,
 	}	
-	tm := ns.NewTopicManager()	
-	_, err = ensureTopic(ctx, topicName, tm, opts...)
-	return err
-}
-
-func ensureTopic(ctx context.Context, topicName string, topicManager *servicebus.TopicManager, opts ...servicebus.TopicManagementOption) (*servicebus.TopicEntity, error) {
-	te, err := topicManager.Get(ctx, topicName)
-	
-	if err == nil {
-		_ = topicManager.Delete(ctx, topicName)
-	}
-
-	te, err = topicManager.Put(ctx, topicName, opts...)
-	if err != nil {		
-		return nil, err
-	}
-	return te, nil	
-}
-
-func deleteTopic(ctx context.Context, topicName, connectionString string) (error) {	
-	ns, err := getSbNamespace(connectionString)
-	if err != nil{
-		return err
-	}	
-	tm := ns.NewTopicManager()	
-	te, err := tm.Get(ctx, topicName)
-	if te != nil {
-	 return tm.Delete(ctx, topicName)	
-	}
-	return nil
-}	
-
-func getSbNamespace(connectionString string)(*servicebus.Namespace, error){
-	// Ensure the Azure ServcieBus ConnectionString is correctly formatted.
-	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas
-	nsOptions := servicebus.NamespaceWithConnectionString(connectionString)
-	return servicebus.NewNamespace(nsOptions)
-}
-
-func (t *topic) getSbTopic() (*servicebus.Topic, error){
-	return t.ns.NewTopic(t.name)
 }
 
 // SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) (error){		
-	sbTopic, err := t.getSbTopic()
-	if err != nil {
-		return nil
-	}
-	defer func(){
-		sbTopic.Close(ctx)
-	}()
-
-	topicSender, err := sbTopic.NewSender(ctx)
-	if err != nil {
-		return err
-	}
-	defer func(){
-		topicSender.Close(ctx)
-	}()
-	
-	var sendError error
-	for i, dm := range dms {
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {		
+	for _, dm := range dms {
 		sbms :=servicebus.NewMessage(dm.Body)				
 		for k, v := range dm.Metadata {
 			sbms.Set(k, v)
 		}		
-
-		sendError := topicSender.Send(ctx, sbms)
-		if sendError != nil {
-			sendError = fmt.Errorf("azure pubsub failed to send at %v: %v", i, sendError)
-			break
-		}
+		if err := t.sbTopic.Send(ctx, sbms); err != nil {
+			return err
+		}		
 	}	
-	return sendError
+	return nil	
 }
 
-func (t *topic) IsRetryable(err error) (bool){
+func (t *topic) IsRetryable(err error) bool {
+	// Let the Service Bus SDK recover from any transient connectivity issue.
 	return false
 }
 
-func (t *topic) As(i interface{}) bool{
+func (t *topic) As(i interface{}) bool {
 	p, ok := i.(**servicebus.Topic)
 	if !ok {
 		return false
-	}	
-	*p , _= t.getSbTopic()
+	}		
+	*p = t.sbTopic
 	return true
 }
 
@@ -178,10 +115,10 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 type subscription struct {
-	name string
-	topicName string
-	ns *servicebus.Namespace
+	sbSub *servicebus.Subscription
 	opts *SubscriptionOptions
+	topicName string // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
+	sbNs *servicebus.Namespace	// Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -189,102 +126,61 @@ type SubscriptionOptions struct{
 	ListenerTimeout time.Duration
 }
 
-// OpenSubscription opens a ServiceBus Subscription on the given topicName and namespace connection string.
-func OpenSubscription(ctx context.Context, topicName string, subscriptionName string, connString string, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	s, err := openSubscription(ctx, topicName, subscriptionName, connString, opts)
+// OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
+func OpenSubscription(ctx context.Context, sbSubscription *servicebus.Subscription, parentTopic *servicebus.Topic, parentNamespace *servicebus.Namespace, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	s, err := openSubscription(ctx, sbSubscription, parentTopic, parentNamespace, opts)
 	if err != nil {
 		return nil, err
 	}
-
 	return pubsub.NewSubscription(s, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, topicName string, subscriptionName string, connectionString string, opts *SubscriptionOptions) (driver.Subscription, error) {
-	ns, err := getSbNamespace(connectionString)
-	if err != nil{
-		return nil, err
+func openSubscription(ctx context.Context, sbSub *servicebus.Subscription, sbTop *servicebus.Topic, sbNs *servicebus.Namespace, opts *SubscriptionOptions) (driver.Subscription, error) {	
+	if sbTop == nil {	
+		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Topic")
+	}
+	if sbNs == nil {		
+		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Namespace")
+	}
+
+	if sbSub == nil {		
+		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Subscription")
 	}
 
 	defaultTimeout := listenerTimeout
-	if opts != nil {
-		if opts.ListenerTimeout > 0 {
-			defaultTimeout = opts.ListenerTimeout
-		}
+	if opts != nil && opts.ListenerTimeout > 0 {
+		defaultTimeout = opts.ListenerTimeout		
 	}
 
 	return &subscription {		
-		name : subscriptionName,
-		topicName: topicName,		
-		ns: ns,
+		sbSub : sbSub,
+		topicName: sbTop.Name,		
+		sbNs: sbNs,
 		opts : &SubscriptionOptions {
 			ListenerTimeout: defaultTimeout,
 		},
 	}, nil
 }
 
-func createSubscription(ctx context.Context, topicName string, subscriptionName string, connectionString string, opts[] servicebus.SubscriptionManagementOption) (error) {
-	ns, err := getSbNamespace(connectionString)
+// testSBSubscription ensures the subscripion exists before listening for incoming messages.
+func (s *subscription) testSBSubscription(ctx context.Context) error {
+	sm, err := s.sbNs.NewSubscriptionManager(s.topicName)	
 	if err != nil {
 		return err
 	}
 
-	subManager, err := ns.NewSubscriptionManager(topicName)
-	if err != nil {
-		return err
-	}
-	
-	_, err = ensureSubscription(ctx, subManager, subscriptionName, opts...)	
-	return err	
-}
-
-func ensureSubscription(ctx context.Context, sm *servicebus.SubscriptionManager, name string, opts ...servicebus.SubscriptionManagementOption) (*servicebus.SubscriptionEntity, error) {
-	subEntity, err := sm.Get(ctx, name)
-	if err == nil {
-		_ = sm.Delete(ctx, name)
-	}
-
-	subEntity, err = sm.Put(ctx, name, opts...)
-	if err != nil {		
-		return nil, err
-	}
-
-	return subEntity, nil
-}
-
-func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, connectionString string) (error){
-	ns, err := getSbNamespace(connectionString)
-	if err != nil {
-		return err
-	}
-	sm, err := ns.NewSubscriptionManager(topicName)
-	se, err := sm.Get(ctx, subscriptionName)
-	if se != nil {
-		_ = sm.Delete(ctx, subscriptionName)
+	// An empty SubscriptionEntity means no Service Bus Subscription exist for the given name. 
+	se, _ := sm.Get(ctx, s.sbSub.Name)
+	if se == nil {
+		return fmt.Errorf("azurepubsub: no such subscription %v", s.sbSub.Name)
 	}
 	return nil
 }
 
-func (s *subscription) getSbSubscription(ctx context.Context)(*servicebus.Subscription, error){
-	sm, err := s.ns.NewSubscriptionManager(s.topicName)	
-	if err != nil {
-		return nil, err
-	}
-	// An empty SubscriptionEntity means no subscription exist for the given name. 
-	se, err := sm.Get(ctx, s.name)
-	if se == nil {
-		return nil, fmt.Errorf("azurepubsub: no such subscription %v", s.name)
-	}
-
-	sbTopic, err := s.ns.NewTopic(s.topicName)	
-	if err != nil {
-		return nil, err
-	}
-	return sbTopic.NewSubscription(s.name)
-}
-
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (s *subscription) IsRetryable(error) bool {	
+	// Let the Service Bus SDK recover from any transient connectivity issue.
 	return false
 }
 
@@ -294,10 +190,9 @@ func (s *subscription) As(i interface{}) bool {
 	if !ok {
 		return false
 	}	
-	*p, _ = s.getSbSubscription(context.Background())
+	*p = s.sbSub
 	return true
 }
-
 
 func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
@@ -305,48 +200,42 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {			
-	sbSub, err := s.getSbSubscription(ctx)
+	// Test to ensure existence of the Service Bus Subscription before listening for messages.
+	// Listening on a non-existence Service Bus Subscription does not fail. This check is also needed for conformance tests which
+	// requires this scenario to fail on ReceiveBatch.
+	err := s.testSBSubscription(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer func(){
-		sbSub.Close(ctx)
-	}()
 	
-	receiverCtx, cancelCtx := context.WithTimeout(ctx, s.opts.ListenerTimeout)
-	defer cancelCtx()
-	
-	subReceiver, err := sbSub.NewReceiver(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func(){
-		subReceiver.Close(ctx)
-	}()
-	
+	rctx, cancel := context.WithTimeout(ctx, s.opts.ListenerTimeout)
+	defer cancel()	
 	var messages []*driver.Message			
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	go func() {
-		subReceiver.Listen(receiverCtx, servicebus.HandlerFunc(func(iCtx context.Context, sbmsg *servicebus.Message)(error){		
+		s.sbSub.Receive(rctx, servicebus.HandlerFunc(func(innerctx context.Context, sbmsg *servicebus.Message) error {		
 			metadata := map[string]string{}
-			for k, v := range sbmsg.UserProperties {			
-				metadata[k] = v.(string)
-			}			
+						
+			sbmsg.ForeachKey(func(k, v string)(error){
+				metadata[k] = v
+				return nil
+			})
+
 			messages = append(messages, &driver.Message{
 				Body:     sbmsg.Data,
 				Metadata: metadata,
 				AckID:    sbmsg.LockToken,
 			})			
 			if len(messages) >= maxMessages {
-				cancelCtx()
+				cancel()
 			}
 			return nil
 		}))
 		
 		select {
-			case <- receiverCtx.Done():
+			case <- rctx.Done():
 				wg.Done()
 		}
 	}() 
@@ -356,13 +245,13 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
-// IMPORTANT: This is a workaround to issue 'completed' message dispositions in bulk which is not supported in the ServiceBus SDK.  
+// IMPORTANT: This is a workaround to issue 'completed' message dispositions in bulk which is not supported in the Service Bus SDK.  
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if len (ids) == 0 {
 		return nil
 	}
 	
-	host := fmt.Sprintf("amqps://%s.%s/", s.ns.Name, s.ns.Environment.ServiceBusEndpointSuffix)
+	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
 	client, err := amqp.Dial(host,
 		amqp.ConnSASLAnonymous(),
 		amqp.ConnProperty("product", "Go-Cloud Client"),
@@ -375,9 +264,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		return err
 	}
 		
-	entityPath := s.topicName+"/Subscriptions/"+s.name		
+	entityPath := s.topicName + "/Subscriptions/" + s.sbSub.Name		
 	audience := host + entityPath
-	err = cbs.NegotiateClaim(ctx, audience, client, s.ns.TokenProvider)
+	err = cbs.NegotiateClaim(ctx, audience, client, s.sbNs.TokenProvider)
 	if err != nil {
 		return nil
 	}
@@ -402,11 +291,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		Value: value,
 	}
 	
-	sbSub, err := s.getSbSubscription(ctx)
-	if err != nil {		
-		return err
-	}
-	link, err := rpc.NewLink(client, sbSub.ManagementPath())
+	link, err := rpc.NewLink(client, s.sbSub.ManagementPath())
 	if err != nil {		
 		return err
 	}	
