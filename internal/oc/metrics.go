@@ -28,7 +28,7 @@ import (
 // by Go CDK APIs.
 func LatencyMeasure(pkg string) *stats.Float64Measure {
 	return stats.Float64(
-		pkg+"/roundtrip_latency",
+		pkg+"/latency",
 		"Latency of method call",
 		stats.UnitMilliseconds)
 }
@@ -59,9 +59,9 @@ func Views(pkg string, latencyMeasure *stats.Float64Measure) []*view.View {
 			Aggregation: view.Count(),
 		},
 		{
-			Name:        "gocloud.dev/pubsub/roundtrip_latency",
+			Name:        pkg + "/latency",
 			Measure:     latencyMeasure,
-			Description: "Distribution of round-trip latency, by provider and method.",
+			Description: "Distribution of method latency, by provider and method.",
 			TagKeys:     []tag.Key{ProviderKey, MethodKey},
 			Aggregation: ocgrpc.DefaultMillisecondsDistribution,
 		},

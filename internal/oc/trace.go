@@ -77,5 +77,5 @@ func (t *Tracer) End(ctx context.Context, err error) {
 	}
 	span.End()
 	stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(StatusKey, fmt.Sprint(code))},
-		t.LatencyMeasure.M(elapsed.Seconds()*1000)) // milliseconds
+		t.LatencyMeasure.M(float64(elapsed.Nanoseconds())/1e6)) // milliseconds
 }

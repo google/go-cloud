@@ -173,8 +173,8 @@ func (a *Attributes) As(i interface{}) bool {
 type Writer struct {
 	b          driver.Bucket
 	w          driver.Writer
-	tracer     *oc.Tracer
-	cancel     func() // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	end        func(error) // called to end the OpenCensus span in Close
+	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
 	md5hash    hash.Hash
 
@@ -189,7 +189,6 @@ type Writer struct {
 	key  string
 	opts *driver.WriterOptions
 	buf  *bytes.Buffer
-	tctx context.Context // context for tracing only
 }
 
 // sniffLen is the byte size of Writer.buf used to detect content-type.
@@ -233,7 +232,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Close may return an error if the context provided to create the Writer is
 // canceled or reaches its deadline.
 func (w *Writer) Close() (err error) {
-	defer func() { w.tracer.End(w.tctx, err) }()
+	defer func() { w.end(err) }()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
 		// by the user.
@@ -394,7 +393,6 @@ var NewBucket = newBucket
 // End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
 func newBucket(b driver.Bucket) *Bucket {
-	fmt.Printf("driver %v, Provider: ################ %s ################\n", b, oc.ProviderName(b))
 	return &Bucket{
 		b: b,
 		tracer: &oc.Tracer{
@@ -615,9 +613,11 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	tctx := b.tracer.Start(ctx, "NewWriter")
+	end := func(err error) { b.tracer.End(tctx, err) }
+
 	defer func() {
 		if err != nil {
-			b.tracer.End(tctx, err)
+			end(err)
 		}
 	}()
 
@@ -636,24 +636,22 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		return &Writer{
 			b:          b.b,
 			w:          w,
-			tracer:     b.tracer,
+			end:        end,
 			cancel:     cancel,
 			contentMD5: opts.ContentMD5,
 			md5hash:    md5.New(),
-			tctx:       tctx,
 		}, nil
 	}
 	return &Writer{
 		ctx:        ctx,
 		cancel:     cancel,
 		b:          b.b,
-		tracer:     b.tracer,
+		end:        end,
 		key:        key,
 		opts:       dopts,
 		buf:        bytes.NewBuffer([]byte{}),
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
-		tctx:       tctx,
 	}, nil
 }
 
