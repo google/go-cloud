@@ -21,10 +21,10 @@ It does this by providing stable, idiomatic interfaces for common uses like
 storage and databases. Think `database/sql` for cloud products.
 
 At the core of the Go CDK are common types implemented by cloud providers.
-For example, the *blob.Bucket type can be created using gcsblob.OpenBucket,
-s3blob.OpenBucket, or any other provider. Then, the *blob.Bucket can be used
-throughout your application without worrying about the underlying
-implementation.
+For example, object of the *blob.Bucket type can be created using
+gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then, the
+*blob.Bucket can be used throughout your application without worrying about
+the underlying implementation.
 
 The Go CDK works well with a code generator called Wire
 (https://github.com/google/wire/blob/master/README.md). It creates
