@@ -191,7 +191,8 @@ packages would expose `New` with an `Options`, while others would expose
 
 To enable the [Backing services factor][] of a Twelve-Factor Application, Go
 Cloud includes the ability to construct each of its API objects using
-identifying URLs. The concrete type should have API like this:
+identifying URLs. The concrete type's package should include APIs like the
+following:
 
 ```go
 package foo
