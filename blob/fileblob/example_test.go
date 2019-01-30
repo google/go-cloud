@@ -16,6 +16,7 @@ package fileblob_test
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -27,7 +28,7 @@ import (
 
 func Example() {
 
-	// For this example, create a temporary directory.
+	// Create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
 		log.Fatal(err)
@@ -35,26 +36,53 @@ func Example() {
 	defer os.RemoveAll(dir)
 
 	// Create a file-based bucket.
-	_, err = fileblob.OpenBucket(dir, nil)
+	b, err := fileblob.OpenBucket(dir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Now we can use b to read or write files to the container.
+	ctx := context.Background()
+	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
+
 	// Output:
+	// hello world
 }
 
 func Example_open() {
-	// For this example, create a temporary directory.
+	// Create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
 
-	_, err = blob.Open(context.Background(), path.Join("file://", dir))
+	// Open creates a *blob.Bucket from a URL.
+	ctx := context.Background()
+	b, err := blob.Open(ctx, path.Join("file://", dir))
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Now we can use b to read or write files to the container.
+	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
+
 	// Output:
+	// hello world
 }

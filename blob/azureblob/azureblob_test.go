@@ -273,6 +273,13 @@ func TestOpenURL(t *testing.T) {
 		sasToken    = "my-sas-token"
 	)
 
+	// Clear (and later restore) credentials in the environment.
+	prevEnv := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	os.Setenv("AZURE_STORAGE_ACCOUNT", "")
+	defer func() {
+		os.Setenv("AZURE_STORAGE_ACCOUNT", prevEnv)
+	}()
+
 	makeCredFile := func(name, content string) *os.File {
 		f, err := ioutil.TempFile("", "key")
 		if err != nil {
@@ -300,9 +307,14 @@ func TestOpenURL(t *testing.T) {
 		url      string
 		wantName string
 		wantErr  bool
-		// If we use a key, we should get a non-nil *Credentials in Options.
+		// If we use an Access Key, we should get a non-nil *Credentials in Options.
 		wantCreds bool
 	}{
+		{
+			url:      "azblob://mybucket",
+			wantName: "mybucket",
+			wantErr:  true, // getting creds from the environment won't work since we cleared them above
+		},
 		{
 			url:       "azblob://mybucket?cred_path=" + keyFile.Name(),
 			wantName:  "mybucket",

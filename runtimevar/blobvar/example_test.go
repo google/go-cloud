@@ -30,34 +30,36 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNewVariable() {
-	ctx := context.Background()
-
+func Example() {
 	// Create a *blob.Bucket.
-	// Here, we use an in-memory implementation.
+	// Here, we use an in-memory implementation and write a sample
+	// configuration value.
 	bucket := memblob.OpenBucket(nil)
+	ctx := context.Background()
+	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte(`{"Server": "foo.com", "Port": 80}`), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable that watches the blob.
-	v, err := blobvar.NewVariable(bucket, "blob name", decoder, nil)
+	v, err := blobvar.NewVariable(bucket, "cfg-variable-name", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
-	// You can now read the current value of the variable from v.
+	// We can now read the current value of the variable from v.
 	snapshot, err := v.Watch(ctx)
 	if err != nil {
-		// This is expected due to the fake credentials we used above.
-		fmt.Println("Watch failed due to blob not existing")
-		return
+		log.Fatal(err)
 	}
-	// We'll never get here when running this sample, but the resulting
-	// runtimevar.Snapshot.Value would be of type MyConfig.
-	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
+	// runtimevar.Snapshot.Value is decoded to type MyConfig.
+	cfg := snapshot.Value.(MyConfig)
+	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
 
 	// Output:
-	// Watch failed due to blob not existing
+	// foo.com running on port 80
 }

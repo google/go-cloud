@@ -12,47 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcpkms_test
+package mempubsub_test
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
-	"gocloud.dev/secrets/gcpkms"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/mempubsub"
 )
 
 func Example() {
-
-	// Get a client to use with the KMS API.
+	// Construct a *pubsub.Topic.
 	ctx := context.Background()
-	client, done, err := gcpkms.Dial(ctx, nil)
+	t := mempubsub.NewTopic()
+	defer t.Shutdown(ctx)
+
+	// Construct a *pubsub.Subscription for the topic.
+	s := mempubsub.NewSubscription(t, 1*time.Minute /* ack deadline */)
+	defer s.Shutdown(ctx)
+
+	// Now we can use t to send messages and s will receive them.
+	err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello World")})
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Close the connection when done.
-	defer done()
 
-	// Construct a *secrets.Keeper.
-	keeper := gcpkms.NewKeeper(
-		client,
-		// Get the key resource ID.
-		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
-		// information.
-		&gcpkms.KeyID{
-			ProjectID: "project-id",
-			Location:  "global",
-			KeyRing:   "test",
-			Key:       "key-name",
-		},
-		nil,
-	)
-
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
+	msg, err := s.Receive(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	_ = decrypted
+	fmt.Println(string(msg.Body))
+	msg.Ack()
+
+	// Output:
+	// Hello World
 }
