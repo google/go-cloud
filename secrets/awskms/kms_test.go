@@ -16,11 +16,12 @@ package awskms
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"gocloud.dev/internal/testing/setup"
-
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
@@ -56,4 +57,32 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// KMS-specific tests.
+
+func TestNoSessionProvidedError(t *testing.T) {
+	if _, err := Dial(nil); err == nil {
+		t.Error("got nil, want no AWS session provided")
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
+	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
+	os.Setenv("AWS_REGION", "us-east-1")
+	sess, err := session.NewSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := Dial(sess)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := NewKeeper(client, keyID, nil)
+
+	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
+		t.Error("got nil, want UnrecognizedClientException")
+	}
 }

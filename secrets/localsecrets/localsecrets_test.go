@@ -25,11 +25,15 @@ import (
 type harness struct{}
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return NewKeeper(ByteKey("very secret secret")), nil
+	return &keeper{secretKey: ByteKey("very secret secret")}, nil
 }
 
 func (h *harness) Close() {}
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{}, nil
+}
+
+func TestConformance(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarness)
 }
