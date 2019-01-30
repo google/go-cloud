@@ -61,7 +61,7 @@ const (
 	ResourceExhausted ErrorCode = 9
 )
 
-// When adding a new error code, try to use the names define in google.golang.org/grpc/codes.
+// When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
 
 // Do not change the numbers assigned to codes: past values may be stored in metric databases.
 
