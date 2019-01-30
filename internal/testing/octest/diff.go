@@ -42,6 +42,10 @@ func formatSpan(s *Span) string {
 	return fmt.Sprintf("<Name: %q, Code: %d>", s.Name, s.Code)
 }
 
+// DiffSpans compares the list of spans obtained from OpenCensus tracing
+// (using the TestExporter in this package, or similar) with an expected
+// list of spans. Only the name and code of the spans are compared.
+// Order matters.
 func DiffSpans(got []*trace.SpanData, want []Span) string {
 	var diffs []string
 	add := func(i int, g *trace.SpanData, w *Span) {
