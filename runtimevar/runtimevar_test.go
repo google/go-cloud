@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -91,6 +93,8 @@ func (w *fakeWatcher) Close() error {
 func (*fakeWatcher) ErrorAs(err error, i interface{}) bool { return false }
 
 func (*fakeWatcher) IsNotExist(err error) bool { return false }
+
+func (*fakeWatcher) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 // watchResp encapsulates the expected result of a Watch call.
 type watchResp struct {
@@ -421,6 +425,10 @@ func (b *erroringWatcher) Close() error {
 	return errFake
 }
 
+func (b *erroringWatcher) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerrors.Internal
+}
+
 // TestErrorsAreWrapped tests that all errors returned from the driver are
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
@@ -429,9 +437,9 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
-		if unwrapped, ok := err.(*wrappedError); !ok {
+		if unwrapped, ok := err.(*gcerr.Error); !ok {
 			t.Errorf("%s: not wrapped: %v", description, err)
-		} else if du, ok := unwrapped.err.(*wrappedError); ok {
+		} else if du, ok := unwrapped.Unwrap().(*gcerr.Error); ok {
 			t.Errorf("%s: double wrapped: %v", description, du)
 		}
 	}
