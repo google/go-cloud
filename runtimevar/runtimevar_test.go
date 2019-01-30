@@ -56,6 +56,7 @@ func (s *state) As(i interface{}) bool {
 // fakeWatcher is a fake implementation of driver.Watcher that verifies a
 // specific set of calls to driver.WatchVariable are made.
 type fakeWatcher struct {
+	driver.Watcher
 	t     *testing.T
 	calls []*state
 }
@@ -89,10 +90,6 @@ func (w *fakeWatcher) Close() error {
 	}
 	return nil
 }
-
-func (*fakeWatcher) ErrorAs(err error, i interface{}) bool { return false }
-
-func (*fakeWatcher) IsNotExist(err error) bool { return false }
 
 func (*fakeWatcher) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
@@ -209,6 +206,7 @@ func TestVariable_Watch(t *testing.T) {
 // fakeStableWatcher is a fake implementation of driver.Watcher that always
 // returns state.
 type fakeStableWatcher struct {
+	driver.Watcher
 	mu    sync.Mutex
 	state *state
 }
@@ -225,9 +223,8 @@ func (w *fakeStableWatcher) WatchVariable(ctx context.Context, prev driver.State
 	return w.state, 0
 }
 
-func (*fakeStableWatcher) Close() error                          { return nil }
-func (*fakeStableWatcher) ErrorAs(err error, i interface{}) bool { return false }
-func (*fakeStableWatcher) IsNotExist(err error) bool             { return false }
+func (b *fakeStableWatcher) Close() error                     { return nil }
+func (*fakeStableWatcher) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestVariable_Latest(t *testing.T) {
 	const content1, content2 = "foo", "bar"
