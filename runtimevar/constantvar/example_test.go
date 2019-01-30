@@ -100,5 +100,5 @@ func ExampleNewError() {
 	fmt.Println(err)
 
 	// Output:
-	// runtimevar: my error
+	// runtimevar (code=Unknown): my error
 }

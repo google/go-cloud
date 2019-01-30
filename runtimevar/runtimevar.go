@@ -44,6 +44,7 @@ import (
 	"reflect"
 	"time"
 
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/trace"
 	"gocloud.dev/runtimevar/driver"
 )
@@ -118,6 +119,9 @@ func newVar(w driver.Watcher) *Variable {
 //
 // Watch is not goroutine-safe; typical use is to call it in a single
 // goroutine in a loop.
+//
+// If the variable does not exist, Watch returns an error for which
+// gcerrors.Code will return gcerrors.NotFound.
 func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
 	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
 	defer func() { trace.EndSpan(ctx, err) }()
@@ -159,46 +163,27 @@ func (c *Variable) Close() error {
 	return wrapError(c.watcher, err)
 }
 
-// wrappedError is used to wrap all errors returned by drivers so that users
-// are not given access to provider-specific errors.
-type wrappedError struct {
-	err error
-	w   driver.Watcher
-}
-
 func wrapError(w driver.Watcher, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &wrappedError{w: w, err: err}
-}
-
-func (w *wrappedError) Error() string {
-	return "runtimevar: " + w.err.Error()
+	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // See Snapshot.As for more details.
-func ErrorAs(err error, i interface{}) bool {
+func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	if err == nil {
 		return false
 	}
 	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
 		panic("runtimevar: ErrorAs i must be a non-nil pointer")
 	}
-	if e, ok := err.(*wrappedError); ok {
-		return e.w.ErrorAs(e.err, i)
+	if e, ok := err.(*gcerr.Error); ok {
+		return c.watcher.ErrorAs(e.Unwrap(), i)
 	}
-	return false
-}
-
-// IsNotExist returns true iff err indicates that the referenced variable does not exist.
-func IsNotExist(err error) bool {
-	if e, ok := err.(*wrappedError); ok {
-		return e.w.IsNotExist(e.err)
-	}
-	return false
+	return c.watcher.ErrorAs(err, i)
 }
 
 // Decode is a function type for unmarshaling/decoding a slice of bytes into

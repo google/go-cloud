@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -65,7 +66,7 @@ type AsTest interface {
 	// ErrorCheck will be called to allow verification of Variable.ErrorAs.
 	// driver is provided so that errors other than err can be checked;
 	// Variable.ErrorAs won't work since it expects driver errors to be wrapped.
-	ErrorCheck(w driver.Watcher, err error) error
+	ErrorCheck(v *runtimevar.Variable, err error) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -81,13 +82,13 @@ func (verifyAsFailsOnNil) SnapshotCheck(v *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(_ driver.Watcher, err error) (ret error) {
+func (verifyAsFailsOnNil) ErrorCheck(v *runtimevar.Variable, err error) (ret error) {
 	defer func() {
 		if recover() == nil {
 			ret = errors.New("want ErrorAs to panic when passed nil")
 		}
 	}()
-	runtimevar.ErrorAs(err, nil)
+	v.ErrorAs(err, nil)
 	return nil
 }
 
@@ -168,7 +169,7 @@ func testNonExistentVariable(t *testing.T, newHarness HarnessMaker) {
 	got, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got %v expected not-found error", got.Value)
-	} else if !runtimevar.IsNotExist(err) {
+	} else if gcerrors.Code(err) != gcerrors.NotFound {
 		t.Error("got IsNotExist false, expected true")
 	}
 }
@@ -610,7 +611,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if gotErr == nil {
 		t.Fatalf("got nil error and %v, expected non-nil error", v)
 	}
-	if err := st.ErrorCheck(drv, gotErr); err != nil {
+	if err := st.ErrorCheck(v, gotErr); err != nil {
 		t.Error(err)
 	}
 	var dummy string
