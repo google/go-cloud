@@ -18,7 +18,7 @@ package gcerrors
 
 import (
 	"gocloud.dev/internal/gcerr"
-	xerrors "golang.org/x/exp/errors"
+	"golang.org/x/xerrors"
 )
 
 // An ErrorCode describes the error's category. Programs should act upon an error's
@@ -51,6 +51,13 @@ const (
 
 	// The system was in the wrong state.
 	FailedPrecondition ErrorCode = gcerr.FailedPrecondition
+
+	// The caller does not have permission to execute the specified operation.
+	PermissionDenied ErrorCode = gcerr.PermissionDenied
+
+	// Some resource has been exhausted, typically because a service resource limit
+	// has been reached.
+	ResourceExhausted ErrorCode = gcerr.ResourceExhausted
 )
 
 // Code returns the ErrorCode of err if it is an *Error.

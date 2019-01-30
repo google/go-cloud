@@ -88,6 +88,11 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(error, interface{}) bool {
+	return false
+}
+
 // ErrorCode implements driver.Topic.ErrorCode
 func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
@@ -221,6 +226,11 @@ func (*subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool { return false }
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(error, interface{}) bool {
+	return false
+}
 
 // ErrorCode implements driver.Subscription.ErrorCode
 func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
