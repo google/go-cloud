@@ -83,9 +83,8 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var ss string
-	v := runtimevar.New(w)
 	if v.ErrorAs(err, &ss) {
 		return errors.New("runtimevar.ErrorAs expected to fail")
 	}

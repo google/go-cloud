@@ -31,8 +31,6 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
-// errNotExist is a sentinel error that can be used with NewError to return an
-// error for which IsNotExist returns true.
 var errNotExist = errors.New("variable does not exist")
 
 // New constructs a *runtimevar.Variable holding value.

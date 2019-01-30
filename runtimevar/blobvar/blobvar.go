@@ -148,8 +148,5 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 // ErrorCode implements driver.ErrorCode.
 func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
 	// err might have come from blob, in which case use its code.
-	if c := gcerrors.Code(err); c != gcerrors.Unknown {
-		return c
-	}
-	return gcerrors.Unknown
+	return gcerrors.Code(err)
 }

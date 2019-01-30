@@ -99,9 +99,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var e awserr.Error
-	if !runtimevar.New(w).ErrorAs(err, &e) {
+	if !v.ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil
