@@ -52,9 +52,18 @@ const (
 
 	// The system was in the wrong state.
 	FailedPrecondition ErrorCode = 7
+
+	// The caller does not have permission to execute the specified operation.
+	PermissionDenied ErrorCode = 8
+
+	// Some resource has been exhausted, typically because a service resource limit
+	// has been reached.
+	ResourceExhausted ErrorCode = 9
 )
 
-// TODO(jba) call stringer after it's fixed for modules
+// When adding a new error code, try to use the names define in google.golang.org/grpc/codes.
+
+// Do not change the numbers assigned to codes: past values may be stored in metric databases.
 
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
@@ -125,6 +134,10 @@ func GRPCCode(err error) ErrorCode {
 		return Internal
 	case codes.Unimplemented:
 		return Unimplemented
+	case codes.PermissionDenied:
+		return PermissionDenied
+	case codes.ResourceExhausted:
+		return ResourceExhausted
 	default:
 		return Unknown
 	}
