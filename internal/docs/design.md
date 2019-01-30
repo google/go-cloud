@@ -201,8 +201,7 @@ package foo
 // The opener must not modify the URL argument. OpenWidgetURL must be safe to
 // call from multiple goroutines.
 //
-// For maximum flexibility, WidgetURLOpeners should not assume that the URL
-// has a particular scheme.
+// WidgetURLOpeners should not assume that the URL has a particular scheme.
 type WidgetURLOpener interface {
   OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error)
 }
