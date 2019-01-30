@@ -28,6 +28,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -177,6 +179,17 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var c3 *raw.SubscriberClient
 	if !sub.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
+	}
+	return nil
+}
+
+func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var s *status.Status
+	if !t.ErrorAs(err, &s) {
+		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+	}
+	if s.Code() != codes.NotFound {
+		return fmt.Errorf("got code %s, want NotFound", s.Code())
 	}
 	return nil
 }

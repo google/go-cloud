@@ -146,7 +146,13 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 			return err
 		}
 	}
-	return <-errc
+	err := <-errc
+	// If there is only one error, return it rather than a MultiError. That
+	// will work better with ErrorCode and ErrorAs.
+	if merr, ok := err.(MultiError); ok && len(merr) == 1 {
+		return merr[0]
+	}
+	return err
 }
 
 // Read from the channels established with NotifyPublish and NotifyReturn.
@@ -340,6 +346,27 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	switch e := err.(type) {
+	case *amqp.Error:
+		if p, ok := target.(**amqp.Error); ok {
+			*p = e
+			return true
+		}
+	case MultiError:
+		if p, ok := target.(*MultiError); ok {
+			*p = e
+			return true
+		}
+	}
+	return false
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
 // See the package documentation for an example.
 //
@@ -523,4 +550,9 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = conn.conn
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }
