@@ -269,6 +269,17 @@ const (
 	decay = 0.05
 )
 
+// Add message processing time d to the weighted moving average.
+func (s *Subscription) addProcessingTime(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.avgProcessTime == 0 {
+		s.avgProcessTime = d.Seconds()
+	} else {
+		s.avgProcessTime = s.avgProcessTime*(1-decay) + d.Seconds()*decay
+	}
+}
+
 // Receive receives and returns the next message from the Subscription's queue,
 // blocking and polling if none are available. This method can be called
 // concurrently from multiple goroutines. The Ack() method of the returned
@@ -369,14 +380,12 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 			Metadata: m.Metadata,
 		}
 		m2.ack = func() {
-			t := float64(time.Since(m2.processingStartTime).Seconds())
-			// Note: m2's mutex is locked here as well. Deadlock will
-			// result if Message.Ack is ever called with s.mu held. That currently
-			// cannot happen, but we should be careful if/when implementing features
-			// like auto-ack.
-			s.mu.Lock()
-			s.avgProcessTime = s.avgProcessTime*(1-decay) + t*decay
-			s.mu.Unlock()
+			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
+			// will result if Message.Ack is ever called with s.mu held. That
+			// currently cannot happen, but we should be careful if/when implementing
+			// features like auto-ack.
+			s.addProcessingTime(time.Since(m2.processingStartTime))
+
 			// Ignore the error channel. Errors are dealt with
 			// in the ackBatcher handler.
 			_ = s.ackBatcher.AddNoWait(id)
