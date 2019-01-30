@@ -87,6 +87,10 @@ type Topic interface {
 	// for more background.
 	As(i interface{}) bool
 
+	// ErrorAs allows providers to expose provider-specific types for errors.
+	// See As.
+	ErrorAs(error, interface{}) bool
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
@@ -136,6 +140,10 @@ type Subscription interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// ErrorAs allows providers to expose provider-specific types for errors.
+	// See As.
+	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
