@@ -16,7 +16,11 @@
 // secrets package.
 package driver // import "gocloud.dev/secrets/driver"
 
-import "context"
+import (
+	"context"
+
+	"gocloud.dev/gcerrors"
+)
 
 // Keeper holds the key information to encrypt a plain text message into a
 // cipher message, as well as decrypt a cipher message into a plain text message
@@ -28,4 +32,8 @@ type Keeper interface {
 
 	// Encrypt encrypts the plaintext and returns the cipher message.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
+
+	// ErrorCode should return a code that describes the error, which was returned by
+	// one of the other methods in this interface.
+	ErrorCode(error) gcerrors.ErrorCode
 }

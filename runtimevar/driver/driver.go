@@ -19,6 +19,8 @@ package driver // import "gocloud.dev/runtimevar/driver"
 import (
 	"context"
 	"time"
+
+	"gocloud.dev/gcerrors"
 )
 
 // DefaultWaitDuration is the default value for WaitDuration.
@@ -107,8 +109,7 @@ type Watcher interface {
 	// errors; see State.As for more details.
 	ErrorAs(error, interface{}) bool
 
-	// IsNotExist should return true if err, an error returned from one
-	// of the other methods in this interface, represents a "variable does not exist"
-	// error.
-	IsNotExist(err error) bool
+	// ErrorCode should return a code that describes the error, which was returned by
+	// one of the other methods in this interface.
+	ErrorCode(error) gcerrors.ErrorCode
 }

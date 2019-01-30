@@ -168,6 +168,27 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
+// ErrorAs converts err to provider-specific types.
+// See Topic.As for more details.
+// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs returns false if err == nil.
+func (t *Topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(t.driver.ErrorAs, err, target)
+}
+
+func errorAs(erras func(error, interface{}) bool, err error, target interface{}) bool {
+	if target == nil || reflect.TypeOf(target).Kind() != reflect.Ptr {
+		panic("pubsub: ErrorAs target must be a non-nil pointer")
+	}
+	if err == nil {
+		return false
+	}
+	if e, ok := err.(*gcerr.Error); ok {
+		err = e.Unwrap()
+	}
+	return erras(err, target)
+}
+
 // NewTopic is for use by provider implementations.
 var NewTopic = newTopic
 

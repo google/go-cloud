@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/secrets"
 )
 
@@ -74,6 +75,12 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return result.CiphertextBlob, nil
+}
+
+// ErrorCode implements driver.ErrorCode.
+func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
+	// TODO(shantuo): try to classify aws error codes
+	return gcerrors.Unknown
 }
 
 // KeeperOptions controls Keeper behaviors.

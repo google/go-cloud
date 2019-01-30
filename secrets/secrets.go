@@ -36,6 +36,7 @@ package secrets // import "gocloud.dev/secrets"
 import (
 	"context"
 
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/trace"
 	"gocloud.dev/secrets/driver"
 )
@@ -78,17 +79,6 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 	return b, nil
 }
 
-// wrappedError is used to wrap all errors returned by drivers so that users are
-// not given access to provider-specific errors.
-type wrappedError struct {
-	err error
-	k   driver.Keeper
-}
-
-func wrapError(k driver.Keeper, err error) error {
-	return &wrappedError{k: k, err: err}
-}
-
-func (w *wrappedError) Error() string {
-	return "secrets: " + w.err.Error()
+func wrapError(k *Keeper, err error) error {
+	return gcerr.New(k.k.ErrorCode(err), err, 2, "secrets")
 }
