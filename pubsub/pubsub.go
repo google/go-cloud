@@ -58,9 +58,12 @@ type Message struct {
 	// Metadata has key/value metadata for the message.
 	Metadata map[string]string
 
+	// processingStartTime is the time that this message was returned
+	// from Receive, or the zero time if it wasn't.
+	processingStartTime time.Time
+
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
-
 	// mu guards isAcked in case Ack() is called concurrently.
 	mu sync.Mutex
 
@@ -234,31 +237,31 @@ type Subscription struct {
 	ackBatcher driver.Batcher
 	cancel     func() // for canceling all SendAcks calls
 
-	mu                sync.Mutex    // protects everything below
-	q                 []*Message    // local queue of messages downloaded from server
-	err               error         // permanent error
-	waitc             chan struct{} // for goroutines waiting on ReceiveBatch
-	lastReceiveReturn time.Time     // time that the last call to Receive returned
-	avgProcessTime    float64       // moving average of the seconds to process a message
+	mu             sync.Mutex    // protects everything below
+	q              []*Message    // local queue of messages downloaded from server
+	err            error         // permanent error
+	waitc          chan struct{} // for goroutines waiting on ReceiveBatch
+	avgProcessTime float64       // moving average of the seconds to process a message
 }
 
 const (
-	// The desired length of a subscription's queue of messages (the messages pulled
-	// and waiting in memory to be doled out to Receive callers). The length is
-	// expressed in time; the relationship to number of messages is
+	// The desired duration of a subscription's queue of messages (the messages pulled
+	// and waiting in memory to be doled out to Receive callers). This is how long
+	// it would take to drain the queue at the current processing rate.
+	// The relationship to queue length (number of messages) is
 	//
-	//      lengthInMessages = desiredQueueLength / averageProcessTimePerMessage
+	//      lengthInMessages = desiredQueueDuration / averageProcessTimePerMessage
 	//
 	// In other words, if it takes 100ms to process a message on average, and we want
-	// 2s worth of queued messages, then we need 2/.1 = 20 messages.
+	// 2s worth of queued messages, then we need 2/.1 = 20 messages in the queue.
 	//
-	// If desiredQueueLength is too small, then there won't be a large enough buffer
+	// If desiredQueueDuration is too small, then there won't be a large enough buffer
 	// of messages to handle fluctuations in processing time, and the queue is likely
-	// to become empty, reducing throughput. If desiredQueueLength is too large, then
+	// to become empty, reducing throughput. If desiredQueueDuration is too large, then
 	// messages will wait in memory for a long time, possibly timing out (that is,
 	// their ack deadline will be exceeded). Those messages could have been handled
 	// by another process receiving from the same subscription.
-	desiredQueueLength = 2 * time.Second
+	desiredQueueDuration = 2 * time.Second
 
 	// The factor by which old points decay when a new point is added to the moving
 	// average. The larger this number, the more weight will be given to the newest
@@ -277,13 +280,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	defer func() { s.lastReceiveReturn = time.Now() }()
-
-	if !s.lastReceiveReturn.IsZero() {
-		t := float64(time.Since(s.lastReceiveReturn).Seconds())
-		s.avgProcessTime = s.avgProcessTime*(1-decay) + t*decay
-	}
-
 	for {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
@@ -294,6 +290,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// At least one message is available. Return it.
 			m := s.q[0]
 			s.q = s.q[1:]
+			m.processingStartTime = time.Now()
 			// TODO(jba): pre-fetch more messages if the queue gets too small.
 			return m, nil
 		}
@@ -320,7 +317,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		nMessages := 1
 		if s.avgProcessTime > 0 {
 			// Using Ceil guarantees at least one message.
-			n := math.Ceil(desiredQueueLength.Seconds() / s.avgProcessTime)
+			n := math.Ceil(desiredQueueDuration.Seconds() / s.avgProcessTime)
 			// Cap nMessages at some non-ridiculous value.
 			// Slight hack: we should be using a larger cap, like MaxInt32. But
 			// that messes up replay: since the tests take very little time to ack,
@@ -367,15 +364,24 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 	var q []*Message
 	for _, m := range msgs {
 		id := m.AckID
-		q = append(q, &Message{
+		m2 := &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
-			ack: func() {
-				// Ignore the error channel. Errors are dealt with
-				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(id)
-			},
-		})
+		}
+		m2.ack = func() {
+			t := float64(time.Since(m2.processingStartTime).Seconds())
+			// Note: m2's mutex is locked here as well. Deadlock will
+			// result if Message.Ack is ever called with s.mu held. That currently
+			// cannot happen, but we should be careful if/when implementing features
+			// like auto-ack.
+			s.mu.Lock()
+			s.avgProcessTime = s.avgProcessTime*(1-decay) + t*decay
+			s.mu.Unlock()
+			// Ignore the error channel. Errors are dealt with
+			// in the ackBatcher handler.
+			_ = s.ackBatcher.AddNoWait(id)
+		}
+		q = append(q, m2)
 	}
 	return q, nil
 }
