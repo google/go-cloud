@@ -81,10 +81,9 @@ import (
 // It implements io.ReadCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b      driver.Bucket
-	r      driver.Reader
-	tracer *oc.Tracer
-	tctx   context.Context // trace context
+	b   driver.Bucket
+	r   driver.Reader
+	end func(error) // called at Close to finish trace and metric collection
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
@@ -96,7 +95,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
 func (r *Reader) Close() error {
 	err := wrapError(r.b, r.r.Close())
-	r.tracer.End(r.tctx, err)
+	r.end(err)
 	return err
 }
 
@@ -548,7 +547,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
-	return &Reader{b: b.b, r: r, tracer: b.tracer, tctx: tctx}, nil
+	end := func(err error) { b.tracer.End(tctx, err) }
+	return &Reader{b: b.b, r: r, end: end}, nil
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.

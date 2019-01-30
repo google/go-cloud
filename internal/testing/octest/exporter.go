@@ -38,7 +38,7 @@ func NewTestExporter(views []*view.View) *TestExporter {
 
 	// Register for metrics.
 	view.RegisterExporter(te)
-	view.SetReportingPeriod(time.Second)
+	view.SetReportingPeriod(time.Millisecond)
 	if err := view.Register(views...); err != nil {
 		log.Fatal(err)
 	}
@@ -52,13 +52,11 @@ func NewTestExporter(views []*view.View) *TestExporter {
 
 // ExportSpan "exports" a span by remembering it.
 func (te *TestExporter) ExportSpan(s *trace.SpanData) {
-	log.Print("ExportSpan")
 	te.Spans = append(te.Spans, s)
 }
 
 // ExportView exports a view by writing it to the Stats channel.
 func (te *TestExporter) ExportView(vd *view.Data) {
-	log.Print("ExportView")
 	if len(vd.Rows) > 0 {
 		select {
 		case te.Stats <- vd:
