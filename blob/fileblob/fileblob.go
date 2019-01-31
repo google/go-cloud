@@ -68,7 +68,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -618,10 +620,11 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 // SignedURL takes a context, an object key, and a SignedURLOptions struct
 // and returns a string containing a URI and an error
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	if b.opts.URLSigner == nil {
-		return "", errNotImplemented
-	}
-	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
+	// if b.opts.URLSigner == nil {
+	// 	return "", errNotImplemented
+	// }
+	// return b.opts.URLSigner.URLFromKey(ctx, key, opts)
+	return "", errNotImplemented
 }
 
 // VerifySignedURL takes a string and returns
@@ -685,7 +688,8 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	}
 	q := sURL.Query()
 	q.Set("obj", key)
-	q.Set("expiry", "tomorrow") //TODO get expiry from options
+	expTime := time.Now().Add(opts.Expiry).Unix()
+	q.Set("expiry", strconv.FormatInt(expTime, 10))
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
 
