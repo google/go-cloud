@@ -26,10 +26,11 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 	"gocloud.dev/internal/testing/setup"
 
+	"github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-service-bus-go"
 )
 var (
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")	
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")		
 )
 
 const (
@@ -171,6 +172,14 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil	
 }
 
+func (sbAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var sbError common.Retryable;
+	if !t.ErrorAs(err, &sbError) {
+		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)		
 }
@@ -185,7 +194,7 @@ func createTopic(ctx context.Context, topicName string, ns *servicebus.Namespace
 	return err
 }
 // deleteTopic removes a Service Bus Topic on a given Namespace.
-func deleteTopic(ctx context.Context, topicName string, ns *servicebus.Namespace) error {	
+func deleteTopic(ctx context.Context, topicName string, ns *servicebus.Namespace) error {		
 	tm := ns.NewTopicManager()	
 	te, _ := tm.Get(ctx, topicName)
 	if te != nil {
@@ -194,7 +203,7 @@ func deleteTopic(ctx context.Context, topicName string, ns *servicebus.Namespace
 	return nil
 }	
 // createTopic ensures the existance of a Service Bus Subscription on a given Namespace and Topic.
-func createSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace, opts[] servicebus.SubscriptionManagementOption) error {	
+func createSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace, opts[] servicebus.SubscriptionManagementOption) error {		
 	sm, err := ns.NewSubscriptionManager(topicName)
 	if err != nil {
 		return err
@@ -207,7 +216,7 @@ func createSubscription(ctx context.Context, topicName string, subscriptionName 
 	return err
 }
 // deleteSubscription removes a Service Bus Subscription on a given Namespace and Topic.
-func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace) error {	
+func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace) error {		
 	sm, err := ns.NewSubscriptionManager(topicName)
 	if err != nil {
 		return nil

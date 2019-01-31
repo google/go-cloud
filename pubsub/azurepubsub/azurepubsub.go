@@ -23,8 +23,7 @@ package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
 import (			
 	"errors"
 	"context"
-	"fmt"	
-	"pack.ag/amqp"
+	"fmt"		
 	"runtime"
 	"sync"
 	"time"
@@ -32,11 +31,14 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub/driver"
-	"gocloud.dev/internal/useragent"
+	"gocloud.dev/internal/useragent"	
+
+	"pack.ag/amqp"
 
 	"github.com/Azure/azure-amqp-common-go/cbs"
 	"github.com/Azure/azure-amqp-common-go/rpc"
 	"github.com/Azure/azure-amqp-common-go/uuid"
+	"github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-service-bus-go"
 )
 
@@ -108,6 +110,27 @@ func (t *topic) As(i interface{}) bool {
 	}		
 	*p = t.sbTopic
 	return true
+}
+
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {	
+	switch v := err.(type) {
+	case *amqp.Error:
+		if p, ok := target.(**amqp.Error); ok {
+			*p = v
+			return true
+		}		
+	case common.Retryable:
+		if p, ok := target.(*common.Retryable); ok {
+			*p = v
+			return true
+		}
+	}
+	return false
 }
 
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
@@ -192,6 +215,11 @@ func (s *subscription) As(i interface{}) bool {
 	}	
 	*p = s.sbSub
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (s *subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }
 
 func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
@@ -299,7 +327,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	return err	
 }
 
-func errorCode(err error) gcerrors.ErrorCode {
+func errorCode(err error) gcerrors.ErrorCode {	
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
 		return gcerrors.Unknown
@@ -316,7 +344,16 @@ func errorCode(err error) gcerrors.ErrorCode {
 
 	case amqp.ErrorCondition(servicebus.ErrorNotImplemented):
 		return gcerrors.Unimplemented
-		
+	
+	case amqp.ErrorCondition(servicebus.ErrorUnauthorizedAccess), amqp.ErrorCondition(servicebus.ErrorNotAllowed):
+		return gcerrors.PermissionDenied
+
+	case amqp.ErrorCondition(servicebus.ErrorResourceLimitExceeded):
+		return gcerrors.ResourceExhausted
+
+	case amqp.ErrorCondition(servicebus.ErrorInvalidField):
+		return gcerrors.InvalidArgument
+
 	default:
 		return gcerrors.Unknown
 	}
