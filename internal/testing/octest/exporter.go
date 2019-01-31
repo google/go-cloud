@@ -65,6 +65,18 @@ func (te *TestExporter) ExportView(vd *view.Data) {
 	}
 }
 
+// Counts returns the first exported data that includes aggregated counts.
+func (te *TestExporter) Counts() []*view.Row {
+	// Wait for counts. Expect all counts to arrive in the same view.Data.
+	for {
+		data := <-te.Stats
+		if _, ok := data.Rows[0].Data.(*view.CountData); !ok {
+			continue
+		}
+		return data.Rows
+	}
+}
+
 // Unregister unregisters the exporter from OpenCensus.
 func (te *TestExporter) Unregister() {
 	view.UnregisterExporter(te)
