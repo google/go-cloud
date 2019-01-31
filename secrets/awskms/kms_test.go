@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	keyID  = "alias/test-secrets"
-	region = "us-west-1"
+	keyID1 = "alias/test-secrets"
+	keyID2 = "alias/test-secrets2"
+	region = "us-east-2"
 )
 
 type harness struct {
@@ -36,11 +37,8 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return &keeper{
-		keyID:  keyID,
-		client: h.client,
-	}, nil
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
+	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
 }
 
 func (h *harness) Close() {
@@ -80,7 +78,7 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keeper := NewKeeper(client, keyID, nil)
+	keeper := NewKeeper(client, keyID1, nil)
 
 	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
 		t.Error("got nil, want UnrecognizedClientException")

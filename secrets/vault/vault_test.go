@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	keyID      = "test-secrets"
+	keyID1     = "test-secrets"
+	keyID2     = "test-secrets2"
 	apiAddress = "http://127.0.0.1:0"
 )
 
@@ -37,11 +38,8 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return &keeper{
-		keyID:  keyID,
-		client: h.client,
-	}, nil
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
+	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
 }
 
 func (h *harness) Close() {
