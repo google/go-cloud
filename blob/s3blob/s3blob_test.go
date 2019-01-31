@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,6 +73,20 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
+func BenchmarkS3blob(b *testing.B) {
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(region),
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	bkt, err := OpenBucket(context.Background(), sess, bucketName, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	drivertest.RunBenchmarks(b, bkt)
+}
+
 const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying GCS types and
@@ -91,9 +105,9 @@ func (verifyContentLanguage) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyContentLanguage) ErrorCheck(err error) error {
+func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 	var e awserr.Error
-	if !blob.ErrorAs(err, &e) {
+	if !b.ErrorAs(err, &e) {
 		return errors.New("blob.ErrorAs failed")
 	}
 	return nil

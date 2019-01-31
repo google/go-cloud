@@ -1,4 +1,4 @@
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ provider "google" {
 module "go_cloud_repo" {
   source       = "./repository"
   name         = "go-cloud"
-  description  = "A library and tools for open cloud development in Go."
+  description  = "The Go Cloud Development Kit (Go CDK): A library and tools for open cloud development in Go."
   homepage_url = "https://godoc.org/gocloud.dev"
 
   topics = [

@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/embed"
-	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/embed"
+	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -101,15 +101,15 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
 	// to fail.
 	var to rpctypes.EtcdError
-	if runtimevar.ErrorAs(err, &to) {
+	if v.ErrorAs(err, &to) {
 		return errors.New("ErrorAs expected to fail")
 	}
 	// Try with a real etcd error.
-	if !w.ErrorAs(rpctypes.ErrUnhealthy, &to) {
+	if !v.ErrorAs(rpctypes.ErrUnhealthy, &to) {
 		return errors.New("ErrorAs expected to succeed with real etcd error")
 	}
 	return nil

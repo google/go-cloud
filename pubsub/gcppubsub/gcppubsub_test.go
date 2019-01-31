@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,11 +22,14 @@ import (
 	"testing"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -46,6 +49,9 @@ const (
 	subscriptionName0 = "test-subscription-1"
 	subscriptionName1 = "test-subscription-2"
 	projectID         = "go-cloud-test-216917"
+
+	benchmarkTopicName        = "benchmark-topic"
+	benchmarkSubscriptionName = "benchmark-subscription"
 )
 
 type harness struct {
@@ -123,6 +129,30 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
 
+func BenchmarkGcpPubSub(b *testing.B) {
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	pc, err := PublisherClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	sc, err := SubscriberClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	topic := OpenTopic(ctx, pc, projectID, benchmarkTopicName, nil)
+	sub := OpenSubscription(ctx, sc, projectID, benchmarkSubscriptionName, nil)
+	drivertest.RunBenchmarks(b, topic, sub)
+}
+
 type gcpAsTest struct{}
 
 func (gcpAsTest) Name() string {
@@ -149,6 +179,17 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var c3 *raw.SubscriberClient
 	if !sub.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
+	}
+	return nil
+}
+
+func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var s *status.Status
+	if !t.ErrorAs(err, &s) {
+		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+	}
+	if s.Code() != codes.NotFound {
+		return fmt.Errorf("got code %s, want NotFound", s.Code())
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,9 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/codes"
 	"testing"
+
+	"google.golang.org/grpc/codes"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
@@ -133,9 +134,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var s *status.Status
-	if !runtimevar.ErrorAs(err, &s) {
+	if !v.ErrorAs(err, &s) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil

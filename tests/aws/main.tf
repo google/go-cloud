@@ -1,4 +1,4 @@
-# Copyright 2018 The Go Cloud Authors
+# Copyright 2018 The Go Cloud Development Kit Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ provider "google" {
 
 resource "aws_security_group" "app" {
   name_prefix = "go-cloud-test-app"
-  description = "Sandbox for the Go Cloud test app."
+  description = "Sandbox for the Go CDK test app."
 
   ingress {
     from_port   = 22

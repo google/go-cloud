@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -234,17 +235,17 @@ type bucket struct {
 	client *s3.S3
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	if e, ok := err.(awserr.Error); ok && (e.Code() == "NoSuchKey" || e.Code() == "NotFound") {
-		return true
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return gcerrors.Unknown
 	}
-	return false
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
+	switch {
+	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
+		return gcerrors.NotFound
+	default:
+		return gcerrors.Unknown
+	}
 }
 
 // ListPaged implements driver.ListPaged.

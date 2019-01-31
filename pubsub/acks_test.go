@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,11 +21,14 @@ import (
 	"testing"
 	"time"
 
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
 
 type ackingDriverSub struct {
+	driver.Subscription
 	q        []*driver.Message
 	sendAcks func(context.Context, []driver.AckID) error
 }
@@ -47,7 +50,7 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 
 func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
-func (s *ackingDriverSub) As(i interface{}) bool { return false }
+func (s *ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
@@ -331,7 +334,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 	defer cancel()
 	for {
 		_, err = sub.Receive(ctx)
-		if err == serr {
+		if gcerrors.Code(err) == gcerrors.Internal && err.(*gcerr.Error).Unwrap() == serr {
 			break // success
 		}
 		if err != nil {

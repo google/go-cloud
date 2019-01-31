@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ const rabbitURL = "amqp://guest:guest@localhost:5672/"
 
 var logOnce sync.Once
 
-func mustDialRabbit(t *testing.T) amqpConnection {
+func mustDialRabbit(t testing.TB) amqpConnection {
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
 		logOnce.Do(func() {
@@ -64,6 +64,22 @@ func TestConformance(t *testing.T) {
 		rabbitAsTest{isFake},
 	}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
+}
+
+func BenchmarkRabbit(b *testing.B) {
+	ctx := context.Background()
+	h := &harness{conn: mustDialRabbit(b)}
+	dt, cleanup, err := h.CreateTopic(ctx, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	ds, cleanup, err := h.CreateSubscription(ctx, dt, b.Name())
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt), pubsub.NewSubscription(ds, nil))
 }
 
 type harness struct {
@@ -274,6 +290,23 @@ func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 		if !sub.As(&conn3) {
 			return fmt.Errorf("cast failed for %T", &conn3)
 		}
+	}
+	return nil
+}
+
+func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var aerr *amqp.Error
+	if !t.ErrorAs(err, &aerr) {
+		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
+	}
+	if aerr.Code != amqp.NotFound {
+		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
+	}
+
+	err = MultiError{err}
+	var merr MultiError
+	if !t.ErrorAs(err, &merr) {
+		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
 	}
 	return nil
 }

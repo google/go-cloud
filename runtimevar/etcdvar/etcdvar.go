@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
+	"go.etcd.io/etcd/clientv3"
+	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"google.golang.org/grpc/codes"
@@ -233,7 +234,10 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	return err == errNotExist
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
 }

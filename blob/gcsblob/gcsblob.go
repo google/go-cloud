@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/useragent"
 
@@ -139,7 +140,7 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	if bucketName == "" {
 		return nil, errors.New("gcsblob.OpenBucket: bucketName is required")
 	}
-	// We wrap the provided http.Client to add a Go Cloud User-Agent.
+	// We wrap the provided http.Client to add a Go CDK User-Agent.
 	c, err := storage.NewClient(ctx, option.WithHTTPClient(useragent.HTTPClient(&client.Client, "blob")))
 	if err != nil {
 		return nil, err
@@ -150,8 +151,8 @@ func openBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, 
 	return &bucket{name: bucketName, client: c, opts: opts}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by GCS. See the package
-// documentation for an example.
+// OpenBucket returns a *blob.Bucket backed by an existing GCS bucket. See the
+// package documentation for an example.
 func OpenBucket(ctx context.Context, client *gcp.HTTPClient, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, client, bucketName, opts)
 	if err != nil {
@@ -199,14 +200,11 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return err == storage.ErrObjectNotExist
-}
-
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return false
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == storage.ErrObjectNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
 }
 
 // ListPaged implements driver.ListPaged.

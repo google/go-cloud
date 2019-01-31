@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 )
 
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.
@@ -142,6 +144,10 @@ func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver
 	return "", errFake
 }
 
+func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerrors.Unknown
+}
+
 // TestErrorsAreWrapped tests that all errors returned from the driver are
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
@@ -153,12 +159,14 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap := func(description string, err error) {
 		if err == nil {
 			t.Errorf("%s: got nil error, wanted non-nil", description)
-		} else if unwrapped, ok := err.(*wrappedError); !ok {
-			t.Errorf("%s: not wrapped: %v", description, err)
-		} else if du, ok := unwrapped.err.(*wrappedError); ok {
-			t.Errorf("%s: double wrapped: %v", description, du)
+			return
 		}
-		if s := err.Error(); !strings.HasPrefix(s, "blob: ") {
+		if _, ok := err.(*gcerr.Error); !ok {
+			t.Errorf("%s: not wrapped: %v", description, err)
+		}
+		if s := err.Error(); !strings.HasPrefix(s, "blob ") {
+			t.Logf("short form of error: %v", err)
+			t.Logf("with details: %+v", err)
 			t.Errorf("%s: Error() for wrapped error doesn't start with blob: prefix: %s", description, s)
 		}
 	}
@@ -293,23 +301,5 @@ func TestOpen(t *testing.T) {
 				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 			}
 		})
-	}
-}
-
-func TestCallsWithUnwrappedError(t *testing.T) {
-	errFail := errors.New("fail")
-
-	if got := IsNotExist(errFail); got {
-		t.Errorf("IsNotExist got true with unwrapped error, wanted false")
-	}
-	if got := IsNotImplemented(errFail); got {
-		t.Errorf("IsNotImplemented got true with unwrapped error, wanted false")
-	}
-	if got := ErrorAs(errFail, nil); got {
-		t.Errorf("ErrorAs got true with unwrapped error conversion to nil, wanted false")
-	}
-	var s string
-	if got := ErrorAs(errFail, &s); got {
-		t.Errorf("ErrorAs got true with unwrapped error conversion to string, wanted false")
 	}
 }

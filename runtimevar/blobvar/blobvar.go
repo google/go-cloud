@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 )
@@ -138,15 +139,14 @@ func (w *watcher) Close() error {
 }
 
 // ErrorAs implements driver.ErrorAs.
+// Since blobvar uses the blob package, ErrorAs delegates
+// to the bucket's ErrorAs method.
 func (w *watcher) ErrorAs(err error, i interface{}) bool {
-	if p, ok := i.(*error); ok {
-		*p = err
-		return true
-	}
-	return false
+	return w.bucket.ErrorAs(err, i)
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	return blob.IsNotExist(err)
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	// err might have come from blob, in which case use its code.
+	return gcerrors.Code(err)
 }

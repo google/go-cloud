@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,18 +14,39 @@
 
 // Package pubsub provides an easy and portable way to interact with publish/
 // subscribe systems.
+//
+// Subpackages contain distinct implementations of pubsub for various providers,
+// including Cloud and on-prem solutions. For example, "gcspubsub" supports
+// Google Cloud Pub/Sub. Your application should import one of these
+// provider-specific subpackages and use its exported functions to get a
+// *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
+// functions in this package. For example:
+//
+//  topic := mempubsub.NewTopic()
+//  err := topic.Send(ctx.Background(), &pubsub.Message{Body: []byte("hi"))
+//  ...
+//
+// Then, write your application code using the *Topic/*Subscription types. You
+// can easily reconfigure your initialization code to choose a different provider.
+// You can develop your application locally using memblob, or deploy it to
+// multiple Cloud providers. You may find http://github.com/google/wire useful
+// for managing your initialization code.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
+	"time"
 
-	"github.com/googleapis/gax-go"
+	gax "github.com/googleapis/gax-go"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/retry"
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -37,9 +58,12 @@ type Message struct {
 	// Metadata has key/value metadata for the message.
 	Metadata map[string]string
 
+	// processingStartTime is the time that this message was returned
+	// from Receive, or the zero time if it wasn't.
+	processingStartTime time.Time
+
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
-
 	// mu guards isAcked in case Ack() is called concurrently.
 	mu sync.Mutex
 
@@ -80,25 +104,31 @@ type msgErrChan struct {
 // Send publishes a message. It only returns after the message has been
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
-func (t *Topic) Send(ctx context.Context, m *Message) error {
+func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
-		return err
+		return err // Return context errors unwrapped.
 	}
 	t.mu.Lock()
-	err := t.err
+	err = t.err
 	t.mu.Unlock()
 	if err != nil {
-		return err
+		return err // t.err wrapped when set
 	}
 	return t.batcher.Add(ctx, m)
 }
 
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
-func (t *Topic) Shutdown(ctx context.Context) error {
+func (t *Topic) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	t.mu.Lock()
-	t.err = errors.New("pubsub: Topic closed")
+	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic closed")
 	t.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -113,8 +143,26 @@ func (t *Topic) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
+// As converts i to provider-specific types.
+//
+// This function (and the other As functions in this package) are inherently
+// provider-specific, and using them will make that part of your application
+// non-portable, so use with care.
+//
+// See the documentation for the subpackage used to instantiate Bucket to see
 // which type(s) are supported.
+//
+// Usage:
+//
+// 1. Declare a variable of the provider-specific type you want to access.
+//
+// 2. Pass a pointer to it to As.
+//
+// 3. If the type is supported, As will return true and copy the
+// provider-specific type into your variable. Otherwise, it will return false.
+//
+// Provider-specific types that are intended to be mutable will be exposed
+// as a pointer to the underlying type.
 //
 // See
 // https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
@@ -123,9 +171,32 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// NewTopic makes a pubsub.Topic from a driver.Topic.
-// It is for use by provider implementations.
-func NewTopic(d driver.Topic) *Topic {
+// ErrorAs converts err to provider-specific types.
+// See Topic.As for more details.
+// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs returns false if err == nil.
+func (t *Topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(t.driver.ErrorAs, err, target)
+}
+
+func errorAs(erras func(error, interface{}) bool, err error, target interface{}) bool {
+	if target == nil || reflect.TypeOf(target).Kind() != reflect.Ptr {
+		panic("pubsub: ErrorAs target must be a non-nil pointer")
+	}
+	if err == nil {
+		return false
+	}
+	if e, ok := err.(*gcerr.Error); ok {
+		err = e.Unwrap()
+	}
+	return erras(err, target)
+}
+
+// NewTopic is for use by provider implementations.
+var NewTopic = newTopic
+
+// newTopic makes a pubsub.Topic from a driver.Topic.
+func newTopic(d driver.Topic) *Topic {
 	callCtx, cancel := context.WithCancel(context.Background())
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
@@ -138,9 +209,15 @@ func NewTopic(d driver.Topic) *Topic {
 			dms = append(dms, dm)
 		}
 
-		return retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() error {
-			return d.SendBatch(callCtx, dms)
+		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
+			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
+			defer func() { trace.EndSpan(ctx, err) }()
+			return d.SendBatch(ctx, dms)
 		})
+		if err != nil {
+			return wrapError(d, err)
+		}
+		return nil
 	}
 	maxHandlers := 1
 	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
@@ -160,10 +237,47 @@ type Subscription struct {
 	ackBatcher driver.Batcher
 	cancel     func() // for canceling all SendAcks calls
 
-	mu    sync.Mutex    // protects everything below
-	q     []*Message    // local queue of messages downloaded from server
-	err   error         // permanent error
-	waitc chan struct{} // for goroutines waiting on ReceiveBatch
+	mu             sync.Mutex    // protects everything below
+	q              []*Message    // local queue of messages downloaded from server
+	err            error         // permanent error
+	waitc          chan struct{} // for goroutines waiting on ReceiveBatch
+	avgProcessTime float64       // moving average of the seconds to process a message
+}
+
+const (
+	// The desired duration of a subscription's queue of messages (the messages pulled
+	// and waiting in memory to be doled out to Receive callers). This is how long
+	// it would take to drain the queue at the current processing rate.
+	// The relationship to queue length (number of messages) is
+	//
+	//      lengthInMessages = desiredQueueDuration / averageProcessTimePerMessage
+	//
+	// In other words, if it takes 100ms to process a message on average, and we want
+	// 2s worth of queued messages, then we need 2/.1 = 20 messages in the queue.
+	//
+	// If desiredQueueDuration is too small, then there won't be a large enough buffer
+	// of messages to handle fluctuations in processing time, and the queue is likely
+	// to become empty, reducing throughput. If desiredQueueDuration is too large, then
+	// messages will wait in memory for a long time, possibly timing out (that is,
+	// their ack deadline will be exceeded). Those messages could have been handled
+	// by another process receiving from the same subscription.
+	desiredQueueDuration = 2 * time.Second
+
+	// The factor by which old points decay when a new point is added to the moving
+	// average. The larger this number, the more weight will be given to the newest
+	// point in preference to older ones.
+	decay = 0.05
+)
+
+// Add message processing time d to the weighted moving average.
+func (s *Subscription) addProcessingTime(d time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.avgProcessTime == 0 {
+		s.avgProcessTime = d.Seconds()
+	} else {
+		s.avgProcessTime = s.avgProcessTime*(1-decay) + d.Seconds()*decay
+	}
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -171,23 +285,29 @@ type Subscription struct {
 // concurrently from multiple goroutines. The Ack() method of the returned
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
-func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
+func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
-			return nil, s.err
+			return nil, s.err // s.err wrapped when set
 		}
 		if len(s.q) > 0 {
 			// At least one message is available. Return it.
 			m := s.q[0]
 			s.q = s.q[1:]
+			m.processingStartTime = time.Now()
+			// TODO(jba): pre-fetch more messages if the queue gets too small.
 			return m, nil
 		}
 		if s.waitc != nil {
 			// A call to ReceiveBatch is in flight. Wait for it.
+			// TODO(jba): support multiple calls in flight simultaneously.
 			waitc := s.waitc
 			s.mu.Unlock()
 			select {
@@ -201,12 +321,30 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 		}
 		// No messages are available and there are no calls to ReceiveBatch in flight.
 		// Make a call.
+		//
+		// Ask for a number of messages that will give us the desired queue length.
+		// Unless we don't have information about process time (at the beginning), in
+		// which case just get one message.
+		nMessages := 1
+		if s.avgProcessTime > 0 {
+			// Using Ceil guarantees at least one message.
+			n := math.Ceil(desiredQueueDuration.Seconds() / s.avgProcessTime)
+			// Cap nMessages at some non-ridiculous value.
+			// Slight hack: we should be using a larger cap, like MaxInt32. But
+			// that messes up replay: since the tests take very little time to ack,
+			// n is very large, and since our averaging process is time-sensitive,
+			// values can differ slightly from run to run. The current cap happens
+			// to work, but we should come up with a more robust solution.
+			// (Currently it doesn't matter for performance, because gcppubsub
+			// caps maxMessages to 1000 anyway.)
+			nMessages = int(math.Min(n, 1000))
+		}
 		s.waitc = make(chan struct{})
 		s.mu.Unlock()
 		// Even though the mutex is unlocked, only one goroutine can be here.
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
-		msgs, err := s.getNextBatch(ctx)
+		msgs, err := s.getNextBatch(ctx, nMessages)
 		s.mu.Lock()
 		close(s.waitc)
 		s.waitc = nil
@@ -222,40 +360,48 @@ func (s *Subscription) Receive(ctx context.Context) (*Message, error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(ctx context.Context) ([]*Message, error) {
+func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
 	for len(msgs) == 0 {
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 			var err error
-			// TODO(#691): dynamically adjust maxMessages
-			const maxMessages = 10
-			msgs, err = s.driver.ReceiveBatch(ctx, maxMessages)
+			msgs, err = s.driver.ReceiveBatch(ctx, nMessages)
 			return err
 		})
 		if err != nil {
-			return nil, err
+			return nil, wrapError(s.driver, err)
 		}
 	}
 	var q []*Message
 	for _, m := range msgs {
 		id := m.AckID
-		q = append(q, &Message{
+		m2 := &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
-			ack: func() {
-				// Ignore the error channel. Errors are dealt with
-				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(id)
-			},
-		})
+		}
+		m2.ack = func() {
+			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
+			// will result if Message.Ack is ever called with s.mu held. That
+			// currently cannot happen, but we should be careful if/when implementing
+			// features like auto-ack.
+			s.addProcessingTime(time.Since(m2.processingStartTime))
+
+			// Ignore the error channel. Errors are dealt with
+			// in the ackBatcher handler.
+			_ = s.ackBatcher.AddNoWait(id)
+		}
+		q = append(q, m2)
 	}
 	return q, nil
 }
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
-func (s *Subscription) Shutdown(ctx context.Context) error {
+func (s *Subscription) Shutdown(ctx context.Context) (err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Shutdown")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	s.mu.Lock()
-	s.err = errors.New("pubsub: Subscription closed")
+	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription closed")
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -270,21 +416,19 @@ func (s *Subscription) Shutdown(ctx context.Context) error {
 	return ctx.Err()
 }
 
-// As converts i to provider-specific types. See provider documentation for
-// which type(s) are supported.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// As converts i to provider-specific types.
+// See Topic.As for more details.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
-// NewSubscription creates a Subscription from a driver.Subscription
+// NewSubscription is for use by provider implementations.
+var NewSubscription = newSubscription
+
+// newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
-// If newAckBatcher is nil, a default batcher implementation is used.
-// NewSubscription is for use by provider implementations,.
-func NewSubscription(d driver.Subscription, newAckBatcher func(context.Context, driver.Subscription, func(error)) driver.Batcher) *Subscription {
+// If newAckBatcher is nil, a default batcher implementation will be used.
+func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
@@ -310,13 +454,30 @@ func defaultAckBatcher(ctx context.Context, ds driver.Subscription, setPermanent
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() error {
-			return ds.SendAcks(ctx, ids)
+		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
+			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub/driver.Subscription.SendAcks")
+			defer func() { trace.EndSpan(ctx, err) }()
+			return s.driver.SendAcks(ctx, ids)
 		})
 		if err != nil {
-			setPermanentError(err)
+			err = wrapError(s.driver, err)
+			s.mu.Lock()
+			s.err = err
+			s.mu.Unlock()
 		}
 		return err
 	}
 	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+}
+
+type errorCoder interface {
+	ErrorCode(error) gcerrors.ErrorCode
+}
+
+func wrapError(ec errorCoder, err error) error {
+	// Don't wrap context errors.
+	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
+		return err
+	}
+	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
 }

@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,13 @@
 // limitations under the License.
 
 // Package mempubsub provides an in-memory pubsub implementation.
-// This should not be used for production: it is intended for local
+// Use NewTopic to construct a *pubsub.Topic, and/or NewSubscription
+// to construct a *pubsub.Subscription.
+//
+// mempubsub should not be used for production: it is intended for local
 // development and testing.
+//
+// As
 //
 // mempubsub does not support any types for As.
 package mempubsub // import "gocloud.dev/pubsub/mempubsub"
@@ -25,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -82,6 +88,14 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(error, interface{}) bool {
+	return false
+}
+
+// ErrorCode implements driver.Topic.ErrorCode
+func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+
 type subscription struct {
 	mu          sync.Mutex
 	topic       *topic
@@ -90,7 +104,7 @@ type subscription struct {
 }
 
 // NewSubscription creates a new subscription for the given topic.
-// It panics if the giventopic did not come from mempubsub.
+// It panics if the given topic did not come from mempubsub.
 func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
 	if !top.As(&t) {
@@ -212,3 +226,11 @@ func (*subscription) IsRetryable(error) bool { return false }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool { return false }
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(error, interface{}) bool {
+	return false
+}
+
+// ErrorCode implements driver.Subscription.ErrorCode
+func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }

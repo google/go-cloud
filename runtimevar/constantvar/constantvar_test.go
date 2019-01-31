@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 	rawVal, found := h.vars[name]
 	if !found {
 		// The variable isn't set. Create a Variable that always returns an error.
-		return &watcher{err: ErrNotExist}, nil
+		return &watcher{err: errNotExist}, nil
 	}
 	val, err := decoder.Decode(rawVal)
 	if err != nil {
@@ -83,9 +83,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var ss string
-	if runtimevar.ErrorAs(err, &ss) {
+	if v.ErrorAs(err, &ss) {
 		return errors.New("runtimevar.ErrorAs expected to fail")
 	}
 	return nil

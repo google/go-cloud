@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"log"
 
+	"gocloud.dev/gcp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
-	"golang.org/x/oauth2/google"
 )
 
 // MyConfig is a sample configuration struct.
@@ -29,14 +29,6 @@ type MyConfig struct {
 	Server string
 	Port   int
 }
-
-// jsonCreds is a fake GCP JSON credentials file.
-const jsonCreds = `
-{
-  "type": "service_account",
-  "project_id": "my-project-id"
-}
-`
 
 func ExampleNewVariable() {
 	ctx := context.Background()
@@ -47,7 +39,7 @@ func ExampleNewVariable() {
 	// the environment.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := google.CredentialsFromJSON(ctx, []byte(jsonCreds))
+	creds, err := gcp.FakeDefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}

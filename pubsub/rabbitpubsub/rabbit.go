@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -39,10 +40,12 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
-// OpenTopic returns a *pubsub.Topic corresponding to the named exchange. The
-// exchange should already exist (for instance, by using
+// OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
+// See the package documentation for an example.
+//
+// The exchange should already exist (for instance, by using
 // amqp.Channel.ExchangeDeclare), although this won't be checked until the first call
-// to SendBatch. For the model of Go Cloud Pub/Sub to make sense, the exchange should
+// to SendBatch. For the Go CDK Pub/Sub model to make sense, the exchange should
 // be a fanout exchange, although nothing in this package enforces that.
 //
 // OpenTopic uses the supplied amqp.Connection for all communication. It is the
@@ -53,7 +56,6 @@ type topic struct {
 // publishing and subscribing.
 func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
 	return pubsub.NewTopic(newTopic(&connection{conn}, name))
-
 }
 
 func newTopic(conn amqpConnection, name string) *topic {
@@ -144,7 +146,13 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 			return err
 		}
 	}
-	return <-errc
+	err := <-errc
+	// If there is only one error, return it rather than a MultiError. That
+	// will work better with ErrorCode and ErrorAs.
+	if merr, ok := err.(MultiError); ok && len(merr) == 1 {
+		return merr[0]
+	}
+	return err
 }
 
 // Read from the channels established with NotifyPublish and NotifyReturn.
@@ -261,6 +269,37 @@ func (*topic) IsRetryable(err error) bool {
 	return isRetryable(err)
 }
 
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
+	aerr, ok := err.(*amqp.Error)
+	if !ok {
+		return gcerrors.Unknown
+	}
+	switch aerr.Code {
+	case amqp.NotFound:
+		return gcerrors.NotFound
+
+	case amqp.PreconditionFailed:
+		return gcerrors.FailedPrecondition
+
+	case amqp.SyntaxError, amqp.CommandInvalid:
+		// These indicate a bug in our driver, not the user's code.
+		return gcerrors.Internal
+
+	case amqp.InternalError:
+		return gcerrors.Internal
+
+	case amqp.NotImplemented:
+		return gcerrors.Unimplemented
+
+	default:
+		return gcerrors.Unknown
+	}
+}
+
 func isRetryable(err error) bool {
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
@@ -307,7 +346,30 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	switch e := err.(type) {
+	case *amqp.Error:
+		if p, ok := target.(**amqp.Error); ok {
+			*p = e
+			return true
+		}
+	case MultiError:
+		if p, ok := target.(*MultiError); ok {
+			*p = e
+			return true
+		}
+	}
+	return false
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
+// See the package documentation for an example.
+//
 // The queue must have been previously created (for instance, by using
 // amqp.Channel.QueueDeclare) and bound to an exchange.
 //
@@ -472,6 +534,10 @@ func (*subscription) IsRetryable(err error) bool {
 	return isRetryable(err)
 }
 
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
 	c, ok := i.(**amqp.Connection)
@@ -484,4 +550,9 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = conn.conn
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }

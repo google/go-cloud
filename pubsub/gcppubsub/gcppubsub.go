@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gcppubsub provides an implementation of pubsub that uses GCP
-// PubSub.
+// Package gcppubsub provides a pubsub implementation that uses GCP
+// PubSub. Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
+// to construct a *pubsub.Subscription.
 //
-// It exposes the following types for As:
-// Topic: *raw.PublisherClient
-// Subscription: *raw.SubscriberClient
+// As
+//
+// gcspubsub exposes the following types for As:
+//  - Topic: *raw.PublisherClient
+//  - Subscription: *raw.SubscriberClient
+//  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (
@@ -25,7 +29,9 @@ import (
 	"fmt"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -34,6 +40,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/status"
 )
 
 const endPoint = "pubsub.googleapis.com:443"
@@ -72,8 +79,9 @@ func SubscriberClient(ctx context.Context, conn *grpc.ClientConn) (*raw.Subscrib
 // TopicOptions will contain configuration for topics.
 type TopicOptions struct{}
 
-// OpenTopic opens the topic on GCP PubSub for the given projectID and
-// topicName.
+// OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
+// topicName in the given projectID. See the package documentation for an
+// example.
 func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(ctx, client, proj, topicName)
 	return pubsub.NewTopic(dt)
@@ -88,19 +96,31 @@ func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.Projec
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	var ms []*pb.PubsubMessage
-	for _, dm := range dms {
-		ms = append(ms, &pb.PubsubMessage{
-			Data:       dm.Body,
-			Attributes: dm.Metadata,
-		})
+	// The PubSub service limits the number of messages in a single Publish RPC.
+	const maxPublishCount = 1000
+	for len(dms) > 0 {
+		n := len(dms)
+		if n > maxPublishCount {
+			n = maxPublishCount
+		}
+		batch := dms[:n]
+		dms = dms[n:]
+		var ms []*pb.PubsubMessage
+		for _, dm := range batch {
+			ms = append(ms, &pb.PubsubMessage{
+				Data:       dm.Body,
+				Attributes: dm.Metadata,
+			})
+		}
+		req := &pb.PublishRequest{
+			Topic:    t.path,
+			Messages: ms,
+		}
+		if _, err := t.client.Publish(ctx, req); err != nil {
+			return err
+		}
 	}
-	req := &pb.PublishRequest{
-		Topic:    t.path,
-		Messages: ms,
-	}
-	_, err := t.client.Publish(ctx, req)
-	return err
+	return nil
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -119,6 +139,28 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	p, ok := target.(**status.Status)
+	if !ok {
+		return false
+	}
+	*p = s
+	return true
+}
+
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
+}
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -127,8 +169,9 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription opens the subscription on GCP PubSub for the given
-// projectID and subscriptionName.
+// OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
+// PubSub subscription subscriptionName in the given projectID. See the package
+// documentation for an example.
 func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(ctx, client, proj, subscriptionName)
 	return pubsub.NewSubscription(ds, nil)
@@ -190,4 +233,13 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = s.client
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return gcerr.GRPCCode(err)
 }

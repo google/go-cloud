@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,9 +40,9 @@ func main() {
 // service is running.
 func handleDefault(w http.ResponseWriter, r *http.Request) {
 	const responseData = `<!DOCTYPE html>
-<title>Go Cloud Contribute Bot</title>
-<h1>Go Cloud Contribute Bot</h1>
-<p>Hello, you've reached <a href="https://github.com/google/go-cloud">Go Cloud</a>'s contribute bot!</p>`
+<title>Go Cloud Development Kit Contribute Bot</title>
+<h1>Go Cloud Development Kit Contribute Bot</h1>
+<p>Hello, you've reached the <a href="https://github.com/google/go-cloud">Go Cloud Development Kit</a>'s contribute bot!</p>`
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return

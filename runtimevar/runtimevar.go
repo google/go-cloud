@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
-// limtations under the License.
+// limitations under the License.
 
 // Package runtimevar provides an easy and portable way to watch runtime
 // configuration variables.
@@ -44,6 +44,8 @@ import (
 	"reflect"
 	"time"
 
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/trace"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -98,10 +100,11 @@ type Variable struct {
 	prev     driver.State
 }
 
-// New creates a new *Variable based on a specific driver implementation.
-// End users should use subpackages to construct a *Variable instead of this
-// function; see the package documentation for details.
-func New(w driver.Watcher) *Variable {
+// New is intended for use by provider implementations.
+var New = newVar
+
+// newVar  creates a new *Variable based on a specific driver implementation.
+func newVar(w driver.Watcher) *Variable {
 	return &Variable{watcher: w}
 }
 
@@ -116,7 +119,13 @@ func New(w driver.Watcher) *Variable {
 //
 // Watch is not goroutine-safe; typical use is to call it in a single
 // goroutine in a loop.
-func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+//
+// If the variable does not exist, Watch returns an error for which
+// gcerrors.Code will return gcerrors.NotFound.
+func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
+	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
+	defer func() { trace.EndSpan(ctx, err) }()
+
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {
@@ -154,42 +163,27 @@ func (c *Variable) Close() error {
 	return wrapError(c.watcher, err)
 }
 
-// wrappedError is used to wrap all errors returned by drivers so that users
-// are not given access to provider-specific errors.
-type wrappedError struct {
-	err error
-	w   driver.Watcher
-}
-
 func wrapError(w driver.Watcher, err error) error {
 	if err == nil {
 		return nil
 	}
-	return &wrappedError{w: w, err: err}
-}
-
-func (w *wrappedError) Error() string {
-	return "runtimevar: " + w.err.Error()
+	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Snapshot.As for more details.
-func ErrorAs(err error, i interface{}) bool {
-	if err == nil || i == nil {
+func (c *Variable) ErrorAs(err error, i interface{}) bool {
+	if err == nil {
 		return false
 	}
-	if e, ok := err.(*wrappedError); ok {
-		return e.w.ErrorAs(e.err, i)
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("runtimevar: ErrorAs i must be a non-nil pointer")
 	}
-	return false
-}
-
-// IsNotExist returns true iff err indicates that the referenced variable does not exist.
-func IsNotExist(err error) bool {
-	if e, ok := err.(*wrappedError); ok {
-		return e.w.IsNotExist(e.err)
+	if e, ok := err.(*gcerr.Error); ok {
+		return c.watcher.ErrorAs(e.Unwrap(), i)
 	}
-	return false
+	return c.watcher.ErrorAs(err, i)
 }
 
 // Decode is a function type for unmarshaling/decoding a slice of bytes into

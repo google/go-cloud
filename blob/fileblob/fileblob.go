@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package fileblob provides a blob implementation that uses the filesystem.
-// Use OpenBucket to construct a blob.Bucket.
+// Use OpenBucket to construct a *blob.Bucket.
 //
 // Blob keys are escaped before being used as filenames, and filenames are
 // unescaped when they are passed back as blob keys during List. The escape
@@ -36,18 +36,23 @@
 // with "file://".
 //
 // The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != "/", any leading "/" from the Path is dropped.
-// No query options are supported. Examples:
+// If os.PathSeparator != '/', any leading '/' from the Path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+// No query options are supported.
+// Examples:
 //  - file:///a/directory
 //    -> Passes "/a/directory" to OpenBucket.
 //  - file://localhost/a/directory
 //    -> Also passes "/a/directory".
 //  - file:///c:/foo/bar
-//    -> Passes "c:/foo/bar".
+//    -> Passes "c:\foo\bar".
+//  - file://localhost/c:/foo/bar
+//    -> Also passes "c:\foo\bar".
 //
 // As
 //
-// fileblob does not support any types for As.
+// fileblob exposes the following types for As:
+//  - Error: *os.PathError
 package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
@@ -65,18 +70,26 @@ import (
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 )
 
 const defaultPageSize = 1000
 
 func init() {
 	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		path := u.Path
-		if os.PathSeparator != '/' && strings.HasPrefix(path, "/") {
-			path = path[1:]
-		}
-		return openBucket(path, nil)
+		return openBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
 	})
+}
+
+func mungeURLPath(path string, pathSeparator uint8) string {
+	if pathSeparator != '/' {
+		path = strings.TrimPrefix(path, "/")
+		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
+		// from this function. Test Windows behavior by opening a bucket on Windows.
+		// See #1075 for why Windows is disabled.
+		path = strings.Replace(path, "/", string(pathSeparator), -1)
+	}
+	return path
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
@@ -246,16 +259,17 @@ func unescape(s string) (string, error) {
 	return unescaped, nil
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (b *bucket) IsNotExist(err error) bool {
-	return os.IsNotExist(err)
-}
-
 var errNotImplemented = errors.New("not implemented")
 
-// IsNotImplemented implements driver.IsNotImplemented.
-func (b *bucket) IsNotImplemented(err error) bool {
-	return err == errNotImplemented
+func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	switch {
+	case os.IsNotExist(err):
+		return gcerrors.NotFound
+	case err == errNotImplemented:
+		return gcerrors.Unimplemented
+	default:
+		return gcerrors.Unknown
+	}
 }
 
 // path returns the full path for a key
@@ -401,7 +415,15 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 func (b *bucket) As(i interface{}) bool { return false }
 
 // As implements driver.ErrorAs.
-func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
+func (b *bucket) ErrorAs(err error, i interface{}) bool {
+	if perr, ok := err.(*os.PathError); ok {
+		if p, ok := i.(**os.PathError); ok {
+			*p = perr
+			return true
+		}
+	}
+	return false
+}
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
@@ -487,7 +509,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
 		return nil, err
 	}
-	f, err := ioutil.TempFile("", "fileblob")
+	f, err := ioutil.TempFile(filepath.Dir(path), "fileblob")
 	if err != nil {
 		return nil, err
 	}
