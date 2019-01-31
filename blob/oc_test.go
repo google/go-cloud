@@ -25,6 +25,7 @@ import (
 	"go.opencensus.io/tag"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/memblob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/testing/octest"
 )
@@ -50,7 +51,17 @@ func TestOpenCensus(t *testing.T) {
 	if _, err := b.ReadAll(ctx, "noSuchKey"); err == nil {
 		t.Fatal("got nil, want error")
 	}
-	// TODO(jba): after #1213, use DiffSpans.
+
+	diff := octest.DiffSpans(te.Spans, []octest.Span{
+		{"gocloud.dev/blob.NewWriter", gcerrors.OK},
+		{"gocloud.dev/blob.NewRangeReader", gcerrors.OK},
+		{"gocloud.dev/blob.Attributes", gcerrors.OK},
+		{"gocloud.dev/blob.Delete", gcerrors.OK},
+		{"gocloud.dev/blob.NewRangeReader", gcerrors.NotFound},
+	})
+	if diff != "" {
+		t.Errorf("trace: %s", diff)
+	}
 
 	// Wait for counts. Expect all counts to arrive in the same view.Data.
 	for {
@@ -82,7 +93,7 @@ func TestOpenCensus(t *testing.T) {
 		})
 		diff := cmp.Diff(data.Rows, want, cmpopts.SortSlices(lessRow))
 		if diff != "" {
-			t.Error(diff)
+			t.Errorf("metrics: %s", diff)
 		}
 		break
 	}
