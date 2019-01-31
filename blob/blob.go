@@ -172,7 +172,7 @@ func (a *Attributes) As(i interface{}) bool {
 type Writer struct {
 	b          driver.Bucket
 	w          driver.Writer
-	end        func(error) // called to end the OpenCensus span in Close
+	end        func(error) // called at Close to finish trace and metric collection
 	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
 	md5hash    hash.Hash
