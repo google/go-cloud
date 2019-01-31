@@ -22,6 +22,7 @@ import (
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -64,4 +65,20 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	_, err = k.Encrypt(ctx, nil)
 	verifyWrap("Encrypt", err)
+}
+
+func TestTracing(t *testing.T) {
+	ctx := context.Background()
+	te := octest.NewTestExporter(nil)
+	defer te.Unregister()
+	k := NewKeeper(&erroringKeeper{})
+	k.Encrypt(ctx, nil)
+	k.Decrypt(ctx, nil)
+	diff := octest.DiffSpans(te.Spans, []octest.Span{
+		{"gocloud.dev/secrets.Encrypt", gcerrors.Internal},
+		{"gocloud.dev/secrets.Decrypt", gcerrors.Internal},
+	})
+	if diff != "" {
+		t.Error(diff)
+	}
 }
