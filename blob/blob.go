@@ -539,6 +539,8 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	dopts := &driver.ReaderOptions{}
 	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
+		// If err == nil, we handed the end closure off to the returned *Writer; it
+		// will be called when the Writer is Closed.
 		if err != nil {
 			b.tracer.End(tctx, err)
 		}
