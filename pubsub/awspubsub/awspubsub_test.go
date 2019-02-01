@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -66,7 +65,8 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 	}
 	dt = openTopic(ctx, client, *out.TopicArn)
 	cleanup = func() {
-		// client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
+		// TODO: Call client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
+		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
 	}
 	return dt, cleanup, nil
 }
@@ -78,63 +78,76 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	client := sqs.New(h.sess, h.cfg)
+	sqsClient := sqs.New(h.sess, h.cfg)
 	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	out, err := client.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(subName)})
+	out, err := sqsClient.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(subName)})
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating subscription queue "%s": %v`, subName, err)
 	}
-	ds = openSubscription(ctx, client, *out.QueueUrl)
-	snsClient := sns.New(h.sess, h.cfg)
-	log.Printf("getting queue ARN")
-	out2, err := client.GetQueueAttributes(&sqs.GetQueueAttributesInput{
-		QueueUrl:       out.QueueUrl,
+	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
+
+	// TODO: call
+	//   snsClient := sns.New(h.sess, h.cfg)
+	//   subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
+	// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+	//
+	// In the meantime, it's necessary to manually go into the AWS console
+	// in the SQS section and manually subscribe the queues to the topics
+	// after running the test once in -record mode and seeing it fail due
+	// to the queues not being subscribed.
+	cleanup = func() {
+		// TODO: Call sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
+		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+	}
+	return ds, cleanup, nil
+}
+
+func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) error {
+	out2, err := sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
+		QueueUrl:       qURL,
 		AttributeNames: []*string{aws.String("QueueArn")},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("getting queue ARN for %s: %v", *out.QueueUrl, err)
+		return fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
 	}
 	qARN := out2.Attributes["QueueArn"]
+
 	t := dt.(*topic)
-	log.Printf("subscribing")
 	_, err = snsClient.Subscribe(&sns.SubscribeInput{
 		TopicArn: aws.String(t.arn),
 		Endpoint: qARN,
 		Protocol: aws.String("sqs"),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("subscribing: %v", err)
+		return fmt.Errorf("subscribing: %v", err)
 	}
+
 	// Get the confirmation from the queue.
-	out3, err := client.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: out.QueueUrl,
+	out3, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
+		QueueUrl: qURL,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
+		return fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
 	}
 	ms := out3.Messages
 	var token *string
 	switch len(ms) {
 	case 0:
-		return nil, nil, errors.New("no subscription confirmation message found in queue")
+		return errors.New("no subscription confirmation message found in queue")
 	case 1:
 		m := ms[0]
 		token = m.Body
 	default:
-		return nil, nil, fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
+		return fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
 	}
 	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
 		TopicArn: aws.String(t.arn),
 		Token:    token,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("confirming subscription: %v", err)
+		return fmt.Errorf("confirming subscription: %v", err)
 	}
-	cleanup = func() {
-		client.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
-	}
-	log.Printf("returning from CreateSubscription")
-	return ds, cleanup, nil
+	return nil
 }
 
 func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(error)) driver.Batcher {
