@@ -24,6 +24,7 @@ package awspubsub
 import (
 	"context"
 	"encoding/json"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -105,6 +106,7 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 	if !ok {
 		return gcerr.Unknown
 	}
+	log.Printf("topic: converting aws error code %q", ae.Code())
 	switch ae.Code() {
 
 	case sns.ErrCodeAuthorizationErrorException:
@@ -259,6 +261,7 @@ func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	if !ok {
 		return gcerr.Unknown
 	}
+	log.Printf("subscription: converting aws error code %q", ae.Code())
 	switch ae.Code() {
 	case sqs.ErrCodeBatchEntryIdsNotDistinct:
 		return gcerr.InvalidArgument

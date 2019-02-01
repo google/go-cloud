@@ -282,8 +282,9 @@ func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	if !t.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
-	if ae.Code() != sns.ErrCodeNotFoundException {
-		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeNotFoundException)
+	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
+	if ae.Code() != sns.ErrCodeInvalidParameterException {
+		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
 	}
 	return nil
 }
