@@ -62,11 +62,11 @@ func NewNamespaceFromConnectionString(connectionString string) (*servicebus.Name
 	return servicebus.NewNamespace(nsOptions)
 }
 // NewTopic returns a *servicebus.Topic associated with a Service Bus Namespace.
-func NewTopic(topicName string, ns *servicebus.Namespace, opts[] servicebus.TopicOption) (*servicebus.Topic, error) {
+func NewTopic(ns *servicebus.Namespace, topicName string, opts[] servicebus.TopicOption) (*servicebus.Topic, error) {
 	return ns.NewTopic(topicName, opts...)	
 }
 // NewSubscription returns a *servicebus.Subscription associated with a Service Bus Topic.
-func NewSubscription(subscriptionName string, parentTopic *servicebus.Topic, opts[] servicebus.SubscriptionOption) (*servicebus.Subscription, error) {
+func NewSubscription(parentTopic *servicebus.Topic, subscriptionName string, opts[] servicebus.SubscriptionOption) (*servicebus.Subscription, error) {
 	return parentTopic.NewSubscription(subscriptionName, opts...)	
 }
 
@@ -150,25 +150,16 @@ type SubscriptionOptions struct{
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
-func OpenSubscription(ctx context.Context, sbSubscription *servicebus.Subscription, parentTopic *servicebus.Topic, parentNamespace *servicebus.Namespace, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
-	s, err := openSubscription(ctx, sbSubscription, parentTopic, parentNamespace, opts)
-	if err != nil {
-		return nil, err
-	}
-	return pubsub.NewSubscription(s, nil), nil
+func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace, parentTopic *servicebus.Topic, sbSubscription *servicebus.Subscription, opts *SubscriptionOptions) (*pubsub.Subscription) {
+	ds := openSubscription(ctx, parentNamespace, parentTopic, sbSubscription, opts)	
+	return pubsub.NewSubscription(ds, nil)
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, sbSub *servicebus.Subscription, sbTop *servicebus.Topic, sbNs *servicebus.Namespace, opts *SubscriptionOptions) (driver.Subscription, error) {	
-	if sbTop == nil {	
-		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Topic")
-	}
-	if sbNs == nil {		
-		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Namespace")
-	}
-
-	if sbSub == nil {		
-		return nil, errors.New("azurepubsub: cannot initialize driver.Subscription with a nil Service Bus Subscription")
+func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) (driver.Subscription) {	
+	topicName := ""
+	if sbTop != nil {
+		topicName = sbTop.Name
 	}
 
 	defaultTimeout := listenerTimeout
@@ -178,16 +169,26 @@ func openSubscription(ctx context.Context, sbSub *servicebus.Subscription, sbTop
 
 	return &subscription {		
 		sbSub : sbSub,
-		topicName: sbTop.Name,		
+		topicName: topicName,		
 		sbNs: sbNs,
 		opts : &SubscriptionOptions {
 			ListenerTimeout: defaultTimeout,
 		},
-	}, nil
+	}
 }
 
 // testSBSubscription ensures the subscripion exists before listening for incoming messages.
 func (s *subscription) testSBSubscription(ctx context.Context) error {
+	if s.topicName == "" {	
+		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Topic")
+	}
+	if s.sbNs == nil {		
+		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Namespace")
+	}
+	if s.sbSub == nil {		
+		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Subscription")
+	}
+
 	sm, err := s.sbNs.NewSubscriptionManager(s.topicName)	
 	if err != nil {
 		return err

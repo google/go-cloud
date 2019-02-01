@@ -29,8 +29,10 @@ import (
 	"github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-service-bus-go"
 )
-var (
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")		
+var (	
+	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")			
 )
 
 const (
@@ -69,7 +71,7 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 		
 	createTopic(ctx, topicName, h.ns, nil)
 			
-	sbTopic, err := NewTopic(topicName, h.ns, nil)
+	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	dt = openTopic(ctx, sbTopic)
 
 	cleanup = func() {
@@ -81,7 +83,7 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {	
-	sbTopic, err := NewTopic(topicName, h.ns, nil)
+	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -104,12 +106,12 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 		return nil, nil, err
 	}
 
-	sbSub, err := NewSubscription(subName, t.sbTopic, nil)
+	sbSub, err := NewSubscription(t.sbTopic, subName, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	ds, err = openSubscription(ctx, sbSub, t.sbTopic, h.ns, nil)
+	ds = openSubscription(ctx, h.ns, t.sbTopic, sbSub, nil)
 
 	cleanup = func() {
 		sbSub.Close(ctx)
@@ -120,10 +122,10 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {	
-	sbTopic, err := NewTopic(topicName, h.ns, nil)
-	sbSub, err := NewSubscription("nonexistent-subscription", sbTopic, nil)
-	ds, err := openSubscription(ctx, sbSub, sbTopic, h.ns, nil)
-	return ds, err
+	sbTopic, _ := NewTopic(h.ns, topicName, nil)
+	sbSub, _ := NewSubscription(sbTopic, "nonexistent-subscription", nil)
+	ds := openSubscription(ctx, h.ns, sbTopic, sbSub, nil)
+	return ds, nil
 }
 
 func (h *harness) Close() {
