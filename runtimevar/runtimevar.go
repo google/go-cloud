@@ -45,7 +45,7 @@ import (
 	"time"
 
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/trace"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -91,11 +91,19 @@ func (s *Snapshot) As(i interface{}) bool {
 	return s.asFunc(i)
 }
 
+const pkgName = "gocloud.dev/runtimevar"
+
+var (
+	latencyMeasure  = oc.LatencyMeasure(pkgName)
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
+
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in provider-specific
 // subpackages.
 type Variable struct {
 	watcher  driver.Watcher
+	tracer   *oc.Tracer
 	nextCall time.Time
 	prev     driver.State
 }
@@ -105,7 +113,14 @@ var New = newVar
 
 // newVar  creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
-	return &Variable{watcher: w}
+	return &Variable{
+		watcher: w,
+		tracer: &oc.Tracer{
+			Package:        pkgName,
+			Provider:       oc.ProviderName(w),
+			LatencyMeasure: latencyMeasure,
+		},
+	}
 }
 
 // Watch returns a Snapshot of the current value of the variable.
@@ -123,8 +138,8 @@ func newVar(w driver.Watcher) *Variable {
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = c.tracer.Start(ctx, "Watch")
+	defer func() { c.tracer.End(ctx, err) }()
 
 	for {
 		wait := c.nextCall.Sub(time.Now())
