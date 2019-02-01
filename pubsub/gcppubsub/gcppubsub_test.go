@@ -183,6 +183,18 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
+func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
+	var pm pubsubpb.PubsubMessage
+	if m.As(&pm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
+	}
+	var ppm *pubsubpb.PubsubMessage
+	if !m.As(&ppm) {
+		return fmt.Errorf("cast failed for %T", &ppm)
+	}
+	return nil
+}
+
 func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	var s *status.Status
 	if !t.ErrorAs(err, &s) {

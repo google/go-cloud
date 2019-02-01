@@ -65,6 +65,8 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // The conformance test:
 // 1. Calls TopicCheck.
 // 2. Calls SubscriptionCheck.
+// 3. Calls ErrorCheck.
+// 4. Calls MessageCheck.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
@@ -77,6 +79,8 @@ type AsTest interface {
 	// The error will be the one returned from SendBatch when called with
 	// a non-existent subscription.
 	ErrorCheck(t *pubsub.Topic, err error) error
+	// MessageCheck will be called to allow verification of Message.As.
+	MessageCheck(m *pubsub.Message) error
 }
 
 type verifyAsFailsOnNil struct{}
@@ -95,6 +99,13 @@ func (verifyAsFailsOnNil) TopicCheck(t *pubsub.Topic) error {
 func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 	if s.As(nil) {
 		return errors.New("want Subscription.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
+	if m.As(nil) {
+		return errors.New("want Message.As to return false when passed nil")
 	}
 	return nil
 }
@@ -415,6 +426,17 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.MessageCheck(m); err != nil {
+		t.Error(err)
+	}
+
 	top = pubsub.NewTopic(dt)
 	defer top.Shutdown(ctx)
 	if err := st.ErrorCheck(top, top.Send(ctx, &pubsub.Message{})); err != nil {
