@@ -62,6 +62,9 @@ type Message struct {
 	// from Receive, or the zero time if it wasn't.
 	processingStartTime time.Time
 
+	// asFunc invokes driver.Message.AsFunc.
+	asFunc func(interface{}) bool
+
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
 	// mu guards isAcked in case Ack() is called concurrently.
@@ -83,6 +86,16 @@ func (m *Message) Ack() {
 	}
 	m.ack()
 	m.isAcked = true
+}
+
+// As converts m to provider-specific types.
+// See Topic.As for details.
+// As panics unless it is called on a message obtained from Subscription.Receive.
+func (m *Message) As(i interface{}) bool {
+	if m.asFunc == nil {
+		panic("As called on a Message that was not obtained from Receive")
+	}
+	return m.asFunc(i)
 }
 
 // Topic publishes messages to all its subscribers.
@@ -398,6 +411,7 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 		m2 := &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
+			asFunc:   m.AsFunc,
 		}
 		m2.ack = func() {
 			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock

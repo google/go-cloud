@@ -136,6 +136,7 @@ func (s *subscription) add(ms []*driver.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, m := range ms {
+		m.AsFunc = func(interface{}) bool { return false }
 		// The new message will expire at the zero time, which means it will be
 		// immediately eligible for delivery.
 		s.msgs[m.AckID] = &message{msg: m}

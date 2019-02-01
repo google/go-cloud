@@ -16,7 +16,6 @@ package runtimeconfigurator_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/gcp"
@@ -30,19 +29,17 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNewVariable() {
-	ctx := context.Background()
-
-	// Get GCP credentials and dial the server.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
+func Example() {
+	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := gcp.FakeDefaultCredentials(ctx)
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Connect to the Runtime Configurator service.
 	client, cleanup, err := runtimeconfigurator.Dial(ctx, creds.TokenSource)
 	if err != nil {
 		log.Fatal(err)
@@ -56,9 +53,9 @@ func ExampleNewVariable() {
 	// For this example, the GCP Cloud Runtime Configurator variable being
 	// referenced should have a JSON string that decodes into MyConfig.
 	name := runtimeconfigurator.ResourceName{
-		ProjectID: "projectID",
-		Config:    "configName",
-		Variable:  "appConfig",
+		ProjectID: "gcp-project-id",
+		Config:    "cfg-name",
+		Variable:  "cfg-variable-name",
 	}
 
 	// Construct a *runtimevar.Variable that watches the variable.
@@ -68,17 +65,11 @@ func ExampleNewVariable() {
 	}
 	defer v.Close()
 
-	// You can now read the current value of the variable from v.
-	snapshot, err := v.Watch(ctx)
+	// We can now read the current value of the variable from v.
+	snapshot, err := v.Watch(context.Background())
 	if err != nil {
-		// This is expected due to the fake credentials we used above.
-		fmt.Println("Watch failed due to invalid credentials")
-		return
+		log.Fatal(err)
 	}
-	// We'll never get here when running this sample, but the resulting
-	// runtimevar.Snapshot.Value would be of type MyConfig.
-	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
-
-	// Output:
-	// Watch failed due to invalid credentials
+	cfg := snapshot.Value.(MyConfig)
+	_ = cfg
 }

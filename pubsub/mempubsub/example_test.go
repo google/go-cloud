@@ -12,36 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vault_test
+package mempubsub_test
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
-	"github.com/hashicorp/vault/api"
-	"gocloud.dev/secrets/vault"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/mempubsub"
 )
 
-func Example_encrypt() {
-
-	// Get a client to use with the Vault API.
+func Example() {
+	// Construct a *pubsub.Topic.
 	ctx := context.Background()
-	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "<Client (Root) Token>",
-		APIConfig: &api.Config{
-			Address: "http://127.0.0.1:8200",
-		},
-	})
+	t := mempubsub.NewTopic()
+	defer t.Shutdown(ctx)
 
-	// Construct a *secrets.Keeper.
-	keeper := vault.NewKeeper(client, "my-key", nil)
+	// Construct a *pubsub.Subscription for the topic.
+	s := mempubsub.NewSubscription(t, 1*time.Minute /* ack deadline */)
+	defer s.Shutdown(ctx)
 
-	// Now we can use keeper to encrypt or decrypt.
-	plaintext := []byte("Hello, Secrets!")
-	ciphertext, err := keeper.Encrypt(ctx, plaintext)
+	// Now we can use t to send messages and s will receive them.
+	err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello World")})
 	if err != nil {
 		log.Fatal(err)
 	}
-	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	_ = decrypted
+
+	msg, err := s.Receive(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(msg.Body))
+	msg.Ack()
+
+	// Output:
+	// Hello World
 }
