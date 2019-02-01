@@ -102,6 +102,43 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	return ds, cleanup, nil
 }
 
+func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
+	return func(ctx context.Context, s *pubsub.Subscription, ds driver.Subscription) driver.Batcher {
+		const maxHandlers = 1
+		handler := func(items interface{}) error {
+			ids := items.([]driver.AckID)
+			return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
+				return ds.SendAcks(ctx, ids)
+			})
+		}
+		return &ackBatcher{handler}
+	}
+}
+
+// ackBatcher is a trivial batcher that sends off items as singleton batches.
+type ackBatcher struct {
+	handler func(items interface{}) error
+}
+
+func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
+	item2 := item.(driver.AckID)
+	items := []driver.AckID{item2}
+	return ab.handler(items)
+}
+
+func (ab *ackBatcher) AddNoWait(item interface{}) <-chan error {
+	item2 := item.(driver.AckID)
+	items := []driver.AckID{item2}
+	c := make(chan error)
+	go func() {
+		c <- ab.handler(items)
+	}()
+	return c
+}
+
+func (ab *ackBatcher) Shutdown() {
+}
+
 func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) error {
 	out2, err := sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
 		QueueUrl:       qURL,
