@@ -46,7 +46,7 @@ func TestOpenCensus(t *testing.T) {
 		t.Fatal("got nil, want error")
 	}
 
-	diff := octest.Diff(te.Spans, te.Counts(), "gocloud.dev/blob", "gocloud.dev/blob/memblob", []octest.Call{
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", "gocloud.dev/blob/memblob", []octest.Call{
 		{"NewWriter", gcerrors.OK},
 		{"NewRangeReader", gcerrors.OK},
 		{"Attributes", gcerrors.OK},

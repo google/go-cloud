@@ -19,6 +19,7 @@ package octest
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"go.opencensus.io/stats/view"
@@ -28,7 +29,8 @@ import (
 // TestExporter is an exporter of OpenCensus traces and metrics, for testing.
 // It should be created with NewTestExporter.
 type TestExporter struct {
-	Spans []*trace.SpanData
+	mu    sync.Mutex
+	spans []*trace.SpanData
 	Stats chan *view.Data
 }
 
@@ -52,7 +54,9 @@ func NewTestExporter(views []*view.View) *TestExporter {
 
 // ExportSpan "exports" a span by remembering it.
 func (te *TestExporter) ExportSpan(s *trace.SpanData) {
-	te.Spans = append(te.Spans, s)
+	te.mu.Lock()
+	defer te.mu.Unlock()
+	te.spans = append(te.spans, s)
 }
 
 // ExportView exports a view by writing it to the Stats channel.
@@ -63,6 +67,12 @@ func (te *TestExporter) ExportView(vd *view.Data) {
 		default:
 		}
 	}
+}
+
+func (te *TestExporter) Spans() []*trace.SpanData {
+	te.mu.Lock()
+	defer te.mu.Unlock()
+	return te.spans
 }
 
 // Counts returns the first exported data that includes aggregated counts.
