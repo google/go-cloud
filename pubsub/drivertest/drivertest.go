@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"log"
 	"strconv"
 	"testing"
 
@@ -224,7 +223,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	log.Printf("makePair")
 	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -235,7 +233,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	got := receiveN(ctx, t, sub, len(want))
 
 	// Check that the received messages match the sent ones.
-	log.Printf("diff")
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
 	}
@@ -300,7 +297,6 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
-		log.Printf("receiving message %d of %d", i+1, n)
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -393,12 +389,10 @@ func isCanceled(err error) bool {
 }
 
 func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	log.Printf("makePair: creating topic")
 	dt, topicCleanup, err := h.CreateTopic(ctx, testName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	log.Printf("makePair: creating subscription")
 	ds, subCleanup, err := h.CreateSubscription(ctx, dt, testName)
 	if err != nil {
 		return nil, nil, nil, err
@@ -411,7 +405,6 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 		t.Shutdown(ctx)
 		s.Shutdown(ctx)
 	}
-	log.Printf("makePair: returning")
 	return t, s, cleanup, nil
 }
 
