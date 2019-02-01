@@ -42,8 +42,13 @@ func NewTestExporter(views []*view.View) *TestExporter {
 	view.RegisterExporter(te)
 	// The reporting period will affect how long it takes to get stats (view.Data).
 	// We want it short so tests don't take too long, but long enough so that all
-	// the work gets done. Note that the race detector slows everything down, so
-	// this number is not as small as we might like.
+	// the actions in a test complete.
+	//   If the period is too short, then some actions may not be finished when the first
+	// call to ExportView happens. diffCounts checks for matching counts, so it will
+	// fail in that case.
+	//   Tests that use the exporter (search for TestOpenCensus) are designed to avoid
+	// network traffic or computation, so they finish quickly. But we must account for
+	// the race detector, which slows everything down.
 	view.SetReportingPeriod(100 * time.Millisecond)
 	if err := view.Register(views...); err != nil {
 		log.Fatal(err)
