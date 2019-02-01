@@ -16,8 +16,11 @@
 package gcerr
 
 import (
+	"context"
 	"fmt"
+	"io"
 
+	"gocloud.dev/internal/retry"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -124,6 +127,27 @@ func New(c ErrorCode, err error, callDepth int, msg string) *Error {
 // Newf uses format and args to format a message, then calls New.
 func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, 1, fmt.Sprintf(format, args...))
+}
+
+// DoNotWrap reports whether an error should not be wrapped in the Error
+// type from this package.
+// It returns true if err is a retry error, a context error, io.EOF, or if it wraps
+// one of those.
+func DoNotWrap(err error) bool {
+	if xerrors.Is(err, io.EOF) {
+		return true
+	}
+	if xerrors.Is(err, context.Canceled) {
+		return true
+	}
+	if xerrors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var r *retry.ContextError
+	if xerrors.As(err, &r) {
+		return true
+	}
+	return false
 }
 
 // GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
