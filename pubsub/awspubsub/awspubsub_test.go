@@ -326,6 +326,18 @@ func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	return nil
 }
 
+func (awsAsTest) MessageCheck(m *pubsub.Message) error {
+	var sm sqs.Message
+	if m.As(&sm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &sm)
+	}
+	var psm *sqs.Message
+	if !m.As(&psm) {
+		return fmt.Errorf("cast failed for %T", &psm)
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }

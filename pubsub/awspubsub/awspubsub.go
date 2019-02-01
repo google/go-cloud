@@ -210,12 +210,20 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		for k, v := range body.MessageAttributes {
 			attrs[k] = v.Value
 		}
-		m := &driver.Message{
+		m2 := &driver.Message{
 			Body:     []byte(body.Message),
 			Metadata: attrs,
 			AckID:    m.ReceiptHandle,
+			AsFunc: func(i interface{}) bool {
+				p, ok := i.(**sqs.Message)
+				if !ok {
+					return false
+				}
+				*p = m
+				return true
+			},
 		}
-		ms = append(ms, m)
+		ms = append(ms, m2)
 	}
 	return ms, nil
 }
