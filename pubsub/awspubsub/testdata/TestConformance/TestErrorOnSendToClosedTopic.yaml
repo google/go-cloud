@@ -16,9 +16,9 @@ interactions:
       Content-Type:
       - application/x-www-form-urlencoded; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190115T020127Z
+      - 20190201T191019Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +28,7 @@ interactions:
           <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-topic-1</TopicArn>
         </CreateTopicResult>
         <ResponseMetadata>
-          <RequestId>f08b78b9-16bf-568a-bae4-2c0e5788abb2</RequestId>
+          <RequestId>44d161fb-1bd7-5ed8-84a4-3535800c35c1</RequestId>
         </ResponseMetadata>
       </CreateTopicResponse>
     headers:
@@ -37,9 +37,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Tue, 15 Jan 2019 02:01:26 GMT
+      - Fri, 01 Feb 2019 19:10:19 GMT
       X-Amzn-Requestid:
-      - f08b78b9-16bf-568a-bae4-2c0e5788abb2
+      - 44d161fb-1bd7-5ed8-84a4-3535800c35c1
     status: 200 OK
     code: 200
     duration: ""
@@ -58,138 +58,22 @@ interactions:
       Content-Type:
       - application/x-www-form-urlencoded; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190115T020127Z
+      - 20190201T191019Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>2aff5d5b-772b-5c34-b283-09ec361c9634</RequestId></ResponseMetadata></CreateQueueResponse>
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>3216954f-69ec-55fd-b58f-c181f23757f4</RequestId></ResponseMetadata></CreateQueueResponse>
     headers:
       Content-Length:
       - "379"
       Content-Type:
       - text/xml
       Date:
-      - Tue, 15 Jan 2019 02:01:27 GMT
+      - Fri, 01 Feb 2019 19:10:19 GMT
       X-Amzn-Requestid:
-      - 2aff5d5b-772b-5c34-b283-09ec361c9634
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=GetQueueAttributes&AttributeName.1=QueueArn&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestErrorOnSendToClosedTopic-subscription-1&Version=2012-11-05
-    form:
-      Action:
-      - GetQueueAttributes
-      AttributeName.1:
-      - QueueArn
-      QueueUrl:
-      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1
-      Version:
-      - "2012-11-05"
-    headers:
-      Content-Length:
-      - "197"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020127Z
-    url: https://sqs.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: <?xml version="1.0"?><GetQueueAttributesResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><GetQueueAttributesResult><Attribute><Name>QueueArn</Name><Value>arn:aws:sqs:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-subscription-1</Value></Attribute></GetQueueAttributesResult><ResponseMetadata><RequestId>f4dfb66b-cbdc-5a43-bb64-e2dc8aeb05e2</RequestId></ResponseMetadata></GetQueueAttributesResponse>
-    headers:
-      Content-Length:
-      - "431"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:28 GMT
-      X-Amzn-Requestid:
-      - f4dfb66b-cbdc-5a43-bb64-e2dc8aeb05e2
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=Subscribe&Endpoint=arn%3Aaws%3Asqs%3Aus-east-2%3A221420415498%3ATestConformance_TestErrorOnSendToClosedTopic-subscription-1&Protocol=sqs&TopicArn=arn%3Aaws%3Asns%3Aus-east-2%3A221420415498%3ATestConformance_TestErrorOnSendToClosedTopic-topic-1&Version=2010-03-31
-    form:
-      Action:
-      - Subscribe
-      Endpoint:
-      - arn:aws:sqs:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-subscription-1
-      Protocol:
-      - sqs
-      TopicArn:
-      - arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-topic-1
-      Version:
-      - "2010-03-31"
-    headers:
-      Content-Length:
-      - "269"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020128Z
-    url: https://sns.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: |
-      <SubscribeResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
-        <SubscribeResult>
-          <SubscriptionArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-topic-1:85da86fc-0759-4a8b-94be-ee81a693f30f</SubscriptionArn>
-        </SubscribeResult>
-        <ResponseMetadata>
-          <RequestId>c347fcd8-5451-5643-a944-a86f15692b7b</RequestId>
-        </ResponseMetadata>
-      </SubscribeResponse>
-    headers:
-      Content-Length:
-      - "402"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:27 GMT
-      X-Amzn-Requestid:
-      - c347fcd8-5451-5643-a944-a86f15692b7b
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestErrorOnSendToClosedTopic-subscription-1&Version=2012-11-05
-    form:
-      Action:
-      - ReceiveMessage
-      QueueUrl:
-      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1
-      Version:
-      - "2012-11-05"
-    headers:
-      Content-Length:
-      - "168"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020128Z
-    url: https://sqs.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult/><ResponseMetadata><RequestId>2329edc1-439d-5535-8539-b97602a5ea94</RequestId></ResponseMetadata></ReceiveMessageResponse>
-    headers:
-      Content-Length:
-      - "240"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:28 GMT
-      X-Amzn-Requestid:
-      - 2329edc1-439d-5535-8539-b97602a5ea94
+      - 3216954f-69ec-55fd-b58f-c181f23757f4
     status: 200 OK
     code: 200
     duration: ""

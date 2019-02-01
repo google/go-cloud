@@ -16,9 +16,9 @@ interactions:
       Content-Type:
       - application/x-www-form-urlencoded; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190115T020129Z
+      - 20190201T191020Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +28,7 @@ interactions:
           <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestCancelSendReceive-topic-1</TopicArn>
         </CreateTopicResult>
         <ResponseMetadata>
-          <RequestId>df6cec2b-4fdb-5818-a4b0-b89c0ee2c520</RequestId>
+          <RequestId>5ecb84cd-aa5a-5909-a309-d0033186e210</RequestId>
         </ResponseMetadata>
       </CreateTopicResponse>
     headers:
@@ -37,9 +37,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Tue, 15 Jan 2019 02:01:29 GMT
+      - Fri, 01 Feb 2019 19:10:19 GMT
       X-Amzn-Requestid:
-      - df6cec2b-4fdb-5818-a4b0-b89c0ee2c520
+      - 5ecb84cd-aa5a-5909-a309-d0033186e210
     status: 200 OK
     code: 200
     duration: ""
@@ -58,138 +58,22 @@ interactions:
       Content-Type:
       - application/x-www-form-urlencoded; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190115T020129Z
+      - 20190201T191020Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestCancelSendReceive-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>802bb890-0f76-55f7-b018-ec274e4f5a56</RequestId></ResponseMetadata></CreateQueueResponse>
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestCancelSendReceive-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>ccc85416-ee72-5b82-b476-00d875ae298b</RequestId></ResponseMetadata></CreateQueueResponse>
     headers:
       Content-Length:
       - "372"
       Content-Type:
       - text/xml
       Date:
-      - Tue, 15 Jan 2019 02:01:29 GMT
+      - Fri, 01 Feb 2019 19:10:20 GMT
       X-Amzn-Requestid:
-      - 802bb890-0f76-55f7-b018-ec274e4f5a56
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=GetQueueAttributes&AttributeName.1=QueueArn&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestCancelSendReceive-subscription-1&Version=2012-11-05
-    form:
-      Action:
-      - GetQueueAttributes
-      AttributeName.1:
-      - QueueArn
-      QueueUrl:
-      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestCancelSendReceive-subscription-1
-      Version:
-      - "2012-11-05"
-    headers:
-      Content-Length:
-      - "190"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020130Z
-    url: https://sqs.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: <?xml version="1.0"?><GetQueueAttributesResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><GetQueueAttributesResult><Attribute><Name>QueueArn</Name><Value>arn:aws:sqs:us-east-2:221420415498:TestConformance_TestCancelSendReceive-subscription-1</Value></Attribute></GetQueueAttributesResult><ResponseMetadata><RequestId>5b1b32e7-ec39-5e7f-88a0-6650ad0361de</RequestId></ResponseMetadata></GetQueueAttributesResponse>
-    headers:
-      Content-Length:
-      - "424"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:30 GMT
-      X-Amzn-Requestid:
-      - 5b1b32e7-ec39-5e7f-88a0-6650ad0361de
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=Subscribe&Endpoint=arn%3Aaws%3Asqs%3Aus-east-2%3A221420415498%3ATestConformance_TestCancelSendReceive-subscription-1&Protocol=sqs&TopicArn=arn%3Aaws%3Asns%3Aus-east-2%3A221420415498%3ATestConformance_TestCancelSendReceive-topic-1&Version=2010-03-31
-    form:
-      Action:
-      - Subscribe
-      Endpoint:
-      - arn:aws:sqs:us-east-2:221420415498:TestConformance_TestCancelSendReceive-subscription-1
-      Protocol:
-      - sqs
-      TopicArn:
-      - arn:aws:sns:us-east-2:221420415498:TestConformance_TestCancelSendReceive-topic-1
-      Version:
-      - "2010-03-31"
-    headers:
-      Content-Length:
-      - "255"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020130Z
-    url: https://sns.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: |
-      <SubscribeResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
-        <SubscribeResult>
-          <SubscriptionArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestCancelSendReceive-topic-1:8a9cc5a7-e84e-4dfa-ab6e-1e914b9c3cce</SubscriptionArn>
-        </SubscribeResult>
-        <ResponseMetadata>
-          <RequestId>ba7da1f0-5ef2-57e5-bef8-f5471fc84add</RequestId>
-        </ResponseMetadata>
-      </SubscribeResponse>
-    headers:
-      Content-Length:
-      - "395"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:29 GMT
-      X-Amzn-Requestid:
-      - ba7da1f0-5ef2-57e5-bef8-f5471fc84add
-    status: 200 OK
-    code: 200
-    duration: ""
-- request:
-    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestCancelSendReceive-subscription-1&Version=2012-11-05
-    form:
-      Action:
-      - ReceiveMessage
-      QueueUrl:
-      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestCancelSendReceive-subscription-1
-      Version:
-      - "2012-11-05"
-    headers:
-      Content-Length:
-      - "161"
-      Content-Type:
-      - application/x-www-form-urlencoded; charset=utf-8
-      User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11.2; darwin; amd64)
-      X-Amz-Date:
-      - 20190115T020130Z
-    url: https://sqs.us-east-2.amazonaws.com/
-    method: POST
-  response:
-    body: <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult/><ResponseMetadata><RequestId>51cbb989-f736-51d2-bc58-ed3eb60c1e73</RequestId></ResponseMetadata></ReceiveMessageResponse>
-    headers:
-      Content-Length:
-      - "240"
-      Content-Type:
-      - text/xml
-      Date:
-      - Tue, 15 Jan 2019 02:01:30 GMT
-      X-Amzn-Requestid:
-      - 51cbb989-f736-51d2-bc58-ed3eb60c1e73
+      - ccc85416-ee72-5b82-b476-00d875ae298b
     status: 200 OK
     code: 200
     duration: ""
