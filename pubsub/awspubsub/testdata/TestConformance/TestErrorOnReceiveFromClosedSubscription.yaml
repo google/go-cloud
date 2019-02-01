@@ -18,7 +18,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T191019Z
+      - 20190201T214836Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +28,7 @@ interactions:
           <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnReceiveFromClosedSubscription-topic-1</TopicArn>
         </CreateTopicResult>
         <ResponseMetadata>
-          <RequestId>b20c786b-c168-5a5a-8393-2ca55ab38143</RequestId>
+          <RequestId>914a3712-d36e-5fc2-8f20-63dc139abbb5</RequestId>
         </ResponseMetadata>
       </CreateTopicResponse>
     headers:
@@ -37,9 +37,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 19:10:19 GMT
+      - Fri, 01 Feb 2019 21:48:35 GMT
       X-Amzn-Requestid:
-      - b20c786b-c168-5a5a-8393-2ca55ab38143
+      - 914a3712-d36e-5fc2-8f20-63dc139abbb5
     status: 200 OK
     code: 200
     duration: ""
@@ -60,20 +60,20 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T191019Z
+      - 20190201T214836Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnReceiveFromClosedSubscription-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>dff1e619-3456-56aa-9a4a-b2d7af8ad4a3</RequestId></ResponseMetadata></CreateQueueResponse>
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnReceiveFromClosedSubscription-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>377db6e3-737a-5976-a4f8-e22db38e4749</RequestId></ResponseMetadata></CreateQueueResponse>
     headers:
       Content-Length:
       - "391"
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 19:10:20 GMT
+      - Fri, 01 Feb 2019 21:48:36 GMT
       X-Amzn-Requestid:
-      - dff1e619-3456-56aa-9a4a-b2d7af8ad4a3
+      - 377db6e3-737a-5976-a4f8-e22db38e4749
     status: 200 OK
     code: 200
     duration: ""

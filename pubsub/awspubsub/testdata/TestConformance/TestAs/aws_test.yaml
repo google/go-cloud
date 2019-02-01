@@ -18,7 +18,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T191020Z
+      - 20190201T214836Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +28,7 @@ interactions:
           <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestAs_aws_test-topic-1</TopicArn>
         </CreateTopicResult>
         <ResponseMetadata>
-          <RequestId>80169c44-7d84-599d-8927-c88ae6583284</RequestId>
+          <RequestId>0b480578-3dce-5ad6-9e6a-51b6fd3a2ea1</RequestId>
         </ResponseMetadata>
       </CreateTopicResponse>
     headers:
@@ -37,9 +37,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 19:10:19 GMT
+      - Fri, 01 Feb 2019 21:48:35 GMT
       X-Amzn-Requestid:
-      - 80169c44-7d84-599d-8927-c88ae6583284
+      - 0b480578-3dce-5ad6-9e6a-51b6fd3a2ea1
     status: 200 OK
     code: 200
     duration: ""
@@ -60,20 +60,20 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T191020Z
+      - 20190201T214836Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestAs_aws_test-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>9efe9d22-e411-5fe3-a054-c9ec7fcd4b07</RequestId></ResponseMetadata></CreateQueueResponse>
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestAs_aws_test-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>d2edb9d6-7857-5edb-a567-ed18b8a310e4</RequestId></ResponseMetadata></CreateQueueResponse>
     headers:
       Content-Length:
       - "366"
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 19:10:20 GMT
+      - Fri, 01 Feb 2019 21:48:36 GMT
       X-Amzn-Requestid:
-      - 9efe9d22-e411-5fe3-a054-c9ec7fcd4b07
+      - d2edb9d6-7857-5edb-a567-ed18b8a310e4
     status: 200 OK
     code: 200
     duration: ""
@@ -98,7 +98,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T191020Z
+      - 20190201T214836Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -109,7 +109,7 @@ interactions:
           <Code>InvalidParameter</Code>
           <Message>Invalid parameter: TopicArn Reason: An ARN must have at least 6 elements, not 1</Message>
         </Error>
-        <RequestId>17473a55-3ba1-5777-a656-6e9ba07ddc6e</RequestId>
+        <RequestId>8ef92d83-4c82-50e6-a79f-794d8c768491</RequestId>
       </ErrorResponse>
     headers:
       Content-Length:
@@ -117,9 +117,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 19:10:20 GMT
+      - Fri, 01 Feb 2019 21:48:36 GMT
       X-Amzn-Requestid:
-      - 17473a55-3ba1-5777-a656-6e9ba07ddc6e
+      - 8ef92d83-4c82-50e6-a79f-794d8c768491
     status: 400 Bad Request
     code: 400
     duration: ""
