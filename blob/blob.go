@@ -833,7 +833,7 @@ func wrapError(b driver.Bucket, err error) error {
 	if err == nil {
 		return nil
 	}
-	if err == io.EOF {
+	if gcerr.DoNotWrap(err) {
 		return err
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")

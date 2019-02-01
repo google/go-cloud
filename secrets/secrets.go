@@ -80,5 +80,8 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 }
 
 func wrapError(k *Keeper, err error) error {
+	if gcerr.DoNotWrap(err) {
+		return err
+	}
 	return gcerr.New(k.k.ErrorCode(err), err, 2, "secrets")
 }
