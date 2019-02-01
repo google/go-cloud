@@ -37,14 +37,15 @@ import (
 	"context"
 
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/trace"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/secrets/driver"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
 // found in provider-specific subpackages.
 type Keeper struct {
-	k driver.Keeper
+	k      driver.Keeper
+	tracer *oc.Tracer
 }
 
 // NewKeeper is intended for use by provider implementations.
@@ -52,13 +53,29 @@ var NewKeeper = newKeeper
 
 // newKeeper creates a Keeper.
 func newKeeper(k driver.Keeper) *Keeper {
-	return &Keeper{k: k}
+	return &Keeper{
+		k: k,
+		tracer: &oc.Tracer{
+			Package:        pkgName,
+			Provider:       oc.ProviderName(k),
+			LatencyMeasure: latencyMeasure,
+		},
+	}
 }
+
+const pkgName = "gocloud.dev/secrets"
+
+var (
+	latencyMeasure  = oc.LatencyMeasure(pkgName)
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
+
+// Encrypt encrypts the plaintext and returns the cipher message.
 
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Encrypt")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = k.tracer.Start(ctx, "Encrypt")
+	defer func() { k.tracer.End(ctx, err) }()
 
 	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
@@ -69,8 +86,8 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 
 // Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Decrypt")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = k.tracer.Start(ctx, "Decrypt")
+	defer func() { k.tracer.End(ctx, err) }()
 
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
