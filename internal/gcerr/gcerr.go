@@ -59,6 +59,12 @@ const (
 	// Some resource has been exhausted, typically because a service resource limit
 	// has been reached.
 	ResourceExhausted ErrorCode = 9
+
+	// The operation was canceled.
+	Canceled ErrorCode = 10
+
+	// The operation timed out.
+	DeadlineExceeded ErrorCode = 11
 )
 
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
@@ -138,6 +144,10 @@ func GRPCCode(err error) ErrorCode {
 		return PermissionDenied
 	case codes.ResourceExhausted:
 		return ResourceExhausted
+	case codes.Canceled:
+		return Canceled
+	case codes.DeadlineExceeded:
+		return DeadlineExceeded
 	default:
 		return Unknown
 	}
