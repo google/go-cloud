@@ -114,7 +114,10 @@ global state, push responsibility to the application to inject the state where
 it is needed.
 
 The exception we permit is URL scheme registration as documented under
-[URLs](#urls).
+[URLs](#urls). The amount of boilerplate setup code required for URL muxes for
+multiple providers without use of a tool like Wire is an unreasonable burden
+for users of Go CDK. A global registry is acceptable as long as its use is not
+mandatory, but the burden is to prove the benefit over the cost.
 
 ## Package Naming Conventions
 
@@ -206,14 +209,6 @@ type WidgetURLOpener interface {
   OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error)
 }
 
-// A type that implements NamedWidgetURLOpener has a preferred scheme for
-// the URLs it opens. WidgetURLScheme must be safe to call from multiple
-// goroutines.
-type NamedWidgetURLOpener interface {
-  WidgetURLOpener
-  WidgetURLScheme() string
-}
-
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
@@ -221,12 +216,6 @@ type NamedWidgetURLOpener interface {
 // The zero value is a URLMux with no registered schemes.
 type URLMux struct {
   // ...
-}
-
-// AddWidget registers the opener with its preferred scheme. If an opener
-// already exists for the scheme, AddWidget panics.
-func (mux *URLMux) AddWidget(opener NamedWidgetURLOpener) {
-  mux.RegisterWidget(opener.WidgetURLScheme(), opener)
 }
 
 // RegisterWidget registers the opener with the given scheme. If an opener
@@ -282,6 +271,76 @@ well-established URI format for the backend (like S3 URLs or database connection
 URIs), then drivers should honor them where possible.
 
 [Backing services factor]: https://12factor.net/backing-services
+
+#### URL Examples
+
+A `WidgetURLOpener` implementation for a hypothetical GCP service:
+
+```go
+package gcpfoo
+
+// ...
+
+const Scheme = "gcpwidget"
+
+type URLOpener struct {
+  Client  *gcp.HTTPClient
+  Options Options
+}
+
+func (o *URLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget, error) {
+  // ...
+  return OpenWidget(ctx, o.Client, u.Host, &o.Options)
+}
+
+type lazyURLOpener struct {
+  init sync.Once
+  o    *URLOpener
+  err  error
+}
+
+func (o *lazyURLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget, error) {
+  o.init.Once(func() {
+    creds, err := gcp.DefaultCredentials(ctx)
+    if err != nil {
+      o.err = err
+      return
+    }
+    o.o = new(URLOpener)
+    o.o.Client, _ = gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
+  })
+  return o.OpenWidgetURL(ctx, u)
+}
+
+func init() {
+  foo.DefaultURLMux().Register(Scheme, new(lazyURLOpener))
+}
+
+// OpenWidget is the exported non-URL constructor.
+func OpenWidget(ctx context.Context, c *gcp.HTTPClient, name string, opts *Options) (*foo.Widget, error) {
+  // ...
+}
+```
+
+Using the global default mux:
+
+```go
+import _ "gocloud.dev/foo/gcpfoo"
+
+// ...
+
+widget, err := foo.OpenWidget(context.Background(), "gcpwidget://xyzzy")
+```
+
+Using a custom mux created during server initialization:
+
+```go
+myMux := new(foo.URLMux)
+myMux.Register(gcpfoo.Scheme, &gcpfoo.URLOpener{
+  Client: client,
+})
+widget, err := myMux.OpenWidget(context.Background(), "gcpwidget://xyzzy")
+```
 
 ## Errors
 
