@@ -21,6 +21,7 @@
 // gcspubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
+//  - Message: *pb.PubsubMessage
 //  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
@@ -201,10 +202,22 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			Body:     rmm.Data,
 			Metadata: rmm.Attributes,
 			AckID:    rm.AckId,
+			AsFunc:   messageAsFunc(rmm),
 		}
 		ms = append(ms, m)
 	}
 	return ms, nil
+}
+
+func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
+	return func(i interface{}) bool {
+		p, ok := i.(**pb.PubsubMessage)
+		if !ok {
+			return false
+		}
+		*p = pm
+		return true
+	}
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
