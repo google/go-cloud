@@ -304,12 +304,25 @@ func TestOpenURL(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Set invalid (and later restore) default credentials in the environment,
+	// so that this test always fails.
+	prevEnv := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "this-cred-file-does-not-exist")
+	defer func() {
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", prevEnv)
+	}()
+
 	tests := []struct {
 		url      string
 		wantName string
 		wantOpts Options
 		wantErr  bool
 	}{
+		{
+			url:      "gs://mybucket",
+			wantName: "mybucket",
+			wantErr:  true,
+		},
 		{
 			url:      "gs://mybucket?cred_path=" + credFile.Name(),
 			wantName: "mybucket",

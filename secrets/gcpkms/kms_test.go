@@ -82,13 +82,13 @@ func TestConformance(t *testing.T) {
 
 func TestNoConnectionError(t *testing.T) {
 	ctx := context.Background()
-	client, close, err := Dial(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+	client, done, err := Dial(ctx, oauth2.StaticTokenSource(&oauth2.Token{
 		AccessToken: "fake",
 	}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer close()
+	defer done()
 
 	keeper := NewKeeper(client, &KeyID{}, nil)
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {

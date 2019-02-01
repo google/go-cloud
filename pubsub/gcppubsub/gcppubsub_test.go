@@ -209,3 +209,55 @@ func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }
+
+func TestOpenTopic(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projID, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	pc, err := PublisherClient(ctx, conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	topic := OpenTopic(ctx, pc, projID, "my-topic", nil)
+	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello world")})
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+}
+
+func TestOpenSubscription(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projID, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	sc, err := SubscriberClient(ctx, conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := OpenSubscription(ctx, sc, projID, "my-subscription", nil)
+	_, err = sub.Receive(ctx)
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+}
