@@ -43,7 +43,7 @@
 // - Topic.Shutdown
 // - Subscription.Receive
 // - Subscription.Shutdown
-// - Calls to the internal driver methods SendBatch, SendAcks and ReceiveBatch.
+// - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
