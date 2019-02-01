@@ -466,7 +466,7 @@ func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context,
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: ds,
-		tracer: newTracer(d),
+		tracer: newTracer(ds),
 		cancel: cancel,
 	}
 	if newAckBatcher == nil {
