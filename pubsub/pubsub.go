@@ -484,8 +484,7 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
-	// Don't wrap context errors.
-	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
+	if gcerr.DoNotWrap(err) {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
