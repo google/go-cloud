@@ -235,7 +235,7 @@ func (mux *URLMux) OpenWidget(ctx context.Context, urlstr string) (*Widget, erro
 }
 
 // OpenWidgetURL dispatches the URL to the opener that is registered with the
-// URL's scheme. OpenWidget is safe to call from multiple goroutines.
+// URL's scheme. OpenWidgetURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error) {
   // ...
 }
@@ -294,9 +294,9 @@ func (o *URLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget,
 }
 
 type lazyURLOpener struct {
-  init sync.Once
-  o    *URLOpener
-  err  error
+  init   sync.Once
+  opener *URLOpener
+  err    error
 }
 
 func (o *lazyURLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget, error) {
@@ -306,10 +306,13 @@ func (o *lazyURLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Wid
       o.err = err
       return
     }
-    o.o = new(URLOpener)
-    o.o.Client, _ = gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
+    o.opener = new(URLOpener)
+    o.opener.Client, _ = gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
   })
-  return o.OpenWidgetURL(ctx, u)
+  if o.err != nil {
+    return nil, o.err
+  }
+  return o.opener.OpenWidgetURL(ctx, u)
 }
 
 func init() {
