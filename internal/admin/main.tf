@@ -33,7 +33,7 @@ provider "google" {
 module "go_cloud_repo" {
   source       = "./repository"
   name         = "go-cloud"
-  description  = "A library and tools for open cloud development in Go."
+  description  = "The Go Cloud Development Kit (Go CDK): A library and tools for open cloud development in Go."
   homepage_url = "https://godoc.org/gocloud.dev"
 
   topics = [

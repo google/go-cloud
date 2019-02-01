@@ -52,6 +52,11 @@ type Message struct {
 	// the message. This field should only be set by methods implementing
 	// Subscription.ReceiveBatch.
 	AckID AckID
+
+	// AsFunc allows providers to expose provider-specific types;
+	// see Topic.As for more details.
+	// AsFunc must be populated on messages returned from ReceiveBatch.
+	AsFunc func(interface{}) bool
 }
 
 // Topic publishes messages.

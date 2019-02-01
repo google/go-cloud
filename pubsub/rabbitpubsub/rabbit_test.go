@@ -294,6 +294,20 @@ func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
+func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
+	var pd *amqp.Delivery
+	if m.As(&pd) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pd)
+	}
+	if !r.usingFake {
+		var d amqp.Delivery
+		if !m.As(&d) {
+			return fmt.Errorf("cast failed for %T", &d)
+		}
+	}
+	return nil
+}
+
 func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	var aerr *amqp.Error
 	if !t.ErrorAs(err, &aerr) {

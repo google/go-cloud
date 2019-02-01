@@ -497,6 +497,14 @@ func toMessage(d amqp.Delivery) *driver.Message {
 		Body:     d.Body,
 		AckID:    d.DeliveryTag,
 		Metadata: md,
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*amqp.Delivery)
+			if !ok {
+				return false
+			}
+			*p = d
+			return true
+		},
 	}
 }
 

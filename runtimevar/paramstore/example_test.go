@@ -16,9 +16,7 @@ package paramstore_test
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/runtimevar"
@@ -31,14 +29,9 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNewVariable() {
-	// Set the environment variables AWS uses to load the session.
-	// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
-	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
-	os.Setenv("AWS_REGION", "us-east-1")
-
+func Example() {
 	// Establish an AWS session.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	session, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -50,24 +43,17 @@ func ExampleNewVariable() {
 	// Construct a *runtimevar.Variable that watches the variable.
 	// For this example, the Parameter Store variable being referenced
 	// should have a JSON string that decodes into MyConfig.
-	v, err := paramstore.NewVariable(session, "myconfig", decoder, nil)
+	v, err := paramstore.NewVariable(session, "cfg-variable-name", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
-	// You can now read the current value of the variable from v.
+	// We can now read the current value of the variable from v.
 	snapshot, err := v.Watch(context.Background())
 	if err != nil {
-		// This is expected to fail due to the invalid credentials
-		// used above.
-		fmt.Println("Watch failed due to invalid credentials")
-		return
+		log.Fatal(err)
 	}
-	// We'll never get here when running this sample, but the resulting
-	// runtimevar.Snapshot.Value would be of type MyConfig.
-	log.Printf("Snapshot.Value: %#v", snapshot.Value.(MyConfig))
-
-	// Output:
-	// Watch failed due to invalid credentials
+	cfg := snapshot.Value.(MyConfig)
+	_ = cfg
 }

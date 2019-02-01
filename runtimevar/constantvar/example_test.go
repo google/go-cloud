@@ -30,69 +30,55 @@ type MyConfig struct {
 	Port   int
 }
 
-func ExampleNew() {
+func Example() {
 	// cfg is our sample config.
 	cfg := MyConfig{Server: "foo.com", Port: 80}
 
-	// Construct a runtimevar.Variable that always returns cfg.
+	// Construct a *runtimevar.Variable that always returns cfg.
 	v := constantvar.New(cfg)
 	defer v.Close()
 
-	// Verify the variable value.
+	// We can now read the current value of the variable from v.
 	snapshot, err := v.Watch(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
+	cfg = snapshot.Value.(MyConfig)
+	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
 
 	// Output:
-	// Value: constantvar_test.MyConfig{Server:"foo.com", Port:80}
+	// foo.com running on port 80
 }
 
-func ExampleNewBytes() {
-	const (
-		// cfgJSON is a JSON string that can be decoded into a MyConfig.
-		cfgJSON = `{"Server": "foo.com", "Port": 80}`
-		// badJSON is a JSON string that cannot be decoded into a MyConfig.
-		badJSON = `{"Server": 42}`
-	)
+func Example_bytes() {
 
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
-	// Construct a runtimevar.Variable using badJSON. It will return an error
-	// since the JSON doesn't decode successfully.
-	v := constantvar.NewBytes([]byte(badJSON), decoder)
-	_, err := v.Watch(context.Background())
-	if err == nil {
-		log.Fatal("Expected an error!")
-	}
-	v.Close()
-
-	// Try again with valid JSON.
-	v = constantvar.NewBytes([]byte(cfgJSON), decoder)
+	// Construct a *runtimevar.Variable based on a JSON string.
+	v := constantvar.NewBytes([]byte(`{"Server": "foo.com", "Port": 80}`), decoder)
 	defer v.Close()
 
-	// Verify the variable value.
+	// We can now read the current value of the variable from v.
 	snapshot, err := v.Watch(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Value: %#v\n", snapshot.Value.(MyConfig))
+	cfg := snapshot.Value.(MyConfig)
+	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
 
 	// Output:
-	// Value: constantvar_test.MyConfig{Server:"foo.com", Port:80}
+	// foo.com running on port 80
 }
 
-func ExampleNewError() {
-	var errFake = errors.New("my error")
-
+func Example_error() {
 	// Construct a runtimevar.Variable that always returns errFake.
+	var errFake = errors.New("my error")
 	v := constantvar.NewError(errFake)
 	defer v.Close()
 
-	// The variable returns an error. It is wrapped by runtimevar, so it's
-	// not equal to errFake.
+	// We can now read the current value of the variable from v
+	// (and always get an error back).
 	_, err := v.Watch(context.Background())
 	if err == nil {
 		log.Fatal("Expected an error!")

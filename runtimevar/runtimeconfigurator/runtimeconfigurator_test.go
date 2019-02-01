@@ -163,3 +163,32 @@ func TestEquivalentError(t *testing.T) {
 		}
 	}
 }
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect to the Runtime Configurator service.
+	client, cleanup, err := Dial(ctx, creds.TokenSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	name := ResourceName{
+		ProjectID: "gcp-project-id",
+		Config:    "cfg-name",
+		Variable:  "cfg-variable-name",
+	}
+	v, err := NewVariable(client, name, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = v.Watch(context.Background())
+	if err == nil {
+		t.Error("got nil want error")
+	}
+}

@@ -15,21 +15,21 @@
 /*
 Package cloud contains a library and tools for open cloud development in Go.
 
-The Go Cloud Project allows application developers to seamlessly deploy cloud
-applications on any combination of cloud providers. It does this by providing
-stable, idiomatic interfaces for common uses like storage and databases.
-Think `database/sql` for cloud products.
+The Go Cloud Development Kit (Go CDK) allows application developers to
+seamlessly deploy cloud applications on any combination of cloud providers.
+It does this by providing stable, idiomatic interfaces for common uses like
+storage and databases. Think `database/sql` for cloud products.
 
-At the core of the project are common types implemented by cloud providers.
-For example, the blob.Bucket type can be created using
-gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then,
-the blob.Bucket can be used throughout your application without worrying
-about the underlying implementation.
+At the core of the Go CDK are common types implemented by cloud providers.
+For example, objects of the blob.Bucket type can be created using
+gcsblob.OpenBucket, s3blob.OpenBucket, or any other provider. Then, the
+*blob.Bucket can be used throughout your application without worrying about
+the underlying implementation.
 
-This project works well with a code generator called Wire
+The Go CDK works well with a code generator called Wire
 (https://github.com/google/wire/blob/master/README.md). It creates
 human-readable code that only imports the cloud SDKs for providers you use. This
-allows Go Cloud to grow to support any number of cloud providers, without
+allows the Go CDK to grow to support any number of cloud providers, without
 increasing compile times or binary sizes, and avoiding any side effects from
 `init()` functions.
 
