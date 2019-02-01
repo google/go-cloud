@@ -437,20 +437,13 @@ func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, 
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
 	}
-	setPermanentError := func(err error) {
-		// Remember a non-retryable error from SendAcks. It will be returned on the
-		// next call to Receive.
-		s.mu.Lock()
-		s.err = err
-		s.mu.Unlock()
-	}
-	s.ackBatcher = newAckBatcher(ctx, d, setPermanentError)
+	s.ackBatcher = newAckBatcher(ctx, s)
 	return s
 }
 
 // defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
-func defaultAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(err error)) driver.Batcher {
+func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
@@ -459,6 +452,8 @@ func defaultAckBatcher(ctx context.Context, ds driver.Subscription, setPermanent
 			defer func() { trace.EndSpan(ctx, err) }()
 			return s.driver.SendAcks(ctx, ids)
 		})
+		// Remember a non-retryable error from SendAcks. It will be returned on the
+		// next call to Receive.
 		if err != nil {
 			err = wrapError(s.driver, err)
 			s.mu.Lock()

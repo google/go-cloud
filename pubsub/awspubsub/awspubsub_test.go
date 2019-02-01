@@ -18,9 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/googleapis/gax-go"
-	"gocloud.dev/internal/batcher"
-	"gocloud.dev/internal/retry"
 	"log"
 	"net/http"
 	"reflect"
@@ -29,7 +26,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	gax "github.com/googleapis/gax-go"
+	"gocloud.dev/internal/batcher"
+	"gocloud.dev/internal/retry"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -39,13 +41,13 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const region   = "us-east-2"
+const region = "us-east-2"
 
 type harness struct {
-	sess   *session.Session
-	cfg    *aws.Config
-	rt     http.RoundTripper
-	closer func()
+	sess      *session.Session
+	cfg       *aws.Config
+	rt        http.RoundTripper
+	closer    func()
 	numTopics uint32
 	numSubs   uint32
 }
@@ -86,7 +88,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	snsClient := sns.New(h.sess, h.cfg)
 	log.Printf("getting queue ARN")
 	out2, err := client.GetQueueAttributes(&sqs.GetQueueAttributesInput{
-		QueueUrl: out.QueueUrl,
+		QueueUrl:       out.QueueUrl,
 		AttributeNames: []*string{aws.String("QueueArn")},
 	})
 	if err != nil {
@@ -105,7 +107,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	}
 	// Get the confirmation from the queue.
 	out3, err := client.ReceiveMessage(&sqs.ReceiveMessageInput{
-			QueueUrl: out.QueueUrl,
+		QueueUrl: out.QueueUrl,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
@@ -123,7 +125,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	}
 	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
 		TopicArn: aws.String(t.arn),
-		Token: token,
+		Token:    token,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("confirming subscription: %v", err)
@@ -258,6 +260,17 @@ func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var s *sqs.SQS
 	if !sub.As(&s) {
 		return fmt.Errorf("cast failed for %T", s)
+	}
+	return nil
+}
+
+func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var ae awserr.Error
+	if !t.ErrorAs(err, &ae) {
+		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
+	}
+	if ae.Code() != sns.ErrCodeNotFoundException {
+		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeNotFoundException)
 	}
 	return nil
 }

@@ -18,6 +18,7 @@
 // It exposes the following types for As:
 // Topic: *sns.SNS
 // Subscription: *sqs.SQS
+// Error: awserror.Error
 package awspubsub
 
 import (
@@ -25,8 +26,11 @@ import (
 	"encoding/json"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
@@ -88,6 +92,78 @@ func (t *topic) As(i interface{}) bool {
 	}
 	*c = t.client
 	return true
+}
+
+// ErrorAs implements driver.Topic.ErrorAs.
+func (t *topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+// ErrorCode implements driver.Topic.ErrorCode.
+func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
+	ae, ok := err.(awserr.Error)
+	if !ok {
+		return gcerr.Unknown
+	}
+	switch ae.Code() {
+
+	case sns.ErrCodeAuthorizationErrorException:
+		return gcerr.AuthorizationError
+
+	case sns.ErrCodeEndpointDisabledException:
+		return gcerr.Unknown
+
+	case sns.ErrCodeFilterPolicyLimitExceededException:
+		return gcerr.ResourceExhausted
+
+	case sns.ErrCodeInternalErrorException:
+		return gcerr.Internal
+
+	case sns.ErrCodeInvalidParameterException:
+		return gcerr.InvalidArgument
+
+	case sns.ErrCodeInvalidParameterValueException:
+		return gcerr.InvalidArgument
+
+	case sns.ErrCodeInvalidSecurityException:
+		return gcerr.InvalidCredentials
+
+	case sns.ErrCodeKMSAccessDeniedException:
+		return gcerr.AuthorizationError
+
+	case sns.ErrCodeKMSDisabledException:
+		return gcerr.FailedPrecondition
+
+	case sns.ErrCodeKMSInvalidStateException:
+		return gcerr.FailedPrecondition
+
+	case sns.ErrCodeKMSNotFoundException:
+		return gcerr.NotFound
+
+	case sns.ErrCodeKMSOptInRequired:
+		return gcerr.FailedPrecondition
+
+	case sns.ErrCodeKMSThrottlingException:
+		return gcerr.Throttled
+
+	case sns.ErrCodeNotFoundException:
+		return gcerr.NotFound
+
+	case sns.ErrCodePlatformApplicationDisabledException:
+		return gcerr.Unknown
+
+	case sns.ErrCodeSubscriptionLimitExceededException:
+		return gcerr.ResourceExhausted
+
+	case sns.ErrCodeThrottledException:
+		return gcerr.Throttled
+
+	case sns.ErrCodeTopicLimitExceededException:
+		return gcerr.ResourceExhausted
+
+	default:
+		return gcerr.Unknown
+	}
 }
 
 type subscription struct {
@@ -169,5 +245,83 @@ func (s *subscription) As(i interface{}) bool {
 		return false
 	}
 	*c = s.client
+	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs.
+func (s *subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+// ErrorCode implements driver.Subscription.ErrorCode.
+func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	ae, ok := err.(awserr.Error)
+	if !ok {
+		return gcerr.Unknown
+	}
+	switch ae.Code() {
+	case sqs.ErrCodeBatchEntryIdsNotDistinct:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeBatchRequestTooLong:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeEmptyBatchRequest:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeInvalidAttributeName:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeInvalidBatchEntryId:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeInvalidIdFormat:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeInvalidMessageContents:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeMessageNotInflight:
+		return gcerr.FailedPrecondition
+
+	case sqs.ErrCodeOverLimit:
+		return gcerr.ResourceExhausted
+
+	case sqs.ErrCodePurgeQueueInProgress:
+		return gcerr.FailedPrecondition
+
+	case sqs.ErrCodeQueueDeletedRecently:
+		return gcerr.FailedPrecondition
+
+	case sqs.ErrCodeQueueDoesNotExist:
+		return gcerr.FailedPrecondition
+
+	case sqs.ErrCodeQueueNameExists:
+		return gcerr.FailedPrecondition
+
+	case sqs.ErrCodeReceiptHandleIsInvalid:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeTooManyEntriesInBatchRequest:
+		return gcerr.InvalidArgument
+
+	case sqs.ErrCodeUnsupportedOperation:
+		return gcerr.InvalidArgument
+
+	default:
+		return gcerr.Unknown
+	}
+}
+
+func errorAs(err error, target interface{}) bool {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return false
+	}
+	p, ok := target.(*awserr.Error)
+	if !ok {
+		return false
+	}
+	*p = e
 	return true
 }

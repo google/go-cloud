@@ -59,6 +59,15 @@ const (
 	// Some resource has been exhausted, typically because a service resource limit
 	// has been reached.
 	ResourceExhausted ErrorCode = 9
+
+	// This user does not have access to the resource.
+	AuthorizationError = 10
+
+	// The credentials are not valid.
+	InvalidCredentials = 11
+
+	// The request was denied due to throttling.
+	Throttled = 12
 )
 
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
