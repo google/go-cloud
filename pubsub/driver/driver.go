@@ -55,6 +55,7 @@ type Message struct {
 
 	// AsFunc allows providers to expose provider-specific types;
 	// see Topic.As for more details.
+	// AsFunc must be populated on messages returned from ReceiveBatch.
 	AsFunc func(interface{}) bool
 }
 
