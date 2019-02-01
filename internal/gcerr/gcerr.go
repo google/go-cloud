@@ -16,8 +16,11 @@
 package gcerr
 
 import (
+	"context"
 	"fmt"
+	"io"
 
+	"gocloud.dev/internal/retry"
 	"golang.org/x/xerrors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,14 +63,20 @@ const (
 	// has been reached.
 	ResourceExhausted ErrorCode = 9
 
+	// The operation was canceled.
+	Canceled ErrorCode = 10
+
+	// The operation timed out.
+	DeadlineExceeded ErrorCode = 11
+
 	// This user does not have access to the resource.
-	AuthorizationError = 10
+	AuthorizationError = 12
 
 	// The credentials are not valid.
-	InvalidCredentials = 11
+	InvalidCredentials = 13
 
 	// The request was denied due to throttling.
-	Throttled = 12
+	Throttled = 14
 )
 
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
@@ -129,6 +138,27 @@ func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, 1, fmt.Sprintf(format, args...))
 }
 
+// DoNotWrap reports whether an error should not be wrapped in the Error
+// type from this package.
+// It returns true if err is a retry error, a context error, io.EOF, or if it wraps
+// one of those.
+func DoNotWrap(err error) bool {
+	if xerrors.Is(err, io.EOF) {
+		return true
+	}
+	if xerrors.Is(err, context.Canceled) {
+		return true
+	}
+	if xerrors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var r *retry.ContextError
+	if xerrors.As(err, &r) {
+		return true
+	}
+	return false
+}
+
 // GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
 // It returns Unknown if the error isn't from gRPC.
 func GRPCCode(err error) ErrorCode {
@@ -147,6 +177,10 @@ func GRPCCode(err error) ErrorCode {
 		return PermissionDenied
 	case codes.ResourceExhausted:
 		return ResourceExhausted
+	case codes.Canceled:
+		return Canceled
+	case codes.DeadlineExceeded:
+		return DeadlineExceeded
 	default:
 		return Unknown
 	}

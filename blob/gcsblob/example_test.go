@@ -16,7 +16,6 @@ package gcsblob_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/blob"
@@ -25,15 +24,11 @@ import (
 )
 
 func Example() {
-	ctx := context.Background()
-
-	// Get GCP credentials.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
+	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := gcp.FakeDefaultCredentials(ctx)
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,18 +46,25 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = b.ReadAll(ctx, "my-key")
-	if err != nil {
-		// This is expected due to the fake credentials we used above.
-		fmt.Println("ReadAll failed due to invalid credentials")
-	}
 
-	// Output:
-	// ReadAll failed due to invalid credentials
+	// Now we can use b to read or write files to the container.
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = data
 }
 
 func Example_open() {
-	_, _ = blob.Open(context.Background(), "gs://my-bucket")
+	ctx := context.Background()
 
-	// Output:
+	// Open creates a *blob.Bucket from a URL.
+	// This URL will open the bucket "my-bucket" using default credentials.
+	b, err := blob.Open(ctx, "gs://my-bucket")
+
+	// Alternatively, you can use the query parameter "cred_path" to load
+	// credentials from a file.
+	b, err = blob.Open(ctx, "gs://my-bucket?cred_path=path/to/credentials")
+	_ = b
+	_ = err
 }

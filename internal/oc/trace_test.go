@@ -12,41 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcerrors
+package oc
 
 import (
-	"context"
-	"io"
+	"regexp"
 	"testing"
-
-	"gocloud.dev/internal/gcerr"
 )
 
-type wrappedErr struct {
-	err error
-}
+type testDriver struct{}
 
-func (w wrappedErr) Error() string { return "wrapped" }
-
-func (w wrappedErr) Unwrap() error { return w.err }
-
-func TestCode(t *testing.T) {
+func TestProviderName(t *testing.T) {
 	for _, test := range []struct {
-		in   error
-		want ErrorCode
+		in   interface{}
+		want string
 	}{
-		{nil, OK},
-		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
-		{wrappedErr{gcerr.New(PermissionDenied, nil, 1, "")}, PermissionDenied},
-		{context.Canceled, Canceled},
-		{context.DeadlineExceeded, DeadlineExceeded},
-		{wrappedErr{context.Canceled}, Canceled},
-		{wrappedErr{context.DeadlineExceeded}, DeadlineExceeded},
-		{io.EOF, Unknown},
+		{nil, ""},
+		{testDriver{}, "gocloud.dev/internal/oc"},
+		{&testDriver{}, "gocloud.dev/internal/oc"},
+		{regexp.Regexp{}, "regexp"},
 	} {
-		got := Code(test.in)
+		got := ProviderName(test.in)
 		if got != test.want {
-			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
+			t.Errorf("%v: got %q, want %q", test.in, got, test.want)
 		}
 	}
 }

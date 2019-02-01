@@ -68,9 +68,17 @@ func TestNoSessionProvidedError(t *testing.T) {
 }
 
 func TestNoConnectionError(t *testing.T) {
+	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
+	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
+	prevRegion := os.Getenv("AWS_REGION")
 	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
 	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
 	os.Setenv("AWS_REGION", "us-east-1")
+	defer func() {
+		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
+		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
+		os.Setenv("AWS_REGION", prevRegion)
+	}()
 	sess, err := session.NewSession()
 	if err != nil {
 		t.Fatal(err)
