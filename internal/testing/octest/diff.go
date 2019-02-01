@@ -86,6 +86,10 @@ func diffSpans(got []*trace.SpanData, prefix string, want []Call) string {
 }
 
 func diffCounts(got []*view.Row, prefix, provider string, wantCalls []Call) string {
+	// Because OpenCensus keeps global state, running tests with -count N can result
+	// in aggregate counts greater than 1.
+	// So instead of checking for 1, we just check that all counts are the same.
+	count := got[0].Data.(*view.CountData).Value
 	var want []*view.Row
 	for _, wc := range wantCalls {
 		want = append(want, &view.Row{
@@ -94,7 +98,7 @@ func diffCounts(got []*view.Row, prefix, provider string, wantCalls []Call) stri
 				{Key: oc.ProviderKey, Value: provider},
 				{Key: oc.StatusKey, Value: fmt.Sprint(wc.Code)},
 			},
-			Data: &view.CountData{Value: 1},
+			Data: &view.CountData{Value: count},
 		})
 	}
 	return cmp.Diff(got, want, cmpopts.SortSlices(lessRow))

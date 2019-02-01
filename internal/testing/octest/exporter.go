@@ -40,7 +40,11 @@ func NewTestExporter(views []*view.View) *TestExporter {
 
 	// Register for metrics.
 	view.RegisterExporter(te)
-	view.SetReportingPeriod(time.Millisecond)
+	// The reporting period will affect how long it takes to get stats (view.Data).
+	// We want it short so tests don't take too long, but long enough so that all
+	// the work gets done. Note that the race detector slows everything down, so
+	// this number is not as small as we might like.
+	view.SetReportingPeriod(100 * time.Millisecond)
 	if err := view.Register(views...); err != nil {
 		log.Fatal(err)
 	}
