@@ -64,7 +64,7 @@
 // - Delete
 // - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
 //   are included because they call NewRangeReader.)
-// - NewWriter, from creation until the call to CLose.
+// - NewWriter, from creation until the call to Close.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
