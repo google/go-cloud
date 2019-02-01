@@ -22,6 +22,7 @@ import (
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/secrets/driver"
 )
 
