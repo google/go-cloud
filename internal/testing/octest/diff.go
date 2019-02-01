@@ -48,10 +48,10 @@ func formatCall(c *Call) string {
 	return fmt.Sprintf("<Name: %q, Code: %d>", c.Method, c.Code)
 }
 
-// Diff compares the list of spans and metric counts obtained from OpenCensus instrumentation
-// (using the TestExporter in this package, or similar) with an expected
-// list of call. Only the name and code are compared.
-// Order matters for traces (though not for metrics).
+// Diff compares the list of spans and metric counts obtained from OpenCensus
+// instrumentation (using the TestExporter in this package, or similar) with an
+// expected list of calls. Only the name and code are compared. Order matters for
+// traces (though not for metrics).
 func Diff(gotSpans []*trace.SpanData, gotRows []*view.Row, namePrefix, provider string, want []Call) string {
 	ds := diffSpans(gotSpans, namePrefix, want)
 	dc := diffCounts(gotRows, namePrefix, provider, want)
