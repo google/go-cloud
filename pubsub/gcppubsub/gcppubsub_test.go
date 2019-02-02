@@ -124,6 +124,10 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
+	return nil
+}
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)

@@ -131,6 +131,10 @@ func (h *harness) Close() {
 	h.conn.Close()
 }
 
+func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
+	return nil
+}
+
 // This test is important for the RabbitMQ driver because the underlying client is
 // poorly designed with respect to concurrency, so we must make sure to exercise the
 // driver with concurrent calls.

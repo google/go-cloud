@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 )
@@ -50,6 +51,10 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 }
 
 func (h *harness) Close() {}
+
+func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
+	return nil
+}
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
