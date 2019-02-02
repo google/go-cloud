@@ -31,6 +31,21 @@
 // You can develop your application locally using localsecrets, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+// - Encrypt
+// - Decrypt
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package secrets // import "gocloud.dev/secrets"
 
 import (
@@ -66,7 +81,11 @@ func newKeeper(k driver.Keeper) *Keeper {
 const pkgName = "gocloud.dev/secrets"
 
 var (
-	latencyMeasure  = oc.LatencyMeasure(pkgName)
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
 	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
 )
 
