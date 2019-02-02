@@ -52,6 +52,24 @@
 //
 // The Bucket.ErrorAs method can retrieve the driver error underlying the returned
 // error.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+// - Attributes
+// - Delete
+// - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
+//   are included because they call NewRangeReader.)
+// - NewWriter, from creation until the call to Close.
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package blob // import "gocloud.dev/blob"
 
 import (
@@ -381,7 +399,11 @@ type Bucket struct {
 const pkgName = "gocloud.dev/blob"
 
 var (
-	latencyMeasure  = oc.LatencyMeasure(pkgName)
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
 	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
 )
 
