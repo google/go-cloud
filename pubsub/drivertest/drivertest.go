@@ -128,12 +128,14 @@ func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) (ret error) {
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
-	t.Run("TestSendReceive", func(t *testing.T) {
-		testSendReceive(t, newHarness)
-	})
-	t.Run("TestSendReceiveTwo", func(t *testing.T) {
-		testSendReceiveTwo(t, newHarness)
-	})
+	if *setup.Record {
+		t.Run("TestSendReceive", func(t *testing.T) {
+			testSendReceive(t, newHarness)
+		})
+		t.Run("TestSendReceiveTwo", func(t *testing.T) {
+			testSendReceiveTwo(t, newHarness)
+		})
+	}
 	t.Run("TestErrorOnSendToClosedTopic", func(t *testing.T) {
 		testErrorOnSendToClosedTopic(t, newHarness)
 	})
