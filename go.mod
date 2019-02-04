@@ -140,4 +140,4 @@ require (
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
 
-replace go.opencensus.io => /usr/local/google/home/jba/gohack/go.opencensus.io
+
