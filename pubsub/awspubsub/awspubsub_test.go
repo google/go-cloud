@@ -102,10 +102,6 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	return ds, cleanup, nil
 }
 
-func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
-	return nil
-}
-
 func (h *harness) ShouldSkip(testName string) (bool, string) {
 	if !*setup.Record {
 		if strings.Contains(testName, "TestSendReceive") {

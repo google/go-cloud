@@ -124,10 +124,6 @@ func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
-	return nil
-}
-
 func (h *harness) ShouldSkip(testName string) (bool, string) {
 	return false, ""
 }
