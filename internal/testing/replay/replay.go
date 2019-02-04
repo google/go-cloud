@@ -197,9 +197,6 @@ func NewGCPDialOptions(t *testing.T, mode recorder.Mode, filename string) (opts 
 		}
 		return opts, done
 	}
-	if path == "testdata/TestConformance.replay" {
-		panic("FIXME")
-	}
 	t.Logf("Replaying from golden file %s", path)
 	r, err := rpcreplay.NewReplayer(path)
 	if err != nil {
