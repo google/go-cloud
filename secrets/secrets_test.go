@@ -67,16 +67,17 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("Encrypt", err)
 }
 
-func TestTracing(t *testing.T) {
+func TestOpenCensus(t *testing.T) {
 	ctx := context.Background()
-	te := octest.NewTestExporter(nil)
+	te := octest.NewTestExporter(OpenCensusViews)
 	defer te.Unregister()
+
 	k := NewKeeper(&erroringKeeper{})
 	k.Encrypt(ctx, nil)
 	k.Decrypt(ctx, nil)
-	diff := octest.DiffSpans(te.Spans, []octest.Span{
-		{"gocloud.dev/secrets.Encrypt", gcerrors.Internal},
-		{"gocloud.dev/secrets.Decrypt", gcerrors.Internal},
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/secrets", "gocloud.dev/secrets", []octest.Call{
+		{"Encrypt", gcerrors.Internal},
+		{"Decrypt", gcerrors.Internal},
 	})
 	if diff != "" {
 		t.Error(diff)

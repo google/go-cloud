@@ -15,11 +15,20 @@
 package gcerrors
 
 import (
+	"context"
 	"io"
 	"testing"
 
 	"gocloud.dev/internal/gcerr"
 )
+
+type wrappedErr struct {
+	err error
+}
+
+func (w wrappedErr) Error() string { return "wrapped" }
+
+func (w wrappedErr) Unwrap() error { return w.err }
 
 func TestCode(t *testing.T) {
 	for _, test := range []struct {
@@ -28,6 +37,11 @@ func TestCode(t *testing.T) {
 	}{
 		{nil, OK},
 		{gcerr.New(AlreadyExists, nil, 1, ""), AlreadyExists},
+		{wrappedErr{gcerr.New(PermissionDenied, nil, 1, "")}, PermissionDenied},
+		{context.Canceled, Canceled},
+		{context.DeadlineExceeded, DeadlineExceeded},
+		{wrappedErr{context.Canceled}, Canceled},
+		{wrappedErr{context.DeadlineExceeded}, DeadlineExceeded},
 		{io.EOF, Unknown},
 	} {
 		got := Code(test.in)

@@ -18,27 +18,25 @@ import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/secrets/awskms"
 )
 
-func Example_encrypt() {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	})
+func Example() {
+	// Establish an AWS session.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
+	session, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(sess)
+	client, err := awskms.Dial(session)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	plaintext := []byte("Hello, Secrets!")
-
+	// Construct a *secrets.Keeper.
 	keeper := awskms.NewKeeper(
 		client,
 		// Get the key resource ID. Here is an example of using an alias. See
@@ -48,40 +46,13 @@ func Example_encrypt() {
 		nil,
 	)
 
-	// Makes the request to the KMS API to encrypt the plain text into a binary.
-	encrypted, err := keeper.Encrypt(context.Background(), plaintext)
+	// Now we can use keeper to encrypt or decrypt.
+	ctx := context.Background()
+	plaintext := []byte("Hello, Secrets!")
+	ciphertext, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Store the encrypted secret.
-	_ = encrypted
-}
-
-func Example_decrypt() {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-west-1"),
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(sess)
-	if err != nil {
-		panic(err)
-	}
-
-	// Get the secret to be decrypted from some kind of storage.
-	var ciphertext []byte
-
-	// keyID is not needed when doing decryption.
-	keeper := awskms.NewKeeper(client, "", nil)
-
-	// Makes the request to the KMS API to decrypt the binary into plain text.
-	decrypted, err := keeper.Decrypt(context.Background(), ciphertext)
-	if err != nil {
-		panic(err)
-	}
-	// Use the decrypted secret.
+	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	_ = decrypted
 }

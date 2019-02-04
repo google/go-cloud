@@ -31,6 +31,24 @@
 // You can develop your application locally using memblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+// - Topic.Send
+// - Topic.Shutdown
+// - Subscription.Receive
+// - Subscription.Shutdown
+// - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
@@ -45,8 +63,8 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/retry"
-	"gocloud.dev/internal/trace"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -61,6 +79,9 @@ type Message struct {
 	// processingStartTime is the time that this message was returned
 	// from Receive, or the zero time if it wasn't.
 	processingStartTime time.Time
+
+	// asFunc invokes driver.Message.AsFunc.
+	asFunc func(interface{}) bool
 
 	// ack is a closure that queues this message for acknowledgement.
 	ack func()
@@ -85,10 +106,21 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
+// As converts m to provider-specific types.
+// See Topic.As for details.
+// As panics unless it is called on a message obtained from Subscription.Receive.
+func (m *Message) As(i interface{}) bool {
+	if m.asFunc == nil {
+		panic("As called on a Message that was not obtained from Receive")
+	}
+	return m.asFunc(i)
+}
+
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
 	batcher driver.Batcher
+	tracer  *oc.Tracer
 	mu      sync.Mutex
 	err     error
 
@@ -105,8 +137,8 @@ type msgErrChan struct {
 // sent, or failed to be sent. Send can be called from multiple goroutines
 // at once.
 func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Send")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = t.tracer.Start(ctx, "Topic.Send")
+	defer func() { t.tracer.End(ctx, err) }()
 
 	// Check for doneness before we do any work.
 	if err := ctx.Err(); err != nil {
@@ -124,8 +156,8 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Shutdown(ctx context.Context) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Topic.Shutdown")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = t.tracer.Start(ctx, "Topic.Shutdown")
+	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
 	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic closed")
@@ -198,6 +230,7 @@ var NewTopic = newTopic
 // newTopic makes a pubsub.Topic from a driver.Topic.
 func newTopic(d driver.Topic) *Topic {
 	callCtx, cancel := context.WithCancel(context.Background())
+	tracer := newTracer(d)
 	handler := func(item interface{}) error {
 		ms := item.([]*Message)
 		var dms []*driver.Message
@@ -210,8 +243,8 @@ func newTopic(d driver.Topic) *Topic {
 		}
 
 		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
-			ctx := trace.StartSpan(callCtx, "gocloud.dev/pubsub/driver.Topic.SendBatch")
-			defer func() { trace.EndSpan(ctx, err) }()
+			ctx := tracer.Start(callCtx, "driver.Topic.SendBatch")
+			defer func() { tracer.End(ctx, err) }()
 			return d.SendBatch(ctx, dms)
 		})
 		if err != nil {
@@ -224,15 +257,35 @@ func newTopic(d driver.Topic) *Topic {
 	t := &Topic{
 		driver:  d,
 		batcher: b,
+		tracer:  tracer,
 		cancel:  cancel,
 	}
 	return t
 }
 
+const pkgName = "gocloud.dev/pubsub"
+
+var (
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
+
+func newTracer(driver interface{}) *oc.Tracer {
+	return &oc.Tracer{
+		Package:        pkgName,
+		Provider:       oc.ProviderName(driver),
+		LatencyMeasure: latencyMeasure,
+	}
+}
+
 // Subscription receives published messages.
 type Subscription struct {
 	driver driver.Subscription
-
+	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher driver.Batcher
 	cancel     func() // for canceling all SendAcks calls
@@ -286,8 +339,8 @@ func (s *Subscription) addProcessingTime(d time.Duration) {
 // Message has to be called once the message has been processed, to prevent it
 // from being received again.
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Receive")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = s.tracer.Start(ctx, "Subscription.Receive")
+	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -365,7 +418,9 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 	for len(msgs) == 0 {
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 			var err error
-			msgs, err = s.driver.ReceiveBatch(ctx, nMessages)
+			ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+			defer func() { s.tracer.End(ctx2, err) }()
+			msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
 			return err
 		})
 		if err != nil {
@@ -378,6 +433,7 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 		m2 := &Message{
 			Body:     m.Body,
 			Metadata: m.Metadata,
+			asFunc:   m.AsFunc,
 		}
 		m2.ack = func() {
 			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
@@ -397,8 +453,8 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 
 // Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub.Subscription.Shutdown")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = s.tracer.Start(ctx, "Subscription.Shutdown")
+	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
 	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription closed")
@@ -432,6 +488,7 @@ func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, 
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: d,
+		tracer: newTracer(d),
 		cancel: cancel,
 	}
 	if newAckBatcher == nil {
@@ -448,9 +505,9 @@ func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
-			ctx = trace.StartSpan(ctx, "gocloud.dev/pubsub/driver.Subscription.SendAcks")
-			defer func() { trace.EndSpan(ctx, err) }()
-			return s.driver.SendAcks(ctx, ids)
+			ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+			defer func() { s.tracer.End(ctx2, err) }()
+			return s.driver.SendAcks(ctx2, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
 		// next call to Receive.
@@ -470,8 +527,7 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
-	// Don't wrap context errors.
-	if _, ok := err.(*retry.ContextError); ok || err == context.Canceled || err == context.DeadlineExceeded {
+	if gcerr.DoNotWrap(err) {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")

@@ -16,9 +16,7 @@ package s3blob_test
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
@@ -26,21 +24,8 @@ import (
 )
 
 func Example() {
-	// Set the environment variables AWS uses to load the session.
-	// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
-	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
-	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
-	prevRegion := os.Getenv("AWS_REGION")
-	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
-	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
-	os.Setenv("AWS_REGION", "us-east-1")
-	defer func() {
-		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
-		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
-		os.Setenv("AWS_REGION", prevRegion)
-	}()
-
 	// Establish an AWS session.
+	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	session, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
@@ -52,18 +37,21 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = b.ReadAll(ctx, "my-key")
-	if err != nil {
-		// This is expected due to the fake credentials we used above.
-		fmt.Println("ReadAll failed due to invalid credentials")
-	}
 
-	// Output:
-	// ReadAll failed due to invalid credentials
+	// Now we can use b to read or write files to the container.
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = data
 }
 
 func Example_open() {
-	_, _ = blob.Open(context.Background(), "s3://my-bucket")
+	ctx := context.Background()
 
-	// Output:
+	// Open creates a *blob.Bucket from a URL.
+	// See the package documentation for tadditional URL parameters.
+	b, err := blob.Open(ctx, "s3://my-bucket?region=us-east-1")
+	_ = b
+	_ = err
 }

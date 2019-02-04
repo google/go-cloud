@@ -59,7 +59,7 @@ func TestListIterator(t *testing.T) {
 	}
 }
 
-// faikeLister implements driver.Bucket. Only ListPaged is implemented,
+// fakeLister implements driver.Bucket. Only ListPaged is implemented,
 // returning static data from pages.
 type fakeLister struct {
 	driver.Bucket

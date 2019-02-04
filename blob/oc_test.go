@@ -16,17 +16,11 @@ package blob_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/memblob"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/testing/octest"
 )
 
@@ -52,60 +46,14 @@ func TestOpenCensus(t *testing.T) {
 		t.Fatal("got nil, want error")
 	}
 
-	diff := octest.DiffSpans(te.Spans, []octest.Span{
-		{"gocloud.dev/blob.NewWriter", gcerrors.OK},
-		{"gocloud.dev/blob.NewRangeReader", gcerrors.OK},
-		{"gocloud.dev/blob.Attributes", gcerrors.OK},
-		{"gocloud.dev/blob.Delete", gcerrors.OK},
-		{"gocloud.dev/blob.NewRangeReader", gcerrors.NotFound},
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", "gocloud.dev/blob/memblob", []octest.Call{
+		{"NewWriter", gcerrors.OK},
+		{"NewRangeReader", gcerrors.OK},
+		{"Attributes", gcerrors.OK},
+		{"Delete", gcerrors.OK},
+		{"NewRangeReader", gcerrors.NotFound},
 	})
 	if diff != "" {
-		t.Errorf("trace: %s", diff)
+		t.Error(diff)
 	}
-
-	// Wait for counts. Expect all counts to arrive in the same view.Data.
-	for {
-		data := <-te.Stats
-		if _, ok := data.Rows[0].Data.(*view.CountData); !ok {
-			continue
-		}
-		// There should be a count of 1 for each of these sets of tags.
-		// Rows may appear in any order, but tags within a row will be sorted
-		// by key name (see https://godoc.org/go.opencensus.io/stats/view#Row.Equal).
-		var want []*view.Row
-		for _, m := range []string{"Attributes", "Delete", "NewRangeReader", "NewWriter"} {
-			want = append(want, &view.Row{
-				Tags: []tag.Tag{
-					{Key: oc.MethodKey, Value: "gocloud.dev/blob." + m},
-					{Key: oc.ProviderKey, Value: "gocloud.dev/blob/memblob"},
-					{Key: oc.StatusKey, Value: "OK"},
-				},
-				Data: &view.CountData{Value: 1},
-			})
-		}
-		want = append(want, &view.Row{
-			Tags: []tag.Tag{
-				{Key: oc.MethodKey, Value: "gocloud.dev/blob.NewRangeReader"},
-				{Key: oc.ProviderKey, Value: "gocloud.dev/blob/memblob"},
-				{Key: oc.StatusKey, Value: "NotFound"},
-			},
-			Data: &view.CountData{Value: 1},
-		})
-		diff := cmp.Diff(data.Rows, want, cmpopts.SortSlices(lessRow))
-		if diff != "" {
-			t.Errorf("metrics: %s", diff)
-		}
-		break
-	}
-}
-
-// The order doesn't matter; we just need a deterministic ordering of rows.
-func lessRow(r1, r2 *view.Row) bool { return rowKey(r1) < rowKey(r2) }
-
-func rowKey(r *view.Row) string {
-	var vals []string
-	for _, t := range r.Tags {
-		vals = append(vals, t.Value)
-	}
-	return strings.Join(vals, "|")
 }
