@@ -116,8 +116,13 @@ func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, 
 }
 
 func (h *harness) ShouldSkip(testName string) (bool, string) {
-	if !*setup.Record && strings.HasPrefix(testName, "TestSendReceive") {
-		return true, "TestSendReceive* tests cause hangs and panics in replay on awspubsub due to an issue with the recorder"
+	if !*setup.Record {
+		if strings.Contains(testName, "TestSendReceive") {
+			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
+		}
+		if strings.Contains(testName, "TestAs") {
+			return true, "TestAs hangs in replay mode on awspubsub"
+		}
 	}
 	return false, ""
 }

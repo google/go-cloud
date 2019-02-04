@@ -147,8 +147,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			should, reason := h.ShouldSkip(name)
-			if should {
+			skip, reason := h.ShouldSkip(t.Name())
+			if skip {
 				t.Skip(reason)
 			}
 			test(t, newHarness)
@@ -163,6 +163,10 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				t.Fatalf("AsTest.Name is required")
 			}
 			t.Run(st.Name(), func(t *testing.T) {
+				skip, reason := h.ShouldSkip(t.Name())
+				if skip {
+					t.Skip(reason)
+				}
 				testAs(t, newHarness, st)
 			})
 		}
