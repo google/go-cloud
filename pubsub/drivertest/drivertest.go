@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"gocloud.dev/internal/testing/setup"
 	"strconv"
 	"testing"
 
@@ -127,7 +126,7 @@ func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) (ret error) {
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
-	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
+	tests := map[string]func(t *testing.T, h Harness){
 		"TestSendReceive":                                         testSendReceive,
 		"TestSendReceiveTwo":                                      testSendReceiveTwo,
 		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
@@ -147,7 +146,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 			if skip {
 				t.Skip(reason)
 			}
-			test(t, newHarness)
+			test(t, h)
 		})
 	}
 
@@ -167,7 +166,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				if skip {
 					t.Skip(reason)
 				}
-				testAs(t, newHarness, st)
+				testAs(t, h, st)
 			})
 		}
 	})
@@ -180,15 +179,9 @@ func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) 
 	})
 }
 
-func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
+func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, h Harness) {
 	// Set up.
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-
 	dt, err := h.MakeNonexistentTopic(ctx)
 	if err != nil {
 		// Failure shouldn't happen for non-existent topics until messages are sent
@@ -205,15 +198,9 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 	}
 }
 
-func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
+func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, h Harness) {
 	// Set up.
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-
 	ds, err := h.MakeNonexistentSubscription(ctx)
 	if err != nil {
 		t.Skipf("failed to make non-existent subscription: %v", err)
@@ -227,14 +214,9 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHa
 	}
 }
 
-func testSendReceive(t *testing.T, newHarness HarnessMaker) {
+func testSendReceive(t *testing.T, h Harness) {
 	// Set up.
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -252,18 +234,9 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 
 // Receive from two subscriptions to the same topic.
 // Verify both get all the messages.
-func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
-	if !*setup.Record {
-		t.Skip("This test fails for awspubsub in replay mode, probably due to an issue with the recorder.")
-	}
+func testSendReceiveTwo(t *testing.T, h Harness) {
 	// Set up.
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
-
 	dt, cleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -330,14 +303,9 @@ func diffMessageSets(got, want []*pubsub.Message) string {
 	return cmp.Diff(got, want, cmpopts.SortSlices(less), cmpopts.IgnoreUnexported(pubsub.Message{}))
 }
 
-func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
+func testErrorOnSendToClosedTopic(t *testing.T, h Harness) {
 	// Set up.
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, _, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -353,13 +321,8 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMaker) {
+func testErrorOnReceiveFromClosedSubscription(t *testing.T, h Harness) {
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	_, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -371,13 +334,8 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 	}
 }
 
-func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
+func testCancelSendReceive(t *testing.T, h Harness) {
 	ctx, cancel := context.WithCancel(context.Background())
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -426,13 +384,8 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 }
 
 // testAs tests the various As functions, using AsTest.
-func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
+func testAs(t *testing.T, h Harness, st AsTest) {
 	ctx := context.Background()
-	h, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer h.Close()
 	top, sub, cleanup, err := makePair(ctx, h, t.Name())
 	if err != nil {
 		t.Fatal(err)
