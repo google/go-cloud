@@ -44,6 +44,7 @@ import (
 	"reflect"
 	"time"
 
+	"go.opencensus.io/stats"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/runtimevar/driver"
@@ -94,8 +95,11 @@ func (s *Snapshot) As(i interface{}) bool {
 const pkgName = "gocloud.dev/runtimevar"
 
 var (
-	latencyMeasure  = oc.LatencyMeasure(pkgName)
-	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+	changeMeasure = stats.Int64(
+		pkgName+"/valueChange",
+		"Count of variable value changes",
+		stats.UnitDimensionless)
+	OpenCensusViews = oc.xViews(pkgName, latencyMeasure)
 )
 
 // Variable provides an easy and portable way to watch runtime configuration
