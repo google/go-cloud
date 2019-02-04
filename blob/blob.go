@@ -66,6 +66,10 @@
 //   are included because they call NewRangeReader.)
 // - NewWriter, from creation until the call to Close.
 //
+// It also collects the following metrics:
+// - gocloud.dev/blob/bytes_read: the total number of bytes read, by provider.
+// - gocloud.dev/blob/bytes_written: the total number of bytes written, by provider.
+//
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
 // To enable metric collection in your application, see "Exporting stats" at
