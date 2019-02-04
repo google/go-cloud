@@ -127,21 +127,22 @@ func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) (ret error) {
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
-	h, err := newHarness(context.Background(), t)
-	if err != nil {
-		t.Fatalf("making test harness: %v", err)
-	}
-	tests := map[string]func(t *testing.T, newHarness HarnessMaker) {
-		"TestSendReceive": testSendReceive,
-		"TestSendReceiveTwo": testSendReceiveTwo,
-		"TestErrorOnSendToClosedTopic": testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription": testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive": testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend": testNonExistentTopicSucceedsOnOpenButFailsOnSend,
+	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
+		"TestSendReceive":                                         testSendReceive,
+		"TestSendReceiveTwo":                                      testSendReceiveTwo,
+		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                                   testCancelSendReceive,
+		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			h, err := newHarness(context.Background(), t)
+			if err != nil {
+				t.Fatalf("making test harness: %v", err)
+			}
+			defer h.Close()
 			skip, reason := h.ShouldSkip(t.Name())
 			if skip {
 				t.Skip(reason)
@@ -150,7 +151,6 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		})
 	}
 
-
 	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, st := range asTests {
@@ -158,6 +158,11 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 				t.Fatalf("AsTest.Name is required")
 			}
 			t.Run(st.Name(), func(t *testing.T) {
+				h, err := newHarness(context.Background(), t)
+				if err != nil {
+					t.Fatalf("making test harness: %v", err)
+				}
+				defer h.Close()
 				skip, reason := h.ShouldSkip(t.Name())
 				if skip {
 					t.Skip(reason)
