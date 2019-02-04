@@ -115,6 +115,13 @@ func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, 
 	}
 }
 
+func (h *harness) ShouldSkip(testName string) (bool, string) {
+	if !*setup.Record && strings.HasPrefix(testName, "TestSendReceive") {
+		return true, "TestSendReceive* tests cause hangs and panics in replay on awspubsub due to an issue with the recorder"
+	}
+	return false, ""
+}
+
 // ackBatcher is a trivial batcher that sends off items as singleton batches.
 type ackBatcher struct {
 	handler func(items interface{}) error

@@ -55,6 +55,10 @@ func mustDialRabbit(t testing.TB) amqpConnection {
 	return &connection{conn}
 }
 
+func (h *harness) ShouldSkip(testName string) (bool, string) {
+	return false, ""
+}
+
 func TestConformance(t *testing.T) {
 	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil

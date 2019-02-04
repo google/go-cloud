@@ -56,6 +56,10 @@ func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, 
 	return nil
 }
 
+func (h *harness) ShouldSkip(testName string) (bool, string) {
+	return false, ""
+}
+
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
