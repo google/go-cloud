@@ -484,30 +484,32 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver: d,
-		tracer: newTracer(d),
+		driver: ds,
+		tracer: newTracer(ds),
 		cancel: cancel,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
 	}
-	s.ackBatcher = newAckBatcher(ctx, s)
+	s.ackBatcher = newAckBatcher(ctx, s, ds)
 	return s
 }
 
+type ackBatchSender func(context.Context, []driver.AckID) error
+
 // defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
-func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
+func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
 			ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
 			defer func() { s.tracer.End(ctx2, err) }()
-			return s.driver.SendAcks(ctx2, ids)
+			return ds.SendAcks(ctx2, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
 		// next call to Receive.
