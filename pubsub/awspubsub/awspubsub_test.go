@@ -103,16 +103,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 }
 
 func (h *harness) AckBatcherMaker() func(context.Context, *pubsub.Subscription, driver.Subscription) driver.Batcher {
-	return func(ctx context.Context, s *pubsub.Subscription, ds driver.Subscription) driver.Batcher {
-		const maxHandlers = 1
-		handler := func(items interface{}) error {
-			ids := items.([]driver.AckID)
-			return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-				return ds.SendAcks(ctx, ids)
-			})
-		}
-		return &ackBatcher{handler}
-	}
+	return nil
 }
 
 func (h *harness) ShouldSkip(testName string) (bool, string) {
