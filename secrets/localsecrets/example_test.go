@@ -29,23 +29,18 @@ func Example() {
 	// the localsecrets package supplies a helper function to convert your key
 	// and also crop it to size, if necessary.
 	secretKey := localsecrets.ByteKey("I'm a secret string!")
-	k := localsecrets.NewKeeper(secretKey)
+	keeper := localsecrets.NewKeeper(secretKey)
 
-	// Package localsecrets is intended for use with small messages,
-	// as the encryption takes place in-memory. For more information,
-	// see the documentation for golang.org/x/crypto/nacl/secretbox.
-	msg := "I'm a message!"
-	encryptedMsg, err := k.Encrypt(context.Background(), []byte(msg))
+	// Now we can use keeper to encrypt or decrypt.
+	plaintext := []byte("Hello, Secrets!")
+	ctx := context.Background()
+	ciphertext, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	decryptedMsg, err := k.Decrypt(context.Background(), encryptedMsg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(decryptedMsg))
+	decrypted, err := keeper.Decrypt(ctx, ciphertext)
+	fmt.Println(string(decrypted))
 
 	// Output:
-	// I'm a message!
+	// Hello, Secrets!
 }

@@ -167,6 +167,9 @@ func wrapError(w driver.Watcher, err error) error {
 	if err == nil {
 		return nil
 	}
+	if gcerr.DoNotWrap(err) {
+		return err
+	}
 	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 

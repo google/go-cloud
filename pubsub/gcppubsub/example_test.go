@@ -16,7 +16,6 @@ package gcppubsub_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"gocloud.dev/gcp"
@@ -25,15 +24,16 @@ import (
 )
 
 func ExampleOpenTopic() {
-	ctx := context.Background()
-
-	// Get GCP credentials.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
+	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := gcp.FakeDefaultCredentials(ctx)
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Get the ProjectID from the credentials (it's required by OpenTopic).
+	projID, err := gcp.DefaultProjectID(creds)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,35 +44,33 @@ func ExampleOpenTopic() {
 		log.Fatal(err)
 	}
 	defer cleanup()
+
+	// Construct a PublisherClient using the connection.
 	pubClient, err := gcppubsub.PublisherClient(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer pubClient.Close()
-	proj, err := gcp.DefaultProjectID(creds)
-	if err != nil {
-		log.Fatal(err)
-	}
-	t := gcppubsub.OpenTopic(ctx, pubClient, proj, "example-topic", nil)
-	defer t.Shutdown(ctx)
-	if err := t.Send(ctx, &pubsub.Message{Body: []byte("example message")}); err != nil {
-		fmt.Println("Message send failure is expected due to the fake credentials.")
-	}
 
-	// Output:
-	// Message send failure is expected due to the fake credentials.
+	// Construct a *pubsub.Topic.
+	t := gcppubsub.OpenTopic(ctx, pubClient, projID, "example-topic", nil)
+	defer t.Shutdown(ctx)
+
+	// Now we can use t to send messages.
+	err = t.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
 
 func ExampleOpenSubscription() {
-	ctx := context.Background()
-
-	// Get GCP credentials.
-	// Here we use a fake JSON credentials file, but you could also use
-	// gcp.DefaultCredentials(ctx) to use the default GCP credentials from
-	// the environment.
+	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
-	creds, err := gcp.FakeDefaultCredentials(ctx)
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Get the ProjectID from the credentials (it's required by OpenTopic).
+	projID, err := gcp.DefaultProjectID(creds)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,25 +81,23 @@ func ExampleOpenSubscription() {
 		log.Fatal(err)
 	}
 	defer cleanup()
-	proj, err := gcp.DefaultProjectID(creds)
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	// Construct a SubscriberClient using the connection.
 	subClient, err := gcppubsub.SubscriberClient(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer subClient.Close()
-	s := gcppubsub.OpenSubscription(ctx, subClient, proj, "example-subscription", nil)
-	defer s.Shutdown(ctx)
-	m, err := s.Receive(ctx)
-	if err != nil {
-		fmt.Println("Message receive failure is expected due to the fake credentials.")
-		return
-	}
-	fmt.Printf("%s\n", m.Body)
-	m.Ack()
 
-	// Output:
-	// Message receive failure is expected due to the fake credentials.
+	// Construct a *pubsub.Subscription.
+	s := gcppubsub.OpenSubscription(ctx, subClient, projID, "example-subscription", nil)
+	defer s.Shutdown(ctx)
+
+	// Now we can use s to receive messages.
+	msg, err := s.Receive(ctx)
+	if err != nil {
+		// Handle error....
+	}
+	// Handle message....
+	msg.Ack()
 }

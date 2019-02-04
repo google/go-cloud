@@ -16,6 +16,7 @@ import (
 	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
 
+	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
@@ -26,6 +27,11 @@ import (
 
 // Record is true iff the tests are being run in "record" mode.
 var Record = flag.Bool("record", false, "whether to run tests against cloud resources and record the interactions")
+
+// FakeGCPCredentials gets fake GCP credentials.
+func FakeGCPCredentials(ctx context.Context) (*google.Credentials, error) {
+	return google.CredentialsFromJSON(ctx, []byte(`{"type": "service_account", "project_id": "my-project-id"}`))
+}
 
 // NewAWSSession creates a new session for testing against AWS.
 // If the test is in --record mode, the test will call out to AWS, and the

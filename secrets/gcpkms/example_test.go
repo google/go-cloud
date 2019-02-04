@@ -21,75 +21,38 @@ import (
 	"gocloud.dev/secrets/gcpkms"
 )
 
-func Example_encrypt() {
-	ctx := context.Background()
+func Example() {
 
 	// Get a client to use with the KMS API.
+	ctx := context.Background()
 	client, done, err := gcpkms.Dial(ctx, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Make sure to close the connection when done.
+	// Close the connection when done.
 	defer done()
 
+	// Construct a *secrets.Keeper.
+	keeper := gcpkms.NewKeeper(
+		client,
+		// Get the key resource ID.
+		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+		// information.
+		&gcpkms.KeyID{
+			ProjectID: "project-id",
+			Location:  "global",
+			KeyRing:   "test",
+			Key:       "key-name",
+		},
+		nil,
+	)
+
+	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")
-
-	keeper := gcpkms.NewKeeper(
-		client,
-		// Get the key resource ID.
-		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
-		// information.
-		&gcpkms.KeyID{
-			ProjectID: "project-id",
-			Location:  "global",
-			KeyRing:   "test",
-			Key:       "key-name",
-		},
-		nil,
-	)
-
-	// Makes the request to the KMS API to encrypt the plain text into a binary.
-	encrypted, err := keeper.Encrypt(ctx, plaintext)
+	ciphertext, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Store the encrypted secret.
-	_ = encrypted
-}
-
-func Example_decrypt() {
-	ctx := context.Background()
-
-	// Get a client to use with the KMS API.
-	client, done, err := gcpkms.Dial(ctx, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Make sure to close the connection when done.
-	defer done()
-
-	// Get the secret to be decrypted from some kind of storage.
-	var ciphertext []byte
-
-	keeper := gcpkms.NewKeeper(
-		client,
-		// Get the key resource ID.
-		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
-		// information.
-		&gcpkms.KeyID{
-			ProjectID: "project-id",
-			Location:  "global",
-			KeyRing:   "test",
-			Key:       "key-name",
-		},
-		nil,
-	)
-
-	// Makes the request to the KMS API to decrypt the binary into plain text.
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Use the decrypted secret.
 	_ = decrypted
 }
