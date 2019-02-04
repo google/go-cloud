@@ -18,7 +18,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T214835Z
+      - 20190204T193359Z
     url: https://sns.us-east-2.amazonaws.com/
     method: POST
   response:
@@ -28,7 +28,7 @@ interactions:
           <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnSendToClosedTopic-topic-1</TopicArn>
         </CreateTopicResult>
         <ResponseMetadata>
-          <RequestId>bfd6b913-cdd9-5f61-a10b-eddd0d2a2b16</RequestId>
+          <RequestId>7c882c8c-23b9-56bd-b52d-785eb65e5ad2</RequestId>
         </ResponseMetadata>
       </CreateTopicResponse>
     headers:
@@ -37,9 +37,9 @@ interactions:
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 21:48:35 GMT
+      - Mon, 04 Feb 2019 19:33:58 GMT
       X-Amzn-Requestid:
-      - bfd6b913-cdd9-5f61-a10b-eddd0d2a2b16
+      - 7c882c8c-23b9-56bd-b52d-785eb65e5ad2
     status: 200 OK
     code: 200
     duration: ""
@@ -60,20 +60,20 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T214835Z
+      - 20190204T193359Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>e6968fe0-0a8d-50e6-b9e8-db2eca7eeed9</RequestId></ResponseMetadata></CreateQueueResponse>
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnSendToClosedTopic-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>c3ba280e-c9ce-5da8-ad50-7cdc5c29e0a9</RequestId></ResponseMetadata></CreateQueueResponse>
     headers:
       Content-Length:
       - "379"
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 21:48:35 GMT
+      - Mon, 04 Feb 2019 19:33:59 GMT
       X-Amzn-Requestid:
-      - e6968fe0-0a8d-50e6-b9e8-db2eca7eeed9
+      - c3ba280e-c9ce-5da8-ad50-7cdc5c29e0a9
     status: 200 OK
     code: 200
     duration: ""

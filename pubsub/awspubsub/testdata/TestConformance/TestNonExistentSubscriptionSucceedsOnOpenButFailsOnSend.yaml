@@ -18,21 +18,21 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
       X-Amz-Date:
-      - 20190201T214836Z
+      - 20190204T193357Z
     url: https://sqs.us-east-2.amazonaws.com/
     method: POST
   response:
     body: <?xml version="1.0"?><ErrorResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><Error><Type>Sender</Type><Code>InvalidAddress</Code><Message>The
-      address nonexistent-subscription is not valid for this endpoint.</Message><Detail/></Error><RequestId>0896343f-7dd5-53e0-b1a3-60f1bd217ddf</RequestId></ErrorResponse>
+      address nonexistent-subscription is not valid for this endpoint.</Message><Detail/></Error><RequestId>f52c041e-b5b6-5192-b873-50cc2053d6ac</RequestId></ErrorResponse>
     headers:
       Content-Length:
       - "319"
       Content-Type:
       - text/xml
       Date:
-      - Fri, 01 Feb 2019 21:48:36 GMT
+      - Mon, 04 Feb 2019 19:33:57 GMT
       X-Amzn-Requestid:
-      - 0896343f-7dd5-53e0-b1a3-60f1bd217ddf
+      - f52c041e-b5b6-5192-b873-50cc2053d6ac
     status: 404 Not Found
     code: 404
     duration: ""
