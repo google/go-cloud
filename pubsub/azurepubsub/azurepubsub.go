@@ -258,6 +258,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				Body:     sbmsg.Data,
 				Metadata: metadata,
 				AckID:    sbmsg.LockToken,
+				AsFunc:   messageAsFunc(sbmsg),
 			})			
 			if len(messages) >= maxMessages {
 				cancel()
@@ -273,6 +274,17 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	wg.Wait()		
 	return messages, nil
+}
+
+func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
+	return func(i interface{}) bool {
+		p, ok := i.(**servicebus.Message)
+		if !ok {
+			return false
+		}
+		*p = sbmsg
+		return true
+	}
 }
 
 // SendAcks implements driver.Subscription.SendAcks.

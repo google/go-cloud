@@ -32,7 +32,7 @@ import (
 var (	
 	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")			
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")		
 )
 
 const (
@@ -178,6 +178,18 @@ func (sbAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	var sbError common.Retryable;
 	if !t.ErrorAs(err, &sbError) {
 		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
+	}
+	return nil
+}
+
+func (sbAsTest) MessageCheck(m *pubsub.Message) error {
+	var m2 servicebus.Message
+	if m.As(&m2) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &m2)
+	}
+	var m3 *servicebus.Message
+	if !m.As(&m3) {
+		return fmt.Errorf("cast failed for %T", &m3)
 	}
 	return nil
 }
