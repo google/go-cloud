@@ -68,18 +68,12 @@ func TestRun(t *testing.T) {
 			m[i] = true
 		}
 
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go func() {
-			workerpool.Run(context.Background(), 10, nextTask, func(ctx context.Context, ti interface{}) {
-				t := ti.(Task)
-				mu.Lock()
-				defer mu.Unlock()
-				delete(m, t.i)
-			})
-			wg.Done()
-		}()
-		wg.Wait()
+		workerpool.Run(context.Background(), 10, nextTask, func(ctx context.Context, ti interface{}) {
+			t := ti.(Task)
+			mu.Lock()
+			defer mu.Unlock()
+			delete(m, t.i)
+		})
 		t.Log("waiting for tasks to finish")
 		for {
 			mu.Lock()
