@@ -34,6 +34,18 @@
 // You can develop your application locally using filevar or constantvar, and
 // deploy it to multiple Cloud providers. You may find
 // http://github.com/google/wire useful for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects an OpenCensus metric "gocloud.dev/runtimevar/value_changes",
+// a count of the number of times all variables have changed values, by provider.
+//
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package runtimevar // import "gocloud.dev/runtimevar"
 
 import (
