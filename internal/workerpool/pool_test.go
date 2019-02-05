@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,29 +29,36 @@ func TestRun(t *testing.T) {
 		ng0 := runtime.NumGoroutine()
 		ctx, cancel := context.WithCancel(context.Background())
 		type Task struct{}
-		nextTask := func(context.Context) (interface{}, bool) {
-			return Task{}, true
+		nextTask := func(context.Context) interface{} {
+			return Task{}
 		}
-		go workerpool.Run(ctx, 1, nextTask, func(ctx context.Context, _ interface{}) {
-			<-ctx.Done()
-		})
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			workerpool.Run(ctx, 1, nextTask, func(ctx context.Context, _ interface{}) {
+				<-ctx.Done()
+			})
+			wg.Done()
+		}()
 		cancel()
+		wg.Wait()
 		t.Log("waiting for goroutines to return")
 		for runtime.NumGoroutine() != ng0 {
 			time.Sleep(time.Millisecond)
 		}
 	})
+
 	t.Run("can run all tasks", func(t *testing.T) {
 		ng0 := runtime.NumGoroutine()
 		i := 0
 		n := 100
 		type Task struct{ i int }
-		nextTask := func(context.Context) (interface{}, bool) {
+		nextTask := func(context.Context) interface{} {
 			i++
 			if i > n {
-				return nil, false
+				return nil
 			}
-			return Task{i}, true
+			return Task{i}
 		}
 
 		// m keeps track of which tasks have yet to be completed.
@@ -61,12 +68,18 @@ func TestRun(t *testing.T) {
 			m[i] = true
 		}
 
-		go workerpool.Run(context.Background(), 10, nextTask, func(ctx context.Context, ti interface{}) {
-			t := ti.(Task)
-			mu.Lock()
-			defer mu.Unlock()
-			delete(m, t.i)
-		})
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			workerpool.Run(context.Background(), 10, nextTask, func(ctx context.Context, ti interface{}) {
+				t := ti.(Task)
+				mu.Lock()
+				defer mu.Unlock()
+				delete(m, t.i)
+			})
+			wg.Done()
+		}()
+		wg.Wait()
 		t.Log("waiting for tasks to finish")
 		for {
 			mu.Lock()
