@@ -405,7 +405,7 @@ Cons:
 
 *   Go CDK could overwrite existing data if a Go CDK-written key escapes to an
     already-existing value (e.g., if the `foo__0x2e__bar` string already
-    existed, it would be overwritten when by the Go CDK write to `foo.bar`).
+    existed, it would be overwritten by a Go CDK write to `foo.bar`).
 *   Escaping may push a string over the maximum allowed string length for a
     provider. Escaping does not solve (and in fact may exacerbate) problems with
     different maximum string lengths across providers.
