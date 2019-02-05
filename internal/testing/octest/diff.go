@@ -18,13 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/oc"
 )
 
 // Call holds the expected contents of a measured call.
@@ -87,30 +83,27 @@ func diffSpans(got []*trace.SpanData, prefix string, want []Call) string {
 
 func diffCounts(got []*view.Row, prefix, provider string, wantCalls []Call) string {
 	// Because OpenCensus keeps global state, running tests with -count N can result
-	// in aggregate counts greater than 1.
-	// So instead of checking for 1, we just check that all counts are the same.
-	count := got[0].Data.(*view.CountData).Value
-	var want []*view.Row
+	// in aggregate counts greater than 1. Also, other tests can contribute measurements.
+	// So all we can do is make sure that each call appears with count at least 1.
+	var diffs []string
+	gotTags := map[string]bool{} // map of canonicalized row tags
+	for _, row := range got {
+		if _, ok := row.Data.(*view.CountData); !ok {
+			diffs = append(diffs, fmt.Sprintf("row.Data is %T, want CountData", row.Data))
+			continue
+		}
+		var tags []string
+		for _, t := range row.Tags {
+			tags = append(tags, t.Key.Name()+":"+t.Value)
+		}
+		gotTags[strings.Join(tags, ",")] = true
+	}
 	for _, wc := range wantCalls {
-		want = append(want, &view.Row{
-			Tags: []tag.Tag{
-				{Key: oc.MethodKey, Value: prefix + "." + wc.Method},
-				{Key: oc.ProviderKey, Value: provider},
-				{Key: oc.StatusKey, Value: fmt.Sprint(wc.Code)},
-			},
-			Data: &view.CountData{Value: count},
-		})
+		mapKey := fmt.Sprintf("gocdk_method:%s.%s,gocdk_provider:%s,gocdk_status:%s",
+			prefix, wc.Method, provider, fmt.Sprint(wc.Code))
+		if !gotTags[mapKey] {
+			diffs = append(diffs, fmt.Sprintf("missing %q", mapKey))
+		}
 	}
-	return cmp.Diff(got, want, cmpopts.SortSlices(lessRow))
-}
-
-// The order doesn't matter; we just need a deterministic ordering of rows.
-func lessRow(r1, r2 *view.Row) bool { return rowKey(r1) < rowKey(r2) }
-
-func rowKey(r *view.Row) string {
-	var vals []string
-	for _, t := range r.Tags {
-		vals = append(vals, t.Value)
-	}
-	return strings.Join(vals, "|")
+	return strings.Join(diffs, "\n")
 }

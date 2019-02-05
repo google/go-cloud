@@ -18,9 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/runtimevar"
@@ -40,10 +38,18 @@ func TestOpenCensus(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	diff := cmp.Diff(te.Counts(), []*view.Row{{
-		Tags: []tag.Tag{{Key: oc.ProviderKey, Value: "gocloud.dev/runtimevar/constantvar"}},
-		Data: &view.CountData{Value: 1}}})
-	if diff != "" {
-		t.Error(diff)
+	seen := false
+	const provider = "gocloud.dev/runtimevar/constantvar"
+	for _, row := range te.Counts() {
+		if _, ok := row.Data.(*view.CountData); !ok {
+			continue
+		}
+		if row.Tags[0].Key == oc.ProviderKey && row.Tags[0].Value == provider {
+			seen = true
+			break
+		}
+	}
+	if !seen {
+		t.Errorf("did not see count row with provider=%s", provider)
 	}
 }
