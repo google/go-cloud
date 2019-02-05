@@ -45,6 +45,8 @@ import (
 	"time"
 
 	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/runtimevar/driver"
@@ -95,11 +97,17 @@ func (s *Snapshot) As(i interface{}) bool {
 const pkgName = "gocloud.dev/runtimevar"
 
 var (
-	changeMeasure = stats.Int64(
-		pkgName+"/valueChange",
-		"Count of variable value changes",
+	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
 		stats.UnitDimensionless)
-	OpenCensusViews = oc.xViews(pkgName, latencyMeasure)
+	OpenCensusViews = []*view.View{
+		{
+			Name:        pkgName + "/value_changes",
+			Measure:     changeMeasure,
+			Description: "Count of variable value changes by provider.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Count(),
+		},
+	}
 )
 
 // Variable provides an easy and portable way to watch runtime configuration
@@ -107,7 +115,7 @@ var (
 // subpackages.
 type Variable struct {
 	watcher  driver.Watcher
-	tracer   *oc.Tracer
+	provider string // for metric collection
 	nextCall time.Time
 	prev     driver.State
 }
@@ -118,12 +126,8 @@ var New = newVar
 // newVar  creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	return &Variable{
-		watcher: w,
-		tracer: &oc.Tracer{
-			Package:        pkgName,
-			Provider:       oc.ProviderName(w),
-			LatencyMeasure: latencyMeasure,
-		},
+		watcher:  w,
+		provider: oc.ProviderName(w),
 	}
 }
 
@@ -142,9 +146,6 @@ func newVar(w driver.Watcher) *Variable {
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
-	ctx = c.tracer.Start(ctx, "Watch")
-	defer func() { c.tracer.End(ctx, err) }()
-
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {
@@ -168,6 +169,8 @@ func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
 		if err != nil {
 			return Snapshot{}, wrapError(c.watcher, err)
 		}
+		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
+		// Error from RecordWithTags is not possible.
 		return Snapshot{
 			Value:      v,
 			UpdateTime: cur.UpdateTime(),

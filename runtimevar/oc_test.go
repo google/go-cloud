@@ -18,7 +18,10 @@ import (
 	"context"
 	"testing"
 
-	"gocloud.dev/gcerrors"
+	"github.com/google/go-cmp/cmp"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
@@ -37,11 +40,9 @@ func TestOpenCensus(t *testing.T) {
 	cancel()
 	_, _ = v.Watch(cctx)
 
-	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/runtimevar", "gocloud.dev/runtimevar/constantvar",
-		[]octest.Call{
-			{"Watch", gcerrors.OK},
-			{"Watch", gcerrors.Canceled},
-		})
+	diff := cmp.Diff(te.Counts(), []*view.Row{{
+		Tags: []tag.Tag{{Key: oc.ProviderKey, Value: "gocloud.dev/runtimevar/constantvar"}},
+		Data: &view.CountData{Value: 1}}})
 	if diff != "" {
 		t.Error(diff)
 	}
