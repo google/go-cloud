@@ -28,6 +28,10 @@ import (
 )
 
 // NewKeeper returns a *secrets.Keeper that uses AWS KMS.
+// The keyID can be in the form of an Amazon Resource Name (ARN), alias
+// name, or alias ARN. See
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details.
 // See the package documentation for an example.
 func NewKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
@@ -45,11 +49,6 @@ func Dial(p client.ConfigProvider) (*kms.KMS, error) {
 }
 
 type keeper struct {
-	// KeyID is a unique identifier to specify a key from AWS KMS. The key
-	// information can be in the form of key ID, Amazon Resource Name (ARN), alias
-	// name, or alias ARN. See
-	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-	// for more details.
 	keyID  string
 	client *kms.KMS
 }
