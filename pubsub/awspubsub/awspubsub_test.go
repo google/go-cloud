@@ -25,10 +25,13 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"gocloud.dev/gcp"
+
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 
+	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -339,4 +342,39 @@ func (awsAsTest) MessageCheck(m *pubsub.Message) error {
 
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
+}
+
+func BenchmarkAwsPubSub(b *testing.B) {
+	// Provide fake creds if running in replay mode.
+	var creds *awscreds.Credentials
+	sess, err := session.NewSession(&aws.Config{
+		HTTPClient:  &http.Client{},
+		Region:      aws.String(region),
+		Credentials: creds,
+		MaxRetries:  aws.Int(0),
+	})
+	h := &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
+	if err != nil {
+		b.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup()
+	pc, err := PublisherClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	sc, err := SubscriberClient(ctx, conn)
+	if err != nil {
+		b.Fatal(err)
+	}
+	client := sns.New(h.sess, h.cfg)
+	topic := OpenTopic(ctx, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	topic := OpenTopic(ctx, pc, projectID, benchmarkTopicName, nil)
+	sub := OpenSubscription(ctx, sc, projectID, benchmarkSubscriptionName, nil)
+	drivertest.RunBenchmarks(b, topic, sub)
 }
