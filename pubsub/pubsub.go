@@ -31,6 +31,31 @@
 // You can develop your application locally using memblob, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+//  - Topic.Send
+//  - Topic.Shutdown
+//  - Subscription.Receive
+//  - Subscription.Shutdown
+//  - The internal driver methods SendBatch, SendAcks and ReceiveBatch.
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/pubsub/Topic.Send".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/pubsub/latency".
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package pubsub // import "gocloud.dev/pubsub"
 
 import (
@@ -248,7 +273,11 @@ func newTopic(d driver.Topic) *Topic {
 const pkgName = "gocloud.dev/pubsub"
 
 var (
-	latencyMeasure  = oc.LatencyMeasure(pkgName)
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
 	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
 )
 
@@ -462,30 +491,32 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-func newSubscription(d driver.Subscription, newAckBatcher func(context.Context, *Subscription) driver.Batcher) *Subscription {
+func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver: d,
-		tracer: newTracer(d),
+		driver: ds,
+		tracer: newTracer(ds),
 		cancel: cancel,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
 	}
-	s.ackBatcher = newAckBatcher(ctx, s)
+	s.ackBatcher = newAckBatcher(ctx, s, ds)
 	return s
 }
 
+type ackBatchSender func(context.Context, []driver.AckID) error
+
 // defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.
-func defaultAckBatcher(ctx context.Context, s *Subscription) driver.Batcher {
+func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
 		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
 			ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
 			defer func() { s.tracer.End(ctx2, err) }()
-			return s.driver.SendAcks(ctx2, ids)
+			return ds.SendAcks(ctx2, ids)
 		})
 		// Remember a non-retryable error from SendAcks. It will be returned on the
 		// next call to Receive.

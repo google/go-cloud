@@ -1,0 +1,79 @@
+---
+version: 1
+interactions:
+- request:
+    body: Action=CreateTopic&Name=TestConformance_TestErrorOnReceiveFromClosedSubscription-topic-1&Version=2010-03-31
+    form:
+      Action:
+      - CreateTopic
+      Name:
+      - TestConformance_TestErrorOnReceiveFromClosedSubscription-topic-1
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "107"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <CreateTopicResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <CreateTopicResult>
+          <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestErrorOnReceiveFromClosedSubscription-topic-1</TopicArn>
+        </CreateTopicResult>
+        <ResponseMetadata>
+          <RequestId>7d3d80dd-732a-5e7f-9f54-d40fe6cd2210</RequestId>
+        </ResponseMetadata>
+      </CreateTopicResponse>
+    headers:
+      Content-Length:
+      - "371"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 7d3d80dd-732a-5e7f-9f54-d40fe6cd2210
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=CreateQueue&QueueName=TestConformance_TestErrorOnReceiveFromClosedSubscription-subscription-1&Version=2012-11-05
+    form:
+      Action:
+      - CreateQueue
+      QueueName:
+      - TestConformance_TestErrorOnReceiveFromClosedSubscription-subscription-1
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "119"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestErrorOnReceiveFromClosedSubscription-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>f316074a-8740-56e2-af14-539812a7abe3</RequestId></ResponseMetadata></CreateQueueResponse>
+    headers:
+      Content-Length:
+      - "391"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - f316074a-8740-56e2-af14-539812a7abe3
+    status: 200 OK
+    code: 200
+    duration: ""
