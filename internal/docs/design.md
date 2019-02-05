@@ -198,6 +198,10 @@ identifying URLs. The concrete type's package should include APIs like the
 following:
 
 ```go
+// Package foo is a portable API. foo could be something like blob or pubsub.
+//
+// Throughout this example, Widget is used as a stand-in for a particular type
+// inside foo, like Bucket or Subscription.
 package foo
 
 // A type that implements WidgetURLOpener can open widgets based on a URL.
