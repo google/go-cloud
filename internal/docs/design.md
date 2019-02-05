@@ -322,7 +322,8 @@ across providers. Some theoretical examples using [`blob.Bucket`][]:
 1.  **Data fields**. Some providers may support key/value metadata associated
     with a blob, others may not.
 1.  **Naming rules**. Different providers may allow different name lengths, or
-    allow/disallow unicode characters.
+    allow/disallow non-ASCII unicode characters. See [Strings](#strings) below
+    for more on handling string differences.
 1.  **Semantic guarantees**. Different providers may have different consistency
     guarantees; for example, S3 only provides eventually consistency while GCS
     provides strong consistency.
@@ -373,6 +374,126 @@ b, err := blob.NewBucket(d, blob.FeatureUnicodeNames)
 
 Design discussions regarding enforcing portability are ongoing; we welcome input
 on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
+
+### Strings
+
+Providers often differ on what they accept in particular strings (e.g., blob
+names, metadata keys, etc.). A couple of specific examples:
+
+*   Azure Blob only
+    [accepts C# identifiers](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata)
+    as metadata keys.
+*   S3 drops double slashes in blob names (e.g., `foo//bar` will end up being
+    saved as `foo/bar`).
+
+These differences lead to a loss of portability and predictability for users.
+
+To resolve this issue, we insist that Go CDK can handle any string, and force
+drivers to use escaping mechanisms to handle strings that the underlying
+provider can't handle. We enforce driver compliance with conformance tests.
+
+As an example, a driver for a provider that only allows underscores and ASCII
+characters might escape the string `foo.bar` to `foo__0x2e__bar`.
+
+Pros of this approach:
+
+*   Go CDK APIs are internally consistent in that a user can write any string to
+    any provider and get the original string back when they read it back.
+*   Go CDK APIs have visibility into all existing strings for all providers.
+
+Cons:
+
+*   Go CDK could overwrite existing data if a Go CDK-written key escapes to an
+    already-existing value (e.g., if the `foo__0x2e__bar` string already
+    existed, it would be overwritten by a Go CDK write to `foo.bar`).
+*   Escaping may push a string over the maximum allowed string length for a
+    provider. Escaping does not solve (and in fact may exacerbate) problems with
+    different maximum string lengths across providers.
+*   Existing strings that happen to look like Go CDK-escaped strings will be
+    unescaped by Go CDK (e.g., an existing string `foo__0x2e__bar` would appear
+    as `foo.bar` when read through the Go CDK).
+*   Strings that were written through the Go CDK and needed escaping will appear
+    in their escaped form when viewed outside of Go CDK (e.g., `foo__0x2e__bar`
+    would appear on the provider's UI).
+
+Most of these cons are mitigated by choosing unusual-looking escape mechanisms
+that are unlikely to appear in existing data.
+
+Drivers should escape strings when writing to the underlying provider, and
+unescape them when reading them back. The Go CDK will provide helpers for these
+operations, as well as a test suite of strings for conformance tests.
+
+Sample code for the helper for escaping strings:
+
+```
+// package escape provider helpers for escaping and unescaping strings.
+package escape
+
+// Escape returns s, with all bytes for which shouldEscape returns true
+// escaped.
+//
+// shouldEscape takes the whole string and an index instead of a single
+// byte because some escape decisions require context. For example, we
+// might want to escape the second "/" in "//" but not the first one.
+func Escape(shouldEscape func(s string, i int) bool, s string) string {...}
+
+// Unescape reverses Escape.
+func Unescape(s string) string {...}
+```
+
+Sample code for how a driver might use it, using metadata keys for a `blob` as
+the example string:
+
+```
+// shouldEscapeMetadataKey returns true if s[i] needs to be escaped in order
+// to produce a valid metadata key.
+func shouldEscapeMetadataKey(s string, i int) bool {...}
+
+// When writing metadata keys, escape the keys:
+// ... gcdkMetadata is the metadata passed to the GCDK API.
+for k, v := range gcdkMetadata {
+    e := escape.Escape(shouldEscapeMetadataKey, k)
+    if _, ok := providerMetadata[e]; ok {
+      return fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
+    }
+    providerMetadata[e] = v
+}
+// ... write providerMetadata to the provider.
+
+// When reading metadata keys, we unescape them:
+// ... providerMetadata is the metadata read from the provider.
+for k, v := range providerMetadata {
+    gcdkMetadata[escape.Unescape(k)] = v
+}
+// ... return gcdkMetadata.
+```
+
+The details of what bytes need to be escaped will vary from provider to
+provider. The details of how to escape may also vary, although we expect to use
+a common approach for most drivers. In particular, we plan to escape each byte
+for which `shouldEscape` returns true with `__0xXX__`, where `XX` is the hex
+representation of the byte value.
+
+### Alternatives Considered
+
+*   We considered restricting Go CDK's APIs to strings that all providers
+    support. For example, we could have asserted that Go CDK's `blob` only
+    supports ASCII plus `/` for blob names (and no `//`!). However, such a rule
+    would mean that we couldn't cleanly handle existing strings created through
+    some mechanism other than through Go CDK APIs that violate the rule. For
+    example, an existing blob in S3 with a unicode name. Filtering out such
+    strings so that they aren't visible at all through the Go CDK would be both
+    surprising and limiting, and could easily result in data loss (e.g., if a
+    user read a set of metadata for a blob via the Go CDK, and some keys were
+    filtered out, and then wrote the metadata back, the filtered keys would be
+    lost). Not filtering such strings would mean that the Go CDK isn't
+    internally consistent (i.e., you can read some strings but not write them).
+    Overall, we decided that this approach is unacceptable.
+
+*   We could expose the escaper used by providers in their `Options` structs
+    (including options like disabling it, overriding the set of bytes to be
+    escaped, or overriding the escaping mechanism), but we'll wait to see if
+    there's demand for that.
 
 ## Coding Conventions
 
