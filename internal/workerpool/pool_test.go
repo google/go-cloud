@@ -16,12 +16,10 @@ package workerpool_test
 
 import (
 	"context"
+	"gocloud.dev/internal/workerpool"
 	"runtime"
 	"sync"
 	"testing"
-	"time"
-
-	"gocloud.dev/internal/workerpool"
 )
 
 func TestRun(t *testing.T) {
@@ -42,9 +40,9 @@ func TestRun(t *testing.T) {
 		}()
 		cancel()
 		wg.Wait()
-		t.Log("waiting for goroutines to return")
-		for runtime.NumGoroutine() != ng0 {
-			time.Sleep(time.Millisecond)
+		ng := runtime.NumGoroutine()
+		if ng != ng0 {
+			t.Errorf("%d goroutines running, want %d", ng, ng0)
 		}
 	})
 
@@ -74,18 +72,12 @@ func TestRun(t *testing.T) {
 			defer mu.Unlock()
 			delete(m, t.i)
 		})
-		t.Log("waiting for tasks to finish")
-		for {
-			mu.Lock()
-			if len(m) == 0 {
-				break
-			}
-			mu.Unlock()
-			time.Sleep(time.Millisecond)
+		ng := runtime.NumGoroutine()
+		if ng != ng0 {
+			t.Errorf("%d goroutines running, want %d", ng, ng0)
 		}
-		t.Log("waiting for goroutines to return")
-		for runtime.NumGoroutine() != ng0 {
-			time.Sleep(time.Millisecond)
+		if len(m) != 0 {
+			t.Errorf("%d tasks were not finished, want 0", len(m))
 		}
 	})
 }
