@@ -60,11 +60,18 @@
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-// - Attributes
-// - Delete
-// - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
-//   are included because they call NewRangeReader.)
-// - NewWriter, from creation until the call to Close.
+//  - Attributes
+//  - Delete
+//  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
+//    are included because they call NewRangeReader.)
+//  - NewWriter, from creation until the call to Close.
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/blob/Attributes".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/blob/latency".
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
