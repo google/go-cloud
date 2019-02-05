@@ -322,8 +322,8 @@ across providers. Some theoretical examples using [`blob.Bucket`][]:
 1.  **Data fields**. Some providers may support key/value metadata associated
     with a blob, others may not.
 1.  **Naming rules**. Different providers may allow different name lengths, or
-    allow/disallow unicode characters. See [Strings](#strings) below for more on
-    handling string differences.
+    allow/disallow non-ASCII unicode characters. See [Strings](#strings) below
+    for more on handling string differences.
 1.  **Semantic guarantees**. Different providers may have different consistency
     guarantees; for example, S3 only provides eventually consistency while GCS
     provides strong consistency.
@@ -377,8 +377,8 @@ on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
 
 ### Strings
 
-Providers often differ on what characters they accept in particular strings
-(e.g., blob names, metadata keys, etc.). A couple of specific examples:
+Providers often differ on what they accept in particular strings (e.g., blob
+names, metadata keys, etc.). A couple of specific examples:
 
 *   Azure Blob only
     [accepts C# identifiers](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata)
@@ -389,7 +389,7 @@ Providers often differ on what characters they accept in particular strings
 These differences lead to a loss of portability and predictability for users.
 
 We considered restricting Go CDK's APIs to strings that all providers support.
-For example, we asserting that Go CDK's blob only supports ASCII plus `/` for
+For example, we could assert that Go CDK's blob only supports ASCII plus `/` for
 blob names (and no `//`!). However, such a rule would mean that we couldn't
 handle existing strings that were created through some mechanism other than
 through Go CDK APIs. For example, an existing blob in S3 with a unicode name
@@ -399,61 +399,67 @@ could read metadata attributes via the Go CDK and then write them back, and
 either lose data (if previously-existing invalid keys were dropped) or get an
 error. Overall, we decided that this approach is unacceptable.
 
-Instead, we assert that Go CDK can handle any string, and force provider
+Instead, we insist that Go CDK can handle any string, and force provider
 implementations to handle strings that the underlying provider can't handle
 using escaping mechanisms. We enforce provider compliance with conformance
-tests. With this approach
+tests. With this approach:
 
-*   Go CDK APIs have visibility into all existing strings for all providers.
-    *   A slight caveat -- strings that look like Go CDK-escaped strings will be
-        unescaped by Go CDK. To mitigate this, we'll choose unusual-looking
-        escape mechanisms.
 *   Go CDK APIs are consistent in that you can write any string to any provider
     and read it back.
-*   Some strings that were written through the Go CDK will appear in their
-    escaped form when viewed outside of Go CDK.
+    *   We could overwrite existing data if a Go CDK-written key escapes to an
+        already-existing value.
+    *   Escaping may push a string over the maximum allowed string length for a
+        provider.
+*   Go CDK APIs have visibility into all existing strings for all providers.
+    *   Existing strings that happen to look like Go CDK-escaped strings will be
+        unescaped by Go CDK.
+*   Strings that were written through the Go CDK and needed escaping will appear
+    in their escaped form when viewed outside of Go CDK.
+*   To mitigate some of the negatives above, we'll choose unusual-looking escape
+    mechanisms that are unlikely to appear in existing data.
 
-The Go CDK providers helpers for such escaping:
+The Go CDK provides helpers for such escaping:
 
 ```
-package stringescape
+package escape
 
-// Escaper supports escaping and unescaping of strings.
-type Escaper interface {
-    // Escape returns the string with unsupported characters escaped.
-    Escape(string) string
-    // Unescape reverses the escaping done by Escape.
-    Unescape(string) string
-}
-
-// NewNoopEscaper returns an Escaper that doesn't change the string at all.
-func NewNoopEscaper() Escaper { ... }
-
-// NewUnderscoreEscaper returns an Escaper that escapes each character for which
+// New returns an escaper that escapes each byte in s for which
 // shouldEscape returns true with "__0xXX__", where XX is the hex representation
-// of the character's byte value.
+// of the byte value.
 // shouldEscape takes the whole string and an index instead of a single
-// character because some escape decisions require context. For example, we
+// byte because some escape decisions require context. For example, we
 // might want to escape the second "/" in "//" but not the first one.
-func NewUnderscoreEscaper(shouldEscape func(s string, i int) bool) Escaper {...}
+// Unescape unescapes a string returned from Escape.
+func New(shouldEscape func(s string, i int) bool) *escaper {...}
+
+
+// Escape returns s, escaped.
+func (e *escaper) Escape(s string) string {...}
+
+// Unescape returns s, unescaped.
+func (e *escaper) Unescape(s string) string {...}
 ```
 
-To see how `Escaper` is used, let's use Azure's blob metadata keys as an
+To see how `escaper` is used, let's use Azure's blob metadata keys as an
 example. As stated above, only valid `C#` identifiers are legal. The Azure blob
 provider would include code like this:
 
 ```
 // shouldEscapeMetadataKey returns true if s[i] needs to be escaped in order
 // to produce a valid C# identifier.
-func shouldEscapeMetadataKey(s string, i int) {
-    return !isValidCSharpIdentifier(s[i])
+func shouldEscapeMetadataKey(s string, i int) bool {
+    return !isValidCSharpIdentifierByte(s[i])
 }
 
-var mdKeyEscaper = stringescaper.NewUnderscoreEscaper(shouldEscapeMetadataKey)
+var mdKeyEscaper = escaper.New(shouldEscapeMetadataKey)
 
 // When writing metadata keys, we escape the keys:
 for k, v := range gcdkMetadata {
-    azureMetadata[mdKeyEscaper.Escape(k)] = v
+    e := mdKeyEscaper.Escape(k)
+    if _, ok := azureMetadata[e]; ok {
+      return fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
+    }
+    azureMetadata[e] = v
 }
 
 // When reading metadata keys, we unescape them:
@@ -463,11 +469,11 @@ for k, v := range azureMetadata {
 ```
 
 When a user writes a metadata key like `foo.bar` through Go CDK, it is written
-as `foo__0x2e__`. When it is read back via Go CDK, it is unescaped back to
+as `foo__0x2e__bar`. When it is read back via Go CDK, it is unescaped back to
 `foo.bar`.
 
 We could expose the `Escaper` used by providers in their `Options` structs, but
-we will probably will wait to see if there's demand for that.
+we'll wait to see if there's demand for that.
 
 ## Coding Conventions
 
