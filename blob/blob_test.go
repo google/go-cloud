@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -219,20 +220,26 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verifyWrap("SignedURL", err)
 }
 
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
+
 // TestOpen tests blob.Open.
 func TestOpen(t *testing.T) {
 	ctx := context.Background()
-	var got *url.URL
 
-	// Register scheme foo to always return nil. Sets got as a side effect
-	Register("foo", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		got = u
-		return nil, nil
-	})
+	testOpenOnce.Do(func() {
+		// Register scheme foo to always return nil. Sets testOpenGot as a side effect.
+		Register("foo", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
+			testOpenGot = u
+			return nil, nil
+		})
 
-	// Register scheme err to always return an error.
-	Register("err", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return nil, errors.New("fail")
+		// Register scheme err to always return an error.
+		Register("err", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
+			return nil, errors.New("fail")
+		})
 	})
 
 	for _, tc := range []struct {
@@ -297,8 +304,8 @@ func TestOpen(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			if diff := cmp.Diff(testOpenGot, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", testOpenGot, want, diff)
 			}
 		})
 	}

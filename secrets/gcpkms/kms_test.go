@@ -32,10 +32,11 @@ import (
 // 2. Enable the Cloud KMS API.
 // 3. Create a key ring and a key, change their name below accordingly.
 const (
-	projectID = "pledged-solved-practically"
+	projectID = "go-cloud-test-216917"
 	location  = "global"
 	keyRing   = "test"
-	keyID     = "password"
+	keyID1    = "password"
+	keyID2    = "password2"
 )
 
 type harness struct {
@@ -43,16 +44,25 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
 	return &keeper{
-		keyID: &KeyID{
-			ProjectID: projectID,
-			Location:  location,
-			KeyRing:   keyRing,
-			Key:       keyID,
+			keyID: &KeyID{
+				ProjectID: projectID,
+				Location:  location,
+				KeyRing:   keyRing,
+				Key:       keyID1,
+			},
+			client: h.client,
 		},
-		client: h.client,
-	}, nil
+		&keeper{
+			keyID: &KeyID{
+				ProjectID: projectID,
+				Location:  location,
+				KeyRing:   keyRing,
+				Key:       keyID2,
+			},
+			client: h.client,
+		}, nil
 }
 
 func (h *harness) Close() {

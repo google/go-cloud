@@ -83,9 +83,17 @@ func TestOpenCensus(t *testing.T) {
 		default:
 			continue
 		}
-		diff = cmp.Diff(data.Rows[0], &view.Row{Tags: tags, Data: &view.SumData{Value: float64(len(bytes))}})
-		if diff != "" {
-			t.Errorf("%s: %s", data.View.Name, diff)
+		if diff := cmp.Diff(data.Rows[0].Tags, tags, cmp.AllowUnexported(tag.Key{})); diff != "" {
+			t.Errorf("tags for %s: %s", data.View.Name, diff)
+			continue
+		}
+		sd, ok := data.Rows[0].Data.(*view.SumData)
+		if !ok {
+			t.Errorf("%s: data is %T, want SumData", data.View.Name, data.Rows[0].Data)
+			continue
+		}
+		if got := int(sd.Value); got < len(bytes) {
+			t.Errorf("%s: got %d, want at least %d", data.View.Name, got, len(bytes))
 		}
 	}
 }
