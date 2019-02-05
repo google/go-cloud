@@ -39,8 +39,15 @@
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-// - Encrypt
-// - Decrypt
+//  - Encrypt
+//  - Decrypt
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/secrets/Encrypt".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/secrets/latency".
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.

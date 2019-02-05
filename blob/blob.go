@@ -60,11 +60,22 @@
 // backend providers. See https://opencensus.io.
 //
 // This API collects OpenCensus traces and metrics for the following methods:
-// - Attributes
-// - Delete
-// - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
-//   are included because they call NewRangeReader.)
-// - NewWriter, from creation until the call to Close.
+//  - Attributes
+//  - Delete
+//  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
+//    are included because they call NewRangeReader.)
+//  - NewWriter, from creation until the call to Close.
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/blob/Attributes".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/blob/latency".
+//
+// It also collects the following metrics:
+// - gocloud.dev/blob/bytes_read: the total number of bytes read, by provider.
+// - gocloud.dev/blob/bytes_written: the total number of bytes written, by provider.
 //
 // To enable trace collection in your application, see "Configure Exporter" at
 // https://opencensus.io/quickstart/go/tracing.
@@ -90,6 +101,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
@@ -99,14 +113,17 @@ import (
 // It implements io.ReadCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b   driver.Bucket
-	r   driver.Reader
-	end func(error) // called at Close to finish trace and metric collection
+	b        driver.Bucket
+	r        driver.Reader
+	end      func(error) // called at Close to finish trace and metric collection
+	provider string      // for metric collection
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
 func (r *Reader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
+	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, r.provider)},
+		bytesReadMeasure.M(int64(n)))
 	return n, wrapError(r.b, err)
 }
 
@@ -194,6 +211,7 @@ type Writer struct {
 	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
 	md5hash    hash.Hash
+	provider   string // for metric collection
 
 	// These fields exist only when w is not yet created.
 	//
@@ -223,8 +241,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 		}
 	}
 	if w.w != nil {
-		n, err := w.w.Write(p)
-		return n, wrapError(w.b, err)
+		return w.write(p)
 	}
 
 	// If w is not yet created due to no content-type being passed in, try to sniff
@@ -287,7 +304,13 @@ func (w *Writer) open(p []byte) (int, error) {
 	w.ctx = nil
 	w.key = ""
 	w.opts = nil
+	return w.write(p)
+}
+
+func (w *Writer) write(p []byte) (int, error) {
 	n, err := w.w.Write(p)
+	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, w.provider)},
+		bytesWrittenMeasure.M(int64(n)))
 	return n, wrapError(w.b, err)
 }
 
@@ -399,12 +422,30 @@ type Bucket struct {
 const pkgName = "gocloud.dev/blob"
 
 var (
-	latencyMeasure = oc.LatencyMeasure(pkgName)
+	latencyMeasure      = oc.LatencyMeasure(pkgName)
+	bytesReadMeasure    = stats.Int64(pkgName+"/bytes_read", "Total bytes read", stats.UnitBytes)
+	bytesWrittenMeasure = stats.Int64(pkgName+"/bytes_written", "Total bytes written", stats.UnitBytes)
 
 	// OpenCensusViews are predefined views for OpenCensus metrics.
-	// The views include counts and latency distributions for API method calls.
+	// The views include counts and latency distributions for API method calls,
+	// and total bytes read and written.
 	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
-	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+	OpenCensusViews = append(
+		oc.Views(pkgName, latencyMeasure),
+		&view.View{
+			Name:        pkgName + "/bytes_read",
+			Measure:     bytesReadMeasure,
+			Description: "Sum of bytes read from the provider service.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        pkgName + "/bytes_written",
+			Measure:     bytesWrittenMeasure,
+			Description: "Sum of bytes written to the provider service.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Sum(),
+		})
 )
 
 // NewBucket is intended for use by provider implementations.
@@ -572,7 +613,7 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		return nil, wrapError(b.b, err)
 	}
 	end := func(err error) { b.tracer.End(tctx, err) }
-	return &Reader{b: b.b, r: r, end: end}, nil
+	return &Reader{b: b.b, r: r, end: end, provider: b.tracer.Provider}, nil
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
@@ -664,6 +705,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 			cancel:     cancel,
 			contentMD5: opts.ContentMD5,
 			md5hash:    md5.New(),
+			provider:   b.tracer.Provider,
 		}, nil
 	}
 	return &Writer{
@@ -676,6 +718,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		buf:        bytes.NewBuffer([]byte{}),
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
+		provider:   b.tracer.Provider,
 	}, nil
 }
 
