@@ -177,9 +177,6 @@ func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
 // Implements Watch above, minus the check to ensure that it's not being
 // called after Latest/InitLatest.
 func (c *Variable) watch(ctx context.Context) (Snapshot, error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {

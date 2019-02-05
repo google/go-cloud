@@ -223,7 +223,8 @@ func (w *fakeStableWatcher) WatchVariable(ctx context.Context, prev driver.State
 	return w.state, 0
 }
 
-func (b *fakeStableWatcher) Close() error                     { return nil }
+func (w *fakeStableWatcher) Close() error { return nil }
+
 func (*fakeStableWatcher) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestVariable_Latest(t *testing.T) {
