@@ -34,6 +34,18 @@
 // You can develop your application locally using filevar or constantvar, and
 // deploy it to multiple Cloud providers. You may find
 // http://github.com/google/wire useful for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects an OpenCensus metric "gocloud.dev/runtimevar/value_changes",
+// a count of the number of times all variables have changed values, by provider.
+//
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package runtimevar // import "gocloud.dev/runtimevar"
 
 import (
@@ -44,8 +56,11 @@ import (
 	"reflect"
 	"time"
 
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/trace"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -91,11 +106,28 @@ func (s *Snapshot) As(i interface{}) bool {
 	return s.asFunc(i)
 }
 
+const pkgName = "gocloud.dev/runtimevar"
+
+var (
+	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
+		stats.UnitDimensionless)
+	OpenCensusViews = []*view.View{
+		{
+			Name:        pkgName + "/value_changes",
+			Measure:     changeMeasure,
+			Description: "Count of variable value changes by provider.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Count(),
+		},
+	}
+)
+
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in provider-specific
 // subpackages.
 type Variable struct {
 	watcher  driver.Watcher
+	provider string // for metric collection
 	nextCall time.Time
 	prev     driver.State
 }
@@ -105,7 +137,10 @@ var New = newVar
 
 // newVar  creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
-	return &Variable{watcher: w}
+	return &Variable{
+		watcher:  w,
+		provider: oc.ProviderName(w),
+	}
 }
 
 // Watch returns a Snapshot of the current value of the variable.
@@ -123,9 +158,6 @@ func newVar(w driver.Watcher) *Variable {
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/runtimevar.Watch")
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	for {
 		wait := c.nextCall.Sub(time.Now())
 		if wait > 0 {
@@ -149,6 +181,8 @@ func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
 		if err != nil {
 			return Snapshot{}, wrapError(c.watcher, err)
 		}
+		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
+		// Error from RecordWithTags is not possible.
 		return Snapshot{
 			Value:      v,
 			UpdateTime: cur.UpdateTime(),

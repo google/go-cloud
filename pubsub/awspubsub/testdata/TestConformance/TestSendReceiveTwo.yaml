@@ -1,0 +1,767 @@
+---
+version: 1
+interactions:
+- request:
+    body: Action=CreateTopic&Name=TestConformance_TestSendReceiveTwo-topic-1&Version=2010-03-31
+    form:
+      Action:
+      - CreateTopic
+      Name:
+      - TestConformance_TestSendReceiveTwo-topic-1
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "85"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <CreateTopicResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <CreateTopicResult>
+          <TopicArn>arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1</TopicArn>
+        </CreateTopicResult>
+        <ResponseMetadata>
+          <RequestId>b0f7ad13-0c5d-5c6d-a130-f9c199bba002</RequestId>
+        </ResponseMetadata>
+      </CreateTopicResponse>
+    headers:
+      Content-Length:
+      - "349"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:57 GMT
+      X-Amzn-Requestid:
+      - b0f7ad13-0c5d-5c6d-a130-f9c199bba002
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=CreateQueue&QueueName=TestConformance_TestSendReceiveTwo-subscription-1&Version=2012-11-05
+    form:
+      Action:
+      - CreateQueue
+      QueueName:
+      - TestConformance_TestSendReceiveTwo-subscription-1
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "97"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>02159b6f-46c0-5ef3-a801-cfbdd32663f2</RequestId></ResponseMetadata></CreateQueueResponse>
+    headers:
+      Content-Length:
+      - "369"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:58 GMT
+      X-Amzn-Requestid:
+      - 02159b6f-46c0-5ef3-a801-cfbdd32663f2
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=CreateQueue&QueueName=TestConformance_TestSendReceiveTwo-subscription-2&Version=2012-11-05
+    form:
+      Action:
+      - CreateQueue
+      QueueName:
+      - TestConformance_TestSendReceiveTwo-subscription-2
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "97"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><CreateQueueResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><CreateQueueResult><QueueUrl>https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2</QueueUrl></CreateQueueResult><ResponseMetadata><RequestId>e3db0415-6536-55bd-a75e-50c7f0d068bc</RequestId></ResponseMetadata></CreateQueueResponse>
+    headers:
+      Content-Length:
+      - "369"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:58 GMT
+      X-Amzn-Requestid:
+      - e3db0415-6536-55bd-a75e-50c7f0d068bc
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=Publish&Message=0&MessageAttributes.entry.1.Name=a&MessageAttributes.entry.1.Value.DataType=String&MessageAttributes.entry.1.Value.StringValue=0&TopicArn=arn%3Aaws%3Asns%3Aus-east-2%3A221420415498%3ATestConformance_TestSendReceiveTwo-topic-1&Version=2010-03-31
+    form:
+      Action:
+      - Publish
+      Message:
+      - "0"
+      MessageAttributes.entry.1.Name:
+      - a
+      MessageAttributes.entry.1.Value.DataType:
+      - String
+      MessageAttributes.entry.1.Value.StringValue:
+      - "0"
+      TopicArn:
+      - arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "267"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <PublishResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <PublishResult>
+          <MessageId>6e0a9a4d-772a-5852-8f81-ce9fe2cc743d</MessageId>
+        </PublishResult>
+        <ResponseMetadata>
+          <RequestId>5fe4fa4c-3acf-5701-a17d-ae9eaf295b6e</RequestId>
+        </ResponseMetadata>
+      </PublishResponse>
+    headers:
+      Content-Length:
+      - "294"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:57 GMT
+      X-Amzn-Requestid:
+      - 5fe4fa4c-3acf-5701-a17d-ae9eaf295b6e
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=Publish&Message=1&MessageAttributes.entry.1.Name=a&MessageAttributes.entry.1.Value.DataType=String&MessageAttributes.entry.1.Value.StringValue=1&TopicArn=arn%3Aaws%3Asns%3Aus-east-2%3A221420415498%3ATestConformance_TestSendReceiveTwo-topic-1&Version=2010-03-31
+    form:
+      Action:
+      - Publish
+      Message:
+      - "1"
+      MessageAttributes.entry.1.Name:
+      - a
+      MessageAttributes.entry.1.Value.DataType:
+      - String
+      MessageAttributes.entry.1.Value.StringValue:
+      - "1"
+      TopicArn:
+      - arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "267"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <PublishResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <PublishResult>
+          <MessageId>7eba32b2-679e-53ca-93b5-6660f2784fa5</MessageId>
+        </PublishResult>
+        <ResponseMetadata>
+          <RequestId>63db61ad-c6ad-575b-911d-357f534bab34</RequestId>
+        </ResponseMetadata>
+      </PublishResponse>
+    headers:
+      Content-Length:
+      - "294"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:58 GMT
+      X-Amzn-Requestid:
+      - 63db61ad-c6ad-575b-911d-357f534bab34
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=Publish&Message=2&MessageAttributes.entry.1.Name=a&MessageAttributes.entry.1.Value.DataType=String&MessageAttributes.entry.1.Value.StringValue=2&TopicArn=arn%3Aaws%3Asns%3Aus-east-2%3A221420415498%3ATestConformance_TestSendReceiveTwo-topic-1&Version=2010-03-31
+    form:
+      Action:
+      - Publish
+      Message:
+      - "2"
+      MessageAttributes.entry.1.Name:
+      - a
+      MessageAttributes.entry.1.Value.DataType:
+      - String
+      MessageAttributes.entry.1.Value.StringValue:
+      - "2"
+      TopicArn:
+      - arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1
+      Version:
+      - "2010-03-31"
+    headers:
+      Content-Length:
+      - "267"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sns.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |
+      <PublishResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+        <PublishResult>
+          <MessageId>cf98a743-b537-5a34-9f3e-f39120d1265b</MessageId>
+        </PublishResult>
+        <ResponseMetadata>
+          <RequestId>90df0463-0268-5963-88f9-50b1978e350c</RequestId>
+        </ResponseMetadata>
+      </PublishResponse>
+    headers:
+      Content-Length:
+      - "294"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:58 GMT
+      X-Amzn-Requestid:
+      - 90df0463-0268-5963-88f9-50b1978e350c
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>7d372f8f-33c3-4461-8aaa-c3dd307088e0</MessageId><ReceiptHandle>AQEBpQQWK66Pr3gydsTTHMwM+TuNzi0eSZ76603TjZ0XcnRfqecFDi8ws36DWH7YaYukrPFOEXa84eKFiJx8EK0rP8HpG+Jm5fTbB3+Ps7wmFtg6CJWPHzrWPsZpkSXqxlC3IXl0axylyt9xPKCeL4JmYs0pf3yNryEY8kQxlUoDxMuCkSk27e2MvGSTtSTWd9exI2MqwpAXydYuLNczsQz5NRTeKaRBoANs7+uiqrf6OSB/+zn2WEsDSXQUBCqMC737xExvDowfwanbjqNsCNgLQsy4QNJ4ym7BO44AqVvDvf0rNZ7wMBQ14Zm1csxAoIR9O9dl/gdS4itt3Q0KnvjwGypkszSouKaDWZWVeqUPXH/U592zTpwyCHoelvvhGs8/gz6Sgp9/FAMlrP162S77DLGKaEKL2tEbT9yuaWQxd2uomG5SyOV8kyUEa5Dr4avs</ReceiptHandle><MD5OfBody>823055ca6d04b920914231fc60f43e04</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;6e0a9a4d-772a-5852-8f81-ce9fe2cc743d&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;0&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.645Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;eNUFBnFm7SLTKXhcv4Oiw5hyn7u3jTlLXvJqedOIzZp4BUFrYGzY0ef8AOSYzwFPRKE0/sLW0GXThaLkjbcsqsq8MDrpG5btHNe0XM1ilAazdTbJkB+D5KOEnFDNeK/YtTTwt/XxatBlVl+TA6QytY1rFhfZCD3neegbFRlZQx+bGiIYX2DlpX9ZgkciVqOrrUdFe+gAmK61M/A2NJF9dfqDDmW7QjFseQSsHY4SKH9lMGDyEOOoGfCOrX8OMTId8Ylw42mJzqrXf37Ufc4FpR1tcEaZJADoFJR9u+41qKT6XB11/T5asBWwZex0EqlSsiUZwg/sT36rdSr1VDDBlw==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c75e6a40-b4d1-44f5-a010-cadb062b9d82&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;0&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>b3c423ac-47f2-5102-8da4-777ed2147c03</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:58 GMT
+      X-Amzn-Requestid:
+      - b3c423ac-47f2-5102-8da4-777ed2147c03
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&ReceiptHandle=AQEBpQQWK66Pr3gydsTTHMwM%2BTuNzi0eSZ76603TjZ0XcnRfqecFDi8ws36DWH7YaYukrPFOEXa84eKFiJx8EK0rP8HpG%2BJm5fTbB3%2BPs7wmFtg6CJWPHzrWPsZpkSXqxlC3IXl0axylyt9xPKCeL4JmYs0pf3yNryEY8kQxlUoDxMuCkSk27e2MvGSTtSTWd9exI2MqwpAXydYuLNczsQz5NRTeKaRBoANs7%2Buiqrf6OSB%2F%2Bzn2WEsDSXQUBCqMC737xExvDowfwanbjqNsCNgLQsy4QNJ4ym7BO44AqVvDvf0rNZ7wMBQ14Zm1csxAoIR9O9dl%2FgdS4itt3Q0KnvjwGypkszSouKaDWZWVeqUPXH%2FU592zTpwyCHoelvvhGs8%2Fgz6Sgp9%2FFAMlrP162S77DLGKaEKL2tEbT9yuaWQxd2uomG5SyOV8kyUEa5Dr4avs&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      ReceiptHandle:
+      - AQEBpQQWK66Pr3gydsTTHMwM+TuNzi0eSZ76603TjZ0XcnRfqecFDi8ws36DWH7YaYukrPFOEXa84eKFiJx8EK0rP8HpG+Jm5fTbB3+Ps7wmFtg6CJWPHzrWPsZpkSXqxlC3IXl0axylyt9xPKCeL4JmYs0pf3yNryEY8kQxlUoDxMuCkSk27e2MvGSTtSTWd9exI2MqwpAXydYuLNczsQz5NRTeKaRBoANs7+uiqrf6OSB/+zn2WEsDSXQUBCqMC737xExvDowfwanbjqNsCNgLQsy4QNJ4ym7BO44AqVvDvf0rNZ7wMBQ14Zm1csxAoIR9O9dl/gdS4itt3Q0KnvjwGypkszSouKaDWZWVeqUPXH/U592zTpwyCHoelvvhGs8/gz6Sgp9/FAMlrP162S77DLGKaEKL2tEbT9yuaWQxd2uomG5SyOV8kyUEa5Dr4avs
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "644"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>05a09b51-2f1a-5887-9fb1-cf83bafd7fb9</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 05a09b51-2f1a-5887-9fb1-cf83bafd7fb9
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193358Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>35b3a68d-d15e-461c-9dfc-04681cdbcaa0</MessageId><ReceiptHandle>AQEBFogmRuHwoIgZ5r+XndJSMKksntJ3qeaMS4jYwgQaLBr2HFh8ukPLo5478tDRbvT/AORTdde2pFhphaFYNo/pIOl0sKorkY5E0fpSni5RD78/nP4KLQiUbHGrGntp2p5V0+Ul7YgcsjDm8c1fqJctH7UIzCCG9QPvUktLF8u8uW56O7jT6O8O8vba/qX1GLREO2Qo2Cg7q7M/lMvpUtSr5/fW8eVUizDNgRIzRqiv+CO0jLbWpPEB7TKeb1OETGBHrpPkoidWBZ3n/f9K2cUrdNvRiQ6cdoFcx4paM3OJHoTA+/TL1uKeRBg9P/63wv98UnYK+FkBFqi7pqiIZzC8w8v5PG0HjjxUhEubD94ApL6Mdp2rhuVBqtwcW6YIuHVILf/ow7g0FiHi0J91fneYCCxErYHfPaSoog/tU7j82AC/1FNxBgiaS5SDJh3/0Ko6</ReceiptHandle><MD5OfBody>30953047f40bc18611eb5b1d23c4a115</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;7eba32b2-679e-53ca-93b5-6660f2784fa5&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;1&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.735Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;a5PzhTynHRNCMOHqs61RCl9Mm6hqmxNAiRXHjW3n6ZDF+liNhIeOHk4+S43CekuGTCq7zr7htpYAua6aRxmRgLZfr4VTQqL1n75wzyBV2oyxaWwXfsQ7adenOFNpTawNn1DA74lrK8GmMeQSjYdq+auyQmNCvZJIRqar8IgKRG3VtmPrqjp42Jckj7B/kUmL+PJ4tmc4u3RWTRGgcWsOVKUD7HcXGpTVYAKXG+ByhaQZC6P8RBTN6Ip/FRzmQ4LNVc7Jp6h0sVL8CYP+Qmt/wV4EdkbF3fZi5EVscIAkGp7vlXyrX47KVYlMeRK7uzk0yx+i0pdxTgnxLWL3H3xZGw==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c75e6a40-b4d1-44f5-a010-cadb062b9d82&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;1&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>bd415a12-a7e4-5244-a100-0ec032032f45</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - bd415a12-a7e4-5244-a100-0ec032032f45
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&ReceiptHandle=AQEBFogmRuHwoIgZ5r%2BXndJSMKksntJ3qeaMS4jYwgQaLBr2HFh8ukPLo5478tDRbvT%2FAORTdde2pFhphaFYNo%2FpIOl0sKorkY5E0fpSni5RD78%2FnP4KLQiUbHGrGntp2p5V0%2BUl7YgcsjDm8c1fqJctH7UIzCCG9QPvUktLF8u8uW56O7jT6O8O8vba%2FqX1GLREO2Qo2Cg7q7M%2FlMvpUtSr5%2FfW8eVUizDNgRIzRqiv%2BCO0jLbWpPEB7TKeb1OETGBHrpPkoidWBZ3n%2Ff9K2cUrdNvRiQ6cdoFcx4paM3OJHoTA%2B%2FTL1uKeRBg9P%2F63wv98UnYK%2BFkBFqi7pqiIZzC8w8v5PG0HjjxUhEubD94ApL6Mdp2rhuVBqtwcW6YIuHVILf%2Fow7g0FiHi0J91fneYCCxErYHfPaSoog%2FtU7j82AC%2F1FNxBgiaS5SDJh3%2F0Ko6&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      ReceiptHandle:
+      - AQEBFogmRuHwoIgZ5r+XndJSMKksntJ3qeaMS4jYwgQaLBr2HFh8ukPLo5478tDRbvT/AORTdde2pFhphaFYNo/pIOl0sKorkY5E0fpSni5RD78/nP4KLQiUbHGrGntp2p5V0+Ul7YgcsjDm8c1fqJctH7UIzCCG9QPvUktLF8u8uW56O7jT6O8O8vba/qX1GLREO2Qo2Cg7q7M/lMvpUtSr5/fW8eVUizDNgRIzRqiv+CO0jLbWpPEB7TKeb1OETGBHrpPkoidWBZ3n/f9K2cUrdNvRiQ6cdoFcx4paM3OJHoTA+/TL1uKeRBg9P/63wv98UnYK+FkBFqi7pqiIZzC8w8v5PG0HjjxUhEubD94ApL6Mdp2rhuVBqtwcW6YIuHVILf/ow7g0FiHi0J91fneYCCxErYHfPaSoog/tU7j82AC/1FNxBgiaS5SDJh3/0Ko6
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "660"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>1716811a-1fa7-5c1e-b7e7-d5c88a40811f</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 1716811a-1fa7-5c1e-b7e7-d5c88a40811f
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>d34f9d55-41d7-443c-bfcb-994cf427ba73</MessageId><ReceiptHandle>AQEBtnKZrMhQjNK3AoeLyEqbzZ+SqA7vPDgNPSGMT4DMzgkA0QYPsBoReg6Ypvle6NQbz6EIGXYC2AlW0yDleK3/bqV10IeMmSXx9fJxaE4ZdvaZbwxbBD6jxxZXWmGSf8hWPtmMFqYv3xPj9iALzudOd9lA0vncNAlUqRrNdLaBTNVsv3Wxg4AXzDYMNtcSm01oguzuS2POaZGqy3mmH1aPYovMX3PTkWXPbiZv4k1FCXgd4AqfyktnOALGkzRWDoM9hJJXfZjXQIq+PysxL5YFuEcZjYJGEFMT+cdOIkMJhqH+McEF8bMo23ca4W1FNNPo0eDENUH6el5kt6rpeq8Vm7Eu8xsIdh2coD/k8wVW3mguQ7Oxu4124og7G5Mpzd3nC87aMiS/iwik1ZyC+3GzwAk2XchARPOrRDI4YKWfVIU5DyntaJdtwoqYPZtIR6pB</ReceiptHandle><MD5OfBody>68a248dff9ffd4cadb985bcab4bf312d</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;cf98a743-b537-5a34-9f3e-f39120d1265b&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;2&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.827Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;BUo1Yog9TgWiTkhbhJc4BrzsBhmct8nBrVifmxfrfJSf6cbu6aaxXJEPN1kV2mJol0fy8m1ZQ/iJ2hZQYUyMyA3e/MiMX/tEQ0rjG/WJI0HTBOIzpyIUzai7Gh372iykXoEdM8y9/MDtbTLDewIYKVkJBYmwC+JEAdl+ZkSwnOUj/5QgATaf8P3cezfHUVJFEM0zx7q+kJ9yAVKIYNRwEVlObvDk4qS4vj8y/qePh5SloPFB8re8yQQ04gZRIRSzy6EtjXldI7nHIJm92DhI5MbqdK4PoTOuOyDjJTnHy14Er1Kyt2vRkb+X3xsQVbo0j8RUeYMRCV77ujhMtEG8KA==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c75e6a40-b4d1-44f5-a010-cadb062b9d82&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;2&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>b0cdc56f-cbdb-5f3f-bda3-91bd5e3ce801</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - b0cdc56f-cbdb-5f3f-bda3-91bd5e3ce801
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-1&ReceiptHandle=AQEBtnKZrMhQjNK3AoeLyEqbzZ%2BSqA7vPDgNPSGMT4DMzgkA0QYPsBoReg6Ypvle6NQbz6EIGXYC2AlW0yDleK3%2FbqV10IeMmSXx9fJxaE4ZdvaZbwxbBD6jxxZXWmGSf8hWPtmMFqYv3xPj9iALzudOd9lA0vncNAlUqRrNdLaBTNVsv3Wxg4AXzDYMNtcSm01oguzuS2POaZGqy3mmH1aPYovMX3PTkWXPbiZv4k1FCXgd4AqfyktnOALGkzRWDoM9hJJXfZjXQIq%2BPysxL5YFuEcZjYJGEFMT%2BcdOIkMJhqH%2BMcEF8bMo23ca4W1FNNPo0eDENUH6el5kt6rpeq8Vm7Eu8xsIdh2coD%2Fk8wVW3mguQ7Oxu4124og7G5Mpzd3nC87aMiS%2Fiwik1ZyC%2B3GzwAk2XchARPOrRDI4YKWfVIU5DyntaJdtwoqYPZtIR6pB&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-1
+      ReceiptHandle:
+      - AQEBtnKZrMhQjNK3AoeLyEqbzZ+SqA7vPDgNPSGMT4DMzgkA0QYPsBoReg6Ypvle6NQbz6EIGXYC2AlW0yDleK3/bqV10IeMmSXx9fJxaE4ZdvaZbwxbBD6jxxZXWmGSf8hWPtmMFqYv3xPj9iALzudOd9lA0vncNAlUqRrNdLaBTNVsv3Wxg4AXzDYMNtcSm01oguzuS2POaZGqy3mmH1aPYovMX3PTkWXPbiZv4k1FCXgd4AqfyktnOALGkzRWDoM9hJJXfZjXQIq+PysxL5YFuEcZjYJGEFMT+cdOIkMJhqH+McEF8bMo23ca4W1FNNPo0eDENUH6el5kt6rpeq8Vm7Eu8xsIdh2coD/k8wVW3mguQ7Oxu4124og7G5Mpzd3nC87aMiS/iwik1ZyC+3GzwAk2XchARPOrRDI4YKWfVIU5DyntaJdtwoqYPZtIR6pB
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "640"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>23def2d6-fdab-5710-b2cf-a604684cc02e</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 23def2d6-fdab-5710-b2cf-a604684cc02e
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>50fbd132-2447-4925-93c9-b8ebfa7d9f6b</MessageId><ReceiptHandle>AQEBFayPNGruAMiNfWaNa0ORcVFZZxLYeLcPM2wKFCOnJfCYJXkvvltalBZ4MEyfKhhepQJLLJcoZ4CoIxURcyP0ZlvoSyFkm0wSt1aMg1XwiGACgHXSqICvQnwIoLJ5J8eKnBsYTy6Tfe7wNn77CXrsFvZO42p5nHacnXaF2PCrH/5IT3+GctvrMvWr9Kkk9tAFTonJBLP6iB6S7XFLzgRAe/PW4TvhD/uyKWWjpUHsKK+fB4uY10HRSpHCPMeJCAKV3ime8c/YLmeCzE8xgS+lL4BEwvh9Bw/DuT8pLEZNX5+8sIEwsq5zGU1t9qcgl1pN8NOuzktCTXHqg/6DV+LJHVazv8VQcW3BJeavyz1Tc5ksxTs9maPsy7osY9bzmbr5xWQiYssOsWkiHh7QUedPDrRCzfGLOZQxz/E4wJZJc5mVjDHtCv2iAV/ZQiQG/hEn</ReceiptHandle><MD5OfBody>9c93fb3ed4a45b4a4441bbb243682a4b</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;cf98a743-b537-5a34-9f3e-f39120d1265b&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;2&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.827Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;BUo1Yog9TgWiTkhbhJc4BrzsBhmct8nBrVifmxfrfJSf6cbu6aaxXJEPN1kV2mJol0fy8m1ZQ/iJ2hZQYUyMyA3e/MiMX/tEQ0rjG/WJI0HTBOIzpyIUzai7Gh372iykXoEdM8y9/MDtbTLDewIYKVkJBYmwC+JEAdl+ZkSwnOUj/5QgATaf8P3cezfHUVJFEM0zx7q+kJ9yAVKIYNRwEVlObvDk4qS4vj8y/qePh5SloPFB8re8yQQ04gZRIRSzy6EtjXldI7nHIJm92DhI5MbqdK4PoTOuOyDjJTnHy14Er1Kyt2vRkb+X3xsQVbo0j8RUeYMRCV77ujhMtEG8KA==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c8c78fde-c4c5-433b-a24b-f732839ad40d&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;2&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>9a2f23a4-de1d-58f1-9c12-77764bfad5f0</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 9a2f23a4-de1d-58f1-9c12-77764bfad5f0
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&ReceiptHandle=AQEBFayPNGruAMiNfWaNa0ORcVFZZxLYeLcPM2wKFCOnJfCYJXkvvltalBZ4MEyfKhhepQJLLJcoZ4CoIxURcyP0ZlvoSyFkm0wSt1aMg1XwiGACgHXSqICvQnwIoLJ5J8eKnBsYTy6Tfe7wNn77CXrsFvZO42p5nHacnXaF2PCrH%2F5IT3%2BGctvrMvWr9Kkk9tAFTonJBLP6iB6S7XFLzgRAe%2FPW4TvhD%2FuyKWWjpUHsKK%2BfB4uY10HRSpHCPMeJCAKV3ime8c%2FYLmeCzE8xgS%2BlL4BEwvh9Bw%2FDuT8pLEZNX5%2B8sIEwsq5zGU1t9qcgl1pN8NOuzktCTXHqg%2F6DV%2BLJHVazv8VQcW3BJeavyz1Tc5ksxTs9maPsy7osY9bzmbr5xWQiYssOsWkiHh7QUedPDrRCzfGLOZQxz%2FE4wJZJc5mVjDHtCv2iAV%2FZQiQG%2FhEn&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      ReceiptHandle:
+      - AQEBFayPNGruAMiNfWaNa0ORcVFZZxLYeLcPM2wKFCOnJfCYJXkvvltalBZ4MEyfKhhepQJLLJcoZ4CoIxURcyP0ZlvoSyFkm0wSt1aMg1XwiGACgHXSqICvQnwIoLJ5J8eKnBsYTy6Tfe7wNn77CXrsFvZO42p5nHacnXaF2PCrH/5IT3+GctvrMvWr9Kkk9tAFTonJBLP6iB6S7XFLzgRAe/PW4TvhD/uyKWWjpUHsKK+fB4uY10HRSpHCPMeJCAKV3ime8c/YLmeCzE8xgS+lL4BEwvh9Bw/DuT8pLEZNX5+8sIEwsq5zGU1t9qcgl1pN8NOuzktCTXHqg/6DV+LJHVazv8VQcW3BJeavyz1Tc5ksxTs9maPsy7osY9bzmbr5xWQiYssOsWkiHh7QUedPDrRCzfGLOZQxz/E4wJZJc5mVjDHtCv2iAV/ZQiQG/hEn
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "652"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>00416d10-ffe8-5984-b3b0-39c26a0faeba</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 00416d10-ffe8-5984-b3b0-39c26a0faeba
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>2d137038-26aa-4c2b-8fe6-06345baa411c</MessageId><ReceiptHandle>AQEBtFSuVNSuAZ7yVYuRFRabiJTxgGDUtj2+bEAVEzlssr6Ln0J7McO0T1KhQe8OgmnbMwhtUVDZmADbYug5by7KrcinyzK+w58E4gn+01VClUR/d6WVyFd7YMw5VvpCEOxFCD5SpZtz8wc2c5dIkrEjWs9McVJ/NlNlz6LuGiY7zilDFC+M4rbvsnXOlR0b2Nhe6k1GPEh8DZ1IgkV4I/NZwLEntWNAXbpxL3KKOYurW8DEG+hFcfw2zIa8cyS+ce0nIMpyfMdUDAmyUVdrbBt4rVFPIdIEDHmOfvysESi5Lq8/DY9Fvtg126YeoAAOqblCnQFTv/r0HRv90QzK7P3Hd7YEoaAANWSRm9lHHx5eFyMtEyuh6iZrfO/oJlukpFfuwhqfNCKECvQdspCKSxkxwbCq+KLJ3PrsCdUvgZIgyrB4ynRmv6S5KQe2KdwffwV4</ReceiptHandle><MD5OfBody>1c967d05f4416c55dd34bace26570d6c</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;7eba32b2-679e-53ca-93b5-6660f2784fa5&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;1&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.735Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;a5PzhTynHRNCMOHqs61RCl9Mm6hqmxNAiRXHjW3n6ZDF+liNhIeOHk4+S43CekuGTCq7zr7htpYAua6aRxmRgLZfr4VTQqL1n75wzyBV2oyxaWwXfsQ7adenOFNpTawNn1DA74lrK8GmMeQSjYdq+auyQmNCvZJIRqar8IgKRG3VtmPrqjp42Jckj7B/kUmL+PJ4tmc4u3RWTRGgcWsOVKUD7HcXGpTVYAKXG+ByhaQZC6P8RBTN6Ip/FRzmQ4LNVc7Jp6h0sVL8CYP+Qmt/wV4EdkbF3fZi5EVscIAkGp7vlXyrX47KVYlMeRK7uzk0yx+i0pdxTgnxLWL3H3xZGw==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c8c78fde-c4c5-433b-a24b-f732839ad40d&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;1&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>d74cdceb-5426-57ec-adb0-8839c1c16aed</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - d74cdceb-5426-57ec-adb0-8839c1c16aed
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&ReceiptHandle=AQEBtFSuVNSuAZ7yVYuRFRabiJTxgGDUtj2%2BbEAVEzlssr6Ln0J7McO0T1KhQe8OgmnbMwhtUVDZmADbYug5by7KrcinyzK%2Bw58E4gn%2B01VClUR%2Fd6WVyFd7YMw5VvpCEOxFCD5SpZtz8wc2c5dIkrEjWs9McVJ%2FNlNlz6LuGiY7zilDFC%2BM4rbvsnXOlR0b2Nhe6k1GPEh8DZ1IgkV4I%2FNZwLEntWNAXbpxL3KKOYurW8DEG%2BhFcfw2zIa8cyS%2Bce0nIMpyfMdUDAmyUVdrbBt4rVFPIdIEDHmOfvysESi5Lq8%2FDY9Fvtg126YeoAAOqblCnQFTv%2Fr0HRv90QzK7P3Hd7YEoaAANWSRm9lHHx5eFyMtEyuh6iZrfO%2FoJlukpFfuwhqfNCKECvQdspCKSxkxwbCq%2BKLJ3PrsCdUvgZIgyrB4ynRmv6S5KQe2KdwffwV4&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      ReceiptHandle:
+      - AQEBtFSuVNSuAZ7yVYuRFRabiJTxgGDUtj2+bEAVEzlssr6Ln0J7McO0T1KhQe8OgmnbMwhtUVDZmADbYug5by7KrcinyzK+w58E4gn+01VClUR/d6WVyFd7YMw5VvpCEOxFCD5SpZtz8wc2c5dIkrEjWs9McVJ/NlNlz6LuGiY7zilDFC+M4rbvsnXOlR0b2Nhe6k1GPEh8DZ1IgkV4I/NZwLEntWNAXbpxL3KKOYurW8DEG+hFcfw2zIa8cyS+ce0nIMpyfMdUDAmyUVdrbBt4rVFPIdIEDHmOfvysESi5Lq8/DY9Fvtg126YeoAAOqblCnQFTv/r0HRv90QzK7P3Hd7YEoaAANWSRm9lHHx5eFyMtEyuh6iZrfO/oJlukpFfuwhqfNCKECvQdspCKSxkxwbCq+KLJ3PrsCdUvgZIgyrB4ynRmv6S5KQe2KdwffwV4
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "650"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>2a442b6c-9804-587c-a8e4-7fbe0de3cf42</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 2a442b6c-9804-587c-a8e4-7fbe0de3cf42
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=ReceiveMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&Version=2012-11-05
+    form:
+      Action:
+      - ReceiveMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "158"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: |-
+      <?xml version="1.0"?><ReceiveMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ReceiveMessageResult><Message><MessageId>4148a533-de35-43d6-9ea4-c83212630a38</MessageId><ReceiptHandle>AQEBTINpw7wHmV+w1RaDWH5p4CI+AEb6/tpbxYSF6T6+juY/6MQxcxVlzmUpPRZsfenJh+g9DFVJeXG5xZRS4IhqO7Fkb40KzHnjBxC68P8oLk437Z1NIbH0eJ3t9YAUzp2gsYSDldm8xZsrsr4XcJ+0YuZSgKVMUBIR1KJg3RVzIxzOlzbKQLlU+XQQD0pzRF8wY1ZYHhxMtGqE97SxVdNtHLxMVkckiYPMV5uM5NcXOO7Il1IhO/SABUqA71bNfDeL5hMD8jXKHLno3S5yjB0YFAw8sVf4RqU9bxstWq0krOhhy7pG/avex9uAhXH7+PSW+eQzPFQlp7dNi9Dt/VsD/DoG0dsRylgUqG8ltw0KMWhrpVmR5JBoL6/c2qO6Tprm4guHU4ZPEH5Ol4xQYuAq7DrJSPlEcwvIpmJRJ/T6JVSe8nQKNGkgOM8iKufqC5K8</ReceiptHandle><MD5OfBody>a14a5f5193ec5eb0bcdb7fbe59ed5b77</MD5OfBody><Body>{
+        &quot;Type&quot; : &quot;Notification&quot;,
+        &quot;MessageId&quot; : &quot;6e0a9a4d-772a-5852-8f81-ce9fe2cc743d&quot;,
+        &quot;TopicArn&quot; : &quot;arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1&quot;,
+        &quot;Message&quot; : &quot;0&quot;,
+        &quot;Timestamp&quot; : &quot;2019-02-04T19:33:58.645Z&quot;,
+        &quot;SignatureVersion&quot; : &quot;1&quot;,
+        &quot;Signature&quot; : &quot;eNUFBnFm7SLTKXhcv4Oiw5hyn7u3jTlLXvJqedOIzZp4BUFrYGzY0ef8AOSYzwFPRKE0/sLW0GXThaLkjbcsqsq8MDrpG5btHNe0XM1ilAazdTbJkB+D5KOEnFDNeK/YtTTwt/XxatBlVl+TA6QytY1rFhfZCD3neegbFRlZQx+bGiIYX2DlpX9ZgkciVqOrrUdFe+gAmK61M/A2NJF9dfqDDmW7QjFseQSsHY4SKH9lMGDyEOOoGfCOrX8OMTId8Ylw42mJzqrXf37Ufc4FpR1tcEaZJADoFJR9u+41qKT6XB11/T5asBWwZex0EqlSsiUZwg/sT36rdSr1VDDBlw==&quot;,
+        &quot;SigningCertURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/SimpleNotificationService-ac565b8b1a6c5d002d285f9598aa1d9b.pem&quot;,
+        &quot;UnsubscribeURL&quot; : &quot;https://sns.us-east-2.amazonaws.com/?Action=Unsubscribe&amp;SubscriptionArn=arn:aws:sns:us-east-2:221420415498:TestConformance_TestSendReceiveTwo-topic-1:c8c78fde-c4c5-433b-a24b-f732839ad40d&quot;,
+        &quot;MessageAttributes&quot; : {
+          &quot;a&quot; : {&quot;Type&quot;:&quot;String&quot;,&quot;Value&quot;:&quot;0&quot;}
+        }
+      }</Body></Message></ReceiveMessageResult><ResponseMetadata><RequestId>6299a3f3-658c-56df-990d-f721f06bebde</RequestId></ResponseMetadata></ReceiveMessageResponse>
+    headers:
+      Content-Length:
+      - "2176"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 6299a3f3-658c-56df-990d-f721f06bebde
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: Action=DeleteMessage&QueueUrl=https%3A%2F%2Fsqs.us-east-2.amazonaws.com%2F221420415498%2FTestConformance_TestSendReceiveTwo-subscription-2&ReceiptHandle=AQEBTINpw7wHmV%2Bw1RaDWH5p4CI%2BAEb6%2FtpbxYSF6T6%2BjuY%2F6MQxcxVlzmUpPRZsfenJh%2Bg9DFVJeXG5xZRS4IhqO7Fkb40KzHnjBxC68P8oLk437Z1NIbH0eJ3t9YAUzp2gsYSDldm8xZsrsr4XcJ%2B0YuZSgKVMUBIR1KJg3RVzIxzOlzbKQLlU%2BXQQD0pzRF8wY1ZYHhxMtGqE97SxVdNtHLxMVkckiYPMV5uM5NcXOO7Il1IhO%2FSABUqA71bNfDeL5hMD8jXKHLno3S5yjB0YFAw8sVf4RqU9bxstWq0krOhhy7pG%2Favex9uAhXH7%2BPSW%2BeQzPFQlp7dNi9Dt%2FVsD%2FDoG0dsRylgUqG8ltw0KMWhrpVmR5JBoL6%2Fc2qO6Tprm4guHU4ZPEH5Ol4xQYuAq7DrJSPlEcwvIpmJRJ%2FT6JVSe8nQKNGkgOM8iKufqC5K8&Version=2012-11-05
+    form:
+      Action:
+      - DeleteMessage
+      QueueUrl:
+      - https://sqs.us-east-2.amazonaws.com/221420415498/TestConformance_TestSendReceiveTwo-subscription-2
+      ReceiptHandle:
+      - AQEBTINpw7wHmV+w1RaDWH5p4CI+AEb6/tpbxYSF6T6+juY/6MQxcxVlzmUpPRZsfenJh+g9DFVJeXG5xZRS4IhqO7Fkb40KzHnjBxC68P8oLk437Z1NIbH0eJ3t9YAUzp2gsYSDldm8xZsrsr4XcJ+0YuZSgKVMUBIR1KJg3RVzIxzOlzbKQLlU+XQQD0pzRF8wY1ZYHhxMtGqE97SxVdNtHLxMVkckiYPMV5uM5NcXOO7Il1IhO/SABUqA71bNfDeL5hMD8jXKHLno3S5yjB0YFAw8sVf4RqU9bxstWq0krOhhy7pG/avex9uAhXH7+PSW+eQzPFQlp7dNi9Dt/VsD/DoG0dsRylgUqG8ltw0KMWhrpVmR5JBoL6/c2qO6Tprm4guHU4ZPEH5Ol4xQYuAq7DrJSPlEcwvIpmJRJ/T6JVSe8nQKNGkgOM8iKufqC5K8
+      Version:
+      - "2012-11-05"
+    headers:
+      Content-Length:
+      - "656"
+      Content-Type:
+      - application/x-www-form-urlencoded; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.11.2; darwin; amd64)
+      X-Amz-Date:
+      - 20190204T193359Z
+    url: https://sqs.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: <?xml version="1.0"?><DeleteMessageResponse xmlns="http://queue.amazonaws.com/doc/2012-11-05/"><ResponseMetadata><RequestId>97177036-63b6-514e-bf67-24e4f6510c4f</RequestId></ResponseMetadata></DeleteMessageResponse>
+    headers:
+      Content-Length:
+      - "215"
+      Content-Type:
+      - text/xml
+      Date:
+      - Mon, 04 Feb 2019 19:33:59 GMT
+      X-Amzn-Requestid:
+      - 97177036-63b6-514e-bf67-24e4f6510c4f
+    status: 200 OK
+    code: 200
+    duration: ""
