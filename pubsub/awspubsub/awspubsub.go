@@ -117,8 +117,8 @@ func errorCode(err error) gcerrors.ErrorCode {
 }
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
-	sns.ErrCodeAuthorizationErrorException:          gcerr.AuthorizationError,
-	sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
+	sns.ErrCodeAuthorizationErrorException:          gcerr.PermissionDenied,
+	sns.ErrCodeKMSAccessDeniedException:             gcerr.PermissionDenied,
 	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
 	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
 	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
@@ -140,15 +140,15 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	sqs.ErrCodeReceiptHandleIsInvalid:               gcerr.InvalidArgument,
 	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerr.InvalidArgument,
 	sqs.ErrCodeUnsupportedOperation:                 gcerr.InvalidArgument,
-	sns.ErrCodeInvalidSecurityException:             gcerr.InvalidCredentials,
+	sns.ErrCodeInvalidSecurityException:             gcerr.PermissionDenied,
 	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
 	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
 	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
 	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
 	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
 	sqs.ErrCodeOverLimit:                            gcerr.ResourceExhausted,
-	sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
-	sns.ErrCodeThrottledException:                   gcerr.Throttled,
+	sns.ErrCodeKMSThrottlingException:               gcerr.ResourceExhausted,
+	sns.ErrCodeThrottledException:                   gcerr.ResourceExhausted,
 	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
 	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 }
