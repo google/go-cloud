@@ -115,5 +115,5 @@ func unhex(b byte) byte {
 	case 'A' <= b && b <= 'F':
 		return b - 'A' + 10
 	}
-	return 0
+	panic("unhex called with non-hex byte")
 }

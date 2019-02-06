@@ -19,7 +19,7 @@ import (
 )
 
 func TestEscape(t *testing.T) {
-	always := func(_ string, _ int) bool { return true }
+	always := func(string, int) bool { return true }
 
 	for _, tc := range []struct {
 		description, s, want string
@@ -27,6 +27,8 @@ func TestEscape(t *testing.T) {
 	}{
 		{
 			description: "empty string",
+			s:           "",
+			want:        "",
 			should:      always,
 		},
 		{
@@ -65,7 +67,7 @@ func TestEscape(t *testing.T) {
 	}
 }
 
-func TestUnescape(t *testing.T) {
+func TestUnescapeOnInvalid(t *testing.T) {
 	// Unescaping of valid escape sequences is tested in TestEscape.
 	// This only tests invalid escape sequences, so Unescape is expected
 	// to do nothing.
