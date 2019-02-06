@@ -24,6 +24,7 @@ package awspubsub
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -100,36 +101,56 @@ func (t *topic) ErrorAs(err error, target interface{}) bool {
 
 // ErrorCode implements driver.Topic.ErrorCode.
 func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
 		return gcerr.Unknown
 	}
-	ec, ok := topicErrorCodeMap[ae.Code()]
+	ec, ok := errorCodeMap[ae.Code()]
 	if !ok {
 		return gcerr.Unknown
 	}
 	return ec
 }
 
-var topicErrorCodeMap = map[string]gcerrors.ErrorCode{
+var errorCodeMap = map[string]gcerrors.ErrorCode{
 	sns.ErrCodeAuthorizationErrorException:          gcerr.AuthorizationError,
 	sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
 	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
 	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
 	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
+	sqs.ErrCodeMessageNotInflight:                   gcerr.FailedPrecondition,
+	sqs.ErrCodePurgeQueueInProgress:                 gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDeletedRecently:                 gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDoesNotExist:                    gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueNameExists:                      gcerr.FailedPrecondition,
 	sns.ErrCodeInternalErrorException:               gcerr.Internal,
 	sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
 	sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
+	sqs.ErrCodeBatchEntryIdsNotDistinct:             gcerr.InvalidArgument,
+	sqs.ErrCodeBatchRequestTooLong:                  gcerr.InvalidArgument,
+	sqs.ErrCodeEmptyBatchRequest:                    gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidAttributeName:                 gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidBatchEntryId:                  gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidIdFormat:                      gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidMessageContents:               gcerr.InvalidArgument,
+	sqs.ErrCodeReceiptHandleIsInvalid:               gcerr.InvalidArgument,
+	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerr.InvalidArgument,
+	sqs.ErrCodeUnsupportedOperation:                 gcerr.InvalidArgument,
 	sns.ErrCodeInvalidSecurityException:             gcerr.InvalidCredentials,
 	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
 	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
-	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
 	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
 	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
+	sqs.ErrCodeOverLimit:                            gcerr.ResourceExhausted,
 	sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
 	sns.ErrCodeThrottledException:                   gcerr.Throttled,
-	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
+	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 }
 
 type subscription struct {
@@ -229,34 +250,7 @@ func (s *subscription) ErrorAs(err error, target interface{}) bool {
 
 // ErrorCode implements driver.Subscription.ErrorCode.
 func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(awserr.Error)
-	if !ok {
-		return gcerr.Unknown
-	}
-	ec, ok := subscriptionErrorCodeMap[ae.Code()]
-	if !ok {
-		return gcerr.Unknown
-	}
-	return ec
-}
-
-var subscriptionErrorCodeMap = map[string]gcerrors.ErrorCode{
-	sqs.ErrCodeBatchEntryIdsNotDistinct:     gcerr.InvalidArgument,
-	sqs.ErrCodeBatchRequestTooLong:          gcerr.InvalidArgument,
-	sqs.ErrCodeEmptyBatchRequest:            gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidAttributeName:         gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidBatchEntryId:          gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidIdFormat:              gcerr.InvalidArgument,
-	sqs.ErrCodeInvalidMessageContents:       gcerr.InvalidArgument,
-	sqs.ErrCodeReceiptHandleIsInvalid:       gcerr.InvalidArgument,
-	sqs.ErrCodeTooManyEntriesInBatchRequest: gcerr.InvalidArgument,
-	sqs.ErrCodeUnsupportedOperation:         gcerr.InvalidArgument,
-	sqs.ErrCodeOverLimit:                    gcerr.ResourceExhausted,
-	sqs.ErrCodeMessageNotInflight:           gcerr.FailedPrecondition,
-	sqs.ErrCodePurgeQueueInProgress:         gcerr.FailedPrecondition,
-	sqs.ErrCodeQueueDeletedRecently:         gcerr.FailedPrecondition,
-	sqs.ErrCodeQueueDoesNotExist:            gcerr.FailedPrecondition,
-	sqs.ErrCodeQueueNameExists:              gcerr.FailedPrecondition,
+	return errorCode(err)
 }
 
 func errorAs(err error, target interface{}) bool {
