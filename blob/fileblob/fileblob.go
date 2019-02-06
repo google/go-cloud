@@ -620,11 +620,10 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 // SignedURL takes a context, an object key, and a SignedURLOptions struct
 // and returns a string containing a URI and an error
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	// if b.opts.URLSigner == nil {
-	// 	return "", errNotImplemented
-	// }
-	// return b.opts.URLSigner.URLFromKey(ctx, key, opts)
-	return "", errNotImplemented
+	if b.opts.URLSigner == nil {
+		return "", errNotImplemented
+	}
+	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
 }
 
 // VerifySignedURL takes a string and returns
@@ -707,10 +706,19 @@ func (h *URLSignerHMAC) getMAC(message string) []byte {
 }
 
 func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bool) {
-	sURL, _ := url.Parse(surl) //todo handle error
+	sURL, err := url.Parse(surl)
+	if err != nil {
+		return "", false
+	}
 	q := sURL.Query()
 
-	// todo check expiry
+	exp, err := strconv.ParseInt(q.Get("expiry"), 10, 64)
+	if err != nil {
+		return "", false
+	}
+	if time.Now().Unix() > exp {
+		return "", false
+	}
 
 	sig := q.Get("signature")
 	q.Set("signature", "")
