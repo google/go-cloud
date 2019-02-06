@@ -54,7 +54,7 @@ func TestEscape(t *testing.T) {
 			want:        "__0xE2____0x98____0xBA____0xE2____0x98____0xBA__",
 		},
 	} {
-		got := Escape(tc.should, tc.s)
+		got := Escape(tc.s, tc.should)
 		if got != tc.want {
 			t.Errorf("%s: got escaped %q want %q", tc.description, got, tc.want)
 		}

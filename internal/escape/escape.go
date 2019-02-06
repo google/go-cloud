@@ -22,7 +22,7 @@ package escape
 // shouldEscape takes the whole string and an index instead of a single
 // byte because some escape decisions require context. For example, we
 // might want to escape the second "/" in "//" but not the first one.
-func Escape(shouldEscape func(s string, i int) bool, s string) string {
+func Escape(s string, shouldEscape func(s string, i int) bool) string {
 	// Do a first pass to see how many bytes need escaping.
 	var toEscape []int
 	for i := 0; i < len(s); i++ {
