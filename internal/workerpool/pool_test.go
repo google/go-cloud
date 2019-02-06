@@ -28,7 +28,7 @@ func TestRun(t *testing.T) {
 	t.Run("can be canceled", func(t *testing.T) {
 		ng0 := runtime.NumGoroutine()
 		ctx, cancel := context.WithCancel(context.Background())
-		nextTask := func(context.Context) func(context.Context) {
+		nextTask := func(context.Context) workerpool.Task {
 			return func(context.Context) {
 				<-ctx.Done()
 			}
@@ -54,12 +54,12 @@ func TestRun(t *testing.T) {
 		// m keeps track of which tasks have been completed.
 		var mu sync.Mutex
 		m := make(map[int]bool)
-		nextTask := func(context.Context) func(context.Context) {
+		nextTask := func(context.Context) workerpool.Task {
 			i++
 			if i > n {
 				return nil
 			}
-			return func(i int) func(context.Context) {
+			return func(i int) workerpool.Task {
 				return func(context.Context) {
 					mu.Lock()
 					m[i] = true

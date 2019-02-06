@@ -22,12 +22,15 @@ import (
 	"context"
 )
 
-// Run runs a worker pool with no more than limit goroutines. It gets tasks
-// from the nextTask func. If nextTask returns nil, Run will no longer ask for
-// more tasks, and will return after waiting for the running goroutines to
-// finish. Each func returned from nextTask is a unit of work to be performed.
-// The provided context can be used to cancel everything and exit the loop.
-func Run(ctx context.Context, limit int, nextTask func(context.Context) func(context.Context)) {
+type Task func(context.Context)
+
+// Run runs a worker pool with no more than limit goroutines. It repeatedly
+// calls nextTask to get tasks to perform. These tasks are in the form of funcs
+// that do some work via side effects. If nextTask returns nil, Run will no
+// longer ask for more tasks, and will return after waiting for the running
+// goroutines to finish. The provided context can be used to cancel everything
+// and exit the loop.
+func Run(ctx context.Context, limit int, nextTask func(context.Context) Task) {
 	type token struct{}
 	sem := make(chan token, limit)
 Loop:
