@@ -472,7 +472,7 @@ func benchmarkReceive(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscriptio
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const (
-		nMessages          = 10000
+		nMessages          = 1000
 		concurrencySend    = 100
 		concurrencyReceive = 1
 	)
