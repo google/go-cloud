@@ -24,8 +24,10 @@ require (
 	dmitri.shuralyov.com/html/belt v0.0.0-20180602232347-f7d459c86be0 // indirect
 	dmitri.shuralyov.com/service/change v0.0.0-20181023043359-a85b471d5412 // indirect
 	dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c // indirect
+	github.com/Azure/azure-amqp-common-go v1.1.4
 	github.com/Azure/azure-pipeline-go v0.1.8
 	github.com/Azure/azure-sdk-for-go v24.1.0+incompatible // indirect
+	github.com/Azure/azure-service-bus-go v0.2.0
 	github.com/Azure/azure-storage-blob-go v0.0.0-20190104215108-45d0c5e3638e
 	github.com/Azure/go-autorest v11.3.2+incompatible // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20181215173202-6f1ecdcf9588
@@ -180,6 +182,7 @@ require (
 	k8s.io/apimachinery v0.0.0-20190119020841-d41becfba9ee // indirect
 	k8s.io/klog v0.1.0 // indirect
 	layeh.com/radius v0.0.0-20190118135028-0f678f039617 // indirect
+	pack.ag/amqp v0.10.2
 	sigs.k8s.io/yaml v1.1.0 // indirect
 	sourcegraph.com/sourcegraph/go-diff v0.5.0 // indirect
 )
