@@ -40,6 +40,9 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
+type TopicOptions struct{}
+type SubscriptionOptions struct{}
+
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
 // See the package documentation for an example.
 //
@@ -54,7 +57,7 @@ type topic struct {
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
+func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.Topic {
 	return pubsub.NewTopic(newTopic(&connection{conn}, name))
 }
 
@@ -380,7 +383,7 @@ func errorAs(err error, target interface{}) bool {
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenSubscription(conn *amqp.Connection, name string) *pubsub.Subscription {
+func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
 	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil)
 }
 

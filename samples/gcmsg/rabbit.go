@@ -29,7 +29,7 @@ func openRabbitTopic(serverURL, topicID string) (*pubsub.Topic, func(), error) {
 		return nil, nil, err
 	}
 	cleanup := func() { conn.Close() }
-	topic := rabbitpubsub.OpenTopic(conn, topicID)
+	topic := rabbitpubsub.OpenTopic(conn, topicID, nil)
 	return topic, cleanup, nil
 }
 
@@ -40,6 +40,6 @@ func openRabbitSubscription(serverURL, subID string) (*pubsub.Subscription, func
 		return nil, nil, fmt.Errorf(`opening rabbit subscription "%s" on "%s": %v`, subID, serverURL, err)
 	}
 	cleanup := func() { conn.Close() }
-	sub := rabbitpubsub.OpenSubscription(conn, subID)
+	sub := rabbitpubsub.OpenSubscription(conn, subID, nil)
 	return sub, cleanup, nil
 }

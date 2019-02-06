@@ -32,7 +32,7 @@ func ExampleOpenTopic() {
 	defer conn.Close()
 
 	// Construct a *pubsub.Topic.
-	t := rabbitpubsub.OpenTopic(conn, "exchange-name")
+	t := rabbitpubsub.OpenTopic(conn, "exchange-name", nil)
 
 	// Now we can use t to send messages.
 	ctx := context.Background()
@@ -48,7 +48,7 @@ func ExampleOpenSubscription() {
 	defer conn.Close()
 
 	// Construct a *pubsub.Subscription..
-	s := rabbitpubsub.OpenSubscription(conn, "queue-name")
+	s := rabbitpubsub.OpenSubscription(conn, "queue-name", nil)
 
 	// Now we can use s to receive messages.
 	ctx := context.Background()
