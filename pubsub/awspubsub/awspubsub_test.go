@@ -25,13 +25,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"gocloud.dev/gcp"
-
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -43,7 +40,11 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const region = "us-east-2"
+const (
+	region = "us-east-2"
+	benchmarkTopicARN = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
+	benchmarkSubscriptionURL = "https://sqs.us-east-2.amazonaws.com/221420415498/benchmark-queue"
+)
 
 type harness struct {
 	sess      *session.Session
@@ -345,36 +346,18 @@ func sanitize(testName string) string {
 }
 
 func BenchmarkAwsPubSub(b *testing.B) {
-	// Provide fake creds if running in replay mode.
-	var creds *awscreds.Credentials
+	ctx := context.Background()
 	sess, err := session.NewSession(&aws.Config{
 		HTTPClient:  &http.Client{},
 		Region:      aws.String(region),
-		Credentials: creds,
 		MaxRetries:  aws.Int(0),
 	})
-	h := &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
-	ctx := context.Background()
-	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		b.Fatal(err)
 	}
-	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer cleanup()
-	pc, err := PublisherClient(ctx, conn)
-	if err != nil {
-		b.Fatal(err)
-	}
-	sc, err := SubscriberClient(ctx, conn)
-	if err != nil {
-		b.Fatal(err)
-	}
-	client := sns.New(h.sess, h.cfg)
-	topic := OpenTopic(ctx, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	topic := OpenTopic(ctx, pc, projectID, benchmarkTopicName, nil)
-	sub := OpenSubscription(ctx, sc, projectID, benchmarkSubscriptionName, nil)
+	snsClient := sns.New(sess, &aws.Config{})
+	sqsClient := sqs.New(sess, &aws.Config{})
+	topic := OpenTopic(ctx, snsClient, benchmarkTopicARN, nil)
+	sub := OpenSubscription(ctx, sqsClient, benchmarkSubscriptionURL, nil)
 	drivertest.RunBenchmarks(b, topic, sub)
 }
