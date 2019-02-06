@@ -25,24 +25,24 @@ import (
 // Run runs a worker pool with no more than limit goroutines. It gets tasks
 // from the nextTask func. If nextTask returns nil, Run will no longer ask for
 // more tasks, and will return after waiting for the running goroutines to
-// finish. The doWork func processes a single task. The provided context can
-// be used to cancel everything and exit the loop.
-func Run(ctx context.Context, limit int, nextTask func(context.Context) interface{}, doWork func(ctx context.Context, task interface{})) {
+// finish. Each func returned from nextTask is a unit of work to be performed.
+// The provided context can be used to cancel everything and exit the loop.
+func Run(ctx context.Context, limit int, nextTask func(context.Context) func(context.Context)) {
 	type token struct{}
 	sem := make(chan token, limit)
 Loop:
 	for {
-		task := nextTask(ctx)
-		if task == nil {
+		doTask := nextTask(ctx)
+		if doTask == nil {
 			break
 		}
 		select {
 		case <-ctx.Done():
 			break Loop
-		case sem <-token{}:
+		case sem <- token{}:
 		}
 		go func() {
-			doWork(ctx, task)
+			doTask(ctx)
 			<-sem
 		}()
 	}
