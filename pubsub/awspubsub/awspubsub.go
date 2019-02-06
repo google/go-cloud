@@ -113,23 +113,23 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 
 var topicErrorCodeMap = map[string]gcerrors.ErrorCode{
 	sns.ErrCodeAuthorizationErrorException:          gcerr.AuthorizationError,
-	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
-	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
+	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
+	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
+	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
 	sns.ErrCodeInternalErrorException:               gcerr.Internal,
 	sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
 	sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
 	sns.ErrCodeInvalidSecurityException:             gcerr.InvalidCredentials,
-	sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
-	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
-	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
 	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
-	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
-	sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
 	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
-	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
-	sns.ErrCodeThrottledException:                   gcerr.Throttled,
+	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
 	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
+	sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
+	sns.ErrCodeThrottledException:                   gcerr.Throttled,
+	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
+	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
 }
 
 type subscription struct {
@@ -248,15 +248,15 @@ var subscriptionErrorCodeMap = map[string]gcerrors.ErrorCode{
 	sqs.ErrCodeInvalidBatchEntryId:          gcerr.InvalidArgument,
 	sqs.ErrCodeInvalidIdFormat:              gcerr.InvalidArgument,
 	sqs.ErrCodeInvalidMessageContents:       gcerr.InvalidArgument,
-	sqs.ErrCodeMessageNotInflight:           gcerr.FailedPrecondition,
+	sqs.ErrCodeReceiptHandleIsInvalid:       gcerr.InvalidArgument,
+	sqs.ErrCodeTooManyEntriesInBatchRequest: gcerr.InvalidArgument,
+	sqs.ErrCodeUnsupportedOperation:         gcerr.InvalidArgument,
 	sqs.ErrCodeOverLimit:                    gcerr.ResourceExhausted,
+	sqs.ErrCodeMessageNotInflight:           gcerr.FailedPrecondition,
 	sqs.ErrCodePurgeQueueInProgress:         gcerr.FailedPrecondition,
 	sqs.ErrCodeQueueDeletedRecently:         gcerr.FailedPrecondition,
 	sqs.ErrCodeQueueDoesNotExist:            gcerr.FailedPrecondition,
 	sqs.ErrCodeQueueNameExists:              gcerr.FailedPrecondition,
-	sqs.ErrCodeReceiptHandleIsInvalid:       gcerr.InvalidArgument,
-	sqs.ErrCodeTooManyEntriesInBatchRequest: gcerr.InvalidArgument,
-	sqs.ErrCodeUnsupportedOperation:         gcerr.InvalidArgument,
 }
 
 func errorAs(err error, target interface{}) bool {
