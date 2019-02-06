@@ -19,11 +19,11 @@ import (
 )
 
 func TestEscape(t *testing.T) {
-	always := func(string, int) bool { return true }
+	always := func([]rune, int) bool { return true }
 
 	for _, tc := range []struct {
 		description, s, want string
-		should               func(string, int) bool
+		should               func([]rune, int) bool
 	}{
 		{
 			description: "empty string",
@@ -32,28 +32,28 @@ func TestEscape(t *testing.T) {
 			should:      always,
 		},
 		{
-			description: "first byte",
+			description: "first rune",
 			s:           "hello world",
 			want:        "__0x68__ello world",
-			should:      func(_ string, i int) bool { return i == 0 },
+			should:      func(_ []rune, i int) bool { return i == 0 },
 		},
 		{
-			description: "last byte",
+			description: "last rune",
 			s:           "hello world",
 			want:        "hello worl__0x64__",
-			should:      func(s string, i int) bool { return i == len(s)-1 },
+			should:      func(r []rune, i int) bool { return i == len(r)-1 },
 		},
 		{
-			description: "bytes in middle",
+			description: "runes in middle",
 			s:           "hello  world",
 			want:        "hello__0x20____0x20__world",
-			should:      func(s string, i int) bool { return s[i] == ' ' },
+			should:      func(r []rune, i int) bool { return r[i] == ' ' },
 		},
 		{
 			description: "unicode",
 			s:           "☺☺",
 			should:      always,
-			want:        "__0xE2____0x98____0xBA____0xE2____0x98____0xBA__",
+			want:        "__0x263a____0x263a__",
 		},
 	} {
 		got := Escape(tc.s, tc.should)
@@ -72,15 +72,14 @@ func TestUnescapeOnInvalid(t *testing.T) {
 	// This only tests invalid escape sequences, so Unescape is expected
 	// to do nothing.
 	for _, s := range []string{
-		"",
 		"0x68",
 		"_0x68_",
 		"__0x68_",
 		"_0x68__",
 		"__1x68__",
 		"__0y68__",
-		"__0xAG__",
-		"__0xff__",
+		"__0xag__",       // invalid hex digit
+		"__0x8fffffff__", // out of int32 range
 	} {
 		got := Unescape(s)
 		if got != s {

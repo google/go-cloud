@@ -15,105 +15,122 @@
 // Package escape includes helpers for escaping and unescaping strings.
 package escape
 
-// Escape returns s, with all bytes for which shouldEscape returns true
-// escaped to "__0xXX__", where XX is the hex representation of the byte
+import (
+	"fmt"
+	"strconv"
+)
+
+// Escape returns s, with all runes for which shouldEscape returns true
+// escaped to "__0xXXX__", where XXX is the hex representation of the rune
 // value.
 //
-// shouldEscape takes the whole string and an index instead of a single
-// byte because some escape decisions require context. For example, we
-// might want to escape the second "/" in "//" but not the first one.
-func Escape(s string, shouldEscape func(s string, i int) bool) string {
-	// Do a first pass to see how many bytes need escaping.
+// Note: shouldEscape takes the whole string as a slice of runes and an
+// index. Passing it a single byte or a single rune doesn't provide
+// enough context for some escape decisions; for example, the caller might
+// want to escape the second "/" in "//" but not the first one.
+// We pass a slice of runes instead of the string or a slice of bytes
+// because some decisions will be made on a rune basis (e.g., encode
+// all non-ASCII runes).
+func Escape(s string, shouldEscape func(s []rune, i int) bool) string {
+	// Do a first pass to see which runes (if any) need escaping.
+	runes := []rune(s)
 	var toEscape []int
-	for i := 0; i < len(s); i++ {
-		if shouldEscape(s, i) {
+	for i := range runes {
+		if shouldEscape(runes, i) {
 			toEscape = append(toEscape, i)
 		}
 	}
 	if len(toEscape) == 0 {
 		return s
 	}
-	// Each escaped byte turns into 8 bytes ("__0xXX__"),
-	// so there's an extra 7 bytes for each.
-	escaped := make([]byte, len(s)+7*len(toEscape))
+	// Each escaped rune turns into at most 14 runes ("__0x7fffffff__"),
+	// so allocate an extra 13 for each. We'll reslice at the end
+	// if we didn't end up using them.
+	escaped := make([]rune, len(runes)+13*len(toEscape))
 	n := 0 // current index into toEscape
 	j := 0 // current index into escaped
-	for i := 0; i < len(s); i++ {
+	for i, r := range runes {
 		if n < len(toEscape) && i == toEscape[n] {
-			b := s[i]
-			escaped[j] = '_'
-			escaped[j+1] = '_'
-			escaped[j+2] = '0'
-			escaped[j+3] = 'x'
-			escaped[j+4] = "0123456789ABCDEF"[b>>4]
-			escaped[j+5] = "0123456789ABCDEF"[b&15]
-			escaped[j+6] = '_'
-			escaped[j+7] = '_'
-			j += 8
+			// We were asked to escape this rune.
+			for _, x := range fmt.Sprintf("__%#x__", r) {
+				escaped[j] = x
+				j++
+			}
 			n++
 		} else {
-			escaped[j] = s[i]
+			escaped[j] = r
 			j++
 		}
 	}
-	return string(escaped)
+	return string(escaped[0:j])
+}
+
+// unescape tries to unescape starting at r[i].
+// It returns a boolean indicating whether the unescaping was successful,
+// and (if true) the unescaped rune and the last index of r that was used
+// during unescaping.
+func unescape(r []rune, i int) (bool, rune, int) {
+	// Look for "__0x".
+	if r[i] != '_' {
+		return false, 0, 0
+	}
+	i++
+	if i >= len(r) || r[i] != '_' {
+		return false, 0, 0
+	}
+	i++
+	if i >= len(r) || r[i] != '0' {
+		return false, 0, 0
+	}
+	i++
+	if i >= len(r) || r[i] != 'x' {
+		return false, 0, 0
+	}
+	i++
+	// Capture the digits until the next "_" (if any).
+	var hexdigits []rune
+	for ; i < len(r) && r[i] != '_'; i++ {
+		hexdigits = append(hexdigits, r[i])
+	}
+	// Look for the trailing "__".
+	if i >= len(r) || r[i] != '_' {
+		return false, 0, 0
+	}
+	i++
+	if i >= len(r) || r[i] != '_' {
+		return false, 0, 0
+	}
+	// Parse the hex digits into an int32.
+	retval, err := strconv.ParseInt(string(hexdigits), 16, 32)
+	if err != nil {
+		return false, 0, 0
+	}
+	return true, rune(retval), i
 }
 
 // Unescape reverses Escape.
 func Unescape(s string) string {
-	var unescaped []byte
-	for i := 0; i < len(s); i++ {
-		if i+7 < len(s) &&
-			s[i] == '_' &&
-			s[i+1] == '_' &&
-			s[i+2] == '0' &&
-			s[i+3] == 'x' &&
-			ishex(s[i+4]) &&
-			ishex(s[i+5]) &&
-			s[i+6] == '_' &&
-			s[i+7] == '_' {
-			// Unescape this byte.
+	var unescaped []rune
+	runes := []rune(s)
+	for i := 0; i < len(runes); i++ {
+		if ok, newR, newI := unescape(runes, i); ok {
+			// We unescaped some runes starting at i, resulting in the
+			// unescaped rune newR. The last rune used was newI.
 			if unescaped == nil {
-				// This is the first byte we've encountered that
+				// This is the first rune we've encountered that
 				// needed unescaping. Allocate a buffer and copy any
-				// previous bytes.
-				unescaped = make([]byte, 0, len(s))
-				if i != 0 {
-					unescaped = append(unescaped, []byte(s[0:i])...)
-				}
+				// previous runes.
+				unescaped = make([]rune, i)
+				copy(unescaped, runes)
 			}
-			unescaped = append(unescaped, unhex(s[i+4])<<4|unhex(s[i+5]))
-			// We used an extra 7 bytes from s, so move forward.
-			i += 7
+			unescaped = append(unescaped, newR)
+			i = newI
 		} else if unescaped != nil {
-			unescaped = append(unescaped, s[i])
+			unescaped = append(unescaped, runes[i])
 		}
 	}
 	if unescaped == nil {
 		return s
 	}
 	return string(unescaped)
-}
-
-// ishex returns true if c is a valid part of a hexadecimal number.
-func ishex(b byte) bool {
-	switch {
-	case '0' <= b && b <= '9':
-		return true
-	case 'A' <= b && b <= 'F':
-		return true
-	}
-	return false
-}
-
-// unhex returns the hexadecimal value of the hexadecimal byte b.
-// For example, unhex('A') returns 10.
-func unhex(b byte) byte {
-	switch {
-	case '0' <= b && b <= '9':
-		return b - '0'
-	case 'A' <= b && b <= 'F':
-		return b - 'A' + 10
-	}
-	panic("unhex called with non-hex byte")
 }
