@@ -49,11 +49,14 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return nil
+	return &http.Client{}
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(h.dir, nil)
+	opts := &Options{
+		URLSigner: NewURLSignerHMAC("http", "example.com", "blobjects", "I'm a secret key"),
+	}
+	return openBucket(h.dir, opts)
 }
 
 func (h *harness) Close() {

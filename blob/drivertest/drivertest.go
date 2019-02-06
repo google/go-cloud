@@ -1706,6 +1706,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 
 	// Try to generate a real signed URL.
 	url, err := b.SignedURL(ctx, key, nil)
+	fmt.Println(url) //TODO remove
 	if err != nil {
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skipf("SignedURL not supported")
