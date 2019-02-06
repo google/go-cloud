@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 
@@ -41,6 +41,36 @@ import (
 )
 
 const region = "us-east-2"
+
+func TestOpenTopic(t *testing.T) {
+	ctx := context.Background()
+	dth, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := dth.(*harness)
+	client := sns.New(h.sess, h.cfg)
+	fakeTopicARN := ""
+	topic := OpenTopic(ctx, client, fakeTopicARN, nil)
+	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("")}); err == nil {
+		t.Error("got nil, want error from send to nonexistent topic")
+	}
+}
+
+func TestOpenSubscription(t *testing.T) {
+	ctx := context.Background()
+	dth, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := dth.(*harness)
+	client := sqs.New(h.sess, h.cfg)
+	fakeQURL := ""
+	sub := OpenSubscription(ctx, client, fakeQURL, nil)
+	if _, err := sub.Receive(ctx); err == nil {
+		t.Error("got nil, want error from receive from nonexistent subscription")
+	}
+}
 
 type harness struct {
 	sess      *session.Session
