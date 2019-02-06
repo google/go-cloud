@@ -22,7 +22,11 @@ import (
 
 // Escape returns s, with all runes for which shouldEscape returns true
 // escaped to "__0xXXX__", where XXX is the hex representation of the rune
-// value.
+// value. For example, " " would escape to "__0x20__".
+//
+// Non-UTF-8 strings will have their non-UTF-8 characters escaped to
+// unicode.ReplacementChar; the original value is lost. Please file an
+// issue if you need non-UTF8 support.
 //
 // Note: shouldEscape takes the whole string as a slice of runes and an
 // index. Passing it a single byte or a single rune doesn't provide
