@@ -104,31 +104,32 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 	if !ok {
 		return gcerr.Unknown
 	}
-	m := map[string]gcerrors.ErrorCode{
-		sns.ErrCodeAuthorizationErrorException:          gcerr.AuthorizationError,
-		sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
-		sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
-		sns.ErrCodeInternalErrorException:               gcerr.Internal,
-		sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
-		sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
-		sns.ErrCodeInvalidSecurityException:             gcerr.InvalidCredentials,
-		sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
-		sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
-		sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
-		sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
-		sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
-		sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
-		sns.ErrCodeNotFoundException:                    gcerr.NotFound,
-		sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
-		sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
-		sns.ErrCodeThrottledException:                   gcerr.Throttled,
-		sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
-	}
-	ec, ok := m[ae.Code()]
+	ec, ok := topicErrorCodeMap[ae.Code()]
 	if !ok {
 		return gcerr.Unknown
 	}
 	return ec
+}
+
+var topicErrorCodeMap = map[string]gcerrors.ErrorCode{
+	sns.ErrCodeAuthorizationErrorException:          gcerr.AuthorizationError,
+	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
+	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeInternalErrorException:               gcerr.Internal,
+	sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
+	sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
+	sns.ErrCodeInvalidSecurityException:             gcerr.InvalidCredentials,
+	sns.ErrCodeKMSAccessDeniedException:             gcerr.AuthorizationError,
+	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
+	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
+	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
+	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
+	sns.ErrCodeKMSThrottlingException:               gcerr.Throttled,
+	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
+	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
+	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeThrottledException:                   gcerr.Throttled,
+	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
 }
 
 type subscription struct {
@@ -232,29 +233,30 @@ func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	if !ok {
 		return gcerr.Unknown
 	}
-	m := map[string]gcerrors.ErrorCode{
-		sqs.ErrCodeBatchEntryIdsNotDistinct:     gcerr.InvalidArgument,
-		sqs.ErrCodeBatchRequestTooLong:          gcerr.InvalidArgument,
-		sqs.ErrCodeEmptyBatchRequest:            gcerr.InvalidArgument,
-		sqs.ErrCodeInvalidAttributeName:         gcerr.InvalidArgument,
-		sqs.ErrCodeInvalidBatchEntryId:          gcerr.InvalidArgument,
-		sqs.ErrCodeInvalidIdFormat:              gcerr.InvalidArgument,
-		sqs.ErrCodeInvalidMessageContents:       gcerr.InvalidArgument,
-		sqs.ErrCodeMessageNotInflight:           gcerr.FailedPrecondition,
-		sqs.ErrCodeOverLimit:                    gcerr.ResourceExhausted,
-		sqs.ErrCodePurgeQueueInProgress:         gcerr.FailedPrecondition,
-		sqs.ErrCodeQueueDeletedRecently:         gcerr.FailedPrecondition,
-		sqs.ErrCodeQueueDoesNotExist:            gcerr.FailedPrecondition,
-		sqs.ErrCodeQueueNameExists:              gcerr.FailedPrecondition,
-		sqs.ErrCodeReceiptHandleIsInvalid:       gcerr.InvalidArgument,
-		sqs.ErrCodeTooManyEntriesInBatchRequest: gcerr.InvalidArgument,
-		sqs.ErrCodeUnsupportedOperation:         gcerr.InvalidArgument,
-	}
-	ec, ok := m[ae.Code()]
+	ec, ok := subscriptionErrorCodeMap[ae.Code()]
 	if !ok {
 		return gcerr.Unknown
 	}
 	return ec
+}
+
+var subscriptionErrorCodeMap = map[string]gcerrors.ErrorCode{
+	sqs.ErrCodeBatchEntryIdsNotDistinct:     gcerr.InvalidArgument,
+	sqs.ErrCodeBatchRequestTooLong:          gcerr.InvalidArgument,
+	sqs.ErrCodeEmptyBatchRequest:            gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidAttributeName:         gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidBatchEntryId:          gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidIdFormat:              gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidMessageContents:       gcerr.InvalidArgument,
+	sqs.ErrCodeMessageNotInflight:           gcerr.FailedPrecondition,
+	sqs.ErrCodeOverLimit:                    gcerr.ResourceExhausted,
+	sqs.ErrCodePurgeQueueInProgress:         gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDeletedRecently:         gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDoesNotExist:            gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueNameExists:              gcerr.FailedPrecondition,
+	sqs.ErrCodeReceiptHandleIsInvalid:       gcerr.InvalidArgument,
+	sqs.ErrCodeTooManyEntriesInBatchRequest: gcerr.InvalidArgument,
+	sqs.ErrCodeUnsupportedOperation:         gcerr.InvalidArgument,
 }
 
 func errorAs(err error, target interface{}) bool {
