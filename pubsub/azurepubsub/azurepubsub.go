@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azurepubsub provides an implementation of pubsub using Azure Service Bus Topic and Subscription.
+// Package azurepubsub provides an implementation of pubsub using Azure Service
+// Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
-// PubSub.
+// As
 //
-// It exposes the following types for As:
-// Topic: *servicebus.Topic
-// Subscription: *servicebus.Subscription
+// azurepubsub exposes the following types for As:
+//  - Topic: *servicebus.Topic
+//  - Subscription: *servicebus.Subscription
+//  - Message: *servicebus.Message
+//  - Error: common.Retryable
 package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
 
 import (
