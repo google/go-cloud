@@ -44,12 +44,11 @@ const region = "us-east-2"
 
 func TestOpenTopic(t *testing.T) {
 	ctx := context.Background()
-	dth, err := newHarness(ctx, t)
+	sess, err := newSession()
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := dth.(*harness)
-	client := sns.New(h.sess, h.cfg)
+	client := sns.New(sess, &aws.Config{})
 	fakeTopicARN := ""
 	topic := OpenTopic(ctx, client, fakeTopicARN, nil)
 	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("")}); err == nil {
@@ -59,17 +58,24 @@ func TestOpenTopic(t *testing.T) {
 
 func TestOpenSubscription(t *testing.T) {
 	ctx := context.Background()
-	dth, err := newHarness(ctx, t)
+	sess, err := newSession()
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := dth.(*harness)
-	client := sqs.New(h.sess, h.cfg)
+	client := sqs.New(sess, &aws.Config{})
 	fakeQURL := ""
 	sub := OpenSubscription(ctx, client, fakeQURL, nil)
 	if _, err := sub.Receive(ctx); err == nil {
 		t.Error("got nil, want error from receive from nonexistent subscription")
 	}
+}
+
+func newSession() (*session.Session, error) {
+	return session.NewSession(&aws.Config{
+		HTTPClient: &http.Client{},
+		Region:     aws.String(region),
+		MaxRetries: aws.Int(0),
+	})
 }
 
 type harness struct {
