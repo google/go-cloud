@@ -34,6 +34,11 @@ type ackingDriverSub struct {
 }
 
 func (s *ackingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	if len(s.q) == 0 {
+		// The queue won't be replenished. This means the test would just time
+		// out, so fail early and loudly instead.
+		panic("s.q is empty!")
+	}
 	if len(s.q) <= maxMessages {
 		ms := s.q
 		s.q = nil
@@ -307,13 +312,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 	ctx := context.Background()
 	serr := errors.New("SendAcks failed")
 	ackChan := make(chan struct{})
-	ds := &ackingDriverSub{
-		q: []*driver.Message{
-			&driver.Message{AckID: 0},
-			&driver.Message{AckID: 1},
-			&driver.Message{AckID: 2},
-			&driver.Message{AckID: 3},
-		},
+	ds := &unlimitedAckingDriverSub{
 		sendAcks: func(context.Context, []driver.AckID) error {
 			close(ackChan)
 			return serr
@@ -342,3 +341,20 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 		}
 	}
 }
+
+type unlimitedAckingDriverSub struct {
+	driver.Subscription
+	sendAcks func(context.Context, []driver.AckID) error
+}
+
+func (s *unlimitedAckingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	return []*driver.Message{&driver.Message{AckID: 1}}, nil
+}
+
+func (s *unlimitedAckingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
+	return s.sendAcks(ctx, ackIDs)
+}
+
+func (s *unlimitedAckingDriverSub) IsRetryable(error) bool { return false }
+
+func (s *unlimitedAckingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
