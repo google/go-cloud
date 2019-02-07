@@ -40,7 +40,11 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const region = "us-east-2"
+const (
+	region = "us-east-2"
+	benchmarkTopicARN = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
+	benchmarkSubscriptionURL = "https://sqs.us-east-2.amazonaws.com/221420415498/benchmark-queue"
+)
 
 type harness struct {
 	sess      *session.Session
@@ -339,4 +343,21 @@ func (awsAsTest) MessageCheck(m *pubsub.Message) error {
 
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
+}
+
+func BenchmarkAwsPubSub(b *testing.B) {
+	ctx := context.Background()
+	sess, err := session.NewSession(&aws.Config{
+		HTTPClient:  &http.Client{},
+		Region:      aws.String(region),
+		MaxRetries:  aws.Int(0),
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	snsClient := sns.New(sess, &aws.Config{})
+	sqsClient := sqs.New(sess, &aws.Config{})
+	topic := OpenTopic(ctx, snsClient, benchmarkTopicARN, nil)
+	sub := OpenSubscription(ctx, sqsClient, benchmarkSubscriptionURL, nil)
+	drivertest.RunBenchmarks(b, topic, sub)
 }
