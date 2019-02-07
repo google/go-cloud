@@ -110,10 +110,13 @@ func (verifyAsFailsOnNil) BucketCheck(b *blob.Bucket) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) error {
-	if b.ErrorAs(err, nil) {
-		return errors.New("want ErrorAs to return false when passed nil")
-	}
+func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want ErrorAs to panic when passed nil")
+		}
+	}()
+	b.ErrorAs(err, nil)
 	return nil
 }
 
@@ -1546,9 +1549,9 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
-			t.Errorf("want error, got nil")
+			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
-			t.Errorf("want NotFound error, got %v", err)
+			t.Errorf("got %v want NotFound error", err)
 		}
 	})
 
@@ -1575,16 +1578,16 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 		// Subsequent read fails with IsNotExist.
 		_, err = b.NewReader(ctx, key, nil)
 		if err == nil {
-			t.Errorf("read after delete want error, got nil")
+			t.Errorf("read after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
 			t.Errorf("read after delete want NotFound error, got %v", err)
 		}
 		// Subsequent delete also fails.
 		err = b.Delete(ctx, key)
 		if err == nil {
-			t.Errorf("delete after delete want error, got nil")
+			t.Errorf("delete after delete got nil, want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
-			t.Errorf("delete after delete want NotFound error, got %v", err)
+			t.Errorf("delete after delete got %v, want NotFound error", err)
 		}
 	})
 }

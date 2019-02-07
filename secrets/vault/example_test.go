@@ -23,9 +23,9 @@ import (
 )
 
 func Example_encrypt() {
-	ctx := context.Background()
 
 	// Get a client to use with the Vault API.
+	ctx := context.Background()
 	client, err := vault.Dial(ctx, &vault.Config{
 		Token: "<Client (Root) Token>",
 		APIConfig: &api.Config{
@@ -33,47 +33,15 @@ func Example_encrypt() {
 		},
 	})
 
-	// Get the plaintext to be encrypted.
+	// Construct a *secrets.Keeper.
+	keeper := vault.NewKeeper(client, "my-key", nil)
+
+	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")
-
-	keeper := vault.NewKeeper(
-		client,
-		"my-key",
-		nil,
-	)
-
-	// Makes the request to the Vault transit API to encrypt the plain text into a binary.
-	encrypted, err := keeper.Encrypt(ctx, plaintext)
+	ciphertext, err := keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Store the encrypted secret.
-	_ = encrypted
-}
-
-func Example_decrypt() {
-	ctx := context.Background()
-
-	// Get a client to use with the Vault API.
-	client, err := vault.Dial(ctx, &vault.Config{
-		Token: "<Client (Root) Token>",
-		APIConfig: &api.Config{
-			Address: "http://127.0.0.1:8200",
-		},
-	})
-
-	// Get the secret to be decrypted from some kind of storage.
-	ciphertext := []byte("vault:v1:RCWHyq64IWZo1s1YhCdjbe5DweJ9UNHKl0TK6NhpaGvv0tXs0QNpTuf8Sg==")
-
-	keeper := vault.NewKeeper(
-		client,
-		"my-key",
-		nil,
-	)
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Use the decrypted secret.
 	_ = decrypted
 }

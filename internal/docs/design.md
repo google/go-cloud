@@ -105,13 +105,19 @@ https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
 https://godoc.org/github.com/google/go-cloud/blob#Bucket.NewWriter
 [`database/sql`]: https://godoc.org/database/sql
 
-## No Global State
+## Minimize Global State
 
 As a library, the Go CDK should not introduce global state. Global state is
 difficult to reason about in large codebases, where it can be necessary for
 different parts of the application to use different states. Instead of adding
 global state, push responsibility to the application to inject the state where
 it is needed.
+
+The exception we permit is URL scheme registration as documented under
+[URLs](#urls). The amount of boilerplate setup code required for URL muxes for
+multiple providers without use of a tool like Wire is an unreasonable burden
+for users of Go CDK. A global registry is acceptable as long as its use is not
+mandatory, but the burden is to prove the benefit over the cost.
 
 ## Package Naming Conventions
 
@@ -183,6 +189,165 @@ with `foo.New(...)` and later add `foo.NewWithOptions(..., opts *Options)` if
 needed). However, this would result in inconsistent names over time (e.g., some
 packages would expose `New` with an `Options`, while others would expose
 `NewWithOptions`).
+
+### URLs
+
+To enable the [Backing services factor][] of a Twelve-Factor Application, Go
+Cloud includes the ability to construct each of its API objects using
+identifying URLs. The concrete type's package should include APIs like the
+following:
+
+```go
+// Package foo is a portable API. foo could be something like blob or pubsub.
+//
+// Throughout this example, Widget is used as a stand-in for a particular type
+// inside foo, like Bucket or Subscription.
+package foo
+
+// A type that implements WidgetURLOpener can open widgets based on a URL.
+// The opener must not modify the URL argument. OpenWidgetURL must be safe to
+// call from multiple goroutines.
+//
+// WidgetURLOpeners should not assume that the URL has a particular scheme.
+type WidgetURLOpener interface {
+  OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a URLMux with no registered schemes.
+type URLMux struct {
+  // ...
+}
+
+// RegisterWidget registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterWidget panics.
+func (mux *URLMux) RegisterWidget(scheme string, opener WidgetURL) {
+  // ...
+}
+
+// OpenWidget calls OpenWidgetURL with the URL parsed from urlstr.
+// OpenWidget is safe to call from multiple goroutines.
+func (mux *URLMux) OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
+  u, err := url.Parse(urlstr)
+  if err != nil {
+    return nil, fmt.Errorf("open widget: %v", err)
+  }
+  return mux.OpenWidgetURL(ctx, u)
+}
+
+// OpenWidgetURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenWidgetURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenWidgetURL(ctx context.Context, u *url.URL) (*Widget, error) {
+  // ...
+}
+
+// DefaultURLMux returns the URLMux used by OpenWidget.
+func DefaultURLMux() *URLMux {
+  return defaultURLMux
+}
+
+var defaultURLMux = new(URLMux)
+
+// OpenWidget opens the Widget identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+func OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
+  return DefaultURLMux().OpenWidget(urlstr)
+}
+```
+
+The repetition of `Widget` in the method names permits a type to handle multiple
+resources within the API. Exporting the `URLMux` allows applications to build
+their own muxes, potentially wrapping existing.
+
+Driver packages should include their own `URLOpener` struct type which
+implements all the relevant `WidgetURLOpener` methods. The URL should only serve
+to identify which resource to open. Any credentials or other complex values
+should be taken in as struct fields, not as input from URL. If the driver
+package registers its `URLOpener` with the `DefaultURLMux`, then it should
+populate these complex fields from environment variables. If doing so is
+undesirable or expensive, then it should not register with the `DefaultURLMux`
+and instead rely on users to create their own mux. If there already exists a
+well-established URI format for the backend (like S3 URLs or database connection
+URIs), then drivers should honor them where possible.
+
+[Backing services factor]: https://12factor.net/backing-services
+
+#### URL Examples
+
+A `WidgetURLOpener` implementation for a hypothetical GCP service:
+
+```go
+package gcpfoo
+
+// ...
+
+const Scheme = "gcpwidget"
+
+type URLOpener struct {
+  Client  *gcp.HTTPClient
+  Options Options
+}
+
+func (o *URLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget, error) {
+  // ...
+  return OpenWidget(ctx, o.Client, u.Host, &o.Options)
+}
+
+type lazyURLOpener struct {
+  init   sync.Once
+  opener *URLOpener
+  err    error
+}
+
+func (o *lazyURLOpener) OpenWidgetURL(ctx context.Context, u *url.URL) (*foo.Widget, error) {
+  o.init.Once(func() {
+    creds, err := gcp.DefaultCredentials(ctx)
+    if err != nil {
+      o.err = err
+      return
+    }
+    o.opener = new(URLOpener)
+    o.opener.Client, _ = gcp.NewHTTPClient(http.DefaultTransport, creds.TokenSource)
+  })
+  if o.err != nil {
+    return nil, o.err
+  }
+  return o.opener.OpenWidgetURL(ctx, u)
+}
+
+func init() {
+  foo.DefaultURLMux().Register(Scheme, new(lazyURLOpener))
+}
+
+// OpenWidget is the exported non-URL constructor.
+func OpenWidget(ctx context.Context, c *gcp.HTTPClient, name string, opts *Options) (*foo.Widget, error) {
+  // ...
+}
+```
+
+Using the global default mux:
+
+```go
+import _ "gocloud.dev/foo/gcpfoo"
+
+// ...
+
+widget, err := foo.OpenWidget(context.Background(), "gcpwidget://xyzzy")
+```
+
+Using a custom mux created during server initialization:
+
+```go
+myMux := new(foo.URLMux)
+myMux.Register(gcpfoo.Scheme, &gcpfoo.URLOpener{
+  Client: client,
+})
+widget, err := myMux.OpenWidget(context.Background(), "gcpwidget://xyzzy")
+```
 
 ## Errors
 
@@ -322,7 +487,8 @@ across providers. Some theoretical examples using [`blob.Bucket`][]:
 1.  **Data fields**. Some providers may support key/value metadata associated
     with a blob, others may not.
 1.  **Naming rules**. Different providers may allow different name lengths, or
-    allow/disallow unicode characters.
+    allow/disallow non-ASCII unicode characters. See [Strings](#strings) below
+    for more on handling string differences.
 1.  **Semantic guarantees**. Different providers may have different consistency
     guarantees; for example, S3 only provides eventually consistency while GCS
     provides strong consistency.
@@ -373,6 +539,126 @@ b, err := blob.NewBucket(d, blob.FeatureUnicodeNames)
 
 Design discussions regarding enforcing portability are ongoing; we welcome input
 on the [mailing list](https://groups.google.com/forum/#!forum/go-cloud).
+
+### Strings
+
+Providers often differ on what they accept in particular strings (e.g., blob
+names, metadata keys, etc.). A couple of specific examples:
+
+*   Azure Blob only
+    [accepts C# identifiers](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata)
+    as metadata keys.
+*   S3 drops double slashes in blob names (e.g., `foo//bar` will end up being
+    saved as `foo/bar`).
+
+These differences lead to a loss of portability and predictability for users.
+
+To resolve this issue, we insist that Go CDK can handle any string, and force
+drivers to use escaping mechanisms to handle strings that the underlying
+provider can't handle. We enforce driver compliance with conformance tests.
+
+As an example, a driver for a provider that only allows underscores and ASCII
+characters might escape the string `foo.bar` to `foo__0x2e__bar`.
+
+Pros of this approach:
+
+*   Go CDK APIs are internally consistent in that a user can write any string to
+    any provider and get the original string back when they read it back.
+*   Go CDK APIs have visibility into all existing strings for all providers.
+
+Cons:
+
+*   Go CDK could overwrite existing data if a Go CDK-written key escapes to an
+    already-existing value (e.g., if the `foo__0x2e__bar` string already
+    existed, it would be overwritten by a Go CDK write to `foo.bar`).
+*   Escaping may push a string over the maximum allowed string length for a
+    provider. Escaping does not solve (and in fact may exacerbate) problems with
+    different maximum string lengths across providers.
+*   Existing strings that happen to look like Go CDK-escaped strings will be
+    unescaped by Go CDK (e.g., an existing string `foo__0x2e__bar` would appear
+    as `foo.bar` when read through the Go CDK).
+*   Strings that were written through the Go CDK and needed escaping will appear
+    in their escaped form when viewed outside of Go CDK (e.g., `foo__0x2e__bar`
+    would appear on the provider's UI).
+
+Most of these cons are mitigated by choosing unusual-looking escape mechanisms
+that are unlikely to appear in existing data.
+
+Drivers should escape strings when writing to the underlying provider, and
+unescape them when reading them back. The Go CDK will provide helpers for these
+operations, as well as a test suite of strings for conformance tests.
+
+Sample code for the helper for escaping strings:
+
+```
+// package escape provider helpers for escaping and unescaping strings.
+package escape
+
+// Escape returns s, with all bytes for which shouldEscape returns true
+// escaped.
+//
+// shouldEscape takes the whole string and an index instead of a single
+// byte because some escape decisions require context. For example, we
+// might want to escape the second "/" in "//" but not the first one.
+func Escape(shouldEscape func(s string, i int) bool, s string) string {...}
+
+// Unescape reverses Escape.
+func Unescape(s string) string {...}
+```
+
+Sample code for how a driver might use it, using metadata keys for a `blob` as
+the example string:
+
+```
+// shouldEscapeMetadataKey returns true if s[i] needs to be escaped in order
+// to produce a valid metadata key.
+func shouldEscapeMetadataKey(s string, i int) bool {...}
+
+// When writing metadata keys, escape the keys:
+// ... gcdkMetadata is the metadata passed to the GCDK API.
+for k, v := range gcdkMetadata {
+    e := escape.Escape(shouldEscapeMetadataKey, k)
+    if _, ok := providerMetadata[e]; ok {
+      return fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
+    }
+    providerMetadata[e] = v
+}
+// ... write providerMetadata to the provider.
+
+// When reading metadata keys, we unescape them:
+// ... providerMetadata is the metadata read from the provider.
+for k, v := range providerMetadata {
+    gcdkMetadata[escape.Unescape(k)] = v
+}
+// ... return gcdkMetadata.
+```
+
+The details of what bytes need to be escaped will vary from provider to
+provider. The details of how to escape may also vary, although we expect to use
+a common approach for most drivers. In particular, we plan to escape each byte
+for which `shouldEscape` returns true with `__0xXX__`, where `XX` is the hex
+representation of the byte value.
+
+### Alternatives Considered
+
+*   We considered restricting Go CDK's APIs to strings that all providers
+    support. For example, we could have asserted that Go CDK's `blob` only
+    supports ASCII plus `/` for blob names (and no `//`!). However, such a rule
+    would mean that we couldn't cleanly handle existing strings created through
+    some mechanism other than through Go CDK APIs that violate the rule. For
+    example, an existing blob in S3 with a unicode name. Filtering out such
+    strings so that they aren't visible at all through the Go CDK would be both
+    surprising and limiting, and could easily result in data loss (e.g., if a
+    user read a set of metadata for a blob via the Go CDK, and some keys were
+    filtered out, and then wrote the metadata back, the filtered keys would be
+    lost). Not filtering such strings would mean that the Go CDK isn't
+    internally consistent (i.e., you can read some strings but not write them).
+    Overall, we decided that this approach is unacceptable.
+
+*   We could expose the escaper used by providers in their `Options` structs
+    (including options like disabling it, overriding the set of bytes to be
+    escaped, or overriding the escaping mechanism), but we'll wait to see if
+    there's demand for that.
 
 ## Coding Conventions
 

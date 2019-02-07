@@ -28,6 +28,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 	pubsubpb "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -122,6 +124,10 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) ShouldSkip(testName string) (bool, string) {
+	return false, ""
+}
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
@@ -181,6 +187,81 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
+func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
+	var pm pubsubpb.PubsubMessage
+	if m.As(&pm) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
+	}
+	var ppm *pubsubpb.PubsubMessage
+	if !m.As(&ppm) {
+		return fmt.Errorf("cast failed for %T", &ppm)
+	}
+	return nil
+}
+
+func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+	var s *status.Status
+	if !t.ErrorAs(err, &s) {
+		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+	}
+	if s.Code() != codes.NotFound {
+		return fmt.Errorf("got code %s, want NotFound", s.Code())
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
+}
+
+func TestOpenTopic(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projID, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	pc, err := PublisherClient(ctx, conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	topic := OpenTopic(ctx, pc, projID, "my-topic", nil)
+	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello world")})
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+}
+
+func TestOpenSubscription(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projID, err := gcp.DefaultProjectID(creds)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	sc, err := SubscriberClient(ctx, conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := OpenSubscription(ctx, sc, projID, "my-subscription", nil)
+	_, err = sub.Receive(ctx)
+	if err == nil {
+		t.Error("got nil, want error")
+	}
 }

@@ -16,6 +16,7 @@ package memblob_test
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"gocloud.dev/blob"
@@ -25,16 +26,43 @@ import (
 func Example() {
 
 	// Create an in-memory bucket.
-	_ = memblob.OpenBucket(nil)
+	b := memblob.OpenBucket(nil)
 
-	// Output:
-}
-
-func Example_open() {
-	_, err := blob.Open(context.Background(), "mem://")
+	// Now we can use b to read or write files to the container.
+	ctx := context.Background()
+	err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Output:
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
 
+	// Output:
+	// hello world
+}
+
+func Example_open() {
+	// Open creates a *blob.Bucket from a URL.
+	b, err := blob.Open(context.Background(), "mem://")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Now we can use b to read or write files to the container.
+	ctx := context.Background()
+	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
+
+	// Output:
+	// hello world
 }

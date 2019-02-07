@@ -31,19 +31,43 @@
 // You can develop your application locally using localsecrets, or deploy it to
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+//  - Encrypt
+//  - Decrypt
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/secrets/Encrypt".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/secrets/latency".
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
 
-	"gocloud.dev/internal/trace"
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/oc"
 	"gocloud.dev/secrets/driver"
 )
 
 // Keeper does encryption and decryption. To create a Keeper, use constructors
 // found in provider-specific subpackages.
 type Keeper struct {
-	k driver.Keeper
+	k      driver.Keeper
+	tracer *oc.Tracer
 }
 
 // NewKeeper is intended for use by provider implementations.
@@ -51,13 +75,33 @@ var NewKeeper = newKeeper
 
 // newKeeper creates a Keeper.
 func newKeeper(k driver.Keeper) *Keeper {
-	return &Keeper{k: k}
+	return &Keeper{
+		k: k,
+		tracer: &oc.Tracer{
+			Package:        pkgName,
+			Provider:       oc.ProviderName(k),
+			LatencyMeasure: latencyMeasure,
+		},
+	}
 }
+
+const pkgName = "gocloud.dev/secrets"
+
+var (
+	latencyMeasure = oc.LatencyMeasure(pkgName)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
+	OpenCensusViews = oc.Views(pkgName, latencyMeasure)
+)
+
+// Encrypt encrypts the plaintext and returns the cipher message.
 
 // Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Encrypt")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = k.tracer.Start(ctx, "Encrypt")
+	defer func() { k.tracer.End(ctx, err) }()
 
 	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
@@ -68,8 +112,8 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 
 // Decrypt decrypts the ciphertext and returns the plaintext.
 func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []byte, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/secrets.Decrypt")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = k.tracer.Start(ctx, "Decrypt")
+	defer func() { k.tracer.End(ctx, err) }()
 
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
@@ -78,17 +122,9 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 	return b, nil
 }
 
-// wrappedError is used to wrap all errors returned by drivers so that users are
-// not given access to provider-specific errors.
-type wrappedError struct {
-	err error
-	k   driver.Keeper
-}
-
-func wrapError(k driver.Keeper, err error) error {
-	return &wrappedError{k: k, err: err}
-}
-
-func (w *wrappedError) Error() string {
-	return "secrets: " + w.err.Error()
+func wrapError(k *Keeper, err error) error {
+	if gcerr.DoNotWrap(err) {
+		return err
+	}
+	return gcerr.New(k.k.ErrorCode(err), err, 2, "secrets")
 }

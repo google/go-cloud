@@ -52,6 +52,11 @@ type Message struct {
 	// the message. This field should only be set by methods implementing
 	// Subscription.ReceiveBatch.
 	AckID AckID
+
+	// AsFunc allows providers to expose provider-specific types;
+	// see Topic.As for more details.
+	// AsFunc must be populated on messages returned from ReceiveBatch.
+	AsFunc func(interface{}) bool
 }
 
 // Topic publishes messages.
@@ -86,6 +91,10 @@ type Topic interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// ErrorAs allows providers to expose provider-specific types for errors.
+	// See As.
+	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -136,6 +145,10 @@ type Subscription interface {
 	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
 	// for more background.
 	As(i interface{}) bool
+
+	// ErrorAs allows providers to expose provider-specific types for errors.
+	// See As.
+	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.

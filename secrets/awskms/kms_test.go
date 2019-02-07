@@ -16,18 +16,20 @@ package awskms
 
 import (
 	"context"
+	"os"
 	"testing"
 
-	"gocloud.dev/internal/testing/setup"
-
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
 
 const (
-	keyID  = "alias/test-secrets"
-	region = "us-west-1"
+	keyID1 = "alias/test-secrets"
+	keyID2 = "alias/test-secrets2"
+	region = "us-east-2"
 )
 
 type harness struct {
@@ -35,11 +37,8 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
-	return &keeper{
-		keyID:  keyID,
-		client: h.client,
-	}, nil
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
+	return &keeper{keyID: keyID1, client: h.client}, &keeper{keyID: keyID2, client: h.client}, nil
 }
 
 func (h *harness) Close() {
@@ -56,4 +55,40 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// KMS-specific tests.
+
+func TestNoSessionProvidedError(t *testing.T) {
+	if _, err := Dial(nil); err == nil {
+		t.Error("got nil, want no AWS session provided")
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
+	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
+	prevRegion := os.Getenv("AWS_REGION")
+	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
+	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
+	os.Setenv("AWS_REGION", "us-east-1")
+	defer func() {
+		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
+		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
+		os.Setenv("AWS_REGION", prevRegion)
+	}()
+	sess, err := session.NewSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := Dial(sess)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := NewKeeper(client, keyID1, nil)
+
+	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
+		t.Error("got nil, want UnrecognizedClientException")
+	}
 }

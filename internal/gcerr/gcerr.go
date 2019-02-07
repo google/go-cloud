@@ -16,10 +16,12 @@
 package gcerr
 
 import (
+	"context"
 	"fmt"
+	"io"
 
-	xerrors "golang.org/x/exp/errors"
-	xfmt "golang.org/x/exp/errors/fmt"
+	"gocloud.dev/internal/retry"
+	"golang.org/x/xerrors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -53,9 +55,24 @@ const (
 
 	// The system was in the wrong state.
 	FailedPrecondition ErrorCode = 7
+
+	// The caller does not have permission to execute the specified operation.
+	PermissionDenied ErrorCode = 8
+
+	// Some resource has been exhausted, typically because a service resource limit
+	// has been reached.
+	ResourceExhausted ErrorCode = 9
+
+	// The operation was canceled.
+	Canceled ErrorCode = 10
+
+	// The operation timed out.
+	DeadlineExceeded ErrorCode = 11
 )
 
-// TODO(jba) call stringer after it's fixed for modules
+// When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
+
+// Do not change the numbers assigned to codes: past values may be stored in metric databases.
 
 // Call "go generate" whenever you change the above list of error codes.
 // To get stringer:
@@ -80,7 +97,7 @@ func (e *Error) Error() string {
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
-	xfmt.FormatError(s, c, e)
+	xerrors.FormatError(e, s, c)
 }
 
 func (e *Error) FormatError(p xerrors.Printer) (next error) {
@@ -112,6 +129,27 @@ func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
 	return New(c, err, 1, fmt.Sprintf(format, args...))
 }
 
+// DoNotWrap reports whether an error should not be wrapped in the Error
+// type from this package.
+// It returns true if err is a retry error, a context error, io.EOF, or if it wraps
+// one of those.
+func DoNotWrap(err error) bool {
+	if xerrors.Is(err, io.EOF) {
+		return true
+	}
+	if xerrors.Is(err, context.Canceled) {
+		return true
+	}
+	if xerrors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var r *retry.ContextError
+	if xerrors.As(err, &r) {
+		return true
+	}
+	return false
+}
+
 // GRPCCode extracts the gRPC status code and converts it into an ErrorCode.
 // It returns Unknown if the error isn't from gRPC.
 func GRPCCode(err error) ErrorCode {
@@ -126,6 +164,14 @@ func GRPCCode(err error) ErrorCode {
 		return Internal
 	case codes.Unimplemented:
 		return Unimplemented
+	case codes.PermissionDenied:
+		return PermissionDenied
+	case codes.ResourceExhausted:
+		return ResourceExhausted
+	case codes.Canceled:
+		return Canceled
+	case codes.DeadlineExceeded:
+		return DeadlineExceeded
 	default:
 		return Unknown
 	}

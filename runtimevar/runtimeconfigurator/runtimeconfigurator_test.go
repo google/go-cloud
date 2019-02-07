@@ -17,8 +17,9 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
-	"google.golang.org/grpc/codes"
 	"testing"
+
+	"google.golang.org/grpc/codes"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
@@ -133,9 +134,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var s *status.Status
-	if !runtimevar.ErrorAs(err, &s) {
+	if !v.ErrorAs(err, &s) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil
@@ -160,5 +161,34 @@ func TestEquivalentError(t *testing.T) {
 		if got != test.Want {
 			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
 		}
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+	creds, err := setup.FakeGCPCredentials(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Connect to the Runtime Configurator service.
+	client, cleanup, err := Dial(ctx, creds.TokenSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	name := ResourceName{
+		ProjectID: "gcp-project-id",
+		Config:    "cfg-name",
+		Variable:  "cfg-variable-name",
+	}
+	v, err := NewVariable(client, name, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = v.Watch(context.Background())
+	if err == nil {
+		t.Error("got nil want error")
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/embed"
@@ -60,7 +61,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(name, h.client, decoder, nil), nil
+	return newWatcher(h.client, name, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
@@ -101,15 +102,15 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(w driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	// etcdvar returns a fmt.Errorf error for "not found", so this is expected
 	// to fail.
 	var to rpctypes.EtcdError
-	if runtimevar.ErrorAs(err, &to) {
+	if v.ErrorAs(err, &to) {
 		return errors.New("ErrorAs expected to fail")
 	}
 	// Try with a real etcd error.
-	if !w.ErrorAs(rpctypes.ErrUnhealthy, &to) {
+	if !v.ErrorAs(rpctypes.ErrUnhealthy, &to) {
 		return errors.New("ErrorAs expected to succeed with real etcd error")
 	}
 	return nil
@@ -134,5 +135,24 @@ func TestEquivalentError(t *testing.T) {
 		if got != test.Want {
 			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
 		}
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	cli, err := clientv3.NewFromURL("http://no.server.here:999")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := New(cli, "variable-name", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Watch will block for quite a while trying to connect,
+	// so use a short timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+	_, err = v.Watch(ctx)
+	if err == nil {
+		t.Error("got nil want error")
 	}
 }

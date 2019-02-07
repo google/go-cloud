@@ -17,6 +17,7 @@
 package drivertest // import "gocloud.dev/secrets/drivertest"
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -28,8 +29,8 @@ import (
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
-	// MakeDriver returns a driver.Keeper for use in tests.
-	MakeDriver(ctx context.Context) (driver.Keeper, error)
+	// MakeDriver returns a pair of driver.Keeper, each backed by a different key.
+	MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error)
 
 	// Close is called when the test is complete.
 	Close()
@@ -47,6 +48,12 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("TestMultipleEncryptionsNotEqual", func(t *testing.T) {
 		testMultipleEncryptionsNotEqual(t, newHarness)
 	})
+	t.Run("TestMultipleKeys", func(t *testing.T) {
+		testMultipleKeys(t, newHarness)
+	})
+	t.Run("TestDecryptMalformedError", func(t *testing.T) {
+		testDecryptMalformedError(t, newHarness)
+	})
 }
 
 // testEncryptDecrypt tests the functionality of encryption and decryption
@@ -58,7 +65,7 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer harness.Close()
 
-	drv, err := harness.MakeDriver(ctx)
+	drv, _, err := harness.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,8 +89,8 @@ func testEncryptDecrypt(t *testing.T, newHarness HarnessMaker) {
 
 }
 
-// testMultipleEncryptionsNotEqual tests the results of multiple encryptions
-// with the same key should be different.
+// testMultipleEncryptionsNotEqual tests that encrypting a plaintext multiple
+// times with the same key works, and that the encrypted bytes are different.
 func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 	ctx := context.Background()
 	harness, err := newHarness(ctx, t)
@@ -92,7 +99,7 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer harness.Close()
 
-	drv, err := harness.MakeDriver(ctx)
+	drv, _, err := harness.MakeDriver(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,5 +116,91 @@ func testMultipleEncryptionsNotEqual(t *testing.T, newHarness HarnessMaker) {
 	}
 	if cmp.Equal(encryptedMsg1, encryptedMsg2) {
 		t.Errorf("Got same encrypted messages from multiple encryptions %v, want them to be different", string(encryptedMsg1))
+	}
+	decryptedMsg, err := keeper.Decrypt(ctx, encryptedMsg1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decryptedMsg, msg) {
+		t.Errorf("got decrypted %q want %q", string(decryptedMsg), string(msg))
+	}
+	decryptedMsg, err = keeper.Decrypt(ctx, encryptedMsg2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decryptedMsg, msg) {
+		t.Errorf("got decrypted %q want %q", string(decryptedMsg), string(msg))
+	}
+}
+
+// testMultipleKeys tests that encrypting the same text with different
+// keys works, and that the encrypted bytes are different.
+func testMultipleKeys(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	harness, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer harness.Close()
+
+	drv1, drv2, err := harness.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper1 := secrets.NewKeeper(drv1)
+	keeper2 := secrets.NewKeeper(drv2)
+
+	msg := []byte("I'm a secret message!")
+	encryptedMsg1, err := keeper1.Encrypt(ctx, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encryptedMsg2, err := keeper2.Encrypt(ctx, msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmp.Equal(encryptedMsg1, encryptedMsg2) {
+		t.Errorf("Got same encrypted messages from multiple encryptions %v, want them to be different", string(encryptedMsg1))
+	}
+
+	// We cannot assert that decrypting encryptedMsg1 with keeper2 fails,
+	// or that decrypting encryptedMsg2 with keeper1 fails, as Decrypt is allowed
+	// to decrypt using a different key than the one given to Keeper.
+
+	decryptedMsg, err := keeper1.Decrypt(ctx, encryptedMsg1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decryptedMsg, msg) {
+		t.Errorf("got decrypted %q want %q", string(decryptedMsg), string(msg))
+	}
+
+	decryptedMsg, err = keeper2.Decrypt(ctx, encryptedMsg2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decryptedMsg, msg) {
+		t.Errorf("got decrypted %q want %q", string(decryptedMsg), string(msg))
+	}
+}
+
+// testDecryptMalformedError tests decryption returns an error when the
+// ciphertext is malformed.
+func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	harness, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer harness.Close()
+
+	drv, _, err := harness.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := secrets.NewKeeper(drv)
+
+	if _, err := keeper.Decrypt(ctx, []byte("malformed cipher message")); err == nil {
+		t.Error("Got nil, want decrypt error")
 	}
 }

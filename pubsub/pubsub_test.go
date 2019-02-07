@@ -24,8 +24,10 @@ import (
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"gocloud.dev/pubsub/mempubsub"
 )
 
 type driverTopic struct {
@@ -380,4 +382,42 @@ func TestErrorsAreWrapped(t *testing.T) {
 	verify(top.Send(ctx, &pubsub.Message{}))
 	_, err := sub.Receive(ctx)
 	verify(err)
+}
+
+func TestOpenCensus(t *testing.T) {
+	ctx := context.Background()
+	te := octest.NewTestExporter(pubsub.OpenCensusViews)
+	defer te.Unregister()
+
+	top := mempubsub.NewTopic()
+	sub := mempubsub.NewSubscription(top, time.Second)
+	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+		t.Fatal(err)
+	}
+	if err := top.Shutdown(ctx); err != nil {
+		t.Fatal(err)
+	}
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	msg.Ack()
+	if err := sub.Shutdown(ctx); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = sub.Receive(ctx)
+
+	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub/mempubsub", []octest.Call{
+		{"driver.Topic.SendBatch", gcerrors.OK},
+		{"Topic.Send", gcerrors.OK},
+		{"Topic.Shutdown", gcerrors.OK},
+		{"driver.Subscription.ReceiveBatch", gcerrors.OK},
+		{"Subscription.Receive", gcerrors.OK},
+		{"driver.Subscription.SendAcks", gcerrors.OK},
+		{"Subscription.Shutdown", gcerrors.OK},
+		{"Subscription.Receive", gcerrors.FailedPrecondition},
+	})
+	if diff != "" {
+		t.Error(diff)
+	}
 }

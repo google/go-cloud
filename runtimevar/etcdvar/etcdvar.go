@@ -30,6 +30,7 @@ import (
 
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"google.golang.org/grpc/codes"
@@ -48,10 +49,10 @@ type Options struct {
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
 func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(name, cli, decoder, opts)), nil
+	return runtimevar.New(newWatcher(cli, name, decoder, opts)), nil
 }
 
-func newWatcher(name string, cli *clientv3.Client, decoder *runtimevar.Decoder, opts *Options) *watcher {
+func newWatcher(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, opts *Options) *watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
@@ -233,7 +234,10 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 	return false
 }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	return err == errNotExist
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
 }

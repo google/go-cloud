@@ -23,10 +23,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/secrets"
 )
 
 // NewKeeper returns a *secrets.Keeper that uses AWS KMS.
+// The keyID can be in the form of an Amazon Resource Name (ARN), alias
+// name, or alias ARN. See
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details.
 // See the package documentation for an example.
 func NewKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
@@ -44,11 +49,6 @@ func Dial(p client.ConfigProvider) (*kms.KMS, error) {
 }
 
 type keeper struct {
-	// KeyID is a unique identifier to specify a key from AWS KMS. The key
-	// information can be in the form of key ID, Amazon Resource Name (ARN), alias
-	// name, or alias ARN. See
-	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-	// for more details.
 	keyID  string
 	client *kms.KMS
 }
@@ -74,6 +74,12 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return result.CiphertextBlob, nil
+}
+
+// ErrorCode implements driver.ErrorCode.
+func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
+	// TODO(shantuo): try to classify aws error codes
+	return gcerrors.Unknown
 }
 
 // KeeperOptions controls Keeper behaviors.

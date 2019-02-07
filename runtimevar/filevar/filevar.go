@@ -40,10 +40,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
-
-	"github.com/fsnotify/fsnotify"
 )
 
 // Options sets options.
@@ -266,8 +266,10 @@ func (w *watcher) Close() error {
 // ErrorAs implements driver.ErrorAs.
 func (w *watcher) ErrorAs(err error, i interface{}) bool { return false }
 
-// IsNotExist implements driver.IsNotExist.
-func (*watcher) IsNotExist(err error) bool {
-	_, ok := err.(*errNotExist)
-	return ok
+// ErrorCode implements driver.ErrorCode.
+func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
+	if _, ok := err.(*errNotExist); ok {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
 }

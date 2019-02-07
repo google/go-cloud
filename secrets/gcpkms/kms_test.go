@@ -22,6 +22,7 @@ import (
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
+	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 )
 
@@ -31,10 +32,11 @@ import (
 // 2. Enable the Cloud KMS API.
 // 3. Create a key ring and a key, change their name below accordingly.
 const (
-	projectID = "pledged-solved-practically"
+	projectID = "go-cloud-test-216917"
 	location  = "global"
 	keyRing   = "test"
-	keyID     = "password"
+	keyID1    = "password"
+	keyID2    = "password2"
 )
 
 type harness struct {
@@ -42,16 +44,25 @@ type harness struct {
 	close  func()
 }
 
-func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, error) {
+func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
 	return &keeper{
-		keyID: &KeyID{
-			ProjectID: projectID,
-			Location:  location,
-			KeyRing:   keyRing,
-			Key:       keyID,
+			keyID: &KeyID{
+				ProjectID: projectID,
+				Location:  location,
+				KeyRing:   keyRing,
+				Key:       keyID1,
+			},
+			client: h.client,
 		},
-		client: h.client,
-	}, nil
+		&keeper{
+			keyID: &KeyID{
+				ProjectID: projectID,
+				Location:  location,
+				KeyRing:   keyRing,
+				Key:       keyID2,
+			},
+			client: h.client,
+		}, nil
 }
 
 func (h *harness) Close() {
@@ -75,4 +86,22 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness)
+}
+
+// KMS-specific tests.
+
+func TestNoConnectionError(t *testing.T) {
+	ctx := context.Background()
+	client, done, err := Dial(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: "fake",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	keeper := NewKeeper(client, &KeyID{}, nil)
+	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
+		t.Error("got nil, want rpc error")
+	}
 }

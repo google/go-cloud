@@ -21,6 +21,8 @@
 // gcspubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
+//  - Message: *pb.PubsubMessage
+//  - Error: *google.golang.org/grpc/status.Status
 package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 
 import (
@@ -39,6 +41,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
+	"google.golang.org/grpc/status"
 )
 
 const endPoint = "pubsub.googleapis.com:443"
@@ -137,6 +140,24 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	p, ok := target.(**status.Status)
+	if !ok {
+		return false
+	}
+	*p = s
+	return true
+}
+
 func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
@@ -181,10 +202,22 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			Body:     rmm.Data,
 			Metadata: rmm.Attributes,
 			AckID:    rm.AckId,
+			AsFunc:   messageAsFunc(rmm),
 		}
 		ms = append(ms, m)
 	}
 	return ms, nil
+}
+
+func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
+	return func(i interface{}) bool {
+		p, ok := i.(**pb.PubsubMessage)
+		if !ok {
+			return false
+		}
+		*p = pm
+		return true
+	}
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
@@ -213,6 +246,11 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = s.client
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }
 
 func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {

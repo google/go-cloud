@@ -17,8 +17,10 @@
 package gcerrors
 
 import (
+	"context"
+
 	"gocloud.dev/internal/gcerr"
-	xerrors "golang.org/x/exp/errors"
+	"golang.org/x/xerrors"
 )
 
 // An ErrorCode describes the error's category. Programs should act upon an error's
@@ -51,11 +53,26 @@ const (
 
 	// The system was in the wrong state.
 	FailedPrecondition ErrorCode = gcerr.FailedPrecondition
+
+	// The caller does not have permission to execute the specified operation.
+	PermissionDenied ErrorCode = gcerr.PermissionDenied
+
+	// Some resource has been exhausted, typically because a service resource limit
+	// has been reached.
+	ResourceExhausted ErrorCode = gcerr.ResourceExhausted
+
+	// The operation was canceled.
+	Canceled ErrorCode = gcerr.Canceled
+
+	// The operation timed out.
+	DeadlineExceeded ErrorCode = gcerr.DeadlineExceeded
 )
 
-// Code returns the ErrorCode of err if it is an *Error.
-// It returns Unknown if err is a non-nil error of a different type.
+// Code returns the ErrorCode of err if it, or some error it wraps, is an *Error.
+// If err is context.Canceled or context.DeadlineExceeded, or wraps one of those errors,
+// it returns the Canceled or DeadlineExceeded codes, respectively.
 // If err is nil, it returns the special code OK.
+// Otherwise, it returns Unknown.
 func Code(err error) ErrorCode {
 	if err == nil {
 		return OK
@@ -63,6 +80,12 @@ func Code(err error) ErrorCode {
 	var e *gcerr.Error
 	if xerrors.As(err, &e) {
 		return e.Code
+	}
+	if xerrors.Is(err, context.Canceled) {
+		return Canceled
+	}
+	if xerrors.Is(err, context.DeadlineExceeded) {
+		return DeadlineExceeded
 	}
 	return Unknown
 }

@@ -17,11 +17,14 @@ package paramstore
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws/awserr"
+	"os"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
@@ -98,9 +101,9 @@ func (verifyAs) SnapshotCheck(s *runtimevar.Snapshot) error {
 	return nil
 }
 
-func (verifyAs) ErrorCheck(_ driver.Watcher, err error) error {
+func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	var e awserr.Error
-	if !runtimevar.ErrorAs(err, &e) {
+	if !v.ErrorAs(err, &e) {
 		return errors.New("runtimevar.ErrorAs failed")
 	}
 	return nil
@@ -125,5 +128,32 @@ func TestEquivalentError(t *testing.T) {
 		if got != test.Want {
 			t.Errorf("%v vs %v: got %v want %v", test.Err1, test.Err2, got, test.Want)
 		}
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	prevAccessKey := os.Getenv("AWS_ACCESS_KEY")
+	prevSecretKey := os.Getenv("AWS_SECRET_KEY")
+	prevRegion := os.Getenv("AWS_REGION")
+	os.Setenv("AWS_ACCESS_KEY", "myaccesskey")
+	os.Setenv("AWS_SECRET_KEY", "mysecretkey")
+	os.Setenv("AWS_REGION", "us-east-1")
+	defer func() {
+		os.Setenv("AWS_ACCESS_KEY", prevAccessKey)
+		os.Setenv("AWS_SECRET_KEY", prevSecretKey)
+		os.Setenv("AWS_REGION", prevRegion)
+	}()
+	sess, err := session.NewSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v, err := NewVariable(sess, "variable-name", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = v.Watch(context.Background())
+	if err == nil {
+		t.Error("got nil want error")
 	}
 }

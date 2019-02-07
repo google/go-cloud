@@ -52,6 +52,35 @@
 //
 // The Bucket.ErrorAs method can retrieve the driver error underlying the returned
 // error.
+//
+//
+// OpenCensus Integration
+//
+// OpenCensus supports tracing and metric collection for multiple languages and
+// backend providers. See https://opencensus.io.
+//
+// This API collects OpenCensus traces and metrics for the following methods:
+//  - Attributes
+//  - Delete
+//  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
+//    are included because they call NewRangeReader.)
+//  - NewWriter, from creation until the call to Close.
+// All trace and metric names begin with the package import path.
+// The traces add the method name.
+// For example, "gocloud.dev/blob/Attributes".
+// The metrics are "completed_calls", a count of completed method calls by provider,
+// method and status (error code); and "latency", a distribution of method latency
+// by provider and method.
+// For example, "gocloud.dev/blob/latency".
+//
+// It also collects the following metrics:
+// - gocloud.dev/blob/bytes_read: the total number of bytes read, by provider.
+// - gocloud.dev/blob/bytes_written: the total number of bytes written, by provider.
+//
+// To enable trace collection in your application, see "Configure Exporter" at
+// https://opencensus.io/quickstart/go/tracing.
+// To enable metric collection in your application, see "Exporting stats" at
+// https://opencensus.io/quickstart/go/metrics.
 package blob // import "gocloud.dev/blob"
 
 import (
@@ -67,34 +96,41 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
 
+	"go.opencensus.io/stats"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/tag"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/trace"
+	"gocloud.dev/internal/oc"
 )
 
 // Reader reads bytes from a blob.
 // It implements io.ReadCloser, and must be closed after
 // reads are finished.
 type Reader struct {
-	b    driver.Bucket
-	r    driver.Reader
-	tctx context.Context // trace context
+	b        driver.Bucket
+	r        driver.Reader
+	end      func(error) // called at Close to finish trace and metric collection
+	provider string      // for metric collection
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
 func (r *Reader) Read(p []byte) (int, error) {
 	n, err := r.r.Read(p)
+	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, r.provider)},
+		bytesReadMeasure.M(int64(n)))
 	return n, wrapError(r.b, err)
 }
 
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
 func (r *Reader) Close() error {
 	err := wrapError(r.b, r.r.Close())
-	trace.EndSpan(r.tctx, err)
+	r.end(err)
 	return err
 }
 
@@ -171,9 +207,11 @@ func (a *Attributes) As(i interface{}) bool {
 type Writer struct {
 	b          driver.Bucket
 	w          driver.Writer
-	cancel     func() // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
+	end        func(error) // called at Close to finish trace and metric collection
+	cancel     func()      // cancels the ctx provided to NewTypedWriter if contentMD5 verification fails
 	contentMD5 []byte
 	md5hash    hash.Hash
+	provider   string // for metric collection
 
 	// These fields exist only when w is not yet created.
 	//
@@ -186,7 +224,6 @@ type Writer struct {
 	key  string
 	opts *driver.WriterOptions
 	buf  *bytes.Buffer
-	tctx context.Context // context for tracing only
 }
 
 // sniffLen is the byte size of Writer.buf used to detect content-type.
@@ -204,8 +241,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 		}
 	}
 	if w.w != nil {
-		n, err := w.w.Write(p)
-		return n, wrapError(w.b, err)
+		return w.write(p)
 	}
 
 	// If w is not yet created due to no content-type being passed in, try to sniff
@@ -230,7 +266,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Close may return an error if the context provided to create the Writer is
 // canceled or reaches its deadline.
 func (w *Writer) Close() (err error) {
-	defer func() { trace.EndSpan(w.tctx, err) }()
+	defer func() { w.end(err) }()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
 		// by the user.
@@ -268,7 +304,13 @@ func (w *Writer) open(p []byte) (int, error) {
 	w.ctx = nil
 	w.key = ""
 	w.opts = nil
+	return w.write(p)
+}
+
+func (w *Writer) write(p []byte) (int, error) {
 	n, err := w.w.Write(p)
+	stats.RecordWithTags(context.Background(), []tag.Mutator{tag.Upsert(oc.ProviderKey, w.provider)},
+		bytesWrittenMeasure.M(int64(n)))
 	return n, wrapError(w.b, err)
 }
 
@@ -373,8 +415,38 @@ func (o *ListObject) As(i interface{}) bool {
 // To create a Bucket, use constructors found in provider-specific
 // subpackages.
 type Bucket struct {
-	b driver.Bucket
+	b      driver.Bucket
+	tracer *oc.Tracer
 }
+
+const pkgName = "gocloud.dev/blob"
+
+var (
+	latencyMeasure      = oc.LatencyMeasure(pkgName)
+	bytesReadMeasure    = stats.Int64(pkgName+"/bytes_read", "Total bytes read", stats.UnitBytes)
+	bytesWrittenMeasure = stats.Int64(pkgName+"/bytes_written", "Total bytes written", stats.UnitBytes)
+
+	// OpenCensusViews are predefined views for OpenCensus metrics.
+	// The views include counts and latency distributions for API method calls,
+	// and total bytes read and written.
+	// See the example at https://godoc.org/go.opencensus.io/stats/view for usage.
+	OpenCensusViews = append(
+		oc.Views(pkgName, latencyMeasure),
+		&view.View{
+			Name:        pkgName + "/bytes_read",
+			Measure:     bytesReadMeasure,
+			Description: "Sum of bytes read from the provider service.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        pkgName + "/bytes_written",
+			Measure:     bytesWrittenMeasure,
+			Description: "Sum of bytes written to the provider service.",
+			TagKeys:     []tag.Key{oc.ProviderKey},
+			Aggregation: view.Sum(),
+		})
+)
 
 // NewBucket is intended for use by provider implementations.
 var NewBucket = newBucket
@@ -383,7 +455,14 @@ var NewBucket = newBucket
 // End users should use subpackages to construct a *Bucket instead of this
 // function; see the package documentation for details.
 func newBucket(b driver.Bucket) *Bucket {
-	return &Bucket{b: b}
+	return &Bucket{
+		b: b,
+		tracer: &oc.Tracer{
+			Package:        pkgName,
+			Provider:       oc.ProviderName(b),
+			LatencyMeasure: latencyMeasure,
+		},
+	}
 }
 
 // As converts i to provider-specific types.
@@ -418,8 +497,12 @@ func (b *Bucket) As(i interface{}) bool {
 }
 
 // ErrorAs converts i to provider-specific types.
+// ErrorAs panics if i is nil or not a pointer.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("blob: ErrorAs i must be a non-nil pointer")
+	}
 	if e, ok := err.(*gcerr.Error); ok {
 		return b.b.ErrorAs(e.Unwrap(), i)
 	}
@@ -429,8 +512,6 @@ func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) {
-	defer func() { trace.EndSpan(ctx, err) }()
-
 	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
@@ -464,8 +545,8 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 // If the blob does not exist, Attributes returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Attributes")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = b.tracer.Start(ctx, "Attributes")
+	defer func() { b.tracer.End(ctx, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
@@ -519,17 +600,20 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		opts = &ReaderOptions{}
 	}
 	dopts := &driver.ReaderOptions{}
-	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewRangeReader")
+	tctx := b.tracer.Start(ctx, "NewRangeReader")
 	defer func() {
+		// If err == nil, we handed the end closure off to the returned *Writer; it
+		// will be called when the Writer is Closed.
 		if err != nil {
-			trace.EndSpan(tctx, err)
+			b.tracer.End(tctx, err)
 		}
 	}()
 	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
-	return &Reader{b: b.b, r: r, tctx: tctx}, nil
+	end := func(err error) { b.tracer.End(tctx, err) }
+	return &Reader{b: b.b, r: r, end: end, provider: b.tracer.Provider}, nil
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
@@ -593,10 +677,12 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		dopts.Metadata = md
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	tctx := trace.StartSpan(ctx, "gocloud.dev/blob.NewWriter")
+	tctx := b.tracer.Start(ctx, "NewWriter")
+	end := func(err error) { b.tracer.End(tctx, err) }
+
 	defer func() {
 		if err != nil {
-			trace.EndSpan(tctx, err)
+			end(err)
 		}
 	}()
 
@@ -615,22 +701,24 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		return &Writer{
 			b:          b.b,
 			w:          w,
+			end:        end,
 			cancel:     cancel,
 			contentMD5: opts.ContentMD5,
 			md5hash:    md5.New(),
-			tctx:       tctx,
+			provider:   b.tracer.Provider,
 		}, nil
 	}
 	return &Writer{
 		ctx:        ctx,
 		cancel:     cancel,
 		b:          b.b,
+		end:        end,
 		key:        key,
 		opts:       dopts,
 		buf:        bytes.NewBuffer([]byte{}),
 		contentMD5: opts.ContentMD5,
 		md5hash:    md5.New(),
-		tctx:       tctx,
+		provider:   b.tracer.Provider,
 	}, nil
 }
 
@@ -639,8 +727,8 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // If the blob does not exist, Delete returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
-	ctx = trace.StartSpan(ctx, "gocloud.dev/blob.Delete")
-	defer func() { trace.EndSpan(ctx, err) }()
+	ctx = b.tracer.Start(ctx, "Delete")
+	defer func() { b.tracer.End(ctx, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key))
 }
 
@@ -810,7 +898,7 @@ func wrapError(b driver.Bucket, err error) error {
 	if err == nil {
 		return nil
 	}
-	if err == io.EOF {
+	if gcerr.DoNotWrap(err) {
 		return err
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")

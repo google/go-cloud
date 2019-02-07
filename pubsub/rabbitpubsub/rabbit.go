@@ -40,6 +40,9 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
+type TopicOptions struct{}
+type SubscriptionOptions struct{}
+
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
 // See the package documentation for an example.
 //
@@ -54,7 +57,7 @@ type topic struct {
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenTopic(conn *amqp.Connection, name string) *pubsub.Topic {
+func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.Topic {
 	return pubsub.NewTopic(newTopic(&connection{conn}, name))
 }
 
@@ -146,7 +149,13 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 			return err
 		}
 	}
-	return <-errc
+	err := <-errc
+	// If there is only one error, return it rather than a MultiError. That
+	// will work better with ErrorCode and ErrorAs.
+	if merr, ok := err.(MultiError); ok && len(merr) == 1 {
+		return merr[0]
+	}
+	return err
 }
 
 // Read from the channels established with NotifyPublish and NotifyReturn.
@@ -340,6 +349,27 @@ func (t *topic) As(i interface{}) bool {
 	return true
 }
 
+// ErrorAs implements driver.Topic.ErrorAs
+func (*topic) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
+}
+
+func errorAs(err error, target interface{}) bool {
+	switch e := err.(type) {
+	case *amqp.Error:
+		if p, ok := target.(**amqp.Error); ok {
+			*p = e
+			return true
+		}
+	case MultiError:
+		if p, ok := target.(*MultiError); ok {
+			*p = e
+			return true
+		}
+	}
+	return false
+}
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
 // See the package documentation for an example.
 //
@@ -353,7 +383,7 @@ func (t *topic) As(i interface{}) bool {
 //
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
-func OpenSubscription(conn *amqp.Connection, name string) *pubsub.Subscription {
+func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
 	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil)
 }
 
@@ -470,6 +500,14 @@ func toMessage(d amqp.Delivery) *driver.Message {
 		Body:     d.Body,
 		AckID:    d.DeliveryTag,
 		Metadata: md,
+		AsFunc: func(i interface{}) bool {
+			p, ok := i.(*amqp.Delivery)
+			if !ok {
+				return false
+			}
+			*p = d
+			return true
+		},
 	}
 }
 
@@ -523,4 +561,9 @@ func (s *subscription) As(i interface{}) bool {
 	}
 	*c = conn.conn
 	return true
+}
+
+// ErrorAs implements driver.Subscription.ErrorAs
+func (*subscription) ErrorAs(err error, target interface{}) bool {
+	return errorAs(err, target)
 }
