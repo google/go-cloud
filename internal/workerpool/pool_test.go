@@ -28,16 +28,15 @@ func TestRun(t *testing.T) {
 	t.Run("can be canceled", func(t *testing.T) {
 		ng0 := runtime.NumGoroutine()
 		ctx, cancel := context.WithCancel(context.Background())
-		type Task struct{}
-		nextTask := func(context.Context) interface{} {
-			return Task{}
+		nextTask := func(context.Context) workerpool.Task {
+			return func(context.Context) {
+				<-ctx.Done()
+			}
 		}
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
-			workerpool.Run(ctx, 1, nextTask, func(ctx context.Context, _ interface{}) {
-				<-ctx.Done()
-			})
+			workerpool.Run(ctx, 1, nextTask)
 			wg.Done()
 		}()
 		cancel()
@@ -52,32 +51,28 @@ func TestRun(t *testing.T) {
 		ng0 := runtime.NumGoroutine()
 		i := 0
 		n := 100
-		type Task struct{ i int }
-		nextTask := func(context.Context) interface{} {
+		// m keeps track of which tasks have been completed.
+		var mu sync.Mutex
+		m := make(map[int]bool)
+		nextTask := func(context.Context) workerpool.Task {
 			i++
 			if i > n {
 				return nil
 			}
-			return Task{i}
+			return func(i int) workerpool.Task {
+				return func(context.Context) {
+					mu.Lock()
+					m[i] = true
+					mu.Unlock()
+				}
+			}(i)
 		}
 
-		// m keeps track of which tasks have yet to be completed.
-		var mu sync.Mutex
-		m := make(map[int]bool)
-		for i := 1; i <= n; i++ {
-			m[i] = true
-		}
-
-		workerpool.Run(context.Background(), 10, nextTask, func(ctx context.Context, ti interface{}) {
-			t := ti.(Task)
-			mu.Lock()
-			defer mu.Unlock()
-			delete(m, t.i)
-		})
+		workerpool.Run(context.Background(), 10, nextTask)
 		t.Log("waiting for tasks to finish")
 		for {
 			mu.Lock()
-			if len(m) == 0 {
+			if len(m) == n {
 				break
 			}
 			mu.Unlock()

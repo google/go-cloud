@@ -68,15 +68,6 @@ const (
 
 	// The operation timed out.
 	DeadlineExceeded ErrorCode = 11
-
-	// This user does not have access to the resource.
-	AuthorizationError = 12
-
-	// The credentials are not valid.
-	InvalidCredentials = 13
-
-	// The request was denied due to throttling.
-	Throttled = 14
 )
 
 // When adding a new error code, try to use the names defined in google.golang.org/grpc/codes.
