@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
@@ -34,6 +35,7 @@ import (
 
 type harness struct {
 	dir    string
+	server *httptest.Server
 	closer func()
 }
 
@@ -42,9 +44,13 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hello world")
+	}))
 	return &harness{
 		dir:    dir,
-		closer: func() { _ = os.RemoveAll(dir) },
+		server: localServer,
+		closer: func() { _ = os.RemoveAll(dir); localServer.Close() },
 	}, nil
 }
 
@@ -53,8 +59,12 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
+	u, err := url.Parse(h.server.URL)
+	if err != nil {
+		return nil, err
+	}
 	opts := &Options{
-		URLSigner: NewURLSignerHMAC("http", "example.com", "blobjects", "I'm a secret key"),
+		URLSigner: NewURLSignerHMAC(u.Scheme, u.Host, u.Path, "I'm a secret key"),
 	}
 	return openBucket(h.dir, opts)
 }
