@@ -286,7 +286,7 @@ Therefore, it should be avoided if possible.
 type Reader struct {...}
 
 // As converts i to provider-specific types.
-func (r *Reader) As func(i interface{}) bool {...}
+func (r *Reader) As(i interface{}) bool {...}
 
 // User code would look like:
 r, _ := bucket.NewReader(ctx, "foo.txt", nil)

@@ -24,7 +24,6 @@ import (
 )
 
 func Example_jsonVariable() {
-
 	// DBConfig is the sample config struct we're going to parse our JSON into.
 	type DBConfig struct {
 		Host     string
@@ -56,7 +55,7 @@ func Example_jsonVariable() {
 }
 
 func Example_stringVariable() {
-	// Next, a construct a *Variable using a constructor from one of the
+	// Construct a *Variable using a constructor from one of the
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
 	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
