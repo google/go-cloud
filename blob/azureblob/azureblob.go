@@ -45,6 +45,16 @@
 // Example URL:
 //  azblob://mybucket?cred_path=pathToCredentials
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
+// and unescaped (during reads) to ensure compatibility with the provider:
+//  - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
+//    Azure only allows C# identifiers as metadata keys. Therefore, characters
+//    other than "a-zA-z0-9_" are escaped using "__0x<hex>__".
+//    URL encoding would not work since "%" is not valid.
+//  - Metadata values: Escaped using URL encoding.
+//
 // As
 //
 // azureblob exposes the following types for As:
@@ -80,6 +90,7 @@ import (
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/useragent"
 )
 
@@ -423,6 +434,14 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	if err != nil {
 		return driver.Attributes{}, err
 	}
+
+	azureMd := blobPropertiesResponse.NewMetadata()
+	md := make(map[string]string, len(azureMd))
+	for k, v := range azureMd {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		md[escape.Unescape(k)] = escape.URLUnescape(v)
+	}
 	return driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
 		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
@@ -432,7 +451,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Size:               blobPropertiesResponse.ContentLength(),
 		MD5:                blobPropertiesResponse.ContentMD5(),
 		ModTime:            blobPropertiesResponse.LastModified(),
-		Metadata:           blobPropertiesResponse.NewMetadata(),
+		Metadata:           md,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)
 			if !ok {
@@ -565,16 +584,37 @@ type writer struct {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	blockBlobURL := b.blockBlobURL(key)
-	if opts.Metadata == nil {
-		opts.Metadata = map[string]string{}
-	}
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
+	}
+
+	md := make(map[string]string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		e := escape.Escape(k, func(runes []rune, i int) bool {
+			c := runes[i]
+			switch {
+			case 'A' <= c && c <= 'Z':
+				return false
+			case 'a' <= c && c <= 'z':
+				return false
+			case '0' <= c && c <= '9':
+				return false
+			case c == '_':
+				return false
+			}
+			return true
+		})
+		if _, ok := md[e]; ok {
+			return nil, fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
+		}
+		md[e] = escape.URLEscape(v)
 	}
 	uploadOpts := &azblob.UploadStreamToBlockBlobOptions{
 		BufferSize: opts.BufferSize,
 		MaxBuffers: defaultUploadBuffers,
-		Metadata:   opts.Metadata,
+		Metadata:   md,
 		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
 			CacheControl:       opts.CacheControl,
 			ContentDisposition: opts.ContentDisposition,

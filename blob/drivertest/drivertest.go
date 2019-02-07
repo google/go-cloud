@@ -213,6 +213,34 @@ func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
 	})
 }
 
+var weirdKeys = map[string]string{
+	"fwdslashes":          "foo/bar/baz",
+	"repeatedfwdslashes":  "foo//bar///baz",
+	"dotdotslash":         "../foo/../bar/../../baz../",
+	"backslashes":         "foo\\bar\\baz",
+	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
+	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
+	"quote":               "foo\"bar\"baz",
+	"spaces":              "foo bar baz",
+	"unicode":             strings.Repeat("☺", 3),
+	"ascii": func() string {
+		var s []byte
+		for i := 0; i < 128; i++ {
+			if i >= 'a' && i <= 'z' {
+				continue
+			}
+			if i >= 'A' && i <= 'Z' {
+				continue
+			}
+			if i >= '0' && i <= '9' {
+				continue
+			}
+			s = append(s, byte(i))
+		}
+		return string(s)
+	}(),
+}
+
 // testList tests the functionality of List.
 func testList(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "blob-for-list"
@@ -1361,6 +1389,11 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-metadata"
 	hello := []byte("hello")
 
+	weirdMetadata := map[string]string{}
+	for _, k := range weirdKeys {
+		weirdMetadata[k] = k
+	}
+
 	tests := []struct {
 		name        string
 		metadata    map[string]string
@@ -1413,6 +1446,12 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			contentType: "text/plain",
 			metadata:    map[string]string{"foo": "bar"},
 			want:        map[string]string{"foo": "bar"},
+		},
+		{
+			name:     "weird metadata keys",
+			content:  hello,
+			metadata: weirdMetadata,
+			want:     weirdMetadata,
 		},
 	}
 
@@ -1597,6 +1636,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
 	content := []byte("hello")
 
+	// TODO: use weirdKeys.
 	tests := []struct {
 		description string
 		key         string

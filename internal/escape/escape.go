@@ -17,6 +17,7 @@ package escape
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 )
 
@@ -137,4 +138,18 @@ func Unescape(s string) string {
 		return s
 	}
 	return string(unescaped)
+}
+
+// URLEscape uses url.PathEscape to escape s.
+func URLEscape(s string) string {
+	return url.PathEscape(s)
+}
+
+// URLUnescape reverses URLEscape using url.PathUnescape. If the unescape
+// returns an error, it returns s.
+func URLUnescape(s string) string {
+	if u, err := url.PathUnescape(s); err == nil {
+		return u
+	}
+	return s
 }
