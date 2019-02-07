@@ -67,6 +67,16 @@ func TestEscape(t *testing.T) {
 	}
 }
 
+func TestEscapeUnescapeWeirdStrings(t *testing.T) {
+	for name, s := range WeirdStrings {
+		escaped := Escape(s, func(r []rune, i int) bool { return !IsAlphanumeric(r[i]) })
+		unescaped := Unescape(escaped)
+		if unescaped != s {
+			t.Errorf("%s: got unescaped %q want %q", name, unescaped, s)
+		}
+	}
+}
+
 func TestUnescapeOnInvalid(t *testing.T) {
 	// Unescaping of valid escape sequences is tested in TestEscape.
 	// This only tests invalid escape sequences, so Unescape is expected
