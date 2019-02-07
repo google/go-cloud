@@ -22,11 +22,11 @@ import (
 	"errors"
 	"gocloud.dev/internal/testing/setup"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -397,39 +397,6 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func makeASCIIString(start, end int) string {
-	var s []byte
-	for i := start; i < end; i++ {
-		if i >= 'a' && i <= 'z' {
-			continue
-		}
-		if i >= 'A' && i <= 'Z' {
-			continue
-		}
-		if i >= '0' && i <= '9' {
-			continue
-		}
-		s = append(s, byte(i))
-	}
-	return string(s)
-}
-
-var weirdKeys = map[string]string{
-	"fwdslashes":          "foo/bar/baz",
-	"repeatedfwdslashes":  "foo//bar///baz",
-	"dotdotslash":         "../foo/../bar/../../baz../",
-	"backslashes":         "foo\\bar\\baz",
-	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
-	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
-	"quote":               "foo\"bar\"baz",
-	"spaces":              "foo bar baz",
-	"unicode":             strings.Repeat("☺", 3),
-	"ascii-1":             makeASCIIString(0, 32),
-	"ascii-2":             makeASCIIString(32, 64),
-	"ascii-3":             makeASCIIString(64, 96),
-	"ascii-4":             makeASCIIString(96, 128),
-}
-
 func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	// Set up.
 	ctx := context.Background()
@@ -440,7 +407,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	defer h.Close()
 
 	weirdMetadata := map[string]string{}
-	for _, k := range weirdKeys {
+	for _, k := range escape.WeirdStrings {
 		weirdMetadata[k] = k
 	}
 
