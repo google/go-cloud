@@ -40,7 +40,12 @@ type topic struct {
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
 }
 
+// TopicOptions sets options for constructing a *pubsub.Topic backed by
+// RabbitMQ.
 type TopicOptions struct{}
+
+// SubscriptionOptions sets options for constructing a *pubsub.Subscription
+// backed by RabbitMQ.
 type SubscriptionOptions struct{}
 
 // OpenTopic returns a *pubsub.Topic corresponding to the named exchange.
