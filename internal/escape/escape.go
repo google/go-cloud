@@ -21,6 +21,19 @@ import (
 	"strconv"
 )
 
+// IsAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
+func IsAlphanumeric(r rune) bool {
+	switch {
+	case 'A' <= r && r <= 'Z':
+		return true
+	case 'a' <= r && r <= 'z':
+		return true
+	case '0' <= r && r <= '9':
+		return true
+	}
+	return false
+}
+
 // Escape returns s, with all runes for which shouldEscape returns true
 // escaped to "__0xXXX__", where XXX is the hex representation of the rune
 // value. For example, " " would escape to "__0x20__".

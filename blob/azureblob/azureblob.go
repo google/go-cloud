@@ -595,11 +595,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		e := escape.Escape(k, func(runes []rune, i int) bool {
 			c := runes[i]
 			switch {
-			case 'A' <= c && c <= 'Z':
-				return false
-			case 'a' <= c && c <= 'z':
-				return false
-			case '0' <= c && c <= '9':
+			case escape.IsAlphanumeric(c):
 				return false
 			case c == '_':
 				return false
