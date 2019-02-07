@@ -306,6 +306,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 		
 	entityPath := s.topicName + "/Subscriptions/" + s.sbSub.Name		
 	audience := host + entityPath
