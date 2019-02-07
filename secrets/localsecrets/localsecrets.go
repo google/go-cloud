@@ -78,5 +78,10 @@ func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 	return decrypted, nil
 }
 
+// ErrorAs implements driver.Keeper.ErrorAs.
+func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	return false
+}
+
 // ErrorCode implements driver.ErrorCode.
 func (k *keeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }

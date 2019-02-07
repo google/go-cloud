@@ -40,8 +40,18 @@ type Harness interface {
 // It is called exactly once per test.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// AsTest represents a test of As functionality.
+// The conformance test:
+// 1. Tries to decrypt malformed message, and calls ErrorCheck with the error.
+type AsTest interface {
+	// Name returns a descriptive name for the test.
+	Name() string
+	// ErrorCheck is called to allow verification of Keeper.ErrorAs.
+	ErrorCheck(k *secrets.Keeper, err error) error
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of secret management.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestEncryptDecrypt", func(t *testing.T) {
 		testEncryptDecrypt(t, newHarness)
 	})
@@ -53,6 +63,16 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	})
 	t.Run("TestDecryptMalformedError", func(t *testing.T) {
 		testDecryptMalformedError(t, newHarness)
+	})
+	t.Run("TestAs", func(t *testing.T) {
+		for _, tc := range asTests {
+			if tc.Name() == "" {
+				t.Fatal("AsTest.Name is required")
+			}
+			t.Run(tc.Name(), func(t *testing.T) {
+				testAs(t, newHarness, tc)
+			})
+		}
 	})
 }
 
@@ -202,5 +222,28 @@ func testDecryptMalformedError(t *testing.T, newHarness HarnessMaker) {
 
 	if _, err := keeper.Decrypt(ctx, []byte("malformed cipher message")); err == nil {
 		t.Error("Got nil, want decrypt error")
+	}
+}
+
+func testAs(t *testing.T, newHarness HarnessMaker, tc AsTest) {
+	ctx := context.Background()
+	harness, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer harness.Close()
+
+	drv, _, err := harness.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keeper := secrets.NewKeeper(drv)
+
+	_, gotErr := keeper.Decrypt(ctx, []byte("malformed cipher message"))
+	if gotErr == nil {
+		t.Error("Got nil, want decrypt error")
+	}
+	if err := tc.ErrorCheck(keeper, gotErr); err != nil {
+		t.Error(err)
 	}
 }

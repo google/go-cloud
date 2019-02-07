@@ -16,8 +16,12 @@ package awskms
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"gocloud.dev/secrets"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
@@ -54,7 +58,21 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (v verifyAs) Name() string {
+	return "verify As function"
+}
+
+func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
+	var e awserr.Error
+	if !k.ErrorAs(err, &e) {
+		return errors.New("Keeper.ErrorAs failed")
+	}
+	return nil
 }
 
 // KMS-specific tests.

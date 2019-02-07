@@ -16,14 +16,17 @@ package gcpkms
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
 	"gocloud.dev/internal/testing/setup"
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/status"
 )
 
 // These constants capture values that were used during the last --record.
@@ -85,7 +88,21 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (v verifyAs) Name() string {
+	return "verify As function"
+}
+
+func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
+	var s *status.Status
+	if !k.ErrorAs(err, &s) {
+		return errors.New("Keeper.ErrorAs failed")
+	}
+	return nil
 }
 
 // KMS-specific tests.
