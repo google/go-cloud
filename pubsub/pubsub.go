@@ -423,7 +423,15 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
 	for len(msgs) == 0 {
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		// Allow unrecoverable errors from acks to be detected and reported.
+		s.mu.Lock()
+		err := s.err
+		s.mu.Unlock()
+		if s.err != nil {
+			return nil, s.err
+		}
+
+		err = retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 			var err error
 			ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
 			defer func() { s.tracer.End(ctx2, err) }()
