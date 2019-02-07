@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // IsAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
@@ -165,4 +166,41 @@ func URLUnescape(s string) string {
 		return u
 	}
 	return s
+}
+
+func makeASCIIString(start, end int) string {
+	var s []byte
+	for i := start; i < end; i++ {
+		if i >= 'a' && i <= 'z' {
+			continue
+		}
+		if i >= 'A' && i <= 'Z' {
+			continue
+		}
+		if i >= '0' && i <= '9' {
+			continue
+		}
+		s = append(s, byte(i))
+	}
+	return string(s)
+}
+
+// WeirdStrings are unusual/weird strings for use in testing escaping.
+// The keys are descriptive strings, the values are the weird strings.
+var WeirdStrings = map[string]string{
+	"fwdslashes":          "foo/bar/baz",
+	"repeatedfwdslashes":  "foo//bar///baz",
+	"dotdotslash":         "../foo/../bar/../../baz../",
+	"backslashes":         "foo\\bar\\baz",
+	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
+	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
+	"quote":               "foo\"bar\"baz",
+	"spaces":              "foo bar baz",
+	"unicode":             strings.Repeat("☺", 3),
+	// The ASCII characters 0-128, split up to avoid the possibly-escaped
+	// versions from getting too long.
+	"ascii-1": makeASCIIString(0, 32),
+	"ascii-2": makeASCIIString(32, 64),
+	"ascii-3": makeASCIIString(64, 96),
+	"ascii-4": makeASCIIString(96, 128),
 }

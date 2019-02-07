@@ -21,8 +21,10 @@ interactions:
       - text/plain; charset=utf-8
       X-Ms-Blob-Type:
       - BlockBlob
-      ? X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf____0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f____0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f____0x3a____0x3b____0x3c____0x3d____0x3e____0x3f____0x40____0x5b____0x5c____0x5d____0x5e_____0x60____0x7b____0x7c____0x7d____0x7e____0x7f__
-      : - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F:%3B%3C=%3E%3F@%5B%5C%5D%5E_%60%7B%7C%7D~%7F'
+      ? X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf____0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f__
+      : - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
+      ? X-Ms-Meta-__0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f____0x3a____0x3b____0x3c____0x3d____0x3e____0x3f__
+      : - '%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F:%3B%3C=%3E%3F'
       X-Ms-Meta-__0x263a____0x263a____0x263a__:
       - '%E2%98%BA%E2%98%BA%E2%98%BA'
       ? X-Ms-Meta-__0x2e____0x2e____0x2f__foo__0x2f____0x2e____0x2e____0x2f__bar__0x2f____0x2e____0x2e____0x2f____0x2e____0x2e____0x2f__baz__0x2e____0x2e____0x2f__
@@ -31,20 +33,24 @@ interactions:
       : - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz:
       - ..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz
+      X-Ms-Meta-__0x40____0x5b____0x5c____0x5d____0x5e___:
+      - '@%5B%5C%5D%5E_'
+      X-Ms-Meta-__0x60____0x7b____0x7c____0x7d____0x7e____0x7f__:
+      - '%60%7B%7C%7D~%7F'
+      X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz:
+      - foo%2F%2Fbar%2F%2F%2Fbaz
+      X-Ms-Meta-Foo__0x2f__bar__0x2f__baz:
+      - foo%2Fbar%2Fbaz
       X-Ms-Meta-Foo__0x5c__bar__0x5c__baz:
       - foo%5Cbar%5Cbaz
       X-Ms-Meta-Foo__0x20__bar__0x20__baz:
       - foo%20bar%20baz
       X-Ms-Meta-Foo__0x22__bar__0x22__baz:
       - foo%22bar%22baz
-      X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz:
-      - foo%2F%2Fbar%2F%2F%2Fbaz
-      X-Ms-Meta-Foo__0x2f__bar__0x2f__baz:
-      - foo%2Fbar%2Fbaz
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: PUT
   response:
@@ -53,15 +59,15 @@ interactions:
       Content-Md5:
       - XUFAKrxLKna5cZ2REBfFkg==
       Date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:27 GMT
       Etag:
-      - '"0x8D68D2A8DEEA627"'
+      - '"0x8D68D398FCEB078"'
       Last-Modified:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - a9d43d2d-b01e-00ba-1713-bf75bd000000
+      - 26a5e796-c01e-0050-0622-bf8abc000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -78,7 +84,7 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: HEAD
   response:
@@ -95,11 +101,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:27 GMT
       Etag:
-      - '"0x8D68D2A8DEEA627"'
+      - '"0x8D68D398FCEB078"'
       Last-Modified:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Access-Tier:
@@ -109,13 +115,15 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
-      ? X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf____0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f____0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f____0x3a____0x3b____0x3c____0x3d____0x3e____0x3f____0x40____0x5b____0x5c____0x5d____0x5e_____0x60____0x7b____0x7c____0x7d____0x7e____0x7f__
-      : - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F:%3B%3C=%3E%3F@%5B%5C%5D%5E_%60%7B%7C%7D~%7F'
+      ? X-Ms-Meta-__0x0____0x1____0x2____0x3____0x4____0x5____0x6____0x7____0x8____0x9____0xa____0xb____0xc____0xd____0xe____0xf____0x10____0x11____0x12____0x13____0x14____0x15____0x16____0x17____0x18____0x19____0x1a____0x1b____0x1c____0x1d____0x1e____0x1f__
+      : - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
+      ? X-Ms-Meta-__0x20____0x21____0x22____0x23____0x24____0x25____0x26____0x27____0x28____0x29____0x2a____0x2b____0x2c____0x2d____0x2e____0x2f____0x3a____0x3b____0x3c____0x3d____0x3e____0x3f__
+      : - '%20%21%22%23$%25&%27%28%29%2A+%2C-.%2F:%3B%3C=%3E%3F'
       X-Ms-Meta-__0x263a____0x263a____0x263a__:
       - '%E2%98%BA%E2%98%BA%E2%98%BA'
       ? X-Ms-Meta-__0x2e____0x2e____0x2f__foo__0x2f____0x2e____0x2e____0x2f__bar__0x2f____0x2e____0x2e____0x2f____0x2e____0x2e____0x2f__baz__0x2e____0x2e____0x2f__
@@ -124,18 +132,22 @@ interactions:
       : - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz:
       - ..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz
-      X-Ms-Meta-Foo__0x20__bar__0x20__baz:
-      - foo%20bar%20baz
-      X-Ms-Meta-Foo__0x22__bar__0x22__baz:
-      - foo%22bar%22baz
+      X-Ms-Meta-__0x40____0x5b____0x5c____0x5d____0x5e___:
+      - '@%5B%5C%5D%5E_'
+      X-Ms-Meta-__0x60____0x7b____0x7c____0x7d____0x7e____0x7f__:
+      - '%60%7B%7C%7D~%7F'
       X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz:
       - foo%2F%2Fbar%2F%2F%2Fbaz
       X-Ms-Meta-Foo__0x2f__bar__0x2f__baz:
       - foo%2Fbar%2Fbaz
       X-Ms-Meta-Foo__0x5c__bar__0x5c__baz:
       - foo%5Cbar%5Cbaz
+      X-Ms-Meta-Foo__0x20__bar__0x20__baz:
+      - foo%20bar%20baz
+      X-Ms-Meta-Foo__0x22__bar__0x22__baz:
+      - foo%22bar%22baz
       X-Ms-Request-Id:
-      - a9d43d30-b01e-00ba-1913-bf75bd000000
+      - 26a5e7a9-c01e-0050-1522-bf8abc000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -154,20 +166,20 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:28 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 07 Feb 2019 18:32:02 GMT
+      - Thu, 07 Feb 2019 20:19:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - a9d43d3b-b01e-00ba-2113-bf75bd000000
+      - 26a5e7bd-c01e-0050-2422-bf8abc000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted

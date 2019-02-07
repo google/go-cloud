@@ -36,6 +36,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -211,34 +212,6 @@ func RunBenchmarks(b *testing.B, bkt *blob.Bucket) {
 	b.Run("BenchmarkWriteReadDelete", func(b *testing.B) {
 		benchmarkWriteReadDelete(b, bkt)
 	})
-}
-
-var weirdKeys = map[string]string{
-	"fwdslashes":          "foo/bar/baz",
-	"repeatedfwdslashes":  "foo//bar///baz",
-	"dotdotslash":         "../foo/../bar/../../baz../",
-	"backslashes":         "foo\\bar\\baz",
-	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
-	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
-	"quote":               "foo\"bar\"baz",
-	"spaces":              "foo bar baz",
-	"unicode":             strings.Repeat("☺", 3),
-	"ascii": func() string {
-		var s []byte
-		for i := 0; i < 128; i++ {
-			if i >= 'a' && i <= 'z' {
-				continue
-			}
-			if i >= 'A' && i <= 'Z' {
-				continue
-			}
-			if i >= '0' && i <= '9' {
-				continue
-			}
-			s = append(s, byte(i))
-		}
-		return string(s)
-	}(),
 }
 
 // testList tests the functionality of List.
@@ -1390,7 +1363,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	hello := []byte("hello")
 
 	weirdMetadata := map[string]string{}
-	for _, k := range weirdKeys {
+	for _, k := range escape.WeirdStrings {
 		weirdMetadata[k] = k
 	}
 
@@ -1636,7 +1609,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
 	content := []byte("hello")
 
-	// TODO: use weirdKeys.
+	// TODO: use escape.WeirdStrings.
 	tests := []struct {
 		description string
 		key         string
