@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	gax "github.com/googleapis/gax-go"
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/retry"
 
@@ -40,7 +40,47 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const region = "us-east-2"
+const (
+	region = "us-east-2"
+	benchmarkTopicARN = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
+	benchmarkSubscriptionURL = "https://sqs.us-east-2.amazonaws.com/221420415498/benchmark-queue"
+)
+
+func TestOpenTopic(t *testing.T) {
+	ctx := context.Background()
+	sess, err := newSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := sns.New(sess, &aws.Config{})
+	fakeTopicARN := ""
+	topic := OpenTopic(ctx, client, fakeTopicARN, nil)
+	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("")}); err == nil {
+		t.Error("got nil, want error from send to nonexistent topic")
+	}
+}
+
+func TestOpenSubscription(t *testing.T) {
+	ctx := context.Background()
+	sess, err := newSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := sqs.New(sess, &aws.Config{})
+	fakeQURL := ""
+	sub := OpenSubscription(ctx, client, fakeQURL, nil)
+	if _, err := sub.Receive(ctx); err == nil {
+		t.Error("got nil, want error from receive from nonexistent subscription")
+	}
+}
+
+func newSession() (*session.Session, error) {
+	return session.NewSession(&aws.Config{
+		HTTPClient: &http.Client{},
+		Region:     aws.String(region),
+		MaxRetries: aws.Int(0),
+	})
+}
 
 type harness struct {
 	sess      *session.Session
@@ -339,4 +379,21 @@ func (awsAsTest) MessageCheck(m *pubsub.Message) error {
 
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
+}
+
+func BenchmarkAwsPubSub(b *testing.B) {
+	ctx := context.Background()
+	sess, err := session.NewSession(&aws.Config{
+		HTTPClient:  &http.Client{},
+		Region:      aws.String(region),
+		MaxRetries:  aws.Int(0),
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+	snsClient := sns.New(sess, &aws.Config{})
+	sqsClient := sqs.New(sess, &aws.Config{})
+	topic := OpenTopic(ctx, snsClient, benchmarkTopicARN, nil)
+	sub := OpenSubscription(ctx, sqsClient, benchmarkSubscriptionURL, nil)
+	drivertest.RunBenchmarks(b, topic, sub)
 }
