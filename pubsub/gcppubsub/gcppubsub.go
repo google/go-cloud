@@ -16,6 +16,13 @@
 // PubSub. Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
 // to construct a *pubsub.Subscription.
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
+// and unescaped (during reads) to ensure compatibility with the provider:
+//  - Metadata keys: No escaping required.
+//  - Metadata values: No escaping required.
+//
 // As
 //
 // gcspubsub exposes the following types for As:

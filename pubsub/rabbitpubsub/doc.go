@@ -25,6 +25,13 @@
 // A Pub/Sub subscription is an AMQP queue. The queue should be bound to the exchange
 // that is the topic of the subscription. See the package example for details.
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
+// and unescaped (during reads) to ensure compatibility with the provider:
+//  - Metadata keys: No escaping required.
+//  - Metadata values: No escaping required.
+//
 // As
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection

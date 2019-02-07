@@ -19,6 +19,13 @@
 // mempubsub should not be used for production: it is intended for local
 // development and testing.
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
+// and unescaped (during reads) to ensure compatibility with the provider:
+//  - Metadata keys: No escaping required.
+//  - Metadata values: No escaping required.
+//
 // As
 //
 // mempubsub does not support any types for As.

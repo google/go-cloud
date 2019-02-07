@@ -22,6 +22,7 @@ import (
 	"errors"
 	"gocloud.dev/internal/testing/setup"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -135,6 +136,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestCancelSendReceive":                                   testCancelSendReceive,
 		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
+		"TestMetadata":                                            testMetadata,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -392,6 +394,78 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	if _, err := sub.Receive(ctx); !isCanceled(err) {
 		t.Errorf("sub.Receive returned %v (%T), want context.Canceled", err, err)
+	}
+}
+
+func makeASCIIString(start, end int) string {
+	var s []byte
+	for i := start; i < end; i++ {
+		if i >= 'a' && i <= 'z' {
+			continue
+		}
+		if i >= 'A' && i <= 'Z' {
+			continue
+		}
+		if i >= '0' && i <= '9' {
+			continue
+		}
+		s = append(s, byte(i))
+	}
+	return string(s)
+}
+
+var weirdKeys = map[string]string{
+	"fwdslashes":          "foo/bar/baz",
+	"repeatedfwdslashes":  "foo//bar///baz",
+	"dotdotslash":         "../foo/../bar/../../baz../",
+	"backslashes":         "foo\\bar\\baz",
+	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
+	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
+	"quote":               "foo\"bar\"baz",
+	"spaces":              "foo bar baz",
+	"unicode":             strings.Repeat("☺", 3),
+	"ascii-1":             makeASCIIString(0, 32),
+	"ascii-2":             makeASCIIString(32, 64),
+	"ascii-3":             makeASCIIString(64, 96),
+	"ascii-4":             makeASCIIString(96, 128),
+}
+
+func testMetadata(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	weirdMetadata := map[string]string{}
+	for _, k := range weirdKeys {
+		weirdMetadata[k] = k
+	}
+
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	m := &pubsub.Message{
+		Body:     []byte("hello world"),
+		Metadata: weirdMetadata,
+	}
+	if err := top.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err = sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
+		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
 	}
 }
 
