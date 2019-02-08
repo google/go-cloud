@@ -19,6 +19,7 @@ package drivertest // import "gocloud.dev/secrets/drivertest"
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -50,6 +51,22 @@ type AsTest interface {
 	ErrorCheck(k *secrets.Keeper, err error) error
 }
 
+type verifyAsFailsOnNil struct{}
+
+func (v verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (v verifyAsFailsOnNil) ErrorCheck(k *secrets.Keeper, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want ErrorAs to panic when passed nil")
+		}
+	}()
+	k.ErrorAs(err, nil)
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of secret management.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	t.Run("TestEncryptDecrypt", func(t *testing.T) {
@@ -64,6 +81,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestDecryptMalformedError", func(t *testing.T) {
 		testDecryptMalformedError(t, newHarness)
 	})
+	asTests = append(asTests, verifyAsFailsOnNil{})
 	t.Run("TestAs", func(t *testing.T) {
 		for _, tc := range asTests {
 			if tc.Name() == "" {
