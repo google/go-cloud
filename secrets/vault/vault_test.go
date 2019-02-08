@@ -16,6 +16,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -23,6 +24,7 @@ import (
 	vhttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
@@ -81,7 +83,21 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (v verifyAs) Name() string {
+	return "verify As function"
+}
+
+func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
+	var s string
+	if k.ErrorAs(err, &s) {
+		return errors.New("Keeper.ErrorAs expected to fail")
+	}
+	return nil
 }
 
 // Vault-specific tests.

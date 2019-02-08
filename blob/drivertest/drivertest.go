@@ -36,6 +36,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 )
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -1361,6 +1362,11 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	const key = "blob-for-metadata"
 	hello := []byte("hello")
 
+	weirdMetadata := map[string]string{}
+	for _, k := range escape.WeirdStrings {
+		weirdMetadata[k] = k
+	}
+
 	tests := []struct {
 		name        string
 		metadata    map[string]string
@@ -1413,6 +1419,12 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			contentType: "text/plain",
 			metadata:    map[string]string{"foo": "bar"},
 			want:        map[string]string{"foo": "bar"},
+		},
+		{
+			name:     "weird metadata keys",
+			content:  hello,
+			metadata: weirdMetadata,
+			want:     weirdMetadata,
 		},
 	}
 
@@ -1597,6 +1609,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
 	content := []byte("hello")
 
+	// TODO: use escape.WeirdStrings.
 	tests := []struct {
 		description string
 		key         string

@@ -31,6 +31,16 @@
 // Example URL:
 //  s3://mybucket?region=us-east-1
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are required for s3blob:
+//  - Metadata keys: Escaped using URL encoding, then additionally "@:=" are
+//    escaped using "__0x<hex>__". These characters were determined by
+//    experimentation.
+//  - Metadata values: Escaped using URL encoding.
+//
 // As
 //
 // s3blob exposes the following types for As:
@@ -59,6 +69,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -362,14 +373,12 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	if err := req.Send(); err != nil {
 		return driver.Attributes{}, err
 	}
-	var md map[string]string
-	if len(resp.Metadata) > 0 {
-		md = make(map[string]string, len(resp.Metadata))
-		for k, v := range resp.Metadata {
-			if v != nil {
-				md[k] = aws.StringValue(v)
-			}
-		}
+
+	md := make(map[string]string, len(resp.Metadata))
+	for k, v := range resp.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
 	return driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
@@ -476,18 +485,21 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 			u.PartSize = int64(opts.BufferSize)
 		}
 	})
-	var metadata map[string]*string
-	if len(opts.Metadata) > 0 {
-		metadata = make(map[string]*string, len(opts.Metadata))
-		for k, v := range opts.Metadata {
-			metadata[k] = aws.String(v)
-		}
+	md := make(map[string]*string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+			c := runes[i]
+			return c == '@' || c == ':' || c == '='
+		})
+		md[k] = aws.String(url.PathEscape(v))
 	}
 	req := &s3manager.UploadInput{
 		Bucket:      aws.String(b.name),
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
-		Metadata:    metadata,
+		Metadata:    md,
 	}
 	if opts.CacheControl != "" {
 		req.CacheControl = aws.String(opts.CacheControl)

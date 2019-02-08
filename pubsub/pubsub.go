@@ -422,17 +422,15 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 // getNextBatch gets the next batch of messages from the server and returns it.
 func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
-	for len(msgs) == 0 {
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-			var err error
-			ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-			defer func() { s.tracer.End(ctx2, err) }()
-			msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
-			return err
-		})
-		if err != nil {
-			return nil, wrapError(s.driver, err)
-		}
+	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		var err error
+		ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+		defer func() { s.tracer.End(ctx2, err) }()
+		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
+		return err
+	})
+	if err != nil {
+		return nil, wrapError(s.driver, err)
 	}
 	var q []*Message
 	for _, m := range msgs {
