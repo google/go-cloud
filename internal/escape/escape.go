@@ -22,8 +22,8 @@ import (
 	"strings"
 )
 
-// IsAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
-func IsAlphanumeric(r rune) bool {
+// IsASCIIAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
+func IsASCIIAlphanumeric(r rune) bool {
 	switch {
 	case 'A' <= r && r <= 'Z':
 		return true

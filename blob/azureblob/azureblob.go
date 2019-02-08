@@ -436,9 +436,9 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		return driver.Attributes{}, err
 	}
 
-	azureMd := blobPropertiesResponse.NewMetadata()
-	md := make(map[string]string, len(azureMd))
-	for k, v := range azureMd {
+	azureMD := blobPropertiesResponse.NewMetadata()
+	md := make(map[string]string, len(azureMD))
+	for k, v := range azureMD {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
 		md[escape.Unescape(k)] = escape.URLUnescape(v)
@@ -596,7 +596,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		e := escape.Escape(k, func(runes []rune, i int) bool {
 			c := runes[i]
 			switch {
-			case escape.IsAlphanumeric(c):
+			case escape.IsASCIIAlphanumeric(c):
 				return false
 			case c == '_':
 				return false
