@@ -200,8 +200,12 @@ var WeirdStrings = map[string]string{
 	"unicode":             strings.Repeat("☺", 3),
 	// The ASCII characters 0-128, split up to avoid the possibly-escaped
 	// versions from getting too long.
-	"ascii-1": makeASCIIString(0, 32),
-	"ascii-2": makeASCIIString(32, 64),
-	"ascii-3": makeASCIIString(64, 96),
-	"ascii-4": makeASCIIString(96, 128),
+	"ascii-1": makeASCIIString(0, 16),
+	"ascii-2": makeASCIIString(16, 32),
+	"ascii-3": makeASCIIString(32, 48),
+	"ascii-4": makeASCIIString(48, 64),
+	"ascii-5": makeASCIIString(64, 80),
+	"ascii-6": makeASCIIString(80, 96),
+	"ascii-7": makeASCIIString(96, 112),
+	"ascii-8": makeASCIIString(112, 128),
 }
