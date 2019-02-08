@@ -217,14 +217,14 @@ type WidgetURLOpener interface {
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
 //
-// The zero value is a URLMux with no registered schemes.
+// The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
   // ...
 }
 
 // RegisterWidget registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterWidget panics.
-func (mux *URLMux) RegisterWidget(scheme string, opener WidgetURL) {
+func (mux *URLMux) RegisterWidget(scheme string, opener WidgetURLOpener) {
   // ...
 }
 
@@ -261,7 +261,7 @@ func OpenWidget(ctx context.Context, urlstr string) (*Widget, error) {
 
 The repetition of `Widget` in the method names permits a type to handle multiple
 resources within the API. Exporting the `URLMux` allows applications to build
-their own muxes, potentially wrapping existing.
+their own muxes, potentially wrapping existing ones.
 
 Driver packages should include their own `URLOpener` struct type which
 implements all the relevant `WidgetURLOpener` methods. The URL should only serve

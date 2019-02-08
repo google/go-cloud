@@ -15,22 +15,6 @@
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
-//
-// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
-// with "s3://".
-//
-// The URL's Host is used as the bucket name.
-// The AWS session is created as described in
-// https://docs.aws.amazon.com/sdk-for-go/api/aws/session/.
-// The following query options are supported:
-//  - region: The AWS region for requests; sets aws.Config.Region.
-//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
-//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
-//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
-// Example URL:
-//  s3://mybucket?region=us-east-1
-//
 // As
 //
 // s3blob exposes the following types for As:
@@ -55,6 +39,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
@@ -71,30 +56,53 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("s3", openURL)
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazySessionOpener))
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	q := u.Query()
-	cfg := &aws.Config{}
+// URLOpener opens S3 URLs like "s3://mybucket".
+type URLOpener struct {
+	// ConfigProvider must be set to a non-nil value.
+	ConfigProvider client.ConfigProvider
 
-	if region := q["region"]; len(region) > 0 {
-		cfg.Region = aws.String(region[0])
+	// Options specifies the options to pass to OpenBucket.
+	Options Options
+}
+
+// lazySessionOpener obtains the AWS session from the environment on the first
+// call to OpenBucketURL.
+type lazySessionOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	o.init.Do(func() {
+		sess, err := session.NewSession()
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{
+			ConfigProvider: sess,
+		}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open S3 bucket %q: %v", u, o.err)
 	}
-	if endpoint := q["endpoint"]; len(endpoint) > 0 {
-		cfg.Endpoint = aws.String(endpoint[0])
+	return o.opener.OpenBucketURL(ctx, u)
+}
+
+// Scheme is the URL scheme s3blob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "s3"
+
+// OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for k := range u.Query() {
+		return nil, fmt.Errorf("open S3 bucket %q: unknown query parameter %s", u, k)
 	}
-	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
-		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
-	}
-	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
-		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
-	}
-	sess, err := session.NewSession(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return openBucket(ctx, sess, u.Host, nil)
+	return OpenBucket(ctx, o.ConfigProvider, u.Host, &o.Options)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.

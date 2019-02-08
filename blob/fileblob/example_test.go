@@ -67,7 +67,7 @@ func Example_open() {
 
 	// Open creates a *blob.Bucket from a URL.
 	ctx := context.Background()
-	b, err := blob.Open(ctx, path.Join("file://", dir))
+	b, err := blob.OpenBucket(ctx, path.Join("file://", dir))
 	if err != nil {
 		log.Fatal(err)
 	}

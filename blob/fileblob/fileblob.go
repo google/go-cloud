@@ -30,25 +30,6 @@
 // (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
 // aren't visible using fileblob.
 //
-// Open URLs
-//
-// For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
-// with "file://".
-//
-// The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != '/', any leading '/' from the Path is dropped
-// and remaining '/' characters are converted to os.PathSeparator.
-// No query options are supported.
-// Examples:
-//  - file:///a/directory
-//    -> Passes "/a/directory" to OpenBucket.
-//  - file://localhost/a/directory
-//    -> Also passes "/a/directory".
-//  - file:///c:/foo/bar
-//    -> Passes "c:\foo\bar".
-//  - file://localhost/c:/foo/bar
-//    -> Also passes "c:\foo\bar".
-//
 // As
 //
 // fileblob exposes the following types for As:
@@ -76,18 +57,40 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return openBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
-	})
+	blob.DefaultURLMux().RegisterBucket(Scheme, &URLOpener{})
 }
 
-func mungeURLPath(path string, pathSeparator uint8) string {
+// Scheme is the URL scheme fileblob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "file"
+
+// URLOpener opens file bucket URLs like "file:///foo/bar/baz".
+type URLOpener struct{}
+
+// OpenBucketURL opens the file bucket at the URL's path. The URL's host is
+// ignored. If os.PathSeparator != "/", any leading "/" from the path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+// No query options are supported. Examples:
+//
+//  - file:///a/directory
+//    -> Passes "/a/directory" to OpenBucket.
+//  - file://localhost/a/directory
+//    -> Also passes "/a/directory".
+//  - file:///c:/foo/bar
+//    -> Passes "c:\foo\bar".
+//  - file://localhost/c:/foo/bar
+//    -> Also passes "c:\foo\bar".
+func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	return OpenBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
+}
+
+func mungeURLPath(path string, pathSeparator byte) string {
 	if pathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
 		// from this function. Test Windows behavior by opening a bucket on Windows.
 		// See #1075 for why Windows is disabled.
-		path = strings.Replace(path, "/", string(pathSeparator), -1)
+		return strings.Replace(path, "/", string(pathSeparator), -1)
 	}
 	return path
 }
