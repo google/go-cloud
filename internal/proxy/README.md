@@ -5,7 +5,7 @@ reliability, and to enforce that all of our dependencies meet our license
 requirements.
 
 The proxy is set
-[here](https://github.com/google/go-cloud/blob/master/.travis.yml#L22).
+[in our .travis.yml file](https://github.com/google/go-cloud/blob/master/.travis.yml).
 
 [Go module proxy]: https://research.swtch.com/vgo-module
 
