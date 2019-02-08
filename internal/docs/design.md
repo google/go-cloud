@@ -556,12 +556,15 @@ These differences lead to a loss of portability and predictability for users.
 To resolve this issue, we insist that Go CDK can handle any UTF-8 string, and
 force drivers to use escaping mechanisms to handle strings that the underlying
 provider can't handle. We enforce driver compliance with conformance tests.
+Behavior for non-UTF-8 strings is undefined (but see
+https://github.com/google/go-cloud/issues/1281 and
+https://github.com/google/go-cloud/issues/1260).
 
 We try to use URL encoding as the escaping mechanism where possible; however,
 sometimes it is not and we'll use custom escaping. As an example, a driver for a
-provider that only allows underscores and ASCII alphanumeric characters might escape the
-string `foo.bar` to `foo__0x2e__bar` (URL escaping won't work because `%` isn't
-allowed).
+provider that only allows underscores and ASCII alphanumeric characters might
+escape the string `foo.bar` to `foo__0x2e__bar` (URL escaping won't work because
+`%` isn't allowed).
 
 Pros of this approach:
 
