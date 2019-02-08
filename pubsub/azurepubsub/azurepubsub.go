@@ -15,6 +15,13 @@
 // Package azurepubsub provides an implementation of pubsub using Azure Service Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
+// and unescaped (during reads) to ensure compatibility with the provider:
+//  - Metadata keys: No escaping required.
+//  - Metadata values: No escaping required.
+//
 // PubSub.
 //
 // It exposes the following types for As:
