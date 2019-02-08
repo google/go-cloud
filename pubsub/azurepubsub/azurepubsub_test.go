@@ -14,36 +14,37 @@
 package azurepubsub
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"strings"
 	"sync/atomic"
-	"fmt"
-	"context"	
 	"testing"
 
+	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
-	"gocloud.dev/internal/testing/setup"
 
 	"github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-service-bus-go"
 )
-var (	
+
+var (
 	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
 	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")		
+	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")
 )
 
 const (
 	topicName = "test-topic"
 )
 
-type harness struct {		
-	ns *servicebus.Namespace
+type harness struct {
+	ns        *servicebus.Namespace
 	numTopics uint32 // atomic
 	numSubs   uint32 // atomic
-	closer     func()
+	closer    func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -56,21 +57,21 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		return nil, err
 	}
 
-	noop := func(){
+	noop := func() {
 
 	}
 
 	return &harness{
-		ns : ns,
+		ns:     ns,
 		closer: noop,
 	}, nil
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
-		
+
 	createTopic(ctx, topicName, h.ns, nil)
-			
+
 	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	dt = openTopic(ctx, sbTopic)
 
@@ -82,7 +83,7 @@ func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.T
 	return dt, cleanup, nil
 }
 
-func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {	
+func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
 	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	if err != nil {
 		return nil, err
@@ -91,14 +92,14 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return dt, nil
 }
 
-func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {	
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	// Keep the subscription entity name under 50 characters as per Azure limits.
 	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
 	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	if len(subName) > 50 {	
+	if len(subName) > 50 {
 		subName = subName[:50]
 	}
-	
+
 	t := dt.(*topic)
 
 	err = createSubscription(ctx, t.sbTopic.Name, subName, h.ns, nil)
@@ -121,7 +122,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 	return ds, cleanup, nil
 }
 
-func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {	
+func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
 	sbTopic, _ := NewTopic(h.ns, topicName, nil)
 	sbSub, _ := NewSubscription(sbTopic, "nonexistent-subscription", nil)
 	ds := openSubscription(ctx, h.ns, sbTopic, sbSub, nil)
@@ -140,8 +141,8 @@ func (h *harness) Close() {
 // Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azurepubsub -run ^TestConformance$
 func TestConformance(t *testing.T) {
 	if !*setup.Record {
-        t.Skip("replaying is not yet supported for Azure pubsub")
-    
+		t.Skip("replaying is not yet supported for Azure pubsub")
+
 	} else {
 		asTests := []drivertest.AsTest{sbAsTest{}}
 		drivertest.RunConformanceTests(t, newHarness, asTests)
@@ -154,7 +155,7 @@ func (sbAsTest) Name() string {
 	return "asb"
 }
 
-func (sbAsTest) TopicCheck(top *pubsub.Topic) error {	
+func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
 	var t2 servicebus.Topic
 	if top.As(&t2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &t2)
@@ -166,7 +167,7 @@ func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
 	return nil
 }
 
-func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {	
+func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	var s2 servicebus.Subscription
 	if sub.As(&s2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &s2)
@@ -175,11 +176,11 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	if !sub.As(&s3) {
 		return fmt.Errorf("cast failed for %T", &s3)
 	}
-	return nil	
+	return nil
 }
 
 func (sbAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
-	var sbError common.Retryable;
+	var sbError common.Retryable
 	if !t.ErrorAs(err, &sbError) {
 		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
 	}
@@ -199,33 +200,36 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 }
 
 func sanitize(testName string) string {
-	return strings.Replace(testName, "/", "_", -1)		
+	return strings.Replace(testName, "/", "_", -1)
 }
+
 // createTopic ensures the existance of a Service Bus Topic on a given Namespace.
-func createTopic(ctx context.Context, topicName string, ns *servicebus.Namespace, opts[] servicebus.TopicManagementOption) error {			
-	tm := ns.NewTopicManager()		
-	_, err := tm.Get(ctx, topicName)	
+func createTopic(ctx context.Context, topicName string, ns *servicebus.Namespace, opts []servicebus.TopicManagementOption) error {
+	tm := ns.NewTopicManager()
+	_, err := tm.Get(ctx, topicName)
 	if err == nil {
 		_ = tm.Delete(ctx, topicName)
 	}
 	_, err = tm.Put(ctx, topicName, opts...)
 	return err
 }
+
 // deleteTopic removes a Service Bus Topic on a given Namespace.
-func deleteTopic(ctx context.Context, topicName string, ns *servicebus.Namespace) error {		
-	tm := ns.NewTopicManager()	
+func deleteTopic(ctx context.Context, topicName string, ns *servicebus.Namespace) error {
+	tm := ns.NewTopicManager()
 	te, _ := tm.Get(ctx, topicName)
 	if te != nil {
-	 return tm.Delete(ctx, topicName)	
+		return tm.Delete(ctx, topicName)
 	}
 	return nil
-}	
+}
+
 // createTopic ensures the existance of a Service Bus Subscription on a given Namespace and Topic.
-func createSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace, opts[] servicebus.SubscriptionManagementOption) error {		
+func createSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace, opts []servicebus.SubscriptionManagementOption) error {
 	sm, err := ns.NewSubscriptionManager(topicName)
 	if err != nil {
 		return err
-	}	
+	}
 	_, err = sm.Get(ctx, subscriptionName)
 	if err == nil {
 		_ = sm.Delete(ctx, subscriptionName)
@@ -233,8 +237,9 @@ func createSubscription(ctx context.Context, topicName string, subscriptionName 
 	_, err = sm.Put(ctx, subscriptionName, opts...)
 	return err
 }
+
 // deleteSubscription removes a Service Bus Subscription on a given Namespace and Topic.
-func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace) error {		
+func deleteSubscription(ctx context.Context, topicName string, subscriptionName string, ns *servicebus.Namespace) error {
 	sm, err := ns.NewSubscriptionManager(topicName)
 	if err != nil {
 		return nil
