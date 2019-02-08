@@ -26,10 +26,13 @@
 //    experimentation.
 //  - Metadata values: Escaped using URL encoding.
 //
-// It exposes the following types for As:
-// Topic: *sns.SNS
-// Subscription: *sqs.SQS
-// Error: awserror.Error
+// As
+//
+// awspubsub exposes the following types for As:
+//  - Topic: *sns.SNS
+//  - Subscription: *sqs.SQS
+//  - Message: *sqs.Message
+//  - Error: awserror.Error
 package awspubsub
 
 import (
@@ -256,7 +259,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool {
+func (*subscription) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
 }
@@ -277,7 +280,7 @@ func (s *subscription) ErrorAs(err error, target interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode.
-func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 

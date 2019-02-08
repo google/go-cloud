@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"gocloud.dev/internal/testing/setup"
 	"strconv"
 	"testing"
 
@@ -218,7 +217,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHa
 
 	ds, err := h.MakeNonexistentSubscription(ctx)
 	if err != nil {
-		t.Skipf("failed to make non-existent subscription: %v", err)
+		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
 	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
@@ -255,9 +254,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 // Receive from two subscriptions to the same topic.
 // Verify both get all the messages.
 func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
-	if !*setup.Record {
-		t.Skip("This test fails for awspubsub in replay mode, probably due to an issue with the recorder.")
-	}
 	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)

@@ -34,6 +34,8 @@
 //  - Metadata values: No escaping required.
 //
 // As
+//
+// rabbitpubsub exposes the following types for As:
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection
 //  - Message: amqp.Delivery
