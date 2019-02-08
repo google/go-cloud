@@ -342,3 +342,86 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 		}
 	}
 }
+
+// callbackDriverSub implements driver.Subscription and allows something like
+// monkey patching of both its ReceiveBatch and SendAcks methods.
+type callbackDriverSub struct {
+	driver.Subscription
+	receiveBatch func(context.Context) ([]*driver.Message, error)
+	sendAcks     func(context.Context, []driver.AckID) error
+}
+
+func (s *callbackDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	return s.receiveBatch(ctx)
+}
+
+func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) error {
+	return s.sendAcks(ctx, acks)
+}
+
+func (s *callbackDriverSub) IsRetryable(error) bool { return false }
+
+func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+
+// This test detects the root cause of
+// https://github.com/google/go-cloud/issues/1238.
+// If the issue is present, this test times out.
+func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
+	// If SendAcks fails, the error is returned via receive.
+	ctx := context.Background()
+	serr := errors.New("unrecoverable error")
+	receiveHappened := make(chan struct{})
+	ackHappened := make(chan struct{})
+	ds := &callbackDriverSub{
+		// First call to receiveBatch will return a single message.
+		receiveBatch: func(context.Context) ([]*driver.Message, error) {
+			ms := []*driver.Message{{AckID: 1}}
+			return ms, nil
+		},
+		sendAcks: func(context.Context, []driver.AckID) error {
+			ackHappened <- struct{}{}
+			return serr
+		},
+	}
+	sub := pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	// Second call to receiveBatch will wait for the pull from the receiveHappened channel below,
+	// and return a nil slice of messages.
+	ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
+		// Subsequent calls to receiveBatch won't wait on receiveHappened,
+		// and will also return nil slices of messages.
+		ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
+			return nil, nil
+		}
+		receiveHappened <- struct{}{}
+		return nil, nil
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		// Set err in the test outside this goroutine so it can be checked below.
+		_, err = sub.Receive(ctx)
+		wg.Done()
+	}()
+
+	// sub.Receive has to get into the loop and then we need to trigger the unrecoverable error.
+	<-receiveHappened
+
+	// Trigger the unrecoverable error.
+	<-ackHappened
+
+	// Wait for sub.Receive to return and set err so we can check err against serr.
+	wg.Wait()
+
+	ok := gcerrors.Code(err) == gcerrors.Internal && err.(*gcerr.Error).Unwrap() == serr
+	if !ok {
+		t.Fatalf("got %v, want %v", err, serr)
+	}
+}
