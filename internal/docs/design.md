@@ -115,8 +115,8 @@ it is needed.
 
 The exception we permit is URL scheme registration as documented under
 [URLs](#urls). The amount of boilerplate setup code required for URL muxes for
-multiple providers without use of a tool like Wire is an unreasonable burden
-for users of Go CDK. A global registry is acceptable as long as its use is not
+multiple providers without use of a tool like Wire is an unreasonable burden for
+users of Go CDK. A global registry is acceptable as long as its use is not
 mandatory, but the burden is to prove the benefit over the cost.
 
 ## Package Naming Conventions
@@ -553,12 +553,18 @@ names, metadata keys, etc.). A couple of specific examples:
 
 These differences lead to a loss of portability and predictability for users.
 
-To resolve this issue, we insist that Go CDK can handle any string, and force
-drivers to use escaping mechanisms to handle strings that the underlying
+To resolve this issue, we insist that Go CDK can handle any UTF-8 string, and
+force drivers to use escaping mechanisms to handle strings that the underlying
 provider can't handle. We enforce driver compliance with conformance tests.
+Behavior for non-UTF-8 strings is undefined (but see
+https://github.com/google/go-cloud/issues/1281 and
+https://github.com/google/go-cloud/issues/1260).
 
-As an example, a driver for a provider that only allows underscores and ASCII
-characters might escape the string `foo.bar` to `foo__0x2e__bar`.
+We try to use URL encoding as the escaping mechanism where possible; however,
+sometimes it is not and we'll use custom escaping. As an example, a driver for a
+provider that only allows underscores and ASCII alphanumeric characters might
+escape the string `foo.bar` to `foo__0x2e__bar` (URL escaping won't work because
+`%` isn't allowed).
 
 Pros of this approach:
 
@@ -594,13 +600,22 @@ Sample code for the helper for escaping strings:
 // package escape provider helpers for escaping and unescaping strings.
 package escape
 
-// Escape returns s, with all bytes for which shouldEscape returns true
-// escaped.
+// Escape returns s, with all runes for which shouldEscape returns true
+// escaped to "__0xXXXX__", where XXXX is the hex representation of the rune
+// value. For example, " " would escape to "__0x20__".
 //
-// shouldEscape takes the whole string and an index instead of a single
-// byte because some escape decisions require context. For example, we
-// might want to escape the second "/" in "//" but not the first one.
-func Escape(shouldEscape func(s string, i int) bool, s string) string {...}
+// Non-UTF-8 strings will have their non-UTF-8 characters escaped to
+// unicode.ReplacementChar; the original value is lost. Please file an
+// issue if you need non-UTF8 support.
+//
+// Note: shouldEscape takes the whole string as a slice of runes and an
+// index. Passing it a single byte or a single rune doesn't provide
+// enough context for some escape decisions; for example, the caller might
+// want to escape the second "/" in "//" but not the first one.
+// We pass a slice of runes instead of the string or a slice of bytes
+// because some decisions will be made on a rune basis (e.g., encode
+// all non-ASCII runes).
+func Escape(s string, shouldEscape func(s []rune, i int) bool) string { ... }
 
 // Unescape reverses Escape.
 func Unescape(s string) string {...}
@@ -610,14 +625,10 @@ Sample code for how a driver might use it, using metadata keys for a `blob` as
 the example string:
 
 ```
-// shouldEscapeMetadataKey returns true if s[i] needs to be escaped in order
-// to produce a valid metadata key.
-func shouldEscapeMetadataKey(s string, i int) bool {...}
-
 // When writing metadata keys, escape the keys:
 // ... gcdkMetadata is the metadata passed to the GCDK API.
 for k, v := range gcdkMetadata {
-    e := escape.Escape(shouldEscapeMetadataKey, k)
+    e := escape.Escape(k, func (r []rune, i int) bool {...})
     if _, ok := providerMetadata[e]; ok {
       return fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
     }
@@ -625,7 +636,7 @@ for k, v := range gcdkMetadata {
 }
 // ... write providerMetadata to the provider.
 
-// When reading metadata keys, we unescape them:
+// When reading metadata keys, unescape them:
 // ... providerMetadata is the metadata read from the provider.
 for k, v := range providerMetadata {
     gcdkMetadata[escape.Unescape(k)] = v
@@ -633,11 +644,11 @@ for k, v := range providerMetadata {
 // ... return gcdkMetadata.
 ```
 
-The details of what bytes need to be escaped will vary from provider to
+The details of what runes need to be escaped will vary from provider to
 provider. The details of how to escape may also vary, although we expect to use
-a common approach for most drivers. In particular, we plan to escape each byte
-for which `shouldEscape` returns true with `__0xXX__`, where `XX` is the hex
-representation of the byte value.
+URL encoding where possible, and a common custom escaping where not. For the
+custom escaping, we plan to escape each rune for which `shouldEscape` returns
+true with `__0xXXX__`, where `XCX` is the hex representation of the rune value.
 
 ### Alternatives Considered
 
