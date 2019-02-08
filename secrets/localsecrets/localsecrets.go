@@ -15,6 +15,10 @@
 // Package localsecrets provides a secrets implementation using a locally
 // locally provided symmetric key.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// localsecrets does not support any types for As.
 package localsecrets // import "gocloud.dev/secrets/localsecrets"
 
 import (

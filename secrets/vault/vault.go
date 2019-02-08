@@ -15,6 +15,10 @@
 // Package vault provides a secrets implementation using the Transit Secrets
 // Engine of Vault by Hashicorp.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// vault does not support any types for As.
 package vault
 
 import (
