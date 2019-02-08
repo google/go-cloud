@@ -427,8 +427,8 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 		s.mu.Lock()
 		err := s.err
 		s.mu.Unlock()
-		if s.err != nil {
-			return nil, s.err
+		if err != nil {
+			return nil, err
 		}
 
 		err = retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
