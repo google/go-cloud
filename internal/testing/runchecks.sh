@@ -40,7 +40,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 else
   go test -race ./... || result=1
   # No need to run wire checks or other module tests on OSs other than linux.
-  #exit $result
+  exit $result
 fi
 
 # Ensure that the code has no extra dependencies (including transitive
