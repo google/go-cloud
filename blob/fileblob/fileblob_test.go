@@ -34,9 +34,10 @@ import (
 )
 
 type harness struct {
-	dir    string
-	server *httptest.Server
-	closer func()
+	dir        string
+	server     *httptest.Server
+	urlSignKey string
+	closer     func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -44,14 +45,44 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "hello world")
-	}))
-	return &harness{
-		dir:    dir,
-		server: localServer,
-		closer: func() { _ = os.RemoveAll(dir); localServer.Close() },
-	}, nil
+
+	h := &harness{dir: dir, urlSignKey: "I'm a secret key"}
+	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
+	h.server = localServer
+	h.closer = func() { _ = os.RemoveAll(dir); localServer.Close() }
+
+	return h, nil
+}
+
+func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
+	// fmt.Fprintf(w, "hello world")
+	su, err := url.Parse(h.server.URL)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	urlSigner := NewURLSignerHMAC(su.Scheme, su.Host, su.Path, h.urlSignKey)
+
+	bucket, err := OpenBucket(h.dir, &Options{})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	objKey, ok := urlSigner.KeyFromURL(r.Context(), r.RequestURI)
+	fmt.Println(r.RequestURI)
+	fmt.Println(r.Host)
+	fmt.Println("here")
+	if !ok {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+	blobject, err := bucket.ReadAll(r.Context(), objKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Write(blobject)
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -64,7 +95,7 @@ func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
 		return nil, err
 	}
 	opts := &Options{
-		URLSigner: NewURLSignerHMAC(u.Scheme, u.Host, u.Path, "I'm a secret key"),
+		URLSigner: NewURLSignerHMAC(u.Scheme, u.Host, u.Path, h.urlSignKey),
 	}
 	return openBucket(h.dir, opts)
 }

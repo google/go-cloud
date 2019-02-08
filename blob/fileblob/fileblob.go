@@ -626,15 +626,16 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
 }
 
+// maybe don't need this
 // VerifySignedURL takes a string and returns
 // (theObjectKey, true) if it's a valid signed URL
 // or (nil, false) if not valid.
-func (b *bucket) VerifySignedURL(ctx context.Context, su string) (string, bool) {
-	if b.opts.URLSigner == nil {
-		return "", false
-	}
-	return b.opts.URLSigner.KeyFromURL(ctx, su)
-}
+// func (b *bucket) VerifySignedURL(ctx context.Context, su string) (string, bool) {
+// 	if b.opts.URLSigner == nil {
+// 		return "", false
+// 	}
+// 	return b.opts.URLSigner.KeyFromURL(ctx, su)
+// }
 
 // URLSigner defines an interface for
 // creating and verifying a signed URL for objects
@@ -725,6 +726,8 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bo
 	sURL.RawQuery = q.Encode()
 
 	if !h.checkMAC(sURL.String(), sig) {
+		fmt.Println(sURL.String())
+		fmt.Println("here3")
 		return "", false
 	}
 	return q.Get("obj"), true
