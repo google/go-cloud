@@ -38,7 +38,7 @@ repo_root="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." >/dev/null 2>&1 && pwd
 for path in "." "internal/contributebot" "samples/appengine"; do
   cd "$repo_root/$path"
   go mod download
-  # We need to install goveralls because Travis uses it for tests and will look
+  # We need to get goveralls because Travis uses it for tests and will look
   # for it in the module proxy.
-  go install github.com/mattn/goveralls
+  go get github.com/mattn/goveralls
 done
