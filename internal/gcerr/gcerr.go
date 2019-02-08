@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 
 	"gocloud.dev/internal/retry"
 	"golang.org/x/xerrors"
@@ -175,4 +176,25 @@ func GRPCCode(err error) ErrorCode {
 	default:
 		return Unknown
 	}
+}
+
+// ErrorAs is a helper for the ErrorAs method of an API's concrete type.
+// It performs some initial nil checks, and does a single level of unwrapping
+// when err is a *gcerr.Error. Then it calls its errorAs argument, which should
+// be a driver implementation of ErrorAs.
+func ErrorAs(err error, target interface{}, errorAs func(error, interface{}) bool) bool {
+	if err == nil {
+		return false
+	}
+	if target == nil {
+		panic("ErrorAs target cannot be nil")
+	}
+	val := reflect.ValueOf(target)
+	if val.Type().Kind() != reflect.Ptr || val.IsNil() {
+		panic("ErrorAs target must be a non-nil pointer")
+	}
+	if e, ok := err.(*Error); ok {
+		err = e.Unwrap()
+	}
+	return errorAs(err, target)
 }
