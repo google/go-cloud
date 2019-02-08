@@ -78,7 +78,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		for k, v := range dm.Metadata {
 			// See the package comments for more details on escaping of metadata
 			// keys & values.
-			k = escape.Escape(k, func(runes []rune, i int) bool {
+			k = escape.HexEscape(k, func(runes []rune, i int) bool {
 				c := runes[i]
 				switch {
 				case escape.IsAlphanumeric(c):
@@ -224,7 +224,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		for k, v := range body.MessageAttributes {
 			// See the package comments for more details on escaping of metadata
 			// keys & values.
-			attrs[escape.Unescape(k)] = escape.URLUnescape(v.Value)
+			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v.Value)
 		}
 		m2 := &driver.Message{
 			Body:     []byte(body.Message),

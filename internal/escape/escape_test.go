@@ -18,7 +18,7 @@ import (
 	"testing"
 )
 
-func TestEscape(t *testing.T) {
+func TestHexEscape(t *testing.T) {
 	always := func([]rune, int) bool { return true }
 
 	for _, tc := range []struct {
@@ -56,21 +56,21 @@ func TestEscape(t *testing.T) {
 			want:        "__0x263a____0x263a__",
 		},
 	} {
-		got := Escape(tc.s, tc.should)
+		got := HexEscape(tc.s, tc.should)
 		if got != tc.want {
 			t.Errorf("%s: got escaped %q want %q", tc.description, got, tc.want)
 		}
-		got = Unescape(got)
+		got = HexUnescape(got)
 		if got != tc.s {
 			t.Errorf("%s: got unescaped %q want %q", tc.description, got, tc.s)
 		}
 	}
 }
 
-func TestEscapeUnescapeWeirdStrings(t *testing.T) {
+func TestHexEscapeUnescapeWeirdStrings(t *testing.T) {
 	for name, s := range WeirdStrings {
-		escaped := Escape(s, func(r []rune, i int) bool { return !IsAlphanumeric(r[i]) })
-		unescaped := Unescape(escaped)
+		escaped := HexEscape(s, func(r []rune, i int) bool { return !IsAlphanumeric(r[i]) })
+		unescaped := HexUnescape(escaped)
 		if unescaped != s {
 			t.Errorf("%s: got unescaped %q want %q", name, unescaped, s)
 		}
@@ -91,7 +91,7 @@ func TestUnescapeOnInvalid(t *testing.T) {
 		"__0xag__",       // invalid hex digit
 		"__0x8fffffff__", // out of int32 range
 	} {
-		got := Unescape(s)
+		got := HexUnescape(s)
 		if got != s {
 			t.Errorf("%s: got %q want %q", s, got, s)
 		}
