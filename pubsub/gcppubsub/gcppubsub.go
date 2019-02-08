@@ -18,8 +18,9 @@
 //
 // Escaping
 //
-// Go CDK supports all UTF-8 strings; some strings are escaped (during writes)
-// and unescaped (during reads) to ensure compatibility with the provider:
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are required for gcppubsub:
 //  - Metadata keys: No escaping required.
 //  - Metadata values: No escaping required.
 //
