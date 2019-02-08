@@ -69,7 +69,7 @@ func TestHexEscape(t *testing.T) {
 
 func TestHexEscapeUnescapeWeirdStrings(t *testing.T) {
 	for name, s := range WeirdStrings {
-		escaped := HexEscape(s, func(r []rune, i int) bool { return !IsAlphanumeric(r[i]) })
+		escaped := HexEscape(s, func(r []rune, i int) bool { return !IsASCIIAlphanumeric(r[i]) })
 		unescaped := HexUnescape(escaped)
 		if unescaped != s {
 			t.Errorf("%s: got unescaped %q want %q", name, unescaped, s)

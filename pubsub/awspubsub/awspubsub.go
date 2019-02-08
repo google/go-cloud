@@ -81,7 +81,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 			k = escape.HexEscape(k, func(runes []rune, i int) bool {
 				c := runes[i]
 				switch {
-				case escape.IsAlphanumeric(c):
+				case escape.IsASCIIAlphanumeric(c):
 					return false
 				case c == '_' || c == '-':
 					return false
