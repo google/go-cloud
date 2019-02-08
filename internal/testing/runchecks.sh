@@ -40,8 +40,19 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 else
   go test -race ./... || result=1
   # No need to run wire checks or other module tests on OSs other than linux.
-  exit $result
+  #exit $result
 fi
+
+# Ensure that the code has no extra dependencies (including transitive
+# dependencies) that we're not already aware of by comparing with
+# ./internal/testing/alldeps
+#
+# Whenever a new valid dependency is added to the project, the PR should include
+# an updated ./internal/testing/alldeps
+# It's created by running "go list -deps ./... | sort"
+go list -deps ./... | sort | diff ./internal/testing/alldeps - || {
+  echo "FAIL: dependencies changed; compare go list -deps ./... with alldeps" && result=1
+}
 
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
