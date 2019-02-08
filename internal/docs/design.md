@@ -559,7 +559,7 @@ provider can't handle. We enforce driver compliance with conformance tests.
 
 We try to use URL encoding as the escaping mechanism where possible; however,
 sometimes it is not and we'll use custom escaping. As an example, a driver for a
-provider that only allows underscores and ASCII characters might escape the
+provider that only allows underscores and ASCII alphanumeric characters might escape the
 string `foo.bar` to `foo__0x2e__bar` (URL escaping won't work because `%` isn't
 allowed).
 
@@ -598,7 +598,7 @@ Sample code for the helper for escaping strings:
 package escape
 
 // Escape returns s, with all runes for which shouldEscape returns true
-// escaped to "__0xXXX__", where XXX is the hex representation of the rune
+// escaped to "__0xXXXX__", where XXXX is the hex representation of the rune
 // value. For example, " " would escape to "__0x20__".
 //
 // Non-UTF-8 strings will have their non-UTF-8 characters escaped to
