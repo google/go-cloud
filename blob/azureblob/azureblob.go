@@ -442,7 +442,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	for k, v := range azureMD {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
-		md[escape.Unescape(k)] = escape.URLUnescape(v)
+		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
 	return driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
@@ -594,7 +594,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	for k, v := range opts.Metadata {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
-		e := escape.Escape(k, func(runes []rune, i int) bool {
+		e := escape.HexEscape(k, func(runes []rune, i int) bool {
 			c := runes[i]
 			switch {
 			case i == 0 && c >= '0' && c <= '9':

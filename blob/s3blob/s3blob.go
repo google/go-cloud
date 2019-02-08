@@ -378,7 +378,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	for k, v := range resp.Metadata {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
-		md[escape.Unescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
+		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
 	return driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
@@ -489,7 +489,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	for k, v := range opts.Metadata {
 		// See the package comments for more details on escaping of metadata
 		// keys & values.
-		k = escape.Escape(url.PathEscape(k), func(runes []rune, i int) bool {
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
 			c := runes[i]
 			return c == '@' || c == ':' || c == '='
 		})
