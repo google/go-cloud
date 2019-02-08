@@ -15,15 +15,19 @@
 // Package awspubsub provides an implementation of pubsub that uses AWS
 // SNS (Simple Notification Service) and SQS (Simple Queueing Service).
 //
-// It exposes the following types for As:
-// Topic: *sns.SNS
-// Subscription: *sqs.SQS
-// Error: awserror.Error
+// As
+//
+// awspubsub exposes the following types for As:
+//  - Topic: *sns.SNS
+//  - Subscription: *sqs.SQS
+//  - Message: *sqs.Message
+//  - Error: awserror.Error
 package awspubsub
 
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sns"
@@ -100,69 +104,56 @@ func (t *topic) ErrorAs(err error, target interface{}) bool {
 
 // ErrorCode implements driver.Topic.ErrorCode.
 func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
+}
+
+func errorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
 		return gcerr.Unknown
 	}
-	switch ae.Code() {
-
-	case sns.ErrCodeAuthorizationErrorException:
-		return gcerr.AuthorizationError
-
-	case sns.ErrCodeEndpointDisabledException:
-		return gcerr.Unknown
-
-	case sns.ErrCodeFilterPolicyLimitExceededException:
-		return gcerr.ResourceExhausted
-
-	case sns.ErrCodeInternalErrorException:
-		return gcerr.Internal
-
-	case sns.ErrCodeInvalidParameterException:
-		return gcerr.InvalidArgument
-
-	case sns.ErrCodeInvalidParameterValueException:
-		return gcerr.InvalidArgument
-
-	case sns.ErrCodeInvalidSecurityException:
-		return gcerr.InvalidCredentials
-
-	case sns.ErrCodeKMSAccessDeniedException:
-		return gcerr.AuthorizationError
-
-	case sns.ErrCodeKMSDisabledException:
-		return gcerr.FailedPrecondition
-
-	case sns.ErrCodeKMSInvalidStateException:
-		return gcerr.FailedPrecondition
-
-	case sns.ErrCodeKMSNotFoundException:
-		return gcerr.NotFound
-
-	case sns.ErrCodeKMSOptInRequired:
-		return gcerr.FailedPrecondition
-
-	case sns.ErrCodeKMSThrottlingException:
-		return gcerr.Throttled
-
-	case sns.ErrCodeNotFoundException:
-		return gcerr.NotFound
-
-	case sns.ErrCodePlatformApplicationDisabledException:
-		return gcerr.Unknown
-
-	case sns.ErrCodeSubscriptionLimitExceededException:
-		return gcerr.ResourceExhausted
-
-	case sns.ErrCodeThrottledException:
-		return gcerr.Throttled
-
-	case sns.ErrCodeTopicLimitExceededException:
-		return gcerr.ResourceExhausted
-
-	default:
+	ec, ok := errorCodeMap[ae.Code()]
+	if !ok {
 		return gcerr.Unknown
 	}
+	return ec
+}
+
+var errorCodeMap = map[string]gcerrors.ErrorCode{
+	sns.ErrCodeAuthorizationErrorException:          gcerr.PermissionDenied,
+	sns.ErrCodeKMSAccessDeniedException:             gcerr.PermissionDenied,
+	sns.ErrCodeKMSDisabledException:                 gcerr.FailedPrecondition,
+	sns.ErrCodeKMSInvalidStateException:             gcerr.FailedPrecondition,
+	sns.ErrCodeKMSOptInRequired:                     gcerr.FailedPrecondition,
+	sqs.ErrCodeMessageNotInflight:                   gcerr.FailedPrecondition,
+	sqs.ErrCodePurgeQueueInProgress:                 gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDeletedRecently:                 gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueDoesNotExist:                    gcerr.FailedPrecondition,
+	sqs.ErrCodeQueueNameExists:                      gcerr.FailedPrecondition,
+	sns.ErrCodeInternalErrorException:               gcerr.Internal,
+	sns.ErrCodeInvalidParameterException:            gcerr.InvalidArgument,
+	sns.ErrCodeInvalidParameterValueException:       gcerr.InvalidArgument,
+	sqs.ErrCodeBatchEntryIdsNotDistinct:             gcerr.InvalidArgument,
+	sqs.ErrCodeBatchRequestTooLong:                  gcerr.InvalidArgument,
+	sqs.ErrCodeEmptyBatchRequest:                    gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidAttributeName:                 gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidBatchEntryId:                  gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidIdFormat:                      gcerr.InvalidArgument,
+	sqs.ErrCodeInvalidMessageContents:               gcerr.InvalidArgument,
+	sqs.ErrCodeReceiptHandleIsInvalid:               gcerr.InvalidArgument,
+	sqs.ErrCodeTooManyEntriesInBatchRequest:         gcerr.InvalidArgument,
+	sqs.ErrCodeUnsupportedOperation:                 gcerr.InvalidArgument,
+	sns.ErrCodeInvalidSecurityException:             gcerr.PermissionDenied,
+	sns.ErrCodeKMSNotFoundException:                 gcerr.NotFound,
+	sns.ErrCodeNotFoundException:                    gcerr.NotFound,
+	sns.ErrCodeFilterPolicyLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeSubscriptionLimitExceededException:   gcerr.ResourceExhausted,
+	sns.ErrCodeTopicLimitExceededException:          gcerr.ResourceExhausted,
+	sqs.ErrCodeOverLimit:                            gcerr.ResourceExhausted,
+	sns.ErrCodeKMSThrottlingException:               gcerr.ResourceExhausted,
+	sns.ErrCodeThrottledException:                   gcerr.ResourceExhausted,
+	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
+	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 }
 
 type subscription struct {
@@ -240,7 +231,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
-func (s *subscription) IsRetryable(error) bool {
+func (*subscription) IsRetryable(error) bool {
 	// The client handles retries.
 	return false
 }
@@ -261,63 +252,8 @@ func (s *subscription) ErrorAs(err error, target interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode.
-func (t *subscription) ErrorCode(err error) gcerrors.ErrorCode {
-	ae, ok := err.(awserr.Error)
-	if !ok {
-		return gcerr.Unknown
-	}
-	switch ae.Code() {
-	case sqs.ErrCodeBatchEntryIdsNotDistinct:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeBatchRequestTooLong:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeEmptyBatchRequest:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeInvalidAttributeName:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeInvalidBatchEntryId:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeInvalidIdFormat:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeInvalidMessageContents:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeMessageNotInflight:
-		return gcerr.FailedPrecondition
-
-	case sqs.ErrCodeOverLimit:
-		return gcerr.ResourceExhausted
-
-	case sqs.ErrCodePurgeQueueInProgress:
-		return gcerr.FailedPrecondition
-
-	case sqs.ErrCodeQueueDeletedRecently:
-		return gcerr.FailedPrecondition
-
-	case sqs.ErrCodeQueueDoesNotExist:
-		return gcerr.FailedPrecondition
-
-	case sqs.ErrCodeQueueNameExists:
-		return gcerr.FailedPrecondition
-
-	case sqs.ErrCodeReceiptHandleIsInvalid:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeTooManyEntriesInBatchRequest:
-		return gcerr.InvalidArgument
-
-	case sqs.ErrCodeUnsupportedOperation:
-		return gcerr.InvalidArgument
-
-	default:
-		return gcerr.Unknown
-	}
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	return errorCode(err)
 }
 
 func errorAs(err error, target interface{}) bool {
