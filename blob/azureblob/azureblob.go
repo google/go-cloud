@@ -52,7 +52,8 @@
 // (during reads). The following escapes are required for azureblob:
 //  - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
 //    Azure only allows C# identifiers as metadata keys. Therefore, characters
-//    other than "a-zA-z0-9_" are escaped using "__0x<hex>__".
+//    other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
+//    characters "[0-9]" are escaped when they start the string.
 //    URL encoding would not work since "%" is not valid.
 //  - Metadata values: Escaped using URL encoding.
 //
@@ -596,6 +597,8 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		e := escape.Escape(k, func(runes []rune, i int) bool {
 			c := runes[i]
 			switch {
+			case i == 0 && c >= '0' && c <= '9':
+				return true
 			case escape.IsASCIIAlphanumeric(c):
 				return false
 			case c == '_':

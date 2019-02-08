@@ -196,6 +196,7 @@ var WeirdStrings = map[string]string{
 	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
 	"quote":               "foo\"bar\"baz",
 	"spaces":              "foo bar baz",
+	"startwithdigit":      "12345",
 	"unicode":             strings.Repeat("☺", 3),
 	// The ASCII characters 0-128, split up to avoid the possibly-escaped
 	// versions from getting too long.

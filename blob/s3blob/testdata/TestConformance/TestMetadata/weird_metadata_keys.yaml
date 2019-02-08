@@ -16,7 +16,7 @@ interactions:
       X-Amz-Content-Sha256:
       - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
       X-Amz-Date:
-      - 20190207T201922Z
+      - 20190208T175648Z
       X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f:
       - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
       X-Amz-Meta-%20%21%22%23$%25&%27%28%29%2a+%2c-.%2f__0x3a__%3b%3c__0x3d__%3e%3f:
@@ -33,14 +33,16 @@ interactions:
       - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Amz-Meta-__0x40__%5b%5c%5d%5e_:
       - '@%5B%5C%5D%5E_'
-      X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz:
-      - foo%2F%2Fbar%2F%2F%2Fbaz
+      X-Amz-Meta-12345:
+      - "12345"
       X-Amz-Meta-Foo%5cbar%5cbaz:
       - foo%5Cbar%5Cbaz
       X-Amz-Meta-Foo%20bar%20baz:
       - foo%20bar%20baz
       X-Amz-Meta-Foo%22bar%22baz:
       - foo%22bar%22baz
+      X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz:
+      - foo%2F%2Fbar%2F%2F%2Fbaz
       X-Amz-Meta-Foo%2fbar%2fbaz:
       - foo%2Fbar%2Fbaz
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-metadata
@@ -51,15 +53,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - bgja1hp7Se6C3fqzTo2jNNQlOWfDdg2QEMMzw8ewalqZ1wSwaEYGMNKnx/sIO2DRIb+iFX4J/sU=
+      - qDUhP/vZukDDnhyHBtiitaGQYKwEscBr2c5R9P5s162lktolvNwsVR4jG5RbW3HUGwIR0GygUPY=
       X-Amz-Request-Id:
-      - B8E8F3B8BC85EF1E
+      - 35A6FA532816E0DB
     status: 200 OK
     code: 200
     duration: ""
@@ -72,7 +74,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190207T201923Z
+      - 20190208T175649Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-metadata
     method: HEAD
   response:
@@ -85,15 +87,15 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - XBHQa2Bd6blTWIoKhC8KAnwm+wxQUtlTt8nqhMIWetl5CG4EgcZoGObgmjKXEHziaV9WWcjH3KM=
+      - hx2DCglmuNpyVzfA6eVkKjYeoGmjzylE8jnEPMx5jXqlXYyTs0fU9h+r7jA9Ex4BXPRky2AOQtY=
       X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f:
       - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
       X-Amz-Meta-%20%21%22%23$%25&%27%28%29%2a+%2c-.%2f__0x3a__%3b%3c__0x3d__%3e%3f:
@@ -110,6 +112,10 @@ interactions:
       - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Amz-Meta-__0x40__%5b%5c%5d%5e_:
       - '@%5B%5C%5D%5E_'
+      X-Amz-Meta-12345:
+      - "12345"
+      X-Amz-Meta-Foo%5cbar%5cbaz:
+      - foo%5Cbar%5Cbaz
       X-Amz-Meta-Foo%20bar%20baz:
       - foo%20bar%20baz
       X-Amz-Meta-Foo%22bar%22baz:
@@ -118,10 +124,8 @@ interactions:
       - foo%2F%2Fbar%2F%2F%2Fbaz
       X-Amz-Meta-Foo%2fbar%2fbaz:
       - foo%2Fbar%2Fbaz
-      X-Amz-Meta-Foo%5cbar%5cbaz:
-      - foo%5Cbar%5Cbaz
       X-Amz-Request-Id:
-      - 6B0DCB74B2660A22
+      - 4316C0C0DF4D628B
     status: 200 OK
     code: 200
     duration: ""
@@ -134,7 +138,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190207T201923Z
+      - 20190208T175649Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-metadata
     method: HEAD
   response:
@@ -147,15 +151,15 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - lB+s8KbIaMhikpGkixzP+MMtehu9k5fyleojDQ/E2wGqoWWjc6EwAe4ArCawjj/TnRT9069kSlU=
+      - usLd/worJLPw59blRFAqhM6xl/vJ+zjfImV5EC0qd4bGLg3mrfdcU+YUGflzhZ1C0TQoRakhSTo=
       X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f:
       - '%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F'
       X-Amz-Meta-%20%21%22%23$%25&%27%28%29%2a+%2c-.%2f__0x3a__%3b%3c__0x3d__%3e%3f:
@@ -172,6 +176,8 @@ interactions:
       - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Amz-Meta-__0x40__%5b%5c%5d%5e_:
       - '@%5B%5C%5D%5E_'
+      X-Amz-Meta-12345:
+      - "12345"
       X-Amz-Meta-Foo%20bar%20baz:
       - foo%20bar%20baz
       X-Amz-Meta-Foo%22bar%22baz:
@@ -183,7 +189,7 @@ interactions:
       X-Amz-Meta-Foo%5cbar%5cbaz:
       - foo%5Cbar%5Cbaz
       X-Amz-Request-Id:
-      - 528C4FD192FDF0EB
+      - 15D52FC7D61FF5A0
     status: 200 OK
     code: 200
     duration: ""
@@ -196,20 +202,20 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190207T201923Z
+      - 20190208T175649Z
     url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-metadata
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 07 Feb 2019 20:19:24 GMT
+      - Fri, 08 Feb 2019 17:56:50 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - Gfs+SyKNuliWnKGyoIr1twaT1ePHMrLRqJR9jR7k13J8o7nP3gEQjVqqfrt6c5HvZHR6ssyMAIo=
+      - 2tj0OEq6r4Wnc9CpjnfkT/3blk+38j1FbYRmUHuBczfc6iJ3eGwAlduQkUOIg3UptlKwlXi00CA=
       X-Amz-Request-Id:
-      - A58D9895EC037DD7
+      - 8E4907A7769D2873
     status: 204 No Content
     code: 204
     duration: ""

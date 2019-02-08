@@ -33,24 +33,26 @@ interactions:
       : - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz:
       - ..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz
+      X-Ms-Meta-__0x31__2345:
+      - "12345"
       X-Ms-Meta-__0x40____0x5b____0x5c____0x5d____0x5e___:
       - '@%5B%5C%5D%5E_'
       X-Ms-Meta-__0x60____0x7b____0x7c____0x7d____0x7e____0x7f__:
       - '%60%7B%7C%7D~%7F'
+      X-Ms-Meta-Foo__0x20__bar__0x20__baz:
+      - foo%20bar%20baz
+      X-Ms-Meta-Foo__0x22__bar__0x22__baz:
+      - foo%22bar%22baz
       X-Ms-Meta-Foo__0x2f____0x2f__bar__0x2f____0x2f____0x2f__baz:
       - foo%2F%2Fbar%2F%2F%2Fbaz
       X-Ms-Meta-Foo__0x2f__bar__0x2f__baz:
       - foo%2Fbar%2Fbaz
       X-Ms-Meta-Foo__0x5c__bar__0x5c__baz:
       - foo%5Cbar%5Cbaz
-      X-Ms-Meta-Foo__0x20__bar__0x20__baz:
-      - foo%20bar%20baz
-      X-Ms-Meta-Foo__0x22__bar__0x22__baz:
-      - foo%22bar%22baz
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: PUT
   response:
@@ -59,15 +61,15 @@ interactions:
       Content-Md5:
       - XUFAKrxLKna5cZ2REBfFkg==
       Date:
-      - Thu, 07 Feb 2019 20:19:27 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       Etag:
-      - '"0x8D68D398FCEB078"'
+      - '"0x8D68DEEE6962E71"'
       Last-Modified:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 26a5e796-c01e-0050-0622-bf8abc000000
+      - 35180206-301e-012c-11d7-bf51dc000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -84,7 +86,7 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:33 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: HEAD
   response:
@@ -101,11 +103,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Feb 2019 20:19:27 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       Etag:
-      - '"0x8D68D398FCEB078"'
+      - '"0x8D68DEEE6962E71"'
       Last-Modified:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Access-Tier:
@@ -115,7 +117,7 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
@@ -132,6 +134,8 @@ interactions:
       : - ..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C
       X-Ms-Meta-__0x2e____0x2e____0x5c__foo__0x5c____0x5c__bar__0x5c____0x5c____0x5c__baz:
       - ..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz
+      X-Ms-Meta-__0x31__2345:
+      - "12345"
       X-Ms-Meta-__0x40____0x5b____0x5c____0x5d____0x5e___:
       - '@%5B%5C%5D%5E_'
       X-Ms-Meta-__0x60____0x7b____0x7c____0x7d____0x7e____0x7f__:
@@ -147,7 +151,7 @@ interactions:
       X-Ms-Meta-Foo__0x22__bar__0x22__baz:
       - foo%22bar%22baz
       X-Ms-Request-Id:
-      - 26a5e7a9-c01e-0050-1522-bf8abc000000
+      - 35180219-301e-012c-1fd7-bf51dc000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -166,20 +170,20 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Thu, 07 Feb 2019 20:19:28 GMT
+      - Fri, 08 Feb 2019 17:57:33 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-metadata
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 07 Feb 2019 20:19:27 GMT
+      - Fri, 08 Feb 2019 17:57:32 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 26a5e7bd-c01e-0050-2422-bf8abc000000
+      - 35180223-301e-012c-26d7-bf51dc000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted
