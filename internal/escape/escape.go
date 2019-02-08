@@ -35,7 +35,7 @@ func IsASCIIAlphanumeric(r rune) bool {
 	return false
 }
 
-// Escape returns s, with all runes for which shouldEscape returns true
+// HexEscape returns s, with all runes for which shouldEscape returns true
 // escaped to "__0xXXX__", where XXX is the hex representation of the rune
 // value. For example, " " would escape to "__0x20__".
 //
@@ -50,7 +50,7 @@ func IsASCIIAlphanumeric(r rune) bool {
 // We pass a slice of runes instead of the string or a slice of bytes
 // because some decisions will be made on a rune basis (e.g., encode
 // all non-ASCII runes).
-func Escape(s string, shouldEscape func(s []rune, i int) bool) string {
+func HexEscape(s string, shouldEscape func(s []rune, i int) bool) string {
 	// Do a first pass to see which runes (if any) need escaping.
 	runes := []rune(s)
 	var toEscape []int
@@ -127,8 +127,8 @@ func unescape(r []rune, i int) (bool, rune, int) {
 	return true, rune(retval), i
 }
 
-// Unescape reverses Escape.
-func Unescape(s string) string {
+// HexUnescape reverses HexEscape.
+func HexUnescape(s string) string {
 	var unescaped []rune
 	runes := []rune(s)
 	for i := 0; i < len(runes); i++ {
