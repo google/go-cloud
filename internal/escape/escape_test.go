@@ -77,7 +77,7 @@ func TestHexEscapeUnescapeWeirdStrings(t *testing.T) {
 	}
 }
 
-func TestUnescapeOnInvalid(t *testing.T) {
+func TestHexUnescapeOnInvalid(t *testing.T) {
 	// Unescaping of valid escape sequences is tested in TestEscape.
 	// This only tests invalid escape sequences, so Unescape is expected
 	// to do nothing.
