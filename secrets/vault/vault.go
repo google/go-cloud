@@ -15,6 +15,10 @@
 // Package vault provides a secrets implementation using the Transit Secrets
 // Engine of Vault by Hashicorp.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// vault does not support any types for As.
 package vault
 
 import (
@@ -94,6 +98,11 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return []byte(secret.Data["ciphertext"].(string)), nil
+}
+
+// ErrorAs implements driver.Keeper.ErrorAs.
+func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	return false
 }
 
 // ErrorCode implements driver.ErrorCode.

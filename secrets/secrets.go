@@ -57,6 +57,7 @@ package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
+	"reflect"
 
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
@@ -97,8 +98,6 @@ var (
 )
 
 // Encrypt encrypts the plaintext and returns the cipher message.
-
-// Encrypt encrypts the plaintext and returns the cipher message.
 func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []byte, err error) {
 	ctx = k.tracer.Start(ctx, "Encrypt")
 	defer func() { k.tracer.End(ctx, err) }()
@@ -120,6 +119,24 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 		return nil, wrapError(k, err)
 	}
 	return b, nil
+}
+
+// ErrorAs converts i to provider-specific error types when you want to directly
+// handle the raw error types returned by the provider. This means that your
+// will write some provider-specific code to handle the error, so use with care.
+//
+// See the documentation for the subpackage used to instantiate Keeper to see
+// which error type(s) are supported.
+//
+// ErrorAs panics if i is nil or not a pointer.
+func (k *Keeper) ErrorAs(err error, i interface{}) bool {
+	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
+		panic("secrets: ErrorAs i must be a non-nil pointer")
+	}
+	if e, ok := err.(*gcerr.Error); ok {
+		return k.k.ErrorAs(e.Unwrap(), i)
+	}
+	return k.k.ErrorAs(err, i)
 }
 
 func wrapError(k *Keeper, err error) error {

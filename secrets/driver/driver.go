@@ -36,6 +36,14 @@ type Keeper interface {
 	// Encrypt encrypts the plaintext using the key, and returns the ciphertext.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 
+	// ErrorAs allows providers to expose provider-specific types for returned
+	// errors.
+	//
+	// See
+	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
+	// for more background.
+	ErrorAs(err error, i interface{}) bool
+
 	// ErrorCode should return a code that describes the error, which was returned
 	// by one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
