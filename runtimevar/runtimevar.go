@@ -135,7 +135,7 @@ type Variable struct {
 // New is intended for use by provider implementations.
 var New = newVar
 
-// newVar  creates a new *Variable based on a specific driver implementation.
+// newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	return &Variable{
 		watcher:  w,
@@ -152,8 +152,9 @@ func newVar(w driver.Watcher) *Variable {
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
 //
-// Watch is not goroutine-safe; typical use is to call it in a single
-// goroutine in a loop.
+// Watch should not be called on the same variable from multiple goroutines
+// concurrently. The typical use case is to call it in a single goroutine in a
+// loop.
 //
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
