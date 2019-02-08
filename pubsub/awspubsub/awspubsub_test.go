@@ -41,8 +41,8 @@ import (
 )
 
 const (
-	region = "us-east-2"
-	benchmarkTopicARN = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
+	region                   = "us-east-2"
+	benchmarkTopicARN        = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
 	benchmarkSubscriptionURL = "https://sqs.us-east-2.amazonaws.com/221420415498/benchmark-queue"
 )
 
@@ -384,9 +384,9 @@ func sanitize(testName string) string {
 func BenchmarkAwsPubSub(b *testing.B) {
 	ctx := context.Background()
 	sess, err := session.NewSession(&aws.Config{
-		HTTPClient:  &http.Client{},
-		Region:      aws.String(region),
-		MaxRetries:  aws.Int(0),
+		HTTPClient: &http.Client{},
+		Region:     aws.String(region),
+		MaxRetries: aws.Int(0),
 	})
 	if err != nil {
 		b.Fatal(err)
