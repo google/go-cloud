@@ -12,12 +12,12 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64) S3Manager
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 355c18667d5796dc2b15043b99f68331b6af560f4f9facb5c4719ba9d09147c6
       X-Amz-Date:
-      - 20180817T180630Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+      - 20190209T000351Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: PUT
   response:
     body: ""
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 17 Aug 2018 18:06:31 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - epVDQmXyjrW2qltKqUH8jjnCCPi6FtMJCbkQC81lsb4s+7lPm2K+zB1y1jT6yWCCBriOWIBKWII=
+      - BrJlaHvQ/+7CHmdi8CzuDHuW5FSkc2ruKHXUvMC1gMYDySh63zgY3VIBinkh8DSTx5jIwV41Bqo=
       X-Amz-Request-Id:
-      - C6F238AA56617D17
+      - C3B32C8D64307328
     status: 200 OK
     code: 200
     duration: ""
@@ -42,12 +42,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T180630Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+      - 20190209T000351Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: GET
   response:
     body: abcdefghijklmnopqurstuvwxyz
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Fri, 17 Aug 2018 18:06:31 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Fri, 17 Aug 2018 18:06:31 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - qHpT+rUOHZaqpEiT8wspZNPrvCggkB1x38HYPNcowl81T2pqQEZ7bKHAsAdTxuN5Re0ojPRAxTc=
+      - YWr6YRHyQODnanIQKDjnZDN1E3WoYfF6uHfbDHXGr+jG+RCiuslIjsjjsT2DdEr4YXEg69ne86E=
       X-Amz-Request-Id:
-      - 84826BD4E78B4EB2
+      - 7B44070B3DC2F3E0
     status: 200 OK
     code: 200
     duration: ""
@@ -78,12 +78,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T180631Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+      - 20190209T000351Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: HEAD
   response:
     body: ""
@@ -95,17 +95,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Fri, 17 Aug 2018 18:06:32 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Fri, 17 Aug 2018 18:06:31 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - aiUY1qIbRADRBvusc2E34YK9KosqwDxkLVCnJm04f1WpDD+6sysp4vnanu8peocx+1LO8A2OpKo=
+      - 8PbTgl/CVDAX592ec7ibsANc7iWztaoMIWco+6XPUy/uCuoXjxg98R11PJVIyclRSsv7glKU838=
       X-Amz-Request-Id:
-      - 340C0410EC4857FB
+      - D00935704F4C9451
     status: 200 OK
     code: 200
     duration: ""
@@ -114,24 +114,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.13.20 (devel +b8669ef1ce; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20180817T180631Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-reading
+      - 20190209T000351Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Fri, 17 Aug 2018 18:06:32 GMT
+      - Sat, 09 Feb 2019 00:03:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - pywFUClzuGIDeI/dVcpuH7oinwoPp2il8xJsMmA1W1uLfhteIJfq9EKtgTab8FayUReaDEC3gh8=
+      - Vr2e9o9JRnVVMUUj2Vo9vPGJZ/fUoTg/j5zZvoe9iSKA2vNeLJY2BMreZv6iPHT4dAiiMTQF3eY=
       X-Amz-Request-Id:
-      - CAE92BFF4C14A698
+      - D795DDBAD21741FB
     status: 204 No Content
     code: 204
     duration: ""
