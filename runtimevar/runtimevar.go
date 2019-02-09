@@ -344,18 +344,10 @@ func wrapError(w driver.Watcher, err error) error {
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 // See Snapshot.As for more details.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
-	if err == nil {
-		return false
-	}
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("runtimevar: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return c.watcher.ErrorAs(e.Unwrap(), i)
-	}
-	return c.watcher.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
 }
 
 // Decode is a function type for unmarshaling/decoding a slice of bytes into

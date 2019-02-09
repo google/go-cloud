@@ -96,7 +96,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -498,15 +497,10 @@ func (b *Bucket) As(i interface{}) bool {
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("blob: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return b.b.ErrorAs(e.Unwrap(), i)
-	}
-	return b.b.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
 
 // ReadAll is a shortcut for creating a Reader via NewReader with nil

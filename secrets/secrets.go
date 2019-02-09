@@ -57,7 +57,6 @@ package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
-	"reflect"
 
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
@@ -129,14 +128,9 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 // which error type(s) are supported.
 //
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 func (k *Keeper) ErrorAs(err error, i interface{}) bool {
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("secrets: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return k.k.ErrorAs(e.Unwrap(), i)
-	}
-	return k.k.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, k.k.ErrorAs)
 }
 
 func wrapError(k *Keeper, err error) error {
