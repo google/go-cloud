@@ -12,12 +12,12 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11; linux; amd64) S3Manager
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
       X-Amz-Date:
-      - 20181213T202529Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+      - 20190209T000352Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: PUT
   response:
     body: ""
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 7f/GehYNDch9Knr7Z9yun+qRgQfKye7OXpZsNRbJdtCBKO2Xwsj27usyhRBeN0f2ZYusUtrcS2w=
+      - h9P4zmTM1kZmGsdEPpXO93uumvLH2/UD25JDFzXVg1IICByXYD4jYGlwYRN2q0EN2c5K4Bf2uNA=
       X-Amz-Request-Id:
-      - EBA91935B70AC497
+      - 4901CCB54D9E62B7
     status: 200 OK
     code: 200
     duration: ""
@@ -42,12 +42,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181213T202529Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+      - 20190209T000352Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: GET
   response:
     body: hello world
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 9/yvlURurQsDpsJf+00bIm59oZG2MZCIJZSUtzV9jfYZ0NYdG+gAwveuB2z9VEaaCwcobeT1w80=
+      - GNx5lezxJk78H9nvIjY2equ0V7x5Yo0VtXhii5oLC67QEF7rCDtxtAP1+NBwRvmp1Orf1H3p1io=
       X-Amz-Request-Id:
-      - 6D322341654462B0
+      - 0370BC8E9AE040FA
     status: 200 OK
     code: 200
     duration: ""
@@ -78,12 +78,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181213T202529Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+      - 20190209T000352Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: GET
   response:
     body: hello world
@@ -95,17 +95,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 4OCcF5OVB4ZXQhtq+csGoqX03m73O0MHcQaDpBRT0StuW6BdTpEZ/1d1H50DFzt7m0vMsN/u2KM=
+      - 08vyb5XpTCE43kEJl2MX8Vtp0+ByJMvzW9C7osIqDXH3IqHmBBNaK2L0wd4S2PtuAl+1P+nowcM=
       X-Amz-Request-Id:
-      - 443B356EAE45A9BB
+      - 2EC00A579BDCD143
     status: 200 OK
     code: 200
     duration: ""
@@ -114,12 +114,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181213T202529Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+      - 20190209T000352Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: HEAD
   response:
     body: ""
@@ -131,17 +131,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 8heDcTvkh2ktGNddo3D3pneATmKX5EQxMHWZb+b48/uDsbWKzWGwC3FgDCy/ld5qRKWhIn+bsO4=
+      - tSFUu7/yV10HxfkUrpcQkw1/kjlx6TjZI9BJ1KncVR+HIjYG8zAYG5Bjyf5X+v6+MtxQTyryY3E=
       X-Amz-Request-Id:
-      - 49546A1097520222
+      - 3EA28144F99577D9
     status: 200 OK
     code: 200
     duration: ""
@@ -150,24 +150,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181213T202529Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/blob-for-canceled-write
+      - 20190209T000352Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 13 Dec 2018 20:25:30 GMT
+      - Sat, 09 Feb 2019 00:03:53 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 7TaeZpNhmuC4criJunz0omV48LAYcTDfzIFf4cGeMF0+IbTSVpCzUVpBHjBMTkeiucGU261/E1Q=
+      - rfR6vjsw62V4f/CBWMD97Chv9pQ/04eh82+SSCOob5cE4Tc4+3q4IuuGkzVC5sRPNaflSYreyCc=
       X-Amz-Request-Id:
-      - 66B03CF4BCAAFF1B
+      - D27D6A484765887E
     status: 204 No Content
     code: 204
     duration: ""
