@@ -32,27 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const (
-	// These constants capture values that were used during the last -record.
-	//
-	// If you want to use --record mode,
-	// 1a. Create a topic in your GCP project:
-	//    https://console.cloud.google.com/cloudpubsub, then
-	//    "Enable API", "Create a topic".
-	// 1b. Create a subscription by clicking on the topic, then clicking on
-	//    the icon at the top with a "Create subscription" tooltip.
-	// 1c. Create a second subscription the same way.
-	// 2. Update the topicName constant to your topic name, and the
-	//    subscriptionName0 and subscriptionName1 constants to your
-	//    subscription names.
-	topicName         = "test-topic"
-	subscriptionName0 = "test-subscription-1"
-	subscriptionName1 = "test-subscription-2"
-	projectID         = "go-cloud-test-216917"
-
-	benchmarkTopicName        = "benchmark-topic"
-	benchmarkSubscriptionName = "benchmark-subscription"
-)
+const projectID = "go-cloud-test-216917"
 
 type harness struct {
 	closer    func()
@@ -78,13 +58,17 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
 	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
-	_, err = h.pubClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicPath})
+	return createTopic(ctx, h.pubClient, topicName, topicPath)
+}
+
+func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName, topicPath string) (dt driver.Topic, cleanup func(), err error) {
+	_, err = pubClient.CreateTopic(ctx, &pubsubpb.Topic{Name: topicPath})
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating topic: %v", err)
 	}
-	dt = openTopic(ctx, h.pubClient, projectID, topicName)
+	dt = openTopic(ctx, pubClient, projectID, topicName)
 	cleanup = func() {
-		h.pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
+		pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
 	}
 	return dt, cleanup, nil
 }
@@ -97,17 +81,21 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
 	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
+	return createSubscription(ctx, h.subClient, dt, subName, subPath)
+}
+
+func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt driver.Topic, subName, subPath string) (ds driver.Subscription, cleanup func(), err error) {
 	t := dt.(*topic)
-	_, err = h.subClient.CreateSubscription(ctx, &pubsubpb.Subscription{
+	_, err = subClient.CreateSubscription(ctx, &pubsubpb.Subscription{
 		Name:  subPath,
 		Topic: t.path,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating subscription: %v", err)
 	}
-	ds = openSubscription(ctx, h.subClient, projectID, subName)
+	ds = openSubscription(ctx, subClient, projectID, subName)
 	cleanup = func() {
-		h.subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
+		subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
 	}
 	return ds, cleanup, nil
 }
@@ -139,21 +127,43 @@ func BenchmarkGcpPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	// Connect.
 	conn, cleanup, err := Dial(ctx, gcp.CredentialsTokenSource(creds))
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer cleanup()
+
+	// Make topic.
 	pc, err := PublisherClient(ctx, conn)
 	if err != nil {
 		b.Fatal(err)
 	}
+	topicName := fmt.Sprintf("%s-topic", b.Name())
+	topicPath := fmt.Sprintf("projects/%s/topics/%s", projectID, topicName)
+	dt, cleanup1, err := createTopic(ctx, pc, topicName, topicPath)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup1()
+	topic := pubsub.NewTopic(dt)
+	defer topic.Shutdown(ctx)
+
+	// Make subscription.
 	sc, err := SubscriberClient(ctx, conn)
 	if err != nil {
 		b.Fatal(err)
 	}
-	topic := OpenTopic(ctx, pc, projectID, benchmarkTopicName, nil)
-	sub := OpenSubscription(ctx, sc, projectID, benchmarkSubscriptionName, nil)
+	subName := fmt.Sprintf("%s-subscription", b.Name())
+	subPath := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subName)
+	ds, cleanup2, err := createSubscription(ctx, sc, dt, subName, subPath)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup2()
+	sub := pubsub.NewSubscription(ds, nil)
+
 	drivertest.RunBenchmarks(b, topic, sub)
 }
 
