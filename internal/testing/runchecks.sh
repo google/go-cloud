@@ -49,8 +49,7 @@ fi
 #
 # Whenever a new valid dependency is added to the project, the PR should include
 # an updated ./internal/testing/alldeps
-# It's created by running "go list -deps ./... | sort"
-go list -deps ./... | sort | diff ./internal/testing/alldeps - || {
+go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort | uniq | diff ./internal/testing/alldeps - || {
   echo "FAIL: dependencies changed; compare go list -deps ./... with alldeps" && result=1
 }
 
