@@ -319,7 +319,9 @@ type ListOptions struct {
 	// should be returned.
 	Prefix string
 	// Delimiter sets the delimiter used to define a hierarchical namespace,
-	// like a filesystem with "directories".
+	// like a filesystem with "directories". It is highly recommended that you
+	// use "" or "/" as the Delimiter. Other values should work through this API,
+	// but provider UIs generally assume "/".
 	//
 	// An empty delimiter means that the bucket is treated as a single flat
 	// namespace.
