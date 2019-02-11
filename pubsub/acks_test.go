@@ -349,6 +349,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 // monkey patching of both its ReceiveBatch and SendAcks methods.
 type callbackDriverSub struct {
 	driver.Subscription
+	mu           sync.Mutex
 	receiveBatch func(context.Context) ([]*driver.Message, error)
 	sendAcks     func(context.Context, []driver.AckID) error
 }
@@ -399,15 +400,19 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 
 	// Second call to receiveBatch will wait for the pull from the
 	// receiveHappened channel below, and return a nil slice of messages.
+	ds.mu.Lock()
 	ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
+		ds.mu.Lock()
 		// Subsequent calls to receiveBatch won't wait on receiveHappened,
 		// and will also return nil slices of messages.
 		ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
 			return nil, nil
 		}
+		ds.mu.Unlock()
 		receiveHappened <- struct{}{}
 		return nil, nil
 	}
+	ds.mu.Unlock()
 
 	errc := make(chan error)
 	go func() {
