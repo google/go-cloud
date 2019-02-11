@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
@@ -407,12 +409,10 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 		return nil, nil
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	errc := make(chan error)
 	go func() {
-		// Set err in the test outside this goroutine so it can be checked below.
-		_, err = sub.Receive(ctx)
-		wg.Done()
+		_, err := sub.Receive(ctx)
+		errc <- err
 	}()
 
 	// sub.Receive has to get into the loop and then we need to trigger the unrecoverable error.
@@ -421,10 +421,10 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	// Trigger the unrecoverable error.
 	<-ackHappened
 
-	// Wait for sub.Receive to return and set err so we can check err against serr.
-	wg.Wait()
+	// Wait for sub.Receive to return so we can check the err from sub.Receive against serr.
+	err = <-errc
 
-	ok := gcerrors.Code(err) == gcerrors.Internal && err.(*gcerr.Error).Unwrap() == serr
+	ok := gcerrors.Code(err) == gcerrors.Internal && xerrors.Unwrap(err) == serr
 	if !ok {
 		t.Fatalf("got %v, want %v", err, serr)
 	}
