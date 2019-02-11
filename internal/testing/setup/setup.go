@@ -5,6 +5,8 @@ import (
 	"flag"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -16,7 +18,9 @@ import (
 	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
 
+	"cloud.google.com/go/httpreplay"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
@@ -55,24 +59,74 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.
 	}
 
 	client := &http.Client{Transport: r}
+	sess, err = awsSession(region, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sess, r, done
+}
 
+func awsSession(region string, client *http.Client) (*session.Session, error) {
 	// Provide fake creds if running in replay mode.
 	var creds *awscreds.Credentials
 	if !*Record {
 		creds = awscreds.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
-
-	sess, err = session.NewSession(&aws.Config{
+	return session.NewSession(&aws.Config{
 		HTTPClient:  client,
 		Region:      aws.String(region),
 		Credentials: creds,
 		MaxRetries:  aws.Int(0),
 	})
+}
+
+// NewAWSSession2 is like NewAWSSession, but it uses a diffrent record/replay proxy.
+func NewAWSSession2(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+	if *Record {
+		t.Logf("Recording into golden file %s", path)
+	} else {
+		t.Logf("Replaying from golden file %s", path)
+	}
+	if *Record {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature")
+		rec.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
+		rec.ClearHeaders("X-Amz-Date")
+		c, err := rec.Client(context.Background(), option.WithoutAuthentication())
+		if err != nil {
+			t.Fatal(err)
+		}
+		rt = c.Transport
+		done = func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	} else { // replay
+		rep, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, err := rep.Client(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		rt = c.Transport
+		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
+	}
+	sess, err := awsSession(region, &http.Client{Transport: rt})
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	return sess, r, done
+	return sess, rt, done
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.

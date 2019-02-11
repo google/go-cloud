@@ -1,0 +1,131 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": null,
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "02ccd6067910eab0",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sns.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "88"
+          ],
+          "User-Agent": [
+            "aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPUNyZWF0ZVRvcGljJk5hbWU9VGVzdENvbmZvcm1hbmNlX1Rlc3RDYW5jZWxTZW5kUmVjZWl2ZS10b3BpYy0xJlZlcnNpb249MjAxMC0wMy0zMQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "352"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Mon, 11 Feb 2019 23:29:38 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "cbf7ff04-1e8b-5987-ac90-abd81929b411"
+          ]
+        },
+        "Body": "PENyZWF0ZVRvcGljUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxDcmVhdGVUb3BpY1Jlc3VsdD4KICAgIDxUb3BpY0Fybj5hcm46YXdzOnNuczp1cy1lYXN0LTI6NDYyMzgwMjI1NzIyOlRlc3RDb25mb3JtYW5jZV9UZXN0Q2FuY2VsU2VuZFJlY2VpdmUtdG9waWMtMTwvVG9waWNBcm4+CiAgPC9DcmVhdGVUb3BpY1Jlc3VsdD4KICA8UmVzcG9uc2VNZXRhZGF0YT4KICAgIDxSZXF1ZXN0SWQ+Y2JmN2ZmMDQtMWU4Yi01OTg3LWFjOTAtYWJkODE5MjliNDExPC9SZXF1ZXN0SWQ+CiAgPC9SZXNwb25zZU1ldGFkYXRhPgo8L0NyZWF0ZVRvcGljUmVzcG9uc2U+Cg=="
+      }
+    },
+    {
+      "ID": "e3f2f2669d25b31c",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "100"
+          ],
+          "User-Agent": [
+            "aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPUNyZWF0ZVF1ZXVlJlF1ZXVlTmFtZT1UZXN0Q29uZm9ybWFuY2VfVGVzdENhbmNlbFNlbmRSZWNlaXZlLXN1YnNjcmlwdGlvbi0xJlZlcnNpb249MjAxMi0xMS0wNQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "372"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Mon, 11 Feb 2019 23:29:39 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "c4531865-6efa-5641-8a3b-4cb969594842"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PENyZWF0ZVF1ZXVlUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PENyZWF0ZVF1ZXVlUmVzdWx0PjxRdWV1ZVVybD5odHRwczovL3Nxcy51cy1lYXN0LTIuYW1hem9uYXdzLmNvbS80NjIzODAyMjU3MjIvVGVzdENvbmZvcm1hbmNlX1Rlc3RDYW5jZWxTZW5kUmVjZWl2ZS1zdWJzY3JpcHRpb24tMTwvUXVldWVVcmw+PC9DcmVhdGVRdWV1ZVJlc3VsdD48UmVzcG9uc2VNZXRhZGF0YT48UmVxdWVzdElkPmM0NTMxODY1LTZlZmEtNTY0MS04YTNiLTRjYjk2OTU5NDg0MjwvUmVxdWVzdElkPjwvUmVzcG9uc2VNZXRhZGF0YT48L0NyZWF0ZVF1ZXVlUmVzcG9uc2U+"
+      }
+    }
+  ]
+}
