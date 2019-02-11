@@ -86,33 +86,3 @@ func Example_open() {
 	// Output:
 	// hello world
 }
-
-// func Example_SignedURL() {
-// 	// Create a temporary directory.
-// 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	defer os.RemoveAll(dir)
-
-// 	// Open creates a *blob.Bucket from a URL.
-// 	ctx := context.Background()
-// 	b, err := blob.Open(ctx, path.Join("file://", dir))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	// Now we can use b to read or write files to the container.
-// 	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	data, err := b.ReadAll(ctx, "my-key")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Println(string(data))
-
-// 	// Output:
-// 	// hello world
-// }

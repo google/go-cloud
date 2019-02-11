@@ -626,17 +626,6 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
 }
 
-// maybe don't need this
-// VerifySignedURL takes a string and returns
-// (theObjectKey, true) if it's a valid signed URL
-// or (nil, false) if not valid.
-// func (b *bucket) VerifySignedURL(ctx context.Context, su string) (string, bool) {
-// 	if b.opts.URLSigner == nil {
-// 		return "", false
-// 	}
-// 	return b.opts.URLSigner.KeyFromURL(ctx, su)
-// }
-
 // URLSigner defines an interface for
 // creating and verifying a signed URL for objects
 // in a fileblob bucket. Signed URLs are typically used for
@@ -658,7 +647,7 @@ type URLSigner interface {
 	// e.g. (key, true) if the signature is valid (authentic && unexpired),
 	// or (nil, false) if it is invalid.
 	// KeyFromURL must be able to validate a URL from the URLFromKey function.
-	KeyFromURL(ctx context.Context, surl string) (string, bool)
+	KeyFromURL(ctx context.Context, surl *url.URL) (string, bool)
 }
 
 // URLSignerHMAC uses the crypto/hmac package to create a message authentication code
@@ -693,7 +682,10 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
 
-	mac := string(h.getMAC(sURL.String()))
+	fmt.Println(sURL.RawQuery)
+	fmt.Println("here1")
+
+	mac := string(h.getMAC(sURL.RawQuery))
 	q.Set("signature", mac)
 	sURL.RawQuery = q.Encode()
 
@@ -706,11 +698,7 @@ func (h *URLSignerHMAC) getMAC(message string) []byte {
 	return hsh.Sum(nil)
 }
 
-func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bool) {
-	sURL, err := url.Parse(surl)
-	if err != nil {
-		return "", false
-	}
+func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, bool) {
 	q := sURL.Query()
 
 	exp, err := strconv.ParseInt(q.Get("expiry"), 10, 64)
@@ -725,9 +713,7 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, surl string) (string, bo
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
 
-	if !h.checkMAC(sURL.String(), sig) {
-		fmt.Println(sURL.String())
-		fmt.Println("here3")
+	if !h.checkMAC(sURL.RawQuery, sig) {
 		return "", false
 	}
 	return q.Get("obj"), true

@@ -55,26 +55,18 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
-	// fmt.Fprintf(w, "hello world")
-	su, err := url.Parse(h.server.URL)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	// The URLSigner requires the scheme, host, and path to construct the
+	// signed URL, but validating only requires the key.
+	urlSigner := NewURLSignerHMAC("", "", "", h.urlSignKey)
+	objKey, ok := urlSigner.KeyFromURL(r.Context(), r.URL)
+	if !ok {
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	urlSigner := NewURLSignerHMAC(su.Scheme, su.Host, su.Path, h.urlSignKey)
 
 	bucket, err := OpenBucket(h.dir, &Options{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	objKey, ok := urlSigner.KeyFromURL(r.Context(), r.RequestURI)
-	fmt.Println(r.RequestURI)
-	fmt.Println(r.Host)
-	fmt.Println("here")
-	if !ok {
-		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 	blobject, err := bucket.ReadAll(r.Context(), objKey)
