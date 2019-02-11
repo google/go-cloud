@@ -23,20 +23,13 @@ import (
 	"gocloud.dev/pubsub/azurepubsub"
 )
 
-var (
-	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
-	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
-	connString = os.Getenv("SERVICEBUS_CONNECTION_STRING")
-)
-
-const (
-	topicName        = "test-topic"
-	subscriptionName = "test-sub"
-)
-
 func ExampleOpenTopic() {
 
 	ctx := context.Background()
+	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
+	connString := os.Getenv("SERVICEBUS_CONNECTION_STRING")
+	topicName := "test-topic"
 
 	if connString == "" {
 		log.Fatal("Service Bus ConnectionString is not set")
@@ -45,12 +38,16 @@ func ExampleOpenTopic() {
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
 	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
 	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer sbTopic.Close(ctx)
 
 	// Construct a *pubsub.Topic.
@@ -67,11 +64,18 @@ func ExampleOpenTopic() {
 
 	// Send *pubsub.Message from *pubsub.Topic backed by Azure Service Bus.
 	err = t.Send(ctx, msg)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func ExampleOpenSubscription() {
 	ctx := context.Background()
+	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
+	connString := os.Getenv("SERVICEBUS_CONNECTION_STRING")
+	topicName := "test-topic"
+	subscriptionName := "test-sub"
 
 	if connString == "" {
 		log.Fatal("Service Bus ConnectionString is not set")
@@ -80,18 +84,24 @@ func ExampleOpenSubscription() {
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
 	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
 	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer sbTopic.Close(ctx)
 
 	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
 	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, nil)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer sbSub.Close(ctx)
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
@@ -99,15 +109,11 @@ func ExampleOpenSubscription() {
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)
-	logFatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Acknowledge the message, this operation issues a 'Complete' disposition on the Service Bus message.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Message.Complete.
 	msg.Ack()
-}
-
-func logFatal(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
 }
