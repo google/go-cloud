@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -419,5 +420,58 @@ func TestOpenCensus(t *testing.T) {
 	})
 	if diff != "" {
 		t.Error(diff)
+	}
+}
+
+func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ng0 := runtime.NumGoroutine()
+	top := mempubsub.NewTopic()
+	sub := mempubsub.NewSubscription(top, time.Second)
+
+	// Send a bunch of messages at roughly the same time to make the batcher's work more difficult.
+	var wg sync.WaitGroup
+	n := 1000
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			err := top.Send(ctx, &pubsub.Message{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// Receive the messages.
+	var wg2 sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg2.Add(1)
+		go func() {
+			m, err := sub.Receive(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			m.Ack()
+			wg2.Done()
+		}()
+	}
+	wg2.Wait()
+
+	// The Shutdown methods each spawn a goroutine so we want to make sure those don't
+	// keep running indefinitely after the Shutdowns return.
+	cancel()
+	top.Shutdown(ctx)
+	sub.Shutdown(ctx)
+
+	// Wait for number of goroutines to return to normal.
+	// Otherwise the test hangs.
+	for {
+		ng := runtime.NumGoroutine()
+		if ng == ng0 {
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
