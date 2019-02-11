@@ -17,7 +17,7 @@ interactions:
       - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
       X-Amz-Date:
       - 20190211T183201Z
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F
     method: PUT
   response:
     body: ""
@@ -31,9 +31,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - UxDN1dO++CCDHsE/MYDO+4fiZZIFLVxqeYxtl42VDksKjBOihuO5UpXbSPAioRPUXXGHMy6BCok=
+      - ih7NcK/88GBtINlCb3Nwc4I993t8Va0Hhvs5jgNCMz1luy7mo+sOwZA6wbwd8R7ww18nJTXeaa8=
       X-Amz-Request-Id:
-      - 897EE678F40A38D3
+      - F85F27B3E943729C
     status: 200 OK
     code: 200
     duration: ""
@@ -47,7 +47,7 @@ interactions:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
       - 20190211T183201Z
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F
     method: GET
   response:
     body: hello
@@ -67,9 +67,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - A1SCI0+l9UwUXRUOn/ADUhgWb+f+bZ4rQezPlzrVQxj3/qsIDSQ54Fp/QKQmFoV6AfhfSlacrKo=
+      - cIL4IyKdSCHcdVwtAtSLNGz8N6gIVxSLQ3R8L3f78Y6ndX1jwWmiwuFOyfZtASiKx5KjSj3Ix5E=
       X-Amz-Request-Id:
-      - 07DDC5B3F8422558
+      - E77ACFA984807392
     status: 200 OK
     code: 200
     duration: ""
@@ -83,7 +83,7 @@ interactions:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
       - 20190211T183201Z
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F
     method: HEAD
   response:
     body: ""
@@ -103,9 +103,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 9agH/spSdPDubexQo81kEv3MJdt7ZdCx1UGJORHwqJiLdBy/vXff+Z3ZV7dz0BCAE4e/z1J8Tiw=
+      - W89RVZTo1lNOH7sxpWpo16AXhIde0L8Rpu9NvRfK8fvK+5aw1DmyFRl3RLk5YdT1FDARNMOXK3A=
       X-Amz-Request-Id:
-      - 6434C5252DEE309F
+      - 940641DD2FA70663
     status: 200 OK
     code: 200
     duration: ""
@@ -113,7 +113,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJUGP3DMJYQAR6PDA%2F20190211%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190211T183201Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=543a3c65d35e2960928bef0f1eb2c38ad695f03394cdb4a3bb60f6d23b0569ee
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJUGP3DMJYQAR6PDA%2F20190211%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190211T183201Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=288bb611a8ba25dda9ea25eee4e5fc2009869a7659279b57311754df8235f960
     method: GET
   response:
     body: hello
@@ -133,9 +133,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - zCeB5AdFryBmRC5cdDXCHc2Z3/h+6NTtHgMaFy4TKMlBypjhRtejHnsgQ5PsU7j/OBNv/j3ZpHs=
+      - FB3tOFDZNID+yAPA7ctGe3+IeHBrQanO+kO2a5oBONLFRtgrp7DrOdFDrHeT+19Zke7lpTVSaPE=
       X-Amz-Request-Id:
-      - 7EAE0D6EE8970189
+      - CD97CF9C8F3472BA
     status: 200 OK
     code: 200
     duration: ""
@@ -149,7 +149,7 @@ interactions:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
       - 20190211T183201Z
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F
     method: HEAD
   response:
     body: ""
@@ -169,9 +169,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 6i5c2F6sAmk4yayR2e2jWhWTH3WnUxexJYu03KXG7c2tIyV5bLNKj1ksX/oH/xmdp48An1CSeyk=
+      - 8RSLe7Lb6UACrv/p+UFm+CSk2vbCkBWRhegLjjEui0FXJ3o7d9/gP8jrqHqMEbrqTE9dg9okRVY=
       X-Amz-Request-Id:
-      - 94D6A0BBF7E8B1C5
+      - 61E721A24E8DD37A
     status: 200 OK
     code: 200
     duration: ""
@@ -185,7 +185,7 @@ interactions:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
       - 20190211T183201Z
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keys%7B%7C%7D~%7F
     method: DELETE
   response:
     body: ""
@@ -195,9 +195,9 @@ interactions:
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 9yZEn9Band133t+glc8RPEr2AD75hsmt1xZ9o1fa7xfQ32PALokeScLbcLgJchjtfIJp8dDH/qI=
+      - TScvK6JpcF//WquIpabBpFvnEJ+xCMTx/1kb0uVhNKDbc79TIKpUk6Bu3ljIKM5QKLb5sYLj5Jo=
       X-Amz-Request-Id:
-      - 4DE88B430609CDB7
+      - 9A340728C3DC8763
     status: 204 No Content
     code: 204
     duration: ""

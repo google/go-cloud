@@ -24,8 +24,8 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+      - Mon, 11 Feb 2019 17:51:27 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys12345
     method: PUT
   response:
     body: ""
@@ -33,15 +33,15 @@ interactions:
       Content-Md5:
       - XUFAKrxLKna5cZ2REBfFkg==
       Date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498BF1EBA3"'
       Last-Modified:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 508e9534-f01e-003e-6d32-c22395000000
+      - 508e958b-f01e-003e-3b32-c22395000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -58,8 +58,8 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+      - Mon, 11 Feb 2019 17:51:27 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys12345
     method: GET
   response:
     body: hello
@@ -75,23 +75,23 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498BF1EBA3"'
       Last-Modified:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e9538-f01e-003e-7132-c22395000000
+      - 508e9596-f01e-003e-4232-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -108,8 +108,8 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+      - Mon, 11 Feb 2019 17:51:27 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys12345
     method: HEAD
   response:
     body: ""
@@ -125,11 +125,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498BF1EBA3"'
       Last-Modified:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Access-Tier:
@@ -139,13 +139,13 @@ interactions:
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e953e-f01e-003e-7632-c22395000000
+      - 508e959b-f01e-003e-4632-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -157,7 +157,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz?se=2019-02-11T18%3A51%3A26Z&sig=C49vNXDV3ZuvAqBpoSU3Yia2hG7y3xEG%2FcLAv4yDXSg%3D&sp=r&spr=https&sr=b&sv=2018-03-28
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys12345?se=2019-02-11T18%3A51%3A27Z&sig=qylSaUKKxsF0lEEmk5POofsuge6nmKGjNZzhpVZl088%3D&sp=r&spr=https&sr=b&sv=2018-03-28
     method: GET
   response:
     body: hello
@@ -173,23 +173,23 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498BF1EBA3"'
       Last-Modified:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Blob-Type:
       - BlockBlob
       X-Ms-Creation-Time:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       X-Ms-Lease-State:
       - available
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e9545-f01e-003e-7d32-c22395000000
+      - 508e95a2-f01e-003e-4b32-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -208,20 +208,20 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+      - Mon, 11 Feb 2019 17:51:27 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys12345
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Mon, 11 Feb 2019 17:51:26 GMT
+      - Mon, 11 Feb 2019 17:51:27 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 508e9547-f01e-003e-7f32-c22395000000
+      - 508e95a9-f01e-003e-4f32-c22395000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted
