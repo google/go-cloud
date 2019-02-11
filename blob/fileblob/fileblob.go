@@ -101,7 +101,7 @@ type Options struct {
 	// URLSigner implements signing URLs (to allow access to a resource without
 	// further authorization) and verifying that a given string contains
 	// a signedURL produced by the URLSigner.
-	// URLSigner is only required for utilizing the SignedURL api.
+	// URLSigner is only required for utilizing the SignedURL API.
 	URLSigner URLSigner
 }
 
@@ -617,11 +617,10 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// SignedURL takes a context, an object key, and a SignedURLOptions struct
-// and returns a string containing a URI and an error
+// SignedURL implements driver.SignedURL
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
-		return "", errNotImplemented
+		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.URLSigner"
 	}
 	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
 }
@@ -714,7 +713,7 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 	return q.Get("obj"), true
 }
 
-func (h *URLSignerHMAC) checkMAC(message string, mac string) bool {
+func (h *URLSignerHMAC) checkMAC(message, mac string) bool {
 	expected := h.getMAC(message)
 	return hmac.Equal([]byte(mac), expected)
 }
