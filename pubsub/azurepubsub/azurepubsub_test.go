@@ -129,10 +129,6 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 	return ds, nil
 }
 
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	return false, ""
-}
-
 func (h *harness) Close() {
 	h.closer()
 }
