@@ -23,4 +23,15 @@ set -euxo pipefail
 # To run this script manually to update alldeps:
 #
 # $ internal/testing/listdeps.sh > internal/testing/alldeps
-go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... | sort | uniq
+tmpfile=$(mktemp)
+
+for path in "." "./internal/contributebot" "./samples/appengine"; do
+  ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
+done
+
+function cleanup() {
+  rm -rf "$tmpfile"
+}
+trap cleanup EXIT
+
+sort "$tmpfile" | uniq
