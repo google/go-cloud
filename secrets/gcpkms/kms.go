@@ -14,6 +14,11 @@
 
 // Package gcpkms provides a secrets implementation backed by Google Cloud KMS.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// gcpkms exposes the following type for As:
+//  - Error: *google.golang.org/grpc/status.Status
 package gcpkms // import "gocloud.dev/secrets/gcpkms"
 
 import (
@@ -28,6 +33,7 @@ import (
 	"gocloud.dev/secrets"
 	"google.golang.org/api/option"
 	kmspb "google.golang.org/genproto/googleapis/cloud/kms/v1"
+	"google.golang.org/grpc/status"
 )
 
 // endPoint is the address to access Google Cloud KMS API.
@@ -92,6 +98,20 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		return nil, err
 	}
 	return resp.GetCiphertext(), nil
+}
+
+// ErrorAs implements driver.Keeper.ErrorAs.
+func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	s, ok := status.FromError(err)
+	if !ok {
+		return false
+	}
+	p, ok := i.(**status.Status)
+	if !ok {
+		return false
+	}
+	*p = s
+	return true
 }
 
 // ErrorCode implements driver.ErrorCode.

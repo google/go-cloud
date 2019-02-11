@@ -15,6 +15,10 @@
 // Package localsecrets provides a secrets implementation using a locally
 // locally provided symmetric key.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// localsecrets does not support any types for As.
 package localsecrets // import "gocloud.dev/secrets/localsecrets"
 
 import (
@@ -76,6 +80,11 @@ func (k *keeper) Decrypt(ctx context.Context, message []byte) ([]byte, error) {
 		return nil, errors.New("localsecrets: Decrypt failed")
 	}
 	return decrypted, nil
+}
+
+// ErrorAs implements driver.Keeper.ErrorAs.
+func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	return false
 }
 
 // ErrorCode implements driver.ErrorCode.

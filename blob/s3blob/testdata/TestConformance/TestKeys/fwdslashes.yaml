@@ -12,12 +12,12 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64) S3Manager
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
       X-Amz-Date:
-      - 20181026T193410Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/weird-keysfoo/bar/baz
+      - 20190209T000353Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: PUT
   response:
     body: ""
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 26 Oct 2018 19:34:11 GMT
+      - Sat, 09 Feb 2019 00:03:54 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - D63MqxuO/fR4QcbVPqVAh/97F+pJq1JsWGj6ygA5aT9bUEVlsETzeDKPnJ79nZh92WH2Lc36EGQ=
+      - b/etud3l0WhSdnGDjmSHk1vmCxlyoH8P3CWs41Zj1RVjoq35KhnSZ6Zg7w2izjkgpQb0bnkiCMc=
       X-Amz-Request-Id:
-      - 91947CD2838C6260
+      - 89290DFEB2E01783
     status: 200 OK
     code: 200
     duration: ""
@@ -42,12 +42,12 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181026T193410Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/weird-keysfoo/bar/baz
+      - 20190209T000353Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: GET
   response:
     body: hello
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Fri, 26 Oct 2018 19:34:11 GMT
+      - Sat, 09 Feb 2019 00:03:54 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Fri, 26 Oct 2018 19:34:11 GMT
+      - Sat, 09 Feb 2019 00:03:54 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - MXSdUthjhiTt+iWPSK63Y2iUON0M1F6dzJp6sUsWLm4eIZlJJ0cPRz2YbITsd33Pq0IS4T3B3h8=
+      - 3dpo9uGt/xH13/qOyqmwzYd4Dasj0xAwmI5JIxS2wWzeyMvI1siFITpDpVJbjlfoC0J3y8NaRB8=
       X-Amz-Request-Id:
-      - CD0015A376DF1528
+      - B02097077129394B
     status: 200 OK
     code: 200
     duration: ""
@@ -78,30 +78,30 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.15.57 (go1.11rc2; linux; amd64)
+      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20181026T193410Z
-    url: https://go-cloud-bucket.s3.us-east-2.amazonaws.com/?list-type=2&max-keys=1000&prefix=weird-keysfoo%2Fbar%2Fbaz
+      - 20190209T000353Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?list-type=2&max-keys=1000&prefix=weird-keysfoo%2Fbar%2Fbaz
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-bucket</Name><Prefix>weird-keysfoo/bar/baz</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>weird-keysfoo/bar/baz</Key><LastModified>2018-10-26T19:34:11.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>weird-keysfoo/bar/baz</Prefix><KeyCount>1</KeyCount><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>weird-keysfoo/bar/baz</Key><LastModified>2019-02-09T00:03:54.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Fri, 26 Oct 2018 19:34:11 GMT
+      - Sat, 09 Feb 2019 00:03:54 GMT
       Server:
       - AmazonS3
       X-Amz-Bucket-Region:
-      - us-east-2
+      - us-west-1
       X-Amz-Id-2:
-      - vDoWKZWxN/Cw0omXwOQx0tWYmxcNpqn0lDC9445yZJJz9Umr5+5ank7TlIqpSlNkd5z83sYS7BE=
+      - t6HRT8aK6MCEtRK1Bji+0NzlIGYqCuPMakkhzr9Sd8+sV0AdzdbTI0UqeAJeYlbIIQeqT1+y0W4=
       X-Amz-Request-Id:
-      - 2EE2BF43E87AD5D9
+      - A2CEEFC3A0DECAB8
     status: 200 OK
     code: 200
     duration: ""

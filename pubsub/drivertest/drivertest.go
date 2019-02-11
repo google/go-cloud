@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"gocloud.dev/internal/testing/setup"
 	"strconv"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -135,6 +135,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestCancelSendReceive":                                   testCancelSendReceive,
 		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
+		"TestMetadata":                                            testMetadata,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -216,7 +217,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHa
 
 	ds, err := h.MakeNonexistentSubscription(ctx)
 	if err != nil {
-		t.Skipf("failed to make non-existent subscription: %v", err)
+		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
 	sub := pubsub.NewSubscription(ds, nil)
 	defer sub.Shutdown(ctx)
@@ -253,9 +254,6 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 // Receive from two subscriptions to the same topic.
 // Verify both get all the messages.
 func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
-	if !*setup.Record {
-		t.Skip("This test fails for awspubsub in replay mode, probably due to an issue with the recorder.")
-	}
 	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -392,6 +390,45 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	if _, err := sub.Receive(ctx); !isCanceled(err) {
 		t.Errorf("sub.Receive returned %v (%T), want context.Canceled", err, err)
+	}
+}
+
+func testMetadata(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	weirdMetadata := map[string]string{}
+	for _, k := range escape.WeirdStrings {
+		weirdMetadata[k] = k
+	}
+
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	m := &pubsub.Message{
+		Body:     []byte("hello world"),
+		Metadata: weirdMetadata,
+	}
+	if err := top.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err = sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
+		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
 	}
 }
 

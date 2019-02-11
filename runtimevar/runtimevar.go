@@ -135,7 +135,7 @@ type Variable struct {
 // New is intended for use by provider implementations.
 var New = newVar
 
-// newVar  creates a new *Variable based on a specific driver implementation.
+// newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	return &Variable{
 		watcher:  w,
@@ -152,8 +152,9 @@ func newVar(w driver.Watcher) *Variable {
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
 //
-// Watch is not goroutine-safe; typical use is to call it in a single
-// goroutine in a loop.
+// Watch should not be called on the same variable from multiple goroutines
+// concurrently. The typical use case is to call it in a single goroutine in a
+// loop.
 //
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
@@ -209,18 +210,10 @@ func wrapError(w driver.Watcher, err error) error {
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 // See Snapshot.As for more details.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
-	if err == nil {
-		return false
-	}
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("runtimevar: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return c.watcher.ErrorAs(e.Unwrap(), i)
-	}
-	return c.watcher.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
 }
 
 // Decode is a function type for unmarshaling/decoding a slice of bytes into
