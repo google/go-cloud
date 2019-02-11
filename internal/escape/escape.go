@@ -17,10 +17,25 @@ package escape
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
-// Escape returns s, with all runes for which shouldEscape returns true
+// IsASCIIAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
+func IsASCIIAlphanumeric(r rune) bool {
+	switch {
+	case 'A' <= r && r <= 'Z':
+		return true
+	case 'a' <= r && r <= 'z':
+		return true
+	case '0' <= r && r <= '9':
+		return true
+	}
+	return false
+}
+
+// HexEscape returns s, with all runes for which shouldEscape returns true
 // escaped to "__0xXXX__", where XXX is the hex representation of the rune
 // value. For example, " " would escape to "__0x20__".
 //
@@ -35,7 +50,7 @@ import (
 // We pass a slice of runes instead of the string or a slice of bytes
 // because some decisions will be made on a rune basis (e.g., encode
 // all non-ASCII runes).
-func Escape(s string, shouldEscape func(s []rune, i int) bool) string {
+func HexEscape(s string, shouldEscape func(s []rune, i int) bool) string {
 	// Do a first pass to see which runes (if any) need escaping.
 	runes := []rune(s)
 	var toEscape []int
@@ -112,8 +127,8 @@ func unescape(r []rune, i int) (bool, rune, int) {
 	return true, rune(retval), i
 }
 
-// Unescape reverses Escape.
-func Unescape(s string) string {
+// HexUnescape reverses HexEscape.
+func HexUnescape(s string) string {
 	var unescaped []rune
 	runes := []rune(s)
 	for i := 0; i < len(runes); i++ {
@@ -137,4 +152,60 @@ func Unescape(s string) string {
 		return s
 	}
 	return string(unescaped)
+}
+
+// URLEscape uses url.PathEscape to escape s.
+func URLEscape(s string) string {
+	return url.PathEscape(s)
+}
+
+// URLUnescape reverses URLEscape using url.PathUnescape. If the unescape
+// returns an error, it returns s.
+func URLUnescape(s string) string {
+	if u, err := url.PathUnescape(s); err == nil {
+		return u
+	}
+	return s
+}
+
+func makeASCIIString(start, end int) string {
+	var s []byte
+	for i := start; i < end; i++ {
+		if i >= 'a' && i <= 'z' {
+			continue
+		}
+		if i >= 'A' && i <= 'Z' {
+			continue
+		}
+		if i >= '0' && i <= '9' {
+			continue
+		}
+		s = append(s, byte(i))
+	}
+	return string(s)
+}
+
+// WeirdStrings are unusual/weird strings for use in testing escaping.
+// The keys are descriptive strings, the values are the weird strings.
+var WeirdStrings = map[string]string{
+	"fwdslashes":          "foo/bar/baz",
+	"repeatedfwdslashes":  "foo//bar///baz",
+	"dotdotslash":         "../foo/../bar/../../baz../",
+	"backslashes":         "foo\\bar\\baz",
+	"repeatedbackslashes": "..\\foo\\\\bar\\\\\\baz",
+	"dotdotbackslash":     "..\\foo\\..\\bar\\..\\..\\baz..\\",
+	"quote":               "foo\"bar\"baz",
+	"spaces":              "foo bar baz",
+	"startwithdigit":      "12345",
+	"unicode":             strings.Repeat("☺", 3),
+	// The ASCII characters 0-128, split up to avoid the possibly-escaped
+	// versions from getting too long.
+	"ascii-1": makeASCIIString(0, 16),
+	"ascii-2": makeASCIIString(16, 32),
+	"ascii-3": makeASCIIString(32, 48),
+	"ascii-4": makeASCIIString(48, 64),
+	"ascii-5": makeASCIIString(64, 80),
+	"ascii-6": makeASCIIString(80, 96),
+	"ascii-7": makeASCIIString(96, 112),
+	"ascii-8": makeASCIIString(112, 128),
 }

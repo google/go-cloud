@@ -16,8 +16,10 @@ package localsecrets
 
 import (
 	"context"
+	"errors"
 	"testing"
 
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/driver"
 	"gocloud.dev/secrets/drivertest"
 )
@@ -35,5 +37,19 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyAs{}})
+}
+
+type verifyAs struct{}
+
+func (v verifyAs) Name() string {
+	return "verify As function"
+}
+
+func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
+	var s string
+	if k.ErrorAs(err, &s) {
+		return errors.New("Keeper.ErrorAs expected to fail")
+	}
+	return nil
 }
