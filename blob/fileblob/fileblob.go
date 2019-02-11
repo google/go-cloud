@@ -638,11 +638,9 @@ type URLSigner interface {
 	// into a signed URL.
 	// URLFromKey takes in a context, object key and options.
 	// It returns a signed URL string, and an error.
-	// e.g. (`www.example.com/index.html?obj=obj=%2Fan%2Fobject%2Fkey&expires=<TIME>&SIGNATURE=<sig>`, nil)
-	// or (nil, SomeError)
 	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
 
-	// KeyFromURL takes in a context and a signed URL string.
+	// KeyFromURL takes in a context and a URL.
 	// It returns an object key string and a bool.
 	// e.g. (key, true) if the signature is valid (authentic && unexpired),
 	// or (nil, false) if it is invalid.
@@ -681,9 +679,6 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("expiry", strconv.FormatInt(expTime, 10))
 	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
-
-	fmt.Println(sURL.RawQuery)
-	fmt.Println("here1")
 
 	mac := string(h.getMAC(sURL.RawQuery))
 	q.Set("signature", mac)

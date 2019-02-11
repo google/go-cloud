@@ -55,7 +55,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
-	// The URLSigner requires the scheme, host, and path to construct the
+	// URLSignerHMAC requires the scheme, host, and path to construct the
 	// signed URL, but validating only requires the key.
 	urlSigner := NewURLSignerHMAC("", "", "", h.urlSignKey)
 	objKey, ok := urlSigner.KeyFromURL(r.Context(), r.URL)
