@@ -54,7 +54,7 @@ func ExampleOpenTopic() {
 	defer sbTopic.Close(ctx)
 
 	// Construct a *pubsub.Topic.
-	t := azurepubsub.OpenTopic(ctx, sbTopic, &azurepubsub.TopicOptions{})
+	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
 	defer t.Shutdown(ctx)
 
 	// Construct a *pubsub.Message.
@@ -95,7 +95,7 @@ func ExampleOpenSubscription() {
 	defer sbSub.Close(ctx)
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, &azurepubsub.SubscriptionOptions{})
+	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)
