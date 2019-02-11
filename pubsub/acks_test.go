@@ -382,7 +382,7 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	var ds = &callbackDriverSub{
 		// First call to receiveBatch will return a single message.
 		receiveBatch: func(context.Context) ([]*driver.Message, error) {
-			var ms = []*driver.Message{{AckID: 1}}
+			ms := []*driver.Message{{AckID: 1}}
 			return ms, nil
 		},
 		sendAcks: func(context.Context, []driver.AckID) error {
