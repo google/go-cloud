@@ -23,4 +23,4 @@ set -euxo pipefail
 # To run this script manually to update alldeps:
 #
 # $ internal/testing/listdeps.sh > internal/testing/alldeps
-go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort | uniq
+go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... | sort | uniq
