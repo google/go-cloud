@@ -32,6 +32,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// projectID is the project ID that was used during the last test run using
+// --record.
 const projectID = "go-cloud-test-216917"
 
 type harness struct {
@@ -163,6 +165,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 	}
 	defer cleanup2()
 	sub := pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
 }
