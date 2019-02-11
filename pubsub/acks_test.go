@@ -365,7 +365,11 @@ func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerror
 
 // This test detects the root cause of
 // https://github.com/google/go-cloud/issues/1238.
-// If the issue is present, this test times out.
+// If the issue is present, this test times out. The problem was that when
+// there were no messages available from the provider,
+// pubsub.Subscription.Receive would spin trying to get more messages without
+// checking to see if an unrecoverable error had occurred while sending a batch
+// of acks to the provider.
 func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	// If SendAcks fails, the error is returned via receive.
 	ctx := context.Background()
@@ -391,8 +395,8 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	}
 	m.Ack()
 
-	// Second call to receiveBatch will wait for the pull from the receiveHappened channel below,
-	// and return a nil slice of messages.
+	// Second call to receiveBatch will wait for the pull from the
+	// receiveHappened channel below, and return a nil slice of messages.
 	ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
 		// Subsequent calls to receiveBatch won't wait on receiveHappened,
 		// and will also return nil slices of messages.
