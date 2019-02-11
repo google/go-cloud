@@ -379,10 +379,10 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 	serr := errors.New("unrecoverable error")
 	receiveHappened := make(chan struct{})
 	ackHappened := make(chan struct{})
-	ds := &callbackDriverSub{
+	var ds = &callbackDriverSub{
 		// First call to receiveBatch will return a single message.
 		receiveBatch: func(context.Context) ([]*driver.Message, error) {
-			ms := []*driver.Message{{AckID: 1}}
+			var ms = []*driver.Message{{AckID: 1}}
 			return ms, nil
 		},
 		sendAcks: func(context.Context, []driver.AckID) error {
@@ -420,17 +420,20 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 		errc <- err
 	}()
 
-	// sub.Receive has to get into the loop and then we need to trigger the unrecoverable error.
+	// sub.Receive has to start running first and then we need to trigger the unrecoverable error.
 	<-receiveHappened
 
 	// Trigger the unrecoverable error.
 	<-ackHappened
 
-	// Wait for sub.Receive to return so we can check the err from sub.Receive against serr.
+	// Wait for sub.Receive to return so we can check the error it returns against serr.
 	err = <-errc
 
-	ok := gcerrors.Code(err) == gcerrors.Internal && xerrors.Unwrap(err) == serr
-	if !ok {
-		t.Fatalf("got %v, want %v", err, serr)
+	// Check the error returned from sub.Receive.
+	if got := gcerrors.Code(err); got != gcerrors.Internal {
+		t.Fatalf("error code = %v; want %v", got, gcerrors.Internal)
+	}
+	if got := xerrors.Unwrap(err); got != serr {
+		t.Errorf("error = %v; want %v", got, serr)
 	}
 }
