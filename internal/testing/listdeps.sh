@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Copyright 2018 The Go Cloud Development Kit Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs only tests relevant to the current pull request.
+# At the moment, this only gates running the Wire test suite.
+# See https://github.com/google/go-cloud/issues/28 for solving the
+# general case.
+
+set -euxo pipefail
+
+# To run this script manually to update alldeps:
+#
+# $ internal/testing/listdeps.sh > internal/testing/alldeps
+go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort | uniq

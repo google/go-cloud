@@ -47,9 +47,8 @@ fi
 # dependencies) that we're not already aware of by comparing with
 # ./internal/testing/alldeps
 #
-# Whenever a new valid dependency is added to the project, the PR should include
-# an updated ./internal/testing/alldeps
-go list -deps -f '{{if .Module}}{{.Module.Path}}{{end}}' ./... | sort | uniq | diff ./internal/testing/alldeps - || {
+# Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
+./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
   echo "FAIL: dependencies changed; compare go list -deps ./... with alldeps" && result=1
 }
 
