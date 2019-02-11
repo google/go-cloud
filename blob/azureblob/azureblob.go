@@ -49,7 +49,10 @@
 //
 // Go CDK supports all UTF-8 strings; to make this work with providers lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
-// (during reads). The following escapes are required for azureblob:
+// (during reads). The following escapes are performed for azureblob:
+//  - Blob keys: ASCII characters 0-31, 92 ("\"), and 127 are escaped to
+//    "__0x<hex>__". Additionally, the "/" in "../" and a trailing "/" in a
+//    key (e.g., "foo/") are escaped in the same way.
 //  - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
 //    Azure only allows C# identifiers as metadata keys. Therefore, characters
 //    other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
@@ -107,25 +110,6 @@ type Options struct {
 	// See https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#shared-access-signature-parameters.
 	SASToken SASToken
 }
-
-// Azure does not handle backslashes in the blob key well. As a workaround, all
-// backslashes are converted to forward slashes during bucket operations.
-// This is needed to ensure directories from Windows file systems are
-// represented correctly in Azure Storage.
-//
-// For example, the Windows path C:\Users\UserName\Test.json is converted
-// to C:/Users/UserName/Test.json. This retains the original directory structure
-// in Azure Storage as C:/Users/UserName/Test.json, where forwardslash
-// represents the virtual directory
-//
-// For more naming rules and limitations see
-// https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
-const (
-	// blobPathSeparator is the replacement for backslashPathSeparator.
-	blobPathSeparator = "/"
-	// backslashPathSeparator are converted to blobPathSeparator.
-	backslashPathSeparator = "\\"
-)
 
 const (
 	defaultMaxDownloadRetryRequests = 3               // download retry policy (Azure default is zero)
@@ -307,16 +291,10 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
-// blockBlobURL replaces backslashes in key and returns an azblob.BlockBlobURL
-// for it.
-func (b *bucket) blockBlobURL(key string) azblob.BlockBlobURL {
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	return b.containerURL.NewBlockBlobURL(key)
-}
-
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	_, err := blockBlobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 	return err
 }
@@ -348,7 +326,8 @@ func (r *reader) As(i interface{}) bool {
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 
 	end := length
 	if end < 0 {
@@ -431,7 +410,8 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
 		return driver.Attributes{}, err
@@ -479,10 +459,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 	}
 
-	opts.Prefix = strings.Replace(opts.Prefix, backslashPathSeparator, blobPathSeparator, -1)
 	azOpts := azblob.ListBlobsSegmentOptions{
 		MaxResults: int32(pageSize),
-		Prefix:     opts.Prefix,
+		Prefix:     escapeKey(opts.Prefix, true),
 	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
@@ -497,7 +476,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	listBlob, err := b.containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azOpts)
+	listBlob, err := b.containerURL.ListBlobsHierarchySegment(ctx, marker, escapeKey(opts.Delimiter, true), azOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +485,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	page.Objects = []*driver.ListObject{}
 	for _, blobPrefix := range listBlob.Segment.BlobPrefixes {
 		page.Objects = append(page.Objects, &driver.ListObject{
-			Key:   blobPrefix.Name,
+			Key:   unescapeKey(blobPrefix.Name),
 			Size:  0,
 			IsDir: true,
 			AsFunc: func(i interface{}) bool {
@@ -521,7 +500,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 	for _, blobInfo := range listBlob.Segment.BlobItems {
 		page.Objects = append(page.Objects, &driver.ListObject{
-			Key:     blobInfo.Name,
+			Key:     unescapeKey(blobInfo.Name),
 			ModTime: blobInfo.Properties.LastModified,
 			Size:    *blobInfo.Properties.ContentLength,
 			MD5:     blobInfo.Properties.ContentMD5,
@@ -555,7 +534,8 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.Credential == nil {
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
 
 	var err error
@@ -583,9 +563,39 @@ type writer struct {
 	err   error
 }
 
+// escapeKey does all required escaping for UTF-8 strings to work with Azure.
+// isPrefix indicates whether the  key is a full key, or a prefix/delimiter.
+func escapeKey(key string, isPrefix bool) string {
+	return escape.HexEscape(key, func(r []rune, i int) bool {
+		c := r[i]
+		switch {
+		// Azure does not work well with backslashes in blob names.
+		case c == '\\':
+			return true
+		// Azure doesn't handle these characters (determined via experimentation).
+		case c < 32 || c == 127:
+			return true
+			// Escape trailing "/" for full keys, otherwise Azure can't address them
+			// consistently.
+		case !isPrefix && i == len(key)-1 && c == '/':
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && r[i] == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		}
+		return false
+	})
+}
+
+// unescapeKey reverses escapeKey.
+func unescapeKey(key string) string {
+	return escape.HexUnescape(key)
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
 	}

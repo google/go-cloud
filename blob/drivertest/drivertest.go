@@ -161,6 +161,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	t.Run("TestList", func(t *testing.T) {
 		testList(t, newHarness)
 	})
+	t.Run("TestListWeirdKeys", func(t *testing.T) {
+		testListWeirdKeys(t, newHarness)
+	})
 	t.Run("TestListDelimiters", func(t *testing.T) {
 		testListDelimiters(t, newHarness)
 	})
@@ -303,10 +306,11 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		// See if the blobs are already there.
 		b := blob.NewBucket(drv)
 		iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
-		count := countItems(ctx, t, iter)
-		if count != 3 {
-			for i := 0; i < 3; i++ {
-				if err := b.WriteAll(ctx, keyForIndex(i), content, nil); err != nil {
+		found := iterToSetOfKeys(ctx, t, iter)
+		for i := 0; i < 3; i++ {
+			key := keyForIndex(i)
+			if !found[key] {
+				if err := b.WriteAll(ctx, key, content, nil); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -437,6 +441,59 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 		}
 	})
+}
+
+// testListWeirdKeys tests the functionality of List on weird keys.
+func testListWeirdKeys(t *testing.T, newHarness HarnessMaker) {
+	const keyPrefix = "list-weirdkeys-"
+	content := []byte("hello")
+	ctx := context.Background()
+
+	// We're going to create a blob for each of the weird key strings, and
+	// then verify we can see them with List.
+	want := map[string]bool{}
+	for _, k := range escape.WeirdStrings {
+		want[keyPrefix+k] = true
+	}
+
+	// Creates blobs for sub-tests below.
+	// We only create the blobs once, for efficiency and because there's
+	// no guarantee that after we create them they will be immediately returned
+	// from List. The very first time the test is run against a Bucket, it may be
+	// flaky due to this race.
+	init := func(t *testing.T) (*blob.Bucket, func()) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// See if the blobs are already there.
+		b := blob.NewBucket(drv)
+		iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
+		found := iterToSetOfKeys(ctx, t, iter)
+		for _, k := range escape.WeirdStrings {
+			key := keyPrefix + k
+			if !found[key] {
+				if err := b.WriteAll(ctx, key, content, nil); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return b, func() { h.Close() }
+	}
+
+	b, done := init(t)
+	defer done()
+
+	iter := b.List(&blob.ListOptions{Prefix: keyPrefix})
+	got := iterToSetOfKeys(ctx, t, iter)
+
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+	}
 }
 
 // listResult is a recursive view of the hierarchy. It's used to verify List
@@ -581,65 +638,62 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 				listResult{Key: keyPrefix + "/f.txt"},
 			},
 		},
-		// TODO(#905): Backslashes cause problems for Azure; disable for now.
-		/*
-			{
-				name:  "backslash",
-				delim: "\\",
-				wantFlat: []listResult{
-					listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-					listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-					listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-					listResult{Key: keyPrefix + "\\f.txt"},
-				},
-				wantRecursive: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
-						Sub: []listResult{
-							listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-							listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-							listResult{
-								Key:   keyPrefix + "\\dir1\\subdir\\",
-								IsDir: true,
-								Sub: []listResult{
-									listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-									listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-								},
+		{
+			name:  "backslash",
+			delim: "\\",
+			wantFlat: []listResult{
+				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantRecursive: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
+						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
+						listResult{
+							Key:   keyPrefix + "\\dir1\\subdir\\",
+							IsDir: true,
+							Sub: []listResult{
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
 							},
 						},
 					},
-					listResult{
-						Key:   keyPrefix + "\\dir2\\",
-						IsDir: true,
-						Sub: []listResult{
-							listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-						},
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				wantPaged: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+					Sub: []listResult{
+						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
 					},
-					listResult{
-						Key:   keyPrefix + "\\dir2\\",
-						IsDir: true,
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
 				},
-				wantAfterDel: []listResult{
-					listResult{
-						Key:   keyPrefix + "\\dir1\\",
-						IsDir: true,
-					},
-					listResult{Key: keyPrefix + "\\f.txt"},
-				},
+				listResult{Key: keyPrefix + "\\f.txt"},
 			},
-		*/
+			wantPaged: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{
+					Key:   keyPrefix + "\\dir2\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+			wantAfterDel: []listResult{
+				listResult{
+					Key:   keyPrefix + "\\dir1\\",
+					IsDir: true,
+				},
+				listResult{Key: keyPrefix + "\\f.txt"},
+			},
+		},
 		{
 			name:  "abc",
 			delim: "abc",
@@ -719,10 +773,11 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 		// See if the blobs are already there.
 		prefix := keyPrefix + delim
 		iter := b.List(&blob.ListOptions{Prefix: prefix})
-		count := countItems(ctx, t, iter)
-		if count != len(keys) {
-			for _, key := range keys {
-				if err := b.WriteAll(ctx, prefix+strings.Join(key, delim), content, nil); err != nil {
+		found := iterToSetOfKeys(ctx, t, iter)
+		for _, keyParts := range keys {
+			key := prefix + strings.Join(keyParts, delim)
+			if !found[key] {
+				if err := b.WriteAll(ctx, key, content, nil); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -805,17 +860,18 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 	}
 }
 
-func countItems(ctx context.Context, t *testing.T, iter *blob.ListIterator) int {
-	count := 0
+func iterToSetOfKeys(ctx context.Context, t *testing.T, iter *blob.ListIterator) map[string]bool {
+	retval := map[string]bool{}
 	for {
-		if _, err := iter.Next(ctx); err == io.EOF {
+		if item, err := iter.Next(ctx); err == io.EOF {
 			break
 		} else if err != nil {
 			t.Fatal(err)
+		} else {
+			retval[item.Key] = true
 		}
-		count++
 	}
-	return count
+	return retval
 }
 
 // testRead tests the functionality of NewReader, NewRangeReader, and Reader.
@@ -1608,84 +1664,71 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
 	content := []byte("hello")
-
-	// TODO: use escape.WeirdStrings.
-	tests := []struct {
-		description string
-		key         string
-	}{
-		{
-			description: "fwdslashes",
-			key:         "foo/bar/baz",
-		},
-		/* TODO(#905): Backslashes cause problems for Azure; disable for now.
-		{
-			description: "backslashes",
-			key:         "foo\\bar\\baz",
-		},
-		*/
-		{
-			description: "quote",
-			key:         "foo\"bar\"baz",
-		},
-		{
-			description: "punctuation",
-			// TODO(#905): Backslashes cause problems for Azure; disable for now.
-			// key:         "~!@#$%^&*()_+`-=[]{}\\|;':\",/.<>?",
-			key: "~!@#$%^&*()_+`-=[]{}|;':\",/.<>?",
-		},
-		{
-			description: "unicode",
-			key:         strings.Repeat("☺", 10),
-		},
-	}
-
 	ctx := context.Background()
 
-	// Creates the blob.
-	// We don't delete the blob, because there's no guarantee that after we
-	// create it that it will be immediately returned from List. The very first
-	// time the test is run against a Bucket, it may be flaky due to this race.
-	init := func(t *testing.T, key string) (*blob.Bucket, func()) {
-		h, err := newHarness(ctx, t)
-		if err != nil {
-			t.Fatal(err)
-		}
-		drv, err := h.MakeDriver(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		b := blob.NewBucket(drv)
-		if err := b.WriteAll(ctx, key, content, nil); err != nil {
-			t.Fatal(err)
-		}
-		return b, func() { h.Close() }
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.description, func(t *testing.T) {
-			key := keyPrefix + tc.key
-			b, done := init(t, key)
-			defer done()
-
-			// Verify read works.
-			gotContent, err := b.ReadAll(ctx, key)
+	for description, key := range escape.WeirdStrings {
+		t.Run(description, func(t *testing.T) {
+			h, err := newHarness(ctx, t)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !cmp.Equal(gotContent, content) {
-				t.Errorf("got %q want %q", string(gotContent), string(content))
-			}
-			// Verify List returns the key.
-			iter := b.List(&blob.ListOptions{Prefix: key})
-			obj, err := iter.Next(ctx)
-			if err != nil && err != io.EOF {
+			defer h.Close()
+			drv, err := h.MakeDriver(ctx)
+			if err != nil {
 				t.Fatal(err)
 			}
-			if err == io.EOF {
-				t.Errorf("key not returned from List")
-			} else if obj.Key != key {
-				t.Errorf("wrong key returned from List, got %v want %v", obj.Key, key)
+			b := blob.NewBucket(drv)
+
+			// Write the blob.
+			key = keyPrefix + key
+			if err := b.WriteAll(ctx, key, content, nil); err != nil {
+				t.Fatal(err)
+			}
+
+			defer func() {
+				err := b.Delete(ctx, key)
+				if err != nil {
+					t.Error(err)
+				}
+			}()
+
+			// Verify read works.
+			got, err := b.ReadAll(ctx, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !cmp.Equal(got, content) {
+				t.Errorf("got %q want %q", string(got), string(content))
+			}
+
+			// Verify Attributes works.
+			_, err = b.Attributes(ctx, key)
+			if err != nil {
+				t.Error(err)
+			}
+
+			// Verify SignedURL works.
+			url, err := b.SignedURL(ctx, key, nil)
+			if gcerrors.Code(err) != gcerrors.Unimplemented {
+				if err != nil {
+					t.Error(err)
+				}
+				client := h.HTTPClient()
+				if client == nil {
+					t.Error("can't verify SignedURL, Harness.HTTPClient() returned nil")
+				}
+				resp, err := client.Get(url)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != 200 {
+					t.Errorf("got status code %d, want 200", resp.StatusCode)
+				}
+				got, err := ioutil.ReadAll(resp.Body)
+				if !bytes.Equal(got, content) {
+					t.Errorf("got body %q, want %q", string(got), string(content))
+				}
 			}
 		})
 	}
