@@ -49,7 +49,7 @@ fi
 #
 # Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
 ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
-  echo "FAIL: dependencies changed; compare go list -deps ./... with alldeps" && result=1
+  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
 
 wire check ./... || result=1
