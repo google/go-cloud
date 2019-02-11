@@ -26,6 +26,8 @@
 // that is the topic of the subscription. See the package example for details.
 //
 // As
+//
+// rabbitpubsub exposes the following types for As:
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection
 //  - Message: amqp.Delivery

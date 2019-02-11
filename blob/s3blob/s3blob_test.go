@@ -42,8 +42,8 @@ import (
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 //    name from the Terraform output instead (saving a copy of it for replay).
 const (
-	bucketName = "go-cloud-bucket"
-	region     = "us-east-2"
+	bucketName = "go-cloud-testing"
+	region     = "us-west-1"
 )
 
 type harness struct {
