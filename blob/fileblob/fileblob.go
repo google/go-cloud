@@ -15,21 +15,6 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Blob keys are escaped before being used as filenames, and filenames are
-// unescaped when they are passed back as blob keys during List. The escape
-// algorithm is:
-//  - Alphanumeric characters (A-Z a-z 0-9) are not escaped.
-//  - Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-//  - Slash ('/') is always escaped to the OS-specific path separator character
-//    (os.PathSeparator).
-//  - All other characters are escaped similar to url.PathEscape:
-//    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
-//
-// Filenames that can't be unescaped due to invalid escape sequences
-// (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
-// (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
-// aren't visible using fileblob.
-//
 // Open URLs
 //
 // For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
@@ -48,6 +33,16 @@
 //    -> Passes "c:\foo\bar".
 //  - file://localhost/c:/foo/bar
 //    -> Also passes "c:\foo\bar".
+//
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for fileblob:
+//  - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
+//    If os.PathSeparator != "/", it is also escaped.
+//    Additionally, the "/" in "../", the trailing "/" in "//", and a trailing
+//    "/" is key names are escaped in the same way.
 //
 // As
 //
@@ -75,6 +70,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 )
 
 const defaultPageSize = 1000
@@ -134,140 +130,44 @@ func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 	return blob.NewBucket(drv), nil
 }
 
-// shouldEscape returns true if c should be escaped.
-func shouldEscape(c byte) bool {
-	switch {
-	case 'A' <= c && c <= 'Z':
+// escapeKey does all required escaping for UTF-8 strings to work the filesystem.
+func escapeKey(s string) string {
+	s = escape.HexEscape(s, func(r []rune, i int) bool {
+		c := r[i]
+		switch {
+		case c < 32:
+			return true
+		// We're going to replace '/' with os.PathSeparator below. In order for this
+		// to be reversible, we need to escape raw os.PathSeparators.
+		case os.PathSeparator != '/' && c == os.PathSeparator:
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		// For "//", escape the trailing slash.
+		case i > 0 && c == '/' && r[i-1] == '/':
+			return true
+		// Escape the trailing slash in a key.
+		case c == '/' && i == len(r)-1:
+			return true
+		}
 		return false
-	case 'a' <= c && c <= 'z':
-		return false
-	case '0' <= c && c <= '9':
-		return false
-	case c == ' ' || c == '-' || c == '_' || c == '.':
-		return false
-	case c == '/':
-		return false
+	})
+	// Replace "/" with os.PathSeparator if needed, so that the local filesystem
+	// can use subdirectories.
+	if os.PathSeparator != '/' {
+		s = strings.Replace(s, "/", string(os.PathSeparator), -1)
 	}
-	return true
+	return s
 }
 
-// escape returns s escaped per the rules described in the package docstring.
-// The code is modified from https://golang.org/src/net/url/url.go.
-func escape(s string) string {
-	hexCount := 0
-	replaceSlash := false
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if shouldEscape(c) {
-			hexCount++
-		} else if c == '/' && os.PathSeparator != '/' {
-			replaceSlash = true
-		}
+// unescapeKey reverses escapeKey.
+func unescapeKey(s string) string {
+	if os.PathSeparator != '/' {
+		s = strings.Replace(s, string(os.PathSeparator), "/", -1)
 	}
-	if hexCount == 0 && !replaceSlash {
-		return s
-	}
-	t := make([]byte, len(s)+2*hexCount)
-	j := 0
-	for i := 0; i < len(s); i++ {
-		switch c := s[i]; {
-		case c == '/':
-			t[j] = os.PathSeparator
-			j++
-		case shouldEscape(c):
-			t[j] = '%'
-			t[j+1] = "0123456789ABCDEF"[c>>4]
-			t[j+2] = "0123456789ABCDEF"[c&15]
-			j += 3
-		default:
-			t[j] = s[i]
-			j++
-		}
-	}
-	return string(t)
-}
-
-// ishex returns true if c is a valid part of a hexadecimal number.
-func ishex(c byte) bool {
-	switch {
-	case '0' <= c && c <= '9':
-		return true
-	case 'a' <= c && c <= 'f':
-		return true
-	case 'A' <= c && c <= 'F':
-		return true
-	}
-	return false
-}
-
-// unhex returns the hexadecimal value of the hexadecimal character c.
-// For example, unhex('A') returns 10.
-func unhex(c byte) byte {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0'
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10
-	}
-	return 0
-}
-
-// unescape unescapes s per the rules described in the package docstring.
-// It returns an error if s has invalid escape sequences, or if
-// escape(unescape(s)) != s.
-// The code is modified from https://golang.org/src/net/url/url.go.
-func unescape(s string) (string, error) {
-	// Count %, check that they're well-formed.
-	n := 0
-	replacePathSeparator := false
-	for i := 0; i < len(s); {
-		switch s[i] {
-		case '%':
-			n++
-			if i+2 >= len(s) || !ishex(s[i+1]) || !ishex(s[i+2]) {
-				bad := s[i:]
-				if len(bad) > 3 {
-					bad = bad[:3]
-				}
-				return "", fmt.Errorf("couldn't unescape %q near %q", s, bad)
-			}
-			i += 3
-		case os.PathSeparator:
-			replacePathSeparator = os.PathSeparator != '/'
-			i++
-		default:
-			i++
-		}
-	}
-	unescaped := s
-	if n > 0 || replacePathSeparator {
-		t := make([]byte, len(s)-2*n)
-		j := 0
-		for i := 0; i < len(s); {
-			switch s[i] {
-			case '%':
-				t[j] = unhex(s[i+1])<<4 | unhex(s[i+2])
-				j++
-				i += 3
-			case os.PathSeparator:
-				t[j] = '/'
-				j++
-				i++
-			default:
-				t[j] = s[i]
-				j++
-				i++
-			}
-		}
-		unescaped = string(t)
-	}
-	escaped := escape(unescaped)
-	if escaped != s {
-		return "", fmt.Errorf("%q unescaped to %q but escaped back to %q instead of itself", s, unescaped, escaped)
-	}
-	return unescaped, nil
+	s = escape.HexUnescape(s)
+	return s
 }
 
 var errNotImplemented = errors.New("not implemented")
@@ -285,7 +185,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // path returns the full path for a key
 func (b *bucket) path(key string) (string, error) {
-	path := filepath.Join(b.dir, escape(key))
+	path := filepath.Join(b.dir, escapeKey(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return "", errAttrsExt
 	}
@@ -342,11 +242,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 		// Strip the <b.dir> prefix from path; +1 is to include the separator.
 		path = path[len(b.dir)+1:]
-		// Unescape the path to get the key; if this fails, skip.
-		key, err := unescape(path)
-		if err != nil {
-			return nil
-		}
+		// Unescape the path to get the key.
+		key := unescapeKey(path)
 		// Skip all directories. If opts.Delimiter is set, we'll create
 		// pseudo-directories later.
 		// Note that returning nil means that we'll still recurse into it;

@@ -25,7 +25,7 @@ interactions:
       - "2018-03-28"
       x-ms-date:
       - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys:;%3C=%3E%3F
     method: PUT
   response:
     body: ""
@@ -35,13 +35,13 @@ interactions:
       Date:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498B4B9770"'
       Last-Modified:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 508e9534-f01e-003e-6d32-c22395000000
+      - 508e9517-f01e-003e-5332-c22395000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -59,7 +59,7 @@ interactions:
       - "2018-03-28"
       x-ms-date:
       - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys:;%3C=%3E%3F
     method: GET
   response:
     body: hello
@@ -77,7 +77,7 @@ interactions:
       Date:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498B4B9770"'
       Last-Modified:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Server:
@@ -91,7 +91,7 @@ interactions:
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e9538-f01e-003e-7132-c22395000000
+      - 508e9521-f01e-003e-5c32-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -109,7 +109,7 @@ interactions:
       - "2018-03-28"
       x-ms-date:
       - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys:;%3C=%3E%3F
     method: HEAD
   response:
     body: ""
@@ -127,7 +127,7 @@ interactions:
       Date:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498B4B9770"'
       Last-Modified:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Server:
@@ -145,7 +145,7 @@ interactions:
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e953e-f01e-003e-7632-c22395000000
+      - 508e9526-f01e-003e-5f32-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -157,7 +157,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz?se=2019-02-11T18%3A51%3A26Z&sig=C49vNXDV3ZuvAqBpoSU3Yia2hG7y3xEG%2FcLAv4yDXSg%3D&sp=r&spr=https&sr=b&sv=2018-03-28
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys:;%3C=%3E%3F?se=2019-02-11T18%3A51%3A26Z&sig=H7qf6yUNZHfjCGi7cZMrN6%2FogerYBj%2FuukGhB7cmmso%3D&sp=r&spr=https&sr=b&sv=2018-03-28
     method: GET
   response:
     body: hello
@@ -175,7 +175,7 @@ interactions:
       Date:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Etag:
-      - '"0x8D690498B7549CA"'
+      - '"0x8D690498B4B9770"'
       Last-Modified:
       - Mon, 11 Feb 2019 17:51:26 GMT
       Server:
@@ -189,7 +189,7 @@ interactions:
       X-Ms-Lease-Status:
       - unlocked
       X-Ms-Request-Id:
-      - 508e9545-f01e-003e-7d32-c22395000000
+      - 508e9529-f01e-003e-6232-c22395000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -209,7 +209,7 @@ interactions:
       - "2018-03-28"
       x-ms-date:
       - Mon, 11 Feb 2019 17:51:26 GMT
-    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keysfoo/bar/baz
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/weird-keys:;%3C=%3E%3F
     method: DELETE
   response:
     body: ""
@@ -221,7 +221,7 @@ interactions:
       X-Ms-Delete-Type-Permanent:
       - "true"
       X-Ms-Request-Id:
-      - 508e9547-f01e-003e-7f32-c22395000000
+      - 508e9530-f01e-003e-6932-c22395000000
       X-Ms-Version:
       - "2018-03-28"
     status: 202 Accepted
