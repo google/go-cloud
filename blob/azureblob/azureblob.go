@@ -17,33 +17,16 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, azureblob registers for the scheme "azblob"; URLs start
-// with "azblob://".
+// For blob.OpenBucket URLs, azureblob registers for the scheme "azblob"; URLs
+// start with "azblob://", like "azblob://mybucket". blob.OpenBucket will obtain
+// credentials from the environment variables AZURE_STORAGE_ACCOUNT,
+// AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN. AZURE_STORAGE_ACCOUNT is
+// required, along with one of the other two. If you want to obtain this
+// information differently or find details on the format of the URL, see
+// URLOpener.
 //
-// The URL's Host is used as the bucket name.
-//
-// By default, credentials are retrieved from the environment variables
-// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
-// AZURE_STORAGE_ACCOUNT is required, along with one of the other two. See
+// For more on SAS tokens, see
 // https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
-// for more on SAS tokens. Alternatively, credentials can be loaded from a file;
-// see the cred_path query parameter below.
-//
-// The following query options are supported:
-//  - cred_path: Sets path to a credentials file in JSON format. The
-//    AccountName field must be specified, and either AccountKey or SASToken.
-// Example credentials file using AccountKey:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "AccountKey": "PRIMARY OR SECONDARY ACCOUNT KEY"
-//     }
-// Example credentials file using SASToken:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "SASToken": "ENTER YOUR AZURE STORAGE SAS TOKEN"
-//     }
-// Example URL:
-//  azblob://mybucket?cred_path=pathToCredentials
 //
 // Escaping
 //
@@ -74,17 +57,16 @@ package azureblob
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -119,41 +101,58 @@ const (
 )
 
 func init() {
-	blob.Register("azblob", openURL)
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	type AzureCreds struct {
-		AccountName AccountName
-		AccountKey  AccountKey
-		SASToken    SASToken
-	}
-	ac := AzureCreds{}
-	if credPath := u.Query()["cred_path"]; len(credPath) > 0 {
-		f, err := ioutil.ReadFile(credPath[0])
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(f, &ac)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+// lazyCredsOpener obtains credentials from the environment on the first call
+// to OpenBucketURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	o.init.Do(func() {
 		// Use default credential info from the environment.
 		// Ignore errors, as we'll get errors from OpenBucket later.
-		ac.AccountName, _ = DefaultAccountName()
-		ac.AccountKey, _ = DefaultAccountKey()
-		ac.SASToken, _ = DefaultSASToken()
-	}
+		accountName, _ := DefaultAccountName()
+		accountKey, _ := DefaultAccountKey()
+		sasToken, _ := DefaultSASToken()
 
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open Azure bucket %q: %v", u, o.err)
+	}
+	return o.opener.OpenBucketURL(ctx, u)
+}
+
+// Scheme is the URL scheme gcsblob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "azblob"
+
+// URLOpener opens Azure URLs like "azblob://mybucket".
+type URLOpener struct {
+	// AccountName must be specified.
+	AccountName AccountName
+
+	// Pipeline must be set to a non-nil value.
+	Pipeline pipeline.Pipeline
+
+	// Options specifies the options to pass to OpenBucket.
+	Options Options
+}
+
+func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken) (*URLOpener, error) {
 	// azblob.Credential is an interface; we will use either a SharedKeyCredential
 	// or anonymous credentials. If the former, we will also fill in
 	// Options.Credential so that SignedURL will work.
 	var credential azblob.Credential
 	var sharedKeyCred *azblob.SharedKeyCredential
-	if ac.AccountKey != "" {
+	if accountKey != "" {
 		var err error
-		sharedKeyCred, err = NewCredential(ac.AccountName, ac.AccountKey)
+		sharedKeyCred, err = NewCredential(accountName, accountKey)
 		if err != nil {
 			return nil, err
 		}
@@ -161,11 +160,23 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	} else {
 		credential = azblob.NewAnonymousCredential()
 	}
-	pipeline := NewPipeline(credential, azblob.PipelineOptions{})
-	return openBucket(ctx, pipeline, ac.AccountName, u.Host, &Options{
-		Credential: sharedKeyCred,
-		SASToken:   ac.SASToken,
-	})
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
+		Options: Options{
+			Credential: sharedKeyCred,
+			SASToken:   sasToken,
+		},
+	}, nil
+}
+
+// OpenBucketURL opens the Azure Storage Account Container with the same name as
+// the host in the URL.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for k := range u.Query() {
+		return nil, fmt.Errorf("open Azure bucket %q: unknown query parameter %s", u, k)
+	}
+	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
 }
 
 // DefaultIdentity is a Wire provider set that provides an Azure storage

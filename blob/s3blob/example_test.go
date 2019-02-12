@@ -50,8 +50,6 @@ func Example_open() {
 	ctx := context.Background()
 
 	// Open creates a *blob.Bucket from a URL.
-	// See the package documentation for tadditional URL parameters.
-	b, err := blob.Open(ctx, "s3://my-bucket?region=us-east-1")
-	_ = b
-	_ = err
+	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
+	_, _ = b, err
 }
