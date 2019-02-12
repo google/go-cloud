@@ -545,7 +545,7 @@ func wrapError(ec errorCoder, err error) error {
 func RunWorkerPool(ctx context.Context, maxWorkers int, sub *Subscription, handleMessage func(ctx context.Context, m *Message) error) error {
 	errc := make(chan error)
 	ctx, cancel := context.WithCancel(ctx)
-	workerpool.Run(ctx, maxWorkers, func(ctx context.Context) workerpool.Task {
+	go workerpool.Run(ctx, maxWorkers, func(ctx context.Context) workerpool.Task {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			cancel()
