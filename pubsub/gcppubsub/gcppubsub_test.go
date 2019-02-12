@@ -114,10 +114,6 @@ func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	return false, ""
-}
-
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)

@@ -88,8 +88,24 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	skip, reason := shouldSkip(t.Name())
+	if skip {
+		t.Skip(reason)
+	}
 	sess, rt, done := setup.NewAWSSession(t, region)
 	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
+}
+
+func shouldSkip(testName string) (bool, string) {
+	if !*setup.Record {
+		if strings.Contains(testName, "TestSendReceive") {
+			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
+		}
+		if strings.Contains(testName, "TestAs") {
+			return true, "TestAs hangs in replay mode on awspubsub"
+		}
+	}
+	return false, ""
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
@@ -144,18 +160,6 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
 	}
 	return ds, cleanup, nil
-}
-
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	if !*setup.Record {
-		if strings.Contains(testName, "TestSendReceive") {
-			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
-		}
-		if strings.Contains(testName, "TestAs") {
-			return true, "TestAs hangs in replay mode on awspubsub"
-		}
-	}
-	return false, ""
 }
 
 // ackBatcher is a trivial batcher that sends off items as singleton batches.
