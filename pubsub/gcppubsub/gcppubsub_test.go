@@ -196,6 +196,28 @@ func (gcpAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
+func (gcpAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
+	var s *status.Status
+	if !t.ErrorAs(err, &s) {
+		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+	}
+	if s.Code() != codes.NotFound {
+		return fmt.Errorf("got code %s, want NotFound", s.Code())
+	}
+	return nil
+}
+
+func (gcpAsTest) SubscriptionErrorCheck(sub *pubsub.Subscription, err error) error {
+	var s *status.Status
+	if !sub.ErrorAs(err, &s) {
+		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
+	}
+	if s.Code() != codes.NotFound {
+		return fmt.Errorf("got code %s, want NotFound", s.Code())
+	}
+	return nil
+}
+
 func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
 	var pm pubsubpb.PubsubMessage
 	if m.As(&pm) {
@@ -204,17 +226,6 @@ func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
 	var ppm *pubsubpb.PubsubMessage
 	if !m.As(&ppm) {
 		return fmt.Errorf("cast failed for %T", &ppm)
-	}
-	return nil
-}
-
-func (gcpAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
-	var s *status.Status
-	if !t.ErrorAs(err, &s) {
-		return fmt.Errorf("failed to convert %v (%T) to a gRPC Status", err, err)
-	}
-	if s.Code() != codes.NotFound {
-		return fmt.Errorf("got code %s, want NotFound", s.Code())
 	}
 	return nil
 }

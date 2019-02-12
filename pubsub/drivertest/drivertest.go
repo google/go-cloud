@@ -66,8 +66,9 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // The conformance test:
 // 1. Calls TopicCheck.
 // 2. Calls SubscriptionCheck.
-// 3. Calls ErrorCheck.
-// 4. Calls MessageCheck.
+// 3. Calls TopicErrorCheck.
+// 4. Calls SubscriptionErrorCheck.
+// 5. Calls MessageCheck.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
@@ -75,11 +76,15 @@ type AsTest interface {
 	TopicCheck(t *pubsub.Topic) error
 	// SubscriptionCheck will be called to allow verification of Subscription.As.
 	SubscriptionCheck(s *pubsub.Subscription) error
-	// ErrorCheck will be called to allow verification of Topic.ErrorAs.
-	// (It is assumed that Subscription.ErrorAs shares the same implementation.)
+	// TopicErrorCheck will be called to allow verification of Topic.ErrorAs.
 	// The error will be the one returned from SendBatch when called with
+	// a non-existent topic.
+	TopicErrorCheck(t *pubsub.Topic, err error) error
+	// SubscriptionErrorCheck will be called to allow verification of
+	// Subscription.ErrorAs.
+	// The error will be the one returned from ReceiveBatch when called with
 	// a non-existent subscription.
-	ErrorCheck(t *pubsub.Topic, err error) error
+	SubscriptionErrorCheck(s *pubsub.Subscription, err error) error
 	// MessageCheck will be called to allow verification of Message.As.
 	MessageCheck(m *pubsub.Message) error
 }
@@ -104,20 +109,30 @@ func (verifyAsFailsOnNil) SubscriptionCheck(s *pubsub.Subscription) error {
 	return nil
 }
 
-func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
-	if m.As(nil) {
-		return errors.New("want Message.As to return false when passed nil")
-	}
-	return nil
-}
-
-func (verifyAsFailsOnNil) ErrorCheck(t *pubsub.Topic, err error) (ret error) {
+func (verifyAsFailsOnNil) TopicErrorCheck(t *pubsub.Topic, err error) (ret error) {
 	defer func() {
 		if recover() == nil {
 			ret = errors.New("want Topic.ErrorAs to panic when passed nil")
 		}
 	}()
 	t.ErrorAs(err, nil)
+	return nil
+}
+
+func (verifyAsFailsOnNil) SubscriptionErrorCheck(s *pubsub.Subscription, err error) (ret error) {
+	defer func() {
+		if recover() == nil {
+			ret = errors.New("want Subscription.ErrorAs to panic when passed nil")
+		}
+	}()
+	s.ErrorAs(err, nil)
+	return nil
+}
+
+func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
+	if m.As(nil) {
+		return errors.New("want Message.As to return false when passed nil")
+	}
 	return nil
 }
 
@@ -472,7 +487,23 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 
 	top = pubsub.NewTopic(dt)
 	defer top.Shutdown(ctx)
-	if err := st.ErrorCheck(top, top.Send(ctx, &pubsub.Message{})); err != nil {
+	topicErr := top.Send(ctx, &pubsub.Message{})
+	if topicErr == nil {
+		t.Error("got nil expected error sending to nonexistent topic")
+	} else if err := st.TopicErrorCheck(top, topicErr); err != nil {
+		t.Error(err)
+	}
+
+	ds, err := h.MakeNonexistentSubscription(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub = pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
+	_, subErr := sub.Receive(ctx)
+	if subErr == nil {
+		t.Error("got nil expected error sending to nonexistent subscription")
+	} else if err := st.SubscriptionErrorCheck(sub, subErr); err != nil {
 		t.Error(err)
 	}
 }
