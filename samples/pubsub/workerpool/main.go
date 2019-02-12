@@ -1,3 +1,21 @@
+// Copyright 2018 The Go Cloud Development Kit Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// workerpool is a sample application that simulates messages being
+// published about video uploads and subscribed workers transcoding
+// these videos. In a real application the publish and subscribe
+// sides would normally be in separate executables.
 package main
 
 import (
@@ -7,7 +25,6 @@ import (
 	"math/rand"
 	"time"
 
-	"gocloud.dev/internal/workerpool"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/mempubsub"
 
@@ -40,27 +57,19 @@ func publish(ctx context.Context, top *pubsub.Topic) error {
 			return fmt.Errorf("sending video upload message: %v", err)
 		}
 		// Simulate some delay between videos being uploaded on an up-and-coming video site.
-		time.Sleep(time.Duration(rand.Intn(10) * 100 * int(time.Millisecond)))
+		time.Sleep(time.Duration(rand.Intn(10) * 100) * time.Millisecond)
 	}
 	return nil
 }
 
 // subscribe pulls from the subscription and simulates processing the videos.
 func subscribe(ctx context.Context, sub *pubsub.Subscription) error {
-	workerpool.Run(ctx, 10, func(ctx context.Context) workerpool.Task {
-		m, err := sub.Receive(ctx)
-		if err != nil {
-			log.Fatalf("receiving video upload message: %v", err)
-		}
+	return pubsub.RunWorkerPool(ctx, 10, sub, func(ctx context.Context, m *pubsub.Message) error {
 		videoURL := string(m.Body)
-		return func(ctx context.Context) {
-			log.Printf("Processing %v", videoURL)
-			// Simulate transcoding the video and storing it in various formats.
-			time.Sleep(time.Duration(rand.Intn(10) * int(time.Second)))
-			log.Printf("Done processing %v", videoURL)
-			m.Ack()
-		}
+		log.Printf("Processing %v", videoURL)
+		// Simulate transcoding the video and storing it in various formats.
+		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
+		log.Printf("Done processing %v", videoURL)
+		return nil
 	})
-	ctx := context.Background()
-	return nil
 }

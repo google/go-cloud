@@ -66,7 +66,9 @@ import (
 	"sync"
 	"time"
 
-	gax "github.com/googleapis/gax-go"
+	"gocloud.dev/internal/workerpool"
+
+	"github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
@@ -533,4 +535,31 @@ func wrapError(ec errorCoder, err error) error {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
+}
+
+// RunWorkerPool repeatedly fetches messages from the given subscription sub, in an
+// inverted worker pool (link) with up to maxWorkers. The callback handleMessage is
+// called on each message. If handleMessage return nil for its error, then the
+// message is acked. If sub.Receive or handleMessage returns a non-nil error then
+// the workerpool is terminated via context cancellation.
+func RunWorkerPool(ctx context.Context, maxWorkers int, sub *Subscription, handleMessage func(ctx context.Context, m *Message) error) error {
+	errc := make(chan error)
+	ctx, cancel := context.WithCancel(ctx)
+	workerpool.Run(ctx, maxWorkers, func(ctx context.Context) workerpool.Task {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			cancel()
+			errc <- fmt.Errorf("receiving message: %v", err)
+			return func(context.Context) {}
+		}
+		return func(ctx context.Context) {
+			if err := handleMessage(ctx, m); err != nil {
+				cancel()
+				errc <- fmt.Errorf("handling message: %v", err)
+				return
+			}
+			m.Ack()
+		}
+	})
+	return <-errc
 }
