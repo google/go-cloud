@@ -163,21 +163,3 @@ resource "github_issue_label" "P1" {
   name        = "P1"
   color       = "ff6666"
 }
-
-resource "github_issue_label" "P2" {
-  repository  = "${github_repository.repo.name}"
-  name        = "P2"
-  color       = "cc9900"
-}
-
-resource "github_issue_label" "P3" {
-  repository  = "${github_repository.repo.name}"
-  name        = "P3"
-  color       = "ffcc33"
-}
-
-resource "github_issue_label" "P4" {
-  repository  = "${github_repository.repo.name}"
-  name        = "P4"
-  color       = "ffe699"
-}
