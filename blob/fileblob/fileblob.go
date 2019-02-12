@@ -538,15 +538,15 @@ type URLSigner interface {
 	// into a signed URL.
 	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error)
 
-	// KeyFromURL takes in a context and a URL.
-	// It returns an object key string and a bool.
-	// e.g. (key, true) if the signature is valid (authentic && unexpired),
-	// or (nil, false) if it is invalid.
+	// KeyFromURL must be able to validate a URL returned from URLFromKey.
+	// KeyFromURL must only return the object if if the URL is
+	// both unexpired and authentic.
 	KeyFromURL(ctx context.Context, surl *url.URL) (string, bool)
 }
 
 // URLSignerHMAC uses the crypto/hmac package to create a message authentication code
-// using a sha256 hash
+// using a sha256 hash. Any URLSignerHMAC with a non-empty secretKey can validate
+// a signed URL created by any other URLSignerHMAC with the identical secretKey.
 type URLSignerHMAC struct {
 	urlScheme string
 	urlHost   string
@@ -554,8 +554,11 @@ type URLSignerHMAC struct {
 	secretKey []byte
 }
 
-// TODO add docstring
+// NewURLSignerHMAC creates a URLSignerHMAC.
 func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerHMAC {
+	if secretKey == "" {
+		return nil
+	}
 	return &URLSignerHMAC{
 		urlScheme: urlScheme,
 		urlHost:   urlHost,
@@ -564,7 +567,7 @@ func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerH
 	}
 }
 
-// TODO add docstring
+// URLFromKey creates a signed URL with the object key and expiry as a query params.
 func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
 	sURL := &url.URL{
 		Host:   h.urlHost,
@@ -590,6 +593,8 @@ func (h *URLSignerHMAC) getMAC(message string) []byte {
 	return hsh.Sum(nil)
 }
 
+// KeyFromURL checks expiry and signature, and returns the object key
+// only if the signed URL is both authentic and unexpired.
 func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, bool) {
 	q := sURL.Query()
 
@@ -611,7 +616,6 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 	return q.Get("obj"), true
 }
 
-// TODO add docstring
 func (h *URLSignerHMAC) checkMAC(message, mac string) bool {
 	expected := h.getMAC(message)
 	return hmac.Equal([]byte(mac), expected)
