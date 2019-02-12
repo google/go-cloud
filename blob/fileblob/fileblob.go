@@ -15,21 +15,6 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Blob keys are escaped before being used as filenames, and filenames are
-// unescaped when they are passed back as blob keys during List. The escape
-// algorithm is:
-//  - Alphanumeric characters (A-Z a-z 0-9) are not escaped.
-//  - Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-//  - Slash ('/') is always escaped to the OS-specific path separator character
-//    (os.PathSeparator).
-//  - All other characters are escaped similar to url.PathEscape:
-//    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
-//
-// Filenames that can't be unescaped due to invalid escape sequences
-// (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
-// (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
-// aren't visible using fileblob.
-//
 // Open URLs
 //
 // For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
