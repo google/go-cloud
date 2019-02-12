@@ -30,7 +30,7 @@ type Task func(context.Context)
 // longer ask for more tasks, and will return after waiting for the running
 // goroutines to finish. The provided context can be used to cancel everything
 // and exit the loop.
-func Run(ctx context.Context, limit int, nextTask func(context.Context) Task) {
+func Run(ctx context.Context, limit int, nextTask func(context.Context) Task) error {
 	type token struct{}
 	sem := make(chan token, limit)
 Loop:
@@ -56,4 +56,6 @@ Loop:
 	for n := limit; n > 0; n-- {
 		sem <- token{}
 	}
+
+	return ctx.Err()
 }
