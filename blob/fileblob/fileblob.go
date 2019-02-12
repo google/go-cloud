@@ -517,7 +517,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 // SignedURL implements driver.SignedURL
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
-		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.URLSigner")
+		return "", errors.New("sign fileblob url: bucket does not have an Options.URLSigner")
 	}
 	surl, err := b.opts.URLSigner.URLFromKey(ctx, key, opts)
 	if err != nil {
