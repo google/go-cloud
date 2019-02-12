@@ -554,6 +554,7 @@ type URLSignerHMAC struct {
 	secretKey []byte
 }
 
+// TODO add docstring
 func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerHMAC {
 	return &URLSignerHMAC{
 		urlScheme: urlScheme,
@@ -563,7 +564,7 @@ func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerH
 	}
 }
 
-// URLFromKey uses the scheme and host in URLSignerHMAC, and uses the passed key as the path.
+// TODO add docstring
 func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
 	sURL := &url.URL{
 		Host:   h.urlHost,
@@ -574,7 +575,6 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("obj", key)
 	expTime := time.Now().Add(opts.Expiry).Unix()
 	q.Set("expiry", strconv.FormatInt(expTime, 10))
-	q.Set("signature", "")
 	sURL.RawQuery = q.Encode()
 
 	mac := string(h.getMAC(sURL.RawQuery))
@@ -602,7 +602,7 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 	}
 
 	sig := q.Get("signature")
-	q.Set("signature", "")
+	q.Del("signature")
 	sURL.RawQuery = q.Encode()
 
 	if !h.checkMAC(sURL.RawQuery, sig) {
@@ -611,6 +611,7 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 	return q.Get("obj"), true
 }
 
+// TODO add docstring
 func (h *URLSignerHMAC) checkMAC(message, mac string) bool {
 	expected := h.getMAC(message)
 	return hmac.Equal([]byte(mac), expected)
