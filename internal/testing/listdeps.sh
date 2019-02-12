@@ -22,8 +22,6 @@ tmpfile=$(mktemp)
 
 for path in "." "./internal/contributebot" "./samples/appengine"; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
-  echo "=================" "$path"
-  cat "$tmpfile"
 done
 
 function cleanup() {
