@@ -76,6 +76,7 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 	})
 	cluster.Start()
 	tc := cluster.Cores[0]
+	tc.Client.SetOutputCurlString(true)
 	vault.TestWaitActive(t, tc.Core)
 
 	tc.Client.SetToken(cluster.RootToken)
@@ -93,9 +94,9 @@ func (v verifyAs) Name() string {
 }
 
 func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
-	var s string
-	if k.ErrorAs(err, &s) {
-		return errors.New("Keeper.ErrorAs expected to fail")
+	var e *api.OutputStringError
+	if !k.ErrorAs(err, &e) {
+		return errors.New("Keeper.ErrorAs failed")
 	}
 	return nil
 }

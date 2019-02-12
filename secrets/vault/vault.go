@@ -18,7 +18,8 @@
 //
 // As
 //
-// vault does not support any types for As.
+// vault exposes the following type for As:
+//  - Error: *api.OutputStringError
 package vault
 
 import (
@@ -102,7 +103,16 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {
-	return false
+	e, ok := err.(*api.OutputStringError)
+	if !ok {
+		return false
+	}
+	p, ok := i.(**api.OutputStringError)
+	if !ok {
+		return false
+	}
+	*p = e
+	return true
 }
 
 // ErrorCode implements driver.ErrorCode.
