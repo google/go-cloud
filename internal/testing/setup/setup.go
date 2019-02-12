@@ -100,6 +100,7 @@ func NewAWSSession2(t *testing.T, region string) (sess *session.Session, rt http
 		rec.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature")
 		rec.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
 		rec.ClearHeaders("X-Amz-Date")
+		rec.ClearHeaders("User-Agent") // AWS includes the Go version
 		c, err := rec.Client(context.Background(), option.WithoutAuthentication())
 		if err != nil {
 			t.Fatal(err)

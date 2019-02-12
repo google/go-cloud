@@ -4,7 +4,8 @@
   "Converter": {
     "ClearHeaders": [
       "^X-Goog-.*Encryption-Key$",
-      "^X-Amz-Date$"
+      "^X-Amz-Date$",
+      "^User-Agent$"
     ],
     "RemoveRequestHeaders": [
       "^Authorization$",
@@ -36,7 +37,7 @@
   },
   "Entries": [
     {
-      "ID": "db106d4dfc86fe04",
+      "ID": "44cce80023ec84f9",
       "Request": {
         "Method": "POST",
         "URL": "https://sns.us-east-2.amazonaws.com/",
@@ -48,7 +49,7 @@
             "88"
           ],
           "User-Agent": [
-            "aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)"
+            "CLEARED"
           ],
           "X-Amz-Date": [
             "CLEARED"
@@ -72,13 +73,13 @@
             "text/xml"
           ],
           "Date": [
-            "Mon, 11 Feb 2019 23:29:39 GMT"
+            "Tue, 12 Feb 2019 15:53:42 GMT"
           ],
           "X-Amzn-Requestid": [
-            "8549d69f-d153-5924-9fb2-8243d6f0e4b2"
+            "8a9c1bd5-f218-51ba-87ce-4f091c5e706e"
           ]
         },
-        "Body": "PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxFcnJvcj4KICAgIDxUeXBlPlNlbmRlcjwvVHlwZT4KICAgIDxDb2RlPkludmFsaWRQYXJhbWV0ZXI8L0NvZGU+CiAgICA8TWVzc2FnZT5JbnZhbGlkIHBhcmFtZXRlcjogVG9waWNBcm4gUmVhc29uOiBBbiBBUk4gbXVzdCBoYXZlIGF0IGxlYXN0IDYgZWxlbWVudHMsIG5vdCAxPC9NZXNzYWdlPgogIDwvRXJyb3I+CiAgPFJlcXVlc3RJZD44NTQ5ZDY5Zi1kMTUzLTU5MjQtOWZiMi04MjQzZDZmMGU0YjI8L1JlcXVlc3RJZD4KPC9FcnJvclJlc3BvbnNlPgo="
+        "Body": "PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9zbnMuYW1hem9uYXdzLmNvbS9kb2MvMjAxMC0wMy0zMS8iPgogIDxFcnJvcj4KICAgIDxUeXBlPlNlbmRlcjwvVHlwZT4KICAgIDxDb2RlPkludmFsaWRQYXJhbWV0ZXI8L0NvZGU+CiAgICA8TWVzc2FnZT5JbnZhbGlkIHBhcmFtZXRlcjogVG9waWNBcm4gUmVhc29uOiBBbiBBUk4gbXVzdCBoYXZlIGF0IGxlYXN0IDYgZWxlbWVudHMsIG5vdCAxPC9NZXNzYWdlPgogIDwvRXJyb3I+CiAgPFJlcXVlc3RJZD44YTljMWJkNS1mMjE4LTUxYmEtODdjZS00ZjA5MWM1ZTcwNmU8L1JlcXVlc3RJZD4KPC9FcnJvclJlc3BvbnNlPgo="
       }
     }
   ]
