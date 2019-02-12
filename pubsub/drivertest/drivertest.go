@@ -299,13 +299,11 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
-		t.Logf("receiveN: about to receive (i=%d)", i)
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		ms = append(ms, m)
-		t.Logf("receiveN: about to ack (i=%d)", i)
 		m.Ack()
 	}
 	return ms
