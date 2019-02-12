@@ -17,6 +17,7 @@ package awskms
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -70,6 +71,9 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	var e awserr.Error
 	if !k.ErrorAs(err, &e) {
 		return errors.New("Keeper.ErrorAs failed")
+	}
+	if e.Code() != kms.ErrCodeInvalidCiphertextException {
+		return fmt.Errorf("got %q, want %q", e.Code(), kms.ErrCodeInvalidCiphertextException)
 	}
 	return nil
 }
