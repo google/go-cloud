@@ -81,7 +81,7 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 }
 
 // NewAWSSession2 is like NewAWSSession, but it uses a diffrent record/replay proxy.
-func NewAWSSession2(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -101,7 +101,7 @@ func NewAWSSession2(t *testing.T, region string) (sess *session.Session, rt http
 		rec.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
 		rec.ClearHeaders("X-Amz-Date")
 		rec.ClearHeaders("User-Agent") // AWS includes the Go version
-		c, err := rec.Client(context.Background(), option.WithoutAuthentication())
+		c, err := rec.Client(ctx, option.WithoutAuthentication())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -116,7 +116,7 @@ func NewAWSSession2(t *testing.T, region string) (sess *session.Session, rt http
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := rep.Client(context.Background())
+		c, err := rep.Client(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
