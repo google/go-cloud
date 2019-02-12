@@ -71,7 +71,7 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 	}
 	blobject, err := bucket.ReadAll(r.Context(), objKey)
 	if err != nil {
-		w.WriteHeader(http.NotFound)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	w.Write(blobject)

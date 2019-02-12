@@ -517,9 +517,13 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 // SignedURL implements driver.SignedURL
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	if b.opts.URLSigner == nil {
-		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.URLSigner"
+		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.URLSigner")
 	}
-	return b.opts.URLSigner.URLFromKey(ctx, key, opts)
+	surl, err := b.opts.URLSigner.URLFromKey(ctx, key, opts)
+	if err != nil {
+		return "", err
+	}
+	return surl.String(), nil
 }
 
 // URLSigner defines an interface for
@@ -532,15 +536,12 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 type URLSigner interface {
 	// URLFromKey defines how the bucket's object key will be turned
 	// into a signed URL.
-	// URLFromKey takes in a context, object key and options.
-	// It returns a signed URL string, and an error.
-	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error)
+	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error)
 
 	// KeyFromURL takes in a context and a URL.
 	// It returns an object key string and a bool.
 	// e.g. (key, true) if the signature is valid (authentic && unexpired),
 	// or (nil, false) if it is invalid.
-	// KeyFromURL must be able to validate a URL from the URLFromKey function.
 	KeyFromURL(ctx context.Context, surl *url.URL) (string, bool)
 }
 
@@ -563,7 +564,7 @@ func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerH
 }
 
 // URLFromKey uses the scheme and host in URLSignerHMAC, and uses the passed key as the path.
-func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
 	sURL := &url.URL{
 		Host:   h.urlHost,
 		Scheme: h.urlScheme,
@@ -580,7 +581,7 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 	q.Set("signature", mac)
 	sURL.RawQuery = q.Encode()
 
-	return sURL.String(), nil
+	return sURL, nil
 }
 
 func (h *URLSignerHMAC) getMAC(message string) []byte {
