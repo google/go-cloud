@@ -115,11 +115,11 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	kms.ErrCodeNotFoundException:          gcerrors.NotFound,
 	kms.ErrCodeDisabledException:          gcerrors.PermissionDenied,
 	kms.ErrCodeInvalidCiphertextException: gcerrors.InvalidArgument,
-	kms.ErrCodeKeyUnavailableException:    gcerrors.NotFound,
+	kms.ErrCodeKeyUnavailableException:    gcerrors.ResourceExhausted,
 	kms.ErrCodeDependencyTimeoutException: gcerrors.DeadlineExceeded,
 	kms.ErrCodeInvalidGrantTokenException: gcerrors.PermissionDenied,
 	kms.ErrCodeInternalException:          gcerrors.Internal,
-	kms.ErrCodeInvalidStateException:      gcerrors.InvalidArgument,
+	kms.ErrCodeInvalidStateException:      gcerrors.FailedPrecondition,
 	kms.ErrCodeInvalidKeyUsageException:   gcerrors.InvalidArgument,
 }
 
