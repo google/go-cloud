@@ -57,7 +57,7 @@ func publish(ctx context.Context, top *pubsub.Topic) error {
 			return fmt.Errorf("sending video upload message: %v", err)
 		}
 		// Simulate some delay between videos being uploaded on an up-and-coming video site.
-		time.Sleep(time.Duration(rand.Intn(10) * 100) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Intn(10)*100) * time.Millisecond)
 	}
 	return nil
 }
