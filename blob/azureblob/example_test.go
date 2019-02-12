@@ -98,12 +98,6 @@ func Example_open() {
 	// credentials found in the environment variables
 	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
 	// and AZURE_STORAGE_SAS_TOKEN.
-	b, err := blob.Open(ctx, "azblob://mycontainer")
-
-	// Alternatively, you can use the query parameter "cred_path" to load
-	// credentials from a file in JSON format.
-	// See the package documentation for the credentials file schema.
-	b, err = blob.Open(ctx, "azblob://mycontainer?cred_path=replace-with-path-to-credentials-file")
-	_ = b
-	_ = err
+	b, err := blob.OpenBucket(ctx, "azblob://mycontainer")
+	_, _ = b, err
 }

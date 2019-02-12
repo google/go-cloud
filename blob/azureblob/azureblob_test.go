@@ -19,10 +19,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"net/url"
-	"os"
 	"testing"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -265,111 +262,56 @@ func TestOpenBucket(t *testing.T) {
 	}
 }
 
-func TestOpenURL(t *testing.T) {
-
-	const (
-		accountName = "my-accoun-name"
-		accountKey  = "aGVsbG8=" // must be base64 encoded string, this is "hello"
-		sasToken    = "my-sas-token"
-	)
-
-	// Clear (and later restore) credentials in the environment.
-	prevEnv := os.Getenv("AZURE_STORAGE_ACCOUNT")
-	os.Setenv("AZURE_STORAGE_ACCOUNT", "")
-	defer func() {
-		os.Setenv("AZURE_STORAGE_ACCOUNT", prevEnv)
-	}()
-
-	makeCredFile := func(name, content string) *os.File {
-		f, err := ioutil.TempFile("", "key")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := f.WriteString(content); err != nil {
-			t.Fatal(err)
-		}
-		if err := f.Close(); err != nil {
-			t.Fatal(err)
-		}
-		return f
-	}
-
-	keyFile := makeCredFile("key", fmt.Sprintf("{\"AccountName\": %q, \"AccountKey\": %q}", accountName, accountKey))
-	defer os.Remove(keyFile.Name())
-	badJSONFile := makeCredFile("badjson", "{")
-	defer os.Remove(badJSONFile.Name())
-	badKeyFile := makeCredFile("badkey", fmt.Sprintf("{\"AccountName\": %q, \"AccountKey\": \"not base 64\"}", accountName))
-	defer os.Remove(badKeyFile.Name())
-	sasFile := makeCredFile("sas", fmt.Sprintf("{\"AccountName\": %q, \"SASToken\": %q}", accountName, sasToken))
-	defer os.Remove(sasFile.Name())
-
+func TestOpenerFromEnv(t *testing.T) {
 	tests := []struct {
-		url      string
-		wantName string
-		wantErr  bool
-		// If we use an Access Key, we should get a non-nil *Credentials in Options.
-		wantCreds bool
+		name        string
+		accountName AccountName
+		accountKey  AccountKey
+		sasToken    SASToken
+
+		wantSharedCreds bool
+		wantSASToken    SASToken
 	}{
 		{
-			url:      "azblob://mybucket",
-			wantName: "mybucket",
-			wantErr:  true, // getting creds from the environment won't work since we cleared them above
+			name:            "AccountKey",
+			accountName:     "myaccount",
+			accountKey:      AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))),
+			wantSharedCreds: true,
 		},
 		{
-			url:       "azblob://mybucket?cred_path=" + keyFile.Name(),
-			wantName:  "mybucket",
-			wantCreds: true,
-		},
-		{
-			url:       "azblob://mybucket2?cred_path=" + keyFile.Name(),
-			wantName:  "mybucket2",
-			wantCreds: true,
-		},
-		{
-			url:      "azblob://mybucket?cred_path=" + sasFile.Name(),
-			wantName: "mybucket",
-		},
-		{
-			url:      "azblob://mybucket2?cred_path=" + sasFile.Name(),
-			wantName: "mybucket2",
-		},
-		{
-			url:     "azblob://foo?cred_path=" + badJSONFile.Name(),
-			wantErr: true,
-		},
-		{
-			url:     "azblob://foo?cred_path=" + badKeyFile.Name(),
-			wantErr: true,
-		},
-		{
-			url:     "azblob://foo?cred_path=/path/does/not/exist",
-			wantErr: true,
+			name:            "SASToken",
+			accountName:     "myaccount",
+			sasToken:        "borkborkbork",
+			wantSharedCreds: false,
+			wantSASToken:    "borkborkbork",
 		},
 	}
-
-	ctx := context.Background()
 	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			u, err := url.Parse(test.url)
+		t.Run(test.name, func(t *testing.T) {
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken)
 			if err != nil {
 				t.Fatal(err)
 			}
-			got, err := openURL(ctx, u)
-			if (err != nil) != test.wantErr {
-				t.Errorf("got err %v want error %v", err, test.wantErr)
+			if o.AccountName != test.accountName {
+				t.Errorf("AccountName = %q; want %q", o.AccountName, test.accountName)
 			}
-			if err != nil {
-				return
+			if o.Pipeline == nil {
+				t.Error("Pipeline = <nil>; want non-nil")
 			}
-			gotB, ok := got.(*bucket)
-			if !ok {
-				t.Fatalf("got type %T want *bucket", got)
+			if o.Options.Credential == nil {
+				if test.wantSharedCreds {
+					t.Error("Options.Credential = <nil>; want non-nil")
+				}
+			} else {
+				if !test.wantSharedCreds {
+					t.Errorf("Options.Credential = %#v; want <nil>", o.Options.Credential)
+				}
+				if got := AccountName(o.Options.Credential.AccountName()); got != test.accountName {
+					t.Errorf("Options.Credential.AccountName() = %q; want %q", got, test.accountName)
+				}
 			}
-			if gotB.name != test.wantName {
-				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
-			}
-			if gotCreds := (gotB.opts.Credential != nil); gotCreds != test.wantCreds {
-				t.Errorf("got creds? %v want %v", gotCreds, test.wantCreds)
+			if o.Options.SASToken != test.wantSASToken {
+				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
 			}
 		})
 	}

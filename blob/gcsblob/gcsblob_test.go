@@ -274,7 +274,7 @@ func TestOpenBucket(t *testing.T) {
 	}
 }
 
-func TestOpenURL(t *testing.T) {
+func TestURLOpenerForParams(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a file for use as a dummy private key file.
@@ -291,92 +291,46 @@ func TestOpenURL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
-	credFile, err := ioutil.TempFile("", "my-creds")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(credFile.Name())
-	if _, err := credFile.Write(jsonCred); err != nil {
-		t.Fatal(err)
-	}
-	if err := credFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Set invalid (and later restore) default credentials in the environment,
-	// so that this test always fails.
-	prevEnv := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "this-cred-file-does-not-exist")
-	defer func() {
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", prevEnv)
-	}()
-
 	tests := []struct {
-		url      string
-		wantName string
+		name     string
+		query    url.Values
 		wantOpts Options
 		wantErr  bool
 	}{
 		{
-			url:      "gs://mybucket",
-			wantName: "mybucket",
-			wantErr:  true,
-		},
-		{
-			url:      "gs://mybucket?cred_path=" + credFile.Name(),
-			wantName: "mybucket",
-		},
-		{
-			url:      "gs://mybucket2?cred_path=" + credFile.Name(),
-			wantName: "mybucket2",
-		},
-		{
-			url:      "gs://foo?access_id=bar&cred_path=" + credFile.Name(),
-			wantName: "foo",
+			name: "AccessID",
+			query: url.Values{
+				"access_id": {"bar"},
+			},
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
 		{
-			url:     "gs://foo?private_key_path=/path/does/not/exist",
+			name: "BadPrivateKeyPath",
+			query: url.Values{
+				"private_key_path": {"/path/does/not/exist"},
+			},
 			wantErr: true,
 		},
 		{
-			url:      "gs://foo?cred_path=" + credFile.Name() + "&private_key_path=" + pkFile.Name(),
-			wantName: "foo",
+			name: "PrivateKeyPath",
+			query: url.Values{
+				"private_key_path": {pkFile.Name()},
+			},
 			wantOpts: Options{PrivateKey: privateKey},
-		},
-		{
-			url:     "gs://foo?cred_path=/path/does/not/exist",
-			wantErr: true,
-		},
-		{
-			url:     "gs://foo?cred_path=" + pkFile.Name(),
-			wantErr: true,
 		},
 	}
 
 	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			u, err := url.Parse(test.url)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := openURL(ctx, u)
+		t.Run(test.name, func(t *testing.T) {
+			got, err := new(URLOpener).forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
 			if err != nil {
 				return
 			}
-			gotB, ok := got.(*bucket)
-			if !ok {
-				t.Fatalf("got type %T want *bucket", got)
-			}
-			if gotB.name != test.wantName {
-				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
-			}
-			if diff := cmp.Diff(*gotB.opts, test.wantOpts); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", *gotB.opts, test.wantOpts, diff)
+			if diff := cmp.Diff(got, &test.wantOpts); diff != "" {
+				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
 			}
 		})
 	}
