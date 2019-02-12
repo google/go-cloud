@@ -261,3 +261,58 @@ func TestOpenBucket(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenerFromEnv(t *testing.T) {
+	tests := []struct {
+		name        string
+		accountName AccountName
+		accountKey  AccountKey
+		sasToken    SASToken
+
+		wantSharedCreds bool
+		wantSASToken    SASToken
+	}{
+		{
+			name:            "AccountKey",
+			accountName:     "myaccount",
+			accountKey:      AccountKey(base64.StdEncoding.EncodeToString([]byte("FAKECREDS"))),
+			wantSharedCreds: true,
+		},
+		{
+			name:            "SASToken",
+			accountName:     "myaccount",
+			sasToken:        "borkborkbork",
+			wantSharedCreds: false,
+			wantSASToken:    "borkborkbork",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			o, err := openerFromEnv(test.accountName, test.accountKey, test.sasToken)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if o.AccountName != test.accountName {
+				t.Errorf("AccountName = %q; want %q", o.AccountName, test.accountName)
+			}
+			if o.Pipeline == nil {
+				t.Error("Pipeline = <nil>; want non-nil")
+			}
+			if o.Options.Credential == nil {
+				if test.wantSharedCreds {
+					t.Error("Options.Credential = <nil>; want non-nil")
+				}
+			} else {
+				if !test.wantSharedCreds {
+					t.Errorf("Options.Credential = %#v; want <nil>", o.Options.Credential)
+				}
+				if got := AccountName(o.Options.Credential.AccountName()); got != test.accountName {
+					t.Errorf("Options.Credential.AccountName() = %q; want %q", got, test.accountName)
+				}
+			}
+			if o.Options.SASToken != test.wantSASToken {
+				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
+			}
+		})
+	}
+}

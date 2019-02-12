@@ -329,7 +329,7 @@ func TestURLOpenerForParams(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if diff := cmp.Diff(got.Options, test.wantOpts); diff != "" {
+			if diff := cmp.Diff(got, &test.wantOpts); diff != "" {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
 			}
 		})

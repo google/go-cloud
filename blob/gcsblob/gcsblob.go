@@ -123,33 +123,32 @@ type URLOpener struct {
 
 // OpenBucketURL opens the GCS bucket with the same name as the URL's host.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	var err error
-	o, err = o.forParams(ctx, u.Query())
+	opts, err := o.forParams(ctx, u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	return OpenBucket(ctx, o.Client, u.Host, &o.Options)
+	return OpenBucket(ctx, o.Client, u.Host, opts)
 }
 
-func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*URLOpener, error) {
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
 		if k != "access_id" && k != "private_key_path" {
 			return nil, fmt.Errorf("unknown GCS query parameter %s", k)
 		}
 	}
-	o2 := new(URLOpener)
-	*o2 = *o
+	opts := new(Options)
+	*opts = o.Options
 	if accessID := q.Get("access_id"); accessID != "" {
-		o2.Options.GoogleAccessID = accessID
+		opts.GoogleAccessID = accessID
 	}
 	if keyPath := q.Get("private_key_path"); keyPath != "" {
 		pk, err := ioutil.ReadFile(keyPath)
 		if err != nil {
 			return nil, err
 		}
-		o2.Options.PrivateKey = pk
+		opts.PrivateKey = pk
 	}
-	return o2, nil
+	return opts, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.

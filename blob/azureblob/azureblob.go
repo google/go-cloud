@@ -120,30 +120,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		accountKey, _ := DefaultAccountKey()
 		sasToken, _ := DefaultSASToken()
 
-		// azblob.Credential is an interface; we will use either a SharedKeyCredential
-		// or anonymous credentials. If the former, we will also fill in
-		// Options.Credential so that SignedURL will work.
-		var credential azblob.Credential
-		var sharedKeyCred *azblob.SharedKeyCredential
-		if accountKey != "" {
-			var err error
-			sharedKeyCred, err = NewCredential(accountName, accountKey)
-			if err != nil {
-				o.err = err
-				return
-			}
-			credential = sharedKeyCred
-		} else {
-			credential = azblob.NewAnonymousCredential()
-		}
-		o.opener = &URLOpener{
-			AccountName: accountName,
-			Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
-			Options: Options{
-				Credential: sharedKeyCred,
-				SASToken:   sasToken,
-			},
-		}
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
 	})
 	if o.err != nil {
 		return nil, fmt.Errorf("open Azure bucket %q: %v", u, o.err)
@@ -165,6 +142,32 @@ type URLOpener struct {
 
 	// Options specifies the options to pass to OpenBucket.
 	Options Options
+}
+
+func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken) (*URLOpener, error) {
+	// azblob.Credential is an interface; we will use either a SharedKeyCredential
+	// or anonymous credentials. If the former, we will also fill in
+	// Options.Credential so that SignedURL will work.
+	var credential azblob.Credential
+	var sharedKeyCred *azblob.SharedKeyCredential
+	if accountKey != "" {
+		var err error
+		sharedKeyCred, err = NewCredential(accountName, accountKey)
+		if err != nil {
+			return nil, err
+		}
+		credential = sharedKeyCred
+	} else {
+		credential = azblob.NewAnonymousCredential()
+	}
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
+		Options: Options{
+			Credential: sharedKeyCred,
+			SASToken:   sasToken,
+		},
+	}, nil
 }
 
 // OpenBucketURL opens the Azure Storage Account Container with the same name as
