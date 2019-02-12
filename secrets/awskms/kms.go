@@ -113,14 +113,14 @@ func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
 
 var errorCodeMap = map[string]gcerrors.ErrorCode{
 	kms.ErrCodeNotFoundException:          gcerrors.NotFound,
-	kms.ErrCodeDisabledException:          gcerrors.PermissionDenied,
 	kms.ErrCodeInvalidCiphertextException: gcerrors.InvalidArgument,
-	kms.ErrCodeKeyUnavailableException:    gcerrors.ResourceExhausted,
-	kms.ErrCodeDependencyTimeoutException: gcerrors.DeadlineExceeded,
-	kms.ErrCodeInvalidGrantTokenException: gcerrors.PermissionDenied,
+	kms.ErrCodeInvalidKeyUsageException:   gcerrors.InvalidArgument,
 	kms.ErrCodeInternalException:          gcerrors.Internal,
 	kms.ErrCodeInvalidStateException:      gcerrors.FailedPrecondition,
-	kms.ErrCodeInvalidKeyUsageException:   gcerrors.InvalidArgument,
+	kms.ErrCodeDisabledException:          gcerrors.PermissionDenied,
+	kms.ErrCodeInvalidGrantTokenException: gcerrors.PermissionDenied,
+	kms.ErrCodeKeyUnavailableException:    gcerrors.ResourceExhausted,
+	kms.ErrCodeDependencyTimeoutException: gcerrors.DeadlineExceeded,
 }
 
 // KeeperOptions controls Keeper behaviors.
