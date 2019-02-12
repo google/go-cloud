@@ -574,23 +574,21 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 		Scheme: h.urlScheme,
 		Path:   h.urlPath,
 	}
+
 	q := sURL.Query()
 	q.Set("obj", key)
-	expTime := time.Now().Add(opts.Expiry).Unix()
-	q.Set("expiry", strconv.FormatInt(expTime, 10))
-	sURL.RawQuery = q.Encode()
-
-	mac := string(h.getMAC(sURL.RawQuery))
-	q.Set("signature", mac)
+	q.Set("expiry", strconv.FormatInt(time.Now().Add(opts.Expiry).Unix(), 10))
+	q.Set("signature", h.getMAC(q))
 	sURL.RawQuery = q.Encode()
 
 	return sURL, nil
 }
 
-func (h *URLSignerHMAC) getMAC(message string) []byte {
+func (h *URLSignerHMAC) getMAC(q url.Values) string {
 	hsh := hmac.New(sha256.New, h.secretKey)
-	hsh.Write([]byte(message))
-	return hsh.Sum(nil)
+	msg := q.Encode()
+	hsh.Write([]byte(msg))
+	return string(hsh.Sum(nil))
 }
 
 // KeyFromURL checks expiry and signature, and returns the object key
@@ -599,24 +597,19 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 	q := sURL.Query()
 
 	exp, err := strconv.ParseInt(q.Get("expiry"), 10, 64)
-	if err != nil {
-		return "", false
-	}
-	if time.Now().Unix() > exp {
+	if err != nil || time.Now().Unix() > exp {
 		return "", false
 	}
 
-	sig := q.Get("signature")
-	q.Del("signature")
-	sURL.RawQuery = q.Encode()
-
-	if !h.checkMAC(sURL.RawQuery, sig) {
+	if !h.checkMAC(q) {
 		return "", false
 	}
 	return q.Get("obj"), true
 }
 
-func (h *URLSignerHMAC) checkMAC(message, mac string) bool {
-	expected := h.getMAC(message)
-	return hmac.Equal([]byte(mac), expected)
+func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
+	mac := q.Get("signature")
+	q.Del("signature")
+	expected := h.getMAC(q)
+	return hmac.Equal([]byte(mac), []byte(expected))
 }
