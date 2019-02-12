@@ -15,6 +15,26 @@
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
 // to construct a *blob.Bucket.
 //
+// Open URLs
+//
+// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
+// with "s3://" like "s3://mybucket". blob.Open will create a new AWS session
+// with the default options. If you want to use a different session or find
+// details on the format of the URL, see URLOpener.
+//
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for s3blob:
+//  - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
+//    Additionally, the "/" in "../" and the trailing "/" in "//" are escaped in
+//    the same way.
+//  - Metadata keys: Escaped using URL encoding, then additionally "@:=" are
+//    escaped using "__0x<hex>__". These characters were determined by
+//    experimentation.
+//  - Metadata values: Escaped using URL encoding.
+//
 // As
 //
 // s3blob exposes the following types for As:
@@ -44,6 +64,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -270,10 +291,10 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		in.ContinuationToken = aws.String(string(opts.PageToken))
 	}
 	if opts.Prefix != "" {
-		in.Prefix = aws.String(opts.Prefix)
+		in.Prefix = aws.String(escapeKey(opts.Prefix))
 	}
 	if opts.Delimiter != "" {
-		in.Delimiter = aws.String(opts.Delimiter)
+		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
 	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
@@ -300,7 +321,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		page.Objects = make([]*driver.ListObject, n)
 		for i, obj := range resp.Contents {
 			page.Objects[i] = &driver.ListObject{
-				Key:     *obj.Key,
+				Key:     unescapeKey(aws.StringValue(obj.Key)),
 				ModTime: *obj.LastModified,
 				Size:    *obj.Size,
 				MD5:     eTagToMD5(obj.ETag),
@@ -316,7 +337,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 		for i, prefix := range resp.CommonPrefixes {
 			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
-				Key:   *prefix.Prefix,
+				Key:   unescapeKey(aws.StringValue(prefix.Prefix)),
 				IsDir: true,
 				AsFunc: func(i interface{}) bool {
 					p, ok := i.(*s3.CommonPrefix)
@@ -362,6 +383,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	key = escapeKey(key)
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -370,14 +392,12 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	if err := req.Send(); err != nil {
 		return driver.Attributes{}, err
 	}
-	var md map[string]string
-	if len(resp.Metadata) > 0 {
-		md = make(map[string]string, len(resp.Metadata))
-		for k, v := range resp.Metadata {
-			if v != nil {
-				md[k] = aws.StringValue(v)
-			}
-		}
+
+	md := make(map[string]string, len(resp.Metadata))
+	for k, v := range resp.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
 	return driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
@@ -402,6 +422,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
+	key = escapeKey(key)
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -477,25 +498,53 @@ func getSize(resp *s3.GetObjectOutput) int64 {
 	return size
 }
 
+// escapeKey does all required escaping for UTF-8 strings to work with S3.
+func escapeKey(key string) string {
+	return escape.HexEscape(key, func(r []rune, i int) bool {
+		c := r[i]
+		switch {
+		// S3 doesn't handle these characters (determined via experimentation).
+		case c < 32:
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		// For "//", escape the trailing slash. Otherwise, S3 drops it.
+		case i > 0 && c == '/' && r[i-1] == '/':
+			return true
+		}
+		return false
+	})
+}
+
+// unescapeKey reverses escapeKey.
+func unescapeKey(key string) string {
+	return escape.HexUnescape(key)
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	key = escapeKey(key)
 	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
 		if opts.BufferSize != 0 {
 			u.PartSize = int64(opts.BufferSize)
 		}
 	})
-	var metadata map[string]*string
-	if len(opts.Metadata) > 0 {
-		metadata = make(map[string]*string, len(opts.Metadata))
-		for k, v := range opts.Metadata {
-			metadata[k] = aws.String(v)
-		}
+	md := make(map[string]*string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(url.PathEscape(k), func(runes []rune, i int) bool {
+			c := runes[i]
+			return c == '@' || c == ':' || c == '='
+		})
+		md[k] = aws.String(url.PathEscape(v))
 	}
 	req := &s3manager.UploadInput{
 		Bucket:      aws.String(b.name),
 		ContentType: aws.String(contentType),
 		Key:         aws.String(key),
-		Metadata:    metadata,
+		Metadata:    md,
 	}
 	if opts.CacheControl != "" {
 		req.CacheControl = aws.String(opts.CacheControl)
@@ -538,6 +587,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.Attributes(ctx, key); err != nil {
 		return err
 	}
+	key = escapeKey(key)
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -547,6 +597,7 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
+	key = escapeKey(key)
 	in := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),

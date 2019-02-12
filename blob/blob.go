@@ -95,7 +95,6 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
@@ -318,7 +317,9 @@ type ListOptions struct {
 	// should be returned.
 	Prefix string
 	// Delimiter sets the delimiter used to define a hierarchical namespace,
-	// like a filesystem with "directories".
+	// like a filesystem with "directories". It is highly recommended that you
+	// use "" or "/" as the Delimiter. Other values should work through this API,
+	// but provider UIs generally assume "/".
 	//
 	// An empty delimiter means that the bucket is treated as a single flat
 	// namespace.
@@ -496,15 +497,10 @@ func (b *Bucket) As(i interface{}) bool {
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("blob: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return b.b.ErrorAs(e.Unwrap(), i)
-	}
-	return b.b.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
 
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
@@ -834,6 +830,8 @@ type WriterOptions struct {
 // A type that implements BucketURLOpener can open buckets based on a URL.
 // The opener must not modify the URL argument. OpenBucketURL must be safe to
 // call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
 type BucketURLOpener interface {
 	OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error)
 }
@@ -887,6 +885,8 @@ func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, erro
 var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenBucket.
+//
+// Driver packages can use this to register their BucketURLOpener on the mux.
 func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }

@@ -15,6 +15,11 @@
 // Package memblob provides an in-memory blob implementation.
 // Use OpenBucket to construct a *blob.Bucket.
 //
+// Open URLs
+//
+// For blob.OpenBucket URLs, memblob registers for the scheme "mem"; URLs
+// are always "mem://". For more details, see URLOpener.
+//
 // As
 //
 // memblob does not support any types for As.
