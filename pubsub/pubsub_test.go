@@ -17,10 +17,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -419,5 +422,56 @@ func TestOpenCensus(t *testing.T) {
 	})
 	if diff != "" {
 		t.Error(diff)
+	}
+}
+
+func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ng0 := runtime.NumGoroutine()
+	top := mempubsub.NewTopic()
+	sub := mempubsub.NewSubscription(top, time.Second)
+
+	// Send a bunch of messages at roughly the same time to make the batcher's work more difficult.
+	var eg errgroup.Group
+	n := 1000
+	for i := 0; i < n; i++ {
+		eg.Go(func() error {
+			return top.Send(ctx, &pubsub.Message{})
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Receive the messages.
+	var eg2 errgroup.Group
+	for i := 0; i < n; i++ {
+		eg2.Go(func() error {
+			m, err := sub.Receive(ctx)
+			if err != nil {
+				return err
+			}
+			m.Ack()
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
+
+	// The Shutdown methods each spawn a goroutine so we want to make sure those don't
+	// keep running indefinitely after the Shutdowns return.
+	cancel()
+	top.Shutdown(ctx)
+	sub.Shutdown(ctx)
+
+	// Wait for number of goroutines to return to normal.
+	// Otherwise the test hangs.
+	for {
+		ng := runtime.NumGoroutine()
+		if ng == ng0 {
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
 }

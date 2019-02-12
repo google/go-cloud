@@ -129,10 +129,6 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 	return ds, nil
 }
 
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	return false, ""
-}
-
 func (h *harness) Close() {
 	h.closer()
 }
@@ -179,9 +175,17 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
-func (sbAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+func (sbAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var sbError common.Retryable
 	if !t.ErrorAs(err, &sbError) {
+		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
+	}
+	return nil
+}
+
+func (sbAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var sbError common.Retryable
+	if !s.ErrorAs(err, &sbError) {
 		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
 	}
 	return nil
