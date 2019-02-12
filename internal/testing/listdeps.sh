@@ -18,6 +18,10 @@ set -euo pipefail
 # To run this script manually to update alldeps:
 #
 # $ internal/testing/listdeps.sh > internal/testing/alldeps
+#
+# Important note: there are changes in module tooling behavior between go 1.11
+# and go 1.12; please make sure to use the same version of Go as used by Travis
+# (see .travis.yml) when updating the alldeps file.
 tmpfile=$(mktemp)
 
 for path in "." "./internal/contributebot" "./samples/appengine"; do
