@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -430,34 +432,32 @@ func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 	sub := mempubsub.NewSubscription(top, time.Second)
 
 	// Send a bunch of messages at roughly the same time to make the batcher's work more difficult.
-	var wg sync.WaitGroup
+	var eg errgroup.Group
 	n := 1000
 	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func() {
-			err := top.Send(ctx, &pubsub.Message{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			wg.Done()
-		}()
+		eg.Go(func() error {
+			return top.Send(ctx, &pubsub.Message{})
+		})
 	}
-	wg.Wait()
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Receive the messages.
-	var wg2 sync.WaitGroup
+	var eg2 errgroup.Group
 	for i := 0; i < n; i++ {
-		wg2.Add(1)
-		go func() {
+		eg2.Go(func() error {
 			m, err := sub.Receive(ctx)
 			if err != nil {
-				t.Fatal(err)
+				return err
 			}
 			m.Ack()
-			wg2.Done()
-		}()
+			return nil
+		})
 	}
-	wg2.Wait()
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 
 	// The Shutdown methods each spawn a goroutine so we want to make sure those don't
 	// keep running indefinitely after the Shutdowns return.
