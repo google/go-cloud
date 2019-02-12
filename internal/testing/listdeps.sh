@@ -13,12 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Runs only tests relevant to the current pull request.
-# At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
-# general case.
-
-set -euxo pipefail
+set -euo pipefail
 
 # To run this script manually to update alldeps:
 #
@@ -27,6 +22,8 @@ tmpfile=$(mktemp)
 
 for path in "." "./internal/contributebot" "./samples/appengine"; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
+  echo "=================" "$path"
+  cat "$tmpfile"
 done
 
 function cleanup() {
