@@ -298,21 +298,7 @@ func (r rabbitAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
-func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
-	var pd *amqp.Delivery
-	if m.As(&pd) {
-		return fmt.Errorf("cast succeeded for %T, want failure", &pd)
-	}
-	if !r.usingFake {
-		var d amqp.Delivery
-		if !m.As(&d) {
-			return fmt.Errorf("cast failed for %T", &d)
-		}
-	}
-	return nil
-}
-
-func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+func (rabbitAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var aerr *amqp.Error
 	if !t.ErrorAs(err, &aerr) {
 		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
@@ -325,6 +311,37 @@ func (rabbitAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
 	var merr MultiError
 	if !t.ErrorAs(err, &merr) {
 		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+	}
+	return nil
+}
+
+func (rabbitAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var aerr *amqp.Error
+	if !s.ErrorAs(err, &aerr) {
+		return fmt.Errorf("failed to convert %v (%T) to an amqp.Error", err, err)
+	}
+	if aerr.Code != amqp.NotFound {
+		return fmt.Errorf("got code %v, want NotFound", aerr.Code)
+	}
+
+	err = MultiError{err}
+	var merr MultiError
+	if !s.ErrorAs(err, &merr) {
+		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+	}
+	return nil
+}
+
+func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
+	var pd *amqp.Delivery
+	if m.As(&pd) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &pd)
+	}
+	if !r.usingFake {
+		var d amqp.Delivery
+		if !m.As(&d) {
+			return fmt.Errorf("cast failed for %T", &d)
+		}
 	}
 	return nil
 }

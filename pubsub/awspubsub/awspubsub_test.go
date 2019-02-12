@@ -361,9 +361,21 @@ func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
-func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+func (awsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var ae awserr.Error
 	if !t.ErrorAs(err, &ae) {
+		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
+	}
+	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
+	if ae.Code() != sns.ErrCodeInvalidParameterException {
+		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
+	}
+	return nil
+}
+
+func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var ae awserr.Error
+	if !s.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
 	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
