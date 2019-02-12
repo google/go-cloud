@@ -88,8 +88,24 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	skip, reason := shouldSkip(t.Name())
+	if skip {
+		t.Skip(reason)
+	}
 	sess, rt, done := setup.NewAWSSession(t, region)
 	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
+}
+
+func shouldSkip(testName string) (bool, string) {
+	if !*setup.Record {
+		if strings.Contains(testName, "TestSendReceive") {
+			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
+		}
+		if strings.Contains(testName, "TestAs") {
+			return true, "TestAs hangs in replay mode on awspubsub"
+		}
+	}
+	return false, ""
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
@@ -144,18 +160,6 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
 	}
 	return ds, cleanup, nil
-}
-
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	if !*setup.Record {
-		if strings.Contains(testName, "TestSendReceive") {
-			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
-		}
-		if strings.Contains(testName, "TestAs") {
-			return true, "TestAs hangs in replay mode on awspubsub"
-		}
-	}
-	return false, ""
 }
 
 // ackBatcher is a trivial batcher that sends off items as singleton batches.
@@ -357,9 +361,21 @@ func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
-func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+func (awsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var ae awserr.Error
 	if !t.ErrorAs(err, &ae) {
+		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
+	}
+	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
+	if ae.Code() != sns.ErrCodeInvalidParameterException {
+		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
+	}
+	return nil
+}
+
+func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var ae awserr.Error
+	if !s.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
 	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.

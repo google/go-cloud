@@ -51,10 +51,6 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 
 func (h *harness) Close() {}
 
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	return false, ""
-}
-
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }

@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
@@ -340,5 +342,98 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("got %v, want %v", err, serr)
 		}
+	}
+}
+
+// callbackDriverSub implements driver.Subscription and allows something like
+// monkey patching of both its ReceiveBatch and SendAcks methods.
+type callbackDriverSub struct {
+	driver.Subscription
+	mu           sync.Mutex
+	receiveBatch func(context.Context) ([]*driver.Message, error)
+	sendAcks     func(context.Context, []driver.AckID) error
+}
+
+func (s *callbackDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	return s.receiveBatch(ctx)
+}
+
+func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) error {
+	return s.sendAcks(ctx, acks)
+}
+
+func (s *callbackDriverSub) IsRetryable(error) bool { return false }
+
+func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+
+// This test detects the root cause of
+// https://github.com/google/go-cloud/issues/1238.
+// If the issue is present, this test times out. The problem was that when
+// there were no messages available from the provider,
+// pubsub.Subscription.Receive would spin trying to get more messages without
+// checking to see if an unrecoverable error had occurred while sending a batch
+// of acks to the provider.
+func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
+	// If SendAcks fails, the error is returned via receive.
+	ctx := context.Background()
+	serr := errors.New("unrecoverable error")
+	receiveHappened := make(chan struct{})
+	ackHappened := make(chan struct{})
+	var ds = &callbackDriverSub{
+		// First call to receiveBatch will return a single message.
+		receiveBatch: func(context.Context) ([]*driver.Message, error) {
+			ms := []*driver.Message{{AckID: 1}}
+			return ms, nil
+		},
+		sendAcks: func(context.Context, []driver.AckID) error {
+			ackHappened <- struct{}{}
+			return serr
+		},
+	}
+	sub := pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	// Second call to receiveBatch will wait for the pull from the
+	// receiveHappened channel below, and return a nil slice of messages.
+	ds.mu.Lock()
+	ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
+		ds.mu.Lock()
+		// Subsequent calls to receiveBatch won't wait on receiveHappened,
+		// and will also return nil slices of messages.
+		ds.receiveBatch = func(context.Context) ([]*driver.Message, error) {
+			return nil, nil
+		}
+		ds.mu.Unlock()
+		receiveHappened <- struct{}{}
+		return nil, nil
+	}
+	ds.mu.Unlock()
+
+	errc := make(chan error)
+	go func() {
+		_, err := sub.Receive(ctx)
+		errc <- err
+	}()
+
+	// sub.Receive has to start running first and then we need to trigger the unrecoverable error.
+	<-receiveHappened
+
+	// Trigger the unrecoverable error.
+	<-ackHappened
+
+	// Wait for sub.Receive to return so we can check the error it returns against serr.
+	err = <-errc
+
+	// Check the error returned from sub.Receive.
+	if got := gcerrors.Code(err); got != gcerrors.Internal {
+		t.Fatalf("error code = %v; want %v", got, gcerrors.Internal)
+	}
+	if got := xerrors.Unwrap(err); got != serr {
+		t.Errorf("error = %v; want %v", got, serr)
 	}
 }
