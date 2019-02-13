@@ -613,7 +613,6 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 
 func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
 	mac := q.Get("signature")
-	q.Del("signature")
 	expected := h.getMAC(q)
 	return hmac.Equal([]byte(mac), []byte(expected))
 }
