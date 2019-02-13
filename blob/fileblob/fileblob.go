@@ -600,7 +600,7 @@ func (h *URLSignerHMAC) getMAC(q url.Values) string {
 
 	hsh := hmac.New(sha256.New, h.secretKey)
 	hsh.Write([]byte(msg))
-	return base64.StdEncoding.EncodeToString(hsh.Sum(nil))
+	return base64.RawURLEncoding.EncodeToString(hsh.Sum(nil))
 }
 
 // KeyFromURL checks expiry and signature, and returns the object key
@@ -622,5 +622,6 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
 	mac := q.Get("signature")
 	expected := h.getMAC(q)
+	// comparison of the underlying bytes of the MAC(s)
 	return hmac.Equal([]byte(mac), []byte(expected))
 }
