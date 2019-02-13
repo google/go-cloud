@@ -562,10 +562,11 @@ type URLSignerHMAC struct {
 	secretKey []byte
 }
 
-// NewURLSignerHMAC creates a URLSignerHMAC. A secretKey is required.
+// NewURLSignerHMAC creates a URLSignerHMAC. If the secret key is empty,
+// then NewURLSignerHMAC panics.
 func NewURLSignerHMAC(baseURL *url.URL, secretKey []byte) *URLSignerHMAC {
-	if secretKey == nil {
-		return nil
+	if len(secretKey) == 0 {
+		panic
 	}
 	uc := new(url.URL)
 	*uc = *baseURL
