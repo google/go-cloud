@@ -63,8 +63,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
-	objKey, ok := h.urlSigner.KeyFromURL(r.Context(), r.URL)
-	if !ok {
+	objKey, err := h.urlSigner.KeyFromURL(r.Context(), r.URL)
+	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}

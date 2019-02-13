@@ -550,7 +550,7 @@ type URLSigner interface {
 	// both unexpired and authentic. KeyFromURL must be safe to call from
 	// multiple goroutines. Implementations of KeyFromURL should not modify
 	// the URL argument.
-	KeyFromURL(ctx context.Context, surl *url.URL) (string, bool)
+	KeyFromURL(ctx context.Context, surl *url.URL) (string, error)
 }
 
 // URLSignerHMAC signs URLs by adding the object key, expiration time, and a
@@ -603,18 +603,18 @@ func (h *URLSignerHMAC) getMAC(q url.Values) string {
 
 // KeyFromURL checks expiry and signature, and returns the object key
 // only if the signed URL is both authentic and unexpired.
-func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, bool) {
+func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, error) {
 	q := sURL.Query()
 
 	exp, err := strconv.ParseInt(q.Get("expiry"), 10, 64)
 	if err != nil || time.Now().Unix() > exp {
-		return "", false
+		return "", errors.New("retrieving blob key from URL: key cannot be retrieved")
 	}
 
 	if !h.checkMAC(q) {
-		return "", false
+		return "", errors.New("retrieving blob key from URL: key cannot be retrieved")
 	}
-	return q.Get("obj"), true
+	return q.Get("obj"), nil
 }
 
 func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
