@@ -553,9 +553,10 @@ type URLSigner interface {
 	KeyFromURL(ctx context.Context, surl *url.URL) (string, bool)
 }
 
-// URLSignerHMAC uses the crypto/hmac package to create a message authentication code
-// using a sha256 hash. Any URLSignerHMAC with a non-empty secretKey can validate
-// a signed URL created by any other URLSignerHMAC with the identical secretKey.
+// URLSignerHMAC signs URLs by adding the object key, expiration time, and a
+// hash-based message authentication code (HMAC) into the query parameters.
+// Values of URLSignerHMAC with the same secret key will accept URLs produced by
+// others as valid.
 type URLSignerHMAC struct {
 	baseURL   *url.URL
 	secretKey []byte
