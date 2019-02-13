@@ -76,7 +76,6 @@ func testVaultServer(t *testing.T) (*api.Client, func()) {
 	})
 	cluster.Start()
 	tc := cluster.Cores[0]
-	tc.Client.SetOutputCurlString(true)
 	vault.TestWaitActive(t, tc.Core)
 
 	tc.Client.SetToken(cluster.RootToken)
@@ -95,8 +94,11 @@ func (v verifyAs) Name() string {
 
 func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	var e *api.OutputStringError
-	if !k.ErrorAs(err, &e) {
-		return errors.New("Keeper.ErrorAs failed")
+	// This should fail in the conformance test since all API calls would return an
+	// non-nil error if we switched on the OutputCurlString field. See below for
+	// testing this functionality in the vault-specific test.
+	if k.ErrorAs(err, &e) {
+		return errors.New("Keeper.ErrorAs expected to fail")
 	}
 	return nil
 }
@@ -127,5 +129,31 @@ func TestNoConnectionError(t *testing.T) {
 	keeper := NewKeeper(client, "my-key", nil)
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want connection refused")
+	}
+}
+
+func TestOutputCurlString(t *testing.T) {
+	ctx := context.Background()
+
+	client, err := Dial(ctx, &Config{
+		Token: "<Client (Root) Token>",
+		APIConfig: &api.Config{
+			Address:          apiAddress,
+			OutputCurlString: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keeper := NewKeeper(client, "my-key", nil)
+	_, err = keeper.Encrypt(ctx, []byte("test"))
+	if err == nil {
+		t.Fatal("got nil, want output curl string")
+	}
+
+	var ve *api.OutputStringError
+	if !keeper.ErrorAs(err, &ve) {
+		t.Error("error should be a *OutputStringError type")
 	}
 }

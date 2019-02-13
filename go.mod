@@ -30,9 +30,7 @@ require (
 	github.com/SAP/go-hdb v0.13.2 // indirect
 	github.com/SermoDigital/jose v0.9.2-0.20161205224733-f6df55f235c2 // indirect
 	github.com/aliyun/alibaba-cloud-sdk-go v0.0.0-20190122153857-e0ace9b64d22 // indirect
-	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190125095113-2b29687e15f2 // indirect
 	github.com/araddon/gou v0.0.0-20190110011759-c797efecbb61 // indirect
-	github.com/armon/go-proxyproto v0.0.0-20190211145416-68259f75880e // indirect
 	github.com/aws/aws-sdk-go v1.16.23
 	github.com/boombuler/barcode v1.0.0 // indirect
 	github.com/briankassouf/jose v0.9.1 // indirect
@@ -40,7 +38,6 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.1.0 // indirect
 	github.com/centrify/cloud-golang-sdk v0.0.0-20180119173102-7c97cc6fde16 // indirect
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0 // indirect
-	github.com/cockroachdb/cockroach-go v0.0.0-20181001143604-e0a95dfd547c // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/etcd v3.3.11+incompatible // indirect
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
@@ -82,7 +79,6 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.5.2 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.1 // indirect
-	github.com/hashicorp/go-syslog v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/go-version v1.1.0 // indirect
 	github.com/hashicorp/nomad v0.8.7 // indirect
@@ -101,20 +97,16 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190115203747-edbfe287c5d9 // indirect
 	github.com/influxdata/influxdb v1.7.3 // indirect
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
-	github.com/jackc/pgx v3.3.0+incompatible // indirect
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/joyent/triton-go v0.0.0-20190112182421-51ffac552869 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a // indirect
 	github.com/lib/pq v1.0.0
-	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mattbaird/elastigo v0.0.0-20170123220020-2fe47fd29e4b // indirect
 	github.com/michaelklishin/rabbit-hole v1.4.0 // indirect
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/ncw/swift v1.0.44 // indirect
 	github.com/ory-am/common v0.4.0 // indirect
 	github.com/ory/dockertest v3.3.4+incompatible // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -131,10 +123,10 @@ require (
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	golang.org/x/crypto v0.0.0-20190122013713-64072686203f
-	golang.org/x/exp/errors v0.0.0-20190123073158-f1c91bc264ca
 	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
+	golang.org/x/sys v0.0.0-20190209173611-3b5209105503 // indirect
 	golang.org/x/xerrors v0.0.0-20190129162528-20feca13ea86
 	google.golang.org/api v0.1.0
 	google.golang.org/genproto v0.0.0-20190122204518-eef12c790cc0
