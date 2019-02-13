@@ -82,7 +82,7 @@ resource "aws_db_instance" "guestbook" {
 
   provisioner "local-exec" {
     # TODO(light): Reuse credentials from Terraform.
-    command = "go run '${path.module}'/provision_db/main.go -host='${aws_db_instance.guestbook.address}' -security_group='${aws_security_group.guestbook.id}' -database=guestbook -password='${random_string.db_password.result}' -schema='${path.module}'/../schema.sql"
+    command = "go run '${path.module}'/provision_db/main.go -host='${aws_db_instance.guestbook.address}' -region='${var.region}' -security_group='${aws_security_group.guestbook.id}' -database=guestbook -password='${random_string.db_password.result}' -schema='${path.module}'/../schema.sql"
   }
 }
 
@@ -119,6 +119,7 @@ resource "aws_ssm_parameter" "motd" {
   name  = "${var.paramstore_var}"
   type  = "String"
   value = "ohai from AWS"
+  overwrite = "true"
 }
 
 # Compute (EC2)
