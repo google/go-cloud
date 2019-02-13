@@ -585,8 +585,12 @@ func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver
 }
 
 func (h *URLSignerHMAC) getMAC(q url.Values) string {
+	signedVals := url.Values{}
+	signedVals.Set("obj", q.Get("obj"))
+	signedVals.Set("expiry", q.Get("expiry"))
+	msg := signedVals.Encode()
+
 	hsh := hmac.New(sha256.New, h.secretKey)
-	msg := q.Encode()
 	hsh.Write([]byte(msg))
 	return string(hsh.Sum(nil))
 }
