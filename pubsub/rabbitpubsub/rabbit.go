@@ -38,6 +38,8 @@ type topic struct {
 	pubc   <-chan amqp.Confirmation // Go channel for server acks of publishes
 	retc   <-chan amqp.Return       // Go channel for "returned" undeliverable messages
 	closec <-chan *amqp.Error       // Go channel for AMQP channel close notifications
+
+	sendBatchHook func() // for testing
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by
@@ -68,8 +70,9 @@ func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.T
 
 func newTopic(conn amqpConnection, name string) *topic {
 	return &topic{
-		conn:     conn,
-		exchange: name,
+		conn:          conn,
+		exchange:      name,
+		sendBatchHook: func() {},
 	}
 }
 
@@ -135,7 +138,7 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	if err := t.establishChannel(ctx); err != nil {
 		return err
 	}
-
+	t.sendBatchHook()
 	// Receive from Go channels concurrently or we will deadlock with the Publish
 	// RPC. (The amqp package docs recommend setting the capacity of the Go channel
 	// to the number of messages to be published, but we can't do that because we
@@ -281,31 +284,26 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+var errorCodes = map[int]gcerrors.ErrorCode{
+	amqp.NotFound:           gcerrors.NotFound,
+	amqp.PreconditionFailed: gcerrors.FailedPrecondition,
+	// These next indicate  a bug in our driver, not the user's code.
+	amqp.SyntaxError:    gcerrors.Internal,
+	amqp.CommandInvalid: gcerrors.Internal,
+	amqp.InternalError:  gcerrors.Internal,
+	amqp.NotImplemented: gcerrors.Unimplemented,
+	amqp.ChannelError:   gcerrors.FailedPrecondition, // typically channel closed
+}
+
 func errorCode(err error) gcerrors.ErrorCode {
 	aerr, ok := err.(*amqp.Error)
 	if !ok {
 		return gcerrors.Unknown
 	}
-	switch aerr.Code {
-	case amqp.NotFound:
-		return gcerrors.NotFound
-
-	case amqp.PreconditionFailed:
-		return gcerrors.FailedPrecondition
-
-	case amqp.SyntaxError, amqp.CommandInvalid:
-		// These indicate a bug in our driver, not the user's code.
-		return gcerrors.Internal
-
-	case amqp.InternalError:
-		return gcerrors.Internal
-
-	case amqp.NotImplemented:
-		return gcerrors.Unimplemented
-
-	default:
-		return gcerrors.Unknown
+	if ec, ok := errorCodes[aerr.Code]; ok {
+		return ec
 	}
+	return gcerrors.Unknown
 }
 
 func isRetryable(err error) bool {
@@ -401,15 +399,18 @@ type subscription struct {
 	ch     amqpChannel // AMQP channel used for all communication.
 	delc   <-chan amqp.Delivery
 	closec <-chan *amqp.Error
+
+	receiveBatchHook func() // for testing
 }
 
 var nextConsumer int64 // atomic
 
 func newSubscription(conn amqpConnection, name string) *subscription {
 	return &subscription{
-		conn:     conn,
-		queue:    name,
-		consumer: fmt.Sprintf("c%d", atomic.AddInt64(&nextConsumer, 1)),
+		conn:             conn,
+		queue:            name,
+		consumer:         fmt.Sprintf("c%d", atomic.AddInt64(&nextConsumer, 1)),
+		receiveBatchHook: func() {},
 	}
 }
 
@@ -455,6 +456,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err := s.establishChannel(ctx); err != nil {
 		return nil, err
 	}
+
+	s.receiveBatchHook()
 
 	// Get up to maxMessages waiting messages, but don't take too long.
 	var ms []*driver.Message
