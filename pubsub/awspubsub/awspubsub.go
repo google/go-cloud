@@ -72,7 +72,7 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Top
 var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) (er error) {
 	for _, dm := range dms {
 		attrs := map[string]*sns.MessageAttributeValue{}
 		for k, v := range dm.Metadata {
@@ -203,7 +203,7 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
-func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
 	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
 		QueueUrl: &s.qURL,
 	})

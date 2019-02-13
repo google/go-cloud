@@ -46,7 +46,7 @@ func Example() {
 
 func Example_open() {
 	// Open creates a *blob.Bucket from a URL.
-	b, err := blob.Open(context.Background(), "mem://")
+	b, err := blob.OpenBucket(context.Background(), "mem://")
 	if err != nil {
 		log.Fatal(err)
 	}
