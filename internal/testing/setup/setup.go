@@ -5,6 +5,8 @@ import (
 	"flag"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -16,7 +18,9 @@ import (
 	"gocloud.dev/internal/testing/replay"
 	"gocloud.dev/internal/useragent"
 
+	"cloud.google.com/go/httpreplay"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	grpccreds "google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
@@ -38,7 +42,7 @@ func FakeGCPCredentials(ctx context.Context) (*google.Credentials, error) {
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
-func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
+func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
@@ -49,30 +53,81 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.
 		},
 		Headers: []string{"X-Amz-Target"},
 	}
-	r, done, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
+	r, cleanup, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
 
 	client := &http.Client{Transport: r}
+	sess, err = awsSession(region, client)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sess, r, cleanup
+}
 
+func awsSession(region string, client *http.Client) (*session.Session, error) {
 	// Provide fake creds if running in replay mode.
 	var creds *awscreds.Credentials
 	if !*Record {
 		creds = awscreds.NewStaticCredentials("FAKE_ID", "FAKE_SECRET", "FAKE_TOKEN")
 	}
-
-	sess, err = session.NewSession(&aws.Config{
+	return session.NewSession(&aws.Config{
 		HTTPClient:  client,
 		Region:      aws.String(region),
 		Credentials: creds,
 		MaxRetries:  aws.Int(0),
 	})
+}
+
+// NewAWSSession2 is like NewAWSSession, but it uses a diffrent record/replay proxy.
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+	if *Record {
+		t.Logf("Recording into golden file %s", path)
+	} else {
+		t.Logf("Replaying from golden file %s", path)
+	}
+	if *Record {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec.RemoveQueryParams("X-Amz-Credential", "X-Amz-Signature")
+		rec.RemoveRequestHeaders("Authorization", "Duration", "X-Amz-Security-Token")
+		rec.ClearHeaders("X-Amz-Date")
+		rec.ClearHeaders("User-Agent") // AWS includes the Go version
+		c, err := rec.Client(ctx, option.WithoutAuthentication())
+		if err != nil {
+			t.Fatal(err)
+		}
+		rt = c.Transport
+		cleanup = func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	} else { // replay
+		rep, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, err := rep.Client(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rt = c.Transport
+		cleanup = func() { _ = rep.Close() } // Don't care about Close error on replay.
+	}
+	sess, err := awsSession(region, &http.Client{Transport: rt})
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	return sess, r, done
+	return sess, rt, cleanup
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
