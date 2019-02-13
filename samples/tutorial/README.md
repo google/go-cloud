@@ -21,182 +21,89 @@ When we're done, our command line application will work like this:
 
 ```shell
 # uploads gopher.png to GCS
-$ ./upload -cloud gcp gopher.png
+$ ./upload gs://go-cloud-bucket gopher.png
 
 # uploads gopher.png to S3
-$ ./upload -cloud aws gopher.png
+$ ./upload s3://go-cloud-bucket gopher.png
 
 # uploads gopher.png to Azure
-$ ./upload -cloud azure gopher.png
+$ ./upload azblob://go-cloud-bucket gopher.png
 ```
 
-## Flags & setup
+## Setup
 
-We start with a skeleton for our program with flags to configure the cloud
-provider and the bucket name.
+We start with a skeleton for our program to read from command-line
+arguments to configure the bucket URL.
 
 ```go
 // Command upload saves files to blob storage on GCP, AWS, and Azure.
 package main
 
 import (
-    "flag"
     "log"
+    "os"
 )
 
 func main() {
     // Define our input.
-    cloud := flag.String("cloud", "", "Cloud storage to use")
-    bucketName := flag.String("bucket", "go-cloud-bucket", "Name of bucket")
-    flag.Parse()
-    if flag.NArg() != 1 {
-        log.Fatal("Failed to provide file to upload")
+    if len(os.Args) != 3 {
+        log.Fatal("usage: upload BUCKET_URL FILE")
     }
-    file := flag.Arg(0)
+    bucketURL := os.Args[1]
+    file := os.Args[2]
+    _, _ = bucketURL, file
 }
 ```
 
 Now that we have a basic skeleton in place, let's start filling in the pieces.
-Opening a connection to the bucket will depend on which cloud we're using.
-Because we allow the user to specify a cloud, we will write connection logic for
-both clouds. This will be the only step that requires cloud-specific APIs.
 
-## GCP authentication & connection
+## Connecting to the bucket
 
-As a first pass, let's write the code to connect to a GCS bucket. Then, we will
-write the code to connect to S3 and Azure buckets. In all cases, we are going to
-create a pointer to a `blob.Bucket`, the cloud-agnostic blob storage type.
+The easiest way to open a portable bucket API is with `blob.OpenBucket`.
 
 ```go
 package main
 
 import (
-    "context"
-    "flag"
-    "log"
+    // previous imports omitted
 
     "gocloud.dev/blob"
-    "gocloud.dev/blob/gcsblob"
-    "gocloud.dev/gcp"
 )
 
 func main() {
-    // flag setup omitted
-    // ...
+    // previous code omitted
 
-    ctx := context.Background()
     // Open a connection to the bucket.
-    var (
-        b *blob.Bucket
-        err error
-    )
-    switch *cloud {
-    case "gcp":
-        b, err = setupGCP(ctx, *bucketName)
-    case "aws":
-        // setupAWS is added in the next code sample.
-        b, err = setupAWS(ctx, *bucketName)
-    case "azure":
-        // setupAzure is added in the next code sample.
-        b, err = setupAzure(ctx, *bucketName)
-    default:
-        log.Fatalf("Failed to recognize cloud. Want gcp or aws, got: %s", *cloud)
-    }
+    b, err := blob.OpenBucket(context.Background(), bucketURL)
     if err != nil {
         log.Fatalf("Failed to setup bucket: %s", err)
     }
-}
-
-// setupGCP creates a connection to Google Cloud Storage (GCS).
-func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
-    // DefaultCredentials assumes a user has logged in with gcloud.
-    // See here for more information:
-    // https://cloud.google.com/docs/authentication/getting-started
-    creds, err := gcp.DefaultCredentials(ctx)
-    if err != nil {
-        return nil, err
-    }
-    c, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
-    if err != nil {
-        return nil, err
-    }
-    return gcsblob.OpenBucket(ctx, c, bucket, nil)
+    _ = b
 }
 ```
 
-The cloud-specific setup is the tricky part as each cloud has its own series of
-invocations to create a bucket. It's worth thinking about this point for a
-moment.
+This is all we need in the `main` function to connect to the bucket. However,
+as written, this function call will always fail: the Go CDK does not link in any
+cloud-specific implementations of `blob.OpenBucket` unless you specifically
+depend on them. This ensures you're only depending on the code you need.
+To link in implementations, use blank imports:
 
-Without the Go CDK, both your setup code and your business logic are platform
-dependent. That's a bad thing because business logic has a tendency to grow
-increasingly complex over time and if that logic is coupled to a particular
-platform, your application will likely become tightly coupled to the plaform as
-well.
-
-With the Go CDK, only your setup code is platform dependent. The business logic
-makes no demands on a particular platform, which means your application itself
-requires less work to move from one cloud to another. In any case, the setup
-code in an application grows far less than the business logic does. Anything we
-can do to separate the business logic from an underlying platform is well worth
-doing.
-
-## AWS and Azure authentication & connection
-
-With GCS setup code out of the way, let's handle the S3 and Azure connection
-logic next:
-
-```go
+```
 package main
 
 import (
-    // ...
-    // listing only new import statements
+    // previous imports omitted
 
-    "github.com/aws/aws-sdk-go/aws"
-    "github.com/aws/aws-sdk-go/aws/credentials"
-    "github.com/aws/aws-sdk-go/aws/session"
-    "gocloud.dev/blob/azureblob"
-    "gocloud.dev/blob/s3blob"
+    // Import the blob packages we want to be able to open.
+    _ "gocloud.dev/blob/azureblob"
+    _ "gocloud.dev/blob/gcsblob"
+    _ "gocloud.dev/blob/s3blob"
 )
 
-// ... main
-
-// setupAWS creates a connection to Simple Cloud Storage Service (S3).
-func setupAWS(ctx context.Context, bucket string) (*blob.Bucket, error) {
-    c := &aws.Config{
-        // Either hard-code the region or use AWS_REGION.
-        Region: aws.String("us-east-2"),
-        // credentials.NewEnvCredentials assumes two environment variables are
-        // present:
-        // 1. AWS_ACCESS_KEY_ID, and
-        // 2. AWS_SECRET_ACCESS_KEY.
-        Credentials: credentials.NewEnvCredentials(),
-    }
-    s := session.Must(session.NewSession(c))
-    return s3blob.OpenBucket(ctx, s, bucket, nil)
-}
-
-// setupAzure creates a connection to Azure Storage Account using shared key
-// authorization. It assumes environment variables AZURE_STORAGE_ACCOUNT_NAME
-// and AZURE_STORAGE_ACCOUNT_KEY are present.
-func setupAzure(ctx context.Context, bucket string) (*blob.Bucket, error) {
-    accountName := os.Getenv("AZURE_STORAGE_ACCOUNT_NAME")
-    accountKey := os.Getenv("AZURE_STORAGE_ACCOUNT_KEY")
-    serviceURL, err := azureblob.ServiceURLFromAccountKey(accountName, accountKey)
-    if err != nil {
-        return nil, err
-    }
-    return azureblob.OpenBucket(ctx, serviceURL, bucket, nil)
+func main() {
+    // ...
 }
 ```
-
-The important point here is that in spite of the differences in setup for GCS
-and S3/Azure, the result is the same: we have a pointer to a `blob.Bucket`.
-Provided we go through the setup, once we have a `blob.Bucket` pointer, we may
-design our system around that type and prevent any cloud specific concerns from
-leaking throughout our application code. In other words, by using `blob.Bucket`
-we avoid being tightly coupled to one cloud provider.
 
 With the setup done, we're ready to use the bucket connection. Note, as a design
 principle of the Go CDK, `blob.Bucket` does not support creating a bucket and
@@ -301,72 +208,26 @@ $ go build -o upload
 Then, we will send `gopher.png` (in the same directory as this README) to GCS:
 
 ```shell
-$ ./upload -cloud gcp gopher.png
+$ ./upload gs://go-cloud-bucket gopher.png
 ```
 
 Then, we send that same gopher to S3:
 
 ```shell
-$ ./upload -cloud aws gopher.png
+$ ./upload s3://go-cloud-bucket gopher.png
 ```
 
 Finally, we send that same gopher to Azure:
 
 ```shell
-$ ./upload -cloud azure gopher.png
+$ ./upload azblob://go-cloud-bucket gopher.png
 ```
 
 If we check the buckets, we should see our gopher in each of them! We're done!
 
-## Separating setup code from application code
-
-Now that we have a working application, let's take one extra step to further
-separate setup code from application code. We will move all setup concerns that
-use any specific cloud-provider SDK out into a `setup.go` file and replace our
-`switch` statement with a single function:
-
-```go
-// main.go
-
-func main() {
-    // ...
-
-    cxt := context.Background()
-    // Open a connection to the bucket.
-    b, err := setupBucket(ctx, *cloud, *bucketName)
-    if err != nil {
-        log.Fatalf("Failed to setup bucket: %s", err
-    }
-
-    // Prepare the file for upload.
-    // ...
-}
-```
-
-After moving the `setupGCP`, `setupAWS`, and `setupAzure` functions into
-`setup.go`, we add our new `setupBucket` function next:
-
-```go
-// setupBucket creates a connection to a particular cloud provider's blob storage.
-func setupBucket(ctx context.Context, cloud, bucket string) (*blob.Bucket, error) {
-    switch cloud {
-    case "aws":
-        return setupAWS(ctx, bucket)
-    case "gcp":
-        return setupGCP(ctx, bucket)
-    case "azure":
-        return setupAzure(ctx, bucket)
-    default:
-        return nil, fmt.Errorf("invalid cloud provider: %s", cloud)
-    }
-}
-```
-
-Now, our application code consists of two files: `main.go` with the application
-logic and `setup.go` with the cloud-provider specific details. A benefit of this
-separation is that changing any part of blob storage is a matter of changing
-only the internals of `setupBucket`. The application logic does not need to be
-changed.
+[s3-bucket]: https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html
+[gcs-bucket]: https://cloud.google.com/storage/docs/creating-buckets
+[azure-container]: https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction
 
 ## Wrapping Up
 
@@ -378,7 +239,3 @@ huge win for simplicity and maintainability. By writing an application using a
 generic interface like `*blob.Bucket`, we retain the option of using
 infrastructure in whichever cloud that best fits our needs all without having to
 worry about a rewrite.
-
-[s3-bucket]: https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html
-[gcs-bucket]: https://cloud.google.com/storage/docs/creating-buckets
-[azure-container]: https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction

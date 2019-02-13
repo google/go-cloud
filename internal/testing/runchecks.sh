@@ -43,6 +43,15 @@ else
   exit $result
 fi
 
+# Ensure that the code has no extra dependencies (including transitive
+# dependencies) that we're not already aware of by comparing with
+# ./internal/testing/alldeps
+#
+# Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
+./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
+}
+
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }

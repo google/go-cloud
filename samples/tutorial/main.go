@@ -17,24 +17,29 @@ package main
 
 import (
 	"context"
-	"flag"
 	"io/ioutil"
 	"log"
+	"os"
+
+	"gocloud.dev/blob"
+
+	// Import the blob packages we want to be able to open.
+	_ "gocloud.dev/blob/azureblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 func main() {
 	// Define our input.
-	cloud := flag.String("cloud", "", "Cloud storage to use")
-	bucketName := flag.String("bucket", "go-cloud-bucket", "Name of bucket")
-	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("Failed to provide file to upload")
+	if len(os.Args) != 3 {
+		log.Fatal("usage: upload BUCKET_URL FILE")
 	}
-	file := flag.Arg(0)
+	bucketURL := os.Args[1]
+	file := os.Args[2]
 
 	ctx := context.Background()
 	// Open a connection to the bucket.
-	b, err := setupBucket(context.Background(), *cloud, *bucketName)
+	b, err := blob.OpenBucket(context.Background(), bucketURL)
 	if err != nil {
 		log.Fatalf("Failed to setup bucket: %s", err)
 	}
