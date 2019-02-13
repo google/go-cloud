@@ -60,11 +60,7 @@ func Example_open() {
 
 	// Open creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
-	b, err := blob.Open(ctx, "gs://my-bucket")
-
-	// Alternatively, you can use the query parameter "cred_path" to load
-	// credentials from a file.
-	b, err = blob.Open(ctx, "gs://my-bucket?cred_path=path/to/credentials")
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
 	_ = b
 	_ = err
 }

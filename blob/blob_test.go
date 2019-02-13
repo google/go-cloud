@@ -225,22 +225,20 @@ var (
 	testOpenGot  *url.URL
 )
 
-// TestOpen tests blob.Open.
-func TestOpen(t *testing.T) {
+func TestURLMux(t *testing.T) {
 	ctx := context.Background()
+	var got *url.URL
 
-	testOpenOnce.Do(func() {
-		// Register scheme foo to always return nil. Sets testOpenGot as a side effect.
-		Register("foo", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-			testOpenGot = u
-			return nil, nil
-		})
-
-		// Register scheme err to always return an error.
-		Register("err", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-			return nil, errors.New("fail")
-		})
-	})
+	mux := new(URLMux)
+	// Register scheme foo to always return nil. Sets got as a side effect
+	mux.RegisterBucket("foo", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+		got = u
+		return nil, nil
+	}))
+	// Register scheme err to always return an error.
+	mux.RegisterBucket("err", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+		return nil, errors.New("fail")
+	}))
 
 	for _, tc := range []struct {
 		name    string
@@ -293,7 +291,7 @@ func TestOpen(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, gotErr := Open(ctx, tc.url)
+			_, gotErr := mux.OpenBucket(ctx, tc.url)
 			if (gotErr != nil) != tc.wantErr {
 				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
 			}
@@ -304,9 +302,15 @@ func TestOpen(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(testOpenGot, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", testOpenGot, want, diff)
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
 			}
 		})
 	}
+}
+
+type bucketURLOpenFunc func(context.Context, *url.URL) (*Bucket, error)
+
+func (f bucketURLOpenFunc) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
+	return f(ctx, u)
 }
