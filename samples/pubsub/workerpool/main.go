@@ -64,12 +64,12 @@ func publish(ctx context.Context, top *pubsub.Topic) error {
 
 // subscribe pulls from the subscription and simulates processing the videos.
 func subscribe(ctx context.Context, sub *pubsub.Subscription) error {
-	return psutil.ReceiveConcurrently(ctx, 10, sub, func(ctx context.Context, m *pubsub.Message) error {
+	return psutil.ReceiveConcurrently(ctx, sub, 10, func(ctx context.Context, m *pubsub.Message) error {
 		videoURL := string(m.Body)
 		log.Printf("Processing %v", videoURL)
 		// Simulate transcoding the video and storing it in various formats.
 		time.Sleep(time.Duration(rand.Intn(10)) * time.Second)
 		log.Printf("Done processing %v", videoURL)
-		return nil
+		return nil // ack
 	})
 }

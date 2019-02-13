@@ -18,8 +18,6 @@ package psutil
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"gocloud.dev/internal/workerpool"
 	"gocloud.dev/pubsub"
 )
@@ -30,14 +28,13 @@ import (
 // sub.Receive or handleMessage returns a non-nil error then the processing is
 // terminated via context cancellation. Cancelling the context causes this
 // function to return.
-func ReceiveConcurrently(ctx context.Context, max int, sub *pubsub.Subscription, handleMessage func(ctx context.Context, m *pubsub.Message) error) error {
+func ReceiveConcurrently(ctx context.Context, sub *pubsub.Subscription, max int, handleMessage func(ctx context.Context, m *pubsub.Message) error) error {
 	errc := make(chan error, max+1)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go func() {
 		errc <- workerpool.Run(ctx, max, func(ctx context.Context) workerpool.Task {
 			m, err := sub.Receive(ctx)
-			log.Printf("Receive returned %v for err", err)
 			if err != nil {
 				cancel()
 				errc <- fmt.Errorf("receiving message: %v", err)
