@@ -27,7 +27,7 @@ import (
 
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/mempubsub"
-
+	"gocloud.dev/pubsub/psutil"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -64,7 +64,7 @@ func publish(ctx context.Context, top *pubsub.Topic) error {
 
 // subscribe pulls from the subscription and simulates processing the videos.
 func subscribe(ctx context.Context, sub *pubsub.Subscription) error {
-	return pubsub.RunWorkerPool(ctx, 10, sub, func(ctx context.Context, m *pubsub.Message) error {
+	return psutil.ReceiveConcurrently(ctx, 10, sub, func(ctx context.Context, m *pubsub.Message) error {
 		videoURL := string(m.Body)
 		log.Printf("Processing %v", videoURL)
 		// Simulate transcoding the video and storing it in various formats.
