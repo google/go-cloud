@@ -29,26 +29,18 @@ import (
 // terminated via context cancellation. Cancelling the context causes this
 // function to return.
 func ReceiveConcurrently(ctx context.Context, sub *pubsub.Subscription, max int, handleMessage func(ctx context.Context, m *pubsub.Message) error) error {
-	errc := make(chan error, max+1)
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	go func() {
-		errc <- workerpool.Run(ctx, max, func(ctx context.Context) workerpool.Task {
-			m, err := sub.Receive(ctx)
-			if err != nil {
-				cancel()
-				errc <- fmt.Errorf("receiving message: %v", err)
-				return nil
+	return workerpool.Run(ctx, max, func(ctx context.Context) (workerpool.Task, error) {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("receiving message: %v", err)
+		}
+		task := func(ctx context.Context) error {
+			if err := handleMessage(ctx, m); err != nil {
+				return fmt.Errorf("handling message: %v", err)
 			}
-			return func(ctx context.Context) {
-				if err := handleMessage(ctx, m); err != nil {
-					cancel()
-					errc <- fmt.Errorf("handling message: %v", err)
-					return
-				}
-				m.Ack()
-			}
-		})
-	}()
-	return <-errc
+			m.Ack()
+			return nil
+		}
+		return task, nil
+	})
 }

@@ -20,9 +20,10 @@ package workerpool
 
 import (
 	"context"
+	"sync"
 )
 
-type Task func(context.Context)
+type Task func(context.Context) error
 
 // Run runs a worker pool with no more than limit goroutines. It repeatedly
 // calls nextTask to get tasks to perform. These tasks are in the form of funcs
@@ -30,22 +31,43 @@ type Task func(context.Context)
 // longer ask for more tasks, and will return after waiting for the running
 // goroutines to finish. The provided context can be used to cancel everything
 // and exit the loop.
-func Run(ctx context.Context, limit int, nextTask func(context.Context) Task) error {
+func Run(ctx context.Context, limit int, nextTask func(context.Context) (Task, error)) error {
+	ctx, cancel := context.WithCancel(ctx)
 	type token struct{}
 	sem := make(chan token, limit)
+	var mu sync.Mutex
+	var retErr error
 Loop:
 	for {
-		doTask := nextTask(ctx)
-		if doTask == nil {
+		doTask, err := nextTask(ctx)
+		if err != nil {
+			mu.Lock()
+			if retErr == nil {
+				retErr = err
+			}
+			mu.Unlock()
 			break
 		}
 		select {
 		case <-ctx.Done():
+			mu.Lock()
+			if retErr == nil {
+				retErr = ctx.Err()
+			}
+			mu.Unlock()
 			break Loop
 		case sem <- token{}:
 		}
 		go func() {
-			doTask(ctx)
+			err := doTask(ctx)
+			if err != nil {
+				mu.Lock()
+				if retErr == nil {
+					retErr = err
+				}
+				mu.Unlock()
+				cancel()
+			}
 			<-sem
 		}()
 	}
@@ -57,5 +79,5 @@ Loop:
 		sem <- token{}
 	}
 
-	return ctx.Err()
+	return retErr
 }
