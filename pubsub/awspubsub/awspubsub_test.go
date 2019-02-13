@@ -318,6 +318,14 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+// Tips on dealing with failures when in -record mode:
+// - There may be leftover messages in queues. Using the AWS CLI tool,
+//   purge the queues before running the test.
+//   E.g.
+//	     aws sqs purge-queue --queue-url URL
+//   You can get the queue URLs with
+//       aws sqs list-queues
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
@@ -351,8 +359,8 @@ func (awsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
 	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
-	if ae.Code() != sns.ErrCodeInvalidParameterException {
-		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
+	if got, want := ae.Code(), sns.ErrCodeInvalidParameterException; got != want {
+		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil
 }
@@ -363,8 +371,8 @@ func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
 	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
-	if ae.Code() != sns.ErrCodeInvalidParameterException {
-		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
+	if got, want := ae.Code(), "InvalidAddress"; got != want {
+		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil
 }
