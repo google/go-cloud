@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -73,12 +74,12 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	blobject, err := bucket.ReadAll(r.Context(), objKey)
+	reader, err := bucket.NewReader(r.Context(), objKey, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	w.Write(blobject)
+	io.Copy(w, reader)
 }
 
 func (h *harness) HTTPClient() *http.Client {
