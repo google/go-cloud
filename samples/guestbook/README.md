@@ -96,26 +96,37 @@ directory using the same variables you entered during `terraform apply`.
 ## Running on Amazon Web Services (AWS)
 
 If you want to run this sample on AWS, you need to set up an account, download
-the AWS command line interface, and log in. You will also need an SSH key. If
-you don't already have one, you can follow [this guide from GitHub][GitHub SSH].
-Follow the instructions for "Adding your key to the ssh-agent" if you want the
-key to persist across terminal sessions.
+the AWS command line interface, and log in. There's [help here][AWS Config Help]
+if you need it.
+
+```shell
+aws configure
+```
 
 ### Agree to the AWS Terms and Conditions
 
 You have to agree to the [AWS Terms and Conditions][AWS T&C] in order to
-provision the resources.
+provision the resources. Click through the "Continue to Subscribe" button at the
+top, then log in to your AWS account and subscribe to Debian.
+
+### SSH Key
+
+You will also need an SSH key to SSH into the EC2 instance. If you don't already
+have one, you can follow [this guide from GitHub][GitHub SSH]. Follow the
+instructions for "Adding your key to the ssh-agent" if you want the key to
+persist across terminal sessions.
+
+```shell
+ssh-add
+```
 
 ### Provision resources with Terraform
 
-With the SSH keys generated and AWS Terms and Conditions signed, you can then
-use Terraform, a tool for initializing cloud resources, to set up your project.
-This will create an EC2 instance you can SSH to and run your binary.
+You can now use Terraform, a tool for initializing cloud resources, to set up
+your project. This will create an EC2 instance you can SSH to and run your
+binary.
 
 ```shell
-aws configure
-ssh-add
-
 # Build for deploying on the AWS Linux VM.
 GOOS=linux GOARCH=amd64 go build
 
@@ -125,51 +136,54 @@ terraform init
 
 # Provisioning can take up to 10 minutes.
 # Keep track of the output of this command as it is needed later.
+# You can replace us-west-1 with whatever region you want.
 terraform apply -var region=us-west-1 -var ssh_public_key="$(cat ~/.ssh/id_rsa.pub)"
 ```
 
 ### Connect to the new server and run the guestbook binary
 
 You now need to connect to the new remote server to execute the `guestbook`
-binary. The final output of `terraform apply` lists the required variables
-`guestbook` requires to execute. Here's an example (with redacted output!):
+binary. The final output of `terraform apply` lists the variables `guestbook`
+requires as arguments. Here's an example, with actual strings replaced with
+`[redacted]`:
 
 ```shell
-localhost$ terraform apply
-
+# Output from "terraform apply" command....
 <snip>
 
 Outputs:
 
-bucket = guestbook[timestamp]
-database_host = guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com
+bucket = [redacted]
+database_host = [redacted]
 database_root_password = <sensitive>
 instance_host = [redacted]
 paramstore_var = /guestbook/motd
 region = us-west-1
 
+# Print out the database root password, since we'll need it below
+# Terraform hides it by default in the Outputs above.
+localhost$ terraform output database_root_password
+[redacted]
+
 # SSH into the EC2 instance.
 localhost$ ssh "admin@$( terraform output instance_host )"
 
-server$ AWS_REGION=us-west-1 ./guestbook -env=aws \
-  -bucket=guestbook[timestamp] \
-    -db_host=guestbook[timestamp][redacted].us-west-1.rds.amazonaws.com \
-    -motd_var=/guestbook/motd
+# Fill in each command-line argument with the values from above.
+server$ AWS_REGION=<your region> ./guestbook -env=aws -bucket=<your bucket> -db_host=<your database_host> -db_user=root -db_password=<your database_root_password> -motd_var=/guestbook/motd
 ```
 
 ### View the guestbook application
 
-You can then visit the server at `http://INSTANCE_HOST:8080/`, where
-`INSTANCE_HOST` is the value of `terraform output instance_host` run on your
-local machine.
+You can now visit the server at `http://<your instance_host>:8080/`.
 
 ### Cleanup
 
 To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
 
-[GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
+[AWS Config Help]: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 [AWS T&C]: https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4
+[GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
 
 ## Gophers
 

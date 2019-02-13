@@ -33,6 +33,7 @@ func main() {
 	log.SetFlags(0)
 	log.SetPrefix("aws/provision_db: ")
 	host := flag.String("host", "", "hostname of database")
+	region := flag.String("region", "", "AWS region")
 	securityGroup := flag.String("security_group", "", "database security group")
 	database := flag.String("database", "", "name of database to provision")
 	password := flag.String("password", "", "root password on database")
@@ -48,12 +49,12 @@ func main() {
 	if missing {
 		os.Exit(64)
 	}
-	if err := provisionDb(*host, *securityGroup, *database, *password, *schema); err != nil {
+	if err := provisionDb(*host, *region, *securityGroup, *database, *password, *schema); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func provisionDb(dbHost, securityGroupID, dbName, dbPassword, schemaPath string) error {
+func provisionDb(dbHost, region, securityGroupID, dbName, dbPassword, schemaPath string) error {
 	const mySQLImage = "mysql:5.6"
 
 	// Pull the necessary Docker images.
@@ -92,12 +93,12 @@ func provisionDb(dbHost, securityGroupID, dbName, dbPassword, schemaPath string)
 	}
 
 	log.Print("Adding a temporary ingress rule")
-	if _, err := run("aws", "ec2", "authorize-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
+	if _, err := run("aws", "ec2", "authorize-security-group-ingress", "--region", region, "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
 		return err
 	}
 	defer func() {
 		log.Print("Removing ingress rule...")
-		if _, err := run("aws", "ec2", "revoke-security-group-ingress", "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
+		if _, err := run("aws", "ec2", "revoke-security-group-ingress", "--region", region, "--group-id", securityGroupID, "--protocol=tcp", "--port=3306", "--cidr=0.0.0.0/0"); err != nil {
 			log.Print(err)
 		}
 	}()
