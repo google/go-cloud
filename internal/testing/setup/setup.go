@@ -42,7 +42,7 @@ func FakeGCPCredentials(ctx context.Context) (*google.Credentials, error) {
 // results are recorded in a replay file.
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
-func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
+func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
 	mode := recorder.ModeReplaying
 	if *Record {
 		mode = recorder.ModeRecording
@@ -53,7 +53,7 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.
 		},
 		Headers: []string{"X-Amz-Target"},
 	}
-	r, done, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
+	r, cleanup, err := replay.NewRecorder(t, mode, awsMatcher, t.Name())
 	if err != nil {
 		t.Fatalf("unable to initialize recorder: %v", err)
 	}
@@ -63,7 +63,7 @@ func NewAWSSession(t *testing.T, region string) (sess *session.Session, rt http.
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sess, r, done
+	return sess, r, cleanup
 }
 
 func awsSession(region string, client *http.Client) (*session.Session, error) {
@@ -81,7 +81,7 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 }
 
 // NewAWSSession2 is like NewAWSSession, but it uses a diffrent record/replay proxy.
-func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, done func()) {
+func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 	if *Record {
@@ -106,7 +106,7 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 			t.Fatal(err)
 		}
 		rt = c.Transport
-		done = func() {
+		cleanup = func() {
 			if err := rec.Close(); err != nil {
 				t.Fatal(err)
 			}
@@ -121,13 +121,13 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 			t.Fatal(err)
 		}
 		rt = c.Transport
-		done = func() { _ = rep.Close() } // Don't care about Close error on replay.
+		cleanup = func() { _ = rep.Close() } // Don't care about Close error on replay.
 	}
 	sess, err := awsSession(region, &http.Client{Transport: rt})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return sess, rt, done
+	return sess, rt, cleanup
 }
 
 // NewGCPClient creates a new HTTPClient for testing against GCP.
