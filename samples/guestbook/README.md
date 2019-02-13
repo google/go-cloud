@@ -103,6 +103,14 @@ if you need it.
 aws configure
 ```
 
+### Agree to the AWS Terms and Conditions
+
+You have to agree to the [AWS Terms and Conditions][AWS T&C] in order to
+provision the resources. Click through the "Continue to Subscribe" button at the
+top, then log in to your AWS account and subscribe to Debian.
+
+### SSH Key
+
 You will also need an SSH key to SSH into the EC2 instance. If you don't already
 have one, you can follow [this guide from GitHub][GitHub SSH]. Follow the
 instructions for "Adding your key to the ssh-agent" if you want the key to
@@ -174,6 +182,7 @@ To clean up the created resources, run `terraform destroy` inside the `aws`
 directory using the same variables you entered during `terraform apply`.
 
 [AWS Config Help]: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
+[AWS T&C]: https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4
 [GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
 
 ## Gophers
