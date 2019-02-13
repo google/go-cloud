@@ -548,32 +548,28 @@ type URLSigner interface {
 // using a sha256 hash. Any URLSignerHMAC with a non-empty secretKey can validate
 // a signed URL created by any other URLSignerHMAC with the identical secretKey.
 type URLSignerHMAC struct {
-	urlScheme string
-	urlHost   string
-	urlPath   string
+	baseURL   *url.URL
 	secretKey []byte
 }
 
-// NewURLSignerHMAC creates a URLSignerHMAC.
-func NewURLSignerHMAC(urlScheme, urlHost, urlPath, secretKey string) *URLSignerHMAC {
-	if secretKey == "" {
+// NewURLSignerHMAC creates a URLSignerHMAC. A secretKey is required.
+func NewURLSignerHMAC(baseURL *url.URL, secretKey []byte) *URLSignerHMAC {
+	if secretKey == nil {
 		return nil
 	}
+	uc := new(url.URL)
+	*uc = *baseURL
 	return &URLSignerHMAC{
-		urlScheme: urlScheme,
-		urlHost:   urlHost,
-		urlPath:   urlPath,
-		secretKey: []byte(secretKey),
+		baseURL:   uc,
+		secretKey: secretKey,
 	}
 }
 
-// URLFromKey creates a signed URL with the object key and expiry as a query params.
+// URLFromKey creates a signed URL by copying the baseURL and appending the
+// object key, expiry, and signature as a query params.
 func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
-	sURL := &url.URL{
-		Host:   h.urlHost,
-		Scheme: h.urlScheme,
-		Path:   h.urlPath,
-	}
+	sURL := new(url.URL)
+	*sURL = *h.baseURL
 
 	q := sURL.Query()
 	q.Set("obj", key)

@@ -34,10 +34,10 @@ import (
 )
 
 type harness struct {
-	dir        string
-	server     *httptest.Server
-	urlSignKey string
-	closer     func()
+	dir       string
+	server    *httptest.Server
+	urlSigner URLSigner
+	closer    func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -45,20 +45,24 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
+	h := &harness{dir: dir}
 
-	h := &harness{dir: dir, urlSignKey: "I'm a secret key"}
 	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
 	h.server = localServer
+
+	u, err := url.Parse(h.server.URL)
+	if err != nil {
+		return nil, err
+	}
+	h.urlSigner = NewURLSignerHMAC(u, []byte("I'm a secret key"))
+
 	h.closer = func() { _ = os.RemoveAll(dir); localServer.Close() }
 
 	return h, nil
 }
 
 func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
-	// URLSignerHMAC requires the scheme, host, and path to construct the
-	// signed URL, but validating only requires the key.
-	urlSigner := NewURLSignerHMAC("", "", "", h.urlSignKey)
-	objKey, ok := urlSigner.KeyFromURL(r.Context(), r.URL)
+	objKey, ok := h.urlSigner.KeyFromURL(r.Context(), r.URL)
 	if !ok {
 		w.WriteHeader(http.StatusForbidden)
 		return
@@ -82,12 +86,8 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	u, err := url.Parse(h.server.URL)
-	if err != nil {
-		return nil, err
-	}
 	opts := &Options{
-		URLSigner: NewURLSignerHMAC(u.Scheme, u.Host, u.Path, h.urlSignKey),
+		URLSigner: h.urlSigner,
 	}
 	return openBucket(h.dir, opts)
 }
