@@ -42,6 +42,7 @@ import (
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash"
@@ -566,7 +567,7 @@ type URLSignerHMAC struct {
 // then NewURLSignerHMAC panics.
 func NewURLSignerHMAC(baseURL *url.URL, secretKey []byte) *URLSignerHMAC {
 	if len(secretKey) == 0 {
-		panic
+		panic("creating URLSignerHMAC: secretKey is required")
 	}
 	uc := new(url.URL)
 	*uc = *baseURL
@@ -599,7 +600,7 @@ func (h *URLSignerHMAC) getMAC(q url.Values) string {
 
 	hsh := hmac.New(sha256.New, h.secretKey)
 	hsh.Write([]byte(msg))
-	return string(hsh.Sum(nil))
+	return base64.StdEncoding.EncodeToString(hsh.Sum(nil))
 }
 
 // KeyFromURL checks expiry and signature, and returns the object key
