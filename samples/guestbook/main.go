@@ -79,11 +79,10 @@ func main() {
 	case "gcp":
 		app, cleanup, err = setupGCP(ctx, cf)
 	case "aws":
-		if cf.dbPassword == "" {
-			cf.dbPassword = "xyzzy"
-		}
 		app, cleanup, err = setupAWS(ctx, cf)
 	case "local":
+		// The default MySQL instance is running on localhost
+		// with this root password.
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
 		}
