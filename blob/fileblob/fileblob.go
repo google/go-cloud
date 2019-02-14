@@ -622,6 +622,6 @@ func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, 
 func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
 	mac := q.Get("signature")
 	expected := h.getMAC(q)
-	// comparison of the underlying bytes of the MAC(s)
+	// This compares the Base-64 encoded MACs
 	return hmac.Equal([]byte(mac), []byte(expected))
 }
