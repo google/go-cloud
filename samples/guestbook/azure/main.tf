@@ -20,30 +20,30 @@ provider "random" {
   version = "~> 1.3"
 }
 
+resource "random_string" "suffix" {
+  special = false
+  upper = false
+  length  = 7
+}
+
 # Create a resource group
 resource "azurerm_resource_group" "guestbook" {
-  name     = "guestbook"
+  name     = "guestbook${random_string.suffix.result}"
   location = "${var.location}"
 }
 
 # Create a Storage Account, container, and two blobs.
 
 resource "azurerm_storage_account" "guestbook" {
-  name                     = "gcdkguestbook"
+  name                     = "guestbook${random_string.suffix.result}"
   resource_group_name      = "${azurerm_resource_group.guestbook.name}"
   location                 = "${var.location}"
   account_tier             = "Standard"
   account_replication_type = "GRS"
 }
 
-resource "random_string" "storage_container_suffix" {
-  special = false
-  upper = false
-  length  = 7
-}
-
 resource "azurerm_storage_container" "guestbook" {
-  name                  = "guestbook${random_string.storage_container_suffix.result}"
+  name                  = "guestbook${random_string.suffix.result}"
   resource_group_name   = "${azurerm_resource_group.guestbook.name}"
   storage_account_name  = "${azurerm_storage_account.guestbook.name}"
   container_access_type = "private"

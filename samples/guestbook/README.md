@@ -14,12 +14,14 @@ You will need to install the following software to run this sample:
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
 -   [Docker](https://docs.docker.com/install/)
 
-To run the sample on a Cloud provider (GCP or AWS), you will also need:
+To run the sample on a Cloud provider (GCP, AWS, or Azure), you will also need:
 
 -   [Terraform][TF]
 -   [gcloud CLI](https://cloud.google.com/sdk/downloads), if you want to use GCP
 -   [aws CLI](https://docs.aws.amazon.com/cli/latest/userguide/installing.html),
     if you want to use AWS
+-   [az CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest),
+    if you want to use Azure
 
 ## Building
 
@@ -189,7 +191,11 @@ directory using the same variables you entered during `terraform apply`.
 ## Running on Azure
 
 If you want to run this sample on Azure, you first need to set up an Azure
-account.
+account. Use the `az` CLI to log in.
+
+```shell
+az login
+```
 
 The Go CDK doesn't have support for SQL on Azure yet
 (https://github.com/google/go-cloud/issues/1305), so we'll run MySQL and the
@@ -214,6 +220,7 @@ terraform apply -var location="West US"
 Outputs:
 
 access_key = [redacted]
+storage_account = [redacated]
 storage_container = [redacted]
 ```
 
@@ -231,8 +238,8 @@ In another terminal, add your Azure credentials to the environment and run the
 `guestbook` application:
 
 ```shell
-# This is the Storage Account that Terraform created.
-AZURE_STORAGE_ACCOUNT=gcdkguestbook
+# Enter the storage_account from the Terraform output earlier.
+AZURE_STORAGE_ACCOUNT=<your storage_account>
 # Enter the access_key from the Terraform output earlier.
 AZURE_STORAGE_KEY=<your access_key>
 

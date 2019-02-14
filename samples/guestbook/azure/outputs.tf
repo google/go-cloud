@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+output "storage_account" {
+  value       = "${azurerm_storage_account.guestbook.name}"
+  description = "Name of the Storage Account created to store images."
+}
+
 output "storage_container" {
   value       = "${azurerm_storage_container.guestbook.name}"
-  description = "Name of the storage container created to storage images."
+  description = "Name of the storage container created to store images."
 }
 
 output "access_key" {
