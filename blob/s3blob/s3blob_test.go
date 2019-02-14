@@ -52,7 +52,7 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, rt, done := setup.NewAWSSession(t, region)
+	sess, _, rt, done := setup.NewAWSSession(t, region)
 	return &harness{session: sess, rt: rt, closer: done}, nil
 }
 
@@ -199,7 +199,7 @@ func TestOpenBucket(t *testing.T) {
 			var sess client.ConfigProvider
 			if !test.nilSession {
 				var done func()
-				sess, _, done = setup.NewAWSSession(t, region)
+				sess, _, _, done = setup.NewAWSSession(t, region)
 				defer done()
 			}
 
