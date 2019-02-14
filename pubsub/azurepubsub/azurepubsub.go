@@ -184,7 +184,7 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 	}
 }
 
-// testSBSubscription ensures the subscripion exists before listening for incoming messages.
+// testSBSubscription ensures the subscription exists before listening for incoming messages.
 func (s *subscription) testSBSubscription(ctx context.Context) error {
 	if s.topicName == "" {
 		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Topic")
@@ -201,10 +201,10 @@ func (s *subscription) testSBSubscription(ctx context.Context) error {
 		return err
 	}
 
-	// An empty SubscriptionEntity means no Service Bus Subscription exist for the given name.
+	// An empty SubscriptionEntity means no Service Bus Subscription exists for the given name.
 	se, _ := sm.Get(ctx, s.sbSub.Name)
 	if se == nil {
-		return fmt.Errorf("azurepubsub: no such subscription %v", s.sbSub.Name)
+		return fmt.Errorf("azurepubsub: no such subscription %q", s.sbSub.Name)
 	}
 	return nil
 }
