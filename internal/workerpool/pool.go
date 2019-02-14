@@ -20,6 +20,7 @@ package workerpool
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -40,7 +41,7 @@ func Run(ctx context.Context, limit int, nextTask func(context.Context) (Task, e
 	setErr := func(err error) {
 		mu.Lock()
 		if retErr == nil {
-			retErr = err
+			retErr = fmt.Errorf("workerpool: %v", err)
 		}
 		mu.Unlock()
 		cancel()
