@@ -671,7 +671,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
 			}
 			if !utf8.ValidString(v) {
-				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", v)
+				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
 			}
 			lowerK := strings.ToLower(k)
 			if _, found := md[lowerK]; found {

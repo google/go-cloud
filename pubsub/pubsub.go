@@ -163,7 +163,7 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", k)
 		}
 		if !utf8.ValidString(v) {
-			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", v)
+			return fmt.Errorf("pubsub.Send: Message.Metadata values must be valid UTF-8 strings: %q", v)
 		}
 	}
 	return t.batcher.Add(ctx, m)
