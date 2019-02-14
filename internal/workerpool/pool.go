@@ -37,35 +37,27 @@ func Run(ctx context.Context, limit int, nextTask func(context.Context) (Task, e
 	sem := make(chan token, limit)
 	var mu sync.Mutex
 	var retErr error
+	setErr := func(err error) {
+		mu.Lock()
+		retErr = err
+		mu.Unlock()
+	}
 Loop:
 	for {
 		doTask, err := nextTask(ctx)
 		if err != nil {
-			mu.Lock()
-			if retErr == nil {
-				retErr = err
-			}
-			mu.Unlock()
+			setErr(err)
 			break
 		}
 		select {
 		case <-ctx.Done():
-			mu.Lock()
-			if retErr == nil {
-				retErr = ctx.Err()
-			}
-			mu.Unlock()
+			setErr(err)
 			break Loop
 		case sem <- token{}:
 		}
 		go func() {
-			err := doTask(ctx)
-			if err != nil {
-				mu.Lock()
-				if retErr == nil {
-					retErr = err
-				}
-				mu.Unlock()
+			if err := doTask(ctx); err != nil {
+				setErr(err)
 				cancel()
 			}
 			<-sem

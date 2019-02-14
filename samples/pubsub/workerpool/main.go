@@ -32,7 +32,7 @@ import (
 )
 
 func main() {
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(10)*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	// top is a topic that notifies when a video has been uploaded.
 	// sub is a subscription to this topic.
