@@ -105,8 +105,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session, c
 	}
 	dt = openTopic(ctx, client, *out.TopicArn)
 	cleanup = func() {
-		// TODO: Call client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 	}
 	return dt, cleanup, nil
 }
@@ -130,18 +129,10 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	}
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
-	// TODO: call
-	//   snsClient := sns.New(h.sess, h.cfg)
-	//   subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
-	// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
-	//
-	// In the meantime, it's necessary to manually go into the AWS console
-	// in the SQS section and manually subscribe the queues to the topics
-	// after running the test once in -record mode and seeing it fail due
-	// to the queues not being subscribed.
+	snsClient := sns.New(sess, cfg)
+	subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
 	cleanup = func() {
-		// TODO: Call sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
 	}
 	return ds, cleanup, nil
 }
@@ -190,31 +181,6 @@ func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *s
 		return fmt.Errorf("subscribing: %v", err)
 	}
 
-	// Get the confirmation from the queue.
-	out3, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: qURL,
-	})
-	if err != nil {
-		return fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
-	}
-	ms := out3.Messages
-	var token *string
-	switch len(ms) {
-	case 0:
-		return errors.New("no subscription confirmation message found in queue")
-	case 1:
-		m := ms[0]
-		token = m.Body
-	default:
-		return fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
-	}
-	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
-		TopicArn: aws.String(t.arn),
-		Token:    token,
-	})
-	if err != nil {
-		return fmt.Errorf("confirming subscription: %v", err)
-	}
 	return nil
 }
 
