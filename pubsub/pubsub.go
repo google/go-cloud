@@ -65,6 +65,7 @@ import (
 	"reflect"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
@@ -156,6 +157,14 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	t.mu.Unlock()
 	if err != nil {
 		return err // t.err wrapped when set
+	}
+	for k, v := range m.Metadata {
+		if !utf8.ValidString(k) {
+			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", k)
+		}
+		if !utf8.ValidString(v) {
+			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", v)
+		}
 	}
 	return t.batcher.Add(ctx, m)
 }

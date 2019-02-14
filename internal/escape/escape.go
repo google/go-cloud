@@ -22,6 +22,9 @@ import (
 	"strings"
 )
 
+// NonUTF8String is a string for which utf8.ValidString returns false.
+const NonUTF8String = "\xbd\xb2"
+
 // IsASCIIAlphanumeric returns true iff r is alphanumeric: a-z, A-Z, 0-9.
 func IsASCIIAlphanumeric(r rune) bool {
 	switch {

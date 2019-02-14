@@ -312,8 +312,8 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		return err
 	}
 	defer client.Close()
-		
-	entityPath := s.topicName + "/Subscriptions/" + s.sbSub.Name		
+
+	entityPath := s.topicName + "/Subscriptions/" + s.sbSub.Name
 	audience := host + entityPath
 	err = cbs.NegotiateClaim(ctx, audience, client, s.sbNs.TokenProvider)
 	if err != nil {

@@ -97,6 +97,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -641,6 +642,10 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
 	var dopts *driver.WriterOptions
 	var w driver.Writer
+
+	if !utf8.ValidString(key) {
+		return nil, fmt.Errorf("blob.NewWriter: key must be a valid UTF-8 string: %q", key)
+	}
 	if opts == nil {
 		opts = &WriterOptions{}
 	}
@@ -661,6 +666,12 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		for k, v := range opts.Metadata {
 			if k == "" {
 				return nil, errors.New("blob.NewWriter: WriterOptions.Metadata keys may not be empty strings")
+			}
+			if !utf8.ValidString(k) {
+				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+			}
+			if !utf8.ValidString(v) {
+				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", v)
 			}
 			lowerK := strings.ToLower(k)
 			if _, found := md[lowerK]; found {

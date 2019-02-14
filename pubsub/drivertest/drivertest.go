@@ -417,6 +417,19 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
 		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
 	}
+
+	// Verify that non-UTF8 strings in metadata key or value fail.
+	m = &pubsub.Message{
+		Body:     []byte("hello world"),
+		Metadata: map[string]string{escape.NonUTF8String: "bar"},
+	}
+	if err := top.Send(ctx, m); err == nil {
+		t.Error("got nil error, expected error for using non-UTF8 string as metadata key")
+	}
+	m.Metadata = map[string]string{"foo": escape.NonUTF8String}
+	if err := top.Send(ctx, m); err == nil {
+		t.Error("got nil error, expected error for using non-UTF8 string as metadata value")
+	}
 }
 
 func isCanceled(err error) bool {
