@@ -54,7 +54,7 @@ Loop:
 		}
 		select {
 		case <-ctx.Done():
-			setErr(err)
+			setErr(ctx.Err())
 			break Loop
 		case sem <- token{}:
 		}
