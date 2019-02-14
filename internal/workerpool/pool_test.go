@@ -29,91 +29,87 @@ import (
 
 func TestRun(t *testing.T) {
 	t.Run("can be canceled", func(t *testing.T) {
-		ng0 := runtime.NumGoroutine()
-		ctx, cancel := context.WithCancel(context.Background())
-		nextTask := func(context.Context) (workerpool.Task, error) {
-			task := func(context.Context) error {
-				<-ctx.Done()
-				return nil
+		checkGoroutines(t, func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			nextTask := func(context.Context) (workerpool.Task, error) {
+				task := func(context.Context) error {
+					<-ctx.Done()
+					return nil
+				}
+				return task, nil
 			}
-			return task, nil
-		}
-		errc := make(chan error)
-		go func() {
-			errc <- workerpool.Run(ctx, 1, nextTask)
-		}()
-		cancel()
-		err := <-errc
-		if err != context.Canceled {
-			t.Errorf("workerpool.Run returned %v, want context.Canceled", err)
-		}
-		t.Log("waiting for goroutines to return")
-		for runtime.NumGoroutine() != ng0 {
-			time.Sleep(time.Millisecond)
-		}
+			errc := make(chan error)
+			go func() {
+				errc <- workerpool.Run(ctx, 1, nextTask)
+			}()
+			cancel()
+			err := <-errc
+			if err != context.Canceled {
+				t.Errorf("workerpool.Run returned %v, want context.Canceled", err)
+			}
+		})
 	})
 
 	t.Run("can run all tasks", func(t *testing.T) {
-		ng0 := runtime.NumGoroutine()
-		i := 0
-		n := 100
-		// m keeps track of which tasks have been completed.
-		var mu sync.Mutex
-		m := make(map[int]bool)
-		wantErr := errors.New("too many tasks created")
-		nextTask := func(context.Context) (workerpool.Task, error) {
-			i++
-			if i > n {
-				return nil, wantErr
-			}
-			task := func(i int) workerpool.Task {
-				return func(context.Context) error {
-					mu.Lock()
-					m[i] = true
-					mu.Unlock()
-					return nil
+		checkGoroutines(t, func() {
+			i := 0
+			n := 100
+			// m keeps track of which tasks have been completed.
+			var mu sync.Mutex
+			m := make(map[int]bool)
+			wantErr := errors.New("too many tasks created")
+			nextTask := func(context.Context) (workerpool.Task, error) {
+				i++
+				if i > n {
+					return nil, wantErr
 				}
-			}(i)
-			return task, nil
-		}
-
-		err := workerpool.Run(context.Background(), 10, nextTask)
-		if err != wantErr {
-			t.Errorf("returned error is %v, want %v", err, wantErr)
-		}
-		t.Log("waiting for tasks to finish")
-		for {
-			mu.Lock()
-			if len(m) == n {
-				break
+				task := func(i int) workerpool.Task {
+					return func(context.Context) error {
+						mu.Lock()
+						m[i] = true
+						mu.Unlock()
+						return nil
+					}
+				}(i)
+				return task, nil
 			}
-			mu.Unlock()
-			time.Sleep(time.Millisecond)
-		}
-		t.Log("waiting for goroutines to return")
-		for runtime.NumGoroutine() != ng0 {
-			time.Sleep(time.Millisecond)
-		}
+
+			err := workerpool.Run(context.Background(), 10, nextTask)
+			if err != wantErr {
+				t.Errorf("returned error is %v, want %v", err, wantErr)
+			}
+			t.Log("waiting for tasks to finish")
+			for {
+				mu.Lock()
+				if len(m) == n {
+					break
+				}
+				mu.Unlock()
+				time.Sleep(time.Millisecond)
+			}
+		})
 	})
 
 	t.Run("returns error if a task returns error", func(t *testing.T) {
-		ng0 := runtime.NumGoroutine()
-		ctx := context.Background()
-		wantErr := fmt.Errorf("error-%d", rand.Int())
-		nextTask := func(context.Context) (workerpool.Task, error) {
-			task := func(context.Context) error {
-				return wantErr
+		checkGoroutines(t, func() {
+			ng0 := runtime.NumGoroutine()
+			ctx := context.Background()
+			wantErr := fmt.Errorf("error-%d", rand.Int())
+			nextTask := func(context.Context) (workerpool.Task, error) {
+				task := func(context.Context) error {
+					return wantErr
+				}
+				return task, nil
 			}
-			return task, nil
-		}
-		err := workerpool.Run(ctx, 1, nextTask)
-		if err != wantErr {
-			t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
-		}
-		t.Log("waiting for goroutines to return")
-		for runtime.NumGoroutine() != ng0 {
-			time.Sleep(time.Millisecond)
-		}
+			err := workerpool.Run(ctx, 1, nextTask)
+			if err != wantErr {
+				t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
+			}
+			t.Log("waiting for goroutines to return")
+			for runtime.NumGoroutine() != ng0 {
+				time.Sleep(time.Millisecond)
+			}
+		})
 	})
 
 	t.Run("returns error if task getter returns an error", func(t *testing.T) {
@@ -134,25 +130,38 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("cancels if nextTask returns an error", func(t *testing.T) {
-		ctx := context.Background()
-		wantErr := errors.New("no more tasks")
-		tasks := []workerpool.Task{
-			func(ctx context.Context) error {
-				<-ctx.Done()
-				return nil
-			},
-		}
-		nextTask := func(context.Context) (workerpool.Task, error) {
-			if len(tasks) == 0 {
-				return nil, wantErr
+		checkGoroutines(t, func() {
+			ctx := context.Background()
+			wantErr := errors.New("no more tasks")
+			tasks := []workerpool.Task{
+				func(ctx context.Context) error {
+					<-ctx.Done()
+					return nil
+				},
 			}
-			task := tasks[0]
-			tasks = tasks[1:]
-			return task, nil
-		}
-		err := workerpool.Run(ctx, 2, nextTask)
-		if err != wantErr {
-			t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
-		}
+			nextTask := func(context.Context) (workerpool.Task, error) {
+				if len(tasks) == 0 {
+					return nil, wantErr
+				}
+				task := tasks[0]
+				tasks = tasks[1:]
+				return task, nil
+			}
+			err := workerpool.Run(ctx, 2, nextTask)
+			if err != wantErr {
+				t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
+			}
+		})
 	})
 }
+
+func checkGoroutines(t* testing.T, f func()) {
+	t.Helper()
+	ng0 := runtime.NumGoroutine()
+	f()
+	t.Log("waiting for goroutines to return")
+	for runtime.NumGoroutine() != ng0 {
+		time.Sleep(time.Millisecond)
+	}
+}
+
