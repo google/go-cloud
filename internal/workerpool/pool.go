@@ -39,8 +39,11 @@ func Run(ctx context.Context, limit int, nextTask func(context.Context) (Task, e
 	var retErr error
 	setErr := func(err error) {
 		mu.Lock()
-		retErr = err
+		if retErr == nil {
+			retErr = err
+		}
 		mu.Unlock()
+		cancel()
 	}
 Loop:
 	for {
@@ -58,7 +61,6 @@ Loop:
 		go func() {
 			if err := doTask(ctx); err != nil {
 				setErr(err)
-				cancel()
 			}
 			<-sem
 		}()

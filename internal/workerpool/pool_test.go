@@ -132,4 +132,27 @@ func TestRun(t *testing.T) {
 			time.Sleep(time.Millisecond)
 		}
 	})
+
+	t.Run("cancels if nextTask returns an error", func(t *testing.T) {
+		ctx := context.Background()
+		wantErr := errors.New("no more tasks")
+		tasks := []workerpool.Task{
+			func(ctx context.Context) error {
+				<-ctx.Done()
+				return nil
+			},
+		}
+		nextTask := func(context.Context) (workerpool.Task, error) {
+			if len(tasks) == 0 {
+				return nil, wantErr
+			}
+			task := tasks[0]
+			tasks = tasks[1:]
+			return task, nil
+		}
+		err := workerpool.Run(ctx, 2, nextTask)
+		if err != wantErr {
+			t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
+		}
+	})
 }
