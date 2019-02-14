@@ -40,11 +40,7 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const (
-	region                   = "us-east-2"
-	benchmarkTopicARN        = "arn:aws:sns:us-east-2:221420415498:benchmark-topic"
-	benchmarkSubscriptionURL = "https://sqs.us-east-2.amazonaws.com/221420415498/benchmark-queue"
-)
+const region = "us-east-2"
 
 func TestOpenTopic(t *testing.T) {
 	ctx := context.Background()
@@ -92,13 +88,17 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	sess, rt, done := setup.NewAWSSession(t, region)
+	sess, rt, done := setup.NewAWSSession2(ctx, t, region)
 	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	client := sns.New(h.sess, h.cfg)
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+	return createTopic(ctx, topicName, h.sess, h.cfg)
+}
+
+func createTopic(ctx context.Context, topicName string, sess *session.Session, cfg *aws.Config) (dt driver.Topic, cleanup func(), err error) {
+	client := sns.New(sess, cfg)
 	out, err := client.CreateTopic(&sns.CreateTopicInput{Name: aws.String(topicName)})
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating topic "%s": %v`, topicName, err)
@@ -118,8 +118,12 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	sqsClient := sqs.New(h.sess, h.cfg)
 	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
+	return createSubscription(ctx, dt, subName, h.sess, h.cfg)
+}
+
+func createSubscription(ctx context.Context, dt driver.Topic, subName string, sess *session.Session, cfg *aws.Config) (ds driver.Subscription, cleanup func(), err error) {
+	sqsClient := sqs.New(sess, cfg)
 	out, err := sqsClient.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(subName)})
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating subscription queue "%s": %v`, subName, err)
@@ -140,18 +144,6 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
 	}
 	return ds, cleanup, nil
-}
-
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	if !*setup.Record {
-		if strings.Contains(testName, "TestSendReceive") {
-			return true, "TestSendReceive* tests hang and panic in replay mode on awspubsub"
-		}
-		if strings.Contains(testName, "TestAs") {
-			return true, "TestAs hangs in replay mode on awspubsub"
-		}
-	}
-	return false, ""
 }
 
 // ackBatcher is a trivial batcher that sends off items as singleton batches.
@@ -326,6 +318,14 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+// Tips on dealing with failures when in -record mode:
+// - There may be leftover messages in queues. Using the AWS CLI tool,
+//   purge the queues before running the test.
+//   E.g.
+//	     aws sqs purge-queue --queue-url URL
+//   You can get the queue URLs with
+//       aws sqs list-queues
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
@@ -353,14 +353,26 @@ func (awsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 	return nil
 }
 
-func (awsAsTest) ErrorCheck(t *pubsub.Topic, err error) error {
+func (awsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var ae awserr.Error
 	if !t.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
 	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
-	if ae.Code() != sns.ErrCodeInvalidParameterException {
-		return fmt.Errorf("got %q, want %q", ae.Code(), sns.ErrCodeInvalidParameterException)
+	if got, want := ae.Code(), sns.ErrCodeInvalidParameterException; got != want {
+		return fmt.Errorf("got %q, want %q", got, want)
+	}
+	return nil
+}
+
+func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var ae awserr.Error
+	if !s.ErrorAs(err, &ae) {
+		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
+	}
+	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
+	if got, want := ae.Code(), "InvalidAddress"; got != want {
+		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil
 }
@@ -381,6 +393,9 @@ func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }
 
+// The first run will hang because the SQS queue is not yet subscribed to the
+// SNS topic. Go to console.aws.amazon.com and manually subscribe the queue
+// to the topic and then rerun this benchmark to get results.
 func BenchmarkAwsPubSub(b *testing.B) {
 	ctx := context.Background()
 	sess, err := session.NewSession(&aws.Config{
@@ -391,9 +406,22 @@ func BenchmarkAwsPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	snsClient := sns.New(sess, &aws.Config{})
-	sqsClient := sqs.New(sess, &aws.Config{})
-	topic := OpenTopic(ctx, snsClient, benchmarkTopicARN, nil)
-	sub := OpenSubscription(ctx, sqsClient, benchmarkSubscriptionURL, nil)
+	topicName := fmt.Sprintf("%s-topic", b.Name())
+	cfg := &aws.Config{}
+	dt, cleanup1, err := createTopic(ctx, topicName, sess, cfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup1()
+	topic := pubsub.NewTopic(dt)
+	defer topic.Shutdown(ctx)
+	subName := fmt.Sprintf("%s-subscription", b.Name())
+	ds, cleanup2, err := createSubscription(ctx, dt, subName, sess, cfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer cleanup2()
+	sub := pubsub.NewSubscription(ds, nil)
+	defer sub.Shutdown(ctx)
 	drivertest.RunBenchmarks(b, topic, sub)
 }

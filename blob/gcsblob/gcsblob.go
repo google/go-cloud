@@ -17,20 +17,19 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, gcsblob registers for the scheme "gs"; URLs start
-// with "gs://".
+// For blob.OpenBucket URLs, gcsblob registers for the scheme "gs"; URLs start
+// with "gs://", like "gs://mybucket". blob.OpenBucket will use Application
+// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
+// If you want to use different credentials or find details on the format of the
+// URL, see URLOpener.
 //
-// The URL's Host is used as the bucket name.
-// The following query options are supported:
+// Escaping
 //
-//  - cred_path: Sets path to the Google credentials file. If unset, default
-//    credentials are loaded.
-//    See https://cloud.google.com/docs/authentication/production.
-//  - access_id: Sets Options.GoogleAccessID.
-//  - private_key_path: Sets path to a private key, which is read and used
-//    to set Options.PrivateKey.
-// Example URL:
-//  gs://mybucket
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for gcsblob:
+//  - Blob keys: ASCII characters 10 and 13 are escaped to "__0x<hex>__".
+//    Additionally, the "/" in "../" is escaped in the same way.
 //
 // As
 //
@@ -47,21 +46,23 @@ package gcsblob // import "gocloud.dev/blob/gcsblob"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/useragent"
 
 	"cloud.google.com/go/storage"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -70,48 +71,84 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("gs", openURL)
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	q := u.Query()
-	opts := &Options{}
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenBucketURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
 
-	if accessID := q["access_id"]; len(accessID) > 0 {
-		opts.GoogleAccessID = accessID[0]
+func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{Client: client}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open GCS bucket %q: %v", u, o.err)
 	}
+	return o.opener.OpenBucketURL(ctx, u)
+}
 
-	if keyPath := q["private_key_path"]; len(keyPath) > 0 {
-		pk, err := ioutil.ReadFile(keyPath[0])
+// Scheme is the URL scheme gcsblob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "gs"
+
+// URLOpener opens GCS URLs like "gs://mybucket".
+//
+// This opener supports the following query parameters:
+//
+//     access_id: sets Options.GoogleAccessID
+//     private_key_path: path to read for Options.PrivateKey
+type URLOpener struct {
+	// Client must be set to a non-nil HTTP client authenticated with
+	// Cloud Storage scope or equivalent.
+	Client *gcp.HTTPClient
+
+	// Options specifies the default options to pass to OpenBucket.
+	Options Options
+}
+
+// OpenBucketURL opens the GCS bucket with the same name as the URL's host.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	opts, err := o.forParams(ctx, u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+	}
+	return OpenBucket(ctx, o.Client, u.Host, opts)
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
+	for k := range q {
+		if k != "access_id" && k != "private_key_path" {
+			return nil, fmt.Errorf("unknown GCS query parameter %s", k)
+		}
+	}
+	opts := new(Options)
+	*opts = o.Options
+	if accessID := q.Get("access_id"); accessID != "" {
+		opts.GoogleAccessID = accessID
+	}
+	if keyPath := q.Get("private_key_path"); keyPath != "" {
+		pk, err := ioutil.ReadFile(keyPath)
 		if err != nil {
 			return nil, err
 		}
 		opts.PrivateKey = pk
 	}
-
-	var creds *google.Credentials
-	if credPath := q["cred_path"]; len(credPath) == 0 {
-		var err error
-		creds, err = gcp.DefaultCredentials(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		jsonCreds, err := ioutil.ReadFile(credPath[0])
-		if err != nil {
-			return nil, err
-		}
-		creds, err = google.CredentialsFromJSON(ctx, jsonCreds)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), gcp.CredentialsTokenSource(creds))
-	if err != nil {
-		return nil, err
-	}
-	return openBucket(ctx, client, u.Host, opts)
+	return opts, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by GCS.
@@ -211,8 +248,8 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)
 	query := &storage.Query{
-		Prefix:    opts.Prefix,
-		Delimiter: opts.Delimiter,
+		Prefix:    escapeKey(opts.Prefix),
+		Delimiter: escapeKey(opts.Delimiter),
 	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
@@ -253,7 +290,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			if obj.Prefix == "" {
 				// Regular blob.
 				page.Objects[i] = &driver.ListObject{
-					Key:     obj.Name,
+					Key:     unescapeKey(obj.Name),
 					ModTime: obj.Updated,
 					Size:    obj.Size,
 					MD5:     obj.MD5,
@@ -262,7 +299,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			} else {
 				// "Directory".
 				page.Objects[i] = &driver.ListObject{
-					Key:    obj.Prefix,
+					Key:    unescapeKey(obj.Prefix),
 					IsDir:  true,
 					AsFunc: asFunc,
 				}
@@ -300,6 +337,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
@@ -329,6 +367,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
+	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	r, err := obj.NewRangeReader(ctx, offset, length)
@@ -347,8 +386,29 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}, nil
 }
 
+// escapeKey does all required escaping for UTF-8 strings to work with GCS.
+func escapeKey(key string) string {
+	return escape.HexEscape(key, func(r []rune, i int) bool {
+		switch {
+		// GCS doesn't handle these characters (determined via experimentation).
+		case r[i] == 10 || r[i] == 13:
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && r[i] == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		}
+		return false
+	})
+}
+
+// unescapeKey reverses escapeKey.
+func unescapeKey(key string) string {
+	return escape.HexUnescape(key)
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
+	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	w := obj.NewWriter(ctx)
@@ -378,6 +438,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
+	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	return obj.Delete(ctx)
@@ -387,6 +448,7 @@ func (b *bucket) SignedURL(ctx context.Context, key string, dopts *driver.Signed
 	if b.opts.GoogleAccessID == "" || (b.opts.PrivateKey == nil && b.opts.SignBytes == nil) {
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a valid Options.GoogleAccessID and exactly one of Options.PrivateKey or Options.SignBytes")
 	}
+	key = escapeKey(key)
 	opts := &storage.SignedURLOptions{
 		Expires:        time.Now().Add(dopts.Expiry),
 		Method:         "GET",

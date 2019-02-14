@@ -15,39 +15,21 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Blob keys are escaped before being used as filenames, and filenames are
-// unescaped when they are passed back as blob keys during List. The escape
-// algorithm is:
-//  - Alphanumeric characters (A-Z a-z 0-9) are not escaped.
-//  - Space (' '), dash ('-'), underscore ('_'), and period ('.') are not escaped.
-//  - Slash ('/') is always escaped to the OS-specific path separator character
-//    (os.PathSeparator).
-//  - All other characters are escaped similar to url.PathEscape:
-//    "%<hex UTF-8 byte>", with capital letters ABCDEF in the hex code.
-//
-// Filenames that can't be unescaped due to invalid escape sequences
-// (e.g., "%%"), or whose unescaped key doesn't escape back to the filename
-// (e.g., "~", which unescapes to "~", which escapes back to "%7E" != "~"),
-// aren't visible using fileblob.
-//
 // Open URLs
 //
 // For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
-// with "file://".
+// with "file://" like "file:///path/to/directory". For full details, see
+// URLOpener.
 //
-// The URL's Path is used as the root directory; the URL's Host is ignored.
-// If os.PathSeparator != '/', any leading '/' from the Path is dropped
-// and remaining '/' characters are converted to os.PathSeparator.
-// No query options are supported.
-// Examples:
-//  - file:///a/directory
-//    -> Passes "/a/directory" to OpenBucket.
-//  - file://localhost/a/directory
-//    -> Also passes "/a/directory".
-//  - file:///c:/foo/bar
-//    -> Passes "c:\foo\bar".
-//  - file://localhost/c:/foo/bar
-//    -> Also passes "c:\foo\bar".
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for fileblob:
+//  - Blob keys: ASCII characters 0-31 are escaped to "__0x<hex>__".
+//    If os.PathSeparator != "/", it is also escaped.
+//    Additionally, the "/" in "../", the trailing "/" in "//", and a trailing
+//    "/" is key names are escaped in the same way.
 //
 // As
 //
@@ -57,7 +39,10 @@ package fileblob // import "gocloud.dev/blob/fileblob"
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"hash"
@@ -66,42 +51,74 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 )
 
 const defaultPageSize = 1000
 
 func init() {
-	blob.Register("file", func(_ context.Context, u *url.URL) (driver.Bucket, error) {
-		return openBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
-	})
+	blob.DefaultURLMux().RegisterBucket(Scheme, &URLOpener{})
 }
 
-func mungeURLPath(path string, pathSeparator uint8) string {
+// Scheme is the URL scheme fileblob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "file"
+
+// URLOpener opens file bucket URLs like "file:///foo/bar/baz".
+type URLOpener struct{}
+
+// OpenBucketURL opens the file bucket at the URL's path. The URL's host is
+// ignored. If os.PathSeparator != "/", any leading "/" from the path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+// No query options are supported. Examples:
+//
+//  - file:///a/directory
+//    -> Passes "/a/directory" to OpenBucket.
+//  - file://localhost/a/directory
+//    -> Also passes "/a/directory".
+//  - file:///c:/foo/bar
+//    -> Passes "c:\foo\bar".
+//  - file://localhost/c:/foo/bar
+//    -> Also passes "c:\foo\bar".
+func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	return OpenBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
+}
+
+func mungeURLPath(path string, pathSeparator byte) string {
 	if pathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
 		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
 		// from this function. Test Windows behavior by opening a bucket on Windows.
 		// See #1075 for why Windows is disabled.
-		path = strings.Replace(path, "/", string(pathSeparator), -1)
+		return strings.Replace(path, "/", string(pathSeparator), -1)
 	}
 	return path
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct{}
+type Options struct {
+	// URLSigner implements signing URLs (to allow access to a resource without
+	// further authorization) and verifying that a given URL is unexpired and
+	// contains a signature produced by the URLSigner.
+	// URLSigner is only required for utilizing the SignedURL API.
+	URLSigner URLSigner
+}
 
 type bucket struct {
-	dir string
+	dir  string
+	opts *Options
 }
 
 // openBucket creates a driver.Bucket that reads and writes to dir.
 // dir must exist.
-func openBucket(dir string, _ *Options) (driver.Bucket, error) {
+func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	dir = filepath.Clean(dir)
 	info, err := os.Stat(dir)
 	if err != nil {
@@ -110,7 +127,7 @@ func openBucket(dir string, _ *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
-	return &bucket{dir}, nil
+	return &bucket{dir: dir, opts: opts}, nil
 }
 
 // OpenBucket creates a *blob.Bucket backed by the filesystem and rooted at
@@ -123,140 +140,44 @@ func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 	return blob.NewBucket(drv), nil
 }
 
-// shouldEscape returns true if c should be escaped.
-func shouldEscape(c byte) bool {
-	switch {
-	case 'A' <= c && c <= 'Z':
+// escapeKey does all required escaping for UTF-8 strings to work the filesystem.
+func escapeKey(s string) string {
+	s = escape.HexEscape(s, func(r []rune, i int) bool {
+		c := r[i]
+		switch {
+		case c < 32:
+			return true
+		// We're going to replace '/' with os.PathSeparator below. In order for this
+		// to be reversible, we need to escape raw os.PathSeparators.
+		case os.PathSeparator != '/' && c == os.PathSeparator:
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && c == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		// For "//", escape the trailing slash.
+		case i > 0 && c == '/' && r[i-1] == '/':
+			return true
+		// Escape the trailing slash in a key.
+		case c == '/' && i == len(r)-1:
+			return true
+		}
 		return false
-	case 'a' <= c && c <= 'z':
-		return false
-	case '0' <= c && c <= '9':
-		return false
-	case c == ' ' || c == '-' || c == '_' || c == '.':
-		return false
-	case c == '/':
-		return false
+	})
+	// Replace "/" with os.PathSeparator if needed, so that the local filesystem
+	// can use subdirectories.
+	if os.PathSeparator != '/' {
+		s = strings.Replace(s, "/", string(os.PathSeparator), -1)
 	}
-	return true
+	return s
 }
 
-// escape returns s escaped per the rules described in the package docstring.
-// The code is modified from https://golang.org/src/net/url/url.go.
-func escape(s string) string {
-	hexCount := 0
-	replaceSlash := false
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if shouldEscape(c) {
-			hexCount++
-		} else if c == '/' && os.PathSeparator != '/' {
-			replaceSlash = true
-		}
+// unescapeKey reverses escapeKey.
+func unescapeKey(s string) string {
+	if os.PathSeparator != '/' {
+		s = strings.Replace(s, string(os.PathSeparator), "/", -1)
 	}
-	if hexCount == 0 && !replaceSlash {
-		return s
-	}
-	t := make([]byte, len(s)+2*hexCount)
-	j := 0
-	for i := 0; i < len(s); i++ {
-		switch c := s[i]; {
-		case c == '/':
-			t[j] = os.PathSeparator
-			j++
-		case shouldEscape(c):
-			t[j] = '%'
-			t[j+1] = "0123456789ABCDEF"[c>>4]
-			t[j+2] = "0123456789ABCDEF"[c&15]
-			j += 3
-		default:
-			t[j] = s[i]
-			j++
-		}
-	}
-	return string(t)
-}
-
-// ishex returns true if c is a valid part of a hexadecimal number.
-func ishex(c byte) bool {
-	switch {
-	case '0' <= c && c <= '9':
-		return true
-	case 'a' <= c && c <= 'f':
-		return true
-	case 'A' <= c && c <= 'F':
-		return true
-	}
-	return false
-}
-
-// unhex returns the hexadecimal value of the hexadecimal character c.
-// For example, unhex('A') returns 10.
-func unhex(c byte) byte {
-	switch {
-	case '0' <= c && c <= '9':
-		return c - '0'
-	case 'a' <= c && c <= 'f':
-		return c - 'a' + 10
-	case 'A' <= c && c <= 'F':
-		return c - 'A' + 10
-	}
-	return 0
-}
-
-// unescape unescapes s per the rules described in the package docstring.
-// It returns an error if s has invalid escape sequences, or if
-// escape(unescape(s)) != s.
-// The code is modified from https://golang.org/src/net/url/url.go.
-func unescape(s string) (string, error) {
-	// Count %, check that they're well-formed.
-	n := 0
-	replacePathSeparator := false
-	for i := 0; i < len(s); {
-		switch s[i] {
-		case '%':
-			n++
-			if i+2 >= len(s) || !ishex(s[i+1]) || !ishex(s[i+2]) {
-				bad := s[i:]
-				if len(bad) > 3 {
-					bad = bad[:3]
-				}
-				return "", fmt.Errorf("couldn't unescape %q near %q", s, bad)
-			}
-			i += 3
-		case os.PathSeparator:
-			replacePathSeparator = os.PathSeparator != '/'
-			i++
-		default:
-			i++
-		}
-	}
-	unescaped := s
-	if n > 0 || replacePathSeparator {
-		t := make([]byte, len(s)-2*n)
-		j := 0
-		for i := 0; i < len(s); {
-			switch s[i] {
-			case '%':
-				t[j] = unhex(s[i+1])<<4 | unhex(s[i+2])
-				j++
-				i += 3
-			case os.PathSeparator:
-				t[j] = '/'
-				j++
-				i++
-			default:
-				t[j] = s[i]
-				j++
-				i++
-			}
-		}
-		unescaped = string(t)
-	}
-	escaped := escape(unescaped)
-	if escaped != s {
-		return "", fmt.Errorf("%q unescaped to %q but escaped back to %q instead of itself", s, unescaped, escaped)
-	}
-	return unescaped, nil
+	s = escape.HexUnescape(s)
+	return s
 }
 
 var errNotImplemented = errors.New("not implemented")
@@ -274,7 +195,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // path returns the full path for a key
 func (b *bucket) path(key string) (string, error) {
-	path := filepath.Join(b.dir, escape(key))
+	path := filepath.Join(b.dir, escapeKey(key))
 	if strings.HasSuffix(path, attrsExt) {
 		return "", errAttrsExt
 	}
@@ -331,11 +252,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 		// Strip the <b.dir> prefix from path; +1 is to include the separator.
 		path = path[len(b.dir)+1:]
-		// Unescape the path to get the key; if this fails, skip.
-		key, err := unescape(path)
-		if err != nil {
-			return nil
-		}
+		// Unescape the path to get the key.
+		key := unescapeKey(path)
 		// Skip all directories. If opts.Delimiter is set, we'll create
 		// pseudo-directories later.
 		// Note that returning nil means that we'll still recurse into it;
@@ -606,7 +524,104 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+// SignedURL implements driver.SignedURL
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
-	// TODO(Issue #546): Implemented SignedURL for fileblob.
-	return "", errNotImplemented
+	if b.opts.URLSigner == nil {
+		return "", errors.New("sign fileblob url: bucket does not have an Options.URLSigner")
+	}
+	surl, err := b.opts.URLSigner.URLFromKey(ctx, key, opts)
+	if err != nil {
+		return "", err
+	}
+	return surl.String(), nil
+}
+
+// URLSigner defines an interface for creating and verifying a signed URL for
+// objects in a fileblob bucket. Signed URLs are typically used for granting
+// access to an otherwise-protected resource without requiring further
+// authentication, and callers should take care to restrict the creation of
+// signed URLs as is appropriate for their application.
+type URLSigner interface {
+	// URLFromKey defines how the bucket's object key will be turned
+	// into a signed URL. URLFromKey must be safe to call from multiple goroutines.
+	URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error)
+
+	// KeyFromURL must be able to validate a URL returned from URLFromKey.
+	// KeyFromURL must only return the object if if the URL is
+	// both unexpired and authentic. KeyFromURL must be safe to call from
+	// multiple goroutines. Implementations of KeyFromURL should not modify
+	// the URL argument.
+	KeyFromURL(ctx context.Context, surl *url.URL) (string, error)
+}
+
+// URLSignerHMAC signs URLs by adding the object key, expiration time, and a
+// hash-based message authentication code (HMAC) into the query parameters.
+// Values of URLSignerHMAC with the same secret key will accept URLs produced by
+// others as valid.
+type URLSignerHMAC struct {
+	baseURL   *url.URL
+	secretKey []byte
+}
+
+// NewURLSignerHMAC creates a URLSignerHMAC. If the secret key is empty,
+// then NewURLSignerHMAC panics.
+func NewURLSignerHMAC(baseURL *url.URL, secretKey []byte) *URLSignerHMAC {
+	if len(secretKey) == 0 {
+		panic("creating URLSignerHMAC: secretKey is required")
+	}
+	uc := new(url.URL)
+	*uc = *baseURL
+	return &URLSignerHMAC{
+		baseURL:   uc,
+		secretKey: secretKey,
+	}
+}
+
+// URLFromKey creates a signed URL by copying the baseURL and appending the
+// object key, expiry, and signature as a query params.
+func (h *URLSignerHMAC) URLFromKey(ctx context.Context, key string, opts *driver.SignedURLOptions) (*url.URL, error) {
+	sURL := new(url.URL)
+	*sURL = *h.baseURL
+
+	q := sURL.Query()
+	q.Set("obj", key)
+	q.Set("expiry", strconv.FormatInt(time.Now().Add(opts.Expiry).Unix(), 10))
+	q.Set("signature", h.getMAC(q))
+	sURL.RawQuery = q.Encode()
+
+	return sURL, nil
+}
+
+func (h *URLSignerHMAC) getMAC(q url.Values) string {
+	signedVals := url.Values{}
+	signedVals.Set("obj", q.Get("obj"))
+	signedVals.Set("expiry", q.Get("expiry"))
+	msg := signedVals.Encode()
+
+	hsh := hmac.New(sha256.New, h.secretKey)
+	hsh.Write([]byte(msg))
+	return base64.RawURLEncoding.EncodeToString(hsh.Sum(nil))
+}
+
+// KeyFromURL checks expiry and signature, and returns the object key
+// only if the signed URL is both authentic and unexpired.
+func (h *URLSignerHMAC) KeyFromURL(ctx context.Context, sURL *url.URL) (string, error) {
+	q := sURL.Query()
+
+	exp, err := strconv.ParseInt(q.Get("expiry"), 10, 64)
+	if err != nil || time.Now().Unix() > exp {
+		return "", errors.New("retrieving blob key from URL: key cannot be retrieved")
+	}
+
+	if !h.checkMAC(q) {
+		return "", errors.New("retrieving blob key from URL: key cannot be retrieved")
+	}
+	return q.Get("obj"), nil
+}
+
+func (h *URLSignerHMAC) checkMAC(q url.Values) bool {
+	mac := q.Get("signature")
+	expected := h.getMAC(q)
+	// This compares the Base-64 encoded MACs
+	return hmac.Equal([]byte(mac), []byte(expected))
 }

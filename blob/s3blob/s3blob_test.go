@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -42,8 +41,8 @@ import (
 // TODO(issue #300): Use Terraform to provision a bucket, and get the bucket
 //    name from the Terraform output instead (saving a copy of it for replay).
 const (
-	bucketName = "go-cloud-bucket"
-	region     = "us-east-2"
+	bucketName = "go-cloud-testing"
+	region     = "us-west-1"
 )
 
 type harness struct {
@@ -217,48 +216,6 @@ func TestOpenBucket(t *testing.T) {
 			_, err = OpenBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
-			}
-		})
-	}
-}
-
-func TestOpenURL(t *testing.T) {
-	ctx := context.Background()
-
-	tests := []struct {
-		url      string
-		wantName string
-		wantErr  bool
-	}{
-		{
-			url:      "s3://mybucket?region=foo",
-			wantName: "mybucket",
-		},
-		{
-			url:      "s3://mybucket2?region=bar",
-			wantName: "mybucket2",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.url, func(t *testing.T) {
-			u, err := url.Parse(test.url)
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := openURL(ctx, u)
-			if (err != nil) != test.wantErr {
-				t.Errorf("got err %v want error %v", err, test.wantErr)
-			}
-			if err != nil {
-				return
-			}
-			gotB, ok := got.(*bucket)
-			if !ok {
-				t.Fatalf("got type %T want *bucket", got)
-			}
-			if gotB.name != test.wantName {
-				t.Errorf("got bucket name %q want %q", gotB.name, test.wantName)
 			}
 		})
 	}

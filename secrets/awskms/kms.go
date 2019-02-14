@@ -14,16 +14,24 @@
 
 // Package awskms provides a secrets implementation backed by AWS KMS.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// As
+//
+// awskms exposes the following type for As:
+//  - Error: awserr.Error
 package awskms // import "gocloud.dev/secrets/awskms"
 
 import (
 	"context"
 	"errors"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/kms"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/secrets"
 )
 
@@ -76,10 +84,43 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	return result.CiphertextBlob, nil
 }
 
+// ErrorAs implements driver.Keeper.ErrorAs.
+func (k *keeper) ErrorAs(err error, i interface{}) bool {
+	e, ok := err.(awserr.Error)
+	if !ok {
+		return false
+	}
+	p, ok := i.(*awserr.Error)
+	if !ok {
+		return false
+	}
+	*p = e
+	return true
+}
+
 // ErrorCode implements driver.ErrorCode.
-func (k *keeper) ErrorCode(error) gcerrors.ErrorCode {
-	// TODO(shantuo): try to classify aws error codes
-	return gcerrors.Unknown
+func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
+	ae, ok := err.(awserr.Error)
+	if !ok {
+		return gcerr.Unknown
+	}
+	ec, ok := errorCodeMap[ae.Code()]
+	if !ok {
+		return gcerr.Unknown
+	}
+	return ec
+}
+
+var errorCodeMap = map[string]gcerrors.ErrorCode{
+	kms.ErrCodeNotFoundException:          gcerrors.NotFound,
+	kms.ErrCodeInvalidCiphertextException: gcerrors.InvalidArgument,
+	kms.ErrCodeInvalidKeyUsageException:   gcerrors.InvalidArgument,
+	kms.ErrCodeInternalException:          gcerrors.Internal,
+	kms.ErrCodeInvalidStateException:      gcerrors.FailedPrecondition,
+	kms.ErrCodeDisabledException:          gcerrors.PermissionDenied,
+	kms.ErrCodeInvalidGrantTokenException: gcerrors.PermissionDenied,
+	kms.ErrCodeKeyUnavailableException:    gcerrors.ResourceExhausted,
+	kms.ErrCodeDependencyTimeoutException: gcerrors.DeadlineExceeded,
 }
 
 // KeeperOptions controls Keeper behaviors.

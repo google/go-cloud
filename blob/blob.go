@@ -92,13 +92,10 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
-	"sync"
 	"time"
 
 	"go.opencensus.io/stats"
@@ -320,7 +317,9 @@ type ListOptions struct {
 	// should be returned.
 	Prefix string
 	// Delimiter sets the delimiter used to define a hierarchical namespace,
-	// like a filesystem with "directories".
+	// like a filesystem with "directories". It is highly recommended that you
+	// use "" or "/" as the Delimiter. Other values should work through this API,
+	// but provider UIs generally assume "/".
 	//
 	// An empty delimiter means that the bucket is treated as a single flat
 	// namespace.
@@ -498,15 +497,10 @@ func (b *Bucket) As(i interface{}) bool {
 
 // ErrorAs converts i to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
+// ErrorAs returns false if err == nil.
 // See Bucket.As for more details.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
-	if i == nil || reflect.TypeOf(i).Kind() != reflect.Ptr {
-		panic("blob: ErrorAs i must be a non-nil pointer")
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		return b.b.ErrorAs(e.Unwrap(), i)
-	}
-	return b.b.ErrorAs(err, i)
+	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
 
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
@@ -833,65 +827,78 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// FromURLFunc is intended for use by provider implementations.
-// It allows providers to convert a parsed URL from Open to a driver.Bucket.
-type FromURLFunc func(context.Context, *url.URL) (driver.Bucket, error)
-
-var (
-	// registry maps scheme strings to provider-specific instantiation functions.
-	registry = map[string]FromURLFunc{}
-	// registryMu protected registry.
-	registryMu sync.Mutex
-)
-
-// Register is for use by provider implementations. It allows providers to
-// register an instantiation function for URLs with the given scheme. It is
-// expected to be called from the provider implementation's package init
-// function.
+// A type that implements BucketURLOpener can open buckets based on a URL.
+// The opener must not modify the URL argument. OpenBucketURL must be safe to
+// call from multiple goroutines.
 //
-// fn will be called from Open, with a bucket name and options parsed from
-// the URL. All option keys will be lowercased.
-//
-// Register panics if a provider has already registered for scheme.
-func Register(scheme string, fn FromURLFunc) {
-	registryMu.Lock()
-	defer registryMu.Unlock()
+// This interface is generally implemented by types in driver packages.
+type BucketURLOpener interface {
+	OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error)
+}
 
-	if _, found := registry[scheme]; found {
-		log.Fatalf("a provider has already registered for scheme %q", scheme)
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a multiplexer with no registered schemes.
+type URLMux struct {
+	schemes map[string]BucketURLOpener
+}
+
+// RegisterBucket registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterBucket panics.
+func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
+	if mux.schemes == nil {
+		mux.schemes = make(map[string]BucketURLOpener)
+	} else if _, exists := mux.schemes[scheme]; exists {
+		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
 	}
-	registry[scheme] = fn
+	mux.schemes[scheme] = opener
 }
 
-// fromRegistry looks up the registered function for scheme.
-// It returns nil if scheme has not been registered for.
-func fromRegistry(scheme string) FromURLFunc {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-
-	return registry[scheme]
-}
-
-// Open creates a *Bucket from a URL.
-// See the package documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
-func Open(ctx context.Context, urlstr string) (*Bucket, error) {
+// OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
+// OpenBucket is safe to call from multiple goroutines.
+func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open bucket: %v", err)
 	}
+	return mux.OpenBucketURL(ctx, u)
+}
+
+// OpenBucketURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenBucketURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
 	if u.Scheme == "" {
-		return nil, fmt.Errorf("invalid URL %q, missing scheme", urlstr)
+		return nil, fmt.Errorf("open bucket %q: no scheme in URL", u)
 	}
-	fn := fromRegistry(u.Scheme)
-	if fn == nil {
-		return nil, fmt.Errorf("no provider registered for scheme %q", u.Scheme)
+	var opener BucketURLOpener
+	if mux != nil {
+		opener = mux.schemes[u.Scheme]
 	}
-	drv, err := fn(ctx, u)
-	if err != nil {
-		return nil, err
+	if opener == nil {
+		return nil, fmt.Errorf("open bucket %q: no provider registered for %s", u, u.Scheme)
 	}
-	return NewBucket(drv), nil
+	return opener.OpenBucketURL(ctx, u)
+}
+
+var defaultURLMux = new(URLMux)
+
+// DefaultURLMux returns the URLMux used by OpenBucket.
+//
+// Driver packages can use this to register their BucketURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenBucket opens the bucket identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
+	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
 
 func wrapError(b driver.Bucket, err error) error {

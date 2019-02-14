@@ -17,33 +17,31 @@
 //
 // Open URLs
 //
-// For blob.Open URLs, azureblob registers for the scheme "azblob"; URLs start
-// with "azblob://".
+// For blob.OpenBucket URLs, azureblob registers for the scheme "azblob"; URLs
+// start with "azblob://", like "azblob://mybucket". blob.OpenBucket will obtain
+// credentials from the environment variables AZURE_STORAGE_ACCOUNT,
+// AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN. AZURE_STORAGE_ACCOUNT is
+// required, along with one of the other two. If you want to obtain this
+// information differently or find details on the format of the URL, see
+// URLOpener.
 //
-// The URL's Host is used as the bucket name.
-//
-// By default, credentials are retrieved from the environment variables
-// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
-// AZURE_STORAGE_ACCOUNT is required, along with one of the other two. See
+// For more on SAS tokens, see
 // https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
-// for more on SAS tokens. Alternatively, credentials can be loaded from a file;
-// see the cred_path query parameter below.
 //
-// The following query options are supported:
-//  - cred_path: Sets path to a credentials file in JSON format. The
-//    AccountName field must be specified, and either AccountKey or SASToken.
-// Example credentials file using AccountKey:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "AccountKey": "PRIMARY OR SECONDARY ACCOUNT KEY"
-//     }
-// Example credentials file using SASToken:
-//     {
-//       "AccountName": "STORAGE ACCOUNT NAME",
-//       "SASToken": "ENTER YOUR AZURE STORAGE SAS TOKEN"
-//     }
-// Example URL:
-//  azblob://mybucket?cred_path=pathToCredentials
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for azureblob:
+//  - Blob keys: ASCII characters 0-31, 92 ("\"), and 127 are escaped to
+//    "__0x<hex>__". Additionally, the "/" in "../" and a trailing "/" in a
+//    key (e.g., "foo/") are escaped in the same way.
+//  - Metadata keys: Per https://docs.microsoft.com/en-us/azure/storage/blobs/storage-properties-metadata,
+//    Azure only allows C# identifiers as metadata keys. Therefore, characters
+//    other than "[a-z][A-z][0-9]_" are escaped using "__0x<hex>__". In addition,
+//    characters "[0-9]" are escaped when they start the string.
+//    URL encoding would not work since "%" is not valid.
+//  - Metadata values: Escaped using URL encoding.
 //
 // As
 //
@@ -59,17 +57,16 @@ package azureblob
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -80,6 +77,7 @@ import (
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/useragent"
 )
 
@@ -95,25 +93,6 @@ type Options struct {
 	SASToken SASToken
 }
 
-// Azure does not handle backslashes in the blob key well. As a workaround, all
-// backslashes are converted to forward slashes during bucket operations.
-// This is needed to ensure directories from Windows file systems are
-// represented correctly in Azure Storage.
-//
-// For example, the Windows path C:\Users\UserName\Test.json is converted
-// to C:/Users/UserName/Test.json. This retains the original directory structure
-// in Azure Storage as C:/Users/UserName/Test.json, where forwardslash
-// represents the virtual directory
-//
-// For more naming rules and limitations see
-// https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata
-const (
-	// blobPathSeparator is the replacement for backslashPathSeparator.
-	blobPathSeparator = "/"
-	// backslashPathSeparator are converted to blobPathSeparator.
-	backslashPathSeparator = "\\"
-)
-
 const (
 	defaultMaxDownloadRetryRequests = 3               // download retry policy (Azure default is zero)
 	defaultPageSize                 = 1000            // default page size for ListPaged (Azure default is 5000)
@@ -122,41 +101,58 @@ const (
 )
 
 func init() {
-	blob.Register("azblob", openURL)
+	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
-func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
-	type AzureCreds struct {
-		AccountName AccountName
-		AccountKey  AccountKey
-		SASToken    SASToken
-	}
-	ac := AzureCreds{}
-	if credPath := u.Query()["cred_path"]; len(credPath) > 0 {
-		f, err := ioutil.ReadFile(credPath[0])
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(f, &ac)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+// lazyCredsOpener obtains credentials from the environment on the first call
+// to OpenBucketURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	o.init.Do(func() {
 		// Use default credential info from the environment.
 		// Ignore errors, as we'll get errors from OpenBucket later.
-		ac.AccountName, _ = DefaultAccountName()
-		ac.AccountKey, _ = DefaultAccountKey()
-		ac.SASToken, _ = DefaultSASToken()
-	}
+		accountName, _ := DefaultAccountName()
+		accountKey, _ := DefaultAccountKey()
+		sasToken, _ := DefaultSASToken()
 
+		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open Azure bucket %q: %v", u, o.err)
+	}
+	return o.opener.OpenBucketURL(ctx, u)
+}
+
+// Scheme is the URL scheme gcsblob registers its URLOpener under on
+// blob.DefaultMux.
+const Scheme = "azblob"
+
+// URLOpener opens Azure URLs like "azblob://mybucket".
+type URLOpener struct {
+	// AccountName must be specified.
+	AccountName AccountName
+
+	// Pipeline must be set to a non-nil value.
+	Pipeline pipeline.Pipeline
+
+	// Options specifies the options to pass to OpenBucket.
+	Options Options
+}
+
+func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SASToken) (*URLOpener, error) {
 	// azblob.Credential is an interface; we will use either a SharedKeyCredential
 	// or anonymous credentials. If the former, we will also fill in
 	// Options.Credential so that SignedURL will work.
 	var credential azblob.Credential
 	var sharedKeyCred *azblob.SharedKeyCredential
-	if ac.AccountKey != "" {
+	if accountKey != "" {
 		var err error
-		sharedKeyCred, err = NewCredential(ac.AccountName, ac.AccountKey)
+		sharedKeyCred, err = NewCredential(accountName, accountKey)
 		if err != nil {
 			return nil, err
 		}
@@ -164,11 +160,23 @@ func openURL(ctx context.Context, u *url.URL) (driver.Bucket, error) {
 	} else {
 		credential = azblob.NewAnonymousCredential()
 	}
-	pipeline := NewPipeline(credential, azblob.PipelineOptions{})
-	return openBucket(ctx, pipeline, ac.AccountName, u.Host, &Options{
-		Credential: sharedKeyCred,
-		SASToken:   ac.SASToken,
-	})
+	return &URLOpener{
+		AccountName: accountName,
+		Pipeline:    NewPipeline(credential, azblob.PipelineOptions{}),
+		Options: Options{
+			Credential: sharedKeyCred,
+			SASToken:   sasToken,
+		},
+	}, nil
+}
+
+// OpenBucketURL opens the Azure Storage Account Container with the same name as
+// the host in the URL.
+func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for k := range u.Query() {
+		return nil, fmt.Errorf("open Azure bucket %q: unknown query parameter %s", u, k)
+	}
+	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
 }
 
 // DefaultIdentity is a Wire provider set that provides an Azure storage
@@ -294,16 +302,10 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
-// blockBlobURL replaces backslashes in key and returns an azblob.BlockBlobURL
-// for it.
-func (b *bucket) blockBlobURL(key string) azblob.BlockBlobURL {
-	key = strings.Replace(key, backslashPathSeparator, blobPathSeparator, -1)
-	return b.containerURL.NewBlockBlobURL(key)
-}
-
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	_, err := blockBlobURL.Delete(ctx, azblob.DeleteSnapshotsOptionInclude, azblob.BlobAccessConditions{})
 	return err
 }
@@ -335,7 +337,8 @@ func (r *reader) As(i interface{}) bool {
 
 // NewRangeReader implements driver.NewRangeReader.
 func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *driver.ReaderOptions) (driver.Reader, error) {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 
 	end := length
 	if end < 0 {
@@ -418,10 +421,19 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // Attributes implements driver.Attributes.
 func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
 		return driver.Attributes{}, err
+	}
+
+	azureMD := blobPropertiesResponse.NewMetadata()
+	md := make(map[string]string, len(azureMD))
+	for k, v := range azureMD {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
 	return driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
@@ -432,7 +444,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Size:               blobPropertiesResponse.ContentLength(),
 		MD5:                blobPropertiesResponse.ContentMD5(),
 		ModTime:            blobPropertiesResponse.LastModified(),
-		Metadata:           blobPropertiesResponse.NewMetadata(),
+		Metadata:           md,
 		AsFunc: func(i interface{}) bool {
 			p, ok := i.(*azblob.BlobGetPropertiesResponse)
 			if !ok {
@@ -458,10 +470,9 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 	}
 
-	opts.Prefix = strings.Replace(opts.Prefix, backslashPathSeparator, blobPathSeparator, -1)
 	azOpts := azblob.ListBlobsSegmentOptions{
 		MaxResults: int32(pageSize),
-		Prefix:     opts.Prefix,
+		Prefix:     escapeKey(opts.Prefix, true),
 	}
 	if opts.BeforeList != nil {
 		asFunc := func(i interface{}) bool {
@@ -476,7 +487,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	listBlob, err := b.containerURL.ListBlobsHierarchySegment(ctx, marker, opts.Delimiter, azOpts)
+	listBlob, err := b.containerURL.ListBlobsHierarchySegment(ctx, marker, escapeKey(opts.Delimiter, true), azOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -485,7 +496,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	page.Objects = []*driver.ListObject{}
 	for _, blobPrefix := range listBlob.Segment.BlobPrefixes {
 		page.Objects = append(page.Objects, &driver.ListObject{
-			Key:   blobPrefix.Name,
+			Key:   unescapeKey(blobPrefix.Name),
 			Size:  0,
 			IsDir: true,
 			AsFunc: func(i interface{}) bool {
@@ -500,7 +511,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 
 	for _, blobInfo := range listBlob.Segment.BlobItems {
 		page.Objects = append(page.Objects, &driver.ListObject{
-			Key:     blobInfo.Name,
+			Key:     unescapeKey(blobInfo.Name),
 			ModTime: blobInfo.Properties.LastModified,
 			Size:    *blobInfo.Properties.ContentLength,
 			MD5:     blobInfo.Properties.ContentMD5,
@@ -534,7 +545,8 @@ func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedU
 	if b.opts.Credential == nil {
 		return "", errors.New("to use SignedURL, you must call OpenBucket with a non-nil Options.Credential")
 	}
-	blockBlobURL := b.blockBlobURL(key)
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	srcBlobParts := azblob.NewBlobURLParts(blockBlobURL.URL())
 
 	var err error
@@ -562,19 +574,68 @@ type writer struct {
 	err   error
 }
 
+// escapeKey does all required escaping for UTF-8 strings to work with Azure.
+// isPrefix indicates whether the  key is a full key, or a prefix/delimiter.
+func escapeKey(key string, isPrefix bool) string {
+	return escape.HexEscape(key, func(r []rune, i int) bool {
+		c := r[i]
+		switch {
+		// Azure does not work well with backslashes in blob names.
+		case c == '\\':
+			return true
+		// Azure doesn't handle these characters (determined via experimentation).
+		case c < 32 || c == 127:
+			return true
+			// Escape trailing "/" for full keys, otherwise Azure can't address them
+			// consistently.
+		case !isPrefix && i == len(key)-1 && c == '/':
+			return true
+		// For "../", escape the trailing slash.
+		case i > 1 && r[i] == '/' && r[i-1] == '.' && r[i-2] == '.':
+			return true
+		}
+		return false
+	})
+}
+
+// unescapeKey reverses escapeKey.
+func unescapeKey(key string) string {
+	return escape.HexUnescape(key)
+}
+
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
-	blockBlobURL := b.blockBlobURL(key)
-	if opts.Metadata == nil {
-		opts.Metadata = map[string]string{}
-	}
+	key = escapeKey(key, false)
+	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	if opts.BufferSize == 0 {
 		opts.BufferSize = defaultUploadBlockSize
+	}
+
+	md := make(map[string]string, len(opts.Metadata))
+	for k, v := range opts.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		e := escape.HexEscape(k, func(runes []rune, i int) bool {
+			c := runes[i]
+			switch {
+			case i == 0 && c >= '0' && c <= '9':
+				return true
+			case escape.IsASCIIAlphanumeric(c):
+				return false
+			case c == '_':
+				return false
+			}
+			return true
+		})
+		if _, ok := md[e]; ok {
+			return nil, fmt.Errorf("duplicate keys after escaping: %q => %q", k, e)
+		}
+		md[e] = escape.URLEscape(v)
 	}
 	uploadOpts := &azblob.UploadStreamToBlockBlobOptions{
 		BufferSize: opts.BufferSize,
 		MaxBuffers: defaultUploadBuffers,
-		Metadata:   opts.Metadata,
+		Metadata:   md,
 		BlobHTTPHeaders: azblob.BlobHTTPHeaders{
 			CacheControl:       opts.CacheControl,
 			ContentDisposition: opts.ContentDisposition,

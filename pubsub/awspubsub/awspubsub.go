@@ -15,6 +15,17 @@
 // Package awspubsub provides an implementation of pubsub that uses AWS
 // SNS (Simple Notification Service) and SQS (Simple Queueing Service).
 //
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are required for awspubsub:
+//  - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
+//    when it's at the start of the key or the previous character was ".",
+//    are escaped using "__0x<hex>__". These characters were determined by
+//    experimentation.
+//  - Metadata values: Escaped using URL encoding.
+//
 // As
 //
 // awspubsub exposes the following types for As:
@@ -33,6 +44,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -60,13 +72,27 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Top
 var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) (er error) {
 	for _, dm := range dms {
 		attrs := map[string]*sns.MessageAttributeValue{}
 		for k, v := range dm.Metadata {
+			// See the package comments for more details on escaping of metadata
+			// keys & values.
+			k = escape.HexEscape(k, func(runes []rune, i int) bool {
+				c := runes[i]
+				switch {
+				case escape.IsASCIIAlphanumeric(c):
+					return false
+				case c == '_' || c == '-':
+					return false
+				case c == '.' && i != 0 && runes[i-1] != '.':
+					return false
+				}
+				return true
+			})
 			attrs[k] = &sns.MessageAttributeValue{
 				DataType:    stringDataType,
-				StringValue: aws.String(v),
+				StringValue: aws.String(escape.URLEscape(v)),
 			}
 		}
 		_, err := t.client.Publish(&sns.PublishInput{
@@ -177,7 +203,7 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
-func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
 	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
 		QueueUrl: &s.qURL,
 	})
@@ -196,7 +222,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		}
 		attrs := map[string]string{}
 		for k, v := range body.MessageAttributes {
-			attrs[k] = v.Value
+			// See the package comments for more details on escaping of metadata
+			// keys & values.
+			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v.Value)
 		}
 		m2 := &driver.Message{
 			Body:     []byte(body.Message),

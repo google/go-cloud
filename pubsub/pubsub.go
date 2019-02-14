@@ -211,24 +211,11 @@ func (t *Topic) As(i interface{}) bool {
 }
 
 // ErrorAs converts err to provider-specific types.
-// See Topic.As for more details.
 // ErrorAs panics if target is nil or not a pointer.
 // ErrorAs returns false if err == nil.
+// See Topic.As for more details.
 func (t *Topic) ErrorAs(err error, target interface{}) bool {
-	return errorAs(t.driver.ErrorAs, err, target)
-}
-
-func errorAs(erras func(error, interface{}) bool, err error, target interface{}) bool {
-	if target == nil || reflect.TypeOf(target).Kind() != reflect.Ptr {
-		panic("pubsub: ErrorAs target must be a non-nil pointer")
-	}
-	if err == nil {
-		return false
-	}
-	if e, ok := err.(*gcerr.Error); ok {
-		err = e.Unwrap()
-	}
-	return erras(err, target)
+	return gcerr.ErrorAs(err, target, t.driver.ErrorAs)
 }
 
 // NewTopic is for use by provider implementations.
@@ -422,17 +409,15 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 // getNextBatch gets the next batch of messages from the server and returns it.
 func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
-	for len(msgs) == 0 {
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-			var err error
-			ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
-			defer func() { s.tracer.End(ctx2, err) }()
-			msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
-			return err
-		})
-		if err != nil {
-			return nil, wrapError(s.driver, err)
-		}
+	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+		var err error
+		ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+		defer func() { s.tracer.End(ctx2, err) }()
+		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
+		return err
+	})
+	if err != nil {
+		return nil, wrapError(s.driver, err)
 	}
 	var q []*Message
 	for _, m := range msgs {
@@ -483,6 +468,14 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 // See Topic.As for more details.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
+}
+
+// ErrorAs converts err to provider-specific types.
+// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs returns false if err == nil.
+// See Topic.As for more details.
+func (s *Subscription) ErrorAs(err error, target interface{}) bool {
+	return gcerr.ErrorAs(err, target, s.driver.ErrorAs)
 }
 
 // NewSubscription is for use by provider implementations.

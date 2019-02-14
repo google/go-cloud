@@ -82,13 +82,6 @@ resource "github_repository_collaborator" "rsc" {
 
 # Labels
 
-resource "github_issue_label" "at_risk" {
-  repository  = "${github_repository.repo.name}"
-  name        = "at risk"
-  color       = "f7d651"
-  description = "This issue might slip to the next sprint"
-}
-
 resource "github_issue_label" "blocked" {
   repository  = "${github_repository.repo.name}"
   name        = "blocked"
@@ -138,13 +131,6 @@ resource "github_issue_label" "enhancement" {
   description = "New feature or request"
 }
 
-resource "github_issue_label" "high_priority" {
-  repository  = "${github_repository.repo.name}"
-  name        = "high priority"
-  color       = "732ec1"
-  description = "This issue is high priority to finish in this sprint"
-}
-
 resource "github_issue_label" "in_progress" {
   repository  = "${github_repository.repo.name}"
   name        = "in progress"
@@ -164,4 +150,22 @@ resource "github_issue_label" "ready_to_submit" {
   name        = "ready to submit"
   color       = "0e8a16"
   description = "Pull request has been approved and should be merged once tests pass"
+}
+
+resource "github_issue_label" "P0" {
+  repository  = "${github_repository.repo.name}"
+  name        = "P0"
+  color       = "990000"
+}
+
+resource "github_issue_label" "P1" {
+  repository  = "${github_repository.repo.name}"
+  name        = "P1"
+  color       = "ff6666"
+}
+
+resource "github_issue_label" "P2" {
+  repository  = "${github_repository.repo.name}"
+  name        = "P1"
+  color       = "cc9900"
 }
