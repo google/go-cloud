@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -147,6 +148,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
 		"TestMetadata":                                            testMetadata,
+		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -416,6 +418,50 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 
 	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
 		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
+	}
+}
+
+func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	// Sort the WeirdStrings map for record/replay consistency.
+	var weirdStrings [][]string  // [0] = key, [1] = value
+	for k, v := range escape.WeirdStrings {
+		weirdStrings = append(weirdStrings, []string{k, v})
+	}
+	sort.Slice(weirdStrings, func(i, j int) bool { return weirdStrings[i][0] < weirdStrings[j][0] })
+
+	// Construct a message body with the weird strings and some non-UTF-8 bytes.
+	var body []byte
+	for _, v := range weirdStrings {
+		body = append(body, []byte(v[1])...)
+	}
+	body = append(body, []byte(escape.NonUTF8String)...)
+	m := &pubsub.Message{Body: body}
+
+	if err := top.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+	m, err = sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	if diff := cmp.Diff(m.Body, body); diff != "" {
+		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Body, body, diff)
 	}
 }
 
