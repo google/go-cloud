@@ -68,9 +68,10 @@ to automatically provision the resources needed.
 
 ## Project status
 
-**This project is in alpha and is not yet suitable for production.**
-
-While in alpha, the API is subject to breaking changes.
+The APIs are still in alpha, but we think they are production-ready and are
+actively looking for feedback from early adopters. If you have comments or
+questions, you can post to the [go-cloud mailing list][] or email us at
+go-cdk-feedback@google.com.
 
 ## Current features
 
