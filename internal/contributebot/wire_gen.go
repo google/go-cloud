@@ -113,7 +113,7 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 }
 
 func subscriptionFromConfig(client *pubsub.SubscriberClient, cfg flagConfig) *pubsub2.Subscription {
-	return gcppubsub.OpenSubscription(context.Background(), client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
+	return gcppubsub.OpenSubscription(client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
 }
 
 func healthChecks(w *worker) []health.Checker {
