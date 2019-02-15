@@ -148,7 +148,7 @@ func TestConformance(t *testing.T) {
 type sbAsTest struct{}
 
 func (sbAsTest) Name() string {
-	return "asb"
+	return "azure"
 }
 
 func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
@@ -178,16 +178,14 @@ func (sbAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 func (sbAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	var sbError common.Retryable
 	if !t.ErrorAs(err, &sbError) {
-		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
+		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, err)
 	}
 	return nil
 }
 
 func (sbAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
-	var sbError common.Retryable
-	if !s.ErrorAs(err, &sbError) {
-		return fmt.Errorf("failed to convert %v (%T) to a common.Retryable", err, sbError)
-	}
+	// We generate our own error for non-existent subscription, so there's no
+	// underlying Azure error type.
 	return nil
 }
 
