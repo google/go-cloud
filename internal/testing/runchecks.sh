@@ -35,7 +35,9 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   if [ -f coverage.out ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
-    goveralls -coverprofile=coverage2.out -service=travis-ci
+    mv coverage2.out coverage.out
+    goveralls -coverprofile=coverage.out -service=travis-ci
+    bash <(curl -s https://codecov.io/bash)
   fi
 else
   go test -race ./... || result=1
