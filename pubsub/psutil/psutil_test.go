@@ -80,7 +80,7 @@ func TestReceiveConcurrently(t *testing.T) {
 			top := mempubsub.NewTopic()
 			sub := mempubsub.NewSubscription(top, time.Second)
 
-			t.Logf("sending a bunch of messages to the topic and store their bodies in a set (map)")
+			t.Logf("sending a bunch of messages to the topic and storing their bodies in a set (map)")
 			var mu sync.Mutex
 			set := make(map[string]bool)
 			N := 10 * max
