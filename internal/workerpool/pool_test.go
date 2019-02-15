@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -45,7 +44,7 @@ func TestRun(t *testing.T) {
 			}()
 			cancel()
 			err := <-errc
-			if !errorContains(err, context.Canceled) {
+			if err != context.Canceled {
 				t.Errorf("workerpool.Run returned %v, want context.Canceled", err)
 			}
 		})
@@ -76,7 +75,7 @@ func TestRun(t *testing.T) {
 			}
 
 			err := workerpool.Run(context.Background(), 10, nextTask)
-			if !errorContains(err, wantErr) {
+			if err != wantErr {
 				t.Errorf("returned error is %v, want %v", err, wantErr)
 			}
 			t.Log("waiting for tasks to finish")
@@ -103,7 +102,7 @@ func TestRun(t *testing.T) {
 				return task, nil
 			}
 			err := workerpool.Run(ctx, 1, nextTask)
-			if !errorContains(err, wantErr) {
+			if err != wantErr {
 				t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
 			}
 			t.Log("waiting for goroutines to return")
@@ -121,7 +120,7 @@ func TestRun(t *testing.T) {
 			return nil, wantErr
 		}
 		err := workerpool.Run(ctx, 1, nextTask)
-		if !errorContains(err, wantErr) {
+		if err != wantErr {
 			t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
 		}
 		t.Log("waiting for goroutines to return")
@@ -149,14 +148,14 @@ func TestRun(t *testing.T) {
 				return task, nil
 			}
 			err := workerpool.Run(ctx, 2, nextTask)
-			if !errorContains(err, wantErr) {
+			if err != wantErr {
 				t.Errorf(`workerpool.Run returned "%v" for error, want "%v"`, err, wantErr)
 			}
 		})
 	})
 }
 
-func checkGoroutines(t *testing.T, f func()) {
+func checkGoroutines(t* testing.T, f func()) {
 	t.Helper()
 	ng0 := runtime.NumGoroutine()
 	f()
@@ -166,6 +165,3 @@ func checkGoroutines(t *testing.T, f func()) {
 	}
 }
 
-func errorContains(haystack, needle error) bool {
-	return strings.Contains(haystack.Error(), needle.Error())
-}
