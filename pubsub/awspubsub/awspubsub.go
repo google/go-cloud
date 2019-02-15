@@ -25,6 +25,10 @@
 //    are escaped using "__0x<hex>__". These characters were determined by
 //    experimentation.
 //  - Metadata values: Escaped using URL encoding.
+//  - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
+//    BodyBase64Encoding enum in TopicOptions for strategies on how to send
+//    non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
+//    encoded.
 //
 // As
 //
@@ -37,7 +41,9 @@ package awspubsub
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -50,23 +56,68 @@ import (
 	"gocloud.dev/pubsub/driver"
 )
 
+// Message Attribute key used to flag that the message body is base64
+// encoded.
+const base64EncodedKey = "base64encoded"
+
 type topic struct {
 	client *sns.SNS
 	arn    string
+	opts   *TopicOptions
 }
 
-// TopicOptions will contain configuration for topics.
-type TopicOptions struct{}
+// BodyBase64Encoding is an enum of strategies for when to base64 message
+// bodies.
+type BodyBase64Encoding int
+
+const (
+	// NonUTF8Only means that message bodies that are valid UTF-8 encodings are
+	// sent as-is. Invalid UTF-8 message bodies are base64 encoded, and a
+	// MessageAttribute with key "base64encoded" is added to the message.
+	// When receiving messages, the "base64encoded" attribute is used to determine
+	// whether to base64 decode, and is then filtered out.
+	NonUTF8Only BodyBase64Encoding = 0
+	// Always means that all message bodies are base64 encoded.
+	// A MessageAttribute with key "base64encoded" is added to the message.
+	// When receiving messages, the "base64encoded" attribute is used to determine
+	// whether to base64 decode, and is then filtered out.
+	Always BodyBase64Encoding = 1
+	// Never means that message bodies are never base64 encoded. Non-UTF-8
+	// bytes in message bodies may be modified by SNS/SQS.
+	Never BodyBase64Encoding = 2
+)
+
+func (e BodyBase64Encoding) wantEncode(b []byte) bool {
+	switch e {
+	case Always:
+		return true
+	case Never:
+		return false
+	case NonUTF8Only:
+		return !utf8.Valid(b)
+	}
+	panic("unreachable")
+}
+
+// TopicOptions contains configuration options for topics.
+type TopicOptions struct {
+	// BodyBase64Encoding determines when message bodies are base64 encoded.
+	// The default is NonUTF8Only.
+	BodyBase64Encoding BodyBase64Encoding
+}
 
 // OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN))
+	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts))
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Topic {
-	return &topic{client: client, arn: topicARN}
+func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	return &topic{client: client, arn: topicARN, opts: opts}
 }
 
 var stringDataType = aws.String("String")
@@ -129,8 +180,18 @@ func (t *topic) sendMessage(ctx context.Context, dm *driver.Message) error {
 			StringValue: aws.String(escape.URLEscape(v)),
 		}
 	}
+	var body string
+	if t.opts.BodyBase64Encoding.wantEncode(dm.Body) {
+		body = base64.StdEncoding.EncodeToString(dm.Body)
+		attrs[base64EncodedKey] = &sns.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String("true"),
+		}
+	} else {
+		body = string(dm.Body)
+	}
 	_, err := t.client.PublishWithContext(ctx, &sns.PublishInput{
-		Message:           aws.String(string(dm.Body)),
+		Message:           aws.String(body),
 		MessageAttributes: attrs,
 		TopicArn:          &t.arn,
 	})
@@ -257,14 +318,33 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 		if err := json.Unmarshal([]byte(*m.Body), &body); err != nil {
 			return nil, err
 		}
+		// See BodyBase64Encoding for details on when we base64 decode message bodies.
+		decodeIt := false
 		attrs := map[string]string{}
 		for k, v := range body.MessageAttributes {
+			if k == base64EncodedKey {
+				decodeIt = true
+				continue
+			}
 			// See the package comments for more details on escaping of metadata
 			// keys & values.
 			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v.Value)
 		}
+
+		var b []byte
+		if decodeIt {
+			var err error
+			b, err = base64.StdEncoding.DecodeString(body.Message)
+			if err != nil {
+				// Fall back to using the raw message.
+				b = []byte(body.Message)
+			}
+		} else {
+			b = []byte(body.Message)
+		}
+
 		m2 := &driver.Message{
-			Body:     []byte(body.Message),
+			Body:     b,
 			Metadata: attrs,
 			AckID:    m.ReceiptHandle,
 			AsFunc: func(i interface{}) bool {
