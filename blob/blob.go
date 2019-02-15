@@ -97,6 +97,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
@@ -539,6 +540,10 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 // If the blob does not exist, Attributes returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
+	if !utf8.ValidString(key) {
+		return Attributes{}, fmt.Errorf("blob.Attributes: key must be a valid UTF-8 string: %q", key)
+	}
+
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
@@ -589,6 +594,9 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
+	}
+	if !utf8.ValidString(key) {
+		return nil, fmt.Errorf("blob.NewRangeReader: key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &ReaderOptions{}
@@ -641,6 +649,10 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
 	var dopts *driver.WriterOptions
 	var w driver.Writer
+
+	if !utf8.ValidString(key) {
+		return nil, fmt.Errorf("blob.NewWriter: key must be a valid UTF-8 string: %q", key)
+	}
 	if opts == nil {
 		opts = &WriterOptions{}
 	}
@@ -661,6 +673,12 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		for k, v := range opts.Metadata {
 			if k == "" {
 				return nil, errors.New("blob.NewWriter: WriterOptions.Metadata keys may not be empty strings")
+			}
+			if !utf8.ValidString(k) {
+				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+			}
+			if !utf8.ValidString(v) {
+				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
 			}
 			lowerK := strings.ToLower(k)
 			if _, found := md[lowerK]; found {
@@ -721,6 +739,9 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // If the blob does not exist, Delete returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
+	if !utf8.ValidString(key) {
+		return fmt.Errorf("blob.Delete: key must be a valid UTF-8 string: %q", key)
+	}
 	ctx = b.tracer.Start(ctx, "Delete")
 	defer func() { b.tracer.End(ctx, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key))
@@ -736,6 +757,9 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 // If the provider implementation does not support this functionality, SignedURL
 // will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
+	if !utf8.ValidString(key) {
+		return "", fmt.Errorf("blob.SignedURL: key must be a valid UTF-8 string: %q", key)
+	}
 	if opts == nil {
 		opts = &SignedURLOptions{}
 	}
