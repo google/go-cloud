@@ -27,23 +27,15 @@ import (
 )
 
 func ExampleOpenBucket() {
+
 	// Connect to a bucket using a URL.
-	// This example uses the file-based implementation, which registers for
-	// the "file" scheme.
+	// This example uses "fileblob", the file-based implementation.
+	// We need to add a blank import line to register the fileblob provider's
+	// URLOpener, which implements blob.BucketURLOpener:
+	// import _ "gocloud.dev/blob/fileblob"
+	// fileblob registers for the "file" scheme.
 	dir, cleanup := newTempDir()
 	defer cleanup()
-
-	ctx := context.Background()
-
-	// The blob package is designed for using with a specific provider package.
-	// Here blob.OpenBucket needs a provider that implements blob.BucketURLOpener
-	// to work. In this example, we use blob/fileblob, so we need to add a blank
-	// import line to register the fileblob provider:
-	// import _ "gocloud.dev/blob/fileblob"
-	if _, err := blob.OpenBucket(ctx, "file:///nonexistentpath"); err == nil {
-		log.Fatal("Expected an error opening nonexistent path")
-	}
-	fmt.Println("Got expected error opening a nonexistent path")
 
 	// Ensure the path has a leading slash; fileblob ignores the URL's
 	// Host field, so URLs should always start with "file:///". On
@@ -53,12 +45,11 @@ func ExampleOpenBucket() {
 	if !strings.HasPrefix(urlpath, "/") {
 		urlpath = "/" + urlpath
 	}
-	if _, err := blob.OpenBucket(ctx, "file://"+urlpath); err != nil {
+	if _, err := blob.OpenBucket(context.Background(), "file://"+urlpath); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Got a bucket for valid path")
 
 	// Output:
-	// Got expected error opening a nonexistent path
 	// Got a bucket for valid path
 }
