@@ -130,7 +130,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
 	snsClient := sns.New(sess, cfg)
-	subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
+	subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
 	cleanup = func() {
 		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
 	}
