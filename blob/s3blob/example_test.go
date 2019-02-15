@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/s3blob"
@@ -26,7 +27,8 @@ import (
 func Example() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	session, err := session.NewSession(nil)
+	// The region must match the region for "my_bucket".
+	session, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
 	if err != nil {
 		log.Fatal(err)
 	}
