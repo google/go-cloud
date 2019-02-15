@@ -47,6 +47,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
+	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 }
 
 const KeyField = "_id"
@@ -224,4 +225,40 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
+}
+
+func testData(t *testing.T, coll *ds.Collection) {
+	// All Go integer types except uint64 are supported, but they all come back as int64.
+	ctx := context.Background()
+	for _, test := range []struct {
+		in, want interface{}
+	}{
+		{int(-1), int64(-1)},
+		{int8(-8), int64(-8)},
+		{int16(-16), int64(-16)},
+		{int32(-32), int64(-32)},
+		{int64(-64), int64(-64)},
+		//		{uint(1), int64(1)}, TODO: support uint in firestore
+		{uint8(8), int64(8)},
+		{uint16(16), int64(16)},
+		{uint32(32), int64(32)},
+		// TODO: support uint64
+		{float32(3.5), float64(3.5)},
+		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
+	} {
+		doc := docmap{KeyField: "testData", "val": test.in}
+		got := docmap{KeyField: doc[KeyField]}
+		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
+			t.Fatal(err)
+		}
+		want := docmap{KeyField: doc[KeyField], "val": test.want}
+		if len(got) != len(want) {
+			t.Errorf("%v: got %v, want %v", test.in, got, want)
+		} else if g := got["val"]; !cmp.Equal(g, test.want) {
+			t.Errorf("%v: got %v (%T), want %v (%T)", test.in, g, g, test.want, test.want)
+		}
+	}
+
+	// TODO: strings: valid vs. invalid unicode
+
 }
