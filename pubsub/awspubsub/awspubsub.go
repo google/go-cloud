@@ -265,8 +265,15 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
+	// SQS supports receiving at most 10 messages at a time:
+	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html
+	max := int64(maxMessages)
+	if max > 10 {
+		max = 10
+	}
 	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: &s.qURL,
+		QueueUrl: aws.String(s.qURL),
+		MaxNumberOfMessages: aws.Int64(max),
 	})
 	if err != nil {
 		return nil, err
