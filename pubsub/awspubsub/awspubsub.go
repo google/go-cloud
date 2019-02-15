@@ -126,7 +126,7 @@ var stringDataType = aws.String("String")
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	// Limit our concurrent RPCs via a semaphore.
 	const maxConcurrency = 10
-	sem := make(chan bool, maxConcurrency)
+	sem := make(chan struct{}, maxConcurrency)
 	// The result for each message (either nil or an error) will be written to
 	// errc and collected at the end. We'll return the first non-nil error
 	// (if any).
@@ -136,7 +136,7 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 		case <-ctx.Done():
 			errc <- ctx.Err()
 			break
-		case sem <- true:
+		case sem <- struct{}{}:
 		}
 		go func(dm *driver.Message) {
 			errc <- t.sendMessage(ctx, dm)
@@ -145,10 +145,10 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	}
 	// Wait for all of the goroutines to complete.
 	for n := 0; n < maxConcurrency; n++ {
-		sem <- true
+		sem <- struct{}{}
 	}
 	// Return the first non-nil error (if any).
-	for n := 0; n < len(dms); n++ {
+	for range dms {
 		err := <-errc
 		if err != nil {
 			return err
