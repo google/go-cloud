@@ -45,11 +45,23 @@ func ExampleOpenBucket() {
 	if !strings.HasPrefix(urlpath, "/") {
 		urlpath = "/" + urlpath
 	}
-	if _, err := blob.OpenBucket(context.Background(), "file://"+urlpath); err != nil {
+	ctx := context.Background()
+	b, err := blob.OpenBucket(ctx, "file://"+urlpath)
+	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Got a bucket for valid path")
 
+	// Now we can use b to read or write files to the container.
+	if err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil); err != nil {
+		log.Fatal(err)
+	}
+	data, err := b.ReadAll(ctx, "my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(data))
 	// Output:
 	// Got a bucket for valid path
+	// hello world
 }
