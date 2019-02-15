@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
-	//	"math"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -73,76 +72,145 @@ type docmap = map[string]interface{}
 var nonexistentDoc = docmap{KeyField: "doesNotExist"}
 
 func testCreate(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
 	named := docmap{KeyField: "testCreate1", "b": true}
 	unnamed := docmap{"b": false}
 	// Attempt to clean up
 	defer func() {
-		_, _ = coll.Actions().Delete(named).Delete(unnamed).Do(context.Background())
+		_, _ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
 	}()
 
-	mustRunAndCompare(t, coll, named, coll.Actions().Create(named))
-	mustRunAndCompare(t, coll, unnamed, coll.Actions().Create(unnamed))
+	createThenGet := func(doc docmap) {
+		t.Helper()
+		if err := coll.Create(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+		got := docmap{KeyField: doc[KeyField]}
+		if err := coll.Get(ctx, got); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(got, doc); diff != "" {
+			t.Fatalf(diff)
+		}
+	}
+
+	createThenGet(named)
+	createThenGet(unnamed)
+
 	// Can't create an existing doc.
-	shouldFail(t, coll.Actions().Create(named))
+	if err := coll.Create(ctx, named); err == nil {
+		t.Error("got nil, want error")
+	}
 }
 
 func testPut(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	named := docmap{KeyField: "testPut1", "b": true}
-	mustRunAndCompare(t, coll, named, coll.Actions().Put(named)) // create new
+	// Create a new doc.
+	must(coll.Put(ctx, named))
+	got := docmap{KeyField: named[KeyField]}
+	must(coll.Get(ctx, got))
+	if diff := cmp.Diff(got, named); diff != "" {
+		t.Fatalf(diff)
+	}
+
+	// Replace an existing doc.
 	named["b"] = false
-	mustRunAndCompare(t, coll, named, coll.Actions().Put(named)) // replace existing
+	must(coll.Put(ctx, named))
+	must(coll.Get(ctx, got))
+	if diff := cmp.Diff(got, named); diff != "" {
+		t.Fatalf(diff)
+	}
 }
 
 func testReplace(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	doc1 := docmap{KeyField: "testReplace", "s": "a"}
-	mustRun(t, coll.Actions().Put(doc1))
-
+	must(coll.Put(ctx, doc1))
 	doc1["s"] = "b"
-	mustRunAndCompare(t, coll, doc1, coll.Actions().Replace(doc1))
-
+	must(coll.Replace(ctx, doc1))
+	got := docmap{KeyField: doc1[KeyField]}
+	must(coll.Get(ctx, got))
+	if diff := cmp.Diff(got, doc1); diff != "" {
+		t.Fatalf(diff)
+	}
 	// Can't replace a nonexistent doc.
-	shouldFail(t, coll.Actions().Replace(nonexistentDoc))
+	if err := coll.Replace(ctx, nonexistentDoc); err == nil {
+		t.Fatal("got nil, want error")
+	}
 }
 
 func testGet(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	doc := docmap{
 		KeyField: "testGet1",
 		"s":      "a string",
 		"i":      int64(95),
 		"f":      32.3,
 	}
-	mustRun(t, coll.Actions().Put(doc))
-
-	checkGet := func(got, want docmap) {
-		t.Helper()
-		mustRun(t, coll.Actions().Get(got))
-		if diff := cmp.Diff(got, want); diff != "" {
-			t.Errorf("got=-, want=+: %s", diff)
-		}
-	}
-
+	must(coll.Put(ctx, doc))
 	// If only the key fields are present, the full document is populated.
-	checkGet(docmap{KeyField: doc[KeyField]}, doc)
+	got := docmap{KeyField: doc[KeyField]}
+	must(coll.Get(ctx, got))
+	if diff := cmp.Diff(got, doc); diff != "" {
+		t.Error(diff)
+	}
+	// TODO(jba): test with field paths
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	mustRun(t, coll.Actions().Put(doc).Delete(doc))
-	shouldFail(t, coll.Actions().Get(doc))
+	if _, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	// The document should no longer exist.
+	if err := coll.Get(ctx, doc); err == nil {
+		t.Error("want error, got nil")
+	}
 	// Delete doesn't fail if the doc doesn't exist.
-	mustRun(t, coll.Actions().Delete(nonexistentDoc))
+	if err := coll.Delete(ctx, nonexistentDoc); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
 	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B"}
-	mustRun(t, coll.Actions().Put(doc))
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
 
 	got := docmap{KeyField: doc[KeyField]}
-	mustRun(t, coll.Actions().Update(doc, ds.Mods{
+	_, err := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
 		"c": "C",
-	}).Get(got))
+	}).Get(got).Do(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := docmap{
 		KeyField: doc[KeyField],
 		"a":      "X",
@@ -153,29 +221,7 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Can't update a nonexistent doc
-	shouldFail(t, coll.Actions().Update(nonexistentDoc, ds.Mods{}))
-}
-
-func mustRun(t *testing.T, al *ds.ActionList) {
-	t.Helper()
-	if _, err := al.Do(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func mustRunAndCompare(t *testing.T, coll *ds.Collection, doc docmap, al *ds.ActionList) {
-	t.Helper()
-	mustRun(t, al)
-	got := docmap{KeyField: doc[KeyField]}
-	mustRun(t, coll.Actions().Get(got))
-	if diff := cmp.Diff(got, doc); diff != "" {
-		t.Fatalf(diff)
-	}
-}
-
-func shouldFail(t *testing.T, al *ds.ActionList) {
-	t.Helper()
-	if _, err := al.Do(context.Background()); err == nil {
+	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
 }
