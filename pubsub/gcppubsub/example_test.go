@@ -53,7 +53,7 @@ func ExampleOpenTopic() {
 	defer pubClient.Close()
 
 	// Construct a *pubsub.Topic.
-	t := gcppubsub.OpenTopic(ctx, pubClient, projID, "example-topic", nil)
+	t := gcppubsub.OpenTopic(pubClient, projID, "example-topic", nil)
 	defer t.Shutdown(ctx)
 
 	// Now we can use t to send messages.
@@ -90,7 +90,7 @@ func ExampleOpenSubscription() {
 	defer subClient.Close()
 
 	// Construct a *pubsub.Subscription.
-	s := gcppubsub.OpenSubscription(ctx, subClient, projID, "example-subscription", nil)
+	s := gcppubsub.OpenSubscription(subClient, projID, "example-subscription", nil)
 	defer s.Shutdown(ctx)
 
 	// Now we can use s to receive messages.
