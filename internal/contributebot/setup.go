@@ -90,7 +90,7 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 }
 
 func subscriptionFromConfig(client *psapi.SubscriberClient, cfg flagConfig) *pubsub.Subscription {
-	return gcppubsub.OpenSubscription(context.Background(), client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
+	return gcppubsub.OpenSubscription(client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
 }
 
 func healthChecks(w *worker) []health.Checker {
