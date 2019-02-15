@@ -30,7 +30,7 @@ import (
 // It also doubles as the state of the fake server.
 type fakeConnection struct {
 	mu        sync.Mutex
-	closed    bool
+	closed    chan struct{}
 	exchanges map[string]*exchange // exchange names are server-scoped
 	queues    map[string]*queue    // queue names are server-scoped
 }
@@ -39,12 +39,14 @@ type fakeConnection struct {
 type fakeChannel struct {
 	conn *fakeConnection
 	// The following fields are protected by conn.mu.
-	closed          bool
 	deliveryTag     uint64 // counter; used to distinguish published messages
 	pubChans        []chan<- amqp.Confirmation
 	returnChans     []chan<- amqp.Return
 	closeChans      []chan<- *amqp.Error
 	consumerCancels map[string]func() // from consumer name to cancel func for the context
+
+	closeMu sync.Mutex
+	closed  chan struct{}
 }
 
 // An exchange is a collection of queues.
@@ -64,27 +66,26 @@ func newFakeConnection() *fakeConnection {
 	return &fakeConnection{
 		exchanges: map[string]*exchange{},
 		queues:    map[string]*queue{},
+		closed:    make(chan struct{}),
 	}
 }
 
 // Channel creates a new AMQP fake channel.
 func (c *fakeConnection) Channel() (amqpChannel, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.closed {
+	if chanIsClosed(c.closed) {
 		return nil, amqp.ErrClosed
 	}
 	return &fakeChannel{
 		conn:            c,
 		consumerCancels: map[string]func(){},
+		closed:          make(chan struct{}),
 	}, nil
 }
 
 func (c *fakeConnection) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.closed = true
+	closeChan(c.closed)
 	return nil
 }
 
@@ -102,19 +103,25 @@ func (ch *fakeChannel) getExchange(name string) (*exchange, error) {
 // closes the channel and makes it unusable.)
 // It must be called with ch.conn.mu held.
 func (ch *fakeChannel) errorf(code int, reasonFormat string, args ...interface{}) error {
-	ch.closeLocked()
+	_ = ch.Close()
 	return &amqp.Error{Code: code, Reason: fmt.Sprintf(reasonFormat, args...)}
+}
+
+// Report whether the channel or its connection is closed. Does not require the lock.
+func (ch *fakeChannel) isClosed() bool {
+	return chanIsClosed(ch.closed) || chanIsClosed(ch.conn.closed)
 }
 
 // ExchangeDeclare creates a new exchange with the given name if one doesn't already
 // exist.
 func (ch *fakeChannel) ExchangeDeclare(name string) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
+
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 
-	if ch.closed || ch.conn.closed {
-		return amqp.ErrClosed
-	}
 	if _, ok := ch.conn.exchanges[name]; !ok {
 		ch.conn.exchanges[name] = &exchange{}
 	}
@@ -125,12 +132,12 @@ func (ch *fakeChannel) ExchangeDeclare(name string) error {
 // The exchange must exist.
 // If the queue doesn't exist, it's created.
 func (ch *fakeChannel) QueueDeclareAndBind(queueName, exchangeName string) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 
-	if ch.closed || ch.conn.closed {
-		return amqp.ErrClosed
-	}
 	ex, err := ch.getExchange(exchangeName)
 	if err != nil {
 		return err
@@ -145,12 +152,13 @@ func (ch *fakeChannel) QueueDeclareAndBind(queueName, exchangeName string) error
 }
 
 func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
+
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 
-	if ch.closed || ch.conn.closed {
-		return amqp.ErrClosed
-	}
 	ex, err := ch.getExchange(exchangeName)
 	if err != nil {
 		return err
@@ -164,7 +172,13 @@ func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
 			ReplyText: "NO_ROUTE: no queues bound to exchange",
 		}
 		for _, c := range ch.returnChans {
-			c <- ret
+			select {
+			case c <- ret:
+			case <-ch.closed:
+				return amqp.ErrClosed
+			case <-ch.conn.closed:
+				return amqp.ErrClosed
+			}
 		}
 	} else {
 		// Each published message in the channel gets a new delivery tag, starting at 1.
@@ -184,7 +198,13 @@ func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
 	// Every Go channel registered with NotifyPublish gets a confirmation message.
 	// Ack is true even if the message was unroutable.
 	for _, c := range ch.pubChans {
-		c <- amqp.Confirmation{DeliveryTag: ch.deliveryTag, Ack: true}
+		select {
+		case c <- amqp.Confirmation{DeliveryTag: ch.deliveryTag, Ack: true}:
+		case <-ch.closed:
+			return amqp.ErrClosed
+		case <-ch.conn.closed:
+			return amqp.ErrClosed
+		}
 	}
 	return nil
 }
@@ -192,12 +212,12 @@ func (ch *fakeChannel) Publish(exchangeName string, pub amqp.Publishing) error {
 // Consume starts a consumer that reads from the given queue.
 // The consumerName can be used in a Cancel call to stop the consumer.
 func (ch *fakeChannel) Consume(queueName, consumerName string) (<-chan amqp.Delivery, error) {
+	if ch.isClosed() {
+		return nil, amqp.ErrClosed
+	}
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 
-	if ch.closed || ch.conn.closed {
-		return nil, amqp.ErrClosed
-	}
 	q, ok := ch.conn.queues[queueName]
 	if !ok {
 		return nil, ch.errorf(amqp.NotFound, "queue %q not found", queueName)
@@ -217,7 +237,11 @@ func (ch *fakeChannel) Consume(queueName, consumerName string) (<-chan amqp.Deli
 				select {
 				case delc <- m:
 				case <-ctx.Done():
-					// ignore error
+					// ignore errors here and below
+					return
+				case <-ch.closed:
+					return
+				case <-ch.conn.closed:
 					return
 				}
 			}
@@ -249,10 +273,7 @@ func (ch *fakeChannel) takeOneMessage(q *queue) (amqp.Delivery, bool) {
 
 // Ack is a no-op. (We don't test ack behavior.)
 func (ch *fakeChannel) Ack(tag uint64) error {
-	ch.conn.mu.Lock()
-	defer ch.conn.mu.Unlock()
-
-	if ch.closed || ch.conn.closed {
+	if ch.isClosed() {
 		return amqp.ErrClosed
 	}
 	return nil
@@ -260,12 +281,12 @@ func (ch *fakeChannel) Ack(tag uint64) error {
 
 // Cancel stops the consumer's goroutine.
 func (ch *fakeChannel) Cancel(consumerName string) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
 	ch.conn.mu.Lock()
 	defer ch.conn.mu.Unlock()
 
-	if ch.closed || ch.conn.closed {
-		return amqp.ErrClosed
-	}
 	cancel, ok := ch.consumerCancels[consumerName]
 	if !ok {
 		return ch.errorf(amqp.NotFound, "consumer %q not found", consumerName)
@@ -305,21 +326,21 @@ func (ch *fakeChannel) NotifyClose(c chan *amqp.Error) chan *amqp.Error {
 // Close marks the fakeChannel as closed and sends an error to all channels
 // registered with NotifyClose.
 func (ch *fakeChannel) Close() error {
-	ch.conn.mu.Lock()
-	defer ch.conn.mu.Unlock()
-
-	if ch.conn.closed {
+	if chanIsClosed(ch.conn.closed) {
 		return amqp.ErrClosed
 	}
-	ch.closeLocked()
-	return nil
-}
-
-func (ch *fakeChannel) closeLocked() {
-	ch.closed = true
-	for _, c := range ch.closeChans {
-		c <- amqp.ErrClosed
+	ch.closeMu.Lock()
+	closeChans := ch.closeChans
+	closeChan(ch.closed)
+	ch.closeMu.Unlock()
+	for _, c := range closeChans {
+		// Don't block on notifying.
+		select {
+		case c <- amqp.ErrClosed:
+		default:
+		}
 	}
+	return nil
 }
 
 func (ch *fakeChannel) ExchangeDelete(name string) error {
@@ -330,4 +351,24 @@ func (ch *fakeChannel) ExchangeDelete(name string) error {
 func (ch *fakeChannel) QueueDelete(name string) error {
 	delete(ch.conn.queues, name)
 	return nil
+}
+
+// Assumes nothing is ever written to the channel.
+func chanIsClosed(ch chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Avoid panic when closing a closed channel.
+// Must be called with the lock held.
+func closeChan(ch chan struct{}) {
+	select {
+	case <-ch:
+	default:
+		close(ch)
+	}
 }
