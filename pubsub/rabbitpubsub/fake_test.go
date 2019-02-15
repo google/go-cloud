@@ -334,7 +334,11 @@ func (ch *fakeChannel) Close() error {
 	closeChan(ch.closed)
 	ch.closeMu.Unlock()
 	for _, c := range closeChans {
-		c <- amqp.ErrClosed
+		// Don't block on notifying.
+		select {
+		case c <- amqp.ErrClosed:
+		default:
+		}
 	}
 	return nil
 }

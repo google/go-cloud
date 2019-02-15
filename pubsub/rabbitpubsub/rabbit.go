@@ -145,19 +145,32 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// want to reuse the channel for all calls to SendBatch--it takes two RPCs to set
 	// up.)
 	errc := make(chan error, 1)
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	ch := t.ch // Avoid touching t.ch while goroutine is running.
 	go func() {
 		// This goroutine runs with t.mu held because its lifetime is within the
 		// lifetime of the t.mu.Lock call at the start of SendBatch.
-		errc <- t.receiveFromPublishChannels(ctx, len(ms))
+		errc <- t.receiveFromPublishChannels(cctx, len(ms))
 	}()
 
+	var perr error
 	for _, m := range ms {
-		if err := t.ch.Publish(t.exchange, toPublishing(m)); err != nil {
-			t.ch = nil // AMQP channel is broken after error
-			return err
+		if perr = ch.Publish(t.exchange, toPublishing(m)); perr != nil {
+			cancel()
+			break
 		}
 	}
+	// Wait for the goroutine to finish.
 	err := <-errc
+	// If we got an error from Publish, prefer that.
+	if perr != nil {
+		// Set t.ch to nil because an AMQP channel is broken after error.
+		// Do this here, after the goroutine has finished, rather than in the Publish loop
+		// above, to avoid a race condition.
+		t.ch = nil
+		err = perr
+	}
 	// If there is only one error, return it rather than a MultiError. That
 	// will work better with ErrorCode and ErrorAs.
 	if merr, ok := err.(MultiError); ok && len(merr) == 1 {
