@@ -294,35 +294,50 @@ func TestURLOpenerForParams(t *testing.T) {
 	tests := []struct {
 		name     string
 		query    url.Values
+		prev     Options
 		wantOpts Options
 		wantErr  bool
 	}{
 		{
-			name: "AccessID",
+			name: "Invalid query parameter",
 			query: url.Values{
-				"access_id": {"bar"},
-			},
-			wantOpts: Options{GoogleAccessID: "bar"},
-		},
-		{
-			name: "BadPrivateKeyPath",
-			query: url.Values{
-				"private_key_path": {"/path/does/not/exist"},
+				"foo": {"bar"},
 			},
 			wantErr: true,
 		},
 		{
-			name: "PrivateKeyPath",
-			query: url.Values{
-				"private_key_path": {pkFile.Name()},
-			},
+			name:     "Previous options are carried over",
+			query:    url.Values{},
+			prev:     Options{GoogleAccessID: "bar"},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID",
+			query:    url.Values{"access_id": {"bar"}},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID override",
+			query:    url.Values{"access_id": {"baz"}},
+			prev:     Options{GoogleAccessID: "bar"},
+			wantOpts: Options{GoogleAccessID: "baz"},
+		},
+		{
+			name:    "BadPrivateKeyPath",
+			query:   url.Values{"private_key_path": {"/path/does/not/exist"}},
+			wantErr: true,
+		},
+		{
+			name:     "PrivateKeyPath",
+			query:    url.Values{"private_key_path": {pkFile.Name()}},
 			wantOpts: Options{PrivateKey: privateKey},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := new(URLOpener).forParams(ctx, test.query)
+			u := &URLOpener{Options: test.prev}
+			got, err := u.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}

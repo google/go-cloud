@@ -125,9 +125,27 @@ const Scheme = "s3"
 
 // OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	// See if there are any aws.Config overrides in the query parameters.
+	opts, err := o.forParams(ctx, u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+	}
+	return OpenBucket(ctx, o.ConfigProvider, u.Host, opts)
+}
+
+var legalQueryParam = map[string]bool{
+	"region":           true,
+	"endpoint":         true,
+	"disableSSL":       true,
+	"s3ForcePathStyle": true,
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
+	for k := range q {
+		if !legalQueryParam[k] {
+			return nil, fmt.Errorf("unknown S3 query parameter %s", k)
+		}
+	}
 	var cfg aws.Config
-	q := u.Query()
 	override := false
 	if region := q["region"]; len(region) > 0 {
 		cfg.Region = aws.String(region[0])
@@ -145,11 +163,13 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
 		override = true
 	}
-	opt := o.Options
-	if override {
-		opt.Cfgs = append(opt.Cfgs, &cfg)
+	if !override {
+		return &o.Options, nil
 	}
-	return OpenBucket(ctx, o.ConfigProvider, u.Host, &opt)
+	opts := new(Options)
+	*opts = o.Options
+	opts.Cfgs = append(opts.Cfgs, &cfg)
+	return opts, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
