@@ -102,7 +102,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating topic "%s": %v`, topicName, err)
 	}
-	dt = openTopic(ctx, client, *out.TopicArn)
+	dt = openTopic(ctx, client, *out.TopicArn, nil)
 	cleanup = func() {
 		// TODO: Call client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
@@ -112,7 +112,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
 	client := sns.New(h.sess)
-	dt := openTopic(ctx, client, "nonexistent-topic")
+	dt := openTopic(ctx, client, "nonexistent-topic", nil)
 	return dt, nil
 }
 
