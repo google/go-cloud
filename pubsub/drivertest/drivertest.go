@@ -168,7 +168,10 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 // RunBenchmarks runs benchmarks for provider implementations of pubsub.
 func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
 	b.Run("BenchmarkReceive", func(b *testing.B) {
-		benchmarkReceive(b, topic, sub)
+		benchmark(b, topic, sub, false)
+	})
+	b.Run("BenchmarkSend", func(b *testing.B) {
+		benchmark(b, topic, sub, true)
 	})
 }
 
@@ -566,31 +569,41 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 }
 
 // Publishes a large number of messages to topic concurrently, and then times
-// how long it takes to receive them all.
-func benchmarkReceive(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
+// how long it takes to send (if timeSend is true) or receive (if timeSend
+// is false) them all.
+func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, timeSend bool) {
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const (
 		nMessages          = 1000
-		concurrencySend    = 100
-		concurrencyReceive = 1
+		concurrencySend    = 10
+		concurrencyReceive = 10
 	)
 	if nMessages%concurrencySend != 0 || nMessages%concurrencyReceive != 0 {
 		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
+		if !timeSend {
+			b.StopTimer()
+		}
 		if err := publishNConcurrently(topic, nMessages, concurrencySend, attrs, body); err != nil {
 			b.Fatalf("publishing: %v", err)
 		}
 		b.Logf("published %d messages", nMessages)
-		b.StartTimer()
+		if timeSend {
+			b.StopTimer()
+		} else {
+			b.StartTimer()
+		}
 		if err := receiveNConcurrently(sub, nMessages, concurrencyReceive); err != nil {
 			b.Fatalf("receiving: %v", err)
 		}
 		b.SetBytes(nMessages * 1e6)
 		b.Log("MB/s is actually number of messages received per second")
+		if timeSend {
+			b.StartTimer()
+		}
 	}
 }
 
