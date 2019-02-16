@@ -1482,6 +1482,18 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 			metadata: weirdMetadata,
 			want:     weirdMetadata,
 		},
+		{
+			name:     "non-utf8 metadata key",
+			content:  hello,
+			metadata: map[string]string{escape.NonUTF8String: "bar"},
+			wantErr:  true,
+		},
+		{
+			name:     "non-utf8 metadata value",
+			content:  hello,
+			metadata: map[string]string{"foo": escape.NonUTF8String},
+			wantErr:  true,
+		},
 	}
 
 	ctx := context.Background()
@@ -1665,6 +1677,25 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 	const keyPrefix = "weird-keys"
 	content := []byte("hello")
 	ctx := context.Background()
+
+	t.Run("non-UTF8 fails", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+
+		// Write the blob.
+		key := keyPrefix + escape.NonUTF8String
+		if err := b.WriteAll(ctx, key, content, nil); err == nil {
+			t.Error("got nil error, expected error for using non-UTF8 string as key")
+		}
+	})
 
 	for description, key := range escape.WeirdStrings {
 		t.Run(description, func(t *testing.T) {
