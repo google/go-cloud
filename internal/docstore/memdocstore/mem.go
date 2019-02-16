@@ -122,7 +122,8 @@ func (c *collection) runAction(a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := copyFields(a.Doc, current, a.FieldPaths); err != nil {
+		// TODO(jba): support field paths.
+		if err := decodeDoc(a.Doc, current); err != nil {
 			return err
 		}
 	default:
@@ -156,34 +157,6 @@ func deleteAtFieldPath(m map[string]interface{}, fp []string) {
 		deleteAtFieldPath(m2, fp[1:])
 	}
 	// Otherwise do nothing.
-}
-
-// Copy the fields of src to dest.
-func copyFields(dest driver.Document, src map[string]interface{}, fps [][]string) error {
-	if fps == nil {
-		// If no field paths were provided, copy all the fields.
-		for k, v := range src {
-			// TODO(jba): copy v to avoid as much structure-sharing as possible.
-			if err := dest.SetField(k, v); err != nil {
-				return err
-			}
-		}
-	} else {
-		dsrc, err := driver.NewDocument(src)
-		if err != nil {
-			return err
-		}
-		for _, fp := range fps {
-			val, err := dsrc.Get(fp)
-			if err != nil {
-				return err
-			}
-			if err := dest.Set(fp, val); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // ErrorCode implements driver.ErrorCOde.

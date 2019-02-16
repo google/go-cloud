@@ -39,7 +39,7 @@ func TestEncodeDoc(t *testing.T) {
 		want map[string]interface{}
 	}{
 		{
-			map[string]interface{}{
+			in: map[string]interface{}{
 				"x": map[int]interface{}{
 					1: "a",
 					2: 17,
@@ -47,7 +47,7 @@ func TestEncodeDoc(t *testing.T) {
 					4: map[string]bool{"false": false, "true": true},
 				},
 			},
-			map[string]interface{}{
+			want: map[string]interface{}{
 				"x": map[string]interface{}{
 					"1": "a",
 					"2": int64(17),
@@ -57,13 +57,13 @@ func TestEncodeDoc(t *testing.T) {
 			},
 		},
 		{
-			&aStruct{
+			in: &aStruct{
 				X:     3,
 				embed: embed{Y: "y"},
 				Z:     &b,
 				W:     33,
 			},
-			map[string]interface{}{
+			want: map[string]interface{}{
 				"X": int64(3),
 				"Y": "y",
 				"Z": true,

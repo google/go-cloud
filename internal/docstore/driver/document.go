@@ -45,7 +45,7 @@ func NewDocument(doc interface{}) (Document, error) {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
-		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting struct or map[string]interface{}, got %s", t)
+		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting struct, *struct or map[string]interface{}, got %s", t)
 	}
 	fields, err := fieldCache.Fields(t)
 	if err != nil {
