@@ -123,49 +123,79 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *Topi
 var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) (er error) {
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	// Limit our concurrent RPCs via a semaphore.
+	const maxConcurrency = 10
+	sem := make(chan struct{}, maxConcurrency)
+	// The result for each message (either nil or an error) will be written to
+	// errc and collected at the end. We'll return the first non-nil error
+	// (if any).
+	errc := make(chan error, len(dms))
 	for _, dm := range dms {
-		attrs := map[string]*sns.MessageAttributeValue{}
-		for k, v := range dm.Metadata {
-			// See the package comments for more details on escaping of metadata
-			// keys & values.
-			k = escape.HexEscape(k, func(runes []rune, i int) bool {
-				c := runes[i]
-				switch {
-				case escape.IsASCIIAlphanumeric(c):
-					return false
-				case c == '_' || c == '-':
-					return false
-				case c == '.' && i != 0 && runes[i-1] != '.':
-					return false
-				}
-				return true
-			})
-			attrs[k] = &sns.MessageAttributeValue{
-				DataType:    stringDataType,
-				StringValue: aws.String(escape.URLEscape(v)),
-			}
+		select {
+		case <-ctx.Done():
+			errc <- ctx.Err()
+			break
+		case sem <- struct{}{}:
 		}
-		var body string
-		if t.opts.BodyBase64Encoding.wantEncode(dm.Body) {
-			body = base64.StdEncoding.EncodeToString(dm.Body)
-			attrs[base64EncodedKey] = &sns.MessageAttributeValue{
-				DataType:    stringDataType,
-				StringValue: aws.String("true"),
-			}
-		} else {
-			body = string(dm.Body)
-		}
-		_, err := t.client.Publish(&sns.PublishInput{
-			Message:           aws.String(body),
-			MessageAttributes: attrs,
-			TopicArn:          &t.arn,
-		})
+		go func(dm *driver.Message) {
+			errc <- t.sendMessage(ctx, dm)
+			<-sem
+		}(dm)
+	}
+	// Wait for all of the goroutines to complete.
+	for n := 0; n < maxConcurrency; n++ {
+		sem <- struct{}{}
+	}
+	// Return the first non-nil error (if any).
+	for range dms {
+		err := <-errc
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// sendMessage sends a single message via RPC to SNS.
+func (t *topic) sendMessage(ctx context.Context, dm *driver.Message) error {
+	attrs := map[string]*sns.MessageAttributeValue{}
+	for k, v := range dm.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(k, func(runes []rune, i int) bool {
+			c := runes[i]
+			switch {
+			case escape.IsASCIIAlphanumeric(c):
+				return false
+			case c == '_' || c == '-':
+				return false
+			case c == '.' && i != 0 && runes[i-1] != '.':
+				return false
+			}
+			return true
+		})
+		attrs[k] = &sns.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String(escape.URLEscape(v)),
+		}
+	}
+	var body string
+	if t.opts.BodyBase64Encoding.wantEncode(dm.Body) {
+		body = base64.StdEncoding.EncodeToString(dm.Body)
+		attrs[base64EncodedKey] = &sns.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String("true"),
+		}
+	} else {
+		body = string(dm.Body)
+	}
+	_, err := t.client.PublishWithContext(ctx, &sns.PublishInput{
+		Message:           aws.String(body),
+		MessageAttributes: attrs,
+		TopicArn:          &t.arn,
+	})
+	return err
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -271,7 +301,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 	if max > 10 {
 		max = 10
 	}
-	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
+	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(s.qURL),
 		MaxNumberOfMessages: aws.Int64(max),
 	})
