@@ -330,6 +330,14 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
 
+func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
+}
+
+func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
+}
+
 type awsAsTest struct{}
 
 func (awsAsTest) Name() string {

@@ -140,15 +140,13 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                                         testSendReceive,
-		"TestSendReceiveTwo":                                      testSendReceiveTwo,
-		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                                   testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
-		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
-		"TestMetadata":                                            testMetadata,
-		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
+		"TestSendReceive":                          testSendReceive,
+		"TestSendReceiveTwo":                       testSendReceiveTwo,
+		"TestErrorOnSendToClosedTopic":             testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription": testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                    testCancelSendReceive,
+		"TestMetadata":                             testMetadata,
+		"TestNonUTF8MessageBody":                   testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -175,7 +173,7 @@ func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) 
 	})
 }
 
-func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
+func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
 	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -200,7 +198,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 	}
 }
 
-func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
+func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
 	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
@@ -453,7 +451,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Sort the WeirdStrings map for record/replay consistency.
-	var weirdStrings [][]string  // [0] = key, [1] = value
+	var weirdStrings [][]string // [0] = key, [1] = value
 	for k, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, []string{k, v})
 	}

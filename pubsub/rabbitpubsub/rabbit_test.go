@@ -81,6 +81,14 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
+func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
+}
+
+func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
+}
+
 func BenchmarkRabbit(b *testing.B) {
 	ctx := context.Background()
 	h := &harness{conn: mustDialRabbit(b)}
