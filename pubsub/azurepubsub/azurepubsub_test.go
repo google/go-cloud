@@ -142,15 +142,13 @@ func TestConformance(t *testing.T) {
 	} else {
 		asTests := []drivertest.AsTest{sbAsTest{}}
 		drivertest.RunConformanceTests(t, newHarness, asTests)
+		t.Run("TestNonExistentTopicSucceedsOnOpenButFailsOnSend", func(t *testing.T) {
+			drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
+		})
+		t.Run("TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend", func(t *testing.T) {
+			drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
+		})
 	}
-}
-
-func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
-}
-
-func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
 }
 
 type sbAsTest struct{}
