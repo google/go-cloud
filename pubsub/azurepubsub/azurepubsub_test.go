@@ -145,14 +145,6 @@ func TestConformance(t *testing.T) {
 	}
 }
 
-func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
-}
-
-func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
-}
-
 type sbAsTest struct{}
 
 func (sbAsTest) Name() string {

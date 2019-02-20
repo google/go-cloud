@@ -60,11 +60,3 @@ func BenchmarkMemPubSub(b *testing.B) {
 	sub := NewSubscription(topic, time.Second)
 	drivertest.RunBenchmarks(b, topic, sub)
 }
-
-func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
-}
-
-func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
-	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
-}
