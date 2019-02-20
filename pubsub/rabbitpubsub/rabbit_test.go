@@ -79,12 +79,14 @@ func TestConformance(t *testing.T) {
 	}
 	asTests = []drivertest.AsTest{rabbitAsTest{true}}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
-	t.Run("TestNonExistentTopicSucceedsOnOpenButFailsOnSend", func(t *testing.T) {
-		drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, harnessMaker)
-	})
-	t.Run("TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend", func(t *testing.T) {
-		drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, harnessMaker)
-	})
+}
+
+func TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentTopicSucceedsOnOpenButFailsOnSend(t, newHarness)
+}
+
+func TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T) {
+	drivertest.TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t, newHarness)
 }
 
 func BenchmarkRabbit(b *testing.B) {
