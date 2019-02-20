@@ -22,6 +22,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -32,6 +33,11 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
 )
+
+// Options contains settings for RunConformanceTests.
+type Options struct {
+	SkipTestsOfNonExistentThings bool
+}
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
@@ -138,7 +144,10 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 }
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest, opts *Options) {
+	if opts == nil {
+		opts = &Options{}
+	}
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
 		"TestSendReceive":                                         testSendReceive,
 		"TestSendReceiveTwo":                                      testSendReceiveTwo,
@@ -149,6 +158,13 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
 		"TestMetadata":                                            testMetadata,
 		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
+	}
+	if opts.SkipTestsOfNonExistentThings {
+		for name := range tests {
+			if strings.Contains(name, "NonExistent") {
+				delete(tests, name)
+			}
+		}
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -453,7 +469,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Sort the WeirdStrings map for record/replay consistency.
-	var weirdStrings [][]string  // [0] = key, [1] = value
+	var weirdStrings [][]string // [0] = key, [1] = value
 	for k, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, []string{k, v})
 	}
