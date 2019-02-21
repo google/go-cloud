@@ -327,7 +327,7 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{awsAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests)
+	drivertest.RunConformanceTests(t, newHarness, asTests, nil)
 }
 
 type awsAsTest struct{}
