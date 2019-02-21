@@ -33,14 +33,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Options contains settings for RunConformanceTests.
+// Options control which conformance tests are run.
 type Options struct {
 	// Tells whether the provider dynamically creates topics and
 	// subscriptions, (e.g., Redis, NATS)
 	DynamicTopicsAndSubscriptions bool
 }
 
-// Harness descibes the functionality test harnesses must provide to run
+// Harness describes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
