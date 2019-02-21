@@ -22,7 +22,6 @@ import (
 	"errors"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -36,7 +35,9 @@ import (
 
 // Options contains settings for RunConformanceTests.
 type Options struct {
-	SkipTestsOfNonExistentThings bool
+	// Tells whether the provider dynamically creates topics and
+	// subscriptions, (e.g., Redis, NATS)
+	DynamicTopicsAndSubscriptions bool
 }
 
 // Harness descibes the functionality test harnesses must provide to run
@@ -149,22 +150,17 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		opts = &Options{}
 	}
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                                         testSendReceive,
-		"TestSendReceiveTwo":                                      testSendReceiveTwo,
-		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                                   testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
-		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
-		"TestMetadata":                                            testMetadata,
-		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
+		"TestSendReceive":                          testSendReceive,
+		"TestSendReceiveTwo":                       testSendReceiveTwo,
+		"TestErrorOnSendToClosedTopic":             testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription": testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                    testCancelSendReceive,
+		"TestMetadata":                             testMetadata,
+		"TestNonUTF8MessageBody":                   testNonUTF8MessageBody,
 	}
-	if opts.SkipTestsOfNonExistentThings {
-		for name := range tests {
-			if strings.Contains(name, "NonExistent") {
-				delete(tests, name)
-			}
-		}
+	if !opts.DynamicTopicsAndSubscriptions {
+		tests["TestNonExistentTopicSucceedsOnOpenButFailsOnSend"] = testNonExistentTopicSucceedsOnOpenButFailsOnSend
+		tests["TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend"] = testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
