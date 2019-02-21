@@ -225,7 +225,7 @@ $ ./upload azblob://go-cloud-bucket gopher.png
 
 If we check the buckets, we should see our gopher in each of them! We're done!
 
-[s3-bucket]: https://docs.aws.amazon.com/AmazonS3/latest/gsg/CreatingABucket.html
+[s3-bucket]: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/s3-example-basic-bucket-operations.html#s3-examples-bucket-ops-create-bucket
 [gcs-bucket]: https://cloud.google.com/storage/docs/creating-buckets
 [azure-container]: https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction
 
