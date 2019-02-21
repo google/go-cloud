@@ -34,7 +34,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Options contains settings for RunConformanceTests.
+// Options control which conformance tests are run.
 type Options struct {
 	SkipTestsOfNonExistentThings bool
 }
