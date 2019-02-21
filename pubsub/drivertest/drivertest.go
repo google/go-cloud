@@ -236,8 +236,13 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 
-	want := publishN(ctx, t, top, 3)
-	got := receiveN(ctx, t, sub, len(want))
+	wantChan := make(chan []*pubsub.Message)
+	gotChan := make(chan []*pubsub.Message)
+	n := 3
+	go func() { gotChan <- receiveN(ctx, t, sub, n) }()
+	go func() { wantChan <- publishN(ctx, t, top, n) }()
+	want := <-wantChan
+	got := <-gotChan
 
 	// Check that the received messages match the sent ones.
 	if diff := diffMessageSets(got, want); diff != "" {
@@ -275,9 +280,20 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		defer s.Shutdown(ctx)
 		ss = append(ss, s)
 	}
-	want := publishN(ctx, t, top, 3)
-	for i, s := range ss {
-		got := receiveN(ctx, t, s, len(want))
+
+	// Publish and subscribe concurrently.
+	wantChan := make(chan []*pubsub.Message)
+	gotChan := make(chan []*pubsub.Message)
+	n := 3
+	for _, s := range ss {
+		go func(s *pubsub.Subscription) { gotChan <- receiveN(ctx, t, s, n) }(s)
+	}
+	go func() { wantChan <- publishN(ctx, t, top, n) }()
+
+	// Check the results.
+	want := <-wantChan
+	for i := range ss {
+		got := <-gotChan
 		if diff := diffMessageSets(got, want); diff != "" {
 			t.Errorf("sub #%d: %s", i, diff)
 		}
@@ -409,21 +425,28 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 		Body:     []byte("hello world"),
 		Metadata: weirdMetadata,
 	}
-	if err := top.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
 
-	m, err = sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Send and receive concurrently.
+	mChan := make(chan *pubsub.Message)
+	var eg errgroup.Group
+	eg.Go(func() error { return top.Send(ctx, m) })
+	eg.Go(func() error {
+		m, err = sub.Receive(ctx)
+		mChan <- m
+		return err
+	})
+	m = <-mChan
 	m.Ack()
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 
+	// Check that the weird metadata was received unaltered.
 	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
 		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
 	}
 
-	// Verify that non-UTF8 strings in metadata key or value fail.
+	// Verify that failure occurs for non-UTF8 strings in metadata key or value.
 	m = &pubsub.Message{
 		Body:     []byte("hello world"),
 		Metadata: map[string]string{escape.NonUTF8String: "bar"},
@@ -440,6 +463,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	// Set up.
 	ctx := context.Background()
+
 	h, err := newHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
@@ -453,7 +477,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Sort the WeirdStrings map for record/replay consistency.
-	var weirdStrings [][]string  // [0] = key, [1] = value
+	var weirdStrings [][]string // [0] = key, [1] = value
 	for k, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, []string{k, v})
 	}
@@ -465,16 +489,22 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 		body = append(body, []byte(v[1])...)
 	}
 	body = append(body, []byte(escape.NonUTF8String)...)
-	m := &pubsub.Message{Body: body}
 
-	if err := top.Send(ctx, m); err != nil {
-		t.Fatal(err)
-	}
-	m, err = sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	mChan := make(chan *pubsub.Message)
+	var eg errgroup.Group
+	eg.Go(func() error {
+		return top.Send(ctx, &pubsub.Message{Body: body})
+	})
+	eg.Go(func() error {
+		m, err := sub.Receive(ctx)
+		mChan <- m
+		return err
+	})
+	m := <-mChan
 	m.Ack()
+	if err := eg.Wait(); err != nil {
+		t.Fatal(err)
+	}
 
 	if diff := cmp.Diff(m.Body, body); diff != "" {
 		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Body, body, diff)
@@ -534,13 +564,21 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+	mChan := make(chan *pubsub.Message)
+	var eg errgroup.Group
+	eg.Go(func() error {
+		return top.Send(ctx, &pubsub.Message{Body: []byte("x")})
+	})
+	eg.Go(func() error {
+		m, err := sub.Receive(ctx)
+		mChan <- m
+		return err
+	})
+	m := <-mChan
+	if err := eg.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	m, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	if err := st.MessageCheck(m); err != nil {
 		t.Error(err)
 	}
