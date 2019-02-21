@@ -39,7 +39,7 @@ type Options struct {
 	SkipTestsOfNonExistentThings bool
 }
 
-// Harness descibes the functionality test harnesses must provide to run
+// Harness describes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
