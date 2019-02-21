@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"testing"
@@ -453,7 +454,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Sort the WeirdStrings map for record/replay consistency.
-	var weirdStrings [][]string  // [0] = key, [1] = value
+	var weirdStrings [][]string // [0] = key, [1] = value
 	for k, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, []string{k, v})
 	}
@@ -583,27 +584,37 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
 	}
 	b.ResetTimer()
+	b.StopTimer()
 	for i := 0; i < b.N; i++ {
-		if !timeSend {
-			b.StopTimer()
-		}
-		if err := publishNConcurrently(topic, nMessages, concurrencySend, attrs, body); err != nil {
-			b.Fatalf("publishing: %v", err)
-		}
-		b.Logf("published %d messages", nMessages)
-		if timeSend {
-			b.StopTimer()
-		} else {
-			b.StartTimer()
-		}
-		if err := receiveNConcurrently(sub, nMessages, concurrencyReceive); err != nil {
-			b.Fatalf("receiving: %v", err)
+		var eg errgroup.Group
+		eg.Go(func() error {
+			if !timeSend {
+				b.StartTimer()
+				defer b.StopTimer()
+			}
+			b.Logf("publishing %d messages", nMessages)
+			if err := publishNConcurrently(topic, nMessages, concurrencySend, attrs, body); err != nil {
+				return fmt.Errorf("publishing: %v", err)
+			}
+			return nil
+
+		})
+		eg.Go(func() error {
+			if timeSend {
+				b.StartTimer()
+				defer b.StopTimer()
+			}
+			b.Logf("receiving %d messages", nMessages)
+			if err := receiveNConcurrently(sub, nMessages, concurrencyReceive); err != nil {
+				return fmt.Errorf("receiving: %v", err)
+			}
+			return nil
+		})
+		if err := eg.Wait(); err != nil {
+			b.Fatal(err)
 		}
 		b.SetBytes(nMessages * 1e6)
 		b.Log("MB/s is actually number of messages received per second")
-		if timeSend {
-			b.StartTimer()
-		}
 	}
 }
 
