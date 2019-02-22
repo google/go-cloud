@@ -4,27 +4,29 @@ import (
 	"context"
 
 	"github.com/nats-io/go-nats"
-	"gocloud.dev/pubsublite/driver"
+	"gocloud.dev/pubsublite"
 )
 
-type Conn struct {
+// Implements driver.Pubsubber.
+type NATSConn struct {
 	c *nats.Conn
 }
 
-func Connect(url string) (*Conn, error) {
+func Connect(url string) (*pubsublite.Conn, error) {
 	c, err := nats.Connect(url)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &Conn{c}, nil
+	nc := &NATSConn{c}
+	return pubsublite.NewConn(nc), nil
 }
 
-func (c *Conn) Publish(ctx context.Context, topic string, msg []byte) error {
+func (c *NATSConn) Publish(ctx context.Context, topic string, msg []byte) error {
 	return c.c.Publish(topic, msg)
 }
 
-func (c *Conn) Subscribe(ctx context.Context, topic string, callback func(msg []byte)) error {
-	sub, err := c.c.Subscribe(topic, func(m *nats.Message) {
+func (c *NATSConn) Subscribe(ctx context.Context, topic string, callback func(msg []byte)) error {
+	sub, err := c.c.Subscribe(topic, func(m *nats.Msg) {
 		callback(m.Data)
 	})
 	if err != nil {
@@ -34,9 +36,9 @@ func (c *Conn) Subscribe(ctx context.Context, topic string, callback func(msg []
 	if err := sub.Drain(); err != nil {
 		return err
 	}
-	return ctx.Error()
+	return ctx.Err()
 }
 
-func (c *Conn) Close() {
+func (c *NATSConn) Close() {
 	c.c.Close()
 }
