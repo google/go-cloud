@@ -13,8 +13,9 @@
 // limitations under the License.
 
 // Package natspubsub provides a pubsub implementation for NATS.io.
-// Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
-// to construct a *pubsub.Subscription.
+// Use CreateTopic to construct a *pubsub.Topic, and/or CreateSubscription
+// to construct a *pubsub.Subscription. This package uses msgPack and the
+// ugorji driver to encode and decode driver.Message to []byte.
 //
 // As
 //
@@ -37,7 +38,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 )
 
-var errNotExist = errors.New("natspubsub: topic does not exist")
+var errNotInitialized = errors.New("natspubsub: topic not initialized")
 
 type topic struct {
 	nc   *nats.Conn
@@ -45,14 +46,19 @@ type topic struct {
 }
 
 // For encoding we use msgpack from github.com/ugorji/go.
-// it was already imported in go-cloud and is reasonably performant.
+// It was already imported in go-cloud and is reasonably performant.
+// However the more recent version has better resource handling with
+// the addition of the following:
+// 	mh.ExplicitRelease = true
+// 	defer enc.Release()
+// However this is not compatible with etcd at the moment.
+// https://github.com/etcd-io/etcd/pull/10337
 var mh codec.MsgpackHandle
 
 func init() {
 	// driver.Message.Metadata type
 	dm := driver.Message{}
 	mh.MapType = reflect.TypeOf(dm.Metadata)
-	mh.ExplicitRelease = true
 }
 
 // We define our own version of message here for encoding that
@@ -63,22 +69,22 @@ type encMsg struct {
 	Metadata map[string]string `codec:",omitempty"`
 }
 
-// OpenTopic returns a *pubsub.Topic for use with NATS.
+// CreateTopic returns a *pubsub.Topic for use with NATS.
 // We delay checking for the proper syntax here.
-func OpenTopic(nc *nats.Conn, topicName string) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(nc, topicName))
+func CreateTopic(nc *nats.Conn, topicName string) *pubsub.Topic {
+	return pubsub.NewTopic(createTopic(nc, topicName))
 }
 
-// openTopic returns the driver for OpenTopic. This function exists so the test
+// createTopic returns the driver for CreateTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(nc *nats.Conn, topicName string) driver.Topic {
+func createTopic(nc *nats.Conn, topicName string) driver.Topic {
 	return &topic{nc, topicName}
 }
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 	if t == nil || t.nc == nil {
-		return errNotExist
+		return errNotInitialized
 	}
 
 	// Reuse if possible.
@@ -86,7 +92,6 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 	var raw [1024]byte
 	b := raw[:0]
 	enc := codec.NewEncoderBytes(&b, &mh)
-	defer enc.Release()
 
 	for _, m := range msgs {
 		if err := ctx.Err(); err != nil {
@@ -103,7 +108,7 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 	}
 	// Per specification this is supposed to only return after
 	// a message has been sent. Normally NATS is very efficient
-	// at sending messages in batches on its on and also handles
+	// at sending messages in batches on its own and also handles
 	// disconnected buffering during a reconnect event. We will
 	// let NATS handle this for now. If needed we could add a
 	// FlushWithContext() call which ensures the connected server
@@ -130,7 +135,19 @@ func (*topic) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Topic.ErrorCode
-func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	switch err {
+	case nil:
+		return gcerrors.OK
+	case errNotInitialized, nats.ErrBadSubject:
+		return gcerrors.FailedPrecondition
+	case nats.ErrAuthorization:
+		return gcerrors.PermissionDenied
+	case nats.ErrMaxPayload, nats.ErrReconnectBufExceeded:
+		return gcerrors.ResourceExhausted
+	}
+	return gcerrors.Unknown
+}
 
 type subscription struct {
 	nc   *nats.Conn
@@ -138,13 +155,13 @@ type subscription struct {
 	oerr error
 }
 
-// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
+// CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
 // TODO(dlc) - Options for queue groups?
-func OpenSubscription(nc *nats.Conn, subscriptionName string) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(nc, subscriptionName), nil)
+func CreateSubscription(nc *nats.Conn, subscriptionName string) *pubsub.Subscription {
+	return pubsub.NewSubscription(createSubscription(nc, subscriptionName), nil)
 }
 
-func openSubscription(nc *nats.Conn, subscriptionName string) driver.Subscription {
+func createSubscription(nc *nats.Conn, subscriptionName string) driver.Subscription {
 	sub, err := nc.SubscribeSync(subscriptionName)
 	return &subscription{nc, sub, err}
 }
@@ -215,8 +232,6 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 	var dm driver.Message
 	// Everything is in the msg.Data
 	dec := codec.NewDecoderBytes(msg.Data, &mh)
-	defer dec.Release()
-
 	dec.Decode(&dm)
 	dm.AckID = -1 // Not applicable to NATS
 	dm.AsFunc = messageAsFunc(msg)
@@ -260,4 +275,18 @@ func (*subscription) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode
-func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	switch err {
+	case nil:
+		return gcerrors.OK
+	case errNotInitialized, nats.ErrBadSubject, nats.ErrBadSubscription, nats.ErrTypeSubscription:
+		return gcerrors.FailedPrecondition
+	case nats.ErrAuthorization:
+		return gcerrors.PermissionDenied
+	case nats.ErrMaxMessages, nats.ErrSlowConsumer:
+		return gcerrors.ResourceExhausted
+	case nats.ErrTimeout:
+		return gcerrors.DeadlineExceeded
+	}
+	return gcerrors.Unknown
+}

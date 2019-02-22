@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2018-2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,7 +40,10 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0 // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/etcd v3.3.11+incompatible // indirect
+<<<<<<< d0fbe46ca3e703373864b571514bc51cb0da52c5
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
+=======
+>>>>>>> Address comments, remove newer version of ugorji (etcd issue)
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dancannon/gorethink v4.0.0+incompatible // indirect
@@ -121,10 +124,9 @@ require (
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	github.com/ugorji/go v1.1.2
-	github.com/ugorji/go/codec v0.0.0-20190204201341-e444a5086c43
+	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
-	go.etcd.io/etcd v3.3.12+incompatible
+	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
 	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e

@@ -51,7 +51,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	cleanup = func() {}
-	dt = openTopic(h.nc, testName)
+	dt = createTopic(h.nc, testName)
 	return dt, cleanup, nil
 }
 
@@ -61,7 +61,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	ds = openSubscription(h.nc, testName)
+	ds = createSubscription(h.nc, testName)
 	// FIXME(dlc) - Check for error?
 	cleanup = func() {
 		var sub *nats.Subscription
@@ -77,15 +77,8 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 }
 
 func (h *harness) Close() {
-	if h == nil {
-		return
-	}
-	if h.nc != nil {
-		h.nc.Close()
-	}
-	if h.s != nil {
-		h.s.Shutdown()
-	}
+	h.nc.Close()
+	h.s.Shutdown()
 }
 
 type natsAsTest struct{}
