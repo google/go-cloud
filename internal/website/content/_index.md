@@ -54,7 +54,7 @@ examples of how to use it:
 * Variables that change at runtime ([runtimevar]({{< ref "runtimevar.md" >}}))
 * HTTP server with request logging, tracing and health checking
   ([server]({{< ref "server.md" >}}))
-
+* Secret management, encryption and decryption ([secrets]({{< ref "secrets.md" >}}))
 
 ## Project status
 
