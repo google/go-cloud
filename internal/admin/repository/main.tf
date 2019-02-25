@@ -166,6 +166,6 @@ resource "github_issue_label" "P1" {
 
 resource "github_issue_label" "P2" {
   repository  = "${github_repository.repo.name}"
-  name        = "P1"
+  name        = "P2"
   color       = "cc9900"
 }

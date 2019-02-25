@@ -116,7 +116,7 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests)
+	drivertest.RunConformanceTests(t, newHarness, asTests, nil)
 }
 
 func BenchmarkGcpPubSub(b *testing.B) {
