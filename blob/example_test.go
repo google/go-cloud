@@ -288,8 +288,7 @@ func ExampleBucket_As() {
 		log.Fatal(err)
 	}
 
-	// Bucket exposes the internal storage.Client type through the As method. Use
-	// it to access a non-portable method of storage.Client.
+	// Access storage.Client fields via gcsClient here.
 	var gcsClient *storage.Client
 	if b.As(&gcsClient) {
 		email, err := gcsClient.ServiceAccount(ctx, "project-name")
@@ -298,7 +297,7 @@ func ExampleBucket_As() {
 		}
 		_ = email
 	} else {
-		log.Fatal("Unable to access storage.Client through Bucket.As")
+		log.Println("Unable to access storage.Client through Bucket.As")
 	}
 }
 
