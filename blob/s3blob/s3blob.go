@@ -133,7 +133,9 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	if overrideCfg != nil {
+		configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	}
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
 

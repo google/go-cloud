@@ -233,6 +233,11 @@ func TestURLOpenerForParams(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name:    "No overrides",
+			query:   url.Values{},
+			wantCfg: nil,
+		},
+		{
 			name:    "Invalid query parameter",
 			query:   url.Values{"foo": {"bar"}},
 			wantErr: true,
