@@ -1,5 +1,6 @@
 ---
 title: "Go CDK"
+pkgmeta: true
 ---
 
 # The Go Cloud Development Kit
