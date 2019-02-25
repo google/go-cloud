@@ -138,13 +138,6 @@ resource "github_issue_label" "process" {
   description = "Improvement to the engineering process"
 }
 
-resource "github_issue_label" "cleanup" {
-  repository  = "${github_repository.repo.name}"
-  name        = "process"
-  color       = "a277ef"
-  description = "Maintenance or refactoring of the project"
-}
-
 resource "github_issue_label" "in_progress" {
   repository  = "${github_repository.repo.name}"
   name        = "in progress"
