@@ -61,6 +61,7 @@ import (
 	"strings"
 	"sync"
 
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -125,11 +126,15 @@ const Scheme = "s3"
 
 // OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	opts, err := o.forParams(ctx, u.Query())
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
+	overrideCfg, err := o.forParams(ctx, u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	return OpenBucket(ctx, o.ConfigProvider, u.Host, opts)
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
 
 var legalQueryParam = map[string]bool{
@@ -139,7 +144,7 @@ var legalQueryParam = map[string]bool{
 	"s3ForcePathStyle": true,
 }
 
-func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*aws.Config, error) {
 	for k := range q {
 		if !legalQueryParam[k] {
 			return nil, fmt.Errorf("unknown S3 query parameter %s", k)
@@ -164,12 +169,9 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, erro
 		override = true
 	}
 	if !override {
-		return &o.Options, nil
+		return nil, nil
 	}
-	opts := new(Options)
-	*opts = o.Options
-	opts.Cfgs = append(opts.Cfgs, &cfg)
-	return opts, nil
+	return &cfg, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.

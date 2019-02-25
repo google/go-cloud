@@ -227,11 +227,10 @@ func TestURLOpenerForParams(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name     string
-		query    url.Values
-		prev     Options
-		wantOpts Options
-		wantErr  bool
+		name    string
+		query   url.Values
+		wantCfg *aws.Config
+		wantErr bool
 	}{
 		{
 			name:    "Invalid query parameter",
@@ -239,52 +238,40 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:     "Previous options are carried over",
-			query:    url.Values{},
-			prev:     Options{Cfgs: []*aws.Config{{Region: aws.String("foo")}}},
-			wantOpts: Options{Cfgs: []*aws.Config{{Region: aws.String("foo")}}},
+			name:    "Region",
+			query:   url.Values{"region": {"my_region"}},
+			wantCfg: &aws.Config{Region: aws.String("my_region")},
 		},
 		{
-			name:     "Region",
-			query:    url.Values{"region": {"my_region"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{Region: aws.String("my_region")}}},
+			name:    "Endpoint",
+			query:   url.Values{"endpoint": {"foo"}},
+			wantCfg: &aws.Config{Endpoint: aws.String("foo")},
 		},
 		{
-			name:     "Region override",
-			query:    url.Values{"region": {"foo"}},
-			prev:     Options{Cfgs: []*aws.Config{{Region: aws.String("my_region")}}},
-			wantOpts: Options{Cfgs: []*aws.Config{{Region: aws.String("my_region")}, {Region: aws.String("foo")}}},
+			name:    "DisableSSL true",
+			query:   url.Values{"disableSSL": {"true"}},
+			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
 		},
 		{
-			name:     "Endpoint",
-			query:    url.Values{"endpoint": {"foo"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{Endpoint: aws.String("foo")}}},
+			name:    "DisableSSL false",
+			query:   url.Values{"disableSSL": {"not-true"}},
+			wantCfg: &aws.Config{DisableSSL: aws.Bool(false)},
 		},
 		{
-			name:     "DisableSSL true",
-			query:    url.Values{"disableSSL": {"true"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{DisableSSL: aws.Bool(true)}}},
+			name:    "S3ForcePathStyle true",
+			query:   url.Values{"s3ForcePathStyle": {"true"}},
+			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(true)},
 		},
 		{
-			name:     "DisableSSL false",
-			query:    url.Values{"disableSSL": {"not-true"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{DisableSSL: aws.Bool(false)}}},
-		},
-		{
-			name:     "S3ForcePathStyle true",
-			query:    url.Values{"s3ForcePathStyle": {"true"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{S3ForcePathStyle: aws.Bool(true)}}},
-		},
-		{
-			name:     "S3ForcePathStyle false",
-			query:    url.Values{"s3ForcePathStyle": {"not-true"}},
-			wantOpts: Options{Cfgs: []*aws.Config{{S3ForcePathStyle: aws.Bool(false)}}},
+			name:    "S3ForcePathStyle false",
+			query:   url.Values{"s3ForcePathStyle": {"not-true"}},
+			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(false)},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			u := &URLOpener{Options: test.prev}
+			u := &URLOpener{}
 			got, err := u.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
@@ -292,7 +279,7 @@ func TestURLOpenerForParams(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if diff := cmp.Diff(got, &test.wantOpts); diff != "" {
+			if diff := cmp.Diff(got, test.wantCfg); diff != "" {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
 			}
 		})
