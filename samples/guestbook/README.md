@@ -12,14 +12,16 @@ You will need to install the following software to run this sample:
 
 -   [Go](https://golang.org/doc/install)
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
--   [Docker](https://docs.docker.com/install/)
+-   [Docker Desktop](https://docs.docker.com/install/)
 
-To run the sample on a Cloud provider (GCP or AWS), you will also need:
+To run the sample on a Cloud provider (GCP, AWS, or Azure), you will also need:
 
 -   [Terraform][TF]
 -   [gcloud CLI](https://cloud.google.com/sdk/downloads), if you want to use GCP
 -   [aws CLI](https://docs.aws.amazon.com/cli/latest/userguide/installing.html),
     if you want to use AWS
+-   [az CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest),
+    if you want to use Azure
 
 ## Building
 
@@ -168,7 +170,8 @@ localhost$ terraform output database_root_password
 # SSH into the EC2 instance.
 localhost$ ssh "admin@$( terraform output instance_host )"
 
-# Fill in each command-line argument with the values from above.
+# Fill in each command-line argument with the values from the
+# Terraform output above.
 server$ AWS_REGION=<your region> ./guestbook -env=aws -bucket=<your bucket> -db_host=<your database_host> -db_user=root -db_password=<your database_root_password> -motd_var=/guestbook/motd
 ```
 
@@ -184,6 +187,81 @@ directory using the same variables you entered during `terraform apply`.
 [AWS Config Help]: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html
 [AWS T&C]: https://aws.amazon.com/marketplace/pp?sku=55q52qvgjfpdj2fpfy9mb1lo4
 [GitHub SSH]: https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/
+
+## Running on Azure
+
+If you want to run this sample on Azure, you first need to set up an Azure
+account. Use the `az` CLI to log in.
+
+```shell
+az login
+```
+
+The Go CDK doesn't have support for SQL on Azure yet
+(https://github.com/google/go-cloud/issues/1305), so we'll run MySQL and the
+guestbook binary locally. Guestbook will get the Gopher logo and MOTD from Azure
+storage.
+
+### Provision resources with Terraform
+
+We'll use Terraform, a tool for initializing cloud resources, to set up your
+project.
+
+```shell
+# Enter the Azure directory from samples/guestbook.
+cd azure
+terraform init
+
+# Provisioning can take up to 10 minutes.
+# Keep track of the output of this command as it is needed later.
+terraform apply -var location="West US"
+
+<snip>
+Outputs:
+
+access_key = [redacted]
+storage_account = [redacated]
+storage_container = [redacted]
+```
+
+### Running
+
+You will need to run a local MySQL database server, similar to what we did for
+running locally earlier. Open a new terminal window, and run:
+
+```shell
+cd .. # back up to samples/guestbook
+go get ./localdb/... # Get package dependencies.
+go run localdb/main.go
+```
+
+In the original terminal, add your Azure credentials to the environment and run
+the `guestbook` application:
+
+```shell
+# You should be in the "samples/guestbook/azure" directory.
+
+# Enter the storage_account from the Terraform output earlier.
+export AZURE_STORAGE_ACCOUNT=<your storage_account>
+# Enter the access_key from the Terraform output earlier.
+export AZURE_STORAGE_KEY=<your access_key>
+
+# Run the binary.
+# Fill in the -bucket command-line argument with the value from the Terraform
+# output.
+#
+./guestbook -env=azure -bucket=<your storage_container> -motd_var=motd
+```
+
+Your server is now running on http://localhost:8080/.
+
+You can stop the MySQL database server with Ctrl-\\. MySQL ignores Ctrl-C
+(SIGINT).
+
+### Cleanup
+
+To clean up the created resources, run `terraform destroy` inside the `azure`
+directory using the same variables you entered during `terraform apply`.
 
 ## Gophers
 
