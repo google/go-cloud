@@ -293,15 +293,36 @@ func TestURLOpenerForParams(t *testing.T) {
 
 	tests := []struct {
 		name     string
+		currOpts Options
 		query    url.Values
 		wantOpts Options
 		wantErr  bool
 	}{
 		{
+			name: "InvalidParam",
+			query: url.Values{
+				"foo": {"bar"},
+			},
+			wantErr: true,
+		},
+		{
 			name: "AccessID",
 			query: url.Values{
 				"access_id": {"bar"},
 			},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID override",
+			currOpts: Options{GoogleAccessID: "foo"},
+			query: url.Values{
+				"access_id": {"bar"},
+			},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID not overridden",
+			currOpts: Options{GoogleAccessID: "bar"},
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
 		{
@@ -322,7 +343,8 @@ func TestURLOpenerForParams(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := new(URLOpener).forParams(ctx, test.query)
+			o := &URLOpener{Options: test.currOpts}
+			got, err := o.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}

@@ -63,14 +63,3 @@ module "wire_repo" {
     "initialization",
   ]
 }
-
-module "go_cloud_proxy" {
-  source        = "./proxybucket"
-  name          = "go-cloud-modules"
-  storage_class = "STANDARD"  # Artifact of manual creation.
-}
-
-module "wire_proxy" {
-  source = "./proxybucket"
-  name   = "wire-modules"
-}
