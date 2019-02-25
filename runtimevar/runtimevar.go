@@ -84,8 +84,8 @@ type Snapshot struct {
 // provider-specific, and using them will make that part of your application
 // non-portable, so use with care.
 //
-// See the documentation for the subpackage used to instantiate Snapshot to see
-// which type(s) are supported.
+// See the documentation for the subpackage you used to instantiate Variable to
+// see which type(s) are supported.
 //
 // Usage:
 //
