@@ -12,7 +12,7 @@ You will need to install the following software to run this sample:
 
 -   [Go](https://golang.org/doc/install)
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
--   [Docker](https://docs.docker.com/install/)
+-   [Docker Desktop](https://docs.docker.com/install/)
 
 To run the sample on a Cloud provider (GCP, AWS, or Azure), you will also need:
 
@@ -227,25 +227,29 @@ storage_container = [redacted]
 ### Running
 
 You will need to run a local MySQL database server, similar to what we did for
-running locally earlier.
+running locally earlier. Open a new terminal window, and run:
 
 ```shell
+cd .. # back up to samples/guestbook
 go get ./localdb/... # Get package dependencies.
 go run localdb/main.go
 ```
 
-In another terminal, add your Azure credentials to the environment and run the
-`guestbook` application:
+In the original terminal, add your Azure credentials to the environment and run
+the `guestbook` application:
 
 ```shell
+# You should be in the "samples/guestbook/azure" directory.
+
 # Enter the storage_account from the Terraform output earlier.
-AZURE_STORAGE_ACCOUNT=<your storage_account>
+export AZURE_STORAGE_ACCOUNT=<your storage_account>
 # Enter the access_key from the Terraform output earlier.
-AZURE_STORAGE_KEY=<your access_key>
+export AZURE_STORAGE_KEY=<your access_key>
 
 # Run the binary.
 # Fill in the -bucket command-line argument with the value from the Terraform
 # output.
+#
 ./guestbook -env=azure -bucket=<your storage_container> -motd_var=motd
 ```
 
