@@ -24,7 +24,7 @@ When we're done, our command line application will work like this:
 $ ./upload gs://go-cloud-bucket gopher.png
 
 # uploads gopher.png to S3
-$ ./upload s3://go-cloud-bucket gopher.png
+$ AWS_REGION=us-west-1 ./upload s3://go-cloud-bucket gopher.png
 
 # uploads gopher.png to Azure
 $ ./upload azblob://go-cloud-bucket gopher.png
@@ -191,7 +191,8 @@ providers.
     alternatives.
 *   For AWS, you will need an access key ID and a secret access key. See
     [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html#Using_CreateAccessKey)
-    for details.
+    for details. You then need to set the `AWS_REGION` environment variable to
+    the region your bucket is in.
 *   For Azure, you will need to add your storage account name and key as
     environment variables (`AZURE_STORAGE_ACCOUNT_NAME` and
     `AZURE_STORAGE_ACCOUNT_KEY`, respectively). See
@@ -214,6 +215,7 @@ $ ./upload gs://go-cloud-bucket gopher.png
 Then, we send that same gopher to S3:
 
 ```shell
+$ export AWS_REGION=us-west-1
 $ ./upload s3://go-cloud-bucket gopher.png
 ```
 
