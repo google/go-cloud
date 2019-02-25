@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command upload saves files to blob storage on GCP, AWS, and Azure.
+// Command blobdownload downloads a blob from a supported provider and writes it to
+// a local file.
 package main
 
 import (
@@ -31,34 +32,26 @@ import (
 
 func main() {
 	// Define our input.
-	if len(os.Args) != 3 {
-		log.Fatal("usage: upload BUCKET_URL FILE")
+	if len(os.Args) != 4 {
+		log.Fatal("usage: blobdownload <bucket_url> <blob key> <local file to write to>")
 	}
 	bucketURL := os.Args[1]
-	file := os.Args[2]
+	blobKey := os.Args[2]
+	file := os.Args[3]
 
 	ctx := context.Background()
 	// Open a connection to the bucket.
 	b, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
-		log.Fatalf("Failed to setup bucket: %s", err)
+		log.Fatalf("Failed to open bucket: %s", err)
 	}
 
-	// Prepare the file for upload.
-	data, err := ioutil.ReadFile(file)
+	data, err := b.ReadAll(ctx, blobKey)
 	if err != nil {
-		log.Fatalf("Failed to read file: %s", err)
+		log.Fatalf("Failed to read %q: %v", blobKey, err)
 	}
 
-	w, err := b.NewWriter(ctx, file, nil)
-	if err != nil {
-		log.Fatalf("Failed to obtain writer: %s", err)
-	}
-	_, err = w.Write(data)
-	if err != nil {
-		log.Fatalf("Failed to write to bucket: %s", err)
-	}
-	if err = w.Close(); err != nil {
-		log.Fatalf("Failed to close: %s", err)
+	if err := ioutil.WriteFile(file, data, os.ModePerm); err != nil {
+		log.Fatalf("Failed to write file: %v", err)
 	}
 }
