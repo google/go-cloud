@@ -306,17 +306,11 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:     "Previous options are carried over",
-			query:    url.Values{},
-			prev:     Options{GoogleAccessID: "bar"},
-			wantOpts: Options{GoogleAccessID: "bar"},
-		},
-		{
 			name: "AccessID",
 			query: url.Values{
 				"access_id": {"bar"},
 			},
-			wantErr: true,
+			wantOpts: Options{GoogleAccessID: "bar"},
 		},
 		{
 			name:     "AccessID override",
@@ -339,8 +333,10 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:     "PrivateKeyPath",
-			query:    url.Values{"private_key_path": {pkFile.Name()}},
+			name: "PrivateKeyPath",
+			query: url.Values{
+				"private_key_path": {pkFile.Name()},
+			},
 			wantOpts: Options{PrivateKey: privateKey},
 		},
 	}
