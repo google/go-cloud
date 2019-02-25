@@ -61,7 +61,7 @@ const (
 	// message body is base64 encoded.
 	base64EncodedKey   = "base64encoded"
 	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
-	// at once.
+	// at once, per Topic.
 	maxPublishConcurrency = 10
 )
 
