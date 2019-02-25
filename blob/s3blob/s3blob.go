@@ -177,27 +177,19 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*aws.Config, e
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct {
-	// Cfgs holds configuration overrides for the S3 client. For example, you
-	// may want to use the same *session.Session for buckets across multiple
-	// regions; you can override the aws.Config.Region here.
-	Cfgs []*aws.Config
-}
+type Options struct {}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*bucket, error) {
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
 	if sess == nil {
 		return nil, errors.New("s3blob.OpenBucket: sess is required")
 	}
 	if bucketName == "" {
 		return nil, errors.New("s3blob.OpenBucket: bucketName is required")
 	}
-	if opts == nil {
-		opts = &Options{}
-	}
 	return &bucket{
 		name:   bucketName,
-		client: s3.New(sess, opts.Cfgs...),
+		client: s3.New(sess),
 	}, nil
 }
 
