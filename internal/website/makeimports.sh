@@ -25,22 +25,9 @@
 # except x is too verbose
 set -euo pipefail
 
-INDIR=internal/imports
-OUTDIR=makeimports-output
-
-TEMPLATE=$INDIR/makeimports.template.html
-
-if [ ! -f "$TEMPLATE" ]; then
-  echo "Template not found: $TEMPLATE"
-  echo "This script must be run from the repo root."
-  exit 1
-fi
-
-
-if [ -e $OUTDIR ]; then
-  echo "The $OUTDIR directory exists. Move or remove it, then re-run."
-  exit 1
-fi
+# Change into repository root.
+cd "$(dirname "$0")/../.."
+OUTDIR=internal/website/content
 
 shopt -s nullglob  # glob patterns that don't match turn into the empty string, instead of themselves
 
@@ -48,21 +35,18 @@ function files_exist() {  # assumes nullglob
   [[ ${1:-""} != "" ]]
 }
 
-
-echo "Generating gocloud.dev"
-mkdir -p "$OUTDIR"
-
-# Copy top-level index.html.
-cp $INDIR/index.html $OUTDIR
-
 # Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
 # directive to remove the initial './'.
 for pkg in $(find . -type d \( -name '.?*' -prune -o -name testdata -prune -o -printf '%P ' \)); do
   # Only consider directories that contain Go source files.
-  if files_exist $pkg/*.go; then
+  outfile="$OUTDIR/$pkg/_index.md"
+  if files_exist $pkg/*.go && [[ ! -e "$outfile" ]]; then
     mkdir -p "$OUTDIR/$pkg"
     echo "Generating gocloud.dev/$pkg"
-    cat "$TEMPLATE" | sed -e "s|{{path}}|/$pkg|" > "$OUTDIR/$pkg/index.html"
+    echo "---" >> "$outfile"
+    echo "title: gocloud.dev/$pkg" >> "$outfile"
+    echo "type: pkg" >> "$outfile"
+    echo "---" >> "$outfile"
   fi
 done
 
