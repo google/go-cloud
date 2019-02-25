@@ -19,9 +19,6 @@ install:
   - "git config --global core.autocrlf input"
   - "git checkout -- ."
   - "go install github.com/google/wire/cmd/wire"
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      go install github.com/mattn/goveralls;
-    fi
 
 script:
   - 'internal/testing/runchecks.sh'
