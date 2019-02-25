@@ -295,7 +295,6 @@ func TestURLOpenerForParams(t *testing.T) {
 		name     string
 		currOpts Options
 		query    url.Values
-		prev     Options
 		wantOpts Options
 		wantErr  bool
 	}{
@@ -307,17 +306,17 @@ func TestURLOpenerForParams(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "AccessID",
-			query: url.Values{
-				"foo": {"bar"},
-			},
-			wantErr: true,
-		},
-		{
 			name:     "Previous options are carried over",
 			query:    url.Values{},
 			prev:     Options{GoogleAccessID: "bar"},
 			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name: "AccessID",
+			query: url.Values{
+				"access_id": {"bar"},
+			},
+			wantErr: true,
 		},
 		{
 			name:     "AccessID override",
