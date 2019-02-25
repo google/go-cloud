@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"cloud.google.com/go/storage"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 )
@@ -273,50 +274,32 @@ func ExampleBucket_List_withDelimiter() {
 	// dir2/
 	//   dir2/c.txt
 }
-func ExampleBucket_As() {
-	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
-	dir, cleanup := newTempDir()
-	defer cleanup()
 
-	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir, nil)
+func ExampleBucket_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Client type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	// This URL will open the bucket "my-bucket" using default credentials.
+	ctx := context.Background()
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
 	if err != nil {
 		log.Fatal(err)
 	}
-	// This example uses As to try to fill in a string variable. As will return
-	// false because fileblob doesn't support any types for Bucket.As.
-	// See the package documentation for your provider (e.g., gcsblob or s3blob)
-	// to see what type(s) it supports.
-	var providerSpecific string
-	if bucket.As(&providerSpecific) {
-		fmt.Println("fileblob supports the `string` type for Bucket.As")
-		// Use providerSpecific.
-	} else {
-		fmt.Println("fileblob does not support the `string` type for Bucket.As")
-	}
 
-	// This example sets WriterOptions.BeforeWrite to be called before the
-	// provider starts writing. In the callback, it uses asFunc to try to fill in
-	// a *string. Again, asFunc will return false because fileblob doesn't support
-	// any types for Writer.
-	fn := func(asFunc func(i interface{}) bool) error {
-		var mutableProviderSpecific *string
-		if asFunc(&mutableProviderSpecific) {
-			fmt.Println("fileblob supports the `*string` type for WriterOptions.BeforeWrite")
-			// Use mutableProviderSpecific.
-		} else {
-			fmt.Println("fileblob does not support the `*string` type for WriterOptions.BeforeWrite")
+	// Bucket exposes the internal storage.Client type through the As method. Use
+	// it to access a non-portable method of storage.Client.
+	var gcsClient *storage.Client
+	if b.As(&gcsClient) {
+		email, err := gcsClient.ServiceAccount(ctx, "project-name")
+		if err != nil {
+			log.Fatal(err)
 		}
-		return nil
+		_ = email
+	} else {
+		log.Fatal("Unable to access storage.Client through Bucket.As")
 	}
-	ctx := context.Background()
-	if err := bucket.WriteAll(ctx, "foo.txt", []byte("Go Cloud Development Kit"), &blob.WriterOptions{BeforeWrite: fn}); err != nil {
-		log.Fatal(err)
-	}
-	// Output:
-	// fileblob does not support the `string` type for Bucket.As
-	// fileblob does not support the `*string` type for WriterOptions.BeforeWrite
 }
 
 func ExampleOpenBucket() {

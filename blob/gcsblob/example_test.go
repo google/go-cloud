@@ -18,7 +18,6 @@ import (
 	"context"
 	"log"
 
-	"cloud.google.com/go/storage"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
@@ -64,28 +63,4 @@ func Example_open() {
 	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
 	_ = b
 	_ = err
-}
-
-func Example_As() {
-	ctx := context.Background()
-
-	// Open creates a *blob.Bucket from a URL.
-	// This URL will open the bucket "my-bucket" using default credentials.
-	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Bucket exposes the internal storage.Client type through the As method. Use
-	// it to access a non-portable method of storage.Client.
-	var gcsClient *storage.Client
-	if b.As(&gcsClient) {
-		email, err := gcsClient.ServiceAccount(ctx, "project-name")
-		if err != nil {
-			log.Fatal(err)
-		}
-		_ = email
-	} else {
-		log.Fatal("Unable to access storage.Client through Bucket.As")
-	}
 }
