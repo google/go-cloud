@@ -1,12 +1,143 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="//gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.54.0" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Go CDK</title>
+
+  
+  <link type="text/css" rel="stylesheet" href="https://gocloud.devcss/print.css" media="print">
+  <link type="text/css" rel="stylesheet" href="https://gocloud.devcss/poole.css">
+  <link type="text/css" rel="stylesheet" href="https://gocloud.devcss/syntax.css">
+  <link type="text/css" rel="stylesheet" href="https://gocloud.devcss/hyde.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface|PT+Sans:400,400i,700">
+
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="https://gocloud.dev/index.xml" rel="alternate" type="application/rss+xml" title="Go CDK" />
+
+  
     <meta name="go-import" content="gocloud.dev git https://github.com/google/go-cloud">
     <meta name="go-source" content="gocloud.dev https://github.com/google/go-cloud https://github.com/google/go-cloud/tree/master{/dir} https://github.com/google/go-cloud/tree/master{/dir}/{file}#L{line}">
-    <meta http-equiv="refresh" content="0; url=https://github.com/google/go-cloud">
-  </head>
-  <body>
-    You will be redirected to the project's Github page shortly. If that doesn't
-    happen, <a href="https://github.com/google/go-cloud">click here</a>.
+
+
+</head>
+
+  <body class="theme-base-0d ">
+  <aside class="sidebar">
+  <div class="container">
+    <div class="sidebar-about">
+      <a href="https://gocloud.dev"><h1>Go CDK</h1></a>
+      <p class="lead">
+      
+      Welcome to the Go Cloud Development Kit!
+      
+      </p>
+    </div>
+    <hr/>
+    <nav>
+      <ul class="sidebar-nav">
+        <li><a href="/pages/blob/"> Blob </a></li><li><a href="/pages/pubsub/"> Pubsub </a></li><li><a href="/pages/runtimevar/"> Runtimevar </a></li><li><a href="/pages/secrets/"> Secrets </a></li><li><a href="/pages/server/"> Server </a></li>
+      </ul>
+      <a href="https://github.com/google/go-cloud">
+        <img class="stickcenter" src="https://gocloud.dev/gh.png"></img>
+      </a>
+    </nav>
+  </div>
+</aside>
+
+    <main class="content container">
+    
+
+<h1 id="the-go-cloud-development-kit">The Go Cloud Development Kit</h1>
+
+<p>The Go Cloud Development Kit (Go CDK) is an open source project building
+libraries and tools to improve the experience of developing for the cloud with
+Go.</p>
+
+<p>Go CDK provides commonly used, vendor-neutral generic APIs that you can deploy
+across cloud providers. The idea is to support hybrid cloud deployments while
+combining on-prem (local) and cloud tools.</p>
+
+<p>This project also lays the foundation for other open source projects to write
+cloud libraries that work across providers. It does this by providing stable,
+idiomatic interfaces for use cases like storage, events and databases.</p>
+
+<p>For more background about the project, check out the
+<a href="https://blog.golang.org/go-cloud">announcement blog post</a> and
+<a href="https://www.youtube.com/watch?v=_2ZwhvIkgek">our talk from Cloud Next 2018</a>.</p>
+
+<p>If you&rsquo;re interested in contributing to the Go CDK or are interested in checking
+out the code, head to <a href="https://github.com/google/go-cloud">our Github project
+page</a>.</p>
+
+<h2 id="installing-and-getting-started">Installing and getting started</h2>
+
+<p>To start using the Go CDK, install it using <code>go get</code>:</p>
+
+<pre><code class="language-shell">go get gocloud.dev
+</code></pre>
+
+<p>Then follow the <a href="https://github.com/google/go-cloud/tree/master/samples/tutorial">Go CDK
+tutorial</a>.
+Links to additional documentation and samples are available below.</p>
+
+<h2 id="portable-cloud-apis-in-go">Portable Cloud APIs in Go</h2>
+
+<p>At this time, the Go CDK focuses on a set of portable APIs for cloud
+programming. We strive to implement these APIs for the leading Cloud providers:
+AWS, GCP and Azure, as well as provide a local (on-prem) implementation.</p>
+
+<p>Using the Go CDK you can write your application code once using these idiomatic
+APIs, test locally using the local versions, and then deploy to a cloud provider
+with only minimal setup-time changes.</p>
+
+<p>Please check out the linked pages for a detailed description of each API and
+examples of how to use it:</p>
+
+<ul>
+<li>Unstructured binary storage (<a href="https://gocloud.dev/pages/blob/">blob</a>)</li>
+<li>Publish/Subscribe (<a href="https://gocloud.dev/pages/pubsub/">pubsub</a>)</li>
+<li>Variables that change at runtime (<a href="https://gocloud.dev/pages/runtimevar/">runtimevar</a>)</li>
+<li>HTTP server with request logging, tracing and health checking
+(<a href="https://gocloud.dev/pages/server/">server</a>)</li>
+<li>Secret management, encryption and decryption (<a href="https://gocloud.dev/pages/secrets/">secrets</a>)</li>
+</ul>
+
+<h2 id="project-status">Project status</h2>
+
+<p>We&rsquo;re looking for early adopters to help us validate the APIs before releasing
+a beta version. Please try it and provide feedback!</p>
+
+<ul>
+<li>File a <a href="https://github.com/google/go-cloud/issues">Github issue</a></li>
+<li>Post questions to the
+<a href="https://groups.google.com/forum/#!forum/go-cloud">project&rsquo;s mailing list</a></li>
+<li>Send us private feedback at <a href="mailto:go-cdk-feedback@google.com">go-cdk-feedback@google.com</a></li>
+</ul>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-135118641-1', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
   </body>
 </html>

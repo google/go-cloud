@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pages on Go CDK</title>
+    <link>https://gocloud.dev/pages/</link>
+    <description>Recent content in Pages on Go CDK</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    
+	<atom:link href="https://gocloud.dev/pages/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Blob</title>
+      <link>https://gocloud.dev/pages/blob/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/blob/</guid>
+      <description>Blobs are a common abstraction for storing unstructured data on cloud storage providers and accessing them via HTTP.
+Package blob provides an easy and portable way to interact with blobs within a storage location (&amp;ldquo;bucket&amp;rdquo;). It supports operations like reading and writing blobs (using standard interfaces from the io package), deleting blobs, and listing blobs in a bucket.
+Top-level package documentation: https://godoc.org/gocloud.dev/blob
+Supported providers:
+ AWS S3 blob GCS blob Azure blob In-memory local blob - mainly useful for local testing File local blob - local blob implementation using the file system  Usage samples:</description>
+    </item>
+    
+    <item>
+      <title>Pubsub</title>
+      <link>https://gocloud.dev/pages/pubsub/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/pubsub/</guid>
+      <description>Pubsub refers to implementations of the publish-subscribe pattern, wherein clients connect to a cloud service to subsribe to topics or publish messages that could be delivered to subscribers.
+Package pubsub provides an easy and portable way to interact with publish/subscribe systems.
+Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
+Supported providers:
+ GCP AWS Azure In-memory local pubsub - mainly useful for local testing RabbitMQ - local implementation using the RabbitMQ message broker  Usage samples:</description>
+    </item>
+    
+    <item>
+      <title>Runtimevar</title>
+      <link>https://gocloud.dev/pages/runtimevar/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/runtimevar/</guid>
+      <description>Package runtimevar provides easy and portable access to the latest value of remote configuration variables.
+Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
+Supported providers:
+ AWS Paramstore GCP Runtime Configurator blobvar - a blob-backed implementation supported by any provider that has blob support Local read-only constant vars - an in-memory local implementation, mainly useful for testing Local etcd runtimevar - a local implementation using the etcd distributed key-value store  Usage samples:
+ Guestbook sample runtimevar package examples  </description>
+    </item>
+    
+    <item>
+      <title>Secrets</title>
+      <link>https://gocloud.dev/pages/secrets/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/secrets/</guid>
+      <description>Package secrets provides an easy and portable way to encrypt and decrypt messages.
+This package lets you do symmetric encryption and decryption within your application layer. You can then store the secret data anywhere safely, for example, using our blob, runtimevar packages etc. It is also integrated with OpenCensus to get metrics and traces for Encrypt and Decrypt, and some providers also have automatic audit logs for all key management related activites.</description>
+    </item>
+    
+    <item>
+      <title>Server</title>
+      <link>https://gocloud.dev/pages/server/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/server/</guid>
+      <description>Package server provides a preconfigured HTTP server with diagnostic hooks.
+Top-level package documentation: https://godoc.org/gocloud.dev/server
+Supported providers:
+ GCP StackDriver AWS X-Ray  Usage samples:
+ Guestbook sample  </description>
+    </item>
+    
+  </channel>
+</rss>
