@@ -4,7 +4,7 @@ _Write once, run on any cloud ☁️_
 
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
-[![Coverage Status](https://coveralls.io/repos/github/google/go-cloud/badge.svg?branch=master)](https://coveralls.io/github/google/go-cloud?branch=master)
+[![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 
 The Go Cloud Development Kit (Go CDK) allows Go application developers to
 seamlessly deploy cloud applications on any combination of cloud providers. It
