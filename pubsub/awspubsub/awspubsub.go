@@ -59,7 +59,7 @@ import (
 const (
 	// base64EncodedKey is the Message Attribute key used to flag that the
 	// message body is base64 encoded.
-	base64EncodedKey   = "base64encoded"
+	base64EncodedKey = "base64encoded"
 	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
 	// at once, per Topic.
 	maxPublishConcurrency = 10
@@ -139,10 +139,19 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	// errc and collected at the end. We'll return the first non-nil error
 	// (if any).
 	errc := make(chan error, len(dms))
+	var ctxErr error
 	for _, dm := range dms {
+		// If ctx is done, don't start any more goroutines. We can't just return
+		// because we want to make sure we wait until any goroutines we've already
+		// started complete.
+		if ctxErr != nil {
+			errc <- ctxErr
+			continue
+		}
 		select {
 		case <-ctx.Done():
-			errc <- ctx.Err()
+			ctxErr = ctx.Err()
+			errc <- ctxErr
 		case t.sem <- struct{}{}:
 			go func(dm *driver.Message) {
 				errc <- t.sendMessage(ctx, dm)
