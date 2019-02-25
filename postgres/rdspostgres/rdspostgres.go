@@ -26,8 +26,6 @@ import (
 	"net/url"
 	"time"
 
-	"gocloud.dev/postgres"
-
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/lib/pq"
 	"gocloud.dev/aws/rds"
@@ -53,41 +51,6 @@ type Params struct {
 
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
-}
-
-type URLOpener struct{}
-
-// Scheme is the URL scheme rdspostgres registers its URLOpener under on
-// postgres.DefaultMux.
-const Scheme = "rdspostgres"
-
-func init() {
-	postgres.DefaultURLMux().RegisterConnection(Scheme, &URLOpener{})
-}
-
-func (*URLOpener) OpenConnectionURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	cf := new(rds.CertFetcher)
-	for k, _ := range u.Query() {
-		// Only permit parameters that do not conflict with other behavior.
-		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("cloudpostgres: openConnectionURL: extra parameter %s not allowed; use Params fields instead", k)
-		}
-	}
-	vals := u.Query()
-	vals.Set("sslmode", "disable")
-	u.RawQuery = vals.Encode()
-
-	db, err := OpenWithUrl(cf, u)
-	return db, err
-}
-
-// OpenWithUrl temporary Open DB method, for smooth migration to new URL based design.
-func OpenWithUrl(provider rds.CertPoolProvider, url *url.URL) (*sql.DB, error) {
-	db := sql.OpenDB(connector{
-		provider: provider,
-		pqConn:   url.String(),
-	})
-	return db, nil
 }
 
 // Open opens an encrypted connection to an RDS database.

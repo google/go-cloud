@@ -60,26 +60,6 @@ func TestOpen(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Error("Close:", err)
 	}
-
-	// Temporary test part for temporary OpenWithUrl method
-	var user *url.Userinfo
-	user = url.UserPassword(username, password)
-	u := url.URL{
-		Scheme: "rdspostgres",
-		User:   user,
-		Host:   "cloudsql",
-		Path:   "/" + databaseName,
-	}
-	dbByUrl, err := OpenWithUrl(cf, &u)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := dbByUrl.Ping(); err != nil {
-		t.Error("Ping:", err)
-	}
-	if err := dbByUrl.Close(); err != nil {
-		t.Error("Close:", err)
-	}
 }
 
 func TestOpenBadValues(t *testing.T) {
@@ -124,26 +104,6 @@ func TestOpenBadValues(t *testing.T) {
 			if db != nil {
 				db.Close()
 			}
-
-			// Temporary test part for temporary OpenWithUrl method
-			var user *url.Userinfo
-			user = url.UserPassword(username, password)
-			u := url.URL{
-				Scheme:   "rdspostgres",
-				User:     user,
-				Host:     "cloudsql",
-				Path:     "/" + databaseName,
-				RawQuery: test.name + "=" + test.value,
-			}
-			dbByUrl, err := OpenWithUrl(cf, &u)
-
-			if err == nil || !strings.Contains(err.Error(), test.name) {
-				t.Errorf("error = %v; want to contain %q", err, test.name)
-			}
-			if dbByUrl != nil {
-				dbByUrl.Close()
-			}
 		})
 	}
-
 }
