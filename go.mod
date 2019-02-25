@@ -40,6 +40,7 @@ require (
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0 // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/etcd v3.3.11+incompatible // indirect
+	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dancannon/gorethink v4.0.0+incompatible // indirect
@@ -122,7 +123,6 @@ require (
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	golang.org/x/crypto v0.0.0-20190122013713-64072686203f
-	golang.org/x/exp/errors v0.0.0-20190123073158-f1c91bc264ca
 	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
