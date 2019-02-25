@@ -15,10 +15,12 @@
 package natspubsub
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"testing"
 
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
@@ -49,9 +51,9 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{s, nc}, nil
 }
 
-func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	cleanup = func() {}
-	dt = createTopic(h.nc, testName)
+func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
+	cleanup := func() {}
+	dt := createTopic(h.nc, testName)
 	return dt, cleanup, nil
 }
 
@@ -60,10 +62,10 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 	return (*topic)(nil), nil
 }
 
-func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	ds = createSubscription(h.nc, testName)
+func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
+	ds := createSubscription(h.nc, testName)
 	// FIXME(dlc) - Check for error?
-	cleanup = func() {
+	cleanup := func() {
 		var sub *nats.Subscription
 		if ds.As(&sub) {
 			sub.Unsubscribe()
@@ -133,7 +135,142 @@ func (r natsAsTest) MessageCheck(m *pubsub.Message) error {
 
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{natsAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests, nil)
+	drivertest.RunConformanceTests(t, newHarness, asTests)
+}
+
+// These are natspubsub specific to increase coverage.
+func TestSimplePubSub(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	h := dh.(*harness)
+	topic := "foo"
+	body := []byte("hello")
+	pt := CreateTopic(h.nc, topic)
+	sub := CreateSubscription(h.nc, topic)
+	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(m.Body, body) {
+		t.Fatalf("Body did not match. %q vs %q\n", m.Body, body)
+	}
+}
+
+func TestCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	h := dh.(*harness)
+	topic := "foo"
+	body := []byte("hello")
+	pt := CreateTopic(h.nc, topic)
+	sub := CreateSubscription(h.nc, topic)
+
+	// Cancel the ctx, make sure we get the right error.
+	cancel()
+
+	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err == nil {
+		t.Fatal("Expected an error with canceled context")
+	}
+	if pt.ErrorAs(err, dh) {
+		t.Fatalf("Expected to return false")
+	}
+	if _, err = sub.Receive(ctx); err == nil {
+		t.Fatal("Expected an error with canceled context")
+	}
+}
+
+func TestErrorCode(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	h := dh.(*harness)
+
+	// Topics
+	dt := createTopic(h.nc, "bar")
+
+	if gce := dt.ErrorCode(nil); gce != gcerrors.OK {
+		t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
+	}
+	if gce := dt.ErrorCode(context.Canceled); gce != gcerrors.Canceled {
+		t.Fatalf("Expected %v, got %v", gcerrors.Canceled, gce)
+	}
+	if gce := dt.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := dt.ErrorCode(nats.ErrAuthorization); gce != gcerrors.PermissionDenied {
+		t.Fatalf("Expected %v, got %v", gcerrors.PermissionDenied, gce)
+	}
+	if gce := dt.ErrorCode(nats.ErrMaxPayload); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+	if gce := dt.ErrorCode(nats.ErrReconnectBufExceeded); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+
+	// Subscriptions
+	ds := createSubscription(h.nc, "bar")
+	if gce := ds.ErrorCode(nil); gce != gcerrors.OK {
+		t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
+	}
+	if gce := ds.ErrorCode(context.Canceled); gce != gcerrors.Canceled {
+		t.Fatalf("Expected %v, got %v", gcerrors.Canceled, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
+		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrAuthorization); gce != gcerrors.PermissionDenied {
+		t.Fatalf("Expected %v, got %v", gcerrors.PermissionDenied, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrMaxMessages); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrSlowConsumer); gce != gcerrors.ResourceExhausted {
+		t.Fatalf("Expected %v, got %v", gcerrors.ResourceExhausted, gce)
+	}
+	if gce := ds.ErrorCode(nats.ErrTimeout); gce != gcerrors.DeadlineExceeded {
+		t.Fatalf("Expected %v, got %v", gcerrors.DeadlineExceeded, gce)
+	}
+}
+
+func TestBadSubjects(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	h := dh.(*harness)
+
+	sub := CreateSubscription(h.nc, "..bad")
+	if _, err = sub.Receive(ctx); err == nil {
+		t.Fatal("Expected an error with bad subject")
+	}
+
+	pt := CreateTopic(h.nc, "..bad")
+	if err = pt.Send(ctx, &pubsub.Message{}); err == nil {
+		t.Fatal("Expected an error with bad subject")
+	}
 }
 
 func BenchmarkNatsPubSub(b *testing.B) {
@@ -161,5 +298,5 @@ func BenchmarkNatsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt), pubsub.NewSubscription(ds, nil))
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil))
 }

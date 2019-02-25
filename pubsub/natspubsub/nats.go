@@ -71,8 +71,9 @@ type encMsg struct {
 
 // CreateTopic returns a *pubsub.Topic for use with NATS.
 // We delay checking for the proper syntax here.
+// For more info, see https://nats.io/documentation/writing_applications/subjects
 func CreateTopic(nc *nats.Conn, topicName string) *pubsub.Topic {
-	return pubsub.NewTopic(createTopic(nc, topicName))
+	return pubsub.NewTopic(createTopic(nc, topicName), nil)
 }
 
 // createTopic returns the driver for CreateTopic. This function exists so the test
@@ -139,6 +140,8 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	switch err {
 	case nil:
 		return gcerrors.OK
+	case context.Canceled:
+		return gcerrors.Canceled
 	case errNotInitialized, nats.ErrBadSubject:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
@@ -152,7 +155,7 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 type subscription struct {
 	nc   *nats.Conn
 	nsub *nats.Subscription
-	oerr error
+	err  error
 }
 
 // CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
@@ -166,6 +169,9 @@ func createSubscription(nc *nats.Conn, subscriptionName string) driver.Subscript
 	return &subscription{nc, sub, err}
 }
 
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }
+
 // ReceiveBatch implements driver.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	if s == nil || s.nsub == nil {
@@ -175,10 +181,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	// Return right away if the ctx has an error.
 	if err := ctx.Err(); err != nil {
 		return nil, err
-	}
-	// Just in case
-	if maxMessages == 0 {
-		maxMessages = 1
 	}
 
 	var ms []*driver.Message
@@ -279,6 +281,8 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	switch err {
 	case nil:
 		return gcerrors.OK
+	case context.Canceled:
+		return gcerrors.Canceled
 	case errNotInitialized, nats.ErrBadSubject, nats.ErrBadSubscription, nats.ErrTypeSubscription:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
