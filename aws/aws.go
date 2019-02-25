@@ -50,7 +50,7 @@ type ConfigOverrider struct {
 	Configs []*aws.Config
 }
 
- // ClientConfig calls the base provider's ClientConfig method with co.Configs
+// ClientConfig calls the base provider's ClientConfig method with co.Configs
 // followed by the arguments given to ClientConfig.
 func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
 	cfgs = append(co.Configs[:len(co.Configs):len(co.Configs)], cfgs...)
