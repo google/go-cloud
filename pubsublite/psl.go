@@ -1,3 +1,8 @@
+// Package pubsublite is an API for pubsub providers that guarantee
+// at-most-once delivery, and can dynamically publish to topics with names that
+// can be chosen at runtime, and can add or remove any number of subscriptions
+// dynamically. These providers do not have a notion of message
+// acknowledgement.
 package pubsublite
 
 import (
