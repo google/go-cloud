@@ -54,15 +54,22 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
 )
 
-// Message Attribute key used to flag that the message body is base64
-// encoded.
-const base64EncodedKey = "base64encoded"
+const (
+	// base64EncodedKey is the Message Attribute key used to flag that the
+	// message body is base64 encoded.
+	base64EncodedKey = "base64encoded"
+	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
+	// at once, per Topic.
+	maxPublishConcurrency = 10
+)
 
 type topic struct {
 	client *sns.SNS
 	arn    string
+	sem    chan struct{} // limits maximum in-flight Public RPCs across SendBatch
 	opts   *TopicOptions
 }
 
@@ -117,44 +124,39 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *Topi
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
-	return &topic{client: client, arn: topicARN, opts: opts}
+	return &topic{
+		client: client,
+		arn:    topicARN,
+		sem:    make(chan struct{}, maxPublishConcurrency),
+		opts:   opts,
+	}
 }
 
 var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	// Limit our concurrent RPCs via a semaphore.
-	const maxConcurrency = 10
-	sem := make(chan struct{}, maxConcurrency)
-	// The result for each message (either nil or an error) will be written to
-	// errc and collected at the end. We'll return the first non-nil error
-	// (if any).
-	errc := make(chan error, len(dms))
+	g, ctx := errgroup.WithContext(ctx)
+	var ctxErr error
+
+Loop:
 	for _, dm := range dms {
 		select {
 		case <-ctx.Done():
-			errc <- ctx.Err()
-			break
-		case sem <- struct{}{}:
-		}
-		go func(dm *driver.Message) {
-			errc <- t.sendMessage(ctx, dm)
-			<-sem
-		}(dm)
-	}
-	// Wait for all of the goroutines to complete.
-	for n := 0; n < maxConcurrency; n++ {
-		sem <- struct{}{}
-	}
-	// Return the first non-nil error (if any).
-	for range dms {
-		err := <-errc
-		if err != nil {
-			return err
+			ctxErr = ctx.Err()
+			break Loop
+		case t.sem <- struct{}{}:
+			dm := dm
+			g.Go(func() error {
+				defer func() { <-t.sem }()
+				return t.sendMessage(ctx, dm)
+			})
 		}
 	}
-	return nil
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	return ctxErr
 }
 
 // sendMessage sends a single message via RPC to SNS.
@@ -302,7 +304,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 		max = 10
 	}
 	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
-		QueueUrl: aws.String(s.qURL),
+		QueueUrl:            aws.String(s.qURL),
 		MaxNumberOfMessages: aws.Int64(max),
 	})
 	if err != nil {
