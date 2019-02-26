@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
 	"sync"
@@ -35,6 +36,9 @@ import (
 	"gocloud.dev/runtimevar/driver"
 )
 
+// How long we wait on a call that is expected to block forever before cancelling it.
+const blockingCheckDelay = 25 * time.Millisecond
+
 // state implements driver.State.
 type state struct {
 	val        string
@@ -42,168 +46,256 @@ type state struct {
 	err        error
 }
 
-func (s *state) Value() (interface{}, error) {
-	return s.val, s.err
-}
+func (s *state) Value() (interface{}, error) { return s.val, s.err }
+func (s *state) UpdateTime() time.Time       { return s.updateTime }
+func (s *state) As(i interface{}) bool       { return false }
 
-func (s *state) UpdateTime() time.Time {
-	return s.updateTime
-}
-
-func (s *state) As(i interface{}) bool {
-	return false
-}
-
-// fakeWatcher is a fake implementation of driver.Watcher.
+// fakeWatcher is a fake implementation of driver.Watcher that returns a set *state.
 type fakeWatcher struct {
-	t     *testing.T
-	calls []*state
+	driver.Watcher
+
+	mu     sync.Mutex
+	state  *state
+	newval bool // true iff WatchVariable should return state
+}
+
+func (w *fakeWatcher) Set(s *state) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.state = s
+	w.newval = true
 }
 
 func (w *fakeWatcher) WatchVariable(ctx context.Context, prev driver.State) (driver.State, time.Duration) {
-	w.t.Logf("fakewatcher.WatchVariable prev %v", prev)
-	if len(w.calls) == 0 {
-		w.t.Fatal("  --> unexpected call!")
+	if err := ctx.Err(); err != nil {
+		w.Set(&state{err: err})
 	}
-	c := w.calls[0]
-	w.calls = w.calls[1:]
-	if c.err != nil {
-		if prev != nil && prev.(*state).err != nil && prev.(*state).err.Error() == c.err.Error() {
-			w.t.Log("  --> same error")
-			return nil, 0
-		}
-		w.t.Logf("  -> new error %v", c.err)
-		return c, 0
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.newval {
+		return nil, 1 * time.Millisecond // to avoid spinning
 	}
-	if prev != nil && prev.(*state).val == c.val {
-		w.t.Log("  --> same value")
-		return nil, 0
-	}
-	w.t.Logf("  --> returning %v", c)
-	return c, 0
+	w.newval = false
+	return w.state, 0
 }
 
-func (w *fakeWatcher) Close() error {
-	if len(w.calls) != 0 {
-		return fmt.Errorf("expected %d more calls to WatchVariable", len(w.calls))
-	}
-	return nil
-}
-
-func (*fakeWatcher) ErrorAs(err error, i interface{}) bool { return false }
-
-func (*fakeWatcher) IsNotExist(err error) bool { return false }
-
+func (*fakeWatcher) Close() error                       { return nil }
 func (*fakeWatcher) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
-// watchResp encapsulates the expected result of a Watch call.
-type watchResp struct {
-	snap Snapshot
-	err  bool
-}
-
-func TestVariable(t *testing.T) {
-
-	const (
-		v1 = "foo"
-		v2 = "bar"
-	)
-	var (
-		upd1         = time.Now()
-		upd2         = time.Now().Add(1 * time.Minute)
-		fail1, fail2 = errors.New("fail1"), errors.New("fail2")
-		snap1        = Snapshot{Value: v1, UpdateTime: upd1}
-		snap2        = Snapshot{Value: v2, UpdateTime: upd2}
-	)
-
-	tests := []struct {
-		name  string
-		calls []*state
-		// Watch will be called once for each entry in want.
-		want []*watchResp
-	}{
-		{
-			name: "Repeated errors don't return until it changes to a different error",
-			calls: []*state{
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{err: fail2},
-			},
-			want: []*watchResp{
-				&watchResp{err: true},
-				&watchResp{err: true},
-			},
-		},
-		{
-			name: "Repeated errors don't return until it changes to a value",
-			calls: []*state{
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{err: fail1},
-				&state{val: v1, updateTime: upd1},
-			},
-			want: []*watchResp{
-				&watchResp{err: true},
-				&watchResp{snap: snap1},
-			},
-		},
-		{
-			name: "Repeated values don't return until it changes to an error",
-			calls: []*state{
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{err: fail1},
-			},
-			want: []*watchResp{
-				&watchResp{snap: snap1},
-				&watchResp{err: true},
-			},
-		},
-		{
-			name: "Repeated values don't return until it changes to a different version",
-			calls: []*state{
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{val: v1, updateTime: upd1},
-				&state{val: v2, updateTime: upd2},
-			},
-			want: []*watchResp{
-				&watchResp{snap: snap1},
-				&watchResp{snap: snap2},
-			},
-		},
-	}
+func TestVariable_Watch(t *testing.T) {
+	fake := &fakeWatcher{}
+	v := New(fake)
 
 	ctx := context.Background()
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			w := &fakeWatcher{t: t, calls: tc.calls}
-			v := New(w)
-			defer func() {
-				if err := v.Close(); err != nil {
+
+	// Watch should block when there's no value yet.
+	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
+	defer cancel()
+	if _, err := v.Watch(ctx2); err == nil {
+		t.Errorf("Watch with no value yet should block: got nil err, want err")
+	}
+	if ctx2.Err() == nil {
+		t.Error("Watch with no value yet should block")
+	}
+
+	// Setting an error value makes Watch return an error.
+	fake.Set(&state{err: errFake})
+	if _, err := v.Watch(ctx); err == nil {
+		t.Fatal("Watch returned non-nil error, want error")
+	}
+	// But calling Watch again blocks.
+	ctx2, cancel = context.WithTimeout(ctx, blockingCheckDelay)
+	defer cancel()
+	if _, err := v.Watch(ctx2); err == nil {
+		t.Errorf("Watch called again with error value should block: got nil err, want err")
+	}
+	if ctx2.Err() == nil {
+		t.Error("Watch called again with error value should block")
+	}
+
+	// Setting a different error makes Watch return again.
+	fake.Set(&state{err: errors.New("another fake error")})
+	if _, err := v.Watch(ctx); err == nil {
+		t.Fatal("Watch returned non-nil error, want error")
+	}
+
+	// Setting a value makes Watch return again.
+	fake.Set(&state{val: "hello"})
+	if _, err := v.Watch(ctx); err != nil {
+		t.Fatalf("Watch returned error %v, want nil", err)
+	}
+
+	// Make a few updates. Each of these will try to write to the nextWatchCh,
+	// but we should only keep the latest one.
+	fake.Set(&state{val: "hello1"})
+	fake.Set(&state{val: "hello2"})
+	fake.Set(&state{val: "hello3"})
+	fake.Set(&state{val: "hello4"})
+	fake.Set(&state{val: "hello5"})
+	// Wait until we're sure the last one has been received.
+	for {
+		snap, err := v.Latest(nil)
+		if err != nil {
+			t.Errorf("got unexpected error from Latest: %v", err)
+		}
+		if snap.Value == "hello5" {
+			break
+		}
+	}
+
+	// Watch should get the last one, hello5.
+	if snap, err := v.Watch(ctx); err != nil {
+		t.Fatalf("Watch returned error %v, want nil", err)
+	} else if snap.Value != "hello5" {
+		t.Errorf("Watch got %v, want hello5", snap.Value)
+	}
+
+	// And the next call should block.
+	ctx2, cancel = context.WithTimeout(ctx, blockingCheckDelay)
+	defer cancel()
+	if _, err := v.Watch(ctx2); err == nil {
+		t.Errorf("Watch after no change in good value should block: got nil err, want err")
+	}
+	if ctx2.Err() == nil {
+		t.Error("Watch after no change in good value should block")
+	}
+
+	// Close the variable.
+	if err := v.Close(); err != nil {
+		t.Error(err)
+	}
+	// Watch should now return io.EOF.
+	if _, err := v.Watch(ctx); err != io.EOF {
+		t.Errorf("Watch after close returned %v, want io.EOF", err)
+	}
+}
+
+func TestVariable_Latest(t *testing.T) {
+	const content1, content2 = "foo", "bar"
+	const numGoroutines = 10
+
+	fake := &fakeWatcher{}
+	v := New(fake)
+	defer v.Close()
+
+	ctx := context.Background()
+
+	// Latest with nil ctx should return right away with an error, as there's
+	// no value yet.
+	if _, err := v.Latest(nil); err == nil {
+		t.Errorf("Latest with nil ctx but no value yet: got nil err, want err")
+	}
+
+	// Latest with non-nil ctx should block until the context is done, as there's
+	// still no value.
+	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
+	defer cancel()
+	if _, err := v.Latest(ctx2); err == nil {
+		t.Errorf("Latest with non-nil ctx but no value yet should block: got nil err, want err")
+	}
+	if ctx2.Err() == nil {
+		t.Error("Latest with non-nil ctx but no value yet should block")
+	}
+
+	// Call Latest concurrently. There's still no value.
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			if _, err := v.Latest(nil); err == nil {
+				t.Errorf("Latest with nil ctx but no value yet: got nil err, want err")
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+
+	// Set an error value. Latest should still block.
+	fake.Set(&state{err: errFake})
+	ctx2, cancel = context.WithTimeout(ctx, blockingCheckDelay)
+	defer cancel()
+	if _, err := v.Latest(ctx2); err == nil {
+		t.Errorf("Latest with non-nil ctx but error value should block: got nil err, want err")
+	}
+	if ctx2.Err() == nil {
+		t.Error("Latest with non-nil ctx but error value should block")
+	}
+
+	// Set a good value.
+	fake.Set(&state{val: content1})
+
+	// Call Latest concurrently, only exiting each goroutine when they
+	// see the content1 value.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(ctx)
+				if err != nil {
+					continue
+				}
+				if val.Value != content1 {
+					t.Errorf("got %v want %s", val, content1)
+				}
+				wg.Done()
+				return
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Set a different value. At some point after this, Latest should start
+	// returning a Snapshot with Value set to content2.
+	fake.Set(&state{val: content2})
+
+	// Call Latest concurrently, only exiting each goroutine when they
+	// see the content2 value.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(nil)
+				if err != nil {
+					// Errors are unexpected at this point.
 					t.Error(err)
 				}
-			}()
-			for i, want := range tc.want {
-				snap, err := v.Watch(ctx)
-				if (err != nil) != want.err {
-					t.Errorf("Watch #%d: got error %v wanted error %v", i+1, err, want.err)
+				if val.Value == content1 {
+					// Still seeing the old value.
+					continue
 				}
-				if snap.Value != want.snap.Value {
-					t.Fatalf("Watch #%d: got snapshot.Value %v want %v", i+1, snap.Value, want.snap.Value)
+				if val.Value != content2 {
+					t.Errorf("got %v want %s", val, content2)
 				}
-				if snap.UpdateTime != want.snap.UpdateTime {
-					t.Errorf("Watch #%d: got snapshot.UpdateTime %v want %v", i+1, snap.UpdateTime, want.snap.UpdateTime)
-				}
+				wg.Done()
+				return
 			}
-		})
+		}()
 	}
+	wg.Wait()
+
+	// Set an error value. Latest should still return content2.
+	fake.Set(&state{err: errFake})
+
+	// Call Latest concurrently. The test will be flaky if some of them
+	// start getting errors.
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			for {
+				val, err := v.Latest(nil)
+				if err != nil {
+					// Errors are unexpected at this point.
+					t.Error(err)
+				}
+				if val.Value != content2 {
+					t.Errorf("got %v want %s", val, content2)
+				}
+				wg.Done()
+				return
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 var errFake = errors.New("fake")

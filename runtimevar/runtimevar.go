@@ -53,9 +53,12 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"reflect"
+	"sync"
 	"time"
 
 	"go.opencensus.io/stats"
@@ -113,6 +116,7 @@ const pkgName = "gocloud.dev/runtimevar"
 var (
 	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
 		stats.UnitDimensionless)
+	// OpenCensusViews are predefined views for OpenCensus metrics.
 	OpenCensusViews = []*view.View{
 		{
 			Name:        pkgName + "/value_changes",
@@ -124,14 +128,35 @@ var (
 	}
 )
 
+type snapshotPlusError struct {
+	snapshot Snapshot
+	err      error
+}
+
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in provider-specific
 // subpackages.
 type Variable struct {
-	watcher  driver.Watcher
+	dw       driver.Watcher
 	provider string // for metric collection
-	nextCall time.Time
-	prev     driver.State
+
+	// For cancelling the background goroutine, and noticing when it has exited.
+	backgroundCancel  func()
+	backgroundCloseCh chan bool
+
+	// firstGoodCh is closed and firstGood is set to true when we get the first
+	// good value for the variable.
+	firstGoodCh chan bool
+	firstGood   bool
+
+	// Holds the snapshot/error to return from the next call to Watch.
+	// The buffer size is 1 so that we can store something in it even when there's
+	// not a Watch in flight.
+	nextWatchCh chan *snapshotPlusError
+
+	mu     sync.Mutex
+	latest *snapshotPlusError // the snapshot/error to return from Latest
+	closed bool
 }
 
 // New is intended for use by provider implementations.
@@ -139,20 +164,30 @@ var New = newVar
 
 // newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
-	return &Variable{
-		watcher:  w,
-		provider: oc.ProviderName(w),
+	ctx, cancel := context.WithCancel(context.Background())
+	v := &Variable{
+		dw:                w,
+		provider:          oc.ProviderName(w),
+		backgroundCancel:  cancel,
+		backgroundCloseCh: make(chan bool),
+		firstGoodCh:       make(chan bool),
+		nextWatchCh:       make(chan *snapshotPlusError, 1),
+		latest:            &snapshotPlusError{err: errors.New("no value yet")},
 	}
+	go v.background(ctx)
+	return v
 }
 
-// Watch returns a Snapshot of the current value of the variable.
+// Watch returns when there is a new Snapshot of the current value of the
+// variable.
 //
 // The first call to Watch will block while reading the variable from the
 // provider, and will return the resulting Snapshot or error. If an error is
 // returned, the returned Snapshot is a zero value and should be ignored.
-//
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
+//
+// Watch returns an io.EOF error if the Variable has been closed.
 //
 // Watch should not be called on the same variable from multiple goroutines
 // concurrently. The typical use case is to call it in a single goroutine in a
@@ -160,44 +195,131 @@ func newVar(w driver.Watcher) *Variable {
 //
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
-func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
-	for {
-		wait := c.nextCall.Sub(time.Now())
-		if wait > 0 {
-			select {
-			case <-ctx.Done():
-				return Snapshot{}, ctx.Err()
-			case <-time.After(wait):
-				// Continue.
-			}
-		}
+//
+// Alternatively, use Latest to retrieve the latest good value.
+func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+	c.mu.Lock()
+	if c.closed {
+		return Snapshot{}, io.EOF
+	}
+	c.mu.Unlock()
 
-		cur, wait := c.watcher.WatchVariable(ctx, c.prev)
-		c.nextCall = time.Now().Add(wait)
-		if cur == nil {
-			// No change.
-			continue
-		}
-		// Something new to return!
-		c.prev = cur
-		v, err := cur.Value()
-		if err != nil {
-			return Snapshot{}, wrapError(c.watcher, err)
-		}
-		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
-		// Error from RecordWithTags is not possible.
-		return Snapshot{
-			Value:      v,
-			UpdateTime: cur.UpdateTime(),
-			asFunc:     cur.As,
-		}, nil
+	select {
+	case wr := <-c.nextWatchCh:
+		return wr.snapshot, wr.err
+	case <-ctx.Done():
+		return Snapshot{}, ctx.Err()
 	}
 }
 
-// Close closes the Variable; don't call Watch after this.
+func (c *Variable) background(ctx context.Context) {
+	var curState, prevState driver.State
+	var wait time.Duration
+	for {
+		select {
+		case <-ctx.Done():
+			// We're shutting down; exit the goroutine.
+			close(c.backgroundCloseCh)
+			return
+		case <-time.After(wait):
+			// Continue.
+		}
+
+		curState, wait = c.dw.WatchVariable(ctx, prevState)
+		if curState == nil {
+			// No change.
+			continue
+		}
+
+		// There's something new to return!
+		prevState = curState
+		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
+		// Error from RecordWithTags is not possible.
+
+		var spe snapshotPlusError
+		if val, err := curState.Value(); err == nil {
+			spe.snapshot = Snapshot{
+				Value:      val,
+				UpdateTime: curState.UpdateTime(),
+				asFunc:     curState.As,
+			}
+		} else {
+			spe.err = wrapError(c.dw, err)
+		}
+
+		// Update c.latest under the lock.
+		c.mu.Lock()
+		// Save the new value if it's good, or if it's an error and we don't
+		// have a good value -- that way we always return the latest error.
+		if spe.err == nil || !c.firstGood {
+			c.latest = &spe
+		}
+		if spe.err == nil && !c.firstGood {
+			// This is the first good value! Close firstgoodCh so that Latest doesn't
+			// block anymore.
+			close(c.firstGoodCh)
+			c.firstGood = true
+		}
+		c.mu.Unlock()
+
+		// Read anything buffered on nextWatchCh, in case we wrote something before
+		// but nobody noticed. The write is then guaranteed to not block since
+		// buffer size = 1.
+		select {
+		case <-c.nextWatchCh:
+		default:
+		}
+		c.nextWatchCh <- &spe
+	}
+}
+
+// Latest is intended to be called per request, with the request context.
+// It returns the latest good Snapshot of the variable value.
+//
+// If ctx is nil, it will return immediately; if there is no known good Snapshot
+// it will return an error.
+//
+// If ctx is not nil, it will block until there's a good Snapshot, and return it.
+func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
+	// If a ctx is provided, block until we get an initial value; firstGoodCh
+	// will be closed, and receives from a closed channel return immediately.
+	if ctx != nil {
+		select {
+		case <-c.firstGoodCh:
+		case <-ctx.Done():
+			return Snapshot{}, ctx.Err()
+		}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.latest.snapshot, c.latest.err
+}
+
+// Close closes the Variable. The Variable is unusable after Close returns.
 func (c *Variable) Close() error {
-	err := c.watcher.Close()
-	return wrapError(c.watcher, err)
+	// Record that we're closing. Subsequent calls to Watch will return io.EOF.
+	c.mu.Lock()
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	c.mu.Unlock()
+
+	// Shut down the background goroutine.
+	c.backgroundCancel()
+	<-c.backgroundCloseCh
+
+	// Close any remaining channels to wake up any callers that are waiting on them.
+	c.mu.Lock()
+	close(c.nextWatchCh)
+	if !c.firstGood {
+		close(c.firstGoodCh)
+	}
+	c.mu.Unlock()
+
+	// Close the driver.
+	err := c.dw.Close()
+	return wrapError(c.dw, err)
 }
 
 func wrapError(w driver.Watcher, err error) error {
@@ -215,7 +337,7 @@ func wrapError(w driver.Watcher, err error) error {
 // ErrorAs returns false if err == nil.
 // See Snapshot.As for more details.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
-	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
+	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
 
 // VariableURLOpener represents types than can open Variables based on a URL.
