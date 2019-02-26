@@ -51,7 +51,7 @@ Please check out the linked pages for a detailed description of each API and
 examples of how to use it:
 
 * Unstructured binary storage ([blob]({{< ref "blob.md" >}}))
-* Publish/Subscribe ([pubsub]({{< ref "pubsub.md" >}}))
+* Publisher/Subscriber ([pubsub]({{< ref "pubsub.md" >}}))
 * Variables that change at runtime ([runtimevar]({{< ref "runtimevar.md" >}}))
 * HTTP server with request logging, tracing and health checking
   ([server]({{< ref "server.md" >}}))
