@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/gcp"
 )
 
-func Example() {
+func Example_read() {
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
