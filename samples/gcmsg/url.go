@@ -82,9 +82,15 @@ func parseSubscriptionURL(s string) (URL, error) {
 	switch scheme {
 	case "gcppubsub":
 		m := gcpSubscriptionRx.FindStringSubmatch(nonScheme)
+		if len(m) != 3 {
+			return URL{}, fmt.Errorf("failed to match %s against %s", nonScheme, gcpSubscriptionRx)
+		}
 		return URL{Provider: "gcp", Project: m[1], Subscription: m[2]}, nil
 	case "rabbitpubsub":
 		m := rabbitSubscriptionRx.FindStringSubmatch(nonScheme)
+		if len(m) != 3 {
+			return URL{}, fmt.Errorf("failed to match %s against %s", nonScheme, rabbitSubscriptionRx)
+		}
 		return URL{Provider: "rabbit", ServerURL: "amqp://" + m[1], Subscription: m[2]}, nil
 	case "":
 		return URL{}, fmt.Errorf(`scheme missing from URL: "%s"`, s)
