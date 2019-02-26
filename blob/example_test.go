@@ -301,6 +301,37 @@ func ExampleBucket_As() {
 	}
 }
 
+func ExampleListObject_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.ObjectAttrs type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	iter := b.List(nil)
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(obj.Key)
+		// Access storage.ObjectAttrs via oa here.
+		var oa storage.ObjectAttrs
+		if obj.As(&oa) {
+			fmt.Println(oa.Owner)
+		}
+	}
+}
+
 func ExampleOpenBucket() {
 	// Connect to a bucket using a URL.
 	// This example uses the file-based implementation, which registers for
