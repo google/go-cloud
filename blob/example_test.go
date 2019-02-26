@@ -332,6 +332,40 @@ func ExampleListObject_As() {
 	}
 }
 
+func ExampleListOptions_BeforeList() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Query type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	beforeList := func(as func(interface{}) bool) error {
+		var q *storage.Query
+		if as(&q) {
+			fmt.Println(q.Delimiter)
+		}
+		return nil
+	}
+
+	iter := b.List(&blob.ListOptions{Prefix: "", Delimiter: "/", BeforeList: beforeList})
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(obj.Key)
+	}
+}
+
 func ExampleOpenBucket() {
 	// Connect to a bucket using a URL.
 	// This example uses the file-based implementation, which registers for
