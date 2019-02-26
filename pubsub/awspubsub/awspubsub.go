@@ -138,11 +138,13 @@ var stringDataType = aws.String("String")
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	g, ctx := errgroup.WithContext(ctx)
 	var ctxErr error
+
+Loop:
 	for _, dm := range dms {
 		select {
 		case <-ctx.Done():
 			ctxErr = ctx.Err()
-			break
+			break Loop
 		case t.sem <- struct{}{}:
 			dm := dm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
