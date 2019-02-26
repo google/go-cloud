@@ -323,11 +323,10 @@ func ExampleListObject_As() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(obj.Key)
 		// Access storage.ObjectAttrs via oa here.
 		var oa storage.ObjectAttrs
 		if obj.As(&oa) {
-			fmt.Println(oa.Owner)
+			_ = oa.Owner
 		}
 	}
 }
@@ -348,7 +347,7 @@ func ExampleListOptions_BeforeList() {
 	beforeList := func(as func(interface{}) bool) error {
 		var q *storage.Query
 		if as(&q) {
-			fmt.Println(q.Delimiter)
+			_ = q.Delimiter
 		}
 		return nil
 	}
@@ -362,7 +361,32 @@ func ExampleListOptions_BeforeList() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(obj.Key)
+		_ = obj
+	}
+}
+
+func ExampleReader_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Reader type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r, err := b.NewReader(ctx, "gopher.png", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
+
+	var sr storage.Reader
+	if r.As(&sr) {
+		_ = sr.Attrs
 	}
 }
 
