@@ -54,6 +54,7 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -135,41 +136,25 @@ var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	// The result for each message (either nil or an error) will be written to
-	// errc and collected at the end. We'll return the first non-nil error
-	// (if any).
-	errc := make(chan error, len(dms))
+	g, ctx := errgroup.WithContext(ctx)
 	var ctxErr error
 	for _, dm := range dms {
-		// If ctx is done, don't start any more goroutines. We can't just return
-		// because we want to make sure we wait until any goroutines we've already
-		// started complete.
-		if ctxErr != nil {
-			errc <- ctxErr
-			continue
-		}
 		select {
 		case <-ctx.Done():
 			ctxErr = ctx.Err()
-			errc <- ctxErr
+			break
 		case t.sem <- struct{}{}:
-			go func(dm *driver.Message) {
-				errc <- t.sendMessage(ctx, dm)
-				<-t.sem
-			}(dm)
+			dm := dm // https://golang.org/doc/faq#closures_and_goroutines
+			g.Go(func() error {
+				defer func() { <-t.sem }()
+				return t.sendMessage(ctx, dm)
+			})
 		}
 	}
-	// Return the first non-nil error (if any).
-	// Make sure to read one error per message regardless, to ensure that we wait
-	// for all messages to be sent.
-	var firstErr error
-	for range dms {
-		err := <-errc
-		if firstErr == nil && err != nil {
-			firstErr = err
-		}
+	if err := g.Wait(); err != nil {
+		return err
 	}
-	return firstErr
+	return ctxErr
 }
 
 // sendMessage sends a single message via RPC to SNS.
