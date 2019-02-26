@@ -8,7 +8,8 @@ wherein clients connect to a cloud service to subsribe to topics or publish
 messages that could be delivered to subscribers.
 
 Package `pubsub` provides an easy and portable way to interact with
-publish/subscribe systems.
+publish/subscribe systems that have [at-least-once
+delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overview).
 
 Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
 
