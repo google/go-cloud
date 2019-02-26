@@ -146,7 +146,7 @@ Loop:
 			ctxErr = ctx.Err()
 			break Loop
 		case t.sem <- struct{}{}:
-			dm := dm // https://golang.org/doc/faq#closures_and_goroutines
+			dm := dm
 			g.Go(func() error {
 				defer func() { <-t.sem }()
 				return t.sendMessage(ctx, dm)
