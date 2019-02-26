@@ -453,7 +453,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	defer cleanup()
 
 	// Sort the WeirdStrings map for record/replay consistency.
-	var weirdStrings [][]string  // [0] = key, [1] = value
+	var weirdStrings [][]string // [0] = key, [1] = value
 	for k, v := range escape.WeirdStrings {
 		weirdStrings = append(weirdStrings, []string{k, v})
 	}
