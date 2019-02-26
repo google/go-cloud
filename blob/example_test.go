@@ -301,6 +301,97 @@ func ExampleBucket_As() {
 	}
 }
 
+func ExampleListObject_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.ObjectAttrs type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	iter := b.List(nil)
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		// Access storage.ObjectAttrs via oa here.
+		var oa storage.ObjectAttrs
+		if obj.As(&oa) {
+			_ = oa.Owner
+		}
+	}
+}
+
+func ExampleListOptions_BeforeList() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Query type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	beforeList := func(as func(interface{}) bool) error {
+		// Access storage.Query via q here.
+		var q *storage.Query
+		if as(&q) {
+			_ = q.Delimiter
+		}
+		return nil
+	}
+
+	iter := b.List(&blob.ListOptions{Prefix: "", Delimiter: "/", BeforeList: beforeList})
+	for {
+		obj, err := iter.Next(ctx)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		_ = obj
+	}
+}
+
+func ExampleReader_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Reader type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r, err := b.NewReader(ctx, "gopher.png", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer r.Close()
+
+	// Access storage.Reader via sr here.
+	var sr storage.Reader
+	if r.As(&sr) {
+		_ = sr.Attrs
+	}
+}
+
 func ExampleOpenBucket() {
 	// Connect to a bucket using a URL.
 	// This example uses the file-based implementation, which registers for
