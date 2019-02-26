@@ -177,7 +177,7 @@ func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*aws.Config, e
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct {}
+type Options struct{}
 
 // openBucket returns an S3 Bucket.
 func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
