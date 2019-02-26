@@ -39,7 +39,7 @@ func TestParseTopicURL(t *testing.T) {
 		})
 	}
 
-	badInputs := []string{"", "a", "http://www.foo.com"}
+	badInputs := []string{"", "a", "http://www.foo.com", "rabbitpubsub://guest:guest@localhost:5672/subscriptions/test-subscription-1"}
 	for _, bi := range badInputs {
 		t.Run(fmt.Sprintf("bad input: %q", bi), func(t *testing.T) {
 			_, err := parseTopicURL(bi)
@@ -70,7 +70,7 @@ func TestParseSubscriptionURL(t *testing.T) {
 		})
 	}
 
-	badInputs := []string{"", "a", "http://www.foo.com"}
+	badInputs := []string{"", "a", "http://www.foo.com", "rabbitpubsub://guest:guest@localhost:5672/topics/test-topic"}
 	for _, bi := range badInputs {
 		t.Run(fmt.Sprintf("bad input: %q", bi), func(t *testing.T) {
 			_, err := parseSubscriptionURL(bi)

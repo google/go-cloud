@@ -141,7 +141,7 @@ func TestConformance(t *testing.T) {
 
 	} else {
 		asTests := []drivertest.AsTest{sbAsTest{}}
-		drivertest.RunConformanceTests(t, newHarness, asTests, nil)
+		drivertest.RunConformanceTests(t, newHarness, asTests)
 	}
 }
 
