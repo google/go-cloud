@@ -345,6 +345,7 @@ func ExampleListOptions_BeforeList() {
 	}
 
 	beforeList := func(as func(interface{}) bool) error {
+		// Access storage.Query via q here.
 		var q *storage.Query
 		if as(&q) {
 			_ = q.Delimiter
@@ -384,6 +385,7 @@ func ExampleReader_As() {
 	}
 	defer r.Close()
 
+	// Access storage.Reader via sr here.
 	var sr storage.Reader
 	if r.As(&sr) {
 		_ = sr.Attrs
