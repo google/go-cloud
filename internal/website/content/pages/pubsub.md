@@ -1,5 +1,5 @@
 ---
-title: "Pub/Sub"
+title: "Pubsub"
 ---
 
 Pub/Sub refers to implementations of the [publish-subscribe

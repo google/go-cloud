@@ -1,5 +1,5 @@
 ---
-title: "Runtime Configuration"
+title: "Runtimevar"
 ---
 
 Package `runtimevar` provides easy and portable access to the latest value of
