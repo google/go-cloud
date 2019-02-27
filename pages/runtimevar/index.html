@@ -54,19 +54,21 @@
     <main class="content container">
     <div class="post">
   <h1>Runtimevar</h1>
-  <p>Package <code>runtimevar</code> provides easy and portable access to the latest value of
+  
+
+<p>Package <code>runtimevar</code> provides easy and portable access to the latest value of
 remote configuration variables.</p>
 
 <p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/runtimevar">https://godoc.org/gocloud.dev/runtimevar</a></p>
 
-<p>Supported providers:</p>
+<h2 id="supported-providers">Supported Providers</h2>
 
 <ul>
 <li><a href="https://godoc.org/gocloud.dev/runtimevar/paramstore">AWS Paramstore</a></li>
 <li><a href="https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator">GCP Runtime
 Configurator</a></li>
 <li><a href="https://godoc.org/gocloud.dev/runtimevar/blobvar">blobvar</a> - a blob-backed
-implementation supported by any provider that has blob support</li>
+implementation supported by any provider that has <a href="/pages/blob/#supported-providers">blob support</a></li>
 <li><a href="https://godoc.org/gocloud.dev/runtimevar/constantvar">Local read-only constant
 vars</a> - an in-memory
 local implementation, mainly useful for testing</li>
@@ -75,7 +77,7 @@ local implementation using the <a href="https://github.com/etcd-io/etcd">etcd di
 store</a></li>
 </ul>
 
-<p>Usage samples:</p>
+<h2 id="usage-samples">Usage Samples</h2>
 
 <ul>
 <li><a href="https://github.com/google/go-cloud/tree/master/samples/guestbook">Guestbook

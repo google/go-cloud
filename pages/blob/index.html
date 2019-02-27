@@ -54,7 +54,9 @@
     <main class="content container">
     <div class="post">
   <h1>Blob</h1>
-  <p>Blobs are a common abstraction for storing unstructured data on cloud storage
+  
+
+<p>Blobs are a common abstraction for storing unstructured data on cloud storage
 providers and accessing them via HTTP.</p>
 
 <p>Package <code>blob</code> provides an easy and portable way to interact with blobs within a
@@ -64,7 +66,7 @@ listing blobs in a bucket.</p>
 
 <p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/blob">https://godoc.org/gocloud.dev/blob</a></p>
 
-<p>Supported providers:</p>
+<h2 id="supported-providers">Supported Providers</h2>
 
 <ul>
 <li><a href="https://godoc.org/gocloud.dev/blob/s3blob">AWS S3 blob</a></li>
@@ -72,11 +74,11 @@ listing blobs in a bucket.</p>
 <li><a href="https://godoc.org/gocloud.dev/blob/azureblob">Azure blob</a></li>
 <li><a href="https://godoc.org/gocloud.dev/blob/memblob">In-memory local blob</a> - mainly
 useful for local testing</li>
-<li><a href="https://godoc.org/gocloud.dev/blob/fileblob">File local blob</a> - local blob
-implementation using the file system</li>
+<li><a href="https://godoc.org/gocloud.dev/blob/fileblob">File-backed local blob</a> - local
+blob implementation using the file system</li>
 </ul>
 
-<p>Usage samples:</p>
+<h2 id="usage-samples">Usage Samples</h2>
 
 <ul>
 <li><a href="https://github.com/google/go-cloud/tree/master/samples/tutorial">Tutorial

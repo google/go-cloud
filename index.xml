@@ -16,11 +16,10 @@
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://gocloud.dev/pages/blob/</guid>
-      <description>Blobs are a common abstraction for storing unstructured data on cloud storage providers and accessing them via HTTP.
+      <description> Blobs are a common abstraction for storing unstructured data on cloud storage providers and accessing them via HTTP.
 Package blob provides an easy and portable way to interact with blobs within a storage location (&amp;ldquo;bucket&amp;rdquo;). It supports operations like reading and writing blobs (using standard interfaces from the io package), deleting blobs, and listing blobs in a bucket.
 Top-level package documentation: https://godoc.org/gocloud.dev/blob
-Supported providers:
- AWS S3 blob GCS blob Azure blob In-memory local blob - mainly useful for local testing File local blob - local blob implementation using the file system  Usage samples:</description>
+Supported Providers  AWS S3 blob GCS blob Azure blob In-memory local blob - mainly useful for local testing File-backed local blob - local blob implementation using the file system  Usage Samples  Tutorial sample Guestbook sample blob package examples  </description>
     </item>
     
     <item>
@@ -29,11 +28,10 @@ Supported providers:
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://gocloud.dev/pages/pubsub/</guid>
-      <description>Pubsub refers to implementations of the publish-subscribe pattern, wherein clients connect to a cloud service to subsribe to topics or publish messages that could be delivered to subscribers.
+      <description> Pub/Sub refers to implementations of the publish-subscribe pattern, wherein clients connect to a cloud service to subscribe to topics or publish messages that could be delivered to subscribers.
 Package pubsub provides an easy and portable way to interact with publish/subscribe systems that have at-least-once delivery.
 Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
-Supported providers:
- GCP AWS Azure In-memory local pubsub - mainly useful for local testing RabbitMQ - local implementation using the RabbitMQ message broker  Usage samples:</description>
+Supported Providers  GCP AWS Azure In-memory local pubsub - mainly useful for local testing RabbitMQ - local implementation using the RabbitMQ message broker  Usage Samples  gcmsg sample pubsub package examples  </description>
     </item>
     
     <item>
@@ -42,11 +40,9 @@ Supported providers:
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://gocloud.dev/pages/runtimevar/</guid>
-      <description>Package runtimevar provides easy and portable access to the latest value of remote configuration variables.
+      <description> Package runtimevar provides easy and portable access to the latest value of remote configuration variables.
 Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
-Supported providers:
- AWS Paramstore GCP Runtime Configurator blobvar - a blob-backed implementation supported by any provider that has blob support Local read-only constant vars - an in-memory local implementation, mainly useful for testing Local etcd runtimevar - a local implementation using the etcd distributed key-value store  Usage samples:
- Guestbook sample runtimevar package examples  </description>
+Supported Providers  AWS Paramstore GCP Runtime Configurator blobvar - a blob-backed implementation supported by any provider that has blob support Local read-only constant vars - an in-memory local implementation, mainly useful for testing Local etcd runtimevar - a local implementation using the etcd distributed key-value store  Usage Samples  Guestbook sample runtimevar package examples  </description>
     </item>
     
     <item>
@@ -65,11 +61,9 @@ This package lets you do symmetric encryption and decryption within your applica
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>https://gocloud.dev/pages/server/</guid>
-      <description>Package server provides a preconfigured HTTP server with diagnostic hooks.
+      <description> Package server provides a preconfigured HTTP server with diagnostic hooks.
 Top-level package documentation: https://godoc.org/gocloud.dev/server
-Supported providers:
- GCP StackDriver AWS X-Ray  Usage samples:
- Guestbook sample  </description>
+Supported Providers  Stackdriver AWS X-Ray  Usage Samples  Guestbook sample  </description>
     </item>
     
   </channel>
