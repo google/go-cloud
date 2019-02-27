@@ -7,13 +7,13 @@ remote configuration variables.
 
 Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 
-Supported providers:
+## Supported Providers
 
 * [AWS Paramstore](https://godoc.org/gocloud.dev/runtimevar/paramstore)
 * [GCP Runtime
   Configurator](https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator)
 * [blobvar](https://godoc.org/gocloud.dev/runtimevar/blobvar) - a blob-backed
-  implementation supported by any provider that has blob support
+  implementation supported by any provider that has [blob support]({{< relref "/pages/blob.md#supported-providers">}})
 * [Local read-only constant
   vars](https://godoc.org/gocloud.dev/runtimevar/constantvar) - an in-memory
   local implementation, mainly useful for testing
@@ -21,7 +21,7 @@ Supported providers:
   local implementation using the [etcd distributed key-value
   store](https://github.com/etcd-io/etcd)
 
-Usage samples:
+## Usage Samples
 
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)

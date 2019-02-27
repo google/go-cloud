@@ -12,17 +12,17 @@ listing blobs in a bucket.
 
 Top-level package documentation: https://godoc.org/gocloud.dev/blob
 
-Supported providers:
+## Supported Providers
 
 * [AWS S3 blob](https://godoc.org/gocloud.dev/blob/s3blob)
 * [GCS blob](https://godoc.org/gocloud.dev/blob/gcsblob)
 * [Azure blob](https://godoc.org/gocloud.dev/blob/azureblob)
 * [In-memory local blob](https://godoc.org/gocloud.dev/blob/memblob) - mainly
   useful for local testing
-* [File local blob](https://godoc.org/gocloud.dev/blob/fileblob) - local blob
-  implementation using the file system
+* [File-backed local blob](https://godoc.org/gocloud.dev/blob/fileblob) - local
+  blob implementation using the file system
 
-Usage samples:
+## Usage Samples
 
 * [Tutorial
   sample](https://github.com/google/go-cloud/tree/master/samples/tutorial)
