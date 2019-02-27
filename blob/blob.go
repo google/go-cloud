@@ -867,7 +867,7 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// A type that implements BucketURLOpener can open buckets based on a URL.
+// BucketURLOpener represents types that can open buckets based on a URL.
 // The opener must not modify the URL argument. OpenBucketURL must be safe to
 // call from multiple goroutines.
 //
