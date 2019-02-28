@@ -17,9 +17,12 @@ package secrets
 import (
 	"context"
 	"errors"
+	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -82,4 +85,99 @@ func TestOpenCensus(t *testing.T) {
 	if diff != "" {
 		t.Error(diff)
 	}
+}
+
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
+
+func TestURLMux(t *testing.T) {
+	ctx := context.Background()
+	var got *url.URL
+
+	mux := new(URLMux)
+	// Register scheme foo to always return nil. Sets got as a side effect
+	mux.RegisterKeeper("foo", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
+		got = u
+		return nil, nil
+	}))
+	// Register scheme err to always return an error.
+	mux.RegisterKeeper("err", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
+		return nil, errors.New("fail")
+	}))
+
+	for _, tc := range []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{
+			name:    "empty URL",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL",
+			url:     ":foo",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL no scheme",
+			url:     "foo",
+			wantErr: true,
+		},
+		{
+			name:    "unregistered scheme",
+			url:     "bar://mykeeper",
+			wantErr: true,
+		},
+		{
+			name:    "func returns error",
+			url:     "err://mykeeper",
+			wantErr: true,
+		},
+		{
+			name: "no query options",
+			url:  "foo://mykeeper",
+		},
+		{
+			name: "empty query options",
+			url:  "foo://mykeeper?",
+		},
+		{
+			name: "query options",
+			url:  "foo://mykeeper?aAa=bBb&cCc=dDd",
+		},
+		{
+			name: "multiple query options",
+			url:  "foo://mykeeper?x=a&x=b&x=c",
+		},
+		{
+			name: "fancy keeper name",
+			url:  "foo:///foo/bar/baz",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenKeeper(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			want, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			}
+		})
+	}
+}
+
+type keeperURLOpenFunc func(context.Context, *url.URL) (*Keeper, error)
+
+func (f keeperURLOpenFunc) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
+	return f(ctx, u)
 }
