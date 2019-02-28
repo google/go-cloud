@@ -16,6 +16,16 @@
 // Engine of Vault by Hashicorp.
 // Use NewKeeper to construct a *secrets.Keeper.
 //
+// URLs
+//
+// For secrets.OpenKeeper URLs, vault registers for the scheme "vault"; URLs
+// start with "vault://". secrets.OpenKeeper will dial a Vault server once per
+// unique cpmbination of the following supported URL parameters:
+//   - address: Sets Config.APIConfig.Address; should be a full URL with the
+//       address of the Vault server.
+//   - token: Sets Config.Token; the access token the Vault client will use.
+// Example URL: "vault://mykey?address=http://vault.server.com:8080&token=aaaaa".
+//
 // As
 //
 // vault does not support any types for As.
@@ -25,7 +35,12 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"net/url"
 	"path"
+	"sort"
+	"strings"
+	"sync"
 
 	"github.com/hashicorp/vault/api"
 	"gocloud.dev/gcerrors"
@@ -37,8 +52,9 @@ type Config struct {
 	// Token is the access token the Vault client uses to talk to the server.
 	// See https://www.vaultproject.io/docs/concepts/tokens.html for more
 	// information.
-	Token     string
-	APIConfig *api.Config
+	Token string
+	// APIConfig is used to configure the creation of the client.
+	APIConfig api.Config
 }
 
 // Dial gets a Vault client.
@@ -46,7 +62,7 @@ func Dial(ctx context.Context, cfg *Config) (*api.Client, error) {
 	if cfg == nil {
 		return nil, errors.New("no auth Config provided")
 	}
-	c, err := api.NewClient(cfg.APIConfig)
+	c, err := api.NewClient(&cfg.APIConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +70,85 @@ func Dial(ctx context.Context, cfg *Config) (*api.Client, error) {
 		c.SetToken(cfg.Token)
 	}
 	return c, nil
+}
+
+func init() {
+	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyDialer))
+}
+
+// lazyDialer lazily dials unique Vault servers.
+type lazyDialer struct {
+	mu      sync.Mutex
+	clients map[string]*api.Client
+}
+
+func (o *lazyDialer) cachedClient(ctx context.Context, u *url.URL) (*api.Client, *url.URL, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.clients == nil {
+		o.clients = map[string]*api.Client{}
+	}
+	var cfg Config
+	var cacheKeyParts []string
+	q := u.Query()
+	for param, values := range u.Query() {
+		value := values[0]
+		switch param {
+		case "token":
+			cfg.Token = value
+		case "address":
+			cfg.APIConfig.Address = value
+		default:
+			continue
+		}
+		cacheKeyParts = append(cacheKeyParts, fmt.Sprintf("%s=%s", param, value))
+		q.Del(param)
+	}
+	sort.Strings(cacheKeyParts)
+	cacheKey := strings.Join(cacheKeyParts, ",")
+	client := o.clients[cacheKey]
+	if client == nil {
+		var err error
+		client, err = Dial(ctx, &cfg)
+		if err != nil {
+			return nil, nil, err
+		}
+		o.clients[cacheKey] = client
+	}
+	// Returned an updated URL with the query parameters that we used cleared.
+	u2 := u
+	u2.RawQuery = q.Encode()
+	return client, u2, nil
+}
+
+func (o *lazyDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	client, u2, err := o.cachedClient(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	opener := &URLOpener{Client: client}
+	return opener.OpenKeeperURL(ctx, u2)
+}
+
+// Scheme is the URL scheme vault registers its URLOpener under on secrets.DefaultMux.
+const Scheme = "vault"
+
+// URLOpener opens Vault URLs like "vault://mykey".
+// The URL Host + Path are used as the keyID.
+type URLOpener struct {
+	// Client must be non-nil.
+	Client *api.Client
+
+	// Options specifies the default options to pass to NewKeeper.
+	Options KeeperOptions
+}
+
+// OpenKeeperURL opens the Keeper URL.
+func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+	}
+	return NewKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
 }
 
 // NewKeeper returns a *secrets.Keeper that uses the Transit Secrets Engine of

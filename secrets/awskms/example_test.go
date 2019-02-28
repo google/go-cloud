@@ -19,6 +19,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/awskms"
 )
 
@@ -55,4 +56,15 @@ func Example() {
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	_ = decrypted
+}
+
+func Example_openKeeper() {
+	ctx := context.Background()
+
+	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// The host + path are the key resource ID; this example uses an alias. See
+	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+	// for more details.
+	k, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
+	_, _ = k, err
 }

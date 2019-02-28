@@ -15,6 +15,16 @@
 // Package awskms provides a secrets implementation backed by AWS KMS.
 // Use NewKeeper to construct a *secrets.Keeper.
 //
+// URLs
+//
+// For secrets.OpenKeeper URLs, awskms registers for the scheme "awskms".
+// The host+path are used as the keyID; see
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details. Example: "awskms://alias/my-key".
+//
+// secrets.OpenKeeper will create a new AWS session with the default options.
+// If you want to use a different session, see URLOpener.
+//
 // As
 //
 // awskms exposes the following type for As:
@@ -24,16 +34,95 @@ package awskms // import "gocloud.dev/secrets/awskms"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/url"
+	"path"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/secrets"
 )
+
+func init() {
+	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazySessionOpener))
+}
+
+// Dial gets an AWS KMS service client.
+func Dial(p client.ConfigProvider) (*kms.KMS, error) {
+	if p == nil {
+		return nil, errors.New("getting KMS service: no AWS session provided")
+	}
+	return kms.New(p), nil
+}
+
+// URLOpener opens secrets.Keeper URLs for AWS KMS, like "awskms://keyID".
+// The keyID can be in the form of an Amazon Resource Name (ARN), alias
+// name, or alias ARN. See
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details.
+// The URL Host + Path are used as the keyID, to support alias names like "awskms://alias/foo".
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// for modifying the aws.Session.
+type URLOpener struct {
+	// ConfigProvider must be set to a non-nil value.
+	ConfigProvider client.ConfigProvider
+
+	// Options specifies the options to pass to NewKeeper.
+	Options KeeperOptions
+}
+
+// lazySessionOpener obtains the AWS session from the environment on the first
+// call to OpenKeeperURL.
+type lazySessionOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	o.init.Do(func() {
+		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{
+			ConfigProvider: sess,
+		}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open AWS KMS Keeper %q: %v", u, o.err)
+	}
+	return o.opener.OpenKeeperURL(ctx, u)
+}
+
+// Scheme is the URL scheme awskms registers its URLOpener under on secrets.DefaultMux.
+const Scheme = "awskms"
+
+// OpenKeeperURL opens an AWS KMS Keeper based on u.
+func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
+	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open keeper %v: %v", u, err)
+	}
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	client, err := Dial(configProvider)
+	if err != nil {
+		return nil, err
+	}
+	return NewKeeper(client, path.Join(u.Host, u.Path), &o.Options), nil
+}
 
 // NewKeeper returns a *secrets.Keeper that uses AWS KMS.
 // The keyID can be in the form of an Amazon Resource Name (ARN), alias
@@ -46,14 +135,6 @@ func NewKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keep
 		keyID:  keyID,
 		client: client,
 	})
-}
-
-// Dial gets a AWS KMS service client.
-func Dial(p client.ConfigProvider) (*kms.KMS, error) {
-	if p == nil {
-		return nil, errors.New("getting KMS service: no AWS session provided")
-	}
-	return kms.New(p), nil
 }
 
 type keeper struct {
