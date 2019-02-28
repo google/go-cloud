@@ -25,9 +25,7 @@ import (
 	"github.com/lib/pq"
 )
 
-type URLOpener struct{}
-
-// Scheme is the URL scheme postgres registers its URLOpener under on
+// Scheme is the URL scheme this package registers its URLOpener under on
 // DefaultMux.
 const Scheme = "postgres"
 
@@ -35,6 +33,11 @@ func init() {
 	DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
 }
 
+// URLOpener opens URLs like "postgres://" by using the underlying PostgreSQL driver.
+// See https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters for details.
+type URLOpener struct{}
+
+// OpenPostgresURL opens a new database connection wrapped with OpenCensus instrumentation.
 func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	for k, _ := range u.Query() {
 		// Only permit parameters that do not conflict with other behavior.
@@ -47,9 +50,7 @@ func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, err
 	return db, err
 }
 
-// OpenWithUrl temporary Open DB method, for smooth migration to new URL based design.
 func openWithUrl(url *url.URL) (*sql.DB, error) {
-
 	// Get a database driver.Connector for a fixed configuration.
 	connector, err := pq.NewConnector(url.String())
 	if err != nil {
