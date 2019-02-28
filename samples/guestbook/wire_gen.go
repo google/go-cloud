@@ -100,7 +100,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 var (
 	_wireClientValue        = http.DefaultClient
-	_wireOptionsValue       = session.Options{}
+	_wireOptionsValue       = session.Options{SharedConfigState: session.SharedConfigEnable}
 	_wireDefaultDriverValue = &server.DefaultDriver{}
 )
 
