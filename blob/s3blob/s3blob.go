@@ -129,51 +129,12 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
 	}
-	overrideCfg, err := o.forParams(ctx, u.Query())
+	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open bucket %v: %v", u, err)
 	}
-	if overrideCfg != nil {
-		configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	}
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
-}
-
-var legalQueryParam = map[string]bool{
-	"region":           true,
-	"endpoint":         true,
-	"disableSSL":       true,
-	"s3ForcePathStyle": true,
-}
-
-func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*aws.Config, error) {
-	for k := range q {
-		if !legalQueryParam[k] {
-			return nil, fmt.Errorf("unknown S3 query parameter %s", k)
-		}
-	}
-	var cfg aws.Config
-	override := false
-	if region := q["region"]; len(region) > 0 {
-		cfg.Region = aws.String(region[0])
-		override = true
-	}
-	if endpoint := q["endpoint"]; len(endpoint) > 0 {
-		cfg.Endpoint = aws.String(endpoint[0])
-		override = true
-	}
-	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
-		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
-		override = true
-	}
-	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
-		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
-		override = true
-	}
-	if !override {
-		return nil, nil
-	}
-	return &cfg, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.

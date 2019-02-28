@@ -16,6 +16,9 @@
 package aws // import "gocloud.dev/aws"
 
 import (
+	"fmt"
+	"net/url"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -55,4 +58,28 @@ type ConfigOverrider struct {
 func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
 	cfgs = append(co.Configs[:len(co.Configs):len(co.Configs)], cfgs...)
 	return co.Base.ClientConfig(serviceName, cfgs...)
+}
+
+// ConfigFromURLParams returns an aws.Config initialized based on the URL
+// parameters in q. It is intended to be used by URLOpeners for AWS services.
+//
+// It returns an error if q contains any unknown query parameters.
+func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
+	var cfg aws.Config
+	for param, values := range q {
+		value := values[0]
+		switch param {
+		case "region":
+			cfg.Region = aws.String(value)
+		case "endpoint":
+			cfg.Endpoint = aws.String(value)
+		case "disableSSL":
+			cfg.DisableSSL = aws.Bool(value == "true")
+		case "s3ForcePathStyle":
+			cfg.S3ForcePathStyle = aws.Bool(value == "true")
+		default:
+			return nil, fmt.Errorf("unknown S3 query parameter %q", param)
+		}
+	}
+	return &cfg, nil
 }
