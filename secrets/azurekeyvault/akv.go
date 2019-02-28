@@ -19,22 +19,22 @@
 // As
 //
 // azurekeyvault exposes the following type for As:
-//  - Error: autorest.DetailedError, see https://godoc.org/github.com/Azure/go-autorest/autorest#DetailedError
+// - Error: autorest.DetailedError, see https://godoc.org/github.com/Azure/go-autorest/autorest#DetailedError
 package azurekeyvault
 
 import (
 	"context"
 	"encoding/base64"
 	"fmt"
-
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/internal/useragent"
-	"gocloud.dev/secrets"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/useragent"
+	"gocloud.dev/secrets"
 )
 
 var (
@@ -83,11 +83,11 @@ func Dial() (*keyvault.BaseClient, error) {
 
 // NewKeeper returns a *secrets.Keeper that uses Azure keyVault.
 // List of Parameters:
-//	- client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
-//  - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
-//  - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-//  - keyVersion: string representing the keyVersion, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-//  - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
+// - client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
+// - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
+// - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
+// - keyVersion: string representing the keyVersion, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
+// - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
 func NewKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		client:       client,
@@ -109,7 +109,6 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
 		Value:     &b64Text,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -168,20 +167,16 @@ func (k *keeper) getKeyVaultURI() string {
 
 func (k *keeper) validateOptions() error {
 	if k.options != nil && k.options.Algorithm == "" {
-		return fmt.Errorf("azure secret: please select a valid algorithm from (%s)", getSupportedAlgorithmsForError())
+		return fmt.Errorf("invalid algorithm, choose from %s", getSupportedAlgorithmsForError())
 	}
 
 	return nil
 }
 
 func getSupportedAlgorithmsForError() string {
-	algos := ""
+	var algos []string
 	for _, a := range keyvault.PossibleJSONWebKeyEncryptionAlgorithmValues() {
-		if algos == "" {
-			algos = fmt.Sprintf("%s", a)
-		} else {
-			algos = fmt.Sprintf("%s, %s", algos, a)
-		}
+		algos = append(algos, string(a))
 	}
-	return algos
+	return strings.Join(algos, ", ")
 }
