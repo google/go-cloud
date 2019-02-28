@@ -105,7 +105,7 @@ type lazySessionOpener struct {
 
 func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	o.init.Do(func() {
-		sess, err := session.NewSession()
+		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
 		if err != nil {
 			o.err = err
 			return
