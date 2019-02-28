@@ -13,7 +13,6 @@
 // limitations under the License.
 
 // Package postgres provides functions to open PostgreSQL databases with OpenCensus instrumentation.
-
 package postgres
 
 import (
