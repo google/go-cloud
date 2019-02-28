@@ -18,7 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -216,6 +218,74 @@ func TestOpenBucket(t *testing.T) {
 			_, err = OpenBucket(ctx, sess, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestURLOpenerForParams(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		query   url.Values
+		wantCfg *aws.Config
+		wantErr bool
+	}{
+		{
+			name:    "No overrides",
+			query:   url.Values{},
+			wantCfg: nil,
+		},
+		{
+			name:    "Invalid query parameter",
+			query:   url.Values{"foo": {"bar"}},
+			wantErr: true,
+		},
+		{
+			name:    "Region",
+			query:   url.Values{"region": {"my_region"}},
+			wantCfg: &aws.Config{Region: aws.String("my_region")},
+		},
+		{
+			name:    "Endpoint",
+			query:   url.Values{"endpoint": {"foo"}},
+			wantCfg: &aws.Config{Endpoint: aws.String("foo")},
+		},
+		{
+			name:    "DisableSSL true",
+			query:   url.Values{"disableSSL": {"true"}},
+			wantCfg: &aws.Config{DisableSSL: aws.Bool(true)},
+		},
+		{
+			name:    "DisableSSL false",
+			query:   url.Values{"disableSSL": {"not-true"}},
+			wantCfg: &aws.Config{DisableSSL: aws.Bool(false)},
+		},
+		{
+			name:    "S3ForcePathStyle true",
+			query:   url.Values{"s3ForcePathStyle": {"true"}},
+			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(true)},
+		},
+		{
+			name:    "S3ForcePathStyle false",
+			query:   url.Values{"s3ForcePathStyle": {"not-true"}},
+			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(false)},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u := &URLOpener{}
+			got, err := u.forParams(ctx, test.query)
+			if (err != nil) != test.wantErr {
+				t.Errorf("got err %v want error %v", err, test.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if diff := cmp.Diff(got, test.wantCfg); diff != "" {
+				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
 			}
 		})
 	}

@@ -61,6 +61,7 @@ import (
 	"strings"
 	"sync"
 
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -81,6 +82,11 @@ func init() {
 }
 
 // URLOpener opens S3 URLs like "s3://mybucket".
+// The following query options are supported:
+//  - region: The AWS region for requests; sets aws.Config.Region.
+//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
+//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
 type URLOpener struct {
 	// ConfigProvider must be set to a non-nil value.
 	ConfigProvider client.ConfigProvider
@@ -120,10 +126,54 @@ const Scheme = "s3"
 
 // OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	for k := range u.Query() {
-		return nil, fmt.Errorf("open S3 bucket %q: unknown query parameter %s", u, k)
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
 	}
-	return OpenBucket(ctx, o.ConfigProvider, u.Host, &o.Options)
+	overrideCfg, err := o.forParams(ctx, u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+	}
+	if overrideCfg != nil {
+		configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	}
+	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
+}
+
+var legalQueryParam = map[string]bool{
+	"region":           true,
+	"endpoint":         true,
+	"disableSSL":       true,
+	"s3ForcePathStyle": true,
+}
+
+func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*aws.Config, error) {
+	for k := range q {
+		if !legalQueryParam[k] {
+			return nil, fmt.Errorf("unknown S3 query parameter %s", k)
+		}
+	}
+	var cfg aws.Config
+	override := false
+	if region := q["region"]; len(region) > 0 {
+		cfg.Region = aws.String(region[0])
+		override = true
+	}
+	if endpoint := q["endpoint"]; len(endpoint) > 0 {
+		cfg.Endpoint = aws.String(endpoint[0])
+		override = true
+	}
+	if disableSSL := q["disableSSL"]; len(disableSSL) > 0 {
+		cfg.DisableSSL = aws.Bool(disableSSL[0] == "true")
+		override = true
+	}
+	if s3ForcePathStyle := q["s3ForcePathStyle"]; len(s3ForcePathStyle) > 0 {
+		cfg.S3ForcePathStyle = aws.Bool(s3ForcePathStyle[0] == "true")
+		override = true
+	}
+	if !override {
+		return nil, nil
+	}
+	return &cfg, nil
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
@@ -139,13 +189,14 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 	}
 	return &bucket{
 		name:   bucketName,
-		sess:   sess,
 		client: s3.New(sess),
 	}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
-// for an example.
+// OpenBucket returns a *blob.Bucket backed by S3.
+// AWS buckets are bound to a region; sess must have been created using an
+// aws.Config with Region set to the right region for bucketName.
+// See the package documentation for an example.
 func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, sess, bucketName, opts)
 	if err != nil {
@@ -260,7 +311,6 @@ func (w *writer) Close() error {
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
 	name   string
-	sess   client.ConfigProvider
 	client *s3.S3
 }
 
@@ -525,7 +575,7 @@ func unescapeKey(key string) string {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
-	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
+	uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
 		if opts.BufferSize != 0 {
 			u.PartSize = int64(opts.BufferSize)
 		}
