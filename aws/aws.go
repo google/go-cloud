@@ -29,7 +29,7 @@ var DefaultSession = wire.NewSet(
 	SessionConfig,
 	ConfigCredentials,
 	session.NewSessionWithOptions,
-	wire.Value(session.Options{}),
+	wire.Value(session.Options{SharedConfigState: session.SharedConfigEnable}),
 	wire.Bind((*client.ConfigProvider)(nil), (*session.Session)(nil)),
 )
 
