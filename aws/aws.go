@@ -42,3 +42,17 @@ func SessionConfig(sess *session.Session) *aws.Config {
 func ConfigCredentials(cfg *aws.Config) *credentials.Credentials {
 	return cfg.Credentials
 }
+
+// ConfigOverrider implements client.ConfigProvider by overlaying a list of
+// configurations over a base configuration provider.
+type ConfigOverrider struct {
+	Base    client.ConfigProvider
+	Configs []*aws.Config
+}
+
+// ClientConfig calls the base provider's ClientConfig method with co.Configs
+// followed by the arguments given to ClientConfig.
+func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
+	cfgs = append(co.Configs[:len(co.Configs):len(co.Configs)], cfgs...)
+	return co.Base.ClientConfig(serviceName, cfgs...)
+}
