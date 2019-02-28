@@ -38,7 +38,7 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
-// Alternatively, you can construct a *Bucket using blob.Open by providing
+// Alternatively, you can construct a *Bucket using blob.OpenBucket by providing
 // a URL that's supported by a blob subpackage that you have linked
 // in to your application.
 //
