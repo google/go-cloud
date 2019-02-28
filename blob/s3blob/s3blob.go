@@ -15,12 +15,12 @@
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
-// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
-// with "s3://" like "s3://mybucket". blob.Open will create a new AWS session
-// with the default options. If you want to use a different session or find
-// details on the format of the URL, see URLOpener.
+// For blob.OpenBucket URLs, s3blob registers for the scheme "s3"; URLs start
+// with "s3://" like "s3://mybucket". blob.OpenBucket will create a new AWS
+// session with the default options. If you want to use a different session or
+// find details on the format of the URL, see URLOpener.
 //
 // Escaping
 //

@@ -15,7 +15,7 @@
 // Package azureblob provides a blob implementation that uses Azure Storage’s
 // BlockBlob. Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
 // For blob.OpenBucket URLs, azureblob registers for the scheme "azblob"; URLs
 // start with "azblob://", like "azblob://mybucket". blob.OpenBucket will obtain

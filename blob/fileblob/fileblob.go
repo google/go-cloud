@@ -15,10 +15,10 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
-// For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
-// with "file://" like "file:///path/to/directory". For full details, see
+// For blob.OpenBucket URLs, fileblob registers for the scheme "file"; URLs
+// start with "file://" like "file:///path/to/directory". For full details, see
 // URLOpener.
 //
 // Escaping
