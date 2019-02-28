@@ -18,6 +18,7 @@ package aws // import "gocloud.dev/aws"
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -74,11 +75,19 @@ func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
 		case "endpoint":
 			cfg.Endpoint = aws.String(value)
 		case "disableSSL":
-			cfg.DisableSSL = aws.Bool(value == "true")
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			cfg.DisableSSL = aws.Bool(b)
 		case "s3ForcePathStyle":
-			cfg.S3ForcePathStyle = aws.Bool(value == "true")
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			cfg.S3ForcePathStyle = aws.Bool(b)
 		default:
-			return nil, fmt.Errorf("unknown S3 query parameter %q", param)
+			return nil, fmt.Errorf("unknown query parameter %q", param)
 		}
 	}
 	return &cfg, nil

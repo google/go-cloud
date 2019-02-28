@@ -57,8 +57,13 @@ func TestURLOpenerForParams(t *testing.T) {
 		},
 		{
 			name:    "DisableSSL false",
-			query:   url.Values{"disableSSL": {"not-true"}},
+			query:   url.Values{"disableSSL": {"false"}},
 			wantCfg: &aws.Config{DisableSSL: aws.Bool(false)},
+		},
+		{
+			name:    "DisableSSL false",
+			query:   url.Values{"disableSSL": {"invalid"}},
+			wantErr: true,
 		},
 		{
 			name:    "S3ForcePathStyle true",
@@ -67,8 +72,13 @@ func TestURLOpenerForParams(t *testing.T) {
 		},
 		{
 			name:    "S3ForcePathStyle false",
-			query:   url.Values{"s3ForcePathStyle": {"not-true"}},
+			query:   url.Values{"s3ForcePathStyle": {"false"}},
 			wantCfg: &aws.Config{S3ForcePathStyle: aws.Bool(false)},
+		},
+		{
+			name:    "S3ForcePathStyle false",
+			query:   url.Values{"s3ForcePathStyle": {"invalid"}},
+			wantErr: true,
 		},
 	}
 
