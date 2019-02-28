@@ -23,7 +23,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -245,6 +247,101 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	err = v.Close()
 	verifyWrap("Close", err)
+}
+
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
+
+func TestURLMux(t *testing.T) {
+	ctx := context.Background()
+	var got *url.URL
+
+	mux := new(URLMux)
+	// Register scheme foo to always return nil. Sets got as a side effect
+	mux.RegisterVariable("foo", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
+		got = u
+		return nil, nil
+	}))
+	// Register scheme err to always return an error.
+	mux.RegisterVariable("err", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
+		return nil, errors.New("fail")
+	}))
+
+	for _, tc := range []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{
+			name:    "empty URL",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL",
+			url:     ":foo",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL no scheme",
+			url:     "foo",
+			wantErr: true,
+		},
+		{
+			name:    "unregistered scheme",
+			url:     "bar://myvar",
+			wantErr: true,
+		},
+		{
+			name:    "func returns error",
+			url:     "err://myvar",
+			wantErr: true,
+		},
+		{
+			name: "no query options",
+			url:  "foo://myvar",
+		},
+		{
+			name: "empty query options",
+			url:  "foo://myvar?",
+		},
+		{
+			name: "query options",
+			url:  "foo://myvar?aAa=bBb&cCc=dDd",
+		},
+		{
+			name: "multiple query options",
+			url:  "foo://myvar?x=a&x=b&x=c",
+		},
+		{
+			name: "fancy var name",
+			url:  "foo:///foo/bar/baz",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenVariable(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			want, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(got, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			}
+		})
+	}
+}
+
+type variableURLOpenFunc func(context.Context, *url.URL) (*Variable, error)
+
+func (f variableURLOpenFunc) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
+	return f(ctx, u)
 }
 
 func TestDecoder(t *testing.T) {
