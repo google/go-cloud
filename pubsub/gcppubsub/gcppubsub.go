@@ -85,7 +85,7 @@ type TopicOptions struct{}
 // example.
 func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(client, proj, topicName)
-	return pubsub.NewTopic(dt)
+	return pubsub.NewTopic(dt, nil)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
