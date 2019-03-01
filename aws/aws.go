@@ -16,6 +16,10 @@
 package aws // import "gocloud.dev/aws"
 
 import (
+	"fmt"
+	"net/url"
+	"strconv"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -55,4 +59,45 @@ type ConfigOverrider struct {
 func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
 	cfgs = append(co.Configs[:len(co.Configs):len(co.Configs)], cfgs...)
 	return co.Base.ClientConfig(serviceName, cfgs...)
+}
+
+// ConfigFromURLParams returns an aws.Config initialized based on the URL
+// parameters in q. It is intended to be used by URLOpeners for AWS services.
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/#Config
+//
+// It returns an error if q contains any unknown query parameters; callers
+// should remove any query parameters they know about from q before calling
+// ConfigFromURLParams.
+//
+// The following query options are supported:
+//  - region: The AWS region for requests; sets aws.Config.Region.
+//  - endpoint: The endpoint URL (hostname only or fully qualified URI); sets aws.Config.Endpoint.
+//  - disableSSL: A value of "true" disables SSL when sending requests; sets aws.Config.DisableSSL.
+//  - s3ForcePathStyle: A value of "true" forces the request to use path-style addressing; sets aws.Config.S3ForcePathStyle.
+func ConfigFromURLParams(q url.Values) (*aws.Config, error) {
+	var cfg aws.Config
+	for param, values := range q {
+		value := values[0]
+		switch param {
+		case "region":
+			cfg.Region = aws.String(value)
+		case "endpoint":
+			cfg.Endpoint = aws.String(value)
+		case "disableSSL":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			cfg.DisableSSL = aws.Bool(b)
+		case "s3ForcePathStyle":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for query parameter %q: %v", param, err)
+			}
+			cfg.S3ForcePathStyle = aws.Bool(b)
+		default:
+			return nil, fmt.Errorf("unknown query parameter %q", param)
+		}
+	}
+	return &cfg, nil
 }
