@@ -299,7 +299,7 @@ func ExampleBucket_As() {
 	}
 }
 
-func ExampleWriterOptions_BeforeWrite() {
+func ExampleWriterOptions() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Writer type.
 	// The types exposed for As by gcsblob are documented in
@@ -356,7 +356,7 @@ func ExampleListObject_As() {
 	}
 }
 
-func ExampleListOptions_BeforeList() {
+func ExampleListOptions() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Query type.
 	// The types exposed for As by gcsblob are documented in
