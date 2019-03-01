@@ -34,7 +34,7 @@ type encoder struct {
 	val interface{}
 }
 
-func (e *encoder) EncodeNull()                                { e.val = nil }
+func (e *encoder) EncodeNil()                                 { e.val = nil }
 func (e *encoder) EncodeBool(x bool)                          { e.val = x }
 func (e *encoder) EncodeInt(x int64)                          { e.val = x }
 func (e *encoder) EncodeUint(x uint64)                        { e.val = int64(x) }

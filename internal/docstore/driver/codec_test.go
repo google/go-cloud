@@ -182,7 +182,7 @@ type testEncoder struct {
 	val interface{}
 }
 
-func (e *testEncoder) EncodeNull()                { e.val = nil }
+func (e *testEncoder) EncodeNil()                 { e.val = nil }
 func (e *testEncoder) EncodeBool(x bool)          { e.val = x }
 func (e *testEncoder) EncodeString(x string)      { e.val = x }
 func (e *testEncoder) EncodeInt(x int64)          { e.val = x }

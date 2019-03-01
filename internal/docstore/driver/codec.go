@@ -47,7 +47,7 @@ var (
 // encodable.
 type Encoder interface {
 	// These methods all encode and store a single Go value.
-	EncodeNull()
+	EncodeNil()
 	EncodeBool(bool)
 	EncodeString(string)
 	EncodeInt(int64)
@@ -71,11 +71,10 @@ type Encoder interface {
 	EncodeList(n int) Encoder
 	ListIndex(i int)
 
-	// EncodeMap is called when a map or struct is encountered. Its argument is the
-	// number of fields in the map or struct. The encoding algorithm will call the
-	// returned Encoder that many times to encode the successive values of the map or
-	// struct. After each such call, MapKey will be called with the key of the
-	// element just encoded.
+	// EncodeMap is called when a map is encountered. Its argument is the number of
+	// fields in the map. The encoding algorithm will call the returned Encoder that
+	// many times to encode the successive values of the map. After each such call,
+	// MapKey will be called with the key of the element just encoded.
 	//
 	// For example, map[string}int{"A": 1, "B": 2} will result in these calls:
 	//     enc2 := enc.EncodeMap(2)
@@ -83,8 +82,11 @@ type Encoder interface {
 	//     enc2.MapKey("A")
 	//     enc2.EncodeInt(2)
 	//     enc2.MapKey("B")
-	// For struct{A, B int}{1, 2}, if EncodeStruct (see below) returns false, the same
-	// sequence of calls will occur.
+	//
+	// EncodeMap is also called for structs if EncodeStruct (see below) returns false; the map
+	// then consists of the exported fields of the struct.
+	// For struct{A, B int}{1, 2}, if EncodeStruct returns false, the same sequence
+	// of calls as above will occur.
 	EncodeMap(n int) Encoder
 	MapKey(string)
 
@@ -119,7 +121,7 @@ func Encode(v reflect.Value, e Encoder) error {
 
 func encode(v reflect.Value, enc Encoder) error {
 	if !v.IsValid() {
-		enc.EncodeNull()
+		enc.EncodeNil()
 		return nil
 	}
 	if v.Type().Implements(binaryMarshalerType) {
@@ -132,7 +134,7 @@ func encode(v reflect.Value, enc Encoder) error {
 	}
 	if v.Type().Implements(protoMessageType) {
 		if v.IsNil() {
-			enc.EncodeNull()
+			enc.EncodeNil()
 		} else {
 			bytes, err := proto.Marshal(v.Interface().(proto.Message))
 			if err != nil {
@@ -165,7 +167,7 @@ func encode(v reflect.Value, enc Encoder) error {
 		enc.EncodeString(v.String())
 	case reflect.Slice:
 		if v.IsNil() {
-			enc.EncodeNull()
+			enc.EncodeNil()
 			return nil
 		}
 		fallthrough
@@ -175,13 +177,13 @@ func encode(v reflect.Value, enc Encoder) error {
 		return encodeMap(v, enc)
 	case reflect.Ptr:
 		if v.IsNil() {
-			enc.EncodeNull()
+			enc.EncodeNil()
 			return nil
 		}
 		return encode(v.Elem(), enc)
 	case reflect.Interface:
 		if v.IsNil() {
-			enc.EncodeNull()
+			enc.EncodeNil()
 			return nil
 		}
 		return encode(v.Elem(), enc)
@@ -216,7 +218,7 @@ func encodeList(v reflect.Value, enc Encoder) error {
 // Encode a map.
 func encodeMap(v reflect.Value, enc Encoder) error {
 	if v.IsNil() {
-		enc.EncodeNull()
+		enc.EncodeNil()
 		return nil
 	}
 	keys := v.MapKeys()
@@ -281,6 +283,9 @@ func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) erro
 			}
 			e2.MapKey(f.Name)
 		}
+		// if !ok, then f is a field in an embedded pointer to struct, and that embedded pointer
+		// is nil in v. In other words, the field exists in the struct type, but not this particular
+		// struct value. So we just ignore it.
 	}
 	return nil
 }
