@@ -220,3 +220,22 @@ func TestOpenBucket(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenBucketFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"s3://mybucket", false},
+		{"s3://mybucket?region=us-west1", false},
+		{"s3://mybucket?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := blob.OpenBucket(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
