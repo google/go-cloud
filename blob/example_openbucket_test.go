@@ -33,7 +33,7 @@ func ExampleOpenBucket() {
 	// memblob registers for the "mem" scheme.
 
 	ctx := context.Background()
-	b, err := blob.OpenBucket(ctx, "mem://mybucket")
+	b, err := blob.OpenBucket(ctx, "mem://")
 	if err != nil {
 		log.Fatal(err)
 	}
