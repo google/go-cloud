@@ -18,11 +18,13 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"net/url"
 
-	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/lib/pq"
+
+	"contrib.go.opencensus.io/integrations/ocsql"
 )
 
 type URLOpener struct{}
@@ -49,18 +51,19 @@ func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, err
 
 // OpenWithUrl temporary Open DB method, for smooth migration to new URL based design.
 func openWithUrl(url *url.URL) (*sql.DB, error) {
+	return sql.OpenDB(connector{dsn: url.String()}), nil
+}
 
-	// Get a database driver.Connector for a fixed configuration.
-	connector, err := pq.NewConnector(url.String())
-	if err != nil {
-		return nil, fmt.Errorf("postgres: openWithUrl: unable to create connector: %v\n", err)
-	}
+type connector struct {
+	dsn string
+}
 
-	// Wrap the driver.Connector with ocsql.
-	connector = ocsql.WrapConnector(connector, ocsql.WithAllTraceOptions())
+func (c connector) Connect(ctx context.Context) (driver.Conn, error) {
+	return c.Driver().Open(c.dsn)
+}
 
-	// Use the wrapped driver.Connector.
-	return sql.OpenDB(connector), nil
+func (c connector) Driver() driver.Driver {
+	return ocsql.Wrap(&pq.Driver{})
 }
 
 // A type that implements PostgresURLOpener can open connection based on a URL.
