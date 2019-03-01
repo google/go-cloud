@@ -63,6 +63,7 @@ func (co ConfigOverrider) ClientConfig(serviceName string, cfgs ...*aws.Config) 
 
 // ConfigFromURLParams returns an aws.Config initialized based on the URL
 // parameters in q. It is intended to be used by URLOpeners for AWS services.
+// https://docs.aws.amazon.com/sdk-for-go/api/aws/#Config
 //
 // It returns an error if q contains any unknown query parameters; callers
 // should remove any query parameters they know about from q before calling
