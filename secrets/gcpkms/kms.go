@@ -47,37 +47,34 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 }
 
 // NewKeeper returns a *secrets.Keeper that uses Google Cloud KMS.
+// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
+// information about the keyID format.
 // See the package documentation for an example.
-func NewKeeper(client *cloudkms.KeyManagementClient, ki *KeyID, opts *KeeperOptions) *secrets.Keeper {
+func NewKeeper(client *cloudkms.KeyManagementClient, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
-		keyID:  ki,
+		keyID:  keyID,
 		client: client,
 	})
 }
 
-// KeyID includes related information to construct a key name that is managed
-// by Cloud KMS.
+// KeyResourceID constructs a key resourceID for GCP KMS.
 // See https://cloud.google.com/kms/docs/object-hierarchy#key for more
 // information.
-type KeyID struct {
-	ProjectID, Location, KeyRing, Key string
-}
-
-func (ki *KeyID) String() string {
+func KeyResourceID(projectID, location, keyRing, key string) string {
 	return fmt.Sprintf("projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s",
-		ki.ProjectID, ki.Location, ki.KeyRing, ki.Key)
+		projectID, location, keyRing, key)
 }
 
 // keeper contains information to construct the pull path of a key.
 type keeper struct {
-	keyID  *KeyID
+	keyID  string
 	client *cloudkms.KeyManagementClient
 }
 
 // Decrypt decrypts the ciphertext using the key constructed from ki.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 	req := &kmspb.DecryptRequest{
-		Name:       k.keyID.String(),
+		Name:       k.keyID,
 		Ciphertext: ciphertext,
 	}
 	resp, err := k.client.Decrypt(ctx, req)
@@ -90,7 +87,7 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
 	req := &kmspb.EncryptRequest{
-		Name:      k.keyID.String(),
+		Name:      k.keyID,
 		Plaintext: plaintext,
 	}
 	resp, err := k.client.Encrypt(ctx, req)
