@@ -38,12 +38,8 @@ func Example() {
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
 		// information.
-		&gcpkms.KeyID{
-			ProjectID: "project-id",
-			Location:  "global",
-			KeyRing:   "test",
-			Key:       "key-name",
-		},
+		// You can also use gcpkms.KeyResourceID to construct the string.
+		"projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY",
 		nil,
 	)
 
