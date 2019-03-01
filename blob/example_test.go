@@ -20,10 +20,8 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"cloud.google.com/go/storage"
 	"gocloud.dev/blob"
@@ -390,37 +388,6 @@ func ExampleReader_As() {
 	if r.As(&sr) {
 		_ = sr.Attrs
 	}
-}
-
-func ExampleOpenBucket() {
-	// Connect to a bucket using a URL.
-	// This example uses the file-based implementation, which registers for
-	// the "file" scheme.
-	dir, cleanup := newTempDir()
-	defer cleanup()
-
-	ctx := context.Background()
-	if _, err := blob.OpenBucket(ctx, "file:///nonexistentpath"); err == nil {
-		log.Fatal("Expected an error opening nonexistent path")
-	}
-	fmt.Println("Got expected error opening a nonexistent path")
-
-	// Ensure the path has a leading slash; fileblob ignores the URL's
-	// Host field, so URLs should always start with "file:///". On
-	// Windows, the leading "/" will be stripped, so "file:///c:/foo"
-	// will refer to c:/foo.
-	urlpath := url.PathEscape(filepath.ToSlash(dir))
-	if !strings.HasPrefix(urlpath, "/") {
-		urlpath = "/" + urlpath
-	}
-	if _, err := blob.OpenBucket(ctx, "file://"+urlpath); err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Got a bucket for valid path")
-
-	// Output:
-	// Got expected error opening a nonexistent path
-	// Got a bucket for valid path
 }
 
 func newTempDir() (string, func()) {

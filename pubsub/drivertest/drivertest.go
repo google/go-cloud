@@ -190,7 +190,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 		// to them.
 		t.Fatalf("creating a local topic that doesn't exist on the server: %v", err)
 	}
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	m := &pubsub.Message{}
@@ -261,7 +261,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	var ss []*pubsub.Subscription
@@ -500,7 +500,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	t := pubsub.NewTopic(dt)
+	t := pubsub.NewTopic(dt, nil)
 	s := pubsub.NewSubscription(ds, nil)
 	cleanup := func() {
 		topicCleanup()
@@ -545,7 +545,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	top = pubsub.NewTopic(dt)
+	top = pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 	topicErr := top.Send(ctx, &pubsub.Message{})
 	if topicErr == nil {
