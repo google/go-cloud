@@ -45,6 +45,7 @@ var (
 		200: gcerrors.OK,
 		400: gcerrors.InvalidArgument,
 		401: gcerrors.PermissionDenied,
+		403: gcerrors.PermissionDenied,
 		404: gcerrors.NotFound,
 		408: gcerrors.DeadlineExceeded,
 		429: gcerrors.ResourceExhausted,
