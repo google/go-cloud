@@ -65,7 +65,7 @@ type SubscriptionOptions struct{}
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenTopic(conn *amqp.Connection, name string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(newTopic(&connection{conn}, name))
+	return pubsub.NewTopic(newTopic(&connection{conn}, name), nil)
 }
 
 func newTopic(conn amqpConnection, name string) *topic {

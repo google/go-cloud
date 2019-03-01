@@ -115,7 +115,7 @@ type TopicOptions struct {
 
 // OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts))
+	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), nil)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
