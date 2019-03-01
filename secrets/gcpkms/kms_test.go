@@ -104,6 +104,9 @@ func TestNoConnectionError(t *testing.T) {
 }
 
 func TestOpenKeeper(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
 	tests := []struct {
 		URL     string
 		WantErr bool
