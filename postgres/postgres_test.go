@@ -1,30 +1,29 @@
+// Copyright 2019 The Go Cloud Development Kit Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package postgres
 
 import (
 	"context"
-	"net/url"
 	"testing"
 )
 
 func TestOpen(t *testing.T) {
-	username := "postgres"
-	password := ""
-	databaseName := "postgres"
-	vals := make(url.Values)
-	//var urlOpener = URLOpener{}
-	var user *url.Userinfo
-	vals.Set("sslmode", "disable")
+	t.Skip("Test not hermetic yet, see https://github.com/google/go-cloud/issues/1429")
 
 	ctx := context.Background()
-	user = url.UserPassword(username, password)
-	u := url.URL{
-		Scheme:   "postgres",
-		User:     user,
-		Host:     "localhost",
-		Path:     "/" + databaseName,
-		RawQuery: vals.Encode(),
-	}
-	dbByUrl, err := Open(ctx, u.String())
+	dbByUrl, err := Open(ctx, "postgres://postgres@localhost/postgres?sslmode=disable")
 	if err != nil {
 		t.Fatal(err)
 	}
