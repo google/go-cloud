@@ -145,7 +145,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup1()
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 
 	// Make subscription.
