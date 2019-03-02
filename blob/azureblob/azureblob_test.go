@@ -15,6 +15,7 @@
 package azureblob
 
 import (
+	"os"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -314,5 +315,32 @@ func TestOpenerFromEnv(t *testing.T) {
 				t.Errorf("Options.SASToken = %q; want %q", o.Options.SASToken, test.wantSASToken)
 			}
 		})
+	}
+}
+
+func TestOpenBucketFromURL(t *testing.T) {
+	prevAccount := os.Getenv("AZURE_STORAGE_ACCOUNT")
+	prevKey := os.Getenv("AZURE_STORAGE_KEY")
+	os.Setenv("AZURE_STORAGE_ACCOUNT", "my-account")
+	os.Setenv("AZURE_STORAGE_KEY", "bXlrZXk=") // mykey base64 encoded
+	defer func() {
+		os.Setenv("AZURE_STORAGE_ACCOUNT", prevAccount)
+		os.Setenv("AZURE_STORAGE_KEY", prevKey)
+	}()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"azblob://mybucket", false},
+		{"azblob://mybucket?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := blob.OpenBucket(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
 	}
 }
