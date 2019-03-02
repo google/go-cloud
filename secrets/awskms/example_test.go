@@ -40,7 +40,7 @@ func Example() {
 	// Construct a *secrets.Keeper.
 	keeper := awskms.NewKeeper(
 		client,
-		// Get the key resource ID. Here is an example of using an alias. See
+		// Get the key ID. Here is an example of using an alias. See
 		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 		// for more details.
 		"alias/test-secrets",
@@ -62,7 +62,7 @@ func Example_openKeeper() {
 	ctx := context.Background()
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
-	// The host + path are the key resource ID; this example uses an alias. See
+	// The host + path are the key ID; this example uses an alias. See
 	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 	// for more details.
 	k, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")

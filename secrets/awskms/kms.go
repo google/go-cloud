@@ -18,7 +18,7 @@
 // URLs
 //
 // For secrets.OpenKeeper URLs, awskms registers for the scheme "awskms".
-// The host+path are used as the keyID; see
+// The host+path are used as the key ID; see
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 // for more details. Example: "awskms://alias/my-key".
 //
@@ -64,11 +64,11 @@ func Dial(p client.ConfigProvider) (*kms.KMS, error) {
 }
 
 // URLOpener opens secrets.Keeper URLs for AWS KMS, like "awskms://keyID".
-// The keyID can be in the form of an Amazon Resource Name (ARN), alias
+// The key ID can be in the form of an Amazon Resource Name (ARN), alias
 // name, or alias ARN. See
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 // for more details.
-// The URL Host + Path are used as the keyID, to support alias names like "awskms://alias/foo".
+// The URL Host + Path are used as the key ID, to support alias names like "awskms://alias/foo".
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // for modifying the aws.Session.
 type URLOpener struct {
@@ -125,7 +125,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 }
 
 // NewKeeper returns a *secrets.Keeper that uses AWS KMS.
-// The keyID can be in the form of an Amazon Resource Name (ARN), alias
+// The key ID can be in the form of an Amazon Resource Name (ARN), alias
 // name, or alias ARN. See
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 // for more details.

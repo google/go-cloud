@@ -48,11 +48,12 @@ func init() {
 	secrets.DefaultURLMux().RegisterKeeper(SchemeBase64, &URLOpener{base64: true})
 }
 
-// SchemeString is the URL scheme localsecrets registers its URLOpener under on secrets.DefaultMux.
-const SchemeString = "stringkey"
-
-// SchemeBase64 is the URL scheme localsecrets registers its URLOpener under on secrets.DefaultMux.
-const SchemeBase64 = "base64key"
+// SchemeString/SchemeBase64 are the URL schemes localsecrets registers its URLOpener under on secrets.DefaultMux.
+// See the package documentation and/or URLOpener for details.
+const (
+	SchemeString = "stringkey"
+	SchemeBase64 = "base64key"
+)
 
 // URLOpener opens localsecrets URLs like "stringkey://mykey" and "base64key://c2VjcmV0IGtleQ==".
 //

@@ -291,10 +291,7 @@ func FakeGCPDefaultCredentials(t *testing.T) func() {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.Write(jsonCred); err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
+	if err := ioutil.WriteFile(f.Name(), jsonCred, 0666); err != nil {
 		t.Fatal(err)
 	}
 	oldEnvVal := os.Getenv(envVar)
