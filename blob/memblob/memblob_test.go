@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"testing"
 
+	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
 )
@@ -45,4 +46,22 @@ func TestConformance(t *testing.T) {
 
 func BenchmarkMemblob(b *testing.B) {
 	drivertest.RunBenchmarks(b, OpenBucket(nil))
+}
+
+func TestOpenBucketFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"mem://", false},
+		{"mem://?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := blob.OpenBucket(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }
