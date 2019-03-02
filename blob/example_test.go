@@ -299,6 +299,33 @@ func ExampleBucket_As() {
 	}
 }
 
+func ExampleWriterOptions() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.Writer type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	beforeWrite := func(as func(interface{}) bool) error {
+		var sw *storage.Writer
+		if as(&sw) {
+			fmt.Println(sw.ChunkSize)
+		}
+		return nil
+	}
+
+	options := blob.WriterOptions{BeforeWrite: beforeWrite}
+	if err := b.WriteAll(ctx, "newfile.txt", []byte("hello\n"), &options); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func ExampleListObject_As() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.ObjectAttrs type.
@@ -329,7 +356,7 @@ func ExampleListObject_As() {
 	}
 }
 
-func ExampleListOptions_BeforeList() {
+func ExampleListOptions() {
 	// This example is specific to the gcsblob implementation; it demonstrates
 	// access to the underlying cloud.google.com/go/storage.Query type.
 	// The types exposed for As by gcsblob are documented in
@@ -387,6 +414,29 @@ func ExampleReader_As() {
 	var sr storage.Reader
 	if r.As(&sr) {
 		_ = sr.Attrs
+	}
+}
+
+func ExampleAttributes_As() {
+	// This example is specific to the gcsblob implementation; it demonstrates
+	// access to the underlying cloud.google.com/go/storage.ObjectAttrs type.
+	// The types exposed for As by gcsblob are documented in
+	// https://godoc.org/gocloud.dev/blob/gcsblob#hdr-As
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	attrs, err := b.Attributes(ctx, "gopher.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var oa storage.ObjectAttrs
+	if attrs.As(&oa) {
+		fmt.Println(oa.Owner)
 	}
 }
 
