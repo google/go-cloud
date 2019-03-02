@@ -15,6 +15,7 @@
 package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
+	"io/ioutil"
 	"context"
 	"flag"
 	"net"
@@ -279,4 +280,24 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		}),
 	})
 	return p, done, httpClient
+}
+
+// FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
+// It returns a cleanup function.
+func FakeGCPDefaultCredentials(t *testing.T) func() {
+	const envVar = "GOOGLE_APPLICATION_CREDENTIALS"
+	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
+	f, err := ioutil.TempFile("", "fake-gcp-creds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(f.Name(), jsonCred, 0666); err != nil {
+		t.Fatal(err)
+	}
+	oldEnvVal := os.Getenv(envVar)
+	os.Setenv(envVar, f.Name())
+	return func() {
+		os.Remove(f.Name())
+		os.Setenv(envVar, oldEnvVal)
+	}
 }
