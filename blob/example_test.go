@@ -171,6 +171,11 @@ func Example() {
 }
 
 func ExampleBucket_ErrorAs() {
+	// This example is specific to the s3blob implementation; it demonstrates
+	// access to the underlying awserr.Error type.
+	// The types exposed for ErrorAs by s3blob are documented in
+	// https://godoc.org/gocloud.dev/blob/s3blob#hdr-As
+
 	ctx := context.Background()
 
 	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
