@@ -89,6 +89,9 @@ type URLOpener struct{}
 //  - file://localhost/c:/foo/bar
 //    -> Also passes "c:\foo\bar".
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+	}
 	return OpenBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
 }
 
