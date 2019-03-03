@@ -206,7 +206,7 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
-	dir := path.Join(os.TempDir(), "fileblob")
+	dir := filepath.Join(os.TempDir(), "fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
