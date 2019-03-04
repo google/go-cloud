@@ -48,10 +48,10 @@ func Example() {
 	_ = data
 }
 
-func Example_open() {
+func Example_openBucket() {
 	ctx := context.Background()
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
 	_, _ = b, err
 }
