@@ -134,10 +134,12 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct{}
+type Options struct {
+	UseLegacyListObjects bool
+}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*bucket, error) {
 	if sess == nil {
 		return nil, errors.New("s3blob.OpenBucket: sess is required")
 	}
@@ -145,8 +147,9 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 		return nil, errors.New("s3blob.OpenBucket: bucketName is required")
 	}
 	return &bucket{
-		name:   bucketName,
-		client: s3.New(sess),
+		name:                 bucketName,
+		client:               s3.New(sess),
+		useLegacyListObjects: opts.UseLegacyListObjects,
 	}, nil
 }
 
@@ -267,8 +270,9 @@ func (w *writer) Close() error {
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
-	name   string
-	client *s3.S3
+	name                 string
+	client               *s3.S3
+	useLegacyListObjects bool
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -286,6 +290,10 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	if b.useLegacyListObjects {
+		return b.legacyListPaged(ctx, opts)
+	}
+
 	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
@@ -323,6 +331,89 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	page := driver.ListPage{}
 	if resp.NextContinuationToken != nil {
 		page.NextPageToken = []byte(*resp.NextContinuationToken)
+	}
+	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
+		page.Objects = make([]*driver.ListObject, n)
+		for i, obj := range resp.Contents {
+			page.Objects[i] = &driver.ListObject{
+				Key:     unescapeKey(aws.StringValue(obj.Key)),
+				ModTime: *obj.LastModified,
+				Size:    *obj.Size,
+				MD5:     eTagToMD5(obj.ETag),
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.Object)
+					if !ok {
+						return false
+					}
+					*p = *obj
+					return true
+				},
+			}
+		}
+		for i, prefix := range resp.CommonPrefixes {
+			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
+				Key:   unescapeKey(aws.StringValue(prefix.Prefix)),
+				IsDir: true,
+				AsFunc: func(i interface{}) bool {
+					p, ok := i.(*s3.CommonPrefix)
+					if !ok {
+						return false
+					}
+					*p = *prefix
+					return true
+				},
+			}
+		}
+		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
+			// S3 gives us blobs and "directories" in separate lists; sort them.
+			sort.Slice(page.Objects, func(i, j int) bool {
+				return page.Objects[i].Key < page.Objects[j].Key
+			})
+		}
+	}
+	return &page, nil
+}
+
+func (b *bucket) legacyListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
+	pageSize := opts.PageSize
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+	in := &s3.ListObjectsInput{
+		Bucket:  aws.String(b.name),
+		MaxKeys: aws.Int64(int64(pageSize)),
+	}
+	if len(opts.PageToken) > 0 {
+		in.Marker = aws.String(string(opts.PageToken))
+	}
+	if opts.Prefix != "" {
+		in.Prefix = aws.String(escapeKey(opts.Prefix))
+	}
+	if opts.Delimiter != "" {
+		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
+	}
+	if opts.BeforeList != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**s3.ListObjectsInput)
+			if !ok {
+				return false
+			}
+			*p = in
+			return true
+		}
+		if err := opts.BeforeList(asFunc); err != nil {
+			return nil, err
+		}
+	}
+	req, resp := b.client.ListObjectsRequest(in)
+	if err := req.Send(); err != nil {
+		return nil, err
+	}
+	page := driver.ListPage{}
+	if resp.NextMarker != nil {
+		page.NextPageToken = []byte(*resp.NextMarker)
+	} else if *resp.IsTruncated {
+		page.NextPageToken = []byte(*resp.Contents[len(resp.Contents)-1].Key + "\x00")
 	}
 	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
 		page.Objects = make([]*driver.ListObject, n)
