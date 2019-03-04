@@ -146,6 +146,9 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 	if bucketName == "" {
 		return nil, errors.New("s3blob.OpenBucket: bucketName is required")
 	}
+	if opts == nil {
+		opts = &Options{}
+	}
 	return &bucket{
 		name:                 bucketName,
 		client:               s3.New(sess),
