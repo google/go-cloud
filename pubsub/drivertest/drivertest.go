@@ -20,9 +20,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"math/rand"
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -141,6 +144,7 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
 		"TestSendReceive":                                         testSendReceive,
+		"TestReceiveSend":                                         testReceiveSend,
 		"TestSendReceiveTwo":                                      testSendReceiveTwo,
 		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
 		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
@@ -242,6 +246,52 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 	// Check that the received messages match the sent ones.
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
+	}
+}
+
+// testReceiveSend checks that a receive will still return even if the next
+// message comes in after it was called.
+func testReceiveSend(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	// Start a receive in the background.
+	gotChan := make(chan *pubsub.Message)
+	go func() {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		m.Ack()
+		gotChan <- m
+	}()
+
+	// Wait for Receive to block, with any luck.
+	time.Sleep(100 * time.Millisecond)
+
+	// Send a message.
+	want := &pubsub.Message{Body: []byte(fmt.Sprintf("%d", rand.Int()))}
+	if err := top.Send(ctx, want); err != nil {
+		t.Fatal(err)
+	}
+
+	// The same message should come through from gotChan.
+	got := <-gotChan
+	gotStr := string(got.Body)
+	wantStr := string(want.Body)
+	if gotStr != wantStr {
+		t.Errorf("received message is '%s', want '%s'", gotStr, wantStr)
 	}
 }
 
