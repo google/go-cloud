@@ -144,10 +144,10 @@ type Variable struct {
 	backgroundCancel  func()
 	backgroundCloseCh chan bool
 
-	// firstGoodCh is closed and firstGood is set to true when we get the first
+	// haveGoodCh is closed and haveGood is set to true when we get the first
 	// good value for the variable.
-	firstGoodCh chan bool
-	firstGood   bool
+	haveGoodCh chan bool
+	haveGood   bool
 
 	// Holds the snapshot/error to return from the next call to Watch.
 	// The buffer size is 1 so that we can store something in it even when there's
@@ -170,7 +170,7 @@ func newVar(w driver.Watcher) *Variable {
 		provider:          oc.ProviderName(w),
 		backgroundCancel:  cancel,
 		backgroundCloseCh: make(chan bool),
-		firstGoodCh:       make(chan bool),
+		haveGoodCh:        make(chan bool),
 		nextWatchCh:       make(chan *snapshotPlusError, 1),
 		latest:            &snapshotPlusError{err: errors.New("no value yet")},
 	}
@@ -251,14 +251,14 @@ func (c *Variable) background(ctx context.Context) {
 		c.mu.Lock()
 		// Save the new value if it's good, or if it's an error and we don't
 		// have a good value -- that way we always return the latest error.
-		if spe.err == nil || !c.firstGood {
+		if spe.err == nil || !c.haveGood {
 			c.latest = &spe
 		}
-		if spe.err == nil && !c.firstGood {
-			// This is the first good value! Close firstgoodCh so that Latest doesn't
+		if spe.err == nil && !c.haveGood {
+			// This is the first good value! Close haveGoodCh so that Latest doesn't
 			// block anymore.
-			close(c.firstGoodCh)
-			c.firstGood = true
+			close(c.haveGoodCh)
+			c.haveGood = true
 		}
 		c.mu.Unlock()
 
@@ -274,21 +274,13 @@ func (c *Variable) background(ctx context.Context) {
 }
 
 // Latest is intended to be called per request, with the request context.
-// It returns the latest good Snapshot of the variable value.
-//
-// If ctx is nil, it will return immediately; if there is no known good Snapshot
-// it will return an error.
-//
-// If ctx is not nil, it will block until there's a good Snapshot, and return it.
+// It returns the latest good Snapshot of the variable value, blocking if no
+// good value has ever been received. Pass an already-canceled ctx to make
+// Latest not block at all.
 func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
-	// If a ctx is provided, block until we get an initial value; firstGoodCh
-	// will be closed, and receives from a closed channel return immediately.
-	if ctx != nil {
-		select {
-		case <-c.firstGoodCh:
-		case <-ctx.Done():
-			return Snapshot{}, ctx.Err()
-		}
+	select {
+	case <-c.haveGoodCh:
+	case <-ctx.Done():
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -312,8 +304,8 @@ func (c *Variable) Close() error {
 	// Close any remaining channels to wake up any callers that are waiting on them.
 	c.mu.Lock()
 	close(c.nextWatchCh)
-	if !c.firstGood {
-		close(c.firstGoodCh)
+	if !c.haveGood {
+		close(c.haveGoodCh)
 	}
 	c.mu.Unlock()
 

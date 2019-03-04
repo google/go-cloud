@@ -134,7 +134,7 @@ func TestVariable_Watch(t *testing.T) {
 	fake.Set(&state{val: "hello5"})
 	// Wait until we're sure the last one has been received.
 	for {
-		snap, err := v.Latest(nil)
+		snap, err := v.Latest(ctx)
 		if err != nil {
 			t.Errorf("got unexpected error from Latest: %v", err)
 		}
@@ -180,14 +180,7 @@ func TestVariable_Latest(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Latest with nil ctx should return right away with an error, as there's
-	// no value yet.
-	if _, err := v.Latest(nil); err == nil {
-		t.Errorf("Latest with nil ctx but no value yet: got nil err, want err")
-	}
-
-	// Latest with non-nil ctx should block until the context is done, as there's
-	// still no value.
+	// Latest should block until the context is done, as there's no value.
 	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
 	defer cancel()
 	if _, err := v.Latest(ctx2); err == nil {
@@ -202,8 +195,10 @@ func TestVariable_Latest(t *testing.T) {
 	wg.Add(numGoroutines)
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
-			if _, err := v.Latest(nil); err == nil {
-				t.Errorf("Latest with nil ctx but no value yet: got nil err, want err")
+			ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
+			cancel()
+			if _, err := v.Latest(ctx2); err == nil {
+				t.Errorf("Latest with no value yet: got nil err, want err")
 			}
 			wg.Done()
 		}()
@@ -254,7 +249,9 @@ func TestVariable_Latest(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for {
-				val, err := v.Latest(nil)
+				ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
+				cancel()
+				val, err := v.Latest(ctx2)
 				if err != nil {
 					// Errors are unexpected at this point.
 					t.Error(err)
@@ -282,7 +279,9 @@ func TestVariable_Latest(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for {
-				val, err := v.Latest(nil)
+				ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
+				cancel()
+				val, err := v.Latest(ctx2)
 				if err != nil {
 					// Errors are unexpected at this point.
 					t.Error(err)
