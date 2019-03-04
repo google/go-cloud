@@ -20,7 +20,7 @@
 //
 // For secrets.OpenKeeper URLs, vault registers for the scheme "vault"; URLs
 // start with "vault://". secrets.OpenKeeper will dial a Vault server once per
-// unique cpmbination of the following supported URL parameters:
+// unique combination of the following supported URL parameters:
 //   - address: Sets Config.APIConfig.Address; should be a full URL with the
 //       address of the Vault server.
 //   - token: Sets Config.Token; the access token the Vault client will use.
