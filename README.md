@@ -15,7 +15,15 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or
 S3):
 
 ```go
-blobReader, err := bucket.NewReader(context.Background(), "my-blob", nil)
+ctx := context.Background()
+bucket, err := blob.OpenBucket(ctx, "s3://my-bucket")
+if err != nil {
+    return err
+}
+blobReader, err := bucket.NewReader(ctx, "my-blob", nil)
+if err != nil {
+    return err
+}
 ```
 
 and being able to run that code on any cloud you want, avoiding all the ceremony

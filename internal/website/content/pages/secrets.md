@@ -14,7 +14,7 @@ activites.
 
 Top-level package documentation: <https://godoc.org/gocloud.dev/secrets>
 
-Supported providers:
+## Supported Providers
 
 * [Google Cloud KMS](https://godoc.org/gocloud.dev/secrets/gcpkms)
 * [AWS KMS](https://godoc.org/gocloud.dev/secrets/awskms)
@@ -23,7 +23,7 @@ Supported providers:
 * [In-memory local secrets](https://godoc.org/gocloud.dev/secrets/localsecrets) -
   mainly useful for local testing
 
-Usage samples:
+## Usage Samples
 
 * [Tutorial sample](https://github.com/google/go-cloud/tree/master/samples/tutorial)
 * [Secrets package examples](https://godoc.org/gocloud.dev/secrets#example-package)

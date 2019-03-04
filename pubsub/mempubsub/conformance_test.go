@@ -52,7 +52,7 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, nil, nil)
+	drivertest.RunConformanceTests(t, newHarness, nil)
 }
 
 func BenchmarkMemPubSub(b *testing.B) {

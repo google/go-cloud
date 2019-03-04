@@ -38,7 +38,7 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
-// Alternatively, you can construct a *Bucket using blob.Open by providing
+// Alternatively, you can construct a *Bucket using blob.OpenBucket by providing
 // a URL that's supported by a blob subpackage that you have linked
 // in to your application.
 //
@@ -103,6 +103,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/tag"
 	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
 )
@@ -535,6 +536,21 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 	return &ListIterator{b: b.b, opts: dopts}
 }
 
+// Exists returns true if a blob exists at key, false if it does not exist, or
+// an error.
+// It is a shortcut for calling Attributes and checking if it returns an error
+// with code gcerrors.NotFound.
+func (b *Bucket) Exists(ctx context.Context, key string) (bool, error) {
+	_, err := b.Attributes(ctx, key)
+	if err == nil {
+		return true, nil
+	}
+	if gcerrors.Code(err) == gcerrors.NotFound {
+		return false, nil
+	}
+	return false, err
+}
+
 // Attributes returns attributes for the blob stored at key.
 //
 // If the blob does not exist, Attributes returns an error for which
@@ -585,8 +601,8 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 // If length is negative, it will read till the end of the blob.
 //
 // If the blob does not exist, NewRangeReader returns an error for which
-// gcerrors.Code will return gcerrors.NotFound. Attributes is a lighter-weight way to
-// check for existence.
+// gcerrors.Code will return gcerrors.NotFound. Exists is a lighter-weight way
+// to check for existence.
 //
 // A nil ReaderOptions is treated the same as the zero value.
 //
@@ -851,7 +867,7 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// A type that implements BucketURLOpener can open buckets based on a URL.
+// BucketURLOpener represents types that can open buckets based on a URL.
 // The opener must not modify the URL argument. OpenBucketURL must be safe to
 // call from multiple goroutines.
 //

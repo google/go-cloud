@@ -41,7 +41,7 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 
 	go func() {
 		m := &pubsub.Message{}

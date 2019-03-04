@@ -15,10 +15,10 @@
 // Package fileblob provides a blob implementation that uses the filesystem.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
-// For blob.Open URLs, fileblob registers for the scheme "file"; URLs start
-// with "file://" like "file:///path/to/directory". For full details, see
+// For blob.OpenBucket URLs, fileblob registers for the scheme "file"; URLs
+// start with "file://" like "file:///path/to/directory". For full details, see
 // URLOpener.
 //
 // Escaping
@@ -88,6 +88,9 @@ type URLOpener struct{}
 //  - file://localhost/c:/foo/bar
 //    -> Also passes "c:\foo\bar".
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+	}
 	return OpenBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
 }
 
