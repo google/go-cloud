@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"math/rand"
 	"sort"
 	"strconv"
 	"testing"
@@ -281,17 +279,15 @@ func testReceiveSend(t *testing.T, newHarness HarnessMaker) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Send a message.
-	want := &pubsub.Message{Body: []byte(fmt.Sprintf("%d", rand.Int()))}
+	want := &pubsub.Message{Body: []byte(t.Name())}
 	if err := top.Send(ctx, want); err != nil {
 		t.Fatal(err)
 	}
 
 	// The same message should come through from gotChan.
 	got := <-gotChan
-	gotStr := string(got.Body)
-	wantStr := string(want.Body)
-	if gotStr != wantStr {
-		t.Errorf("received message is '%s', want '%s'", gotStr, wantStr)
+	if !cmp.Equal(got.Body, want.Body) {
+		t.Errorf("received message is '%s', want '%s'", got.Body, want.Body)
 	}
 }
 
