@@ -27,6 +27,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 func ExampleBucket_NewReader() {
