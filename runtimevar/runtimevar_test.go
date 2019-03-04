@@ -249,9 +249,7 @@ func TestVariable_Latest(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for {
-				ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
-				cancel()
-				val, err := v.Latest(ctx2)
+				val, err := v.Latest(ctx)
 				if err != nil {
 					// Errors are unexpected at this point.
 					t.Error(err)
@@ -279,9 +277,7 @@ func TestVariable_Latest(t *testing.T) {
 	for i := 0; i < numGoroutines; i++ {
 		go func() {
 			for {
-				ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
-				cancel()
-				val, err := v.Latest(ctx2)
+				val, err := v.Latest(ctx)
 				if err != nil {
 					// Errors are unexpected at this point.
 					t.Error(err)
