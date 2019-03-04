@@ -42,46 +42,21 @@ Escaping the abstraction
 It is not feasible or desirable for APIs like blob.Bucket to encompass the full
 functionality of every provider. Rather, we intend to provide a subset of the
 most commonly used functionality. There will be cases where a developer wants
-to access provider-specific functionality, which might consist of:
-
-1. Top-level APIs. For example, blob does not expose a Copy, but some provider
-might.
-
-2. Data fields. For example, blob exposes a few attributes like ContentType
-and Size, but S3 and GCS both have many more.
-
-3. Errors. For example, S3 returns awserr.Error.
-
-4. Options. Different providers may support different options for functionality.
+to access provider-specific functionality, such as unexposed APIs or data
+fields, errors or options.
 
 As functions in the APIs provide the user a way to escape the Go CDK
 abstraction to access provider-specific types. They might be used as an interim
 solution until a feature request to the Go CDK is implemented. Or, the Go CDK
 may choose not to support specific features, and the use of As will be
-permanent. As an example, both S3 and GCS blobs have the concept of ACLs, but
-it might be difficult to represent them in a generic way (although, we have not
-tried).
+permanent.
 
 Using As implies that the resulting code is no longer portable; the
 provider-specific code will need to be ported in order to switch providers.
-Therefore, it should be avoided if possible. For example:
+Therefore, it should be avoided if possible.
 
-	// The existing blob.Reader exposes some blob attributes, but not everything
-	// that every provider exposes.
-	type Reader struct {...}
-
-	// As converts i to provider-specific types.
-	func (r *Reader) As(i interface{}) bool {...}
-
-	// User code would look like:
-	r, _ := bucket.NewReader(ctx, "foo.txt", nil)
-	var s3type s3.GetObjectOutput
-	if r.As(&s3type) {
-		... use s3type...
-	}
-
-Each provider implementation documents what type(s) it supports for each of the
-As functions.
+Each provider implementation must document what type(s) it supports for each of
+the As functions.
 
 */
 package cloud // import "gocloud.dev"
