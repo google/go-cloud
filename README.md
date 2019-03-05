@@ -7,7 +7,7 @@ _Write once, run on any cloud ☁️_
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 
 <p align="center">
-  <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png">
+  <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">
 </p>
 
 The Go Cloud Development Kit (Go CDK) allows Go application developers to
