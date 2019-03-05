@@ -131,6 +131,7 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (k *Keeper) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, k.k.ErrorAs)
 }
