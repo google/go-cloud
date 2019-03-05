@@ -75,7 +75,7 @@ project.
 
 Instead, we follow the example of [`database/sql`][] and separate out the
 implementation-agnostic logic from the interface. The implementation-agnostic 
-logic-containg concrete type is the **portable type**. We call the interface the
+logic-containing concrete type is the **portable type**. We call the interface the
 **driver**. Visually, it looks
 like this:
 
