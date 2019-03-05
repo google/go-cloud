@@ -56,9 +56,9 @@ language while focusing on their respective areas of expertise.
 
 [`blob.Bucket`]: https://godoc.org/github.com/google/go-cloud/blob#Bucket
 
-## Drivers and User-Facing Types
+## Portable Types and Drivers
 
-The generic APIs that the Go CDK exports (like [`blob.Bucket`][] or
+The portable APIs that the Go CDK exports (like [`blob.Bucket`][] or
 [`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
@@ -74,8 +74,9 @@ makes the interfaces hard to implement, which runs counter to the goals of the
 project.
 
 Instead, we follow the example of [`database/sql`][] and separate out the
-implementation-agnostic logic from the interface. We call the interface the
-**driver type** and the wrapper the **user-facing type**. Visually, it looks
+implementation-agnostic logic from the interface. The implementation-agnostic 
+logic-containg concrete type is the **portable type**. We call the interface the
+**driver**. Visually, it looks
 like this:
 
 ![Diagram showing user code depending on blob.Bucket, which holds a
@@ -83,21 +84,21 @@ driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
 
 This has a number of benefits:
 
--   The user-facing type can perform higher level logic without making the
-    interface complex to implement. In the blob example, the user-facing type's
+-   The portable type can perform higher level logic without making the
+    interface complex to implement. In the blob example, the portable type's
     `NewWriter` method can do the content type detection and then pass the final
     result to the driver type.
--   Methods can be added to the user-facing type without breaking compatibility.
+-   Methods can be added to the portable type without breaking compatibility.
     Contrast with adding methods to an interface, which is a breaking change.
 -   As new operations on the driver are added as new optional interfaces, the
-    user-facing type can hide the need for type-assertions from the user.
+    portable type can hide the need for type-assertions from the user.
 
 As a rule, if a method `Foo` has the same inputs and semantics in the
-user-facing type and the driver type, then the driver method may be called
+portable type and the driver type, then the driver method may be called
 `Foo`, even though the return signatures may differ. Otherwise, the driver
 method name should be different to reduce confusion.
 
-New Go CDK APIs should always follow this driver plus user-facing type pattern.
+New Go CDK APIs should always follow this portable type and driver pattern.
 
 [`runtimevar.Variable`]:
 https://godoc.org/github.com/google/go-cloud/runtimevar#Variable
@@ -130,18 +131,18 @@ symbols stable over time.
 The exception to this rule is if the name is not unique across providers. The
 canonical example is `gcpkms` and `awskms`.
 
-## Concrete Type Constructors
+## Portable Type Constructors
 
-Concrete type constructors are the functions defined in provider-specific
-packages that end users use to get an instance of the concrete type. For
+Portbale type constructors are the functions defined in provider-specific
+packages that end users call to get an instance of the portable type. For
 example, `gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket`
-concrete type backed by GCS.
+portbale type backed by GCS.
 
--   Concrete type constructors should be top-level functions that return the
-    concrete type directly. Avoid helpers (e.g., a `Client` struct with a
-    function that returns the concrete type instead of it being top-level) and
+-   Portable type constructors should be top-level functions that return the
+    portable type directly. Avoid helpers (e.g., a `Client` struct with a
+    function that returns the portable type instead of it being top-level) and
     wrappers (e.g., a `fooblob.Bucket` type returned from `fooblob.OpenBucket`
-    that wraps the concrete type). Top level functions without wrappers are
+    that wraps the portable type). Top level functions without wrappers are
     easier to use, especially when we're consistent about it.
 -   Order arguments that are less likely to change across multiple calls to the
     constructor before ones that are likely to change. For example, connection
@@ -163,7 +164,7 @@ breaking backward compatibility.
     the default case.
 -   Name the `Options` struct appropriately. `Options` is usually fine for
     provider constructors since the package generally only exposes a
-    constructor. Inside a driver interface or in a concrete type like `blob`,
+    constructor. Inside a driver interface or in a portable type like `blob`,
     use more descriptive names like `ReaderOptions` or `WriterOptions`.
 -   If a function already has a struct argument, don't add a separate `Options`
     struct. Example: the various `sql.Open` functions take a `Params` struct
@@ -172,11 +173,11 @@ breaking backward compatibility.
     signature simpler and avoid confusion about which struct new parameters
     should be added to.
 -   When similar `Options` are part of a driver interface and also part of the
-    concrete type (e.g., `blob.WriterOptions`), duplicate the struct instead of
+    portable type (e.g., `blob.WriterOptions`), duplicate the struct instead of
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
-    appropriate audience (e.g. end-users for the concrete type, provider
-    implementors for the driver interface) implementors), and also allows the
+    appropriate audience (e.g. end-users for the portable type, provider
+    implementors for the driver interface), and also allows the
     structs to diverge over time if appropriate.
 -   Required arguments must not be in an `Options` struct, and all fields of the
     `Options` struct must have reasonable defaults. Exception: struct arguments
@@ -194,13 +195,13 @@ packages would expose `New` with an `Options`, while others would expose
 
 To enable the [Backing services factor][] of a Twelve-Factor Application, Go
 Cloud includes the ability to construct each of its API objects using
-identifying URLs. The concrete type's package should include APIs like the
+identifying URLs. The portable type's package should include APIs like the
 following:
 
 ```go
 // Package foo is a portable API. foo could be something like blob or pubsub.
 //
-// Throughout this example, Widget is used as a stand-in for a particular type
+// Throughout this example, Widget is used as a stand-in for a portable type
 // inside foo, like Bucket or Subscription.
 package foo
 
@@ -364,9 +365,9 @@ Driver implementations should:
 -   Return the raw errors from the underlying provider, and not wrap them in
     `fmt.Errorf` calls, so that they can be exposed to end users via `ErrorAs`.
 
-### Concrete Types
+### Portble Types
 
-Concrete types should:
+Portable types should:
 
 -   Wrap errors returned from driver implementations before returning them to
     end users, so that users can't peek into provider-specific error details
@@ -441,7 +442,7 @@ Any incompatibilities between provider implementations should be visible to the
 user as soon as possible. From best to worst:
 
 1.  At compile time
-1.  At configuration/app startup time (e.g., when the concrete type is created)
+1.  At configuration/app startup time (e.g., when the portable type is created)
 1.  At runtime (e.g., when the incompatible behavior is accessed), via a non-nil
     error
 1.  At runtime, via panic
@@ -462,7 +463,7 @@ user as soon as possible. From best to worst:
     *   API users would declare which feature codes they need.
     *   Mismatches between what a user requests and what the provider supports
         would be enforced at initialization time.
-    *   As much as possible, the API (via the concrete type) would enforce that
+    *   As much as possible, the API (via the portable type) would enforce that
         the user is only exposed to optional functionality that they asked for.
     *   For example, the default legal name for a blob might be ASCII only, with
         a `FeatureUnicodeNames` feature code. Users that don't request this
