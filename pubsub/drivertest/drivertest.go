@@ -33,14 +33,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Options control which conformance tests are run.
-type Options struct {
-	// Tells whether the provider dynamically creates topics and
-	// subscriptions, (e.g., Redis, NATS)
-	DynamicTopicsAndSubscriptions bool
-}
-
-// Harness describes the functionality test harnesses must provide to run
+// Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
 	// CreateTopic creates a new topic in the provider and returns a driver.Topic for testing.
@@ -145,22 +138,17 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 }
 
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest, opts *Options) {
-	if opts == nil {
-		opts = &Options{}
-	}
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                          testSendReceive,
-		"TestSendReceiveTwo":                       testSendReceiveTwo,
-		"TestErrorOnSendToClosedTopic":             testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription": testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                    testCancelSendReceive,
-		"TestMetadata":                             testMetadata,
-		"TestNonUTF8MessageBody":                   testNonUTF8MessageBody,
-	}
-	if !opts.DynamicTopicsAndSubscriptions {
-		tests["TestNonExistentTopicSucceedsOnOpenButFailsOnSend"] = testNonExistentTopicSucceedsOnOpenButFailsOnSend
-		tests["TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend"] = testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend
+		"TestSendReceive":                                         testSendReceive,
+		"TestSendReceiveTwo":                                      testSendReceiveTwo,
+		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                                   testCancelSendReceive,
+		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
+		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
+		"TestMetadata":                                            testMetadata,
+		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -202,7 +190,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 		// to them.
 		t.Fatalf("creating a local topic that doesn't exist on the server: %v", err)
 	}
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	m := &pubsub.Message{}
@@ -273,7 +261,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	var ss []*pubsub.Subscription
@@ -512,7 +500,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	t := pubsub.NewTopic(dt)
+	t := pubsub.NewTopic(dt, nil)
 	s := pubsub.NewSubscription(ds, nil)
 	cleanup := func() {
 		topicCleanup()
@@ -557,7 +545,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	top = pubsub.NewTopic(dt)
+	top = pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 	topicErr := top.Send(ctx, &pubsub.Message{})
 	if topicErr == nil {

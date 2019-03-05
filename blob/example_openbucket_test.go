@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package memblob_test
+package blob_test
 
 import (
 	"context"
@@ -20,18 +20,26 @@ import (
 	"log"
 
 	"gocloud.dev/blob"
-	"gocloud.dev/blob/memblob"
+	_ "gocloud.dev/blob/memblob"
 )
 
-func Example() {
+func ExampleOpenBucket() {
 
-	// Create an in-memory bucket.
-	b := memblob.OpenBucket(nil)
+	// Connect to a bucket using a URL.
+	// This example uses "memblob", the in-memory implementation.
+	// We need to add a blank import line to register the memblob provider's
+	// URLOpener, which implements blob.BucketURLOpener:
+	// import _ "gocloud.dev/blob/memblob"
+	// memblob registers for the "mem" scheme.
 
-	// Now we can use b to read or write files to the container.
 	ctx := context.Background()
-	err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
+	b, err := blob.OpenBucket(ctx, "mem://")
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Now we can use b to read or write blob to the container.
+	if err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil); err != nil {
 		log.Fatal(err)
 	}
 	data, err := b.ReadAll(ctx, "my-key")
@@ -39,30 +47,6 @@ func Example() {
 		log.Fatal(err)
 	}
 	fmt.Println(string(data))
-
-	// Output:
-	// hello world
-}
-
-func Example_openBucket() {
-	// OpenBucket creates a *blob.Bucket from a URL.
-	b, err := blob.OpenBucket(context.Background(), "mem://")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Now we can use b to read or write files to the container.
-	ctx := context.Background()
-	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(data))
-
 	// Output:
 	// hello world
 }

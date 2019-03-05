@@ -67,7 +67,7 @@ func TestConformance(t *testing.T) {
 	}
 	_, isFake := mustDialRabbit(t).(*fakeConnection)
 	asTests := []drivertest.AsTest{rabbitAsTest{isFake}}
-	drivertest.RunConformanceTests(t, harnessMaker, asTests, nil)
+	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 
 	// Run the conformance tests with the fake if we haven't.
 	if isFake {
@@ -78,7 +78,7 @@ func TestConformance(t *testing.T) {
 		return &harness{conn: newFakeConnection()}, nil
 	}
 	asTests = []drivertest.AsTest{rabbitAsTest{true}}
-	drivertest.RunConformanceTests(t, harnessMaker, asTests, nil)
+	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
 func BenchmarkRabbit(b *testing.B) {
@@ -94,7 +94,7 @@ func BenchmarkRabbit(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt), pubsub.NewSubscription(ds, nil))
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil))
 }
 
 type harness struct {

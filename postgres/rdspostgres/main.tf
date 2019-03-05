@@ -94,7 +94,7 @@ output "endpoint" {
 
 output "username" {
   value       = "root"
-  description = "The MySQL username to connect with."
+  description = "The PostgreSQL username to connect with."
 }
 
 output "password" {

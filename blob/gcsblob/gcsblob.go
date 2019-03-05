@@ -15,7 +15,7 @@
 // Package gcsblob provides a blob implementation that uses GCS. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
 // For blob.OpenBucket URLs, gcsblob registers for the scheme "gs"; URLs start
 // with "gs://", like "gs://mybucket". blob.OpenBucket will use Application

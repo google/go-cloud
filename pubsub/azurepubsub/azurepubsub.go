@@ -80,7 +80,7 @@ func NewSubscription(parentTopic *servicebus.Topic, subscriptionName string, opt
 // OpenTopic initializes a pubsub Topic on a given Service Bus Topic.
 func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOptions) *pubsub.Topic {
 	t := openTopic(ctx, sbTopic)
-	return pubsub.NewTopic(t)
+	return pubsub.NewTopic(t, nil)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test

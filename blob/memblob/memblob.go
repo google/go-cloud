@@ -15,7 +15,7 @@
 // Package memblob provides an in-memory blob implementation.
 // Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
 // For blob.OpenBucket URLs, memblob registers for the scheme "mem"; URLs
 // are always "mem://". For more details, see URLOpener.
@@ -30,6 +30,7 @@ import (
 	"context"
 	"crypto/md5"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"net/url"
@@ -59,10 +60,14 @@ func init() {
 const Scheme = "mem"
 
 // URLOpener opens URLs like "mem://".
+// No query parameters are supported.
 type URLOpener struct{}
 
 // OpenBucketURL returns a new in-memory bucket.
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+	}
 	return OpenBucket(nil), nil
 }
 

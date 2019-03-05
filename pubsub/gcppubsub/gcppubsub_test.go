@@ -116,7 +116,7 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
-	drivertest.RunConformanceTests(t, newHarness, asTests, nil)
+	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
 
 func BenchmarkGcpPubSub(b *testing.B) {
@@ -145,7 +145,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup1()
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 
 	// Make subscription.

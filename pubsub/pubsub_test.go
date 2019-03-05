@@ -114,7 +114,7 @@ func TestSendReceive(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 	m := &pubsub.Message{Body: []byte("user signed up")}
 	if err := topic.Send(ctx, m); err != nil {
@@ -174,7 +174,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	}
 
 	// Send messages. Each message has a unique body used as a key to receivedMsgs.
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 	for i := 0; i < howManyToSend; i++ {
 		key := fmt.Sprintf("message #%d", i)
@@ -204,7 +204,7 @@ func TestCancelSend(t *testing.T) {
 	dt := &driverTopic{
 		subs: []*driverSub{ds},
 	}
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 	m := &pubsub.Message{}
 
@@ -273,7 +273,7 @@ func TestCancelTwoReceives(t *testing.T) {
 func TestRetryTopic(t *testing.T) {
 	// Test that Send is retried if the driver returns a retryable error.
 	ft := &failTopic{}
-	top := pubsub.NewTopic(ft)
+	top := pubsub.NewTopic(ft, nil)
 	err := top.Send(context.Background(), &pubsub.Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
@@ -363,7 +363,7 @@ func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { re
 // wrapped exactly once by the concrete type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	top := pubsub.NewTopic(erroringTopic{})
+	top := pubsub.NewTopic(erroringTopic{}, nil)
 	sub := pubsub.NewSubscription(erroringSubscription{}, nil)
 
 	verify := func(err error) {
