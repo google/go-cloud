@@ -33,4 +33,4 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-sort "$tmpfile" | uniq
+sort -df "$tmpfile" | uniq
