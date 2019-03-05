@@ -227,9 +227,7 @@ type Bucket interface {
 	//   *i = foo.MyType{}  // or, more likely, the existing value
 	//   return true
 	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// See https://godoc.org/gocloud.dev for more background.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for returned

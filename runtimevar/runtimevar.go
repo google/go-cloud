@@ -98,9 +98,7 @@ type Snapshot struct {
 // 3. If the type is supported, As will return true and copy the
 // provider-specific type into your variable. Otherwise, it will return false.
 //
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev for more background.
 func (s *Snapshot) As(i interface{}) bool {
 	if s.asFunc == nil {
 		return false

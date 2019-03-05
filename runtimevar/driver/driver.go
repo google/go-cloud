@@ -57,9 +57,7 @@ type State interface {
 	//   *i = foo.MyType{}  // or, more likely, the existing value
 	//   return true
 	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// See https://godoc.org/gocloud.dev for more background.
 	As(interface{}) bool
 }
 

@@ -487,9 +487,7 @@ func newBucket(b driver.Bucket) *Bucket {
 // Provider-specific types that are intended to be mutable will be exposed
 // as a pointer to the underlying type.
 //
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev for more background.
 func (b *Bucket) As(i interface{}) bool {
 	if i == nil {
 		return false
