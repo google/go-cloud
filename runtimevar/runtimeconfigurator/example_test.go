@@ -73,3 +73,18 @@ func Example() {
 	cfg := snapshot.Value.(MyConfig)
 	_ = cfg
 }
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "runtimeconfigurator://myproject/myconfigid/myvar?decoder=string")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Watch(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, _ = snapshot, err
+}

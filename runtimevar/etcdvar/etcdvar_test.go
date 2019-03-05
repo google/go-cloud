@@ -17,6 +17,7 @@ package etcdvar
 import (
 	"context"
 	"errors"
+	"github.com/google/go-cmp/cmp"
 	"testing"
 	"time"
 
@@ -154,5 +155,60 @@ func TestNoConnectionError(t *testing.T) {
 	_, err = v.Watch(ctx)
 	if err == nil {
 		t.Error("got nil want error")
+	}
+}
+
+func TestOpenVariable(t *testing.T) {
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	if err := h.CreateVariable(ctx, "string-var", []byte("hello world")); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.CreateVariable(ctx, "json-var", []byte(`{"Foo": "Bar"}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantWatchErr bool
+		Want         interface{}
+	}{
+		// Variable construction succeeds, but nonexistentvar does not exist
+		// so we get an error from Watch.
+		{"etcd://nonexistentvar?client=http://localhost:2379", false, true, nil},
+		// Variable construction fails due to missing client arg.
+		{"etcd://string-var", true, false, nil},
+		// Variable construction fails due to invalid decoder arg.
+		{"etcd://string-var?client=http://localhost:2379&decoder=notadecoder", true, false, nil},
+		// Variable construction fails due to invalid arg.
+		{"etcd://string-var?client=http://localhost:2379&param=value", true, false, nil},
+		// Working example with string decoder.
+		{"etcd://string-var?client=http://localhost:2379&decoder=string", false, false, "hello world"},
+		// Working example with JSON decoder.
+		{"etcd://json-var?client=http://localhost:2379&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+	}
+
+	for _, test := range tests {
+		v, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err != nil {
+			continue
+		}
+		snapshot, err := v.Watch(ctx)
+		if (err != nil) != test.WantWatchErr {
+			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+		}
+		if err != nil {
+			continue
+		}
+		if !cmp.Equal(snapshot.Value, test.Want) {
+			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+		}
 	}
 }

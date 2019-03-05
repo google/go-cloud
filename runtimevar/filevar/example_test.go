@@ -61,3 +61,18 @@ func Example() {
 	// Output:
 	// foo.com running on port 80
 }
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "file:///path/to/config.json?decoder=json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Watch(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, _ = snapshot, err
+}

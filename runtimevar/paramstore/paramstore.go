@@ -17,6 +17,13 @@
 // (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
 // Use NewVariable to construct a *runtimevar.Variable.
 //
+// URLs
+//
+// For runtimevar.OpenVariable URLs, paramstore registers for the scheme
+// "paramstore". runtimevar.OpenVariable will create a new AWS session with the
+// default options. If you want to use a different session or
+// find details on the format of the URL, see URLOpener.
+//
 // As
 //
 // paramstore exposes the following types for As:
@@ -27,8 +34,12 @@ package paramstore // import "gocloud.dev/runtimevar/paramstore"
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"path"
+	"sync"
 	"time"
 
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
@@ -36,8 +47,93 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 )
+
+func init() {
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, new(lazySessionOpener))
+}
+
+// URLOpener opens AWS Paramstore URLs like "paramstore://myvar".
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// that affect the default AWS session.
+//
+// In addition, the following URL parameters are supported:
+//   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
+//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//       See runtimevar.DecoderByName for supported values.
+//   - wait: The poll interval; supported values are from time.ParseDuration.
+//       Defaults to 30s.
+type URLOpener struct {
+	// ConfigProvider must be set to a non-nil value.
+	ConfigProvider client.ConfigProvider
+
+	// Decoder and Options can be specified at URLOpener construction time,
+	// or provided/overridden via URL parameters.
+	Decoder *runtimevar.Decoder
+	Options Options
+}
+
+// lazySessionOpener obtains the AWS session from the environment on the first
+// call to OpenVariableURL.
+type lazySessionOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	o.init.Do(func() {
+		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{
+			ConfigProvider: sess,
+		}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open variable %q: %v", u, o.err)
+	}
+	return o.opener.OpenVariableURL(ctx, u)
+}
+
+// Scheme is the URL scheme paramstore registers its URLOpener under on runtimevar.DefaultMux.
+const Scheme = "paramstore"
+
+// OpenVariableURL opens the paramstore variable with the name as the host+path from the URL.
+func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	q := u.Query()
+	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
+		var err error
+		o.Decoder, err = runtimevar.DecoderByName(q.Get("decoder"))
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+		}
+		q.Del("decoder")
+	}
+
+	if wait := q.Get("wait"); wait != "" {
+		var err error
+		o.Options.WaitDuration, err = time.ParseDuration(wait)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
+		}
+		q.Del("wait")
+	}
+
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
+	overrideCfg, err := gcaws.ConfigFromURLParams(q)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: %v", u, err)
+	}
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	return NewVariable(configProvider, path.Join(u.Host, u.Path), o.Decoder, &o.Options)
+}
 
 // Options sets options.
 type Options struct {

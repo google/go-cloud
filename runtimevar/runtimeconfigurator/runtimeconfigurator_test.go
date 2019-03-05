@@ -192,3 +192,25 @@ func TestNoConnectionError(t *testing.T) {
 		t.Error("got nil want error")
 	}
 }
+
+func TestOpenVariable(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"runtimeconfigurator://myproject/mycfg/myvar", false},
+		{"runtimeconfigurator://myvar?decoder=string", false},
+		{"runtimeconfigurator://myvar?decoder=notadecoder", true},
+		{"runtimeconfigurator://myvar?wait=30s", false},
+		{"runtimeconfigurator://myvar?wait=notaduration", true},
+		{"runtimeconfigurator://myvar?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
