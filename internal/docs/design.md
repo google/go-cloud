@@ -365,7 +365,7 @@ Driver implementations should:
 -   Return the raw errors from the underlying provider, and not wrap them in
     `fmt.Errorf` calls, so that they can be exposed to end users via `ErrorAs`.
 
-### Portble Types
+### Portable Types
 
 Portable types should:
 
