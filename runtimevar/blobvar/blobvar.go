@@ -88,7 +88,8 @@ func (o *lazyBucketOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*ru
 
 // URLOpener opens Variable URLs like "blob://myblobkey?decoder=string".
 // It supports the URL parameters:
-//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
+//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval; supported values are from time.ParseDuration.
 //       Defaults to 30s.
@@ -109,10 +110,12 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		return nil, fmt.Errorf("open variable %q: a bucket is required", u)
 	}
 	q := u.Query()
-	var err error
-	o.Decoder, err = runtimevar.DecoderByName(q.Get("decoder"))
-	if err != nil {
-		return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
+		var err error
+		o.Decoder, err = runtimevar.DecoderByName(decoderName)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+		}
 	}
 	for param, values := range q {
 		val := values[0]
