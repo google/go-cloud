@@ -187,14 +187,10 @@ func unescapeKey(s string) string {
 	return s
 }
 
-var errNotImplemented = errors.New("not implemented")
-
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	switch {
 	case os.IsNotExist(err):
 		return gcerrors.NotFound
-	case err == errNotImplemented:
-		return gcerrors.Unimplemented
 	default:
 		return gcerrors.Unknown
 	}
