@@ -24,8 +24,11 @@ import (
 	"path/filepath"
 
 	"cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
+	_ "gocloud.dev/blob/gcsblob"
+	_ "gocloud.dev/blob/s3blob"
 )
 
 func ExampleBucket_NewReader() {
@@ -167,6 +170,28 @@ func Example() {
 
 	// Output:
 	// Go Cloud Development Kit
+}
+
+func ExampleBucket_ErrorAs() {
+	// This example is specific to the s3blob implementation; it demonstrates
+	// access to the underlying awserr.Error type.
+	// The types exposed for ErrorAs by s3blob are documented in
+	// https://godoc.org/gocloud.dev/blob/s3blob#hdr-As
+
+	ctx := context.Background()
+
+	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = b.ReadAll(ctx, "nosuchfile")
+	if err != nil {
+		var awsErr awserr.Error
+		if b.ErrorAs(err, &awsErr) {
+			fmt.Println(awsErr.Code())
+		}
+	}
 }
 
 func ExampleBucket_List() {
