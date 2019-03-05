@@ -35,5 +35,29 @@ increasing compile times or binary sizes, and avoiding any side effects from
 
 For sample applications and a tutorial, see the samples directory
 (https://github.com/google/go-cloud/tree/master/samples).
+
+
+Escaping the abstraction
+
+It is not feasible or desirable for APIs like blob.Bucket to encompass the full
+functionality of every provider. Rather, we intend to provide a subset of the
+most commonly used functionality. There will be cases where a developer wants
+to access provider-specific functionality, such as unexposed APIs or data
+fields, errors or options.
+
+As functions in the APIs provide the user a way to escape the Go CDK
+abstraction to access provider-specific types. They might be used as an interim
+solution until a feature request to the Go CDK is implemented. Or, the Go CDK
+may choose not to support specific features, and the use of As will be
+permanent.
+
+Using As implies that the resulting code is no longer portable; the
+provider-specific code will need to be ported in order to switch providers.
+Therefore, it should be avoided if possible.
+
+Each API will include examples demonstrating how to use its various As
+functions, and each provider implementation will document what types it
+supports for each.
+
 */
 package cloud // import "gocloud.dev"
