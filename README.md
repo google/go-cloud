@@ -6,7 +6,7 @@ _Write once, run on any cloud ☁️_
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 
-<p style="text-align:center;">
+<p style="align=center">
   <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">
 </p>
 
