@@ -33,4 +33,5 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-sort -df "$tmpfile" | uniq
+# Sort usnig the native byte values to keep results from different environment consistent.
+LC_ALL=C sort "$tmpfile" | uniq
