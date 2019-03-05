@@ -11,10 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 // Package azurekeyvault provides a secrets implementation backed by Azure KeyVault.
 // See https://docs.microsoft.com/en-us/azure/key-vault/key-vault-whatis for more information.
 // Use NewKeeper to construct a *secrets.Keeper.
+//
+// URLs
+//
+// For secrets.OpenKeeper URLs, azurekeyvault registers for the scheme
+// "azurekeyvault". secrets.OpenKeeper will use Dial to dial Azure KeyVault.
+// If you want to use a different client, or for details on the format of
+// the URL, see URLOpener.
+// Example URL: azurekeyvault://mykeyvaultname/mykeyname/mykeyversion?algorithm=RSA-OAEP-256
 //
 // As
 //
@@ -26,7 +34,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest"
@@ -53,6 +63,81 @@ var (
 		501: gcerrors.Unimplemented,
 	}
 )
+
+func init() {
+	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyDialer))
+}
+
+// URLOpener opens secrets.Keeper URLs for Azure KeyVault, like
+// "azurekeyvault://mykeyvaultname/mykeyname/mykeyversion?algorithm=RSA-OAEP-256", where:
+//
+//   - The URL's host holds the KeyVault name (https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers).
+//   - The first element of the URL's path holds the key name (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters).
+//   - The second element of the URL's path holds the key version (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameter).
+//   - The "algorithm" query parameter (required) holds the algorithm (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm).
+type URLOpener struct {
+	// Client must be set to a non-nil value.
+	Client *keyvault.BaseClient
+
+	// Options specifies the options to pass to NewKeeper.
+	Options KeeperOptions
+}
+
+// lazyDialer dials Azure KeyVault from the environment on the first call to OpenKeeperURL.
+type lazyDialer struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	o.init.Do(func() {
+		client, err := Dial()
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{
+			Client: client,
+		}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open Azure KeyVault Keeper %q: %v", u, o.err)
+	}
+	return o.opener.OpenKeeperURL(ctx, u)
+}
+
+// Scheme is the URL scheme azurekeyvault registers its URLOpener under on secrets.DefaultMux.
+const Scheme = "azurekeyvault"
+
+// OpenKeeperURL opens an Azure KeyVault Keeper based on u.
+func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
+	q := u.Query()
+	algorithm := q.Get("algorithm")
+	if algorithm != "" {
+		o.Options.Algorithm = algorithm
+		q.Del("algorithm")
+	}
+	if o.Options.Algorithm == "" {
+		return nil, fmt.Errorf("open keeper %q: algorithm is required", u)
+	}
+	for param := range q {
+		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+	}
+
+	if u.Host == "" {
+		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the key vault name)", u)
+	}
+	path := u.Path
+	if path[0] == '/' {
+		path = path[1:]
+	}
+	pathParts := strings.Split(path, "/")
+	if len(pathParts) != 2 || pathParts[0] == "" || pathParts[1] == "" {
+		return nil, fmt.Errorf("open keeper %q: URL is expected to have a Path with 2 non-empty elements (the key name and key version)", u)
+	}
+	return NewKeeper(o.Client, u.Host, pathParts[0], pathParts[1], &o.Options), nil
+}
 
 type (
 	keeper struct {
