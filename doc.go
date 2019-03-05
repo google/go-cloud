@@ -55,8 +55,9 @@ Using As implies that the resulting code is no longer portable; the
 provider-specific code will need to be ported in order to switch providers.
 Therefore, it should be avoided if possible.
 
-Each provider implementation must document what type(s) it supports for each of
-the As functions.
+Each API will include examples demonstrating how to use its various As
+functions, and each provider implementation will document what types it
+supports for each.
 
 */
 package cloud // import "gocloud.dev"
