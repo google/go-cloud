@@ -113,3 +113,22 @@ func TestNoConnectionError(t *testing.T) {
 		t.Error("got nil, want UnrecognizedClientException")
 	}
 }
+
+func TestOpenKeeper(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"awskms://alias/my-key", false},
+		{"awskms://alias/my-key?region=us-west1", false},
+		{"awskms://alias/my-key?someparam=foo", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := secrets.OpenKeeper(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}

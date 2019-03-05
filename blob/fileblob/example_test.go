@@ -57,7 +57,7 @@ func Example() {
 	// hello world
 }
 
-func Example_open() {
+func Example_openBucket() {
 	// Create a temporary directory.
 	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
 	if err != nil {
@@ -65,7 +65,7 @@ func Example_open() {
 	}
 	defer os.RemoveAll(dir)
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	ctx := context.Background()
 	b, err := blob.OpenBucket(ctx, path.Join("file://", dir))
 	if err != nil {
