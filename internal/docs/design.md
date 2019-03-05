@@ -133,10 +133,10 @@ canonical example is `gcpkms` and `awskms`.
 
 ## Portable Type Constructors
 
-Portbale type constructors are the functions defined in provider-specific
+Portable type constructors are the functions defined in provider-specific
 packages that end users call to get an instance of the portable type. For
 example, `gcsblob.OpenBucket`, which returns an instance of the `*blob.Bucket`
-portbale type backed by GCS.
+portable type backed by GCS.
 
 -   Portable type constructors should be top-level functions that return the
     portable type directly. Avoid helpers (e.g., a `Client` struct with a
