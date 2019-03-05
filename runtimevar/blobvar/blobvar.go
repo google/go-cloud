@@ -27,7 +27,7 @@
 //       See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval; supported values are from time.ParseDuration.
 //       Defaults to 30s.
-// Example URL: "blob://myvar.txt?url=fileblob:///foo/bar&decoder=string".
+// Example URL: "blob://myvar.txt?bucket=fileblob:///foo/bar&decoder=string".
 //
 // As
 //
@@ -55,7 +55,7 @@ func init() {
 	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &lazyBucketOpener{})
 }
 
-// Scheme is the URL scheme blobvar registers its URLOpener under on blob.DefaultMux.
+// Scheme is the URL scheme blobvar registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "blob"
 
 type lazyBucketOpener struct {
