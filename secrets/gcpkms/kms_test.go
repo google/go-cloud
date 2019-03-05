@@ -102,3 +102,24 @@ func TestNoConnectionError(t *testing.T) {
 		t.Error("got nil, want rpc error")
 	}
 }
+
+func TestOpenKeeper(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY", false},
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?param=val", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := secrets.OpenKeeper(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}

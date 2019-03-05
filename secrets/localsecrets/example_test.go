@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/localsecrets"
 )
 
@@ -43,4 +44,18 @@ func Example() {
 
 	// Output:
 	// Hello, Secrets!
+}
+
+func Example_openKeeper() {
+	ctx := context.Background()
+
+	// OpenKeeper creates a *secrets.Keeper from a URL.
+
+	// Using "stringkey://", the first 32 bytes of the URL hostname is used as the secret.
+	k, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
+
+	// Using "base64key://", the URL hostname must be a base64-encoded key.
+	// The first 32 bytes of the decoding are used as the secret key.
+	k, err = secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
+	_, _ = k, err
 }
