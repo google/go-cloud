@@ -160,7 +160,7 @@ func TestNew(t *testing.T) {
 				drv.Close()
 			}
 
-			// Create concrete type.
+			// Create portable type.
 			w, err := New(test.path, test.decoder, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)

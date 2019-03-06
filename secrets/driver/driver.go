@@ -39,9 +39,7 @@ type Keeper interface {
 	// ErrorAs allows providers to expose provider-specific types for returned
 	// errors.
 	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	ErrorAs(err error, i interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned
