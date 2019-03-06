@@ -66,7 +66,7 @@ type WriterOptions struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
 	ContentLanguage string
 	// ContentMD5 is used as a message integrity check.
-	// The concrete type checks that the MD5 hash of the bytes written matches
+	// The portable type checks that the MD5 hash of the bytes written matches
 	// ContentMD5.
 	// If len(ContentMD5) > 0, driver implementations may pass it to their
 	// underlying network service to guarantee the integrity of the bytes in
@@ -115,7 +115,7 @@ type Attributes struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
-	// Keys will be lowercased by the concrete type before being returned
+	// Keys will be lowercased by the portable type before being returned
 	// to the user. If there are duplicate case-insensitive keys (e.g.,
 	// "foo" and "FOO"), only one value will be kept, and it is undefined
 	// which one.

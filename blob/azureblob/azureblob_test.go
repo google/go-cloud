@@ -15,12 +15,12 @@
 package azureblob
 
 import (
-	"os"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
@@ -254,7 +254,7 @@ func TestOpenBucket(t *testing.T) {
 			if err == nil && drv != nil && drv.name != test.want {
 				t.Errorf("got %q want %q", drv.name, test.want)
 			}
-			// Create concrete type.
+			// Create portable type.
 			_, err = OpenBucket(ctx, p, test.accountName, test.containerName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
