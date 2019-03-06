@@ -17,20 +17,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/mempubsub"
+	"golang.org/x/sync/errgroup"
 )
 
 type driverTopic struct {
@@ -474,4 +475,128 @@ func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
+
+func TestURLMux(t *testing.T) {
+	ctx := context.Background()
+	var gotTopic, gotSub *url.URL
+
+	mux := new(pubsub.URLMux)
+	// Register scheme foo to always return nil. Sets got as a side effect
+	mux.RegisterTopic("foo", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
+		gotTopic = u
+		return nil, nil
+	}))
+	mux.RegisterSubscription("foo", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
+		gotSub = u
+		return nil, nil
+	}))
+	// Register scheme err to always return an error.
+	mux.RegisterTopic("err", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
+		return nil, errors.New("fail")
+	}))
+	mux.RegisterSubscription("err", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
+		return nil, errors.New("fail")
+	}))
+
+	for _, tc := range []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{
+			name:    "empty URL",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL",
+			url:     ":foo",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL no scheme",
+			url:     "foo",
+			wantErr: true,
+		},
+		{
+			name:    "unregistered scheme",
+			url:     "bar://myps",
+			wantErr: true,
+		},
+		{
+			name:    "func returns error",
+			url:     "err://myps",
+			wantErr: true,
+		},
+		{
+			name: "no query options",
+			url:  "foo://myps",
+		},
+		{
+			name: "empty query options",
+			url:  "foo://myps?",
+		},
+		{
+			name: "query options",
+			url:  "foo://myps?aAa=bBb&cCc=dDd",
+		},
+		{
+			name: "multiple query options",
+			url:  "foo://myps?x=a&x=b&x=c",
+		},
+		{
+			name: "fancy ps name",
+			url:  "foo:///foo/bar/baz",
+		},
+	} {
+		t.Run("topic: "+tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenTopic(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			want, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(gotTopic, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotTopic, want, diff)
+			}
+		})
+		t.Run("subscription: "+tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenSubscription(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error: %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			want, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(gotSub, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotSub, want, diff)
+			}
+		})
+	}
+}
+
+type topicURLOpenFunc func(context.Context, *url.URL) (*pubsub.Topic, error)
+
+func (f topicURLOpenFunc) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	return f(ctx, u)
+}
+
+type subscriptionURLOpenFunc func(context.Context, *url.URL) (*pubsub.Subscription, error)
+
+func (f subscriptionURLOpenFunc) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	return f(ctx, u)
 }
