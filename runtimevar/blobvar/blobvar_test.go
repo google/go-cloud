@@ -17,13 +17,13 @@ package blobvar
 import (
 	"context"
 	"errors"
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/runtimevar"
@@ -127,6 +127,8 @@ func TestOpenVariable(t *testing.T) {
 		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=notadecoder", true, false, nil},
 		// Variable construction fails due to invalid arg.
 		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=string&param=value", true, false, nil},
+		// Working example with default decoder.
+		{"blob://myvar.txt?bucket=file://" + dir, false, false, []byte("hello world!")},
 		// Working example with string decoder and wait.
 		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=string&wait=5s", false, false, "hello world!"},
 		// Working example with JSON decoder.

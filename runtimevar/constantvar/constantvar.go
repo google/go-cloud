@@ -27,6 +27,7 @@
 //       See runtimevar.DecoderByName for supported values.
 //   - err: The error to use for the constant Variable. A new error is created
 //       using errors.New and passed to NewError.
+// If both "err" and "val" are provided, "val" is ignored.
 // Example URL: "constant://?val=foo&decoder=string".
 //
 // As
