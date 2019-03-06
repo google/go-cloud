@@ -62,6 +62,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -202,11 +203,11 @@ func (t *Topic) As(i interface{}) bool {
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://godoc.org/gocloud.dev#As for background information.
-func (t *Topic) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, t.driver.ErrorAs)
+func (t *Topic) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
 // NewTopic is for use by provider implementations.
@@ -469,11 +470,11 @@ func (s *Subscription) As(i interface{}) bool {
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See Topic.As for more details.
-func (s *Subscription) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, s.driver.ErrorAs)
+func (s *Subscription) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
 // NewSubscription is for use by provider implementations.
@@ -529,4 +530,136 @@ func wrapError(ec errorCoder, err error) error {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
+}
+
+// TopicURLOpener represents types than can open Topics based on a URL.
+// The opener must not modify the URL argument. OpenTopicURL must be safe to
+// call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type TopicURLOpener interface {
+	OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error)
+}
+
+// SubscriptionURLOpener represents types than can open Subscriptions based on a URL.
+// The opener must not modify the URL argument. OpenSubscriptionURL must be safe to
+// call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type SubscriptionURLOpener interface {
+	OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a multiplexer with no registered schemes.
+type URLMux struct {
+	subscriptionSchemes map[string]SubscriptionURLOpener
+	topicSchemes        map[string]TopicURLOpener
+}
+
+// RegisterTopic registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterTopic panics.
+func (mux *URLMux) RegisterTopic(scheme string, opener TopicURLOpener) {
+	if mux.topicSchemes == nil {
+		mux.topicSchemes = make(map[string]TopicURLOpener)
+	} else if _, exists := mux.topicSchemes[scheme]; exists {
+		panic(fmt.Errorf("scheme %q already registered for topics on mux", scheme))
+	}
+	mux.topicSchemes[scheme] = opener
+}
+
+// RegisterSubscription registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterSubscription panics.
+func (mux *URLMux) RegisterSubscription(scheme string, opener SubscriptionURLOpener) {
+	if mux.subscriptionSchemes == nil {
+		mux.subscriptionSchemes = make(map[string]SubscriptionURLOpener)
+	} else if _, exists := mux.subscriptionSchemes[scheme]; exists {
+		panic(fmt.Errorf("scheme %q already registered for subscriptions on mux", scheme))
+	}
+	mux.subscriptionSchemes[scheme] = opener
+}
+
+// OpenTopic calls OpenTopicURL with the URL parsed from urlstr.
+// OpenTopic is safe to call from multiple goroutines.
+func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, fmt.Errorf("open topic: %v", err)
+	}
+	return mux.OpenTopicURL(ctx, u)
+}
+
+// OpenSubscription calls OpenSubscriptionURL with the URL parsed from urlstr.
+// OpenSubscription is safe to call from multiple goroutines.
+func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription: %v", err)
+	}
+	return mux.OpenSubscriptionURL(ctx, u)
+}
+
+// OpenTopicURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenTopicURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("open topic %q: no scheme in URL", u)
+	}
+	var opener TopicURLOpener
+	if mux != nil {
+		opener = mux.topicSchemes[u.Scheme]
+	}
+	if opener == nil {
+		return nil, fmt.Errorf("open topic %q: no provider registered for %s", u, u.Scheme)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+// OpenSubscriptionURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenSubscriptionURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("open subscription %q: no scheme in URL", u)
+	}
+	var opener SubscriptionURLOpener
+	if mux != nil {
+		opener = mux.subscriptionSchemes[u.Scheme]
+	}
+	if opener == nil {
+		return nil, fmt.Errorf("open subscription %q: no provider registered for %s", u, u.Scheme)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+var defaultURLMux = new(URLMux)
+
+// DefaultURLMux returns the URLMux used by OpenTopic and OpenSubscription.
+//
+// Driver packages can use this to register their TopicURLOpener and/or
+// SubscriptionURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenTopic opens the Topic identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
+	return defaultURLMux.OpenTopic(ctx, urlstr)
+}
+
+// OpenSubscription opens the Subscription identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
+	return defaultURLMux.OpenSubscription(ctx, urlstr)
 }
