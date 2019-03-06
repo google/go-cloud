@@ -1313,7 +1313,7 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 		exists      bool
 	}{
 		{
-			// The write will be buffered in the concrete type as part of
+			// The write will be buffered in the portable type as part of
 			// ContentType detection, so the first call to the Driver will be Close.
 			description: "EmptyContentType",
 		},
@@ -1785,7 +1785,7 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 	b := blob.NewBucket(drv)
 
 	// Verify that a negative Expiry gives an error. This is enforced in the
-	// concrete type, so works regardless of provider support.
+	// portable type, so works regardless of provider support.
 	_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Expiry: -1 * time.Minute})
 	if err == nil {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
@@ -1873,6 +1873,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
 	if err := st.ReaderCheck(r); err != nil {
 		t.Error(err)
 	}

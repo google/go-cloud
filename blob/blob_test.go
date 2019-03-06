@@ -213,7 +213,7 @@ func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
-// wrapped exactly once by the concrete type.
+// wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	buf := bytes.Repeat([]byte{'A'}, sniffLen)

@@ -77,7 +77,7 @@ func (*topic) IsRetryable(error) bool { return false }
 
 // As implements driver.Topic.As.
 // It supports *topic so that NewSubscription can recover a *topic
-// from the concrete type (see below). External users won't be able
+// from the portable type (see below). External users won't be able
 // to use As because topic isn't exported.
 func (t *topic) As(i interface{}) bool {
 	x, ok := i.(**topic)
