@@ -80,7 +80,7 @@ type Watcher interface {
 	// WatchVariable returns the current State of the variable.
 	// If the State has not changed, it returns nil.
 	//
-	// If WatchVariable returns a wait time > 0, the concrete type uses
+	// If WatchVariable returns a wait time > 0, the portable type uses
 	// it as a hint to not call WatchVariable again for the wait time.
 	//
 	// Implementations *may* block, but must return if ctx is Done. If the
