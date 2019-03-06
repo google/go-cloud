@@ -104,8 +104,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 	}
 	dt = openTopic(ctx, client, *out.TopicArn, nil)
 	cleanup = func() {
-		// TODO: Call client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 	}
 	return dt, cleanup, nil
 }
@@ -129,18 +128,14 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	}
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
-	// TODO: call
-	//   snsClient := sns.New(h.sess, h.cfg)
-	//   subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
-	// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
-	//
-	// In the meantime, it's necessary to manually go into the AWS console
-	// in the SQS section and manually subscribe the queues to the topics
-	// after running the test once in -record mode and seeing it fail due
-	// to the queues not being subscribed.
+	snsClient := sns.New(sess, &aws.Config{})
+	cleanupSub, err := subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("subscribing: %v", err)
+	}
 	cleanup = func() {
-		// TODO: Call sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
+		cleanupSub()
 	}
 	return ds, cleanup, nil
 }
@@ -169,52 +164,60 @@ func (ab *ackBatcher) AddNoWait(item interface{}) <-chan error {
 func (ab *ackBatcher) Shutdown() {
 }
 
-func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) error {
+func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) (func(), error) {
 	out2, err := sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
 		QueueUrl:       qURL,
 		AttributeNames: []*string{aws.String("QueueArn")},
 	})
 	if err != nil {
-		return fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
+		return nil, fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
 	}
 	qARN := out2.Attributes["QueueArn"]
 
 	t := dt.(*topic)
-	_, err = snsClient.Subscribe(&sns.SubscribeInput{
+	subOut, err := snsClient.Subscribe(&sns.SubscribeInput{
 		TopicArn: aws.String(t.arn),
 		Endpoint: qARN,
 		Protocol: aws.String("sqs"),
 	})
 	if err != nil {
-		return fmt.Errorf("subscribing: %v", err)
+		return nil, fmt.Errorf("subscribing: %v", err)
+	}
+	cleanup := func() {
+		_, _ = snsClient.Unsubscribe(&sns.UnsubscribeInput{
+			SubscriptionArn: subOut.SubscriptionArn,
+		})
 	}
 
-	// Get the confirmation from the queue.
-	out3, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: qURL,
+	queuePolicy := `{
+"Version": "2012-10-17",
+"Id": "AllowQueue",
+"Statement": [
+{
+"Sid": "MySQSPolicy001",
+"Effect": "Allow",
+"Principal": {
+"AWS": "*"
+},
+"Action": "sqs:SendMessage",
+"Resource": "` + *qARN + `",
+"Condition": {
+"ArnEquals": {
+"aws:SourceArn": "` + t.arn + `"
+}
+}
+}
+]
+}`
+	_, err = sqsClient.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+		Attributes: map[string]*string{"Policy": &queuePolicy},
+		QueueUrl:   qURL,
 	})
 	if err != nil {
-		return fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
+		return nil, fmt.Errorf("setting policy: %v", err)
 	}
-	ms := out3.Messages
-	var token *string
-	switch len(ms) {
-	case 0:
-		return errors.New("no subscription confirmation message found in queue")
-	case 1:
-		m := ms[0]
-		token = m.Body
-	default:
-		return fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
-	}
-	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
-		TopicArn: aws.String(t.arn),
-		Token:    token,
-	})
-	if err != nil {
-		return fmt.Errorf("confirming subscription: %v", err)
-	}
-	return nil
+
+	return cleanup, nil
 }
 
 func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(error)) driver.Batcher {
