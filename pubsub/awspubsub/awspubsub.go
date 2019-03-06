@@ -217,8 +217,8 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs.
-func (t *topic) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (t *topic) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Topic.ErrorCode.
@@ -394,8 +394,8 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs.
-func (s *subscription) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (s *subscription) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode.
@@ -403,12 +403,12 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
-func errorAs(err error, target interface{}) bool {
+func errorAs(err error, i interface{}) bool {
 	e, ok := err.(awserr.Error)
 	if !ok {
 		return false
 	}
-	p, ok := target.(*awserr.Error)
+	p, ok := i.(*awserr.Error)
 	if !ok {
 		return false
 	}
