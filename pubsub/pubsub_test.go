@@ -573,7 +573,7 @@ func TestURLMux(t *testing.T) {
 		t.Run("subscription: "+tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenSubscription(ctx, tc.url)
 			if (gotErr != nil) != tc.wantErr {
-				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+				t.Fatalf("got err %v, want error: %v", gotErr, tc.wantErr)
 			}
 			if gotErr != nil {
 				return
