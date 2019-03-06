@@ -39,16 +39,15 @@ import (
 	"sync"
 	"time"
 
-	gcaws "gocloud.dev/aws"
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/driver"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	gcaws "gocloud.dev/aws"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 )
 
 func init() {

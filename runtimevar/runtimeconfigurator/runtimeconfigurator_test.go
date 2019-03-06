@@ -201,12 +201,26 @@ func TestOpenVariable(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"runtimeconfigurator://myproject/mycfg/myvar", false},
-		{"runtimeconfigurator://myvar?decoder=string", false},
-		{"runtimeconfigurator://myvar?decoder=notadecoder", true},
-		{"runtimeconfigurator://myvar?wait=30s", false},
-		{"runtimeconfigurator://myvar?wait=notaduration", true},
-		{"runtimeconfigurator://myvar?param=value", true},
+		// OK, setting decoder.
+		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=string", false},
+		// Missing project ID.
+		{"runtimeconfigurator:///mycfg/myvar", true},
+		// Empty config.
+		{"runtimeconfigurator://myproject//myvar", true},
+		// Empty key name.
+		{"runtimeconfigurator://myproject/mycfg/", true},
+		// Missing key name.
+		{"runtimeconfigurator://myproject/mycfg", true},
+		// Invalid decoder.
+		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=notadecoder", true},
+		// OK, setting wait.
+		{"runtimeconfigurator://myproject/mycfg/myvar?wait=30s", false},
+		// Invalid wait.
+		{"runtimeconfigurator://myproject/mycfg/myvar?wait=notaduration", true},
+		// Unknown param.
+		{"runtimeconfigurator://myproject/mycfg/myvar?param=value", true},
 	}
 
 	ctx := context.Background()

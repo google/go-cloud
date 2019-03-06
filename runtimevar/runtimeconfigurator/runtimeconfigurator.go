@@ -38,7 +38,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"path"
+	"strings"
 	"sync"
 	"time"
 
@@ -168,7 +168,17 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	}
 	var rn ResourceName
 	rn.ProjectID = u.Host
-	rn.Config, rn.Variable = path.Split(u.Path)
+	path := u.Path
+	if len(path) > 0 && path[0] == '/' {
+		path = path[1:]
+	}
+	if pathParts := strings.Split(path, "/"); len(pathParts) == 2 {
+		rn.Config = pathParts[0]
+		rn.Variable = pathParts[1]
+	}
+	if rn.ProjectID == "" || rn.Config == "" || rn.Variable == "" {
+		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
+	}
 	return NewVariable(o.Client, rn, o.Decoder, &o.Options)
 }
 

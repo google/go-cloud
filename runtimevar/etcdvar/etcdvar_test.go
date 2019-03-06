@@ -17,10 +17,10 @@ package etcdvar
 import (
 	"context"
 	"errors"
-	"github.com/google/go-cmp/cmp"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/embed"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"

@@ -202,6 +202,8 @@ func TestOpenVariable(t *testing.T) {
 		{"file://" + txtPath + "?decoder=notadecoder", true, false, nil},
 		// Variable construction fails due to invalid arg.
 		{"file://" + txtPath + "?param=value", true, false, nil},
+		// Working example with default decoder.
+		{"file://" + txtPath, false, false, []byte("hello world!")},
 		// Working example with string decoder and wait.
 		{"file://" + txtPath + "?decoder=string&wait=5s", false, false, "hello world!"},
 		// Working example with JSON decoder.

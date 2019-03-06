@@ -67,8 +67,5 @@ func Example_openVariable() {
 	}
 
 	snapshot, err := v.Watch(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
 	_, _ = snapshot, err
 }
