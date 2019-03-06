@@ -366,19 +366,19 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (*topic) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
-func errorAs(err error, target interface{}) bool {
+func errorAs(err error, i interface{}) bool {
 	switch e := err.(type) {
 	case *amqp.Error:
-		if p, ok := target.(**amqp.Error); ok {
+		if p, ok := i.(**amqp.Error); ok {
 			*p = e
 			return true
 		}
 	case MultiError:
-		if p, ok := target.(*MultiError); ok {
+		if p, ok := i.(*MultiError); ok {
 			*p = e
 			return true
 		}
@@ -585,6 +585,6 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (*subscription) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
