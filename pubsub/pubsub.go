@@ -203,11 +203,11 @@ func (t *Topic) As(i interface{}) bool {
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://godoc.org/gocloud.dev#As for background information.
-func (t *Topic) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, t.driver.ErrorAs)
+func (t *Topic) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
 // NewTopic is for use by provider implementations.
@@ -470,11 +470,11 @@ func (s *Subscription) As(i interface{}) bool {
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See Topic.As for more details.
-func (s *Subscription) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, s.driver.ErrorAs)
+func (s *Subscription) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
 // NewSubscription is for use by provider implementations.
