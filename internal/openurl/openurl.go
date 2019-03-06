@@ -18,6 +18,7 @@ package openurl // import "gocloud.dev/internal/openurl"
 import (
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 // SchemeMap maps URL schemes to values. The zero value is an empty map, ready for use.
@@ -29,13 +30,15 @@ type SchemeMap struct {
 // Register registers scheme for value; subsequent calls to FromString or
 // FromURL with scheme will return value.
 // api is the portable API name (e.g., "blob"); the same value should always
-// be passed.
+// be passed. It should be in all lowercase.
 // typ is the portable type (e.g., "Bucket").
 // Register panics if scheme has already been registered.
-// TODO(rvangent): Remove typ from here and use a single URLOpener per API.
 func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
 	if m.m == nil {
 		m.m = map[string]interface{}{}
+	}
+	if api != strings.ToLower(api) {
+		panic(fmt.Errorf("api should be lowercase: %q", api))
 	}
 	if m.api == "" {
 		m.api = api
@@ -63,12 +66,19 @@ func (m *SchemeMap) FromString(typ, urlstr string) (interface{}, *url.URL, error
 
 // FromURL looks up the value for u's scheme.
 func (m *SchemeMap) FromURL(typ string, u *url.URL) (interface{}, error) {
-	if u.Scheme == "" {
+	scheme := u.Scheme
+	if scheme == "" {
 		return nil, fmt.Errorf("open %s.%s: no scheme in URL %q", m.api, typ, u)
 	}
-	v, ok := m.m[u.Scheme]
+	for _, prefix := range []string{
+		fmt.Sprintf("%s+%s+", m.api, strings.ToLower(typ)),
+		fmt.Sprintf("%s+", m.api),
+	} {
+		scheme = strings.TrimPrefix(scheme, prefix)
+	}
+	v, ok := m.m[scheme]
 	if !ok {
-		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q", m.api, typ, u.Scheme, u)
+		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q", m.api, typ, scheme, u)
 	}
 	return v, nil
 }
