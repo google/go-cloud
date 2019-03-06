@@ -166,8 +166,8 @@ func TestOpenKeeper(t *testing.T) {
 		{"azurekeyvault://mykeyvault/mykey/myversion?algorithm=RSA-OAEP-256&param=value", true},
 		// Empty host.
 		{"azurekeyvault:///mykey/myversion?algorithm=RSA-OAEP-256", true},
-		// Path has < 2 elements.
-		{"azurekeyvault://mykeyvault/mykey?algorithm=RSA-OAEP-256", true},
+		// Path has 1 elements (no version) -> OK.
+		{"azurekeyvault://mykeyvault/mykey?algorithm=RSA-OAEP-256", false},
 		// Path has > 2 elements.
 		{"azurekeyvault://mykeyvault/mykey/myversion/extra?algorithm=RSA-OAEP-256", true},
 		// Path has empty first element.

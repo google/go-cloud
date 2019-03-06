@@ -73,7 +73,7 @@ func init() {
 //
 //   - The URL's host holds the KeyVault name (https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers).
 //   - The first element of the URL's path holds the key name (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters).
-//   - The second element of the URL's path holds the key version (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameter).
+//   - The second element of the URL's path, if included, holds the key version (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameter).
 //   - The "algorithm" query parameter (required) holds the algorithm (https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm).
 type URLOpener struct {
 	// Client must be set to a non-nil value.
@@ -133,10 +133,17 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		path = path[1:]
 	}
 	pathParts := strings.Split(path, "/")
-	if len(pathParts) != 2 || pathParts[0] == "" || pathParts[1] == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a Path with 2 non-empty elements (the key name and key version)", u)
+	var keyName, keyVersion string
+	if len(pathParts) == 1 {
+		keyName = pathParts[0]
+	} else if len(pathParts) == 2 {
+		keyName = pathParts[0]
+		keyVersion = pathParts[1]
 	}
-	return NewKeeper(o.Client, u.Host, pathParts[0], pathParts[1], &o.Options), nil
+	if keyName == "" {
+		return nil, fmt.Errorf("open keeper %q: URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version)", u)
+	}
+	return NewKeeper(o.Client, u.Host, keyName, keyVersion, &o.Options), nil
 }
 
 type (
@@ -172,7 +179,7 @@ func Dial() (*keyvault.BaseClient, error) {
 // - client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
 // - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
 // - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
-// - keyVersion: string representing the keyVersion, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
+// - keyVersion: string representing the keyVersion, or ""; see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 // - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
 func NewKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
