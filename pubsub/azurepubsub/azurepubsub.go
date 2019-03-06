@@ -40,11 +40,11 @@ import (
 
 	"pack.ag/amqp"
 
-	"github.com/Azure/azure-amqp-common-go"
+	common "github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-amqp-common-go/cbs"
 	"github.com/Azure/azure-amqp-common-go/rpc"
 	"github.com/Azure/azure-amqp-common-go/uuid"
-	"github.com/Azure/azure-service-bus-go"
+	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
 const (
@@ -120,19 +120,19 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (*topic) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
-func errorAs(err error, target interface{}) bool {
+func errorAs(err error, i interface{}) bool {
 	switch v := err.(type) {
 	case *amqp.Error:
-		if p, ok := target.(**amqp.Error); ok {
+		if p, ok := i.(**amqp.Error); ok {
 			*p = v
 			return true
 		}
 	case common.Retryable:
-		if p, ok := target.(*common.Retryable); ok {
+		if p, ok := i.(*common.Retryable); ok {
 			*p = v
 			return true
 		}
@@ -226,8 +226,8 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (s *subscription) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (s *subscription) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
 func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
