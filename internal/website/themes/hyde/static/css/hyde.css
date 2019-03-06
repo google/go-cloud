@@ -82,17 +82,17 @@ h1 {
 }
 h2 {
   font: 700 1.5rem/1.25 "Work Sans", "Roboto", sans-serif;
-  margin: 1rem 0 0.5rem;
+  margin: 2rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 h3 {
   font: 700 1.25rem/1.25 "Work Sans", "Roboto", sans-serif;
-  margin: 1.5rem 0 0.5rem;
+  margin: 3rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 h4, h5, h6 {
   font: 700 1rem/1.25 "Work Sans", "Roboto", sans-serif;
-  margin: 1rem 0 0.5rem;
+  margin: 2rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 
@@ -120,7 +120,6 @@ hr {
   position: relative;
   margin: 1.5rem 0;
   border: 0;
-  /*border-top: 1px solid #eee; */
   border-bottom: 2px solid #fff;
 }
 
@@ -230,6 +229,10 @@ tbody tr:nth-child(odd) th {
 
 .sidebar-logo {
   width: 100%;
+}
+
+.sidebar-line {
+  margin: 0 0 1.5rem;
 }
 
 /* The following two selectors make images with class stickcenter in the
