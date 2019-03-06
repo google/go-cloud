@@ -41,13 +41,16 @@ func OpenCollection(keyField string, opts *Options) *docstore.Collection {
 func newCollection(keyField string) driver.Collection {
 	return &collection{
 		keyField: keyField,
-		docs:     map[interface{}]driver.Document{},
+		docs:     map[interface{}]map[string]interface{}{},
 	}
 }
 
 type collection struct {
 	keyField string
-	docs     map[interface{}]driver.Document
+	// map from keys to documents. Documents are represented as map[string]interface{},
+	// regardless of what their original representation is. Even if the user is using
+	// map[string]interface{}, we make our own copy.
+	docs map[interface{}]map[string]interface{}
 }
 
 // RunActions implements driver.RunActions.
@@ -75,7 +78,7 @@ func (c *collection) runAction(a *driver.Action) error {
 	}
 	// If there is a key, get the current document.
 	var (
-		current driver.Document
+		current map[string]interface{}
 		exists  bool
 	)
 	if err == nil {
@@ -102,7 +105,11 @@ func (c *collection) runAction(a *driver.Action) error {
 		fallthrough
 
 	case driver.Replace, driver.Put:
-		c.docs[key] = a.Doc
+		doc, err := encodeDoc(a.Doc)
+		if err != nil {
+			return err
+		}
+		c.docs[key] = doc
 
 	case driver.Delete:
 		delete(c.docs, key)
@@ -115,7 +122,8 @@ func (c *collection) runAction(a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		if err := copyFields(a.Doc, current, a.FieldPaths); err != nil {
+		// TODO(jba): support field paths.
+		if err := decodeDoc(a.Doc, current); err != nil {
 			return err
 		}
 	default:
@@ -124,13 +132,17 @@ func (c *collection) runAction(a *driver.Action) error {
 	return nil
 }
 
-func (c *collection) update(doc driver.Document, mods []driver.Mod) error {
+func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error {
 	// Apply each modification in order. Fail on the first error.
 	// TODO(jba): this should be atomic.
+	ddoc, err := driver.NewDocument(doc)
+	if err != nil {
+		return err
+	}
 	for _, m := range mods {
 		if m.Value == nil {
-			deleteAtFieldPath(doc.Map(), m.FieldPath)
-		} else if err := doc.Set(m.FieldPath, m.Value); err != nil {
+			deleteAtFieldPath(doc, m.FieldPath)
+		} else if err := ddoc.Set(m.FieldPath, m.Value); err != nil {
 			return err
 		}
 	}
@@ -145,30 +157,6 @@ func deleteAtFieldPath(m map[string]interface{}, fp []string) {
 		deleteAtFieldPath(m2, fp[1:])
 	}
 	// Otherwise do nothing.
-}
-
-// Copy the fields of src to dest.
-func copyFields(dest, src driver.Document, fps [][]string) error {
-	if fps == nil {
-		// If no field paths were provided, copy all the fields.
-		for k, v := range src.Map() {
-			// TODO(jba): copy v to avoid as much structure-sharing as possible.
-			if err := dest.SetField(k, v); err != nil {
-				return err
-			}
-		}
-	} else {
-		for _, fp := range fps {
-			val, err := src.Get(fp)
-			if err != nil {
-				return err
-			}
-			if err := dest.Set(fp, val); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // ErrorCode implements driver.ErrorCOde.
