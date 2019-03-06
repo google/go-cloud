@@ -1873,6 +1873,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
 	if err := st.ReaderCheck(r); err != nil {
 		t.Error(err)
 	}
