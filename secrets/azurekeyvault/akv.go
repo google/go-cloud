@@ -129,7 +129,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the key vault name)", u)
 	}
 	path := u.Path
-	if path[0] == '/' {
+	if len(path) > 0 && path[0] == '/' {
 		path = path[1:]
 	}
 	pathParts := strings.Split(path, "/")
