@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log"
 	"sort"
 	"strconv"
 	"testing"
@@ -363,6 +364,7 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 			Body:     []byte(strconv.Itoa(i)),
 			Metadata: map[string]string{"a": strconv.Itoa(i)},
 		}
+		log.Printf("sending message with body '%s'", m.Body)
 		if err := top.Send(ctx, m); err != nil {
 			t.Fatal(err)
 		}
@@ -375,6 +377,7 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
+		log.Printf("receiving message %d", i)
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
