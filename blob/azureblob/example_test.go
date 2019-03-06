@@ -90,10 +90,10 @@ func Example_sasToken() {
 	_ = data
 }
 
-func Example_open() {
+func Example_openBucket() {
 	ctx := context.Background()
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the container "mycontainer" using default
 	// credentials found in the environment variables
 	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
