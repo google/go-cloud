@@ -42,7 +42,7 @@ func Example() {
 		client,
 		"replace with keyVaultName",
 		"replace with keyName",
-		"replace with keyVersion",
+		"", // replace with keyVersion if you don't want to use the default one.
 		&akv.KeeperOptions{
 			Algorithm: string(keyvault.RSAOAEP256),
 		},
@@ -56,5 +56,8 @@ func Example() {
 		log.Fatal(err)
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
+	if err != nil {
+		log.Fatal(err)
+	}
 	_ = decrypted
 }
