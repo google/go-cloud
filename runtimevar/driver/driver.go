@@ -41,25 +41,8 @@ type State interface {
 	// UpdateTime returns the update time for the variable.
 	UpdateTime() time.Time
 
-	// As allows providers to expose provider-specific types.
-	//
-	// i will be a pointer to the type the user wants filled in.
-	// As should either fill it in and return true, or return false.
-	//
-	// A provider should document the type(s) it support in package
-	// comments, and add conformance tests verifying them.
-	//
-	// A sample implementation might look like this, for supporting foo.MyType:
-	//   mt, ok := i.(*foo.MyType)
-	//   if !ok {
-	//     return false
-	//   }
-	//   *i = foo.MyType{}  // or, more likely, the existing value
-	//   return true
-	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(interface{}) bool
 }
 
