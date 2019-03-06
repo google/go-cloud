@@ -276,7 +276,7 @@ func testReceiveSend(t *testing.T, newHarness HarnessMaker) {
 	}()
 
 	// Wait for Receive to block, with any luck.
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(time.Second)
 
 	// Send a message.
 	want := &pubsub.Message{Body: []byte(t.Name())}
