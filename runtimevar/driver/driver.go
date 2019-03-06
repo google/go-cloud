@@ -42,9 +42,7 @@ type State interface {
 	UpdateTime() time.Time
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#As for background information, the "As"
-	// examples in the runtimevar package for examples, and the provider-specific
-	// package documentation for the specific types supported for that provider.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(interface{}) bool
 }
 

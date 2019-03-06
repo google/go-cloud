@@ -149,7 +149,7 @@ func (r *Reader) Size() int64 {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
@@ -191,7 +191,7 @@ type Attributes struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -336,7 +336,7 @@ type ListOptions struct {
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
 
@@ -403,7 +403,7 @@ type ListObject struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (o *ListObject) As(i interface{}) bool {
 	if o.asFunc == nil {
 		return false
@@ -477,7 +477,7 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://godoc.org/gocloud.dev#As for background information.
@@ -843,7 +843,7 @@ type WriterOptions struct {
 	// sending an upload request.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 

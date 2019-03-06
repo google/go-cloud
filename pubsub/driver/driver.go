@@ -137,13 +137,10 @@ type Subscription interface {
 	IsRetryable(err error) bool
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#As for background information, the "As"
-	// examples in the pubsub package for examples, and the provider-specific
-	// package documentation for the specific types supported for that provider.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for errors.
-	// See As.
 	// See https://godoc.org/gocloud.dev#As for background information.
 	ErrorAs(error, interface{}) bool
 

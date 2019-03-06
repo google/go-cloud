@@ -199,8 +199,8 @@ func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
-// ErrorAs converts i to provider-specific types.
-// ErrorAs panics if i is nil or not a pointer.
+// ErrorAs converts err to provider-specific types.
+// ErrorAs panics if target is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://godoc.org/gocloud.dev#As for background information.
 func (t *Topic) ErrorAs(err error, target interface{}) bool {

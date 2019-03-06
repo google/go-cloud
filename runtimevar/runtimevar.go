@@ -193,7 +193,7 @@ func wrapError(w driver.Watcher, err error) error {
 	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See https://godoc.org/gocloud.dev#As for background information.

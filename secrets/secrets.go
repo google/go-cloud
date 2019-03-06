@@ -122,16 +122,13 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 	return b, nil
 }
 
-// ErrorAs converts i to provider-specific error types when you want to directly
-// handle the raw error types returned by the provider. This means that you
-// will write some provider-specific code to handle the error, so use with care.
-//
-// See the documentation for the subpackage used to instantiate Keeper to see
-// which error type(s) are supported.
+// ErrorAs converts i to provider-specific types. See
+// https://godoc.org/gocloud.dev#As for background information and the
+// provider-specific package documentation for the specific types supported for
+// that provider.
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#As for background information.
 func (k *Keeper) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, k.k.ErrorAs)
 }
