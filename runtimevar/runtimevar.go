@@ -81,26 +81,9 @@ type Snapshot struct {
 }
 
 // As converts i to provider-specific types.
-//
-// This function (and the other As functions in this package) are inherently
-// provider-specific, and using them will make that part of your application
-// non-portable, so use with care.
-//
-// See the documentation for the subpackage you used to instantiate Variable to
-// see which type(s) are supported.
-//
-// Usage:
-//
-// 1. Declare a variable of the provider-specific type you want to access.
-//
-// 2. Pass a pointer to it to As.
-//
-// 3. If the type is supported, As will return true and copy the
-// provider-specific type into your variable. Otherwise, it will return false.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (s *Snapshot) As(i interface{}) bool {
 	if s.asFunc == nil {
 		return false
@@ -210,10 +193,10 @@ func wrapError(w driver.Watcher, err error) error {
 	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See Snapshot.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
 }

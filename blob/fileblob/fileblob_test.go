@@ -24,7 +24,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -42,7 +41,7 @@ type harness struct {
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
-	dir := path.Join(os.TempDir(), "go-cloud-fileblob")
+	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -79,6 +78,7 @@ func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	defer reader.Close()
 	io.Copy(w, reader)
 }
 
@@ -102,7 +102,7 @@ func TestConformance(t *testing.T) {
 }
 
 func BenchmarkFileblob(b *testing.B) {
-	dir := path.Join(os.TempDir(), "go-cloud-fileblob")
+	dir := filepath.Join(os.TempDir(), "go-cloud-fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		b.Fatal(err)
 	}
@@ -198,7 +198,7 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 	if !b.ErrorAs(err, &perr) {
 		return errors.New("want ErrorAs to succeed for PathError")
 	}
-	const wantSuffix = "go-cloud-fileblob/key-does-not-exist"
+	wantSuffix := filepath.Join("go-cloud-fileblob", "key-does-not-exist")
 	if got := perr.Path; !strings.HasSuffix(got, wantSuffix) {
 		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)
 	}
@@ -206,7 +206,7 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 }
 
 func TestOpenBucketFromURL(t *testing.T) {
-	dir := path.Join(os.TempDir(), "fileblob")
+	dir := filepath.Join(os.TempDir(), "fileblob")
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}

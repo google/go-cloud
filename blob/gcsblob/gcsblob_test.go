@@ -265,7 +265,7 @@ func TestOpenBucket(t *testing.T) {
 				t.Errorf("got %q want %q", drv.name, test.want)
 			}
 
-			// Create concrete type.
+			// Create portable type.
 			_, err = OpenBucket(ctx, client, test.bucketName, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)

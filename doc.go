@@ -43,7 +43,10 @@ It is not feasible or desirable for APIs like blob.Bucket to encompass the full
 functionality of every provider. Rather, we intend to provide a subset of the
 most commonly used functionality. There will be cases where a developer wants
 to access provider-specific functionality, such as unexposed APIs or data
-fields, errors or options.
+fields, errors or options. This can be accomplished using As functions.
+
+
+As
 
 As functions in the APIs provide the user a way to escape the Go CDK
 abstraction to access provider-specific types. They might be used as an interim
@@ -59,5 +62,16 @@ Each API will include examples demonstrating how to use its various As
 functions, and each provider implementation will document what types it
 supports for each.
 
+Usage:
+
+1. Declare a variable of the provider-specific type you want to access.
+
+2. Pass a pointer to it to As.
+
+3. If the type is supported, As will return true and copy the
+provider-specific type into your variable. Otherwise, it will return false.
+
+Provider-specific types that are intended to be mutable will be exposed
+as a pointer to the underlying type.
 */
 package cloud // import "gocloud.dev"

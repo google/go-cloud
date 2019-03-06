@@ -361,7 +361,7 @@ func (erroringSubscription) IsRetryable(err error) bool                     { re
 func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
-// wrapped exactly once by the concrete type.
+// wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	top := pubsub.NewTopic(erroringTopic{}, nil)

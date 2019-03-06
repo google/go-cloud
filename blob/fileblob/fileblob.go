@@ -30,6 +30,7 @@
 //    If os.PathSeparator != "/", it is also escaped.
 //    Additionally, the "/" in "../", the trailing "/" in "//", and a trailing
 //    "/" is key names are escaped in the same way.
+//    On Windows, the characters "<>:"|?*" are also escaped.
 //
 // As
 //
@@ -162,6 +163,9 @@ func escapeKey(s string) string {
 			return true
 		// Escape the trailing slash in a key.
 		case c == '/' && i == len(r)-1:
+			return true
+		// https://docs.microsoft.com/en-us/windows/desktop/fileio/naming-a-file
+		case os.PathSeparator == '\\' && (c == '>' || c == '<' || c == ':' || c == '"' || c == '|' || c == '?' || c == '*'):
 			return true
 		}
 		return false
