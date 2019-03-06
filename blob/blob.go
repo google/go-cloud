@@ -149,7 +149,9 @@ func (r *Reader) Size() int64 {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
@@ -191,7 +193,9 @@ type Attributes struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -403,7 +407,9 @@ type ListObject struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (o *ListObject) As(i interface{}) bool {
 	if o.asFunc == nil {
 		return false

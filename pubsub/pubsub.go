@@ -114,8 +114,10 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-// As converts m to provider-specific types.
-// See Topic.As for details.
+// As converts i to provider-specific types.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 // As panics unless it is called on a message obtained from Subscription.Receive.
 func (m *Message) As(i interface{}) bool {
 	if m.asFunc == nil {
@@ -459,7 +461,9 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See Topic.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
