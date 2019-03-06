@@ -128,7 +128,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	}
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
-	snsClient := sns.New(sess, cfg)
+	snsClient := sns.New(sess, &aws.Config{})
 	subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
 	cleanup = func() {
 		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
@@ -178,6 +178,34 @@ func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *s
 	})
 	if err != nil {
 		return fmt.Errorf("subscribing: %v", err)
+	}
+
+	queuePolicy := `{
+"Version": "2012-10-17",
+"Id": "AllowQueue",
+"Statement": [
+{
+"Sid": "MySQSPolicy001",
+"Effect": "Allow",
+"Principal": {
+"AWS": "*"
+},
+"Action": "sqs:SendMessage",
+"Resource": "` + *qARN + `",
+"Condition": {
+"ArnEquals": {
+"aws:SourceArn": "` + t.arn + `"
+}
+}
+}
+]
+}`
+	_, err = sqsClient.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+		Attributes: map[string]*string{"Policy": &queuePolicy},
+		QueueUrl:   qURL,
+	})
+	if err != nil {
+		return fmt.Errorf("setting policy: %v", err)
 	}
 
 	return nil
