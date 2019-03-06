@@ -154,3 +154,33 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	}
 	return nil
 }
+
+func TestOpenKeeper(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// Missing algorithm query param.
+		{"azurekeyvault://mykeyvault/mykey/myversion", true},
+		// Invalid query parameter.
+		{"azurekeyvault://mykeyvault/mykey/myversion?algorithm=RSA-OAEP-256&param=value", true},
+		// Empty host.
+		{"azurekeyvault:///mykey/myversion?algorithm=RSA-OAEP-256", true},
+		// Path has 1 elements (no version) -> OK.
+		{"azurekeyvault://mykeyvault/mykey?algorithm=RSA-OAEP-256", false},
+		// Path has > 2 elements.
+		{"azurekeyvault://mykeyvault/mykey/myversion/extra?algorithm=RSA-OAEP-256", true},
+		// Path has empty first element.
+		{"azurekeyvault://mykeyvault//myversion?algorithm=RSA-OAEP-256", true},
+		// OK.
+		{"azurekeyvault://mykeyvault/mykey/myversion?algorithm=RSA-OAEP-256", false},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := secrets.OpenKeeper(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
