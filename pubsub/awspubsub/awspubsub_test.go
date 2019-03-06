@@ -129,9 +129,13 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
 	snsClient := sns.New(sess, &aws.Config{})
-	subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
+	cleanupSub, err := subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("subscribing: %v", err)
+	}
 	cleanup = func() {
 		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
+		cleanupSub()
 	}
 	return ds, cleanup, nil
 }
@@ -160,24 +164,29 @@ func (ab *ackBatcher) AddNoWait(item interface{}) <-chan error {
 func (ab *ackBatcher) Shutdown() {
 }
 
-func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) error {
+func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) (func(), error) {
 	out2, err := sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
 		QueueUrl:       qURL,
 		AttributeNames: []*string{aws.String("QueueArn")},
 	})
 	if err != nil {
-		return fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
+		return nil, fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
 	}
 	qARN := out2.Attributes["QueueArn"]
 
 	t := dt.(*topic)
-	_, err = snsClient.Subscribe(&sns.SubscribeInput{
+	subOut, err := snsClient.Subscribe(&sns.SubscribeInput{
 		TopicArn: aws.String(t.arn),
 		Endpoint: qARN,
 		Protocol: aws.String("sqs"),
 	})
 	if err != nil {
-		return fmt.Errorf("subscribing: %v", err)
+		return nil, fmt.Errorf("subscribing: %v", err)
+	}
+	cleanup := func() {
+		_, _ = snsClient.Unsubscribe(&sns.UnsubscribeInput{
+			SubscriptionArn: subOut.SubscriptionArn,
+		})
 	}
 
 	queuePolicy := `{
@@ -205,10 +214,10 @@ func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *s
 		QueueUrl:   qURL,
 	})
 	if err != nil {
-		return fmt.Errorf("setting policy: %v", err)
+		return nil, fmt.Errorf("setting policy: %v", err)
 	}
 
-	return nil
+	return cleanup, nil
 }
 
 func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(error)) driver.Batcher {
