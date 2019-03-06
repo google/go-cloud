@@ -400,7 +400,7 @@ Portable types should:
             just your API, add it to `gcerrors.ErrorCode`. Look at the
             [gRPC error codes](https://github.com/grpc/grpc-go/blob/master/codes/codes.go)
             for inspiration.
-        -   Otherwise, you can define a custom code in your API's concrete
+        -   Otherwise, you can define a custom code in your portable API
             package. Your code should use a negative integer.
 
 -   For now, your package should expose an `ErrorAs` function to allow users to
