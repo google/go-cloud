@@ -19,6 +19,7 @@ import (
 	"log"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
+	"gocloud.dev/secrets"
 	akv "gocloud.dev/secrets/azurekeyvault"
 )
 
@@ -60,4 +61,18 @@ func Example() {
 		log.Fatal(err)
 	}
 	_ = decrypted
+}
+
+func Example_openKeeper() {
+	ctx := context.Background()
+
+	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// The URL's host holds the KeyVault name.
+	// The first element of the URL's path holds the key name.
+	// The second element of the URL's path, if included, holds the key version.
+	// The "algorithm" query parameter (required) holds the algorithm.
+	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt
+	// for more information.
+	k, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
+	_, _ = k, err
 }
