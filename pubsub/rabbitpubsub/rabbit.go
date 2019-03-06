@@ -588,3 +588,6 @@ func (s *subscription) As(i interface{}) bool {
 func (*subscription) ErrorAs(err error, target interface{}) bool {
 	return errorAs(err, target)
 }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }

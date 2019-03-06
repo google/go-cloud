@@ -235,3 +235,6 @@ func (*subscription) ErrorAs(error, interface{}) bool {
 
 // ErrorCode implements driver.Subscription.ErrorCode
 func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }

@@ -415,3 +415,6 @@ func errorAs(err error, target interface{}) bool {
 	*p = e
 	return true
 }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }
