@@ -9,9 +9,6 @@ The Go Cloud Development Kit (Go CDK) is an open source project building
 libraries and tools to improve the experience of developing for the cloud with
 Go.
 
-{{< figure src="go-cdk-logo-gopherblue-small.png" alt="Go CDK logo"
-class="aligncenter" >}}
-
 Go CDK provides commonly used, vendor-neutral generic APIs that you can deploy
 across cloud providers. The idea is to support hybrid cloud deployments while
 combining on-prem (local) and cloud tools.
