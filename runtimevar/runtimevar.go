@@ -55,7 +55,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"reflect"
 	"sync"
@@ -178,6 +177,9 @@ func newVar(w driver.Watcher) *Variable {
 	return v
 }
 
+// ErrClosed is returned from Watch when the Variable has been Closed.
+var ErrClosed = errors.New("Variable has been closed")
+
 // Watch returns when there is a new Snapshot of the current value of the
 // variable.
 //
@@ -187,7 +189,7 @@ func newVar(w driver.Watcher) *Variable {
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
 //
-// Watch returns an io.EOF error if the Variable has been closed.
+// Watch returns an ErrClosed error if the Variable has been closed.
 //
 // Watch should not be called on the same variable from multiple goroutines
 // concurrently. The typical use case is to call it in a single goroutine in a
@@ -200,7 +202,7 @@ func newVar(w driver.Watcher) *Variable {
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	c.mu.Lock()
 	if c.closed {
-		return Snapshot{}, io.EOF
+		return Snapshot{}, ErrClosed
 	}
 	c.mu.Unlock()
 
@@ -277,6 +279,8 @@ func (c *Variable) background(ctx context.Context) {
 // It returns the latest good Snapshot of the variable value, blocking if no
 // good value has ever been received. Pass an already-canceled ctx to make
 // Latest not block at all.
+//
+// Latest returns ErrClosed if the Variable has been closed.
 func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	select {
 	case <-c.haveGoodCh:
@@ -284,12 +288,15 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.closed {
+		return Snapshot{}, ErrClosed
+	}
 	return c.latest.snapshot, c.latest.err
 }
 
 // Close closes the Variable. The Variable is unusable after Close returns.
 func (c *Variable) Close() error {
-	// Record that we're closing. Subsequent calls to Watch will return io.EOF.
+	// Record that we're closing. Subsequent calls to Watch will return ErrClosed.
 	c.mu.Lock()
 	if c.closed {
 		return nil

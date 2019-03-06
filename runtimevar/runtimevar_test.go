@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"reflect"
 	"sync"
@@ -164,9 +163,9 @@ func TestVariable_Watch(t *testing.T) {
 	if err := v.Close(); err != nil {
 		t.Error(err)
 	}
-	// Watch should now return io.EOF.
-	if _, err := v.Watch(ctx); err != io.EOF {
-		t.Errorf("Watch after close returned %v, want io.EOF", err)
+	// Watch should now return ErrClosed.
+	if _, err := v.Watch(ctx); err != ErrClosed {
+		t.Errorf("Watch after close returned %v, want ErrClosed", err)
 	}
 }
 
@@ -176,7 +175,6 @@ func TestVariable_Latest(t *testing.T) {
 
 	fake := &fakeWatcher{}
 	v := New(fake)
-	defer v.Close()
 
 	ctx := context.Background()
 
@@ -291,6 +289,16 @@ func TestVariable_Latest(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+
+	// Close the variable.
+	if err := v.Close(); err != nil {
+		t.Error(err)
+	}
+
+	// Latest should now return ErrClosed.
+	if _, err := v.Latest(ctx); err != ErrClosed {
+		t.Errorf("Latest after close returned %v, want ErrClosed", err)
+	}
 }
 
 var errFake = errors.New("fake")
