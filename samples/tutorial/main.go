@@ -39,7 +39,7 @@ func main() {
 
 	ctx := context.Background()
 	// Open a connection to the bucket.
-	b, err := blob.OpenBucket(context.Background(), bucketURL)
+	b, err := blob.OpenBucket(ctx, bucketURL)
 	if err != nil {
 		log.Fatalf("Failed to setup bucket: %s", err)
 	}

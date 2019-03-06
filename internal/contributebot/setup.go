@@ -22,17 +22,18 @@ import (
 	"errors"
 	"net/http"
 
-	"cloud.google.com/go/pubsub"
+	psapi "cloud.google.com/go/pubsub/apiv1"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/google/wire"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/health"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/gcppubsub"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
-	"google.golang.org/api/option"
 )
 
 func setup(ctx context.Context, cfg flagConfig) (*worker, *server.Server, func(), error) {
@@ -54,8 +55,8 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		gcp.DefaultCredentials,
 		gitHubAppAuthFromConfig,
 		healthChecks,
-		newPubSubClient,
-		projectFromConfig,
+		gcppubsub.Dial,
+		gcppubsub.SubscriberClient,
 		server.Set,
 		subscriptionFromConfig,
 		trace.NeverSample,
@@ -88,20 +89,8 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 	}, nil
 }
 
-func newPubSubClient(ctx context.Context, id gcp.ProjectID, ts gcp.TokenSource) (*pubsub.Client, func(), error) {
-	c, err := pubsub.NewClient(ctx, string(id), option.WithTokenSource(ts))
-	if err != nil {
-		return nil, nil, err
-	}
-	return c, func() { c.Close() }, nil
-}
-
-func subscriptionFromConfig(client *pubsub.Client, cfg flagConfig) *pubsub.Subscription {
-	return client.SubscriptionInProject(cfg.subscription, cfg.project)
-}
-
-func projectFromConfig(cfg flagConfig) gcp.ProjectID {
-	return gcp.ProjectID(cfg.project)
+func subscriptionFromConfig(client *psapi.SubscriberClient, cfg flagConfig) *pubsub.Subscription {
+	return gcppubsub.OpenSubscription(client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
 }
 
 func healthChecks(w *worker) []health.Checker {

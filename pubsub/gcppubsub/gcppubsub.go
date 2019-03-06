@@ -83,14 +83,14 @@ type TopicOptions struct{}
 // OpenTopic returns a *pubsub.Topic backed by an existing GCP PubSub topic
 // topicName in the given projectID. See the package documentation for an
 // example.
-func OpenTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
-	dt := openTopic(ctx, client, proj, topicName)
-	return pubsub.NewTopic(dt)
+func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
+	dt := openTopic(client, proj, topicName)
+	return pubsub.NewTopic(dt, nil)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
+func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string) driver.Topic {
 	path := fmt.Sprintf("projects/%s/topics/%s", proj, topicName)
 	return &topic{path, client}
 }
@@ -173,13 +173,13 @@ type SubscriptionOptions struct{}
 // OpenSubscription returns a *pubsub.Subscription backed by an existing GCP
 // PubSub subscription subscriptionName in the given projectID. See the package
 // documentation for an example.
-func OpenSubscription(ctx context.Context, client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
-	ds := openSubscription(ctx, client, proj, subscriptionName)
+func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
+	ds := openSubscription(client, proj, subscriptionName)
 	return pubsub.NewSubscription(ds, nil)
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) driver.Subscription {
+func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, subscriptionName string) driver.Subscription {
 	path := fmt.Sprintf("projects/%s/subscriptions/%s", projectID, subscriptionName)
 	return &subscription{client, path}
 }

@@ -65,6 +65,7 @@ import (
 	"reflect"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	gax "github.com/googleapis/gax-go"
 	"gocloud.dev/gcerrors"
@@ -157,6 +158,14 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	if err != nil {
 		return err // t.err wrapped when set
 	}
+	for k, v := range m.Metadata {
+		if !utf8.ValidString(k) {
+			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", k)
+		}
+		if !utf8.ValidString(v) {
+			return fmt.Errorf("pubsub.Send: Message.Metadata values must be valid UTF-8 strings: %q", v)
+		}
+	}
 	return t.batcher.Add(ctx, m)
 }
 
@@ -221,12 +230,11 @@ func (t *Topic) ErrorAs(err error, target interface{}) bool {
 // NewTopic is for use by provider implementations.
 var NewTopic = newTopic
 
-// newTopic makes a pubsub.Topic from a driver.Topic.
-func newTopic(d driver.Topic) *Topic {
-	callCtx, cancel := context.WithCancel(context.Background())
-	tracer := newTracer(d)
-	handler := func(item interface{}) error {
-		ms := item.([]*Message)
+// defaultBatcher creates a batcher for topics, for use with NewTopic.
+func defaultBatcher(ctx context.Context, t *Topic, dt driver.Topic) driver.Batcher {
+	const maxHandlers = 1
+	handler := func(items interface{}) error {
+		ms := items.([]*Message)
 		var dms []*driver.Message
 		for _, m := range ms {
 			dm := &driver.Message{
@@ -235,25 +243,31 @@ func newTopic(d driver.Topic) *Topic {
 			}
 			dms = append(dms, dm)
 		}
-
-		err := retry.Call(callCtx, gax.Backoff{}, d.IsRetryable, func() (err error) {
-			ctx := tracer.Start(callCtx, "driver.Topic.SendBatch")
-			defer func() { tracer.End(ctx, err) }()
-			return d.SendBatch(ctx, dms)
+		err := retry.Call(ctx, gax.Backoff{}, t.driver.IsRetryable, func() (err error) {
+			ctx2 := t.tracer.Start(ctx, "driver.Topic.SendBatch")
+			defer func() { t.tracer.End(ctx2, err) }()
+			return dt.SendBatch(ctx2, dms)
 		})
 		if err != nil {
-			return wrapError(d, err)
+			return wrapError(dt, err)
 		}
 		return nil
 	}
-	maxHandlers := 1
-	b := batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
+	return batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
+}
+
+// newTopic makes a pubsub.Topic from a driver.Topic.
+func newTopic(d driver.Topic, newBatcher func(context.Context, *Topic, driver.Topic) driver.Batcher) *Topic {
+	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
-		driver:  d,
-		batcher: b,
-		tracer:  tracer,
-		cancel:  cancel,
+		driver: d,
+		tracer: newTracer(d),
+		cancel: cancel,
 	}
+	if newBatcher == nil {
+		newBatcher = defaultBatcher
+	}
+	t.batcher = newBatcher(ctx, t, d)
 	return t
 }
 
@@ -497,8 +511,6 @@ func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context,
 	s.ackBatcher = newAckBatcher(ctx, s, ds)
 	return s
 }
-
-type ackBatchSender func(context.Context, []driver.AckID) error
 
 // defaultAckBatcher creates a batcher for acknowledgements, for use with
 // NewSubscription.

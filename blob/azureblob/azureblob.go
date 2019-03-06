@@ -15,7 +15,7 @@
 // Package azureblob provides a blob implementation that uses Azure Storage’s
 // BlockBlob. Use OpenBucket to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
 // For blob.OpenBucket URLs, azureblob registers for the scheme "azblob"; URLs
 // start with "azblob://", like "azblob://mybucket". blob.OpenBucket will obtain
@@ -123,7 +123,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open Azure bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %q: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -154,7 +154,7 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 		var err error
 		sharedKeyCred, err = NewCredential(accountName, accountKey)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid credentials %s/%s: %v", accountName, accountKey, err)
 		}
 		credential = sharedKeyCred
 	} else {

@@ -6,35 +6,40 @@
 package main
 
 import (
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/apiv1"
 	"context"
 	"crypto/rsa"
 	"github.com/dgrijalva/jwt-go"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/health"
+	pubsub2 "gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/gcppubsub"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/server"
-	"google.golang.org/api/option"
 	"net/http"
 )
 
 // Injectors from setup.go:
 
 func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error) {
-	projectID := projectFromConfig(cfg)
 	credentials, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		return workerAndServer{}, nil, err
 	}
 	tokenSource := gcp.CredentialsTokenSource(credentials)
-	client, cleanup, err := newPubSubClient(ctx, projectID, tokenSource)
+	clientConn, cleanup, err := gcppubsub.Dial(ctx, tokenSource)
 	if err != nil {
 		return workerAndServer{}, nil, err
 	}
-	subscription := subscriptionFromConfig(client, cfg)
+	subscriberClient, err := gcppubsub.SubscriberClient(ctx, clientConn)
+	if err != nil {
+		cleanup()
+		return workerAndServer{}, nil, err
+	}
+	subscription := subscriptionFromConfig(subscriberClient, cfg)
 	roundTripper := _wireRoundTripperValue
 	mainGitHubAppAuth, cleanup2, err := gitHubAppAuthFromConfig(roundTripper, cfg)
 	if err != nil {
@@ -107,20 +112,8 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 	}, nil
 }
 
-func newPubSubClient(ctx context.Context, id gcp.ProjectID, ts gcp.TokenSource) (*pubsub.Client, func(), error) {
-	c, err := pubsub.NewClient(ctx, string(id), option.WithTokenSource(ts))
-	if err != nil {
-		return nil, nil, err
-	}
-	return c, func() { c.Close() }, nil
-}
-
-func subscriptionFromConfig(client *pubsub.Client, cfg flagConfig) *pubsub.Subscription {
-	return client.SubscriptionInProject(cfg.subscription, cfg.project)
-}
-
-func projectFromConfig(cfg flagConfig) gcp.ProjectID {
-	return gcp.ProjectID(cfg.project)
+func subscriptionFromConfig(client *pubsub.SubscriberClient, cfg flagConfig) *pubsub2.Subscription {
+	return gcppubsub.OpenSubscription(client, gcp.ProjectID(cfg.project), cfg.subscription, nil)
 }
 
 func healthChecks(w *worker) []health.Checker {

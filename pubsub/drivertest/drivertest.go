@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -147,6 +148,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
 		"TestMetadata":                                            testMetadata,
+		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -166,7 +168,10 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 // RunBenchmarks runs benchmarks for provider implementations of pubsub.
 func RunBenchmarks(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
 	b.Run("BenchmarkReceive", func(b *testing.B) {
-		benchmarkReceive(b, topic, sub)
+		benchmark(b, topic, sub, false)
+	})
+	b.Run("BenchmarkSend", func(b *testing.B) {
+		benchmark(b, topic, sub, true)
 	})
 }
 
@@ -185,7 +190,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 		// to them.
 		t.Fatalf("creating a local topic that doesn't exist on the server: %v", err)
 	}
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	m := &pubsub.Message{}
@@ -256,7 +261,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	top := pubsub.NewTopic(dt)
+	top := pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 
 	var ss []*pubsub.Subscription
@@ -417,6 +422,63 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 	if diff := cmp.Diff(m.Metadata, weirdMetadata); diff != "" {
 		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Metadata, weirdMetadata, diff)
 	}
+
+	// Verify that non-UTF8 strings in metadata key or value fail.
+	m = &pubsub.Message{
+		Body:     []byte("hello world"),
+		Metadata: map[string]string{escape.NonUTF8String: "bar"},
+	}
+	if err := top.Send(ctx, m); err == nil {
+		t.Error("got nil error, expected error for using non-UTF8 string as metadata key")
+	}
+	m.Metadata = map[string]string{"foo": escape.NonUTF8String}
+	if err := top.Send(ctx, m); err == nil {
+		t.Error("got nil error, expected error for using non-UTF8 string as metadata value")
+	}
+}
+
+func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+
+	// Sort the WeirdStrings map for record/replay consistency.
+	var weirdStrings [][]string // [0] = key, [1] = value
+	for k, v := range escape.WeirdStrings {
+		weirdStrings = append(weirdStrings, []string{k, v})
+	}
+	sort.Slice(weirdStrings, func(i, j int) bool { return weirdStrings[i][0] < weirdStrings[j][0] })
+
+	// Construct a message body with the weird strings and some non-UTF-8 bytes.
+	var body []byte
+	for _, v := range weirdStrings {
+		body = append(body, []byte(v[1])...)
+	}
+	body = append(body, []byte(escape.NonUTF8String)...)
+	m := &pubsub.Message{Body: body}
+
+	if err := top.Send(ctx, m); err != nil {
+		t.Fatal(err)
+	}
+	m, err = sub.Receive(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Ack()
+
+	if diff := cmp.Diff(m.Body, body); diff != "" {
+		t.Fatalf("got\n%v\nwant\n%v\ndiff\n%s", m.Body, body, diff)
+	}
 }
 
 func isCanceled(err error) bool {
@@ -438,7 +500,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	t := pubsub.NewTopic(dt)
+	t := pubsub.NewTopic(dt, nil)
 	s := pubsub.NewSubscription(ds, nil)
 	cleanup := func() {
 		topicCleanup()
@@ -483,7 +545,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	top = pubsub.NewTopic(dt)
+	top = pubsub.NewTopic(dt, nil)
 	defer top.Shutdown(ctx)
 	topicErr := top.Send(ctx, &pubsub.Message{})
 	if topicErr == nil {
@@ -507,31 +569,41 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 }
 
 // Publishes a large number of messages to topic concurrently, and then times
-// how long it takes to receive them all.
-func benchmarkReceive(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription) {
+// how long it takes to send (if timeSend is true) or receive (if timeSend
+// is false) them all.
+func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, timeSend bool) {
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const (
 		nMessages          = 1000
-		concurrencySend    = 100
-		concurrencyReceive = 1
+		concurrencySend    = 10
+		concurrencyReceive = 10
 	)
 	if nMessages%concurrencySend != 0 || nMessages%concurrencyReceive != 0 {
 		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		b.StopTimer()
+		if !timeSend {
+			b.StopTimer()
+		}
 		if err := publishNConcurrently(topic, nMessages, concurrencySend, attrs, body); err != nil {
 			b.Fatalf("publishing: %v", err)
 		}
 		b.Logf("published %d messages", nMessages)
-		b.StartTimer()
+		if timeSend {
+			b.StopTimer()
+		} else {
+			b.StartTimer()
+		}
 		if err := receiveNConcurrently(sub, nMessages, concurrencyReceive); err != nil {
 			b.Fatalf("receiving: %v", err)
 		}
 		b.SetBytes(nMessages * 1e6)
 		b.Log("MB/s is actually number of messages received per second")
+		if timeSend {
+			b.StartTimer()
+		}
 	}
 }
 

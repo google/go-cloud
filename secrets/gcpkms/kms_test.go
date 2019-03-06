@@ -35,11 +35,8 @@ import (
 // 2. Enable the Cloud KMS API.
 // 3. Create a key ring and a key, change their name below accordingly.
 const (
-	projectID = "go-cloud-test-216917"
-	location  = "global"
-	keyRing   = "test"
-	keyID1    = "password"
-	keyID2    = "password2"
+	key1ResourceID = "projects/go-cloud-test-216917/locations/global/keyRings/test/cryptoKeys/password"
+	key2ResourceID = "projects/go-cloud-test-216917/locations/global/keyRings/test/cryptoKeys/password2"
 )
 
 type harness struct {
@@ -48,24 +45,7 @@ type harness struct {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Keeper, driver.Keeper, error) {
-	return &keeper{
-			keyID: &KeyID{
-				ProjectID: projectID,
-				Location:  location,
-				KeyRing:   keyRing,
-				Key:       keyID1,
-			},
-			client: h.client,
-		},
-		&keeper{
-			keyID: &KeyID{
-				ProjectID: projectID,
-				Location:  location,
-				KeyRing:   keyRing,
-				Key:       keyID2,
-			},
-			client: h.client,
-		}, nil
+	return &keeper{key1ResourceID, h.client}, &keeper{key2ResourceID, h.client}, nil
 }
 
 func (h *harness) Close() {
@@ -117,8 +97,29 @@ func TestNoConnectionError(t *testing.T) {
 	}
 	defer done()
 
-	keeper := NewKeeper(client, &KeyID{}, nil)
+	keeper := NewKeeper(client, "", nil)
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want rpc error")
+	}
+}
+
+func TestOpenKeeper(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY", false},
+		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?param=val", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := secrets.OpenKeeper(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
 	}
 }

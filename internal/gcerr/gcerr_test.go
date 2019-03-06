@@ -102,3 +102,18 @@ func TestFormatting(t *testing.T) {
 		})
 	}
 }
+
+func TestError(t *testing.T) {
+	// Check that err.Error() == fmt.Sprintf("%s", err)
+	for _, err := range []*Error{
+		New(NotFound, nil, 1, "message"),
+		New(AlreadyExists, errors.New("wrapped"), 1, "message"),
+		New(AlreadyExists, errors.New("wrapped"), 1, ""),
+	} {
+		got := err.Error()
+		want := fmt.Sprint(err)
+		if got != want {
+			t.Errorf("%v: got %q, want %q", err, got, want)
+		}
+	}
+}

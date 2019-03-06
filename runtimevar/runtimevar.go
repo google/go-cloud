@@ -53,6 +53,8 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"reflect"
 	"time"
 
@@ -84,8 +86,8 @@ type Snapshot struct {
 // provider-specific, and using them will make that part of your application
 // non-portable, so use with care.
 //
-// See the documentation for the subpackage used to instantiate Variable to see
-// which type(s) are supported.
+// See the documentation for the subpackage you used to instantiate Variable to
+// see which type(s) are supported.
 //
 // Usage:
 //
@@ -214,6 +216,80 @@ func wrapError(w driver.Watcher, err error) error {
 // See Snapshot.As for more details.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
+}
+
+// VariableURLOpener represents types than can open Variables based on a URL.
+// The opener must not modify the URL argument. OpenVariableURL must be safe to
+// call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type VariableURLOpener interface {
+	OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a multiplexer with no registered schemes.
+type URLMux struct {
+	schemes map[string]VariableURLOpener
+}
+
+// RegisterVariable registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterVariable panics.
+func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
+	if mux.schemes == nil {
+		mux.schemes = make(map[string]VariableURLOpener)
+	} else if _, exists := mux.schemes[scheme]; exists {
+		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
+	}
+	mux.schemes[scheme] = opener
+}
+
+// OpenVariable calls OpenVariableURL with the URL parsed from urlstr.
+// OpenVariable is safe to call from multiple goroutines.
+func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, fmt.Errorf("open variable: %v", err)
+	}
+	return mux.OpenVariableURL(ctx, u)
+}
+
+// OpenVariableURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenVariableURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("open variable %q: no scheme in URL", u)
+	}
+	var opener VariableURLOpener
+	if mux != nil {
+		opener = mux.schemes[u.Scheme]
+	}
+	if opener == nil {
+		return nil, fmt.Errorf("open variable %q: no provider registered for %s", u, u.Scheme)
+	}
+	return opener.OpenVariableURL(ctx, u)
+}
+
+var defaultURLMux = new(URLMux)
+
+// DefaultURLMux returns the URLMux used by OpenVariable.
+//
+// Driver packages can use this to register their VariableURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenVariable opens the variable identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
+	return defaultURLMux.OpenVariable(ctx, urlstr)
 }
 
 // Decode is a function type for unmarshaling/decoding a slice of bytes into

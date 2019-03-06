@@ -1,6 +1,21 @@
+// Copyright 2019 The Go Cloud Development Kit Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
+	"io/ioutil"
 	"context"
 	"flag"
 	"net"
@@ -265,4 +280,39 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 		}),
 	})
 	return p, done, httpClient
+}
+
+// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
+func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *http.Client) {
+	mode := recorder.ModeReplaying
+	if *Record {
+		mode = recorder.ModeRecording
+	}
+
+	azMatchers := &replay.ProviderMatcher{}
+	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
+	if err != nil {
+		t.Fatalf("unable to initialize recorder: %v", err)
+	}
+
+	return done, &http.Client{Transport: r}
+}
+// FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
+// It returns a cleanup function.
+func FakeGCPDefaultCredentials(t *testing.T) func() {
+	const envVar = "GOOGLE_APPLICATION_CREDENTIALS"
+	jsonCred := []byte(`{"client_id": "foo.apps.googleusercontent.com", "client_secret": "bar", "refresh_token": "baz", "type": "authorized_user"}`)
+	f, err := ioutil.TempFile("", "fake-gcp-creds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(f.Name(), jsonCred, 0666); err != nil {
+		t.Fatal(err)
+	}
+	oldEnvVal := os.Getenv(envVar)
+	os.Setenv(envVar, f.Name())
+	return func() {
+		os.Remove(f.Name())
+		os.Setenv(envVar, oldEnvVal)
+	}
 }

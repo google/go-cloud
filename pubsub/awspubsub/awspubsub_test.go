@@ -80,7 +80,6 @@ func newSession() (*session.Session, error) {
 
 type harness struct {
 	sess      *session.Session
-	cfg       *aws.Config
 	rt        http.RoundTripper
 	closer    func()
 	numTopics uint32
@@ -89,21 +88,21 @@ type harness struct {
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, rt, done := setup.NewAWSSession2(ctx, t, region)
-	return &harness{sess: sess, cfg: &aws.Config{}, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
+	return &harness{sess: sess, rt: rt, closer: done, numTopics: 0, numSubs: 0}, nil
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
-	return createTopic(ctx, topicName, h.sess, h.cfg)
+	return createTopic(ctx, topicName, h.sess)
 }
 
-func createTopic(ctx context.Context, topicName string, sess *session.Session, cfg *aws.Config) (dt driver.Topic, cleanup func(), err error) {
-	client := sns.New(sess, cfg)
+func createTopic(ctx context.Context, topicName string, sess *session.Session) (dt driver.Topic, cleanup func(), err error) {
+	client := sns.New(sess)
 	out, err := client.CreateTopic(&sns.CreateTopicInput{Name: aws.String(topicName)})
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating topic "%s": %v`, topicName, err)
 	}
-	dt = openTopic(ctx, client, *out.TopicArn)
+	dt = openTopic(ctx, client, *out.TopicArn, nil)
 	cleanup = func() {
 		client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 	}
@@ -111,18 +110,18 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session, c
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	client := sns.New(h.sess, h.cfg)
-	dt := openTopic(ctx, client, "nonexistent-topic")
+	client := sns.New(h.sess)
+	dt := openTopic(ctx, client, "nonexistent-topic", nil)
 	return dt, nil
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	subName := fmt.Sprintf("%s-subscription-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	return createSubscription(ctx, dt, subName, h.sess, h.cfg)
+	return createSubscription(ctx, dt, subName, h.sess)
 }
 
-func createSubscription(ctx context.Context, dt driver.Topic, subName string, sess *session.Session, cfg *aws.Config) (ds driver.Subscription, cleanup func(), err error) {
-	sqsClient := sqs.New(sess, cfg)
+func createSubscription(ctx context.Context, dt driver.Topic, subName string, sess *session.Session) (ds driver.Subscription, cleanup func(), err error) {
+	sqsClient := sqs.New(sess)
 	out, err := sqsClient.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(subName)})
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating subscription queue "%s": %v`, subName, err)
@@ -275,7 +274,7 @@ func (sb *simpleBatcher) Shutdown() {
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	client := sqs.New(h.sess, h.cfg)
+	client := sqs.New(h.sess)
 	ds := openSubscription(ctx, client, "nonexistent-subscription")
 	return ds, nil
 }
@@ -373,16 +372,15 @@ func BenchmarkAwsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	topicName := fmt.Sprintf("%s-topic", b.Name())
-	cfg := &aws.Config{}
-	dt, cleanup1, err := createTopic(ctx, topicName, sess, cfg)
+	dt, cleanup1, err := createTopic(ctx, topicName, sess)
 	if err != nil {
 		b.Fatal(err)
 	}
 	defer cleanup1()
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 	subName := fmt.Sprintf("%s-subscription", b.Name())
-	ds, cleanup2, err := createSubscription(ctx, dt, subName, sess, cfg)
+	ds, cleanup2, err := createSubscription(ctx, dt, subName, sess)
 	if err != nil {
 		b.Fatal(err)
 	}

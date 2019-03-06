@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/gcp"
 )
 
-func Example() {
+func Example_read() {
 	// Your GCP credentials.
 	// See https://cloud.google.com/docs/authentication/production
 	// for more info on alternatives.
@@ -55,10 +55,10 @@ func Example() {
 	_ = data
 }
 
-func Example_open() {
+func Example_openBucket() {
 	ctx := context.Background()
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
 	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
 	_ = b

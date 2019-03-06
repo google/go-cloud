@@ -30,6 +30,71 @@ import (
 	"gocloud.dev/internal/gcerr"
 )
 
+var (
+	errFake     = errors.New("fake")
+	errNotFound = errors.New("fake not found")
+)
+
+func TestExists(t *testing.T) {
+	tests := []struct {
+		Description string
+		Err         error
+		Want        bool
+		WantErr     bool
+	}{
+		{
+			Description: "no error -> exists",
+			Err:         nil,
+			Want:        true,
+			WantErr:     false,
+		},
+		{
+			Description: "notfound error -> !exists",
+			Err:         errNotFound,
+			Want:        false,
+			WantErr:     false,
+		},
+		{
+			Description: "other error -> error",
+			Err:         errFake,
+			Want:        false,
+			WantErr:     true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Description, func(t *testing.T) {
+			drv := &fakeAttributes{attributesErr: test.Err}
+			b := NewBucket(drv)
+			got, gotErr := b.Exists(context.Background(), "key")
+			if got != test.Want {
+				t.Errorf("got %v want %v", got, test.Want)
+			}
+			if (gotErr != nil) != test.WantErr {
+				t.Errorf("got err %v want %v", gotErr, test.WantErr)
+			}
+		})
+	}
+}
+
+// fakeAttributes implements driver.Bucket. Only Attributes is implemented,
+// returning a zero Attributes struct and attributesErr.
+type fakeAttributes struct {
+	driver.Bucket
+	attributesErr error
+}
+
+func (b *fakeAttributes) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+	return driver.Attributes{}, b.attributesErr
+}
+
+func (b *fakeAttributes) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotFound {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
+
 // Verify that ListIterator works even if driver.ListPaged returns empty pages.
 func TestListIterator(t *testing.T) {
 	ctx := context.Background()
@@ -79,8 +144,6 @@ func (b *fakeLister) ListPaged(ctx context.Context, opts *driver.ListOptions) (*
 	}
 	return &driver.ListPage{Objects: objs, NextPageToken: []byte{1}}, nil
 }
-
-var errFake = errors.New("fake")
 
 // erroringBucket implements driver.Bucket. All interface methods that return
 // errors are implemented, and return errFake.

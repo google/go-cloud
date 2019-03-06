@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/google/go-github/github"
+	"gocloud.dev/pubsub"
 )
 
 const userAgent = "google/go-cloud Contribute Bot"
@@ -102,20 +102,24 @@ type repoConfigCacheEntry struct {
 
 // receive listens for events on its subscription and handles them.
 func (w *worker) receive(ctx context.Context) error {
-	return w.sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
-		id := msg.Attributes["X-GitHub-Delivery"]
-		eventType := msg.Attributes["X-GitHub-Event"]
+	for {
+		msg, err := w.sub.Receive(ctx)
+		if err != nil {
+			return err
+		}
+		id := msg.Metadata["X-GitHub-Delivery"]
+		eventType := msg.Metadata["X-GitHub-Event"]
 		if eventType == "integration_installation" || eventType == "integration_installation_repositories" {
 			// Deprecated event types. Ignore them in favor of supported ones.
 			log.Printf("Skipped event %s of deprecated type %s", id, eventType)
 			msg.Ack()
-			return
+			continue
 		}
-		event, err := github.ParseWebHook(eventType, msg.Data)
+		event, err := github.ParseWebHook(eventType, msg.Body)
 		if err != nil {
 			log.Printf("Parsing %s event %s: %v", eventType, id, err)
-			msg.Nack()
-			return
+			msg.Ack() // We did process the message, albeit unsuccessfully.
+			continue
 		}
 		var handleErr error
 		switch event := event.(type) {
@@ -127,17 +131,19 @@ func (w *worker) receive(ctx context.Context) error {
 			// No-op.
 		default:
 			log.Printf("Unhandled webhook event type %s (%T) for %s", eventType, event, id)
-			msg.Nack()
-			return
+			msg.Ack() // Although we don't know what event type this is, we did
+			// process the message, by doing nothing.
+			continue
 		}
 		if handleErr != nil {
 			log.Printf("Failed processing %s event %s: %v", eventType, id, handleErr)
-			msg.Nack()
-			return
+			// Don't ack or nack; let the message expire, and hope the error won't happen
+			// when it's redelivered.
+			continue
 		}
 		msg.Ack()
 		log.Printf("Processed %s event %s", eventType, id)
-	})
+	}
 }
 
 func (w *worker) receiveIssueEvent(ctx context.Context, e *github.IssuesEvent) error {

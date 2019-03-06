@@ -91,10 +91,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	if e.msg == "" {
-		return fmt.Sprintf("code=%v", e.Code)
-	}
-	return fmt.Sprintf("%s (code=%v)", e.msg, e.Code)
+	return fmt.Sprint(e)
 }
 
 func (e *Error) Format(s fmt.State, c rune) {
@@ -102,7 +99,11 @@ func (e *Error) Format(s fmt.State, c rune) {
 }
 
 func (e *Error) FormatError(p xerrors.Printer) (next error) {
-	p.Print(e.Error())
+	if e.msg == "" {
+		p.Printf("code=%v", e.Code)
+	} else {
+		p.Printf("%s (code=%v)", e.msg, e.Code)
+	}
 	e.frame.Format(p)
 	return e.err
 }

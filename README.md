@@ -4,7 +4,11 @@ _Write once, run on any cloud ☁️_
 
 [![Build Status](https://travis-ci.com/google/go-cloud.svg?branch=master)][travis]
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
-[![Coverage Status](https://coveralls.io/repos/github/google/go-cloud/badge.svg?branch=master)](https://coveralls.io/github/google/go-cloud?branch=master)
+[![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
+
+<p align="center">
+  <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">
+</p>
 
 The Go Cloud Development Kit (Go CDK) allows Go application developers to
 seamlessly deploy cloud applications on any combination of cloud providers. It
@@ -15,7 +19,15 @@ Imagine writing this to read from blob storage (like Google Cloud Storage or
 S3):
 
 ```go
-blobReader, err := bucket.NewReader(context.Background(), "my-blob", nil)
+ctx := context.Background()
+bucket, err := blob.OpenBucket(ctx, "s3://my-bucket")
+if err != nil {
+    return err
+}
+blobReader, err := bucket.NewReader(ctx, "my-blob", nil)
+if err != nil {
+    return err
+}
 ```
 
 and being able to run that code on any cloud you want, avoiding all the ceremony

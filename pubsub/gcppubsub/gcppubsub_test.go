@@ -68,7 +68,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating topic: %v", err)
 	}
-	dt = openTopic(ctx, pubClient, projectID, topicName)
+	dt = openTopic(pubClient, projectID, topicName)
 	cleanup = func() {
 		pubClient.DeleteTopic(ctx, &pubsubpb.DeleteTopicRequest{Topic: topicPath})
 	}
@@ -76,7 +76,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := openTopic(ctx, h.pubClient, projectID, "nonexistent-topic")
+	dt := openTopic(h.pubClient, projectID, "nonexistent-topic")
 	return dt, nil
 }
 
@@ -95,7 +95,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating subscription: %v", err)
 	}
-	ds = openSubscription(ctx, subClient, projectID, subName)
+	ds = openSubscription(subClient, projectID, subName)
 	cleanup = func() {
 		subClient.DeleteSubscription(ctx, &pubsubpb.DeleteSubscriptionRequest{Subscription: subPath})
 	}
@@ -103,7 +103,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	ds := openSubscription(ctx, h.subClient, projectID, "nonexistent-subscription")
+	ds := openSubscription(h.subClient, projectID, "nonexistent-subscription")
 	return ds, nil
 
 }
@@ -145,7 +145,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup1()
-	topic := pubsub.NewTopic(dt)
+	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
 
 	// Make subscription.
@@ -253,7 +253,7 @@ func TestOpenTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	topic := OpenTopic(ctx, pc, projID, "my-topic", nil)
+	topic := OpenTopic(pc, projID, "my-topic", nil)
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello world")})
 	if err == nil {
 		t.Error("got nil, want error")
@@ -279,7 +279,7 @@ func TestOpenSubscription(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub := OpenSubscription(ctx, sc, projID, "my-subscription", nil)
+	sub := OpenSubscription(sc, projID, "my-subscription", nil)
 	_, err = sub.Receive(ctx)
 	if err == nil {
 		t.Error("got nil, want error")

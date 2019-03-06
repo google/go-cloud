@@ -34,7 +34,7 @@ module "go_cloud_repo" {
   source       = "./repository"
   name         = "go-cloud"
   description  = "The Go Cloud Development Kit (Go CDK): A library and tools for open cloud development in Go."
-  homepage_url = "https://godoc.org/gocloud.dev"
+  homepage_url = "https://gocloud.dev/"
 
   topics = [
     "cloud",
@@ -62,15 +62,4 @@ module "wire_repo" {
     "codegen",
     "initialization",
   ]
-}
-
-module "go_cloud_proxy" {
-  source        = "./proxybucket"
-  name          = "go-cloud-modules"
-  storage_class = "STANDARD"  # Artifact of manual creation.
-}
-
-module "wire_proxy" {
-  source = "./proxybucket"
-  name   = "wire-modules"
 }

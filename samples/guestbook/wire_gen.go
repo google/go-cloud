@@ -9,12 +9,15 @@ import (
 	"context"
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
+	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
 	"go.opencensus.io/trace"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
+	"gocloud.dev/blob/azureblob"
 	"gocloud.dev/blob/fileblob"
 	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/blob/s3blob"
@@ -24,6 +27,7 @@ import (
 	"gocloud.dev/mysql/rdsmysql"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/blobvar"
 	"gocloud.dev/runtimevar/filevar"
 	"gocloud.dev/runtimevar/paramstore"
 	"gocloud.dev/runtimevar/runtimeconfigurator"
@@ -96,8 +100,67 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 var (
 	_wireClientValue        = http.DefaultClient
-	_wireOptionsValue       = session.Options{}
+	_wireOptionsValue       = session.Options{SharedConfigState: session.SharedConfigEnable}
 	_wireDefaultDriverValue = &server.DefaultDriver{}
+)
+
+// Injectors from inject_azure.go:
+
+func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	logger := _wireLoggerValue
+	db, err := dialLocalSQL(flags)
+	if err != nil {
+		return nil, nil, err
+	}
+	v, cleanup := appHealthChecks(db)
+	exporter := _wireExporterValue
+	sampler := trace.AlwaysSample()
+	defaultDriver := _wireDefaultDriverValue
+	options := &server.Options{
+		RequestLogger:         logger,
+		HealthChecks:          v,
+		TraceExporter:         exporter,
+		DefaultSamplingPolicy: sampler,
+		Driver:                defaultDriver,
+	}
+	serverServer := server.New(options)
+	accountName, err := azureblob.DefaultAccountName()
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	accountKey, err := azureblob.DefaultAccountKey()
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	sharedKeyCredential, err := azureblob.NewCredential(accountName, accountKey)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	pipelineOptions := _wirePipelineOptionsValue
+	pipeline := azureblob.NewPipeline(sharedKeyCredential, pipelineOptions)
+	bucket, err := azureBucket(ctx, pipeline, accountName, flags)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	variable, err := azureMOTDVar(ctx, bucket, flags)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	mainApplication := newApplication(serverServer, db, bucket, variable)
+	return mainApplication, func() {
+		cleanup()
+	}, nil
+}
+
+var (
+	_wireLoggerValue          = requestlog.Logger(nil)
+	_wireExporterValue        = trace.Exporter(nil)
+	_wirePipelineOptionsValue = azblob.PipelineOptions{}
 )
 
 // Injectors from inject_gcp.go:
@@ -172,13 +235,13 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // Injectors from inject_local.go:
 
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	logger := _wireLoggerValue
+	logger := _wireRequestlogLoggerValue
 	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
 	v, cleanup := appHealthChecks(db)
-	exporter := _wireExporterValue
+	exporter := _wireTraceExporterValue
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
 	options := &server.Options{
@@ -207,8 +270,8 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 }
 
 var (
-	_wireLoggerValue   = requestlog.Logger(nil)
-	_wireExporterValue = trace.Exporter(nil)
+	_wireRequestlogLoggerValue = requestlog.Logger(nil)
+	_wireTraceExporterValue    = trace.Exporter(nil)
 )
 
 // inject_aws.go:
@@ -235,6 +298,22 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
 	return paramstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+		WaitDuration: flags.motdVarWaitTime,
+	})
+}
+
+// inject_azure.go:
+
+// azureBucket is a Wire provider function that returns the Azure bucket based
+// on the command-line flags.
+func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, error) {
+	return azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+}
+
+// azureMOTDVar is a Wire provider function that returns the Message of the Day
+// variable read from a blob stored in Azure.
+func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtimevar.Variable, error) {
+	return blobvar.NewVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }

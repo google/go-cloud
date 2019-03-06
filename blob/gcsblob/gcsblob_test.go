@@ -293,15 +293,36 @@ func TestURLOpenerForParams(t *testing.T) {
 
 	tests := []struct {
 		name     string
+		currOpts Options
 		query    url.Values
 		wantOpts Options
 		wantErr  bool
 	}{
 		{
+			name: "InvalidParam",
+			query: url.Values{
+				"foo": {"bar"},
+			},
+			wantErr: true,
+		},
+		{
 			name: "AccessID",
 			query: url.Values{
 				"access_id": {"bar"},
 			},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID override",
+			currOpts: Options{GoogleAccessID: "foo"},
+			query: url.Values{
+				"access_id": {"bar"},
+			},
+			wantOpts: Options{GoogleAccessID: "bar"},
+		},
+		{
+			name:     "AccessID not overridden",
+			currOpts: Options{GoogleAccessID: "bar"},
 			wantOpts: Options{GoogleAccessID: "bar"},
 		},
 		{
@@ -322,7 +343,8 @@ func TestURLOpenerForParams(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := new(URLOpener).forParams(ctx, test.query)
+			o := &URLOpener{Options: test.currOpts}
+			got, err := o.forParams(ctx, test.query)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -333,5 +355,38 @@ func TestURLOpenerForParams(t *testing.T) {
 				t.Errorf("opener.forParams(...) diff (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestOpenBucketFromURL(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	pkFile, err := ioutil.TempFile("", "my-private-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(pkFile.Name())
+	if err := ioutil.WriteFile(pkFile.Name(), []byte("key"), 0666); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"gs://mybucket", false},
+		{"gs://mybucket?access_id=foo", false},
+		{"gs://mybucket?private_key_path=" + pkFile.Name(), false},
+		{"gs://mybucket?private_key_path=invalid-path", true},
+		{"gs://mybucket?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := blob.OpenBucket(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
 	}
 }

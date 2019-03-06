@@ -35,7 +35,7 @@ func openGCPSubscription(ctx context.Context, proj, subID string) (*pubsub.Subsc
 	if err != nil {
 		return nil, nil, err
 	}
-	sub := gcppubsub.OpenSubscription(ctx, subClient, gcp.ProjectID(proj), subID, nil)
+	sub := gcppubsub.OpenSubscription(subClient, gcp.ProjectID(proj), subID, nil)
 	cleanup2 := func() {
 		sub.Shutdown(ctx)
 		cleanup()
@@ -79,7 +79,7 @@ func openGCPTopic(ctx context.Context, proj, topicID string) (*pubsub.Topic, fun
 	if err != nil {
 		return nil, nil, err
 	}
-	topic := gcppubsub.OpenTopic(ctx, pubClient, gcp.ProjectID(proj), topicID, nil)
+	topic := gcppubsub.OpenTopic(pubClient, gcp.ProjectID(proj), topicID, nil)
 	cleanup2 := func() {
 		topic.Shutdown(ctx)
 		cleanup()

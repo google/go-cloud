@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +33,7 @@ import (
 	"time"
 
 	"github.com/streadway/amqp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
@@ -64,9 +66,18 @@ func TestConformance(t *testing.T) {
 		return &harness{conn: mustDialRabbit(t)}, nil
 	}
 	_, isFake := mustDialRabbit(t).(*fakeConnection)
-	asTests := []drivertest.AsTest{
-		rabbitAsTest{isFake},
+	asTests := []drivertest.AsTest{rabbitAsTest{isFake}}
+	drivertest.RunConformanceTests(t, harnessMaker, asTests)
+
+	// Run the conformance tests with the fake if we haven't.
+	if isFake {
+		return
 	}
+	t.Logf("now running tests with the fake")
+	harnessMaker = func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
+		return &harness{conn: newFakeConnection()}, nil
+	}
+	asTests = []drivertest.AsTest{rabbitAsTest{true}}
 	drivertest.RunConformanceTests(t, harnessMaker, asTests)
 }
 
@@ -83,7 +94,7 @@ func BenchmarkRabbit(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt), pubsub.NewSubscription(ds, nil))
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil))
 }
 
 type harness struct {
@@ -200,10 +211,97 @@ func TestUnroutable(t *testing.T) {
 	if got, want := len(merr), len(msgs); got != want {
 		t.Fatalf("got %d errors, want %d", got, want)
 	}
+	// Test MultiError.Error.
+	if got, want := strings.Count(merr.Error(), ";")+1, len(merr); got != want {
+		t.Errorf("got %d semicolon-separated messages, want %d", got, want)
+	}
+	// Test each individual error.
 	for i, err := range merr {
 		if !strings.Contains(err.Error(), "NO_ROUTE") {
 			t.Errorf("%d: got %v, want an error with 'NO_ROUTE'", i, err)
 		}
+	}
+}
+
+func TestErrorCode(t *testing.T) {
+	for _, test := range []struct {
+		in   error
+		want gcerrors.ErrorCode
+	}{
+		{nil, gcerrors.Unknown},
+		{&os.PathError{}, gcerrors.Unknown},
+		{&amqp.Error{Code: amqp.SyntaxError}, gcerrors.Internal},
+		{&amqp.Error{Code: amqp.NotImplemented}, gcerrors.Unimplemented},
+		{&amqp.Error{Code: amqp.ContentTooLarge}, gcerrors.Unknown},
+	} {
+		if got := errorCode(test.in); got != test.want {
+			t.Errorf("%v: got %s, want %s", test.in, got, test.want)
+		}
+	}
+}
+
+func TestOpens(t *testing.T) {
+	if got := OpenTopic(nil, "t", nil); got == nil {
+		t.Error("got nil, want non-nil")
+	}
+	if got := OpenSubscription(nil, "s", nil); got == nil {
+		t.Error("got nil, want non-nil")
+	}
+}
+
+func TestCancelSendAndReceive(t *testing.T) {
+	conn := mustDialRabbit(t)
+	defer conn.Close()
+
+	if err := declareExchange(conn, "t"); err != nil {
+		t.Fatal(err)
+	}
+	// The queue is needed, or RabbitMQ says the message is unroutable.
+	if err := bindQueue(conn, "s", "t"); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	top := newTopic(conn, "t")
+	top.sendBatchHook = cancel
+	msgs := []*driver.Message{
+		{Body: []byte("")},
+	}
+	var err error
+	for err == nil {
+		err = top.SendBatch(ctx, msgs)
+	}
+	ec := errorCodeForTest(err)
+	// Error might either be from context being canceled, or channel subsequently being closed.
+	if ec != gcerrors.Canceled && ec != gcerrors.FailedPrecondition {
+		t.Errorf("got %v, want context.Canceled or FailedPrecondition", err)
+	}
+
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	if err := top.SendBatch(ctx, msgs); err != nil {
+		t.Fatal(err)
+	}
+	sub := newSubscription(conn, "s")
+	sub.receiveBatchHook = cancel
+	_, err = sub.ReceiveBatch(ctx, 4)
+	if err != context.Canceled {
+		t.Errorf("got %v, want context.Canceled", err)
+	}
+}
+
+// Includes some cases that are handled elsewhere in production code.
+func errorCodeForTest(err error) gcerrors.ErrorCode {
+	switch err {
+	case nil:
+		return gcerrors.OK
+	case context.Canceled:
+		return gcerrors.Canceled
+
+	case context.DeadlineExceeded:
+		return gcerrors.DeadlineExceeded
+	default:
+		return errorCode(err)
 	}
 }
 
@@ -312,6 +410,10 @@ func (rabbitAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	if !t.ErrorAs(err, &merr) {
 		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
 	}
+	var perr *os.PathError
+	if t.ErrorAs(err, &perr) {
+		return errors.New("got true for PathError, want false")
+	}
 	return nil
 }
 
@@ -328,6 +430,10 @@ func (rabbitAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) er
 	var merr MultiError
 	if !s.ErrorAs(err, &merr) {
 		return fmt.Errorf("failed to convert %v (%T) to a MultiError", err, err)
+	}
+	var perr *os.PathError
+	if s.ErrorAs(err, &perr) {
+		return errors.New("got true for PathError, want false")
 	}
 	return nil
 }

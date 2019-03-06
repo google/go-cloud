@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/gcpkms"
 )
 
@@ -38,12 +39,8 @@ func Example() {
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
 		// information.
-		&gcpkms.KeyID{
-			ProjectID: "project-id",
-			Location:  "global",
-			KeyRing:   "test",
-			Key:       "key-name",
-		},
+		// You can also use gcpkms.KeyResourceID to construct the string.
+		"projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY",
 		nil,
 	)
 
@@ -55,4 +52,15 @@ func Example() {
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	_ = decrypted
+}
+
+func Example_openKeeper() {
+	ctx := context.Background()
+
+	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// The host + path are the key resourceID; see
+	// https://cloud.google.com/kms/docs/object-hierarchy#key
+	// for more information.
+	k, err := secrets.OpenKeeper(ctx, "gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY")
+	_, _ = k, err
 }

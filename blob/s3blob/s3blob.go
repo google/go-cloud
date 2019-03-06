@@ -15,12 +15,12 @@
 // Package s3blob provides a blob implementation that uses S3. Use OpenBucket
 // to construct a *blob.Bucket.
 //
-// Open URLs
+// URLs
 //
-// For blob.Open URLs, s3blob registers for the scheme "s3"; URLs start
-// with "s3://" like "s3://mybucket". blob.Open will create a new AWS session
-// with the default options. If you want to use a different session or find
-// details on the format of the URL, see URLOpener.
+// For blob.OpenBucket URLs, s3blob registers for the scheme "s3"; URLs start
+// with "s3://" like "s3://mybucket". blob.OpenBucket will create a new AWS
+// session with the default options. If you want to use a different session or
+// find details on the format of the URL, see URLOpener.
 //
 // Escaping
 //
@@ -61,6 +61,7 @@ import (
 	"strings"
 	"sync"
 
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -81,6 +82,7 @@ func init() {
 }
 
 // URLOpener opens S3 URLs like "s3://mybucket".
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters.
 type URLOpener struct {
 	// ConfigProvider must be set to a non-nil value.
 	ConfigProvider client.ConfigProvider
@@ -99,7 +101,7 @@ type lazySessionOpener struct {
 
 func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	o.init.Do(func() {
-		sess, err := session.NewSession()
+		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
 		if err != nil {
 			o.err = err
 			return
@@ -120,10 +122,15 @@ const Scheme = "s3"
 
 // OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
-	for k := range u.Query() {
-		return nil, fmt.Errorf("open S3 bucket %q: unknown query parameter %s", u, k)
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
 	}
-	return OpenBucket(ctx, o.ConfigProvider, u.Host, &o.Options)
+	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open bucket %v: %v", u, err)
+	}
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
+	return OpenBucket(ctx, configProvider, u.Host, &o.Options)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
@@ -139,13 +146,14 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 	}
 	return &bucket{
 		name:   bucketName,
-		sess:   sess,
 		client: s3.New(sess),
 	}, nil
 }
 
-// OpenBucket returns a *blob.Bucket backed by S3. See the package documentation
-// for an example.
+// OpenBucket returns a *blob.Bucket backed by S3.
+// AWS buckets are bound to a region; sess must have been created using an
+// aws.Config with Region set to the right region for bucketName.
+// See the package documentation for an example.
 func OpenBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*blob.Bucket, error) {
 	drv, err := openBucket(ctx, sess, bucketName, opts)
 	if err != nil {
@@ -260,7 +268,6 @@ func (w *writer) Close() error {
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
 	name   string
-	sess   client.ConfigProvider
 	client *s3.S3
 }
 
@@ -525,7 +532,7 @@ func unescapeKey(key string) string {
 // NewTypedWriter implements driver.NewTypedWriter.
 func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType string, opts *driver.WriterOptions) (driver.Writer, error) {
 	key = escapeKey(key)
-	uploader := s3manager.NewUploader(b.sess, func(u *s3manager.Uploader) {
+	uploader := s3manager.NewUploaderWithClient(b.client, func(u *s3manager.Uploader) {
 		if opts.BufferSize != 0 {
 			u.PartSize = int64(opts.BufferSize)
 		}

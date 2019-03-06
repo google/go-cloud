@@ -25,6 +25,10 @@
 //    are escaped using "__0x<hex>__". These characters were determined by
 //    experimentation.
 //  - Metadata values: Escaped using URL encoding.
+//  - Message body: AWS SNS/SQS only supports UTF-8 strings. See the
+//    BodyBase64Encoding enum in TopicOptions for strategies on how to send
+//    non-UTF-8 message bodies. By default, non-UTF-8 message bodies are base64
+//    encoded.
 //
 // As
 //
@@ -37,7 +41,9 @@ package awspubsub
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -48,63 +54,150 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
+)
+
+const (
+	// base64EncodedKey is the Message Attribute key used to flag that the
+	// message body is base64 encoded.
+	base64EncodedKey = "base64encoded"
+	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
+	// at once, per Topic.
+	maxPublishConcurrency = 10
 )
 
 type topic struct {
 	client *sns.SNS
 	arn    string
+	sem    chan struct{} // limits maximum in-flight Public RPCs across SendBatch
+	opts   *TopicOptions
 }
 
-// TopicOptions will contain configuration for topics.
-type TopicOptions struct{}
+// BodyBase64Encoding is an enum of strategies for when to base64 message
+// bodies.
+type BodyBase64Encoding int
+
+const (
+	// NonUTF8Only means that message bodies that are valid UTF-8 encodings are
+	// sent as-is. Invalid UTF-8 message bodies are base64 encoded, and a
+	// MessageAttribute with key "base64encoded" is added to the message.
+	// When receiving messages, the "base64encoded" attribute is used to determine
+	// whether to base64 decode, and is then filtered out.
+	NonUTF8Only BodyBase64Encoding = 0
+	// Always means that all message bodies are base64 encoded.
+	// A MessageAttribute with key "base64encoded" is added to the message.
+	// When receiving messages, the "base64encoded" attribute is used to determine
+	// whether to base64 decode, and is then filtered out.
+	Always BodyBase64Encoding = 1
+	// Never means that message bodies are never base64 encoded. Non-UTF-8
+	// bytes in message bodies may be modified by SNS/SQS.
+	Never BodyBase64Encoding = 2
+)
+
+func (e BodyBase64Encoding) wantEncode(b []byte) bool {
+	switch e {
+	case Always:
+		return true
+	case Never:
+		return false
+	case NonUTF8Only:
+		return !utf8.Valid(b)
+	}
+	panic("unreachable")
+}
+
+// TopicOptions contains configuration options for topics.
+type TopicOptions struct {
+	// BodyBase64Encoding determines when message bodies are base64 encoded.
+	// The default is NonUTF8Only.
+	BodyBase64Encoding BodyBase64Encoding
+}
 
 // OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN))
+	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), nil)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *sns.SNS, topicARN string) driver.Topic {
-	return &topic{client: client, arn: topicARN}
+func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
+	if opts == nil {
+		opts = &TopicOptions{}
+	}
+	return &topic{
+		client: client,
+		arn:    topicARN,
+		sem:    make(chan struct{}, maxPublishConcurrency),
+		opts:   opts,
+	}
 }
 
 var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
-func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) (er error) {
+func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
+	g, ctx := errgroup.WithContext(ctx)
+	var ctxErr error
+
+Loop:
 	for _, dm := range dms {
-		attrs := map[string]*sns.MessageAttributeValue{}
-		for k, v := range dm.Metadata {
-			// See the package comments for more details on escaping of metadata
-			// keys & values.
-			k = escape.HexEscape(k, func(runes []rune, i int) bool {
-				c := runes[i]
-				switch {
-				case escape.IsASCIIAlphanumeric(c):
-					return false
-				case c == '_' || c == '-':
-					return false
-				case c == '.' && i != 0 && runes[i-1] != '.':
-					return false
-				}
-				return true
+		select {
+		case <-ctx.Done():
+			ctxErr = ctx.Err()
+			break Loop
+		case t.sem <- struct{}{}:
+			dm := dm
+			g.Go(func() error {
+				defer func() { <-t.sem }()
+				return t.sendMessage(ctx, dm)
 			})
-			attrs[k] = &sns.MessageAttributeValue{
-				DataType:    stringDataType,
-				StringValue: aws.String(escape.URLEscape(v)),
-			}
-		}
-		_, err := t.client.Publish(&sns.PublishInput{
-			Message:           aws.String(string(dm.Body)),
-			MessageAttributes: attrs,
-			TopicArn:          &t.arn,
-		})
-		if err != nil {
-			return err
 		}
 	}
-	return nil
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	return ctxErr
+}
+
+// sendMessage sends a single message via RPC to SNS.
+func (t *topic) sendMessage(ctx context.Context, dm *driver.Message) error {
+	attrs := map[string]*sns.MessageAttributeValue{}
+	for k, v := range dm.Metadata {
+		// See the package comments for more details on escaping of metadata
+		// keys & values.
+		k = escape.HexEscape(k, func(runes []rune, i int) bool {
+			c := runes[i]
+			switch {
+			case escape.IsASCIIAlphanumeric(c):
+				return false
+			case c == '_' || c == '-':
+				return false
+			case c == '.' && i != 0 && runes[i-1] != '.':
+				return false
+			}
+			return true
+		})
+		attrs[k] = &sns.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String(escape.URLEscape(v)),
+		}
+	}
+	var body string
+	if t.opts.BodyBase64Encoding.wantEncode(dm.Body) {
+		body = base64.StdEncoding.EncodeToString(dm.Body)
+		attrs[base64EncodedKey] = &sns.MessageAttributeValue{
+			DataType:    stringDataType,
+			StringValue: aws.String("true"),
+		}
+	} else {
+		body = string(dm.Body)
+	}
+	_, err := t.client.PublishWithContext(ctx, &sns.PublishInput{
+		Message:           aws.String(body),
+		MessageAttributes: attrs,
+		TopicArn:          &t.arn,
+	})
+	return err
 }
 
 // IsRetryable implements driver.Topic.IsRetryable.
@@ -204,8 +297,15 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
-	output, err := s.client.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: &s.qURL,
+	// SQS supports receiving at most 10 messages at a time:
+	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html
+	max := int64(maxMessages)
+	if max > 10 {
+		max = 10
+	}
+	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
+		QueueUrl:            aws.String(s.qURL),
+		MaxNumberOfMessages: aws.Int64(max),
 	})
 	if err != nil {
 		return nil, err
@@ -220,14 +320,33 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 		if err := json.Unmarshal([]byte(*m.Body), &body); err != nil {
 			return nil, err
 		}
+		// See BodyBase64Encoding for details on when we base64 decode message bodies.
+		decodeIt := false
 		attrs := map[string]string{}
 		for k, v := range body.MessageAttributes {
+			if k == base64EncodedKey {
+				decodeIt = true
+				continue
+			}
 			// See the package comments for more details on escaping of metadata
 			// keys & values.
 			attrs[escape.HexUnescape(k)] = escape.URLUnescape(v.Value)
 		}
+
+		var b []byte
+		if decodeIt {
+			var err error
+			b, err = base64.StdEncoding.DecodeString(body.Message)
+			if err != nil {
+				// Fall back to using the raw message.
+				b = []byte(body.Message)
+			}
+		} else {
+			b = []byte(body.Message)
+		}
+
 		m2 := &driver.Message{
-			Body:     []byte(body.Message),
+			Body:     b,
 			Metadata: attrs,
 			AckID:    m.ReceiptHandle,
 			AsFunc: func(i interface{}) bool {

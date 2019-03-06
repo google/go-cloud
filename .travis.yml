@@ -19,16 +19,12 @@ install:
   - "git config --global core.autocrlf input"
   - "git checkout -- ."
   - "go install github.com/google/wire/cmd/wire"
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      go install github.com/mattn/goveralls;
-    fi
 
 script:
   - 'internal/testing/runchecks.sh'
 
 env:
   global:
-  - GOPROXY=https://storage.googleapis.com/go-cloud-modules/
   - GO111MODULE=on
 
 jobs:
@@ -41,15 +37,16 @@ jobs:
     # # Only run Windows build job on master; it's very slow.
     # - os: windows
     #   if: branch = master AND type = push
-    # Generate imports for GitHub Pages.
-    - stage: imports
+    # Deploy to GitHub Pages.
+    - stage: website
       os: linux
-      script: ./internal/imports/makeimports.sh
+      install: "curl -fsSL https://github.com/gohugoio/hugo/releases/download/v0.54.0/hugo_0.54.0_Linux-64bit.tar.gz | tar zxf - -C \"$HOME\" hugo"
+      script: "HUGO_GOOGLEANALYTICS=UA-135118641-1 \"$HOME/hugo\" -s internal/website"
       deploy:
         provider: pages
         fqdn: gocloud.dev
         skip-cleanup: true
-        local-dir: makeimports-output
+        local-dir: internal/website/public
         github-token: $GITHUB_TOKEN  # set in the Settings page of the repo
         keep-history: true
         verbose: true  # temporarily, while verifying
@@ -58,5 +55,5 @@ jobs:
 
 stages:
   - test
-  - name: imports
+  - name: website
     if: branch = master AND type = push

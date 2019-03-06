@@ -45,7 +45,7 @@ type topic struct {
 
 // NewTopic creates a new in-memory topic.
 func NewTopic() *pubsub.Topic {
-	return pubsub.NewTopic(&topic{})
+	return pubsub.NewTopic(&topic{}, nil)
 }
 
 // SendBatch implements driver.Topic.SendBatch.

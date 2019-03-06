@@ -39,7 +39,7 @@ spec:
           secretName: worker-service-account
       containers:
       - name: contributebot
-        image: gcr.io/go-cloud-contribute-bot/contributebot:e907263c-448a-4a58-ad70-6815eab3e261
+        image: gcr.io/go-cloud-contribute-bot/contributebot:60dbbbc6-726c-4485-b32b-820ff4a1e9c5
         args:
         - "-project=go-cloud-contribute-bot"
         - "-github_app=15206"

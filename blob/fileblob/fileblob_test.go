@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path"
@@ -33,8 +35,10 @@ import (
 )
 
 type harness struct {
-	dir    string
-	closer func()
+	dir       string
+	server    *httptest.Server
+	urlSigner URLSigner
+	closer    func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
@@ -42,18 +46,51 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	return &harness{
-		dir:    dir,
-		closer: func() { _ = os.RemoveAll(dir) },
-	}, nil
+	h := &harness{dir: dir}
+
+	localServer := httptest.NewServer(http.HandlerFunc(h.serveSignedURL))
+	h.server = localServer
+
+	u, err := url.Parse(h.server.URL)
+	if err != nil {
+		return nil, err
+	}
+	h.urlSigner = NewURLSignerHMAC(u, []byte("I'm a secret key"))
+
+	h.closer = func() { _ = os.RemoveAll(dir); localServer.Close() }
+
+	return h, nil
+}
+
+func (h *harness) serveSignedURL(w http.ResponseWriter, r *http.Request) {
+	objKey, err := h.urlSigner.KeyFromURL(r.Context(), r.URL)
+	if err != nil {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	bucket, err := OpenBucket(h.dir, &Options{})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	reader, err := bucket.NewReader(r.Context(), objKey, nil)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	io.Copy(w, reader)
 }
 
 func (h *harness) HTTPClient() *http.Client {
-	return nil
+	return &http.Client{}
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(h.dir, nil)
+	opts := &Options{
+		URLSigner: h.urlSigner,
+	}
+	return openBucket(h.dir, opts)
 }
 
 func (h *harness) Close() {
@@ -166,4 +203,28 @@ func (verifyPathError) ErrorCheck(b *blob.Bucket, err error) error {
 		return fmt.Errorf("got path %q, want suffix %q", got, wantSuffix)
 	}
 	return nil
+}
+
+func TestOpenBucketFromURL(t *testing.T) {
+	dir := path.Join(os.TempDir(), "fileblob")
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"file://" + dir, false},
+		{"file:///bucket-not-found", true},
+		{"file://" + dir + "?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := blob.OpenBucket(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }

@@ -29,13 +29,14 @@ fi
 result=0
 
 # Run Go tests for the root. Only do coverage for the Linux build
-# because it is slow, and Coveralls will only save the last one anyway.
+# because it is slow, and codecov will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
-  if [ -f coverage.out ]; then
+  if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
-    goveralls -coverprofile=coverage2.out -service=travis-ci
+    mv coverage2.out coverage.out
+    bash <(curl -s https://codecov.io/bash)
   fi
 else
   go test -race ./... || result=1
