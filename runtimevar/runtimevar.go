@@ -127,7 +127,7 @@ type Variable struct {
 	mu        sync.Mutex
 	changed   chan struct{}   // closed when changing any of the other variables and replaced with a new channel
 	lastWatch <-chan struct{} // a reference to changed at the last time Watch was called
-	last      Snapshot
+	last      *Snapshot
 	lastErr   error
 	lastGood  *Snapshot // non-nil iff haveGood is closed
 }
@@ -177,16 +177,27 @@ var ErrClosed = errors.New("Variable has been closed")
 // Alternatively, use Latest to retrieve the latest good value.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	// Block until there's a change since the last Watch call, signaled
-	// by c.lastWatch being closed by the background goroutine.
+	// by lastWatch being closed by the background goroutine.
+	var lastWatch <-chan struct{}
+	c.mu.Lock()
+	lastWatch = c.lastWatch
+	c.mu.Unlock()
+
+	var ctxErr error
 	select {
-	case <-c.lastWatch:
+	case <-lastWatch:
 	case <-ctx.Done():
-		return Snapshot{}, ctx.Err()
+		ctxErr = ctx.Err()
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.lastErr == ErrClosed {
+		return Snapshot{}, ErrClosed
+	} else if ctxErr != nil {
+		return Snapshot{}, ctxErr
+	}
 	c.lastWatch = c.changed
-	return c.last, c.lastErr
+	return *c.last, c.lastErr
 }
 
 func (c *Variable) background(ctx context.Context) {
@@ -217,7 +228,7 @@ func (c *Variable) background(ctx context.Context) {
 		c.mu.Lock()
 		if val, err := curState.Value(); err == nil {
 			// We got a good value!
-			c.last = Snapshot{
+			c.last = &Snapshot{
 				Value:      val,
 				UpdateTime: curState.UpdateTime(),
 				asFunc:     curState.As,
@@ -226,13 +237,13 @@ func (c *Variable) background(ctx context.Context) {
 
 			// If it's the first good value, close haveGood so that Latest doesn't block.
 			firstGood := c.lastGood == nil
-			c.lastGood = &c.last
+			c.lastGood = c.last
 			if firstGood {
 				close(c.haveGood)
 			}
 		} else {
 			// We got an error value.
-			c.last = Snapshot{}
+			c.last = &Snapshot{}
 			c.lastErr = wrapError(c.dw, err)
 		}
 		close(c.changed)
@@ -272,7 +283,7 @@ func (c *Variable) Close() error {
 		c.mu.Unlock()
 		return ErrClosed
 	}
-	c.last = Snapshot{}
+	c.last = &Snapshot{}
 	c.lastErr = ErrClosed
 
 	// Close any remaining channels to wake up any callers that are waiting on them.

@@ -294,9 +294,8 @@ func TestVariable_Latest(t *testing.T) {
 				if err != nil {
 					// Errors are unexpected at this point.
 					t.Error(err)
-				}
-				if val.Value != content2 {
-					t.Errorf("got %v want %s", val, content2)
+				} else if val.Value != content2 {
+					t.Errorf("got %v want %s", val.Value, content2)
 				}
 				wg.Done()
 				return
