@@ -18,7 +18,7 @@
 //
 // As
 //
-// gcspubsub exposes the following types for As:
+// gcppubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
 //  - Message: *pb.PubsubMessage
@@ -256,3 +256,6 @@ func (*subscription) ErrorAs(err error, i interface{}) bool {
 func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }
