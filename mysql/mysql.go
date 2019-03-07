@@ -32,7 +32,7 @@ import (
 const Scheme = "mysql"
 
 func init() {
-	DefaultURLMux().RegisterMySql(Scheme, &URLOpener{})
+	DefaultURLMux().RegisterMySQL(Scheme, &URLOpener{})
 }
 
 // URLOpener opens URLs like "mysql://" by using the underlying MySQL driver.
