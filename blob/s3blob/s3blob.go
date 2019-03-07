@@ -135,7 +135,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
-	UseLegacyListObjects bool
+	UseLegacyList bool
 }
 
 // openBucket returns an S3 Bucket.
@@ -150,9 +150,9 @@ func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName stri
 		opts = &Options{}
 	}
 	return &bucket{
-		name:                 bucketName,
-		client:               s3.New(sess),
-		useLegacyListObjects: opts.UseLegacyListObjects,
+		name:          bucketName,
+		client:        s3.New(sess),
+		useLegacyList: opts.UseLegacyList,
 	}, nil
 }
 
@@ -273,9 +273,9 @@ func (w *writer) Close() error {
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
-	name                 string
-	client               *s3.S3
-	useLegacyListObjects bool
+	name          string
+	client        *s3.S3
+	useLegacyList bool
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -293,7 +293,7 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
-	if b.useLegacyListObjects {
+	if b.useLegacyList {
 		return b.legacyListPaged(ctx, opts)
 	}
 
