@@ -135,6 +135,9 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
+	// Some bucket providers (like CEPH) do not currently support the
+	// ListObjectV2 API. Setting this option to true, enabled fallback to
+	// the ListObject (V1) API.
 	UseLegacyList bool
 }
 
