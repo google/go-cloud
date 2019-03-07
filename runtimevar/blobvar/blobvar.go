@@ -27,7 +27,7 @@
 //       See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval; supported values are from time.ParseDuration.
 //       Defaults to 30s.
-// Example URL: "blob://myvar.txt?bucket=fileblob:///foo/bar&decoder=string".
+// Example URL: "blob://myvar.txt?bucket=file:///foo/bar&decoder=string".
 //
 // As
 //
