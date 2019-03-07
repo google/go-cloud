@@ -70,6 +70,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -134,19 +135,28 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
-type Options struct{}
+type Options struct {
+	// Some bucket providers (like CEPH) do not currently support the
+	// ListObjectV2 API. Setting this option to true, enabled fallback to
+	// the ListObject (V1) API.
+	UseLegacyList bool
+}
 
 // openBucket returns an S3 Bucket.
-func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, _ *Options) (*bucket, error) {
+func openBucket(ctx context.Context, sess client.ConfigProvider, bucketName string, opts *Options) (*bucket, error) {
 	if sess == nil {
 		return nil, errors.New("s3blob.OpenBucket: sess is required")
 	}
 	if bucketName == "" {
 		return nil, errors.New("s3blob.OpenBucket: bucketName is required")
 	}
+	if opts == nil {
+		opts = &Options{}
+	}
 	return &bucket{
-		name:   bucketName,
-		client: s3.New(sess),
+		name:          bucketName,
+		client:        s3.New(sess),
+		useLegacyList: opts.UseLegacyList,
 	}, nil
 }
 
@@ -267,8 +277,9 @@ func (w *writer) Close() error {
 
 // bucket represents an S3 bucket and handles read, write and delete operations.
 type bucket struct {
-	name   string
-	client *s3.S3
+	name          string
+	client        *s3.S3
+	useLegacyList bool
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -316,7 +327,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	req, resp := b.client.ListObjectsV2Request(in)
+	req, resp := b.listObjectsV2Request(in)
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
@@ -364,6 +375,45 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 		}
 	}
 	return &page, nil
+}
+
+func (b *bucket) listObjectsV2Request(in *s3.ListObjectsV2Input) (req *request.Request, output *s3.ListObjectsV2Output) {
+	if b.useLegacyList {
+		marker := in.ContinuationToken
+		if marker == nil || (marker != nil && in.StartAfter != nil && *in.StartAfter > *marker) {
+			marker = in.StartAfter
+		}
+
+		legacyIn := &s3.ListObjectsInput{
+			Bucket:       in.Bucket,
+			Delimiter:    in.Delimiter,
+			EncodingType: in.EncodingType,
+			Marker:       marker,
+			MaxKeys:      in.MaxKeys,
+			Prefix:       in.Prefix,
+			RequestPayer: in.RequestPayer,
+		}
+		req, legacyResp := b.client.ListObjectsRequest(legacyIn)
+
+		var nextContinuationToken *string
+		if legacyResp.NextMarker != nil && *legacyResp.NextMarker != "" {
+			nextContinuationToken = legacyResp.NextMarker
+		} else if !*legacyResp.IsTruncated {
+			nextContinuationToken = aws.String(*legacyResp.Contents[len(legacyResp.Contents)-1].Key + " ")
+		} else {
+			nextContinuationToken = nil
+		}
+
+		resp := &s3.ListObjectsV2Output{
+			CommonPrefixes:        legacyResp.CommonPrefixes,
+			Contents:              legacyResp.Contents,
+			NextContinuationToken: nextContinuationToken,
+		}
+
+		return req, resp
+	} else {
+		return b.client.ListObjectsV2Request(in)
+	}
 }
 
 // As implements driver.As.
