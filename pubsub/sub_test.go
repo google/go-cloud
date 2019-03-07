@@ -43,6 +43,8 @@ func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error
 	return nil
 }
 
+func (*scriptedSub) AckFunc() func() { return nil }
+
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
 	ds := &scriptedSub{

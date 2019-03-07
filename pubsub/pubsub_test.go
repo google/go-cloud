@@ -109,6 +109,8 @@ func (s *driverSub) IsRetryable(error) bool { return false }
 
 func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
+func (*driverSub) AckFunc() func() { return nil }
+
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
 	ds := NewDriverSub()
@@ -242,6 +244,8 @@ func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([
 	return nil, ctx.Err()
 }
 
+func (blockingDriverSub) AckFunc() func() { return nil }
+
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
 	// 1. Goroutine 1 calls Receive, obtains the lock (Subscription.mu),
@@ -336,6 +340,8 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 
 func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
+func (*failSub) AckFunc() func() { return nil }
+
 // TODO(jba): add a test for retry of SendAcks.
 
 var errDriver = errors.New("driver error")
@@ -359,6 +365,7 @@ func (erroringSubscription) ReceiveBatch(context.Context, int) ([]*driver.Messag
 func (erroringSubscription) SendAcks(context.Context, []driver.AckID) error { return errDriver }
 func (erroringSubscription) IsRetryable(err error) bool                     { return isRetryable(err) }
 func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
+func (erroringSubscription) AckFunc() func()                                { return nil }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
 // wrapped exactly once by the portable type.

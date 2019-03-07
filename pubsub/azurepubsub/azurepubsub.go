@@ -379,3 +379,6 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }
