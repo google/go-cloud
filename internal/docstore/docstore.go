@@ -135,7 +135,7 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 	})
 }
 
-// Update applies Mods to doc, which must exist.
+// Update atomically applies Mods to doc, which must exist.
 // Only the key and revision fields of doc are used.
 //
 // A modification will create a field if it doesn't exist.
