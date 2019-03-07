@@ -168,11 +168,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	}
 	var rn ResourceName
 	rn.ProjectID = u.Host
-	path := u.Path
-	if len(path) > 0 && path[0] == '/' {
-		path = path[1:]
-	}
-	if pathParts := strings.Split(path, "/"); len(pathParts) == 2 {
+	if pathParts := strings.SplitN(strings.TrimLeft(u.Path, "/"), "/", 2); len(pathParts) == 2 {
 		rn.Config = pathParts[0]
 		rn.Variable = pathParts[1]
 	}

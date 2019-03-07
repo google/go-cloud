@@ -203,6 +203,8 @@ func TestOpenVariable(t *testing.T) {
 	}{
 		// OK.
 		{"runtimeconfigurator://myproject/mycfg/myvar", false},
+		// OK, hierarchical key name.
+		{"runtimeconfigurator://myproject/mycfg/myvar1/myvar2", false},
 		// OK, setting decoder.
 		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=string", false},
 		// Missing project ID.
