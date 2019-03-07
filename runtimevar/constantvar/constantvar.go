@@ -48,15 +48,18 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &urlOpener{})
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{})
 }
 
 // Scheme is the URL scheme constantvar registers its URLOpener under on blob.DefaultMux.
 const Scheme = "constant"
 
-type urlOpener struct{}
+// URLOpener opens Variable URLs like "constant://?val=foo&decoder=string".
+type URLOpener struct{}
 
-func (*urlOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+// OpenVariableURL opens the variable at the URL's path. See the package doc
+// for more details.
+func (*URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
 	decoder, err := runtimevar.DecoderByName(q.Get("decoder"))
 	if err != nil {
