@@ -39,6 +39,8 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// CodecTester describes functions that encode and decode values using both the
+// docstore codec for a provider, and that provider's own "native" codec.
 type CodecTester interface {
 	NativeEncode(interface{}) (interface{}, error)
 	NativeDecode(value, dest interface{}) error
