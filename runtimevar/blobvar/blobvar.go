@@ -52,79 +52,88 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &lazyBucketOpener{})
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{Mux: blob.DefaultURLMux()})
 }
 
 // Scheme is the URL scheme blobvar registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "blob"
 
-type lazyBucketOpener struct {
-	mu      sync.Mutex
-	buckets map[string]*blob.Bucket
-}
-
-func (o *lazyBucketOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	bucketURL := u.Query().Get("bucket")
-	if bucketURL == "" {
-		return nil, fmt.Errorf("open variable %q: URL parameter \"bucket\" is required", u)
-	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	if o.buckets == nil {
-		o.buckets = map[string]*blob.Bucket{}
-	}
-	bucket := o.buckets[bucketURL]
-	if bucket == nil {
-		var err error
-		bucket, err = blob.OpenBucket(ctx, bucketURL)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: OpenBucket failed: %v", u, err)
-		}
-		o.buckets[bucketURL] = bucket
-	}
-	opener := URLOpener{Bucket: bucket}
-	return opener.OpenVariableURL(ctx, u)
-}
-
 // URLOpener opens Variable URLs like "blob://myblobkey?decoder=string".
 // It supports the URL parameters:
+//   - bucket: The URL to be passed to blob.OpenBucket. Required unless
+//       URLOpener.Bucket is provided explicitly.
+//       blob.OpenBucket will be called once per unique bucket URL.
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
 //   - wait: The poll interval; supported values are from time.ParseDuration.
 //       Defaults to 30s.
+//
 type URLOpener struct {
-	// The Bucket to use; required.
+	// Mux is required unless Bucket is provided. The "bucket" URL parameter
+	// must be provided, and Mux will be used to open it. Opened buckets are
+	// cached.
+	Mux *blob.URLMux
+
+	// Bucket is optional; if it is provided, it is always used.
 	Bucket *blob.Bucket
 
 	// Decoder and Options can be specified at URLOpener construction time,
 	// or provided/overridden via URL parameters.
 	Decoder *runtimevar.Decoder
 	Options Options
+
+	mu      sync.Mutex
+	buckets map[string]*blob.Bucket
 }
 
 // OpenVariableURL opens the variable at the URL's path. See the package doc
 // for more details.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	if o.Bucket == nil {
-		return nil, fmt.Errorf("open variable %q: a bucket is required", u)
-	}
 	q := u.Query()
-	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
+
+	bucket := o.Bucket
+	decoder := o.Decoder
+	options := o.Options
+
+	if bucket == nil {
+		if o.Mux == nil {
+			return nil, fmt.Errorf("open variable %q: URLOpener.Mux is required if Bucket is not provided", u)
+		}
+		bucketURL := u.Query().Get("bucket")
+		if bucketURL == "" {
+			return nil, fmt.Errorf("open variable %q: URL parameter \"bucket\" is required", u)
+		}
+		o.mu.Lock()
+		defer o.mu.Unlock()
+		if o.buckets == nil {
+			o.buckets = map[string]*blob.Bucket{}
+		}
+		bucket = o.buckets[bucketURL]
+		if bucket == nil {
+			var err error
+			bucket, err = o.Mux.OpenBucket(ctx, bucketURL)
+			if err != nil {
+				return nil, fmt.Errorf("open variable %q: OpenBucket failed: %v", u, err)
+			}
+			o.buckets[bucketURL] = bucket
+		}
+		q.Del("bucket")
+	}
+	if decoderName := q.Get("decoder"); decoderName != "" || decoder == nil {
 		var err error
-		o.Decoder, err = runtimevar.DecoderByName(decoderName)
+		decoder, err = runtimevar.DecoderByName(decoderName)
 		if err != nil {
 			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
 		}
+		q.Del("decoder")
 	}
 	for param, values := range q {
 		val := values[0]
 		switch param {
-		case "decoder", "bucket":
-			// processed elsewhere
 		case "wait":
 			var err error
-			o.Options.WaitDuration, err = time.ParseDuration(val)
+			options.WaitDuration, err = time.ParseDuration(val)
 			if err != nil {
 				return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
 			}
@@ -132,7 +141,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
 		}
 	}
-	return NewVariable(o.Bucket, path.Join(u.Host, u.Path), o.Decoder, &o.Options)
+	return NewVariable(bucket, path.Join(u.Host, u.Path), decoder, &options)
 }
 
 // Options sets options.
