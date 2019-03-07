@@ -56,3 +56,16 @@ func Example() {
 	cfg := snapshot.Value.(MyConfig)
 	_ = cfg
 }
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	// This example watches a variable based on a file-based blob.Bucket with JSON.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname?client=my.etcd.server:9999")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Watch(ctx)
+	_, _ = snapshot, err
+}
