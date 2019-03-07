@@ -17,10 +17,10 @@ package constantvar
 import (
 	"context"
 	"errors"
-	"github.com/google/go-cmp/cmp"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
