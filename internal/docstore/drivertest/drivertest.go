@@ -236,20 +236,23 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		t.Error("got nil, want error")
 	}
 
+	// TODO(jba): this test doesn't work for all providers, because some (e.g. Firestore) do allow
+	// setting a subpath of a non-map field. So move this test to memdocstore.
+
 	// Check that update is atomic.
-	doc = got
-	mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
-	if err := coll.Update(ctx, doc, mods); err == nil {
-		t.Fatal("got nil, want error")
-	}
-	got = docmap{KeyField: doc[KeyField]}
-	if err := coll.Get(ctx, got); err != nil {
-		t.Fatal(err)
-	}
-	// want should be unchanged
-	if !cmp.Equal(got, want) {
-		t.Errorf("got %v, want %v", got, want)
-	}
+	// doc = got
+	// mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
+	// if err := coll.Update(ctx, doc, mods); err == nil {
+	// 	t.Fatal("got nil, want error")
+	// }
+	// got = docmap{KeyField: doc[KeyField]}
+	// if err := coll.Get(ctx, got); err != nil {
+	// 	t.Fatal(err)
+	// }
+	// // want should be unchanged
+	// if !cmp.Equal(got, want) {
+	// 	t.Errorf("got %v, want %v", got, want)
+	// }
 }
 
 func testData(t *testing.T, coll *ds.Collection) {

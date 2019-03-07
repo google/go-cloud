@@ -143,6 +143,11 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 // No field path in mods can be a prefix of another. (It makes no sense
 // to, say, set foo but increment foo.bar.)
 //
+// It is undefined whether updating a sub-field of a non-map field will succeed.
+// For instance, if the current document is {a: 1} and Update is called with the
+// mod "a.b": 2, then either Update will fail, or it will succeed with the result
+// {a: {b: 2}}.
+//
 // Update does not modify its doc argument. To obtain the new value of the document,
 // call Get after calling Update.
 func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
@@ -273,6 +278,9 @@ func wrapError(c driver.Collection, err error) error {
 		return nil
 	}
 	if gcerr.DoNotWrap(err) {
+		return err
+	}
+	if _, ok := err.(*gcerr.Error); ok {
 		return err
 	}
 	return gcerr.New(c.ErrorCode(err), err, 2, "docstore")
