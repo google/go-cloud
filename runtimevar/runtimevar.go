@@ -110,11 +110,6 @@ var (
 	}
 )
 
-type snapshotPlusError struct {
-	snapshot Snapshot
-	err      error
-}
-
 // Variable provides an easy and portable way to watch runtime configuration
 // variables. To create a Variable, use constructors found in provider-specific
 // subpackages.
@@ -123,22 +118,20 @@ type Variable struct {
 	provider string // for metric collection
 
 	// For cancelling the background goroutine, and noticing when it has exited.
-	backgroundCancel  func()
-	backgroundCloseCh chan bool
+	backgroundCancel context.CancelFunc
+	backgroundDone   chan struct{}
 
-	// haveGoodCh is closed and haveGood is set to true when we get the first
-	// good value for the variable.
-	haveGoodCh chan bool
-	haveGood   bool
+	// haveGood is closed when we get the first good value for the variable.
+	haveGood chan struct{}
 
-	// Holds the snapshot/error to return from the next call to Watch.
-	// The buffer size is 1 so that we can store something in it even when there's
-	// not a Watch in flight.
-	nextWatchCh chan *snapshotPlusError
+	// A reference to the changed channel at the last time Watch was called.
+	lastWatch <-chan struct{}
 
-	mu     sync.Mutex
-	latest *snapshotPlusError // the snapshot/error to return from Latest
-	closed bool
+	mu       sync.Mutex
+	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
+	last     Snapshot
+	lastErr  error
+	lastGood *Snapshot // non-nil iff haveGood is closed
 }
 
 // New is intended for use by provider implementations.
@@ -147,14 +140,16 @@ var New = newVar
 // newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
 	ctx, cancel := context.WithCancel(context.Background())
+	changed := make(chan struct{})
 	v := &Variable{
-		dw:                w,
-		provider:          oc.ProviderName(w),
-		backgroundCancel:  cancel,
-		backgroundCloseCh: make(chan bool),
-		haveGoodCh:        make(chan bool),
-		nextWatchCh:       make(chan *snapshotPlusError, 1),
-		latest:            &snapshotPlusError{err: errors.New("no value yet")},
+		dw:               w,
+		provider:         oc.ProviderName(w),
+		backgroundCancel: cancel,
+		backgroundDone:   make(chan struct{}),
+		haveGood:         make(chan struct{}),
+		lastWatch:        changed,
+		changed:          changed,
+		lastErr:          errors.New("no value yet"),
 	}
 	go v.background(ctx)
 	return v
@@ -183,16 +178,17 @@ var ErrClosed = errors.New("Variable has been closed")
 //
 // Alternatively, use Latest to retrieve the latest good value.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+	// Block until there's a change since the last Watch call, signaled
+	// by c.lastWatch being closed by the background goroutine.
 	select {
-	case wr := <-c.nextWatchCh:
-		if wr == nil {
-			// nextWatchCh is closed, implying v has been Closed.
-			return Snapshot{}, ErrClosed
-		}
-		return wr.snapshot, wr.err
+	case <-c.lastWatch:
 	case <-ctx.Done():
 		return Snapshot{}, ctx.Err()
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.lastWatch = c.changed
+	return c.last, c.lastErr
 }
 
 func (c *Variable) background(ctx context.Context) {
@@ -202,7 +198,7 @@ func (c *Variable) background(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			// We're shutting down; exit the goroutine.
-			close(c.backgroundCloseCh)
+			close(c.backgroundDone)
 			return
 		case <-time.After(wait):
 			// Continue.
@@ -219,40 +215,31 @@ func (c *Variable) background(ctx context.Context) {
 		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
 		// Error from RecordWithTags is not possible.
 
-		var spe snapshotPlusError
+		// Updates under the lock.
+		c.mu.Lock()
 		if val, err := curState.Value(); err == nil {
-			spe.snapshot = Snapshot{
+			// We got a good value!
+			c.last = Snapshot{
 				Value:      val,
 				UpdateTime: curState.UpdateTime(),
 				asFunc:     curState.As,
 			}
+			c.lastErr = nil
+
+			// If it's the first good value, close haveGood so that Latest doesn't block.
+			firstGood := c.lastGood == nil
+			c.lastGood = &c.last
+			if firstGood {
+				close(c.haveGood)
+			}
 		} else {
-			spe.err = wrapError(c.dw, err)
+			// We got an error value.
+			c.last = Snapshot{}
+			c.lastErr = wrapError(c.dw, err)
 		}
-
-		// Update c.latest under the lock.
-		c.mu.Lock()
-		// Save the new value if it's good, or if it's an error and we don't
-		// have a good value -- that way we always return the latest error.
-		if spe.err == nil || !c.haveGood {
-			c.latest = &spe
-		}
-		if spe.err == nil && !c.haveGood {
-			// This is the first good value! Close haveGoodCh so that Latest doesn't
-			// block anymore.
-			close(c.haveGoodCh)
-			c.haveGood = true
-		}
+		close(c.changed)
+		c.changed = make(chan struct{})
 		c.mu.Unlock()
-
-		// Read anything buffered on nextWatchCh, in case we wrote something before
-		// but nobody noticed. The write is then guaranteed to not block since
-		// buffer size = 1.
-		select {
-		case <-c.nextWatchCh:
-		default:
-		}
-		c.nextWatchCh <- &spe
 	}
 }
 
@@ -264,36 +251,36 @@ func (c *Variable) background(ctx context.Context) {
 // Latest returns ErrClosed if the Variable has been closed.
 func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	select {
-	case <-c.haveGoodCh:
+	case <-c.haveGood:
 	case <-ctx.Done():
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.closed {
-		return Snapshot{}, ErrClosed
+	if c.lastGood != nil && c.lastErr != ErrClosed {
+		return *c.lastGood, nil
 	}
-	return c.latest.snapshot, c.latest.err
+	return Snapshot{}, c.lastErr
 }
 
 // Close closes the Variable. The Variable is unusable after Close returns.
 func (c *Variable) Close() error {
-	// Record that we're closing. Subsequent calls to Watch will return ErrClosed.
-	c.mu.Lock()
-	if c.closed {
-		return nil
-	}
-	c.closed = true
-	c.mu.Unlock()
-
 	// Shut down the background goroutine.
 	c.backgroundCancel()
-	<-c.backgroundCloseCh
+	<-c.backgroundDone
+
+	// Record that we're closing. Subsequent calls to Watch/Latest will return ErrClosed.
+	c.mu.Lock()
+	if c.lastErr == ErrClosed {
+		c.mu.Unlock()
+		return ErrClosed
+	}
+	c.last = Snapshot{}
+	c.lastErr = ErrClosed
 
 	// Close any remaining channels to wake up any callers that are waiting on them.
-	c.mu.Lock()
-	close(c.nextWatchCh)
-	if !c.haveGood {
-		close(c.haveGoodCh)
+	close(c.changed)
+	if c.lastGood == nil {
+		close(c.haveGood)
 	}
 	c.mu.Unlock()
 
