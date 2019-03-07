@@ -70,6 +70,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -296,10 +297,6 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
-	if b.useLegacyList {
-		return b.legacyListPaged(ctx, opts)
-	}
-
 	pageSize := opts.PageSize
 	if pageSize == 0 {
 		pageSize = defaultPageSize
@@ -330,7 +327,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	req, resp := b.client.ListObjectsV2Request(in)
+	req, resp := b.listObjectsV2Request(in)
 	if err := req.Send(); err != nil {
 		return nil, err
 	}
@@ -380,87 +377,43 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return &page, nil
 }
 
-func (b *bucket) legacyListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
-	pageSize := opts.PageSize
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	}
-	in := &s3.ListObjectsInput{
-		Bucket:  aws.String(b.name),
-		MaxKeys: aws.Int64(int64(pageSize)),
-	}
-	if len(opts.PageToken) > 0 {
-		in.Marker = aws.String(string(opts.PageToken))
-	}
-	if opts.Prefix != "" {
-		in.Prefix = aws.String(escapeKey(opts.Prefix))
-	}
-	if opts.Delimiter != "" {
-		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
-	}
-	if opts.BeforeList != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**s3.ListObjectsInput)
-			if !ok {
-				return false
-			}
-			*p = in
-			return true
+func (b *bucket) listObjectsV2Request(in *s3.ListObjectsV2Input) (req *request.Request, output *s3.ListObjectsV2Output) {
+	if b.useLegacyList {
+		marker := in.ContinuationToken
+		if marker == nil || (marker != nil && in.StartAfter != nil && *in.StartAfter > *marker) {
+			marker = in.StartAfter
 		}
-		if err := opts.BeforeList(asFunc); err != nil {
-			return nil, err
+
+		legacyIn := &s3.ListObjectsInput{
+			Bucket:       in.Bucket,
+			Delimiter:    in.Delimiter,
+			EncodingType: in.EncodingType,
+			Marker:       marker,
+			MaxKeys:      in.MaxKeys,
+			Prefix:       in.Prefix,
+			RequestPayer: in.RequestPayer,
 		}
-	}
-	req, resp := b.client.ListObjectsRequest(in)
-	if err := req.Send(); err != nil {
-		return nil, err
-	}
-	page := driver.ListPage{}
-	if resp.NextMarker != nil {
-		page.NextPageToken = []byte(*resp.NextMarker)
-	} else if *resp.IsTruncated {
-		page.NextPageToken = []byte(*resp.Contents[len(resp.Contents)-1].Key + "\x00")
-	}
-	if n := len(resp.Contents) + len(resp.CommonPrefixes); n > 0 {
-		page.Objects = make([]*driver.ListObject, n)
-		for i, obj := range resp.Contents {
-			page.Objects[i] = &driver.ListObject{
-				Key:     unescapeKey(aws.StringValue(obj.Key)),
-				ModTime: *obj.LastModified,
-				Size:    *obj.Size,
-				MD5:     eTagToMD5(obj.ETag),
-				AsFunc: func(i interface{}) bool {
-					p, ok := i.(*s3.Object)
-					if !ok {
-						return false
-					}
-					*p = *obj
-					return true
-				},
-			}
+		req, legacyResp := b.client.ListObjectsRequest(legacyIn)
+
+		var nextContinuationToken *string
+		if legacyResp.NextMarker != nil && *legacyResp.NextMarker != "" {
+			nextContinuationToken = legacyResp.NextMarker
+		} else if !*legacyResp.IsTruncated {
+			nextContinuationToken = aws.String(*legacyResp.Contents[len(legacyResp.Contents)-1].Key + " ")
+		} else {
+			nextContinuationToken = nil
 		}
-		for i, prefix := range resp.CommonPrefixes {
-			page.Objects[i+len(resp.Contents)] = &driver.ListObject{
-				Key:   unescapeKey(aws.StringValue(prefix.Prefix)),
-				IsDir: true,
-				AsFunc: func(i interface{}) bool {
-					p, ok := i.(*s3.CommonPrefix)
-					if !ok {
-						return false
-					}
-					*p = *prefix
-					return true
-				},
-			}
+
+		resp := &s3.ListObjectsV2Output{
+			CommonPrefixes:        legacyResp.CommonPrefixes,
+			Contents:              legacyResp.Contents,
+			NextContinuationToken: nextContinuationToken,
 		}
-		if len(resp.Contents) > 0 && len(resp.CommonPrefixes) > 0 {
-			// S3 gives us blobs and "directories" in separate lists; sort them.
-			sort.Slice(page.Objects, func(i, j int) bool {
-				return page.Objects[i].Key < page.Objects[j].Key
-			})
-		}
+
+		return req, resp
+	} else {
+		return b.client.ListObjectsV2Request(in)
 	}
-	return &page, nil
 }
 
 // As implements driver.As.
