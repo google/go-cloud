@@ -18,7 +18,7 @@
 //
 // As
 //
-// gcspubsub exposes the following types for As:
+// gcppubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
 //  - Message: *pb.PubsubMessage
