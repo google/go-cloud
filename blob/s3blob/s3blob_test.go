@@ -47,13 +47,19 @@ const (
 
 type harness struct {
 	session *session.Session
+	opts    *Options
 	rt      http.RoundTripper
 	closer  func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, rt, done := setup.NewAWSSession(t, region)
-	return &harness{session: sess, rt: rt, closer: done}, nil
+	return &harness{session: sess, opts: nil, rt: rt, closer: done}, nil
+}
+
+func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	sess, rt, done := setup.NewAWSSession(t, region)
+	return &harness{session: sess, opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -61,7 +67,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.session, bucketName, nil)
+	return openBucket(ctx, h.session, bucketName, h.opts)
 }
 
 func (h *harness) Close() {
@@ -70,6 +76,10 @@ func (h *harness) Close() {
 
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+}
+
+func TestConformanceUsingLegacyList(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarnessUsingLegacyList, []drivertest.AsTest{verifyContentLanguage{}})
 }
 
 func BenchmarkS3blob(b *testing.B) {

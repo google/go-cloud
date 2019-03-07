@@ -70,7 +70,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -136,9 +135,9 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.
 type Options struct {
-	// Some bucket providers (like CEPH) do not currently support the
-	// ListObjectV2 API. Setting this option to true, enabled fallback to
-	// the ListObject (V1) API.
+	// UseLegacyList forces the use of ListObjects instead of ListObjectsV2.
+	// Some S3-compatible providers (like CEPH) do not currently support
+	// ListObjectsV2.
 	UseLegacyList bool
 }
 
@@ -327,8 +326,8 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 			return nil, err
 		}
 	}
-	req, resp := b.listObjectsV2Request(in)
-	if err := req.Send(); err != nil {
+	resp, err := b.listObjects(in)
+	if err != nil {
 		return nil, err
 	}
 	page := driver.ListPage{}
@@ -377,43 +376,41 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return &page, nil
 }
 
-func (b *bucket) listObjectsV2Request(in *s3.ListObjectsV2Input) (req *request.Request, output *s3.ListObjectsV2Output) {
-	if b.useLegacyList {
-		marker := in.ContinuationToken
-		if marker == nil || (marker != nil && in.StartAfter != nil && *in.StartAfter > *marker) {
-			marker = in.StartAfter
+func (b *bucket) listObjects(in *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+	if !b.useLegacyList {
+		req, resp := b.client.ListObjectsV2Request(in)
+		if err := req.Send(); err != nil {
+			return nil, err
 		}
-
-		legacyIn := &s3.ListObjectsInput{
-			Bucket:       in.Bucket,
-			Delimiter:    in.Delimiter,
-			EncodingType: in.EncodingType,
-			Marker:       marker,
-			MaxKeys:      in.MaxKeys,
-			Prefix:       in.Prefix,
-			RequestPayer: in.RequestPayer,
-		}
-		req, legacyResp := b.client.ListObjectsRequest(legacyIn)
-
-		var nextContinuationToken *string
-		if legacyResp.NextMarker != nil && *legacyResp.NextMarker != "" {
-			nextContinuationToken = legacyResp.NextMarker
-		} else if !*legacyResp.IsTruncated {
-			nextContinuationToken = aws.String(*legacyResp.Contents[len(legacyResp.Contents)-1].Key + " ")
-		} else {
-			nextContinuationToken = nil
-		}
-
-		resp := &s3.ListObjectsV2Output{
-			CommonPrefixes:        legacyResp.CommonPrefixes,
-			Contents:              legacyResp.Contents,
-			NextContinuationToken: nextContinuationToken,
-		}
-
-		return req, resp
-	} else {
-		return b.client.ListObjectsV2Request(in)
+		return resp, nil
 	}
+
+	// Use the legacy ListObjects request.
+	legacyIn := &s3.ListObjectsInput{
+		Bucket:       in.Bucket,
+		Delimiter:    in.Delimiter,
+		EncodingType: in.EncodingType,
+		Marker:       in.ContinuationToken,
+		MaxKeys:      in.MaxKeys,
+		Prefix:       in.Prefix,
+		RequestPayer: in.RequestPayer,
+	}
+	req, legacyResp := b.client.ListObjectsRequest(legacyIn)
+	if err := req.Send(); err != nil {
+		return nil, err
+	}
+
+	var nextContinuationToken *string
+	if legacyResp.NextMarker != nil {
+		nextContinuationToken = legacyResp.NextMarker
+	} else if aws.BoolValue(legacyResp.IsTruncated) {
+		nextContinuationToken = aws.String(aws.StringValue(legacyResp.Contents[len(legacyResp.Contents)-1].Key) + " ")
+	}
+	return &s3.ListObjectsV2Output{
+		CommonPrefixes:        legacyResp.CommonPrefixes,
+		Contents:              legacyResp.Contents,
+		NextContinuationToken: nextContinuationToken,
+	}, nil
 }
 
 // As implements driver.As.
