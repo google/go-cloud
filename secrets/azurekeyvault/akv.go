@@ -128,13 +128,8 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if u.Host == "" {
 		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the key vault name)", u)
 	}
-	path := u.Path
-	if len(path) > 0 && path[0] == '/' {
-		path = path[1:]
-	}
-	pathParts := strings.Split(path, "/")
 	var keyName, keyVersion string
-	if len(pathParts) == 1 {
+	if pathParts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/"); len(pathParts) == 1 {
 		keyName = pathParts[0]
 	} else if len(pathParts) == 2 {
 		keyName = pathParts[0]
