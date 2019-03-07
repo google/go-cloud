@@ -186,6 +186,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	select {
 	case wr := <-c.nextWatchCh:
 		if wr == nil {
+			// nextWatchCh is closed, implying v has been Closed.
 			return Snapshot{}, ErrClosed
 		}
 		return wr.snapshot, wr.err
