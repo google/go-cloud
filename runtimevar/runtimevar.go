@@ -124,14 +124,12 @@ type Variable struct {
 	// haveGood is closed when we get the first good value for the variable.
 	haveGood chan struct{}
 
-	// A reference to the changed channel at the last time Watch was called.
-	lastWatch <-chan struct{}
-
-	mu       sync.Mutex
-	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
-	last     Snapshot
-	lastErr  error
-	lastGood *Snapshot // non-nil iff haveGood is closed
+	mu        sync.Mutex
+	changed   chan struct{}   // closed when changing any of the other variables and replaced with a new channel
+	lastWatch <-chan struct{} // a reference to changed at the last time Watch was called
+	last      Snapshot
+	lastErr   error
+	lastGood  *Snapshot // non-nil iff haveGood is closed
 }
 
 // New is intended for use by provider implementations.
@@ -147,8 +145,8 @@ func newVar(w driver.Watcher) *Variable {
 		backgroundCancel: cancel,
 		backgroundDone:   make(chan struct{}),
 		haveGood:         make(chan struct{}),
-		lastWatch:        changed,
 		changed:          changed,
+		lastWatch:        changed,
 		lastErr:          errors.New("no value yet"),
 	}
 	go v.background(ctx)
