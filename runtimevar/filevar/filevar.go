@@ -26,6 +26,12 @@
 // * On macOS, if an empty file is copied into a configuration file,
 //   filevar will not detect the change.
 //
+// URLs
+//
+// For runtimevar.OpenVariable URLs, filevar registers for the scheme
+// "file". For details on the format of the URL, see URLOpener.
+// Example URL: file:///path/to/config.json?decoder=json
+//
 // As
 //
 // filevar does not support any types for As.
@@ -35,9 +41,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -45,6 +54,68 @@ import (
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 )
+
+func init() {
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{})
+}
+
+// Scheme is the URL scheme filevar registers its URLOpener under on runtimevar.DefaultMux.
+const Scheme = "file"
+
+// URLOpener opens filevar URLs like "file:///path/to/config.json?decoder=json".
+type URLOpener struct {
+	// Decoder and Options can be specified at URLOpener construction time,
+	// or provided/overridden via URL parameters.
+	Decoder *runtimevar.Decoder
+	Options Options
+}
+
+// OpenVariableURL opens the file variable at the URL's path.
+// The URL's host+path is used as the path to the file to watch.
+// If os.PathSeparator != "/", any leading "/" from the path is dropped
+// and remaining '/' characters are converted to os.PathSeparator.
+//
+// In addition, the following URL parameters are supported:
+//   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
+//       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
+//       See runtimevar.DecoderByName for supported values.
+//   - wait: The poll interval; supported values are from time.ParseDuration.
+//       Defaults to 30s.
+func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	q := u.Query()
+	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
+		var err error
+		o.Decoder, err = runtimevar.DecoderByName(q.Get("decoder"))
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+		}
+		q.Del("decoder")
+	}
+
+	if wait := q.Get("wait"); wait != "" {
+		var err error
+		o.Options.WaitDuration, err = time.ParseDuration(wait)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
+		}
+		q.Del("wait")
+	}
+	for param := range q {
+		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+	}
+	return New(mungeURLPath(u.Path, os.PathSeparator), o.Decoder, &o.Options)
+}
+
+func mungeURLPath(path string, pathSeparator byte) string {
+	if pathSeparator != '/' {
+		path = strings.TrimPrefix(path, "/")
+		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
+		// from this function. Test Windows behavior by opening a bucket on Windows.
+		// See #1075 for why Windows is disabled.
+		return strings.Replace(path, "/", string(pathSeparator), -1)
+	}
+	return path
+}
 
 // Options sets options.
 type Options struct {

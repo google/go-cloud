@@ -17,6 +17,7 @@ package filevar
 import (
 	"context"
 	"errors"
+	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -168,5 +169,65 @@ func TestNew(t *testing.T) {
 				w.Close()
 			}
 		})
+	}
+}
+
+func TestOpenVariable(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gcdk-filevar-example")
+	if err != nil {
+		t.Fatal(err)
+	}
+	jsonPath := filepath.Join(dir, "myvar.json")
+	if err := ioutil.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
+		t.Fatal(err)
+	}
+	txtPath := filepath.Join(dir, "myvar.txt")
+	if err := ioutil.WriteFile(txtPath, []byte("hello world!"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	nonexistentPath := filepath.Join(dir, "filenotfound")
+	defer os.RemoveAll(dir)
+
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantWatchErr bool
+		Want         interface{}
+	}{
+		// Variable construction succeeds, but the file does not exist.
+		{"file://" + nonexistentPath, false, true, nil},
+		// Variable construction fails due to invalid wait arg.
+		{"file://" + txtPath + "?decoder=string&wait=notaduration", true, false, nil},
+		// Variable construction fails due to invalid decoder arg.
+		{"file://" + txtPath + "?decoder=notadecoder", true, false, nil},
+		// Variable construction fails due to invalid arg.
+		{"file://" + txtPath + "?param=value", true, false, nil},
+		// Working example with default decoder.
+		{"file://" + txtPath, false, false, []byte("hello world!")},
+		// Working example with string decoder and wait.
+		{"file://" + txtPath + "?decoder=string&wait=5s", false, false, "hello world!"},
+		// Working example with JSON decoder.
+		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		v, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err != nil {
+			continue
+		}
+		snapshot, err := v.Watch(ctx)
+		if (err != nil) != test.WantWatchErr {
+			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+		}
+		if err != nil {
+			continue
+		}
+		if !cmp.Equal(snapshot.Value, test.Want) {
+			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+		}
 	}
 }
