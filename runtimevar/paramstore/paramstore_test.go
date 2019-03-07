@@ -157,3 +157,26 @@ func TestNoConnectionError(t *testing.T) {
 		t.Error("got nil want error")
 	}
 }
+
+func TestOpenVariable(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		{"paramstore://myvar", false},
+		{"paramstore://myvar?region=us-west-1", false},
+		{"paramstore://myvar?decoder=string", false},
+		{"paramstore://myvar?decoder=notadecoder", true},
+		{"paramstore://myvar?wait=30s", false},
+		{"paramstore://myvar?wait=notaduration", true},
+		{"paramstore://myvar?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
