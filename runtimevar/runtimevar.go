@@ -127,9 +127,9 @@ type Variable struct {
 	mu        sync.Mutex
 	changed   chan struct{}   // closed when changing any of the other variables and replaced with a new channel
 	lastWatch <-chan struct{} // a reference to changed at the last time Watch was called
-	last      *Snapshot
+	last      Snapshot
 	lastErr   error
-	lastGood  *Snapshot // non-nil iff haveGood is closed
+	lastGood  Snapshot
 }
 
 // New is intended for use by provider implementations.
@@ -197,7 +197,7 @@ func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 		return Snapshot{}, ctxErr
 	}
 	c.lastWatch = c.changed
-	return *c.last, c.lastErr
+	return c.last, c.lastErr
 }
 
 func (c *Variable) background(ctx context.Context) {
@@ -228,22 +228,22 @@ func (c *Variable) background(ctx context.Context) {
 		c.mu.Lock()
 		if val, err := curState.Value(); err == nil {
 			// We got a good value!
-			c.last = &Snapshot{
+			c.last = Snapshot{
 				Value:      val,
 				UpdateTime: curState.UpdateTime(),
 				asFunc:     curState.As,
 			}
 			c.lastErr = nil
-
-			// If it's the first good value, close haveGood so that Latest doesn't block.
-			firstGood := c.lastGood == nil
 			c.lastGood = c.last
-			if firstGood {
+			// Close c.haveGood if it's not already closed.
+			select {
+			case <-c.haveGood:
+			default:
 				close(c.haveGood)
 			}
 		} else {
 			// We got an error value.
-			c.last = &Snapshot{}
+			c.last = Snapshot{}
 			c.lastErr = wrapError(c.dw, err)
 		}
 		close(c.changed)
@@ -254,19 +254,23 @@ func (c *Variable) background(ctx context.Context) {
 
 // Latest is intended to be called per request, with the request context.
 // It returns the latest good Snapshot of the variable value, blocking if no
-// good value has ever been received. Pass an already-canceled ctx to make
-// Latest not block at all.
+// good value has ever been received. If ctx is Done, it returns the latest
+// error indicating why no good value is available (not the ctx.Err()).
+// You can pass an already-Done ctx to make Latest not block.
 //
 // Latest returns ErrClosed if the Variable has been closed.
 func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
+	var haveGood bool
 	select {
 	case <-c.haveGood:
+		haveGood = true
 	case <-ctx.Done():
+		// We don't return ctx.Err().
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.lastGood != nil && c.lastErr != ErrClosed {
-		return *c.lastGood, nil
+	if haveGood && c.lastErr != ErrClosed {
+		return c.lastGood, nil
 	}
 	return Snapshot{}, c.lastErr
 }
@@ -283,12 +287,15 @@ func (c *Variable) Close() error {
 		c.mu.Unlock()
 		return ErrClosed
 	}
-	c.last = &Snapshot{}
+	c.last = Snapshot{}
 	c.lastErr = ErrClosed
 
 	// Close any remaining channels to wake up any callers that are waiting on them.
 	close(c.changed)
-	if c.lastGood == nil {
+	// If it's the first good value, close haveGood so that Latest doesn't block.
+	select {
+	case <-c.haveGood:
+	default:
 		close(c.haveGood)
 	}
 	c.mu.Unlock()
