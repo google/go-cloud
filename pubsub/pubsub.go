@@ -279,6 +279,7 @@ type Subscription struct {
 	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher driver.Batcher
+	ackFunc    func() // if non-nil, used for Ack
 	cancel     func() // for canceling all SendAcks calls
 
 	mu             sync.Mutex    // protects everything below
@@ -424,16 +425,23 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 			Metadata: m.Metadata,
 			asFunc:   m.AsFunc,
 		}
-		m2.ack = func() {
-			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
-			// will result if Message.Ack is ever called with s.mu held. That
-			// currently cannot happen, but we should be careful if/when implementing
-			// features like auto-ack.
-			s.addProcessingTime(time.Since(m2.processingStartTime))
+		if s.ackFunc == nil {
+			m2.ack = func() {
+				// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
+				// will result if Message.Ack is ever called with s.mu held. That
+				// currently cannot happen, but we should be careful if/when implementing
+				// features like auto-ack.
+				s.addProcessingTime(time.Since(m2.processingStartTime))
 
-			// Ignore the error channel. Errors are dealt with
-			// in the ackBatcher handler.
-			_ = s.ackBatcher.AddNoWait(id)
+				// Ignore the error channel. Errors are dealt with
+				// in the ackBatcher handler.
+				_ = s.ackBatcher.AddNoWait(id)
+			}
+		} else {
+			m2.ack = func() {
+				s.addProcessingTime(time.Since(m2.processingStartTime)) // see note above
+				s.ackFunc()
+			}
 		}
 		q = append(q, m2)
 	}
@@ -494,6 +502,7 @@ func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context,
 		newAckBatcher = defaultAckBatcher
 	}
 	s.ackBatcher = newAckBatcher(ctx, s, ds)
+	s.ackFunc = ds.AckFunc()
 	return s
 }
 
