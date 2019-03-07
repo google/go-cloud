@@ -123,13 +123,16 @@ type Variable struct {
 
 	// haveGood is closed when we get the first good value for the variable.
 	haveGood chan struct{}
+	// A reference to changed at the last time Watch was called.
+	// Not protected by mu because it's only referenced in Watch, which is not
+	// supposed to be called from multiple goroutines.
+	lastWatch <-chan struct{}
 
-	mu        sync.Mutex
-	changed   chan struct{}   // closed when changing any of the other variables and replaced with a new channel
-	lastWatch <-chan struct{} // a reference to changed at the last time Watch was called
-	last      Snapshot
-	lastErr   error
-	lastGood  Snapshot
+	mu       sync.Mutex
+	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
+	last     Snapshot
+	lastErr  error
+	lastGood Snapshot
 }
 
 // New is intended for use by provider implementations.
@@ -178,14 +181,9 @@ var ErrClosed = errors.New("Variable has been closed")
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
 	// Block until there's a change since the last Watch call, signaled
 	// by lastWatch being closed by the background goroutine.
-	var lastWatch <-chan struct{}
-	c.mu.Lock()
-	lastWatch = c.lastWatch
-	c.mu.Unlock()
-
 	var ctxErr error
 	select {
-	case <-lastWatch:
+	case <-c.lastWatch:
 	case <-ctx.Done():
 		ctxErr = ctx.Err()
 	}
@@ -226,6 +224,11 @@ func (c *Variable) background(ctx context.Context) {
 
 		// Updates under the lock.
 		c.mu.Lock()
+		if c.lastErr == ErrClosed {
+			close(c.backgroundDone)
+			c.mu.Unlock()
+			return
+		}
 		if val, err := curState.Value(); err == nil {
 			// We got a good value!
 			c.last = Snapshot{
