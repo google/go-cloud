@@ -41,7 +41,8 @@
 //  - Bucket: *s3.S3
 //  - Error: awserr.Error
 //  - ListObject: s3.Object for objects, s3.CommonPrefix for "directories"
-//  - ListOptions.BeforeList: *s3.ListObjectsV2Input
+//  - ListOptions.BeforeList: *s3.ListObjectsV2Input, or *s3.ListObjectsInput
+//      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
@@ -313,20 +314,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if opts.Delimiter != "" {
 		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
 	}
-	if opts.BeforeList != nil {
-		asFunc := func(i interface{}) bool {
-			p, ok := i.(**s3.ListObjectsV2Input)
-			if !ok {
-				return false
-			}
-			*p = in
-			return true
-		}
-		if err := opts.BeforeList(asFunc); err != nil {
-			return nil, err
-		}
-	}
-	resp, err := b.listObjects(in)
+	resp, err := b.listObjects(in, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -376,8 +364,21 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return &page, nil
 }
 
-func (b *bucket) listObjects(in *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output, error) {
+func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions) (*s3.ListObjectsV2Output, error) {
 	if !b.useLegacyList {
+		if opts.BeforeList != nil {
+			asFunc := func(i interface{}) bool {
+				p, ok := i.(**s3.ListObjectsV2Input)
+				if !ok {
+					return false
+				}
+				*p = in
+				return true
+			}
+			if err := opts.BeforeList(asFunc); err != nil {
+				return nil, err
+			}
+		}
 		req, resp := b.client.ListObjectsV2Request(in)
 		if err := req.Send(); err != nil {
 			return nil, err
@@ -394,6 +395,19 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input) (*s3.ListObjectsV2Output
 		MaxKeys:      in.MaxKeys,
 		Prefix:       in.Prefix,
 		RequestPayer: in.RequestPayer,
+	}
+	if opts.BeforeList != nil {
+		asFunc := func(i interface{}) bool {
+			p, ok := i.(**s3.ListObjectsInput)
+			if !ok {
+				return false
+			}
+			*p = legacyIn
+			return true
+		}
+		if err := opts.BeforeList(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	req, legacyResp := b.client.ListObjectsRequest(legacyIn)
 	if err := req.Send(); err != nil {
