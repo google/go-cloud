@@ -192,3 +192,44 @@ func TestNoConnectionError(t *testing.T) {
 		t.Error("got nil want error")
 	}
 }
+
+func TestOpenVariable(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"runtimeconfigurator://myproject/mycfg/myvar", false},
+		// OK, hierarchical key name.
+		{"runtimeconfigurator://myproject/mycfg/myvar1/myvar2", false},
+		// OK, setting decoder.
+		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=string", false},
+		// Missing project ID.
+		{"runtimeconfigurator:///mycfg/myvar", true},
+		// Empty config.
+		{"runtimeconfigurator://myproject//myvar", true},
+		// Empty key name.
+		{"runtimeconfigurator://myproject/mycfg/", true},
+		// Missing key name.
+		{"runtimeconfigurator://myproject/mycfg", true},
+		// Invalid decoder.
+		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=notadecoder", true},
+		// OK, setting wait.
+		{"runtimeconfigurator://myproject/mycfg/myvar?wait=30s", false},
+		// Invalid wait.
+		{"runtimeconfigurator://myproject/mycfg/myvar?wait=notaduration", true},
+		// Unknown param.
+		{"runtimeconfigurator://myproject/mycfg/myvar?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
