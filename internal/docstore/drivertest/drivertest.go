@@ -225,10 +225,25 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
+
+	// Check that update is atomic.
+	doc = got
+	mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
+	if err := coll.Update(ctx, doc, mods); err == nil {
+		t.Fatal("got nil, want error")
+	}
+	got = docmap{KeyField: doc[KeyField]}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	// want should be unchanged
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func testData(t *testing.T, coll *ds.Collection) {
-	// All Go integer types except uint64 are supported, but they all come back as int64.
+	// All Go integer types are supported, but they all come back as int64.
 	ctx := context.Background()
 	for _, test := range []struct {
 		in, want interface{}
@@ -238,11 +253,11 @@ func testData(t *testing.T, coll *ds.Collection) {
 		{int16(-16), int64(-16)},
 		{int32(-32), int64(-32)},
 		{int64(-64), int64(-64)},
-		//		{uint(1), int64(1)}, TODO: support uint in firestore
+		//		{uint(1), int64(1)}, TODO(jba): support uint in firestore
 		{uint8(8), int64(8)},
 		{uint16(16), int64(16)},
 		{uint32(32), int64(32)},
-		// TODO: support uint64
+		// TODO(jba): support uint64
 		{float32(3.5), float64(3.5)},
 		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
 	} {

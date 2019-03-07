@@ -253,6 +253,9 @@ func (c *Collection) Update(ctx context.Context, doc Document, mods Mods) error 
 }
 
 func parseFieldPath(fp FieldPath) ([]string, error) {
+	if len(fp) == 0 {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "empty field path")
+	}
 	if !utf8.ValidString(string(fp)) {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "invalid UTF-8 field path %q", fp)
 	}
