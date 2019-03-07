@@ -565,85 +565,71 @@ type SubscriptionURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	subscriptionSchemes map[string]SubscriptionURLOpener
-	topicSchemes        map[string]TopicURLOpener
+	subscriptionSchemes urlSchemeMap
+	topicSchemes        urlSchemeMap
+}
+
+// NewURLMux returns URLMux ready for use.
+func NewURLMux() *URLMux {
+	return &URLMux{
+		subscriptionSchemes: urlSchemeMap{name: "subscriptions"},
+		topicSchemes:        urlSchemeMap{name: "topics"},
+	}
 }
 
 // RegisterTopic registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterTopic panics.
 func (mux *URLMux) RegisterTopic(scheme string, opener TopicURLOpener) {
-	if mux.topicSchemes == nil {
-		mux.topicSchemes = make(map[string]TopicURLOpener)
-	} else if _, exists := mux.topicSchemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered for topics on mux", scheme))
-	}
-	mux.topicSchemes[scheme] = opener
+	mux.topicSchemes.Register(scheme, opener)
 }
 
 // RegisterSubscription registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterSubscription panics.
 func (mux *URLMux) RegisterSubscription(scheme string, opener SubscriptionURLOpener) {
-	if mux.subscriptionSchemes == nil {
-		mux.subscriptionSchemes = make(map[string]SubscriptionURLOpener)
-	} else if _, exists := mux.subscriptionSchemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered for subscriptions on mux", scheme))
-	}
-	mux.subscriptionSchemes[scheme] = opener
+	mux.subscriptionSchemes.Register(scheme, opener)
 }
 
 // OpenTopic calls OpenTopicURL with the URL parsed from urlstr.
 // OpenTopic is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.topicSchemes.FromString(urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open topic: %v", err)
+		return nil, err
 	}
-	return mux.OpenTopicURL(ctx, u)
+	return opener.(TopicURLOpener).OpenTopicURL(ctx, u)
 }
 
 // OpenSubscription calls OpenSubscriptionURL with the URL parsed from urlstr.
 // OpenSubscription is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.subscriptionSchemes.FromString(urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open subscription: %v", err)
+		return nil, err
 	}
-	return mux.OpenSubscriptionURL(ctx, u)
+	return opener.(SubscriptionURLOpener).OpenSubscriptionURL(ctx, u)
 }
 
 // OpenTopicURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenTopicURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open topic %q: no scheme in URL", u)
+	opener, err := mux.topicSchemes.FromURL(u)
+	if err != nil {
+		return nil, err
 	}
-	var opener TopicURLOpener
-	if mux != nil {
-		opener = mux.topicSchemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open topic %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenTopicURL(ctx, u)
+	return opener.(TopicURLOpener).OpenTopicURL(ctx, u)
 }
 
 // OpenSubscriptionURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenSubscriptionURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open subscription %q: no scheme in URL", u)
+	opener, err := mux.subscriptionSchemes.FromURL(u)
+	if err != nil {
+		return nil, err
 	}
-	var opener SubscriptionURLOpener
-	if mux != nil {
-		opener = mux.subscriptionSchemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open subscription %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenSubscriptionURL(ctx, u)
+	return opener.(SubscriptionURLOpener).OpenSubscriptionURL(ctx, u)
 }
 
-var defaultURLMux = new(URLMux)
+var defaultURLMux = NewURLMux()
 
 // DefaultURLMux returns the URLMux used by OpenTopic and OpenSubscription.
 //
@@ -671,4 +657,44 @@ func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 // details on supported scheme(s) and URL parameter(s).
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)
+}
+
+// An urlSchemeMap maps URL schemes to values.
+// TODO(jba): move to a package under internal, so all APIs can use it.
+type urlSchemeMap struct {
+	name string // for errors
+	m    map[string]interface{}
+}
+
+func (m *urlSchemeMap) Register(scheme string, value interface{}) {
+	if m.m == nil {
+		m.m = map[string]interface{}{}
+	}
+	if _, exists := m.m[scheme]; exists {
+		panic(fmt.Errorf("scheme %q already registered for %s", scheme, m.name))
+	}
+	m.m[scheme] = value
+}
+
+func (m *urlSchemeMap) FromString(urlstr string) (interface{}, *url.URL, error) {
+	u, err := url.Parse(urlstr)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %v", m.name, err)
+	}
+	val, err := m.FromURL(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	return val, u, nil
+}
+
+func (m *urlSchemeMap) FromURL(u *url.URL) (interface{}, error) {
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("%s, URL %q: no scheme in URL", m.name, u)
+	}
+	v, ok := m.m[u.Scheme]
+	if !ok {
+		return nil, fmt.Errorf("%s, URL %q: no provider registered for %s", m.name, u, u.Scheme)
+	}
+	return v, nil
 }
