@@ -159,14 +159,29 @@ func TestVariable_Watch(t *testing.T) {
 		t.Error("Watch after no change in good value should block")
 	}
 
+	// Start a blocking Watch in the background, to ensure it's interrupted
+	// by Close.
+	ch := make(chan struct{})
+	go func() {
+		if _, err := v.Watch(ctx); err != ErrClosed {
+			t.Errorf("Watch interrupted by Close returned %v, want ErrClosed", err)
+		}
+		ch <- struct{}{}
+	}()
+	// Give it some time to get into the Watch. This doesn't guarantee that it
+	// does, but the test will be a least flaky if Watch isn't interrupted.
+	time.Sleep(blockingCheckDelay)
+
 	// Close the variable.
 	if err := v.Close(); err != nil {
 		t.Error(err)
 	}
 	// Watch should now return ErrClosed.
 	if _, err := v.Watch(ctx); err != ErrClosed {
-		t.Errorf("Watch after close returned %v, want ErrClosed", err)
+		t.Errorf("Watch after Close returned %v, want ErrClosed", err)
 	}
+	// Wait for the background Watch to exit as well.
+	<-ch
 }
 
 func TestVariable_Latest(t *testing.T) {

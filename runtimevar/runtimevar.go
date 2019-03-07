@@ -183,14 +183,11 @@ var ErrClosed = errors.New("Variable has been closed")
 //
 // Alternatively, use Latest to retrieve the latest good value.
 func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
-	c.mu.Lock()
-	if c.closed {
-		return Snapshot{}, ErrClosed
-	}
-	c.mu.Unlock()
-
 	select {
 	case wr := <-c.nextWatchCh:
+		if wr == nil {
+			return Snapshot{}, ErrClosed
+		}
 		return wr.snapshot, wr.err
 	case <-ctx.Done():
 		return Snapshot{}, ctx.Err()
