@@ -16,6 +16,20 @@
 // that never change. Use New, NewBytes, or NewError to construct a
 // *runtimevar.Variable.
 //
+// URLs
+//
+// For runtimevar.OpenVariable URLs, constantvar registers for the scheme
+// "constant". The host and path are ignored. It supports the following URL
+// parameters:
+//   - val: The value to use for the constant Variable. The bytes from val
+//       are passed to NewBytes.
+//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//       See runtimevar.DecoderByName for supported values.
+//   - err: The error to use for the constant Variable. A new error is created
+//       using errors.New and passed to NewError.
+// If both "err" and "val" are provided, "val" is ignored.
+// Example URL: "constant://?val=foo&decoder=string".
+//
 // As
 //
 // constantvar does not support any types for As.
@@ -24,12 +38,53 @@ package constantvar // import "gocloud.dev/runtimevar/constantvar"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/url"
 	"time"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 )
+
+func init() {
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{})
+}
+
+// Scheme is the URL scheme constantvar registers its URLOpener under on blob.DefaultMux.
+const Scheme = "constant"
+
+// URLOpener opens Variable URLs like "constant://?val=foo&decoder=string".
+type URLOpener struct{}
+
+// OpenVariableURL opens the variable at the URL's path. See the package doc
+// for more details.
+func (*URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	q := u.Query()
+	decoder, err := runtimevar.DecoderByName(q.Get("decoder"))
+	if err != nil {
+		return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+	}
+	var value string
+	var errVal error
+	for param, values := range q {
+		val := values[0]
+		switch param {
+		case "decoder":
+			// processed elsewhere
+		case "val":
+			value = val
+		case "err":
+			errVal = errors.New(val)
+		default:
+			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		}
+	}
+	if errVal != nil {
+		return NewError(errVal), nil
+	}
+	return NewBytes([]byte(value), decoder), nil
+}
 
 var errNotExist = errors.New("variable does not exist")
 
