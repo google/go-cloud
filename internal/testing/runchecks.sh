@@ -31,7 +31,7 @@ result=0
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  go test -v -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
