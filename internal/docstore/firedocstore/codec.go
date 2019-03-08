@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package firedocstore
-
-// Encoding and decoding between supported docstore types and Firestore protos.
+// Package firedocstore implements the docstore API for Cloud Firestore.
 //
 // Docstore types not supported by Firestore:
 // - complex64/128: encoded as an array of two float32/64s.
@@ -28,6 +26,9 @@ package firedocstore
 // Firestore types not supported by Docstore:
 // - Document reference (a pointer to another Firestore document)
 // TODO(jba): figure out how to support this
+package firedocstore
+
+// Encoding and decoding between supported docstore types and Firestore protos.
 
 import (
 	"errors"
