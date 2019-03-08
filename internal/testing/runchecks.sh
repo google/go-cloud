@@ -38,6 +38,7 @@ if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | go run ./in
 else
   echo "goprogram failure"
 fi
+exit 1
 
 result=0
 
