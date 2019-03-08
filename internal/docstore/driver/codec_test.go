@@ -200,7 +200,7 @@ func (e *testEncoder) EncodeBytes(x []byte)       { e.val = x }
 var typeOfSpecial = reflect.TypeOf(special(0))
 
 func (e *testEncoder) EncodeSpecial(v reflect.Value) (bool, error) {
-	// time.Time would normally encode as a []byte, because it implements BinaryMarshaler.
+	// special would normally encode as a []byte, because it implements BinaryMarshaler.
 	// Encode it as an int instead.
 	if v.Type() == typeOfSpecial {
 		e.val = int(v.Interface().(special))
