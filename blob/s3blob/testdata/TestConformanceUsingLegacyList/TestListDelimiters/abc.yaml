@@ -1,0 +1,421 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?max-keys=1000&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcdir1abca.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcb.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcc.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcd.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir2abce.txt</Key><LastModified>2019-03-07T17:01:04.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcf.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - 4e7NzuL2O/GVo/eydiajlJUeN0hkR8Z6b1kwVBo29/Lr9lUY7IkzqPUUe/24OFWUxz4DqXjpgts=
+      X-Amz-Request-Id:
+      - 11E27B91F5F88187
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?max-keys=1000&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcdir1abca.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcb.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcc.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcd.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir2abce.txt</Key><LastModified>2019-03-07T17:01:04.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcf.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - XKtdeMEES+J1tm5367TszjZKp4v96b4xs7u6s237UxILptb8Bts2ocd7l0b/pcySS34M6Gwp0gc=
+      X-Amz-Request-Id:
+      - 887606DB60077257
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1000&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcf.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><CommonPrefixes><Prefix>blob-for-delimiters-abcdir1abc</Prefix></CommonPrefixes><CommonPrefixes><Prefix>blob-for-delimiters-abcdir2abc</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - Aod9ZGJKJbX9Ea2AYMKp62a59doU0CjOQwFxyux/DBHcboMpS8lKOKozh+BArVBjfLFoKCMcN6w=
+      X-Amz-Request-Id:
+      - 0AE697E5D82A613B
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1000&prefix=blob-for-delimiters-abcdir1abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abcdir1abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcdir1abca.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcb.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><CommonPrefixes><Prefix>blob-for-delimiters-abcdir1abcsubdirabc</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - GCCd11SvL53sITSv/GDRYtuw+0giLPwYMuy7hEw1AwTcuyg0DuTVyVFTKcsnJn2ykOji2OY8j+U=
+      X-Amz-Request-Id:
+      - D6219CAE97C0F981
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1000&prefix=blob-for-delimiters-abcdir1abcsubdirabc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abcdir1abcsubdirabc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcc.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-delimiters-abcdir1abcsubdirabcd.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - evsrE8hL36wHJejhR0FXrZCN7n2KbZQGnBDQL6o+DIYrnP25HQ36H0r2WF144uDoeiFEIx5iMbQ=
+      X-Amz-Request-Id:
+      - D9E4C068FC186916
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1000&prefix=blob-for-delimiters-abcdir2abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abcdir2abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcdir2abce.txt</Key><LastModified>2019-03-07T17:01:04.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - GSlnnEbhk8hI5y6wN17bqOxal1Fb5aDiFCTs9argLtWUg/V+QWdyQet802QCbcLaYuPFz6psy5g=
+      X-Amz-Request-Id:
+      - 36824202778F9C26
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker></Marker><NextMarker>blob-for-delimiters-abcdir1abc</NextMarker><MaxKeys>1</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>true</IsTruncated><CommonPrefixes><Prefix>blob-for-delimiters-abcdir1abc</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - CS0GyHD2to5TsKf51xZBsbXnhH2HWGIJaWM3R5ABo7l5J8Fgun+zF10JUfVFQbBobnRttDKUHws=
+      X-Amz-Request-Id:
+      - 642D9457349ED65A
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&marker=blob-for-delimiters-abcdir1abc&max-keys=1&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker>blob-for-delimiters-abcdir1abc</Marker><NextMarker>blob-for-delimiters-abcdir2abc</NextMarker><MaxKeys>1</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>true</IsTruncated><CommonPrefixes><Prefix>blob-for-delimiters-abcdir2abc</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - 8Kqo6doj3TZxqe/GTCkY47qLPkBGeFh8enRrUtJsZRVy4Pc8SEfYWqrMOYptx1+FL1FABCz4vj0=
+      X-Amz-Request-Id:
+      - FD033E85A9B9E529
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&marker=blob-for-delimiters-abcdir2abc&max-keys=1&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker>blob-for-delimiters-abcdir2abc</Marker><MaxKeys>1</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcf.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - lny484VwV//F1iOqZltRR/pg5phpZirjgEMmOualB35kNKEwpz9dgaosO7DG8VeMYwmJY02pS/A=
+      X-Amz-Request-Id:
+      - 8951D7C83B744B31
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-delimiters-abcdir2abce.txt
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "5"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Last-Modified:
+      - Thu, 07 Mar 2019 17:01:04 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - iII5lnK21pnxXmnG+dLUScj6Hrr9nNLc4uqeAQtvec96QDdRNpCooYe204zwKf2LPk1eMmFlyOY=
+      X-Amz-Request-Id:
+      - E686F7B3CB3558C2
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-delimiters-abcdir2abce.txt
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 67fx2lOIFUCh+GC2cUytZ8yM76i92tXwrudblke57i4njzmHrgWXqyD7RlbPBP1bHlDencBxzAQ=
+      X-Amz-Request-Id:
+      - 37FADE0FBFD3BAF1
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?delimiter=abc&max-keys=1000&prefix=blob-for-delimiters-abc
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-delimiters-abc</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><Delimiter>abc</Delimiter><IsTruncated>false</IsTruncated><Contents><Key>blob-for-delimiters-abcf.txt</Key><LastModified>2019-03-07T16:50:25.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><CommonPrefixes><Prefix>blob-for-delimiters-abcdir1abc</Prefix></CommonPrefixes></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - jykmdNKJWM8RChIqJWbEANbULOhPV455FVoitLxj6/4Fd+B0nJUKw8Cv7HDbGtbdcihsfovoROY=
+      X-Amz-Request-Id:
+      - C3DE90CAA270D9CB
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: hello
+    form: {}
+    headers:
+      Content-Length:
+      - "5"
+      Content-Md5:
+      - XUFAKrxLKna5cZ2REBfFkg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
+      X-Amz-Date:
+      - 20190307T170108Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-delimiters-abcdir2abce.txt
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Etag:
+      - '"5d41402abc4b2a76b9719d911017c592"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - bd9p7gEjc79WSHPPgRZ8cQenYx25miwU+IkCmIoap8cYZhO9gUjB5nr0zrBvANcERCHPdT7erfc=
+      X-Amz-Request-Id:
+      - 51BDE5FF255511FA
+    status: 200 OK
+    code: 200
+    duration: ""

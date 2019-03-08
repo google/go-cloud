@@ -88,3 +88,21 @@ func Example_error() {
 	// Output:
 	// runtimevar (code=Unknown): my error
 }
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Watch(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(snapshot.Value.(string))
+
+	// Output
+	// hello world
+}
