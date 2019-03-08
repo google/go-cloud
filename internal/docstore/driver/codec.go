@@ -122,8 +122,8 @@ func encode(v reflect.Value, enc Encoder) error {
 		enc.EncodeNil()
 		return nil
 	}
-	didIt, err := enc.EncodeSpecial(v)
-	if didIt {
+	done, err := enc.EncodeSpecial(v)
+	if done {
 		return err
 	}
 	if v.Type().Implements(binaryMarshalerType) {
