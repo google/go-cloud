@@ -118,6 +118,11 @@ type Subscription interface {
 	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
+	// For at-most-once systems, AckFunc should return a function to be called
+	// whenever pubsub.Message.Ack is called. For at-least-once systems (those that
+	// support Ack), AckFunc should return nil.
+	AckFunc() func()
+
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
 	// subscription if the server gets the acks before their deadlines.

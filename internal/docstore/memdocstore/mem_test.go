@@ -35,5 +35,6 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness)
+	// CodecTester is nil because memdocstore has no native representation.
+	drivertest.RunConformanceTests(t, newHarness, nil)
 }

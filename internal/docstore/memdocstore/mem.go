@@ -18,6 +18,8 @@ package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
+	"sort"
+	"strings"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
@@ -51,6 +53,11 @@ type collection struct {
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
 	docs map[interface{}]map[string]interface{}
+}
+
+// ErrorCode implements driver.ErrorCode.
+func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
+	return gcerrors.Code(err)
 }
 
 // RunActions implements driver.RunActions.
@@ -133,33 +140,66 @@ func (c *collection) runAction(a *driver.Action) error {
 }
 
 func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error {
-	// Apply each modification in order. Fail on the first error.
-	// TODO(jba): this should be atomic.
-	ddoc, err := driver.NewDocument(doc)
-	if err != nil {
-		return err
+	// Apply each modification. Fail if any mod would fail.
+	// Sort mods by first field path element so tests are deterministic.
+	sort.Slice(mods, func(i, j int) bool { return mods[i].FieldPath[0] < mods[j].FieldPath[0] })
+
+	// Check first that every field path is valid. That is, whether every component
+	// of the path but the last refers to a map, and no component along the way is
+	// nil. If that check succeeds, all actions will succeed, making update atomic.
+	for _, m := range mods {
+		if _, err := getParentMap(doc, m.FieldPath, false); err != nil {
+			return err
+		}
 	}
 	for _, m := range mods {
 		if m.Value == nil {
 			deleteAtFieldPath(doc, m.FieldPath)
-		} else if err := ddoc.Set(m.FieldPath, m.Value); err != nil {
-			return err
+		} else {
+			// This can't fail because we checked it above.
+			_ = setAtFieldPath(doc, m.FieldPath, m.Value)
 		}
 	}
 	return nil
 }
 
-// Delete the value from m at the given field path.
-func deleteAtFieldPath(m map[string]interface{}, fp []string) {
-	if len(fp) == 1 {
-		delete(m, fp[0])
-	} else if m2, ok := m[fp[0]].(map[string]interface{}); ok {
-		deleteAtFieldPath(m2, fp[1:])
+// setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
+// needed. It returns an error if a non-final component of fp does not denote a map.
+func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) error {
+	m2, err := getParentMap(m, fp, true)
+	if err != nil {
+		return err
 	}
-	// Otherwise do nothing.
+	m2[fp[len(fp)-1]] = val
+	return nil
 }
 
-// ErrorCode implements driver.ErrorCOde.
-func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
-	return gcerrors.Code(err)
+// Delete the value from m at the given field path, if it exists.
+func deleteAtFieldPath(m map[string]interface{}, fp []string) {
+	m2, _ := getParentMap(m, fp, false) // ignore error
+	if m2 != nil {
+		delete(m2, fp[len(fp)-1])
+	}
+}
+
+// getParentMap returns the map that directly contains the given field path;
+// that is, the value of m at the field path that excludes the last component
+// of fp. If a non-map is encountered along the way, an InvalidArgument error is
+// returned. If nil is encountered, nil is returned unless create is true, in
+// which case a map is added at that point.
+func getParentMap(m map[string]interface{}, fp []string, create bool) (map[string]interface{}, error) {
+	var ok bool
+	for _, k := range fp[:len(fp)-1] {
+		if m[k] == nil {
+			if !create {
+				return nil, nil
+			}
+			m[k] = map[string]interface{}{}
+		}
+		m, ok = m[k].(map[string]interface{})
+		if !ok {
+			return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "invalid field path %q at %q", strings.Join(fp, "."), k)
+		}
+	}
+	return m, nil
 }
