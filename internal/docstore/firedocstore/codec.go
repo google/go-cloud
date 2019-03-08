@@ -98,11 +98,8 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-// TODO(jba): Rethink this escape mechanism. We need to special-case time.Time and
-// one or two other types earlier in driver.Encode: EncodeStruct happens too late,
-// after the checks for BinaryMarshaler and TextMarshaler. (time.Time implements the
-// former).
-func (e *encoder) EncodeStruct(reflect.Value) (bool, error) {
+// TODO(jba): make this work for time.Time, latlng.LatLng, and ts.Timestamp.
+func (e *encoder) EncodeSpecial(reflect.Value) (bool, error) {
 	return false, nil
 }
 
@@ -285,4 +282,9 @@ func (d decoder) DecodeMap(f func(string, driver.Decoder) bool) {
 			return
 		}
 	}
+}
+
+// TODO(jba): see above TODO for EncodeSpecial.
+func (c decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
+	return false, nil, nil
 }
