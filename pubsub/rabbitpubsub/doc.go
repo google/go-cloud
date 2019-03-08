@@ -25,6 +25,13 @@
 // A Pub/Sub subscription is an AMQP queue. The queue should be bound to the exchange
 // that is the topic of the subscription. See the package example for details.
 //
+// URLs
+//
+// For pubsub.OpenTopic/Subscription URLs, rabbitpubsub registers for the scheme
+// "rabbit". pubsub.OpenTopic/Subscription will connect to a default server
+// based on the environment variable RABBIT_SERVER_URL. To connect to multiple
+// server, or for details on the URL format, see URLOpener.
+//
 // As
 //
 // rabbitpubsub exposes the following types for As:

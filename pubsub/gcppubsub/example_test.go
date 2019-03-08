@@ -101,3 +101,18 @@ func ExampleOpenSubscription() {
 	// Handle message....
 	msg.Ack()
 }
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will open the topic "mytopic" in the project "myproject"
+	// using default credentials.
+	t, err := pubsub.OpenTopic(ctx, "gcppubsub://myproject/mytopic")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open the subscription "mysubscription" in the project
+	// "myproject" using default credentials.
+	s, err := pubsub.OpenSubscription(ctx, "gcppubsub://myproject/mysubscription")
+	_, _, _ = t, s, err
+}

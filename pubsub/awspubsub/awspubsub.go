@@ -15,6 +15,13 @@
 // Package awspubsub provides an implementation of pubsub that uses AWS
 // SNS (Simple Notification Service) and SQS (Simple Queueing Service).
 //
+// URLs
+//
+// For pubsub.OpenTopic/Subscription URLs, awspubsub registers for the scheme
+// "awssnssqs". pubsub.OpenTopic/Subscription will create a new AWS
+// session with the default options. If you want to use a different session or
+// find details on the format of the URL, see URLOpener.
+//
 // Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with providers lacking
@@ -43,12 +50,19 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"net/url"
+	"path"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
@@ -65,6 +79,91 @@ const (
 	// at once, per Topic.
 	maxPublishConcurrency = 10
 )
+
+func init() {
+	lazy := new(lazySessionOpener)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, lazy)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, lazy)
+}
+
+// lazySessionOpener obtains the AWS session from the environment on the first
+// call to OpenBucketURL.
+type lazySessionOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazySessionOpener) defaultOpener() (*URLOpener, error) {
+	o.init.Do(func() {
+		sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{
+			ConfigProvider: sess,
+		}
+	})
+	return o.opener, o.err
+}
+
+func (o *lazySessionOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	opener, err := o.defaultOpener()
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: failed to open default session: %v", u, err)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opener, err := o.defaultOpener()
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: failed to open default session: %v", u, err)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+// Scheme is the URL scheme awspubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "awssnssqs"
+
+// URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
+// topics or "awssnssqs://sqs-queue-url" for subscriptions.
+// For topics, the URL's host+path is used as the topic ARN.
+// For subscriptions, the URL's host+path is prefixed with "https://" to create
+//    the queue URL.
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters.
+type URLOpener struct {
+	// ConfigProvider configures the connection to AWS.
+	ConfigProvider client.ConfigProvider
+
+	// TopicOptions specifies the options to pass to OpenTopic.
+	TopicOptions TopicOptions
+	// SubscriptionOptions specifies the options to pass to OpenSubscription.
+	SubscriptionOptions SubscriptionOptions
+}
+
+// OpenTopicURL opens a pubsub.Topic based on u.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: %v", u, err)
+	}
+	client := sns.New(o.ConfigProvider, overrideCfg)
+	topicARN := path.Join(u.Host, u.Path)
+	return OpenTopic(ctx, client, topicARN, &o.TopicOptions), nil
+}
+
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+	}
+	client := sqs.New(o.ConfigProvider, overrideCfg)
+	qURL := "https://" + path.Join(u.Host, u.Path)
+	return OpenSubscription(ctx, client, qURL, &o.SubscriptionOptions), nil
+}
 
 type topic struct {
 	client *sns.SNS
