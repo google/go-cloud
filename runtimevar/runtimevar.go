@@ -35,6 +35,8 @@
 // deploy it to multiple Cloud providers. You may find
 // http://github.com/google/wire useful for managing your initialization code.
 //
+// Variable implements health.Checker; it reports as healthy when Latest will
+// return a value without blocking.
 //
 // OpenCensus Integration
 //
@@ -276,6 +278,23 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 		return c.lastGood, nil
 	}
 	return Snapshot{}, c.lastErr
+}
+
+// CheckHealth returns an error unless Latest will return a good value
+// without blocking.
+func (c *Variable) CheckHealth() error {
+	haveGood := false
+	select {
+	case <-c.haveGood:
+		haveGood = true
+	default:
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if haveGood && c.lastErr != ErrClosed {
+		return nil
+	}
+	return c.lastErr
 }
 
 // Close closes the Variable. The Variable is unusable after Close returns.

@@ -203,11 +203,15 @@ func TestVariable_Watch(t *testing.T) {
 func TestVariable_Latest(t *testing.T) {
 	const content1, content2 = "foo", "bar"
 	const numGoroutines = 10
+	ctx := context.Background()
 
 	fake := &fakeWatcher{}
 	v := New(fake)
 
-	ctx := context.Background()
+	// Not healthy at startup.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
+	}
 
 	// Latest should block until the context is done, as there's no value.
 	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
@@ -217,6 +221,10 @@ func TestVariable_Latest(t *testing.T) {
 	}
 	if ctx2.Err() == nil {
 		t.Error("Latest with no value yet should block")
+	}
+	// And we're not healthy.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
 	}
 
 	// Call Latest concurrently. There's still no value.
@@ -244,6 +252,10 @@ func TestVariable_Latest(t *testing.T) {
 	if ctx2.Err() == nil {
 		t.Error("Latest with error value should block")
 	}
+	// And we're still not healthy.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
+	}
 
 	// Call Latest concurrently, only exiting each goroutine when they
 	// see the content1 value.
@@ -268,6 +280,10 @@ func TestVariable_Latest(t *testing.T) {
 	time.Sleep(blockingCheckDelay)
 	fake.Set(&state{val: content1})
 	wg.Wait()
+	// And now we're healthy.
+	if err := v.CheckHealth(); err != nil {
+		t.Errorf("got %v from CheckHealth, want nil", err)
+	}
 
 	// Set a different value. At some point after this, Latest should start
 	// returning a Snapshot with Value set to content2.
@@ -321,6 +337,11 @@ func TestVariable_Latest(t *testing.T) {
 	}
 	wg.Wait()
 
+	// Still healthy.
+	if err := v.CheckHealth(); err != nil {
+		t.Errorf("got %v from CheckHealth, want nil", err)
+	}
+
 	// Close the variable.
 	if err := v.Close(); err != nil {
 		t.Error(err)
@@ -329,6 +350,10 @@ func TestVariable_Latest(t *testing.T) {
 	// Latest should now return ErrClosed.
 	if _, err := v.Latest(ctx); err != ErrClosed {
 		t.Errorf("Latest after close returned %v, want ErrClosed", err)
+	}
+	// Unhealthy now.
+	if err := v.CheckHealth(); err != ErrClosed {
+		t.Errorf("got %v from CheckHealth, want ErrClosed", err)
 	}
 }
 
