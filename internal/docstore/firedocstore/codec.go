@@ -27,7 +27,7 @@ package firedocstore
 //
 // Firestore types not supported by Docstore:
 // - Document reference (a pointer to another Firestore document)
-// TODO(jba): figure out how to support these
+// TODO(jba): figure out how to support this
 
 import (
 	"errors"
