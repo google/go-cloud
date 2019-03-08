@@ -65,7 +65,7 @@ var (
 )
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyDialer))
+	secrets.DefaultURLMux().Register(Scheme, new(lazyDialer))
 }
 
 // URLOpener opens secrets.Keeper URLs for Azure KeyVault, like

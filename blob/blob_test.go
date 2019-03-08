@@ -294,12 +294,12 @@ func TestURLMux(t *testing.T) {
 
 	mux := new(URLMux)
 	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterBucket("foo", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+	mux.Register("foo", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
 		got = u
 		return nil, nil
 	}))
 	// Register scheme err to always return an error.
-	mux.RegisterBucket("err", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
+	mux.Register("err", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
 		return nil, errors.New("fail")
 	}))
 

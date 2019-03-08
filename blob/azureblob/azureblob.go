@@ -101,7 +101,7 @@ const (
 )
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
+	blob.DefaultURLMux().Register(Scheme, new(lazyCredsOpener))
 }
 
 // lazyCredsOpener obtains credentials from the environment on the first call

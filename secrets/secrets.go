@@ -140,12 +140,12 @@ func wrapError(k *Keeper, err error) error {
 	return gcerr.New(k.k.ErrorCode(err), err, 2, "secrets")
 }
 
-// KeeperURLOpener represents types that can open Keepers based on a URL.
+// URLOpener represents types that can open Keepers based on a URL.
 // The opener must not modify the URL argument. OpenKeeperURL must be safe to
 // call from multiple goroutines.
 //
 // This interface is generally implemented by types in driver packages.
-type KeeperURLOpener interface {
+type URLOpener interface {
 	OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error)
 }
 
@@ -158,10 +158,10 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
-// RegisterKeeper registers the opener with the given scheme. If an opener
-// already exists for the scheme, RegisterKeeper panics.
-func (mux *URLMux) RegisterKeeper(scheme string, opener KeeperURLOpener) {
-	mux.schemes.Register("secrets", "Keeper", scheme, opener)
+// Register registers the opener with the given scheme. If an opener
+// already exists for the scheme, Register panics.
+func (mux *URLMux) Register(scheme string, opener URLOpener) {
+	mux.schemes.Register("secrets", scheme, opener)
 }
 
 // OpenKeeper calls OpenKeeperURL with the URL parsed from urlstr.
@@ -171,7 +171,7 @@ func (mux *URLMux) OpenKeeper(ctx context.Context, urlstr string) (*Keeper, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(KeeperURLOpener).OpenKeeperURL(ctx, u)
+	return opener.(URLOpener).OpenKeeperURL(ctx, u)
 }
 
 // OpenKeeperURL dispatches the URL to the opener that is registered with the
@@ -181,14 +181,14 @@ func (mux *URLMux) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(KeeperURLOpener).OpenKeeperURL(ctx, u)
+	return opener.(URLOpener).OpenKeeperURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenKeeper.
 //
-// Driver packages can use this to register their KeeperURLOpener on the mux.
+// Driver packages can use this to register their URLOpener on the mux.
 func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }

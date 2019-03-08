@@ -79,7 +79,7 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazySessionOpener))
+	blob.DefaultURLMux().Register(Scheme, new(lazySessionOpener))
 }
 
 // URLOpener opens S3 URLs like "s3://mybucket".

@@ -52,7 +52,7 @@ import (
 )
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazySessionOpener))
+	secrets.DefaultURLMux().Register(Scheme, new(lazySessionOpener))
 }
 
 // Dial gets an AWS KMS service client.

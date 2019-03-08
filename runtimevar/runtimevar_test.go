@@ -435,12 +435,12 @@ func TestURLMux(t *testing.T) {
 
 	mux := new(URLMux)
 	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterVariable("foo", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
+	mux.Register("foo", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
 		got = u
 		return nil, nil
 	}))
 	// Register scheme err to always return an error.
-	mux.RegisterVariable("err", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
+	mux.Register("err", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
 		return nil, errors.New("fail")
 	}))
 

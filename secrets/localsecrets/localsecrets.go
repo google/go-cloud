@@ -44,8 +44,8 @@ import (
 )
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(SchemeString, &URLOpener{})
-	secrets.DefaultURLMux().RegisterKeeper(SchemeBase64, &URLOpener{base64: true})
+	secrets.DefaultURLMux().Register(SchemeString, &URLOpener{})
+	secrets.DefaultURLMux().Register(SchemeBase64, &URLOpener{base64: true})
 }
 
 // SchemeString/SchemeBase64 are the URL schemes localsecrets registers its URLOpener under on secrets.DefaultMux.

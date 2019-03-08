@@ -51,7 +51,7 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, new(lazySessionOpener))
+	runtimevar.DefaultURLMux().Register(Scheme, new(lazySessionOpener))
 }
 
 // URLOpener opens AWS Paramstore URLs like "paramstore://myvar".

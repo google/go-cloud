@@ -28,14 +28,13 @@ type SchemeMap map[string]interface{}
 // api is the portable API name (e.g., "blob") and typ is the portable type
 // (e.g., "Bucket").
 // Register panics if scheme has already been registered.
-// TODO(rvangent): Remove typ from here and use a single URLOpener per API.
 // TODO(rvangent): Remove api from the From* functions by storing it in the map in Register.
-func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
+func (m *SchemeMap) Register(api, scheme string, value interface{}) {
 	if *m == nil {
 		*m = map[string]interface{}{}
 	}
 	if _, exists := (*m)[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered for %s.%s", scheme, api, typ))
+		panic(fmt.Errorf("scheme %q already registered for %s", scheme, api))
 	}
 	(*m)[scheme] = value
 }

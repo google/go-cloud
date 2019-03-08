@@ -491,25 +491,10 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var gotTopic, gotSub *url.URL
-
 	mux := new(pubsub.URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterTopic("foo", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
-		gotTopic = u
-		return nil, nil
-	}))
-	mux.RegisterSubscription("foo", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
-		gotSub = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterTopic("err", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
-		return nil, errors.New("fail")
-	}))
-	mux.RegisterSubscription("err", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
-		return nil, errors.New("fail")
-	}))
+	fake, fakeErr := fakeOpener{}, fakeOpener{err: errors.New("fail")}
+	mux.Register("foo", &fake)
+	mux.Register("err", &fakeErr)
 
 	for _, tc := range []struct {
 		name    string
@@ -573,8 +558,8 @@ func TestURLMux(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(gotTopic, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotTopic, want, diff)
+			if diff := cmp.Diff(fake.lastTopicURL, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", fake.lastTopicURL, want, diff)
 			}
 		})
 		t.Run("subscription: "+tc.name, func(t *testing.T) {
@@ -589,21 +574,24 @@ func TestURLMux(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(gotSub, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotSub, want, diff)
+			if diff := cmp.Diff(fake.lastSubURL, want); diff != "" {
+				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", fake.lastSubURL, want, diff)
 			}
 		})
 	}
 }
 
-type topicURLOpenFunc func(context.Context, *url.URL) (*pubsub.Topic, error)
-
-func (f topicURLOpenFunc) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	return f(ctx, u)
+type fakeOpener struct {
+	err                      error
+	lastTopicURL, lastSubURL *url.URL
 }
 
-type subscriptionURLOpenFunc func(context.Context, *url.URL) (*pubsub.Subscription, error)
+func (f *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	f.lastTopicURL = u
+	return nil, f.err
+}
 
-func (f subscriptionURLOpenFunc) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	return f(ctx, u)
+func (f *fakeOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	f.lastSubURL = u
+	return nil, f.err
 }

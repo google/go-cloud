@@ -52,7 +52,7 @@ var (
 )
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, &URLOpener{})
+	blob.DefaultURLMux().Register(Scheme, &URLOpener{})
 }
 
 // Scheme is the URL scheme memblob registers its URLOpener under on

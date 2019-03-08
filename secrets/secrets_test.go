@@ -98,12 +98,12 @@ func TestURLMux(t *testing.T) {
 
 	mux := new(URLMux)
 	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterKeeper("foo", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
+	mux.Register("foo", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
 		got = u
 		return nil, nil
 	}))
 	// Register scheme err to always return an error.
-	mux.RegisterKeeper("err", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
+	mux.Register("err", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
 		return nil, errors.New("fail")
 	}))
 

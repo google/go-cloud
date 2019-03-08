@@ -56,7 +56,7 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{})
+	runtimevar.DefaultURLMux().Register(Scheme, &URLOpener{})
 }
 
 // Scheme is the URL scheme filevar registers its URLOpener under on runtimevar.DefaultMux.

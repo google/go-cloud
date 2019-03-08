@@ -33,8 +33,8 @@ func TestSchemeMap(t *testing.T) {
 	}
 
 	var emptyM, m openurl.SchemeMap
-	m.Register("api", "type", "foo", foo)
-	m.Register("api", "type", "bar", bar)
+	m.Register("api", "foo", foo)
+	m.Register("api", "bar", bar)
 
 	for _, test := range tests {
 		// Empty SchemeMap should always return an error.
@@ -56,5 +56,4 @@ func TestSchemeMap(t *testing.T) {
 			t.Errorf("%s: got %v want %v", test.url, got, test.want)
 		}
 	}
-
 }

@@ -65,7 +65,7 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, &URLOpener{})
+	blob.DefaultURLMux().Register(Scheme, &URLOpener{})
 }
 
 // Scheme is the URL scheme fileblob registers its URLOpener under on

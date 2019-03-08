@@ -346,12 +346,12 @@ func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
 
-// VariableURLOpener represents types than can open Variables based on a URL.
+// URLOpener represents types than can open Variables based on a URL.
 // The opener must not modify the URL argument. OpenVariableURL must be safe to
 // call from multiple goroutines.
 //
 // This interface is generally implemented by types in driver packages.
-type VariableURLOpener interface {
+type URLOpener interface {
 	OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error)
 }
 
@@ -364,10 +364,10 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
-// RegisterVariable registers the opener with the given scheme. If an opener
-// already exists for the scheme, RegisterVariable panics.
-func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
-	mux.schemes.Register("runtimevar", "Variable", scheme, opener)
+// Register registers the opener with the given scheme. If an opener
+// already exists for the scheme, Register panics.
+func (mux *URLMux) Register(scheme string, opener URLOpener) {
+	mux.schemes.Register("runtimevar", scheme, opener)
 }
 
 // OpenVariable calls OpenVariableURL with the URL parsed from urlstr.
@@ -377,7 +377,7 @@ func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, 
 	if err != nil {
 		return nil, err
 	}
-	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
+	return opener.(URLOpener).OpenVariableURL(ctx, u)
 }
 
 // OpenVariableURL dispatches the URL to the opener that is registered with the
@@ -387,14 +387,14 @@ func (mux *URLMux) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, 
 	if err != nil {
 		return nil, err
 	}
-	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
+	return opener.(URLOpener).OpenVariableURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenVariable.
 //
-// Driver packages can use this to register their VariableURLOpener on the mux.
+// Driver packages can use this to register their URLOpener on the mux.
 func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
@@ -477,7 +477,7 @@ func bytesDecode(b []byte, obj interface{}) error {
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
-// It is intended to be used by VariableURLOpeners in driver packages.
+// It is intended to be used by URLOpeners in driver packages.
 // Supported values include:
 //   - (empty string), "bytes": Returns the default, BytesDecoder;
 //       Snapshot.Valuewill be of type []byte.

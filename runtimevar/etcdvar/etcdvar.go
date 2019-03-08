@@ -52,7 +52,7 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &lazyClientOpener{})
+	runtimevar.DefaultURLMux().Register(Scheme, &lazyClientOpener{})
 }
 
 // Scheme is the URL scheme etcdvar registers its URLOpener under on runtimevar.DefaultMux.

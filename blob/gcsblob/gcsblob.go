@@ -71,7 +71,7 @@ import (
 const defaultPageSize = 1000
 
 func init() {
-	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
+	blob.DefaultURLMux().Register(Scheme, new(lazyCredsOpener))
 }
 
 // lazyCredsOpener obtains Application Default Credentials on the first call

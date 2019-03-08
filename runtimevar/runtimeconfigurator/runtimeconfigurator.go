@@ -81,7 +81,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 }
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, new(lazyCredsOpener))
+	runtimevar.DefaultURLMux().Register(Scheme, new(lazyCredsOpener))
 }
 
 // lazyCredsOpener obtains Application Default Credentials on the first call

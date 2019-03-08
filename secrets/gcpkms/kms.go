@@ -61,7 +61,7 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*cloudkms.KeyManagementClien
 }
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyCredsOpener))
+	secrets.DefaultURLMux().Register(Scheme, new(lazyCredsOpener))
 }
 
 // lazyCredsOpener obtains Application Default Credentials on the first call

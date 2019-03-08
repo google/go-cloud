@@ -854,12 +854,12 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
-// BucketURLOpener represents types that can open buckets based on a URL.
+// URLOpener represents types that can open Buckets based on a URL.
 // The opener must not modify the URL argument. OpenBucketURL must be safe to
 // call from multiple goroutines.
 //
 // This interface is generally implemented by types in driver packages.
-type BucketURLOpener interface {
+type URLOpener interface {
 	OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error)
 }
 
@@ -872,10 +872,10 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
-// RegisterBucket registers the opener with the given scheme. If an opener
-// already exists for the scheme, RegisterBucket panics.
-func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
-	mux.schemes.Register("blob", "Bucket", scheme, opener)
+// Register registers the opener with the given scheme. If an opener
+// already exists for the scheme, Register panics.
+func (mux *URLMux) Register(scheme string, opener URLOpener) {
+	mux.schemes.Register("blob", scheme, opener)
 }
 
 // OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
@@ -885,7 +885,7 @@ func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return opener.(URLOpener).OpenBucketURL(ctx, u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
@@ -895,14 +895,14 @@ func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, erro
 	if err != nil {
 		return nil, err
 	}
-	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
+	return opener.(URLOpener).OpenBucketURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenBucket.
 //
-// Driver packages can use this to register their BucketURLOpener on the mux.
+// Driver packages can use this to register their URLOpener on the mux.
 func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }

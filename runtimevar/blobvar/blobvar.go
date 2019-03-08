@@ -52,7 +52,7 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &URLOpener{Mux: blob.DefaultURLMux()})
+	runtimevar.DefaultURLMux().Register(Scheme, &URLOpener{Mux: blob.DefaultURLMux()})
 }
 
 // Scheme is the URL scheme blobvar registers its URLOpener under on runtimevar.DefaultMux.

@@ -73,7 +73,7 @@ func Dial(ctx context.Context, cfg *Config) (*api.Client, error) {
 }
 
 func init() {
-	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyDialer))
+	secrets.DefaultURLMux().Register(Scheme, new(lazyDialer))
 }
 
 // lazyDialer lazily dials unique Vault servers.
