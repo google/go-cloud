@@ -281,10 +281,6 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 
 // Close closes the Variable. The Variable is unusable after Close returns.
 func (c *Variable) Close() error {
-	// Shut down the background goroutine.
-	c.backgroundCancel()
-	<-c.backgroundDone
-
 	// Record that we're closing. Subsequent calls to Watch/Latest will return ErrClosed.
 	c.mu.Lock()
 	if c.lastErr == ErrClosed {
@@ -303,6 +299,10 @@ func (c *Variable) Close() error {
 		close(c.haveGood)
 	}
 	c.mu.Unlock()
+
+	// Shut down the background goroutine.
+	c.backgroundCancel()
+	<-c.backgroundDone
 
 	// Close the driver.
 	err := c.dw.Close()
