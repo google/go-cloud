@@ -1,0 +1,277 @@
+---
+version: 1
+interactions:
+- request:
+    body: "<!DOCTYPE html><html lang=\"en\">\n<head profile=\"http://a9.com/-/spec/opensearch/1.1/\">\n
+      \ <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,
+      initial-scale=1.0\">\n  <link href=\"/-/bootstrap.min.css?v=8bec1bba3e23ecba22cffb197a2d440af410b15d\"
+      rel=\"stylesheet\">\n  <link href=\"/-/site.css?v=7d81f4104c89dbe376345f6bfe3e62b4e40d3d06\"
+      rel=\"stylesheet\">\n  <title>GoDoc</title>\n</head>\n<body>\n<nav class=\"navbar
+      navbar-default\" role=\"navigation\">\n  <div class=\"container\">\n  <div class=\"navbar-header\">\n
+      \   <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\"
+      data-target=\".navbar-collapse\">\n      <span class=\"sr-only\">Toggle navigation</span>\n
+      \     <span class=\"icon-bar\"></span>\n      <span class=\"icon-bar\"></span>\n
+      \     <span class=\"icon-bar\"></span>\n    </button>\n    <a class=\"navbar-brand\"
+      href=\"/\"><strong>GoDoc</strong></a>\n  </div>\n  <div class=\"collapse navbar-collapse\">\n
+      \   <ul class=\"nav navbar-nav\">\n        <li class=\"active\"><a href=\"/\">Home</a></li>\n
+      \       <li><a href=\"/-/about\">About</a></li>\n    </ul>\n    <form class=\"navbar-nav
+      navbar-form navbar-right\" id=\"x-search\" action=\"/\" role=\"search\"><input
+      class=\"form-control\" id=\"x-search-query\" type=\"text\" name=\"q\" placeholder=\"Search\"></form>\n
+      \ </div>\n</div>\n</nav>\n<div class=\"container\">\n  \n<div class=\"jumbotron\">\n
+      \   <h2>Search for Go Packages</h2>\n    \n  <form>\n    <div class=\"input-group\">\n
+      \     <input class=\"form-control\" name=\"q\" autofocus=\"autofocus\" value=\"\"
+      placeholder=\"Search for package by import path or keyword.\" type=\"text\">\n
+      \     <span class=\"input-group-btn\">\n        <button class=\"btn btn-default\"
+      type=\"submit\">Go!</button>\n      </span>\n    </div>\n  </form>\n\n</div>\n\n<p>GoDoc
+      hosts documentation for <a href=\"http://golang.org/\">Go</a> packages\non Bitbucket,
+      GitHub, Google Project Hosting and Launchpad.  Read the <a\n  href=\"/-/about\">About
+      Page</a> for information about adding packages to GoDoc\nand more.\n\n<div class=\"row\">\n
+      \ <div class=\"col-sm-6\">\n    \n      <h4>Popular Packages</h4>\n      <ul
+      class=\"list-unstyled\">\n        <li><a href=\"/github.com/aws/aws-sdk-go/aws\">github.com/aws/aws-sdk-go/aws</a><li><a
+      href=\"/github.com/dgrijalva/jwt-go\">github.com/dgrijalva/jwt-go</a><li><a
+      href=\"/github.com/gin-gonic/gin\">github.com/gin-gonic/gin</a><li><a href=\"/github.com/go-redis/redis\">github.com/go-redis/redis</a><li><a
+      href=\"/github.com/go-sql-driver/mysql\">github.com/go-sql-driver/mysql</a><li><a
+      href=\"/github.com/golang/protobuf/proto\">github.com/golang/protobuf/proto</a><li><a
+      href=\"/github.com/gomodule/redigo/redis\">github.com/gomodule/redigo/redis</a><li><a
+      href=\"/github.com/gorilla/websocket\">github.com/gorilla/websocket</a><li><a
+      href=\"/github.com/hyperledger/fabric/core/chaincode/shim\">github.com/hyperledger/fabric/core/chaincode/shim</a><li><a
+      href=\"/github.com/jinzhu/gorm\">github.com/jinzhu/gorm</a><li><a href=\"/github.com/lib/pq\">github.com/lib/pq</a><li><a
+      href=\"/github.com/pkg/errors\">github.com/pkg/errors</a><li><a href=\"/github.com/prometheus/client_golang/prometheus\">github.com/prometheus/client_golang/prometheus</a><li><a
+      href=\"/github.com/robfig/cron\">github.com/robfig/cron</a><li><a href=\"/github.com/sirupsen/logrus\">github.com/sirupsen/logrus</a><li><a
+      href=\"/github.com/stretchr/testify/assert\">github.com/stretchr/testify/assert</a><li><a
+      href=\"/github.com/unixpickle/kahoot-hack\">github.com/unixpickle/kahoot-hack</a><li><a
+      href=\"/go.uber.org/zap\">go.uber.org/zap</a><li><a href=\"/golang.org/x/crypto/ssh\">golang.org/x/crypto/ssh</a><li><a
+      href=\"/golang.org/x/net/context\">golang.org/x/net/context</a><li><a href=\"/golang.org/x/oauth2\">golang.org/x/oauth2</a><li><a
+      href=\"/google.golang.org/grpc\">google.golang.org/grpc</a><li><a href=\"/gopkg.in/mgo.v2\">gopkg.in/mgo.v2</a><li><a
+      href=\"/gopkg.in/yaml.v2\">gopkg.in/yaml.v2</a><li><a href=\"/labix.org/v2/mgo\">labix.org/v2/mgo</a>\n
+      \     </ul>\n    \n  </div>\n  <div class=\"col-sm-6\">\n    <h4>More Packages</h4>\n
+      \   <ul class=\"list-unstyled\">\n      <li><a href=\"/-/go\">Go Standard Packages</a>\n
+      \     <li><a href=\"/-/subrepo\">Go Sub-repository Packages</a>\n      <li><a
+      href=\"https://golang.org/wiki/Projects\">Projects @ go-wiki</a>\n      <li><a
+      href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=stars&amp;type=Repositories\">Most
+      stars</a>, \n        <a href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=forks&amp;type=Repositories\">most
+      forks</a>, \n        <a href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=updated&amp;type=Repositories\">recently
+      updated</a> on GitHub\n    </ul>\n  </div>\n</div>\n\n\n</div>\n<div id=\"x-footer\"
+      class=\"clearfix\">\n  <div class=\"container\">\n    <a href=\"https://github.com/golang/gddo/issues\">Website
+      Issues</a>\n    <span class=\"text-muted\">|</span> <a href=\"http://golang.org/\">Go
+      Language</a>\n    <span class=\"pull-right\"><a href=\"#\">Back to top</a></span>\n
+      \ </div>\n</div>\n\n<div id=\"x-shortcuts\" tabindex=\"-1\" class=\"modal\">\n
+      \   <div class=\"modal-dialog\">\n      <div class=\"modal-content\">\n        <div
+      class=\"modal-header\">\n          <button type=\"button\" class=\"close\" data-dismiss=\"modal\"
+      aria-hidden=\"true\">&times;</button>\n          <h4 class=\"modal-title\">Keyboard
+      shortcuts</h4>\n        </div>\n        <div class=\"modal-body\">\n          <table>\n
+      \         <tr><td align=\"right\"><b>?</b></td><td> : This menu</td></tr>\n
+      \         <tr><td align=\"right\"><b>/</b></td><td> : Search site</td></tr>\n
+      \         <tr class=\"text-muted\"><td align=\"right\"><b>f</b></td><td> : Jump
+      to identifier</td></tr>\n          <tr><td align=\"right\"><b>g</b> then <b>g</b></td><td>
+      : Go to top of page</td></tr>\n          <tr><td align=\"right\"><b>g</b> then
+      <b>b</b></td><td> : Go to end of page</td></tr>\n          <tr class=\"text-muted\"><td
+      align=\"right\"><b>g</b> then <b>i</b></td><td> : Go to index</td></tr>\n          <tr
+      class=\"text-muted\"><td align=\"right\"><b>g</b> then <b>e</b></td><td> : Go
+      to examples</td></tr>\n          </table>\n        </div>\n        <div class=\"modal-footer\">\n
+      \         <button type=\"button\" class=\"btn\" data-dismiss=\"modal\">Close</button>\n
+      \     </div>\n    </div>\n  </div>\n</div>\n<script src=\"/-/jquery-2.0.3.min.js?v=fbf9c77d0c4e3c34a485980c1e5316b6212160c8\"></script>\n<script
+      src=\"/-/bootstrap.min.js?v=5ada7c103fc1deabc925cc1fdbbb6e451c21fc70\"></script>\n<script
+      src=\"/-/site.js?v=371de731c18d91c499d90b1ab0bf39ecf66d6cf7\"></script>\n</body>\n</html>"
+    form: {}
+    headers:
+      Content-Length:
+      - "6354"
+      Content-Md5:
+      - D2p8n/PT13C49/oZwq4Z0A==
+      Content-Type:
+      - application/json
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 354accec7d08850d6f2e6803abecdc0870c3ee9544b6e77ffdae6beafd86a1c6
+      X-Amz-Date:
+      - 20190307T170109Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Etag:
+      - '"0f6a7c9ff3d3d770b8f7fa19c2ae19d0"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - UexNkFA2gyWXo5fOEZr15cFYwWQF8XxzK1BRPcpSKVjC84/jNau71ItzKxqPWeFBPJ40Z3t77rU=
+      X-Amz-Request-Id:
+      - 46C7366E8D89A804
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170109Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
+    method: GET
+  response:
+    body: "<!DOCTYPE html><html lang=\"en\">\n<head profile=\"http://a9.com/-/spec/opensearch/1.1/\">\n
+      \ <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,
+      initial-scale=1.0\">\n  <link href=\"/-/bootstrap.min.css?v=8bec1bba3e23ecba22cffb197a2d440af410b15d\"
+      rel=\"stylesheet\">\n  <link href=\"/-/site.css?v=7d81f4104c89dbe376345f6bfe3e62b4e40d3d06\"
+      rel=\"stylesheet\">\n  <title>GoDoc</title>\n</head>\n<body>\n<nav class=\"navbar
+      navbar-default\" role=\"navigation\">\n  <div class=\"container\">\n  <div class=\"navbar-header\">\n
+      \   <button type=\"button\" class=\"navbar-toggle\" data-toggle=\"collapse\"
+      data-target=\".navbar-collapse\">\n      <span class=\"sr-only\">Toggle navigation</span>\n
+      \     <span class=\"icon-bar\"></span>\n      <span class=\"icon-bar\"></span>\n
+      \     <span class=\"icon-bar\"></span>\n    </button>\n    <a class=\"navbar-brand\"
+      href=\"/\"><strong>GoDoc</strong></a>\n  </div>\n  <div class=\"collapse navbar-collapse\">\n
+      \   <ul class=\"nav navbar-nav\">\n        <li class=\"active\"><a href=\"/\">Home</a></li>\n
+      \       <li><a href=\"/-/about\">About</a></li>\n    </ul>\n    <form class=\"navbar-nav
+      navbar-form navbar-right\" id=\"x-search\" action=\"/\" role=\"search\"><input
+      class=\"form-control\" id=\"x-search-query\" type=\"text\" name=\"q\" placeholder=\"Search\"></form>\n
+      \ </div>\n</div>\n</nav>\n<div class=\"container\">\n  \n<div class=\"jumbotron\">\n
+      \   <h2>Search for Go Packages</h2>\n    \n  <form>\n    <div class=\"input-group\">\n
+      \     <input class=\"form-control\" name=\"q\" autofocus=\"autofocus\" value=\"\"
+      placeholder=\"Search for package by import path or keyword.\" type=\"text\">\n
+      \     <span class=\"input-group-btn\">\n        <button class=\"btn btn-default\"
+      type=\"submit\">Go!</button>\n      </span>\n    </div>\n  </form>\n\n</div>\n\n<p>GoDoc
+      hosts documentation for <a href=\"http://golang.org/\">Go</a> packages\non Bitbucket,
+      GitHub, Google Project Hosting and Launchpad.  Read the <a\n  href=\"/-/about\">About
+      Page</a> for information about adding packages to GoDoc\nand more.\n\n<div class=\"row\">\n
+      \ <div class=\"col-sm-6\">\n    \n      <h4>Popular Packages</h4>\n      <ul
+      class=\"list-unstyled\">\n        <li><a href=\"/github.com/aws/aws-sdk-go/aws\">github.com/aws/aws-sdk-go/aws</a><li><a
+      href=\"/github.com/dgrijalva/jwt-go\">github.com/dgrijalva/jwt-go</a><li><a
+      href=\"/github.com/gin-gonic/gin\">github.com/gin-gonic/gin</a><li><a href=\"/github.com/go-redis/redis\">github.com/go-redis/redis</a><li><a
+      href=\"/github.com/go-sql-driver/mysql\">github.com/go-sql-driver/mysql</a><li><a
+      href=\"/github.com/golang/protobuf/proto\">github.com/golang/protobuf/proto</a><li><a
+      href=\"/github.com/gomodule/redigo/redis\">github.com/gomodule/redigo/redis</a><li><a
+      href=\"/github.com/gorilla/websocket\">github.com/gorilla/websocket</a><li><a
+      href=\"/github.com/hyperledger/fabric/core/chaincode/shim\">github.com/hyperledger/fabric/core/chaincode/shim</a><li><a
+      href=\"/github.com/jinzhu/gorm\">github.com/jinzhu/gorm</a><li><a href=\"/github.com/lib/pq\">github.com/lib/pq</a><li><a
+      href=\"/github.com/pkg/errors\">github.com/pkg/errors</a><li><a href=\"/github.com/prometheus/client_golang/prometheus\">github.com/prometheus/client_golang/prometheus</a><li><a
+      href=\"/github.com/robfig/cron\">github.com/robfig/cron</a><li><a href=\"/github.com/sirupsen/logrus\">github.com/sirupsen/logrus</a><li><a
+      href=\"/github.com/stretchr/testify/assert\">github.com/stretchr/testify/assert</a><li><a
+      href=\"/github.com/unixpickle/kahoot-hack\">github.com/unixpickle/kahoot-hack</a><li><a
+      href=\"/go.uber.org/zap\">go.uber.org/zap</a><li><a href=\"/golang.org/x/crypto/ssh\">golang.org/x/crypto/ssh</a><li><a
+      href=\"/golang.org/x/net/context\">golang.org/x/net/context</a><li><a href=\"/golang.org/x/oauth2\">golang.org/x/oauth2</a><li><a
+      href=\"/google.golang.org/grpc\">google.golang.org/grpc</a><li><a href=\"/gopkg.in/mgo.v2\">gopkg.in/mgo.v2</a><li><a
+      href=\"/gopkg.in/yaml.v2\">gopkg.in/yaml.v2</a><li><a href=\"/labix.org/v2/mgo\">labix.org/v2/mgo</a>\n
+      \     </ul>\n    \n  </div>\n  <div class=\"col-sm-6\">\n    <h4>More Packages</h4>\n
+      \   <ul class=\"list-unstyled\">\n      <li><a href=\"/-/go\">Go Standard Packages</a>\n
+      \     <li><a href=\"/-/subrepo\">Go Sub-repository Packages</a>\n      <li><a
+      href=\"https://golang.org/wiki/Projects\">Projects @ go-wiki</a>\n      <li><a
+      href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=stars&amp;type=Repositories\">Most
+      stars</a>, \n        <a href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=forks&amp;type=Repositories\">most
+      forks</a>, \n        <a href=\"https://github.com/search?o=desc&amp;q=language%3Ago&amp;s=updated&amp;type=Repositories\">recently
+      updated</a> on GitHub\n    </ul>\n  </div>\n</div>\n\n\n</div>\n<div id=\"x-footer\"
+      class=\"clearfix\">\n  <div class=\"container\">\n    <a href=\"https://github.com/golang/gddo/issues\">Website
+      Issues</a>\n    <span class=\"text-muted\">|</span> <a href=\"http://golang.org/\">Go
+      Language</a>\n    <span class=\"pull-right\"><a href=\"#\">Back to top</a></span>\n
+      \ </div>\n</div>\n\n<div id=\"x-shortcuts\" tabindex=\"-1\" class=\"modal\">\n
+      \   <div class=\"modal-dialog\">\n      <div class=\"modal-content\">\n        <div
+      class=\"modal-header\">\n          <button type=\"button\" class=\"close\" data-dismiss=\"modal\"
+      aria-hidden=\"true\">&times;</button>\n          <h4 class=\"modal-title\">Keyboard
+      shortcuts</h4>\n        </div>\n        <div class=\"modal-body\">\n          <table>\n
+      \         <tr><td align=\"right\"><b>?</b></td><td> : This menu</td></tr>\n
+      \         <tr><td align=\"right\"><b>/</b></td><td> : Search site</td></tr>\n
+      \         <tr class=\"text-muted\"><td align=\"right\"><b>f</b></td><td> : Jump
+      to identifier</td></tr>\n          <tr><td align=\"right\"><b>g</b> then <b>g</b></td><td>
+      : Go to top of page</td></tr>\n          <tr><td align=\"right\"><b>g</b> then
+      <b>b</b></td><td> : Go to end of page</td></tr>\n          <tr class=\"text-muted\"><td
+      align=\"right\"><b>g</b> then <b>i</b></td><td> : Go to index</td></tr>\n          <tr
+      class=\"text-muted\"><td align=\"right\"><b>g</b> then <b>e</b></td><td> : Go
+      to examples</td></tr>\n          </table>\n        </div>\n        <div class=\"modal-footer\">\n
+      \         <button type=\"button\" class=\"btn\" data-dismiss=\"modal\">Close</button>\n
+      \     </div>\n    </div>\n  </div>\n</div>\n<script src=\"/-/jquery-2.0.3.min.js?v=fbf9c77d0c4e3c34a485980c1e5316b6212160c8\"></script>\n<script
+      src=\"/-/bootstrap.min.js?v=5ada7c103fc1deabc925cc1fdbbb6e451c21fc70\"></script>\n<script
+      src=\"/-/site.js?v=371de731c18d91c499d90b1ab0bf39ecf66d6cf7\"></script>\n</body>\n</html>"
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "6354"
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Etag:
+      - '"0f6a7c9ff3d3d770b8f7fa19c2ae19d0"'
+      Last-Modified:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - bpMDYNkmELy4Ce4spQ+kE0lbRcuaabEmq40zKhtiKFe1bV4fF+5AKvyirdRpbZj4Cbq+UKdl7AY=
+      X-Amz-Request-Id:
+      - 991F816B46D372D1
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170109Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "6354"
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Etag:
+      - '"0f6a7c9ff3d3d770b8f7fa19c2ae19d0"'
+      Last-Modified:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - jWm9DDpOWJLb6puEDnDZ/Qz5vbIMrqMCfSVqG255bdZv/TMUfkr66fN06it1UpuFoG5H5vxZ35M=
+      X-Amz-Request-Id:
+      - A9B97B5CF5E5B12B
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170109Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - bYOb5+IfjyfAOwZOFw7PY9NMT/g2dlty5K6mqck8tar4ShUzY6lsPpNc/tczJu2fU0oiigi2Bjc=
+      X-Amz-Request-Id:
+      - 0444CA2B7AF0556D
+    status: 204 No Content
+    code: 204
+    duration: ""

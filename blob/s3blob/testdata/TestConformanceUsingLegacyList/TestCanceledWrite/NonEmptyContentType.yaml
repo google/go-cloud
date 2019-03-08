@@ -1,0 +1,63 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>7947BAD27EF4F399</RequestId><HostId>FROmW/OVS0lOE64kmUzIGXsGcLApq9Fkku4ML/pD1D7R5pyYRE/HIM01+EkScQAanlvmGTsgyXw=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - FROmW/OVS0lOE64kmUzIGXsGcLApq9Fkku4ML/pD1D7R5pyYRE/HIM01+EkScQAanlvmGTsgyXw=
+      X-Amz-Request-Id:
+      - 7947BAD27EF4F399
+    status: 404 Not Found
+    code: 404
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>0497DF141423C22D</RequestId><HostId>An9wn6DIQCX2tYh3TCFC2yxY3OHCc1ly4SMeIbjXplxyhA1rrjOdjbnpF88J2vJ0VIAKNVQ4Niw=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - An9wn6DIQCX2tYh3TCFC2yxY3OHCc1ly4SMeIbjXplxyhA1rrjOdjbnpF88J2vJ0VIAKNVQ4Niw=
+      X-Amz-Request-Id:
+      - 0497DF141423C22D
+    status: 404 Not Found
+    code: 404
+    duration: ""

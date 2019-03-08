@@ -1,0 +1,159 @@
+---
+version: 1
+interactions:
+- request:
+    body: Hello world
+    form: {}
+    headers:
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - PiWWCnnbxptnTNTsZ6csYg==
+      Content-Type:
+      - text/plain; charset=utf-8
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - 64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Thu, 07 Mar 2019 17:01:11 GMT
+      Etag:
+      - '"3e25960a79dbc69b674cd4ec67a72c62"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - aZuewKNEZm2cw1r6lo/pvBz6T5sWb7P2Ew5rMyjxj2ieViFkJKt0pOPGsFKxzieY/FHWo+UUufg=
+      X-Amz-Request-Id:
+      - D0CA879E50A4B7DD
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Thu, 07 Mar 2019 17:01:11 GMT
+      Etag:
+      - '"3e25960a79dbc69b674cd4ec67a72c62"'
+      Last-Modified:
+      - Thu, 07 Mar 2019 17:01:11 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - yRMcijbUzxFTQ7RwWLwsf/BaOTGJEk61EAV2eFkowwa5AcqGTR9+nprih5VE/qA+9UK6ZEJpKqE=
+      X-Amz-Request-Id:
+      - 656ABCBF74ADD3C6
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
+    method: DELETE
+  response:
+    body: ""
+    headers:
+      Date:
+      - Thu, 07 Mar 2019 17:01:11 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - /0G95Gczw+0Ygpy7bJty90aIRMtNuClwLZp5FN7m+DQTl6v1hqoza2Bk5Wemnkak2gUGc68/lr4=
+      X-Amz-Request-Id:
+      - 08D5FC75528C69B0
+    status: 204 No Content
+    code: 204
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>BAD689F4D337E6F5</RequestId><HostId>CgeDvr7JG6pALJ0i8Zc92hfjbqSM8kseOM860mfit95bO4pplr1caLVWJaO494g0jePBLgXf9kw=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - CgeDvr7JG6pALJ0i8Zc92hfjbqSM8kseOM860mfit95bO4pplr1caLVWJaO494g0jePBLgXf9kw=
+      X-Amz-Request-Id:
+      - BAD689F4D337E6F5
+    status: 404 Not Found
+    code: 404
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170110Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:10 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - tr9BWKIp9vThhfCf1NnrUHbj3aUJ4qt86oaN7LPGwSE/JVocdB6aLmwbrdUTKwT6BXSPl1z9xJ0=
+      X-Amz-Request-Id:
+      - F107661D212B36AF
+    status: 404 Not Found
+    code: 404
+    duration: ""

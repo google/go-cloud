@@ -90,12 +90,10 @@ type Encoder interface {
 	EncodeMap(n int) Encoder
 	MapKey(string)
 
-	// If the encoder wants to encode a struct in a special way (other than as a map
-	// from its exported fields to values), it should do so here and return true along
-	// with any error from the encoding.
-	// Otherwise, it should return false.
-	// s is the reflection of a struct.
-	EncodeStruct(s reflect.Value) (bool, error)
+	// If the encoder wants to encode a value in a special way it should do so here
+	// and return true along with any error from the encoding. Otherwise, it should
+	// return false.
+	EncodeSpecial(v reflect.Value) (bool, error)
 }
 
 // Encode encodes the value using the given Encoder. It traverses the value,
@@ -123,6 +121,10 @@ func encode(v reflect.Value, enc Encoder) error {
 	if !v.IsValid() {
 		enc.EncodeNil()
 		return nil
+	}
+	done, err := enc.EncodeSpecial(v)
+	if done {
+		return err
 	}
 	if v.Type().Implements(binaryMarshalerType) {
 		bytes, err := v.Interface().(encoding.BinaryMarshaler).MarshalBinary()
@@ -189,7 +191,11 @@ func encode(v reflect.Value, enc Encoder) error {
 		return encode(v.Elem(), enc)
 
 	case reflect.Struct:
-		return encodeStruct(v, enc)
+		fields, err := fieldCache.Fields(v.Type())
+		if err != nil {
+			return err
+		}
+		return encodeStructWithFields(v, fields, enc)
 
 	default:
 		return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode type %s", v.Type())
@@ -259,18 +265,6 @@ func stringifyMapKey(k reflect.Value) (string, error) {
 	default:
 		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %s of type %s", k, k.Type())
 	}
-}
-
-func encodeStruct(v reflect.Value, e Encoder) error {
-	didIt, err := e.EncodeStruct(v)
-	if didIt {
-		return err
-	}
-	fields, err := fieldCache.Fields(v.Type())
-	if err != nil {
-		return err
-	}
-	return encodeStructWithFields(v, fields, e)
 }
 
 func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) error {
@@ -357,6 +351,11 @@ type Decoder interface {
 	// AsInterface should decode the value into the Go value that best represents it.
 	AsInterface() (interface{}, error)
 
+	// If the decoder wants to decode a value in a special way it should do so here
+	// and return true, the decoded value, and any error from the decoding.
+	// Otherwise, it should return false.
+	AsSpecial(reflect.Value) (bool, interface{}, error)
+
 	// String should return a human-readable representation of the Decoder, for error messages.
 	String() string
 }
@@ -380,6 +379,11 @@ func decode(v reflect.Value, d Decoder) error {
 			v.Set(reflect.Zero(v.Type()))
 			return nil
 		}
+	}
+
+	if done, val, err := d.AsSpecial(v); done {
+		v.Set(reflect.ValueOf(val))
+		return err
 	}
 
 	// Handle implemented interfaces first.

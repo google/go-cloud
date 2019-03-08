@@ -1,0 +1,67 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170107Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?max-keys=1000&prefix=blob-for-list
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-list</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-list-0</Key><LastModified>2019-03-07T16:50:24.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-list-1</Key><LastModified>2019-03-07T17:01:03.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents><Contents><Key>blob-for-list-2</Key><LastModified>2019-03-07T16:50:24.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:08 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - wdzq/SQqiIoJpV1P0GmAtMM2Vcw+LXJNvSeENDjCDpvmGVWpBWE+T9wIaDYXOry61r4Ph/s5uew=
+      X-Amz-Request-Id:
+      - C6B34288FFB94C0E
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170107Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/?max-keys=1000&prefix=blob-for-list-1
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>go-cloud-testing</Name><Prefix>blob-for-list-1</Prefix><Marker></Marker><MaxKeys>1000</MaxKeys><IsTruncated>false</IsTruncated><Contents><Key>blob-for-list-1</Key><LastModified>2019-03-07T17:01:03.000Z</LastModified><ETag>&quot;5d41402abc4b2a76b9719d911017c592&quot;</ETag><Size>5</Size><Owner><ID>e1f8084cdfae4a96c0ca8d343fe30bfc18997dd786ab0930b2492a01f5f85b3b</ID><DisplayName>rvangent</DisplayName></Owner><StorageClass>STANDARD</StorageClass></Contents></ListBucketResult>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:08 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Bucket-Region:
+      - us-west-1
+      X-Amz-Id-2:
+      - kI0ZYTA0q0kl+5O6jAMiqabZkCgp+8yI+SPWQC9Z9M8z/Thzyow0f1vr229icZdnvFoAdXMLuD4=
+      X-Amz-Request-Id:
+      - 796291CB313C6853
+    status: 200 OK
+    code: 200
+    duration: ""
