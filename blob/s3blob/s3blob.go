@@ -418,7 +418,7 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions
 	if legacyResp.NextMarker != nil {
 		nextContinuationToken = legacyResp.NextMarker
 	} else if aws.BoolValue(legacyResp.IsTruncated) {
-		nextContinuationToken = aws.String(aws.StringValue(legacyResp.Contents[len(legacyResp.Contents)-1].Key) + " ")
+		nextContinuationToken = aws.String(aws.StringValue(legacyResp.Contents[len(legacyResp.Contents)-1].Key))
 	}
 	return &s3.ListObjectsV2Output{
 		CommonPrefixes:        legacyResp.CommonPrefixes,
