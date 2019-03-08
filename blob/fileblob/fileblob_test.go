@@ -139,49 +139,6 @@ func TestNewBucket(t *testing.T) {
 	})
 }
 
-func TestMungePath(t *testing.T) {
-	tests := []struct {
-		URL       string
-		Separator uint8
-		Want      string
-	}{
-		{
-			URL:       "file:///a/directory",
-			Separator: '/',
-			Want:      "/a/directory",
-		},
-		{
-			URL:       "file://localhost/a/directory",
-			Separator: '/',
-			Want:      "/a/directory",
-		},
-		{
-			URL:       "file://localhost/mybucket",
-			Separator: '/',
-			Want:      "/mybucket",
-		},
-		{
-			URL:       "file:///c:/a/directory",
-			Separator: '\\',
-			Want:      "c:\\a\\directory",
-		},
-		{
-			URL:       "file://localhost/c:/a/directory",
-			Separator: '\\',
-			Want:      "c:\\a\\directory",
-		},
-	}
-	for _, tc := range tests {
-		u, err := url.Parse(tc.URL)
-		if err != nil {
-			t.Fatalf("%s: failed to parse URL: %v", tc.URL, err)
-		}
-		if got := mungeURLPath(u.Path, tc.Separator); got != tc.Want {
-			t.Errorf("%s: got %q want %q", tc.URL, got, tc.Want)
-		}
-	}
-}
-
 type verifyPathError struct{}
 
 func (verifyPathError) Name() string { return "verify ErrorAs handles os.PathError" }
@@ -210,21 +167,53 @@ func TestOpenBucketFromURL(t *testing.T) {
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "myfile.txt"), []byte("hello world"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	// Convert dir to a URL path, adding a leading "/" if needed on Windows.
+	dirpath := filepath.ToSlash(dir)
+	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
+		dirpath = "/" + dirpath
+	}
 
 	tests := []struct {
-		URL     string
-		WantErr bool
+		URL         string
+		Key         string
+		WantErr     bool
+		WantReadErr bool
+		Want        string
 	}{
-		{"file://" + dir, false},
-		{"file:///bucket-not-found", true},
-		{"file://" + dir + "?param=value", true},
+		// Bucket doesn't exist -> error at construction time.
+		{"file:///bucket-not-found", "myfile.txt", true, false, ""},
+		// File doesn't exist -> error at read time.
+		{"file://" + dirpath, "filenotfound.txt", false, true, ""},
+		// OK.
+		{"file://" + dirpath, "myfile.txt", false, false, "hello world"},
+		// OK, host is ignored.
+		{"file://localhost" + dirpath, "myfile.txt", false, false, "hello world"},
+		// Invalid query parameter.
+		{"file://" + dirpath + "?param=value", "myfile.txt", true, false, ""},
 	}
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := blob.OpenBucket(ctx, test.URL)
+		b, err := blob.OpenBucket(ctx, test.URL)
+		t.Logf("%s", test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err != nil {
+			continue
+		}
+		got, err := b.ReadAll(ctx, test.Key)
+		if (err != nil) != test.WantReadErr {
+			t.Errorf("%s: got read error %v, want error %v", test.URL, err, test.WantReadErr)
+		}
+		if err != nil {
+			continue
+		}
+		if string(got) != test.Want {
+			t.Errorf("%s: got %q want %q", test.URL, got, test.Want)
 		}
 	}
 }

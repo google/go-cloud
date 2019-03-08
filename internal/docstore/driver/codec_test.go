@@ -43,6 +43,11 @@ func (e *te) UnmarshalText(b []byte) error {
 	return nil
 }
 
+type special int
+
+func (special) MarshalBinary() ([]byte, error) { panic("should never be called") }
+func (*special) UnmarshalBinary([]byte) error  { panic("should never be called") }
+
 type Embed1 struct {
 	E1 string
 }
@@ -119,6 +124,7 @@ func TestEncode(t *testing.T) {
 		{tm, tmb},
 		{ts, tsb},
 		{te{'A'}, "A"},
+		{special(17), 17},
 		{myString("x"), "x"},
 		{[]myString{"x"}, []interface{}{"x"}},
 		{map[myString]myString{"a": "x"}, map[string]interface{}{"a": "x"}},
@@ -173,7 +179,7 @@ func TestEncode(t *testing.T) {
 		}
 		got := enc.val
 		if diff := cmp.Diff(got, test.want); diff != "" {
-			t.Errorf("%#v: %s", test.in, diff)
+			t.Errorf("%#v (got=-, want=+):\n%s", test.in, diff)
 		}
 	}
 }
@@ -191,7 +197,15 @@ func (e *testEncoder) EncodeFloat(x float64)      { e.val = x }
 func (e *testEncoder) EncodeComplex(x complex128) { e.val = x }
 func (e *testEncoder) EncodeBytes(x []byte)       { e.val = x }
 
-func (e *testEncoder) EncodeStruct(reflect.Value) (bool, error) {
+var typeOfSpecial = reflect.TypeOf(special(0))
+
+func (e *testEncoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	// special would normally encode as a []byte, because it implements BinaryMarshaler.
+	// Encode it as an int instead.
+	if v.Type() == typeOfSpecial {
+		e.val = int(v.Interface().(special))
+		return true, nil
+	}
 	return false, nil
 }
 
@@ -258,6 +272,7 @@ func TestDecode(t *testing.T) {
 		{new([]byte), []byte("foo"), []byte("foo")},
 		{new([]string), []interface{}{"a", "b"}, []string{"a", "b"}},
 		{new([]**bool), []interface{}{true, false}, []**bool{&ptru, &pfa}},
+		{new(special), 17, special(17)},
 		{
 			new(map[string]string),
 			map[string]interface{}{"a": "b"},
@@ -433,4 +448,11 @@ func (d testDecoder) DecodeMap(f func(key string, vd Decoder) bool) {
 }
 func (d testDecoder) AsInterface() (interface{}, error) {
 	return d.val, nil
+}
+
+func (d testDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	if v.Type() == typeOfSpecial {
+		return true, special(d.val.(int)), nil
+	}
+	return false, nil, nil
 }

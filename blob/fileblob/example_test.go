@@ -20,7 +20,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
+	"strings"
 
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/fileblob"
@@ -65,9 +66,16 @@ func Example_openBucket() {
 	}
 	defer os.RemoveAll(dir)
 
+	// On Unix, append the dir to "file://".
+	// On Windows, convert "\" to "/" and add a leading "/":
+	dirpath := filepath.ToSlash(dir)
+	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
+		dirpath = "/" + dirpath
+	}
+
 	// OpenBucket creates a *blob.Bucket from a URL.
 	ctx := context.Background()
-	b, err := blob.OpenBucket(ctx, path.Join("file://", dir))
+	b, err := blob.OpenBucket(ctx, "file://"+dirpath)
 	if err != nil {
 		log.Fatal(err)
 	}

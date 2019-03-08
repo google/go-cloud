@@ -84,26 +84,19 @@ type URLOpener struct{}
 //    -> Passes "/a/directory" to OpenBucket.
 //  - file://localhost/a/directory
 //    -> Also passes "/a/directory".
-//  - file:///c:/foo/bar
+//  - file:///c:/foo/bar on Windows.
 //    -> Passes "c:\foo\bar".
-//  - file://localhost/c:/foo/bar
+//  - file://localhost/c:/foo/bar on Windows.
 //    -> Also passes "c:\foo\bar".
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
 	}
-	return OpenBucket(mungeURLPath(u.Path, os.PathSeparator), nil)
-}
-
-func mungeURLPath(path string, pathSeparator byte) string {
-	if pathSeparator != '/' {
+	path := u.Path
+	if os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
-		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
-		// from this function. Test Windows behavior by opening a bucket on Windows.
-		// See #1075 for why Windows is disabled.
-		return strings.Replace(path, "/", string(pathSeparator), -1)
 	}
-	return path
+	return OpenBucket(filepath.FromSlash(path), nil)
 }
 
 // Options sets options for constructing a *blob.Bucket backed by fileblob.

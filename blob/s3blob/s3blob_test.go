@@ -47,13 +47,19 @@ const (
 
 type harness struct {
 	session *session.Session
+	opts    *Options
 	rt      http.RoundTripper
 	closer  func()
 }
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	sess, rt, done := setup.NewAWSSession(t, region)
-	return &harness{session: sess, rt: rt, closer: done}, nil
+	return &harness{session: sess, opts: nil, rt: rt, closer: done}, nil
+}
+
+func newHarnessUsingLegacyList(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
+	sess, rt, done := setup.NewAWSSession(t, region)
+	return &harness{session: sess, opts: &Options{UseLegacyList: true}, rt: rt, closer: done}, nil
 }
 
 func (h *harness) HTTPClient() *http.Client {
@@ -61,7 +67,7 @@ func (h *harness) HTTPClient() *http.Client {
 }
 
 func (h *harness) MakeDriver(ctx context.Context) (driver.Bucket, error) {
-	return openBucket(ctx, h.session, bucketName, nil)
+	return openBucket(ctx, h.session, bucketName, h.opts)
 }
 
 func (h *harness) Close() {
@@ -69,7 +75,11 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{}})
+	drivertest.RunConformanceTests(t, newHarness, []drivertest.AsTest{verifyContentLanguage{usingLegacyList: false}})
+}
+
+func TestConformanceUsingLegacyList(t *testing.T) {
+	drivertest.RunConformanceTests(t, newHarnessUsingLegacyList, []drivertest.AsTest{verifyContentLanguage{usingLegacyList: true}})
 }
 
 func BenchmarkS3blob(b *testing.B) {
@@ -90,7 +100,9 @@ const language = "nl"
 
 // verifyContentLanguage uses As to access the underlying GCS types and
 // read/write the ContentLanguage field.
-type verifyContentLanguage struct{}
+type verifyContentLanguage struct {
+	usingLegacyList bool
+}
 
 func (verifyContentLanguage) Name() string {
 	return "verify ContentLanguage can be written and read through As"
@@ -121,10 +133,17 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
-func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
-	var req *s3.ListObjectsV2Input
-	if !as(&req) {
-		return errors.New("List.As failed")
+func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
+	if v.usingLegacyList {
+		var req *s3.ListObjectsInput
+		if !as(&req) {
+			return errors.New("List.As failed")
+		}
+	} else {
+		var req *s3.ListObjectsV2Input
+		if !as(&req) {
+			return errors.New("List.As failed")
+		}
 	}
 	// Nothing to do.
 	return nil
