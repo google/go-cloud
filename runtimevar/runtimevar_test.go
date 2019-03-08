@@ -187,11 +187,15 @@ func TestVariable_Watch(t *testing.T) {
 func TestVariable_Latest(t *testing.T) {
 	const content1, content2 = "foo", "bar"
 	const numGoroutines = 10
+	ctx := context.Background()
 
 	fake := &fakeWatcher{}
 	v := New(fake)
 
-	ctx := context.Background()
+	// Not healthy at startup.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
+	}
 
 	// Latest should block until the context is done, as there's no value.
 	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
