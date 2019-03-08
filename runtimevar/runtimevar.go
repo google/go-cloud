@@ -67,6 +67,7 @@ import (
 	"go.opencensus.io/tag"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -360,44 +361,33 @@ type VariableURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]VariableURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterVariable registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterVariable panics.
 func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]VariableURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("runtimevar", "Variable", scheme, opener)
 }
 
 // OpenVariable calls OpenVariableURL with the URL parsed from urlstr.
 // OpenVariable is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("runtimevar", "Variable", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open variable: %v", err)
+		return nil, err
 	}
-	return mux.OpenVariableURL(ctx, u)
+	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
 }
 
 // OpenVariableURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenVariableURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open variable %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("runtimevar", "Variable", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener VariableURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open variable %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenVariableURL(ctx, u)
+	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
