@@ -33,11 +33,13 @@ fi
 
 mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
 git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" --
-if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | go run ./internal/testing/shouldruntests.go; then
+pushd ./internal/testing
+if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | go run ./shouldruntests.go; then
   echo "goprogram success"
 else
   echo "goprogram failure"
 fi
+popd
 exit 1
 
 result=0
