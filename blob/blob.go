@@ -96,6 +96,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -346,7 +347,7 @@ type ListOptions struct {
 
 // ListIterator iterates over List results.
 type ListIterator struct {
-	b       driver.Bucket
+	b       *Bucket
 	opts    *driver.ListOptions
 	page    *driver.ListPage
 	nextIdx int
@@ -377,10 +378,15 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		// We need to load the next page.
 		i.opts.PageToken = i.page.NextPageToken
 	}
+	i.b.mu.RLock()
+	defer i.b.mu.RUnlock()
+	if i.b.closed {
+		return nil, errClosed
+	}
 	// Loading a new page.
-	p, err := i.b.ListPaged(ctx, i.opts)
+	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
-		return nil, wrapError(i.b, err)
+		return nil, wrapError(i.b.b, err)
 	}
 	i.page = p
 	i.nextIdx = 0
@@ -424,6 +430,11 @@ func (o *ListObject) As(i interface{}) bool {
 type Bucket struct {
 	b      driver.Bucket
 	tracer *oc.Tracer
+
+	// mu protects the closed variable.
+	// Read locks are kept to prevent closing until a call finishes.
+	mu     sync.RWMutex
+	closed bool
 }
 
 const pkgName = "gocloud.dev/blob"
@@ -494,6 +505,11 @@ func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
@@ -519,7 +535,7 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 		Delimiter:  opts.Delimiter,
 		BeforeList: opts.BeforeList,
 	}
-	return &ListIterator{b: b.b, opts: dopts}
+	return &ListIterator{b: b, opts: dopts}
 }
 
 // Exists returns true if a blob exists at key, false if it does not exist, or
@@ -546,6 +562,11 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 		return Attributes{}, fmt.Errorf("blob.Attributes: key must be a valid UTF-8 string: %q", key)
 	}
 
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return Attributes{}, errClosed
+	}
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
@@ -594,6 +615,11 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
 	}
@@ -690,6 +716,11 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		}
 		dopts.Metadata = md
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	tctx := b.tracer.Start(ctx, "NewWriter")
 	end := func(err error) { b.tracer.End(tctx, err) }
@@ -744,6 +775,11 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	if !utf8.ValidString(key) {
 		return fmt.Errorf("blob.Delete: key must be a valid UTF-8 string: %q", key)
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return errClosed
+	}
 	ctx = b.tracer.Start(ctx, "Delete")
 	defer func() { b.tracer.End(ctx, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key))
@@ -774,8 +810,25 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	dopts := driver.SignedURLOptions{
 		Expiry: opts.Expiry,
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return "", errClosed
+	}
 	url, err := b.b.SignedURL(ctx, key, &dopts)
 	return url, wrapError(b.b, err)
+}
+
+// Close releases any resources used for the bucket.
+func (b *Bucket) Close() error {
+	b.mu.Lock()
+	prev := b.closed
+	b.closed = false
+	b.mu.Unlock()
+	if prev {
+		return errClosed
+	}
+	return b.b.Close()
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
@@ -936,3 +989,5 @@ func wrapError(b driver.Bucket, err error) error {
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
 }
+
+var errClosed = errors.New("blob: operation on closed bucket")

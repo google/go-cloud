@@ -35,6 +35,7 @@ func Example() {
 	// Here, we use an in-memory implementation and write a sample
 	// configuration value.
 	bucket := memblob.OpenBucket(nil)
+	defer bucket.Close()
 	ctx := context.Background()
 	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte(`{"Server": "foo.com", "Port": 80}`), nil)
 	if err != nil {

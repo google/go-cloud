@@ -27,6 +27,7 @@ func Example() {
 
 	// Create an in-memory bucket.
 	b := memblob.OpenBucket(nil)
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	ctx := context.Background()
@@ -50,6 +51,7 @@ func Example_openBucket() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	ctx := context.Background()

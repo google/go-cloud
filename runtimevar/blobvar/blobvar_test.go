@@ -62,6 +62,7 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 }
 
 func (h *harness) Close() {
+	h.bucket.Close()
 	_ = os.RemoveAll(h.dir)
 }
 
