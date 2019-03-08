@@ -73,6 +73,7 @@ import (
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
 )
@@ -565,26 +566,26 @@ type SubscriptionURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	subscriptionSchemes urlSchemeMap
-	topicSchemes        urlSchemeMap
+	subscriptionSchemes openurl.SchemeMap
+	topicSchemes        openurl.SchemeMap
 }
 
 // RegisterTopic registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterTopic panics.
 func (mux *URLMux) RegisterTopic(scheme string, opener TopicURLOpener) {
-	mux.topicSchemes.Register("topics", scheme, opener)
+	mux.topicSchemes.Register("pubsub", "Topic", scheme, opener)
 }
 
 // RegisterSubscription registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterSubscription panics.
 func (mux *URLMux) RegisterSubscription(scheme string, opener SubscriptionURLOpener) {
-	mux.subscriptionSchemes.Register("subscriptions", scheme, opener)
+	mux.subscriptionSchemes.Register("pubsub", "Subscription", scheme, opener)
 }
 
 // OpenTopic calls OpenTopicURL with the URL parsed from urlstr.
 // OpenTopic is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
-	opener, u, err := mux.topicSchemes.FromString("topics", urlstr)
+	opener, u, err := mux.topicSchemes.FromString("pubsub", "Topic", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +595,7 @@ func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error)
 // OpenSubscription calls OpenSubscriptionURL with the URL parsed from urlstr.
 // OpenSubscription is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
-	opener, u, err := mux.subscriptionSchemes.FromString("subscriptions", urlstr)
+	opener, u, err := mux.subscriptionSchemes.FromString("pubsub", "Subscription", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -604,7 +605,7 @@ func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscr
 // OpenTopicURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenTopicURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
-	opener, err := mux.topicSchemes.FromURL("topics", u)
+	opener, err := mux.topicSchemes.FromURL("pubsub", "Topic", u)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +615,7 @@ func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error)
 // OpenSubscriptionURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenSubscriptionURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
-	opener, err := mux.subscriptionSchemes.FromURL("subscriptions", u)
+	opener, err := mux.subscriptionSchemes.FromURL("pubsub", "Subscription", u)
 	if err != nil {
 		return nil, err
 	}
@@ -649,41 +650,4 @@ func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 // details on supported scheme(s) and URL parameter(s).
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)
-}
-
-// An urlSchemeMap maps URL schemes to values.
-// TODO(jba): move to a package under internal, so all APIs can use it.
-type urlSchemeMap map[string]interface{}
-
-func (m *urlSchemeMap) Register(name, scheme string, value interface{}) {
-	if *m == nil {
-		*m = map[string]interface{}{}
-	}
-	if _, exists := (*m)[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered for %s", scheme, name))
-	}
-	(*m)[scheme] = value
-}
-
-func (m urlSchemeMap) FromString(name, urlstr string) (interface{}, *url.URL, error) {
-	u, err := url.Parse(urlstr)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%s: %v", name, err)
-	}
-	val, err := m.FromURL(name, u)
-	if err != nil {
-		return nil, nil, err
-	}
-	return val, u, nil
-}
-
-func (m urlSchemeMap) FromURL(name string, u *url.URL) (interface{}, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("%s, URL %q: no scheme in URL", name, u)
-	}
-	v, ok := m[u.Scheme]
-	if !ok {
-		return nil, fmt.Errorf("%s, URL %q: no provider registered for %s", name, u, u.Scheme)
-	}
-	return v, nil
 }

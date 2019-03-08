@@ -106,6 +106,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 )
 
 // Reader reads bytes from a blob.
@@ -868,44 +869,33 @@ type BucketURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]BucketURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterBucket registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterBucket panics.
 func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]BucketURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("blob", "Bucket", scheme, opener)
 }
 
 // OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
 // OpenBucket is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("blob", "Bucket", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open bucket: %v", err)
+		return nil, err
 	}
-	return mux.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenBucketURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open bucket %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("blob", "Bucket", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener BucketURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open bucket %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
