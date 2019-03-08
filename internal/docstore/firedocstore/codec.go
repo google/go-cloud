@@ -14,6 +14,21 @@
 
 package firedocstore
 
+// Encoding and decoding between supported docstore types and Firestore protos.
+//
+// Docstore types not supported by Firestore:
+// - complex64/128: encoded as an array of two float32/64s.
+//
+// Docstore types handled specially by Firestore:
+// TODO(jba): implement these
+// - time.Time: encoded as a ts.Timestamp [ts = "github.com/golang/protobuf/ptypes/timestamp"]
+// - *ts.Timestamp: encoded as itself
+// - *latlng.LatLng: encoded as itself [latlng = "google.golang.org/genproto/googleapis/type/latlng"]
+//
+// Firestore types not supported by Docstore:
+// - Document reference (a pointer to another Firestore document)
+// TODO(jba): figure out how to support these
+
 import (
 	"errors"
 	"fmt"
@@ -78,10 +93,14 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 
 func (e *encoder) EncodeMap(n int) driver.Encoder {
 	m := make(map[string]*pb.Value, n)
-	e.pv = mapval(m)
+	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
 	return &mapEncoder{m: m}
 }
 
+// TODO(jba): Rethink this escape mechanism. We need to special-case time.Time and
+// one or two other types earlier in driver.Encode: EncodeStruct happens too late,
+// after the checks for BinaryMarshaler and TextMarshaler. (time.Time implements the
+// former).
 func (e *encoder) EncodeStruct(reflect.Value) (bool, error) {
 	return false, nil
 }
@@ -102,15 +121,12 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.pv }
 
 func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_DoubleValue{x}} }
 
-func mapval(m map[string]*pb.Value) *pb.Value {
-	return &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
-}
-
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes a Firestore document into a driver.Document.
 func decodeDoc(pdoc *pb.Document, ddoc driver.Document) error {
-	return ddoc.Decode(decoder{mapval(pdoc.Fields)})
+	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
+	return ddoc.Decode(decoder{mv})
 }
 
 type decoder struct {

@@ -292,39 +292,50 @@ func testCodec(t *testing.T, ct CodecTester) {
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
+
 	type S struct {
-		A int
-		B bool
-		C float64
-		D string
-		E []int
-		F map[string]bool
+		N  *int
+		I  int
+		U  uint
+		F  float64
+		C  complex64
+		St string
+		B  bool
+		By []byte
+		L  []int
+		M  map[string]bool
 	}
 	// TODO(jba): add more fields: more basic types; pointers; structs; embedding.
 
-	in := S{A: 1, B: true, C: 2.5, D: "foo", E: []int{3, 5, 7},
-		F: map[string]bool{"x": true, "y": false}}
-	ne, err := ct.NativeEncode(in)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var dd S
-	if err := ct.DocstoreDecode(ne, &dd); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(in, dd); diff != "" {
-		t.Error(diff)
+	in := S{
+		N:  nil,
+		I:  1,
+		U:  2,
+		F:  2.5,
+		C:  complex(9, 10),
+		St: "foo",
+		B:  true,
+		L:  []int{3, 4, 5},
+		M:  map[string]bool{"a": true, "b": false},
+		By: []byte{6, 7, 8},
 	}
 
-	de, err := ct.DocstoreEncode(in)
-	if err != nil {
-		t.Fatal(err)
+	check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
+		t.Helper()
+		enc, err := encode(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var dec S
+		if err := decode(enc, &dec); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(in, dec); diff != "" {
+			t.Error(diff)
+		}
 	}
-	var nd S
-	if err := ct.NativeDecode(de, &nd); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(in, nd); diff != "" {
-		t.Error(diff)
-	}
+
+	check(ct.DocstoreEncode, ct.DocstoreDecode)
+	check(ct.DocstoreEncode, ct.NativeDecode)
+	check(ct.NativeEncode, ct.DocstoreDecode)
 }
