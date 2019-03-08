@@ -103,18 +103,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	for param := range q {
 		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
 	}
-	return New(mungeURLPath(u.Path, os.PathSeparator), o.Decoder, &o.Options)
-}
-
-func mungeURLPath(path string, pathSeparator byte) string {
-	if pathSeparator != '/' {
+	path := u.Path
+	if os.PathSeparator != '/' {
 		path = strings.TrimPrefix(path, "/")
-		// TODO: use filepath.FromSlash instead; and remove the pathSeparator arg
-		// from this function. Test Windows behavior by opening a bucket on Windows.
-		// See #1075 for why Windows is disabled.
-		return strings.Replace(path, "/", string(pathSeparator), -1)
 	}
-	return path
+	return New(filepath.FromSlash(path), o.Decoder, &o.Options)
 }
 
 // Options sets options.
