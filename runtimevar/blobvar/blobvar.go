@@ -84,7 +84,12 @@ type URLOpener struct {
 	Options Options
 
 	mu      sync.Mutex
-	buckets map[string]*blob.Bucket
+	buckets map[string]*refCountBucket
+}
+
+type refCountBucket struct {
+	bucket *blob.Bucket
+	refs   int
 }
 
 // OpenVariableURL opens the variable at the URL's path. See the package doc
@@ -95,6 +100,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	bucket := o.Bucket
 	decoder := o.Decoder
 	options := o.Options
+	var watcherOpener *URLOpener // Set if bucket opened via URL to decrement references.
 
 	if bucket == nil {
 		if o.Mux == nil {
@@ -104,20 +110,12 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		if bucketURL == "" {
 			return nil, fmt.Errorf("open variable %q: URL parameter \"bucket\" is required", u)
 		}
-		o.mu.Lock()
-		defer o.mu.Unlock()
-		if o.buckets == nil {
-			o.buckets = map[string]*blob.Bucket{}
+		var err error
+		bucket, err = o.bucketForURL(ctx, bucketURL)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: %v", u, err)
 		}
-		bucket = o.buckets[bucketURL]
-		if bucket == nil {
-			var err error
-			bucket, err = o.Mux.OpenBucket(ctx, bucketURL)
-			if err != nil {
-				return nil, fmt.Errorf("open variable %q: OpenBucket failed: %v", u, err)
-			}
-			o.buckets[bucketURL] = bucket
-		}
+		watcherOpener = o
 		q.Del("bucket")
 	}
 	if decoderName := q.Get("decoder"); decoderName != "" || decoder == nil {
@@ -141,7 +139,37 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
 		}
 	}
-	return NewVariable(bucket, path.Join(u.Host, u.Path), decoder, &options)
+	return runtimevar.New(newWatcher(bucket, path.Join(u.Host, u.Path), decoder, watcherOpener, &options)), nil
+}
+
+func (o *URLOpener) bucketForURL(ctx context.Context, bucketURL string) (*blob.Bucket, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.buckets == nil {
+		o.buckets = make(map[string]*refCountBucket)
+	}
+	rcBucket := o.buckets[bucketURL]
+	if rcBucket == nil {
+		var err error
+		newBucket, err := o.Mux.OpenBucket(ctx, bucketURL)
+		if err != nil {
+			return nil, err
+		}
+		rcBucket = &refCountBucket{bucket: newBucket}
+		o.buckets[bucketURL] = rcBucket
+	}
+	rcBucket.refs++
+	return rcBucket.bucket, nil
+}
+
+func (o *URLOpener) decBucketRef(bucket *blob.Bucket) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	for _, rcBucket := range o.buckets {
+		if rcBucket.bucket == bucket {
+			rcBucket.refs--
+		}
+	}
 }
 
 // Options sets options.
@@ -156,15 +184,16 @@ type Options struct {
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
 func NewVariable(bucket *blob.Bucket, key string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	return runtimevar.New(newWatcher(bucket, key, decoder, opts)), nil
+	return runtimevar.New(newWatcher(bucket, key, decoder, nil, opts)), nil
 }
 
-func newWatcher(bucket *blob.Bucket, key string, decoder *runtimevar.Decoder, opts *Options) driver.Watcher {
+func newWatcher(bucket *blob.Bucket, key string, decoder *runtimevar.Decoder, opener *URLOpener, opts *Options) driver.Watcher {
 	if opts == nil {
 		opts = &Options{}
 	}
 	return &watcher{
 		bucket:  bucket,
+		opener:  opener,
 		key:     key,
 		wait:    driver.WaitDuration(opts.WaitDuration),
 		decoder: decoder,
@@ -217,6 +246,7 @@ func errorState(err error, prevS driver.State) driver.State {
 // service.
 type watcher struct {
 	bucket  *blob.Bucket
+	opener  *URLOpener
 	key     string
 	wait    time.Duration
 	decoder *runtimevar.Decoder
@@ -245,6 +275,10 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
+	if w.opener != nil {
+		w.opener.decBucketRef(w.bucket)
+		w.opener = nil // Ensure that we don't call multiple times.
+	}
 	return nil
 }
 
