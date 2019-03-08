@@ -36,7 +36,7 @@
 // http://github.com/google/wire useful for managing your initialization code.
 //
 // Variable implements health.Checker; it reports as healthy when Latest will
-// return a value.
+// return a value without blocking.
 //
 // OpenCensus Integration
 //
