@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
@@ -136,5 +137,48 @@ func TestNewError(t *testing.T) {
 	_, err := v.Watch(ctx)
 	if err == nil {
 		t.Errorf("got nil err want fail err")
+	}
+}
+
+func TestOpenVariable(t *testing.T) {
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantWatchErr bool
+		Want         interface{}
+	}{
+		// Empty URL results in empty byte slice.
+		{"constant://", false, false, []byte("")},
+		// Invalid query param.
+		{"constant://?param=value", true, false, nil},
+		// String value.
+		{"constant://?val=hello+world&decoder=string", false, false, "hello world"},
+		// JSON value; val parameter is {"Foo": "Bar"}, URL-encoded.
+		{"constant://?val=%7B%22Foo%22%3A%22Bar%22%7d&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Error.
+		{"constant://?err=fail", false, true, nil},
+		// Invalid decoder.
+		{"constant://?decoder=notadecoder", true, false, nil},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		v, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err != nil {
+			continue
+		}
+		snapshot, err := v.Watch(ctx)
+		if (err != nil) != test.WantWatchErr {
+			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+		}
+		if err != nil {
+			continue
+		}
+		if !cmp.Equal(snapshot.Value, test.Want) {
+			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+		}
 	}
 }
