@@ -20,7 +20,7 @@ import (
 	"net/url"
 )
 
-// SchemeMap maps URL schemes to values. The zero value is an empty map.
+// SchemeMap maps URL schemes to values. The zero value is an empty map, ready for use.
 type SchemeMap map[string]interface{}
 
 // Register registers scheme for value; subsequent calls to FromString or
@@ -28,6 +28,8 @@ type SchemeMap map[string]interface{}
 // api is the portable API name (e.g., "blob") and typ is the portable type
 // (e.g., "Bucket").
 // Register panics if scheme has already been registered.
+// TODO(rvangent): Remove typ from here and use a single URLOpener per API.
+// TODO(rvangent): Remove api from the From* functions by storing it in the map in Register.
 func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
 	if *m == nil {
 		*m = map[string]interface{}{}
