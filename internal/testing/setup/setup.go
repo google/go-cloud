@@ -15,15 +15,16 @@
 package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
-	"io/ioutil"
 	"context"
 	"flag"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
@@ -127,7 +128,9 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 			}
 		}
 	} else { // replay
+		start := time.Now()
 		rep, err := httpreplay.NewReplayer(path)
+		t.Logf("starting http replayer took %s", time.Since(start))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -297,6 +300,7 @@ func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *htt
 
 	return done, &http.Client{Transport: r}
 }
+
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
 // It returns a cleanup function.
 func FakeGCPDefaultCredentials(t *testing.T) func() {
