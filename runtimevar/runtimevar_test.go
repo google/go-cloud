@@ -202,6 +202,10 @@ func TestVariable_Latest(t *testing.T) {
 	if ctx2.Err() == nil {
 		t.Error("Latest with non-nil ctx but no value yet should block")
 	}
+	// And we're not healthy.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
+	}
 
 	// Call Latest concurrently. There's still no value.
 	var wg sync.WaitGroup
@@ -228,6 +232,10 @@ func TestVariable_Latest(t *testing.T) {
 	if ctx2.Err() == nil {
 		t.Error("Latest with non-nil ctx but error value should block")
 	}
+	// And we're still not healthy.
+	if v.CheckHealth() == nil {
+		t.Error("got nil from CheckHealth, want error")
+	}
 
 	// Set a good value.
 	fake.Set(&state{val: content1})
@@ -251,6 +259,10 @@ func TestVariable_Latest(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+	// And now we're healthy.
+	if err := v.CheckHealth(); err != nil {
+		t.Errorf("got %v from CheckHealth, want nil", err)
+	}
 
 	// Set a different value. At some point after this, Latest should start
 	// returning a Snapshot with Value set to content2.
@@ -304,6 +316,11 @@ func TestVariable_Latest(t *testing.T) {
 	}
 	wg.Wait()
 
+	// Still healthy.
+	if err := v.CheckHealth(); err != nil {
+		t.Errorf("got %v from CheckHealth, want nil", err)
+	}
+
 	// Close the variable.
 	if err := v.Close(); err != nil {
 		t.Error(err)
@@ -312,6 +329,10 @@ func TestVariable_Latest(t *testing.T) {
 	// Latest should now return ErrClosed.
 	if _, err := v.Latest(ctx); err != ErrClosed {
 		t.Errorf("Latest after close returned %v, want ErrClosed", err)
+	}
+	// Unhealthy now.
+	if err := v.CheckHealth(); err != ErrClosed {
+		t.Errorf("got %v from CheckHealth, want ErrClosed", err)
 	}
 }
 
