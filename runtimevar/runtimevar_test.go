@@ -160,8 +160,24 @@ func TestVariable_Watch(t *testing.T) {
 	}
 
 	// Start a blocking Watch in the background, to ensure it's interrupted
-	// by Close.
+	// when a new value arrives.
 	ch := make(chan struct{})
+	go func() {
+		if snap, err := v.Watch(ctx); err != nil {
+			t.Errorf("Watch interrupted by new value returned %v, want nil", err)
+		} else if snap.Value != "hello6" {
+			t.Errorf("Watch got %v, want hello6", snap.Value)
+		}
+		ch <- struct{}{}
+	}()
+	// Give it some time to get into the Watch. This doesn't guarantee that it
+	// does, but the test will be a least flaky if Watch isn't interrupted.
+	time.Sleep(blockingCheckDelay)
+	fake.Set(&state{val: "hello6"})
+	<-ch
+
+	// Start a blocking Watch in the background, to ensure it's interrupted
+	// by Close.
 	go func() {
 		if _, err := v.Watch(ctx); err != ErrClosed {
 			t.Errorf("Watch interrupted by Close returned %v, want ErrClosed", err)
@@ -197,10 +213,10 @@ func TestVariable_Latest(t *testing.T) {
 	ctx2, cancel := context.WithTimeout(ctx, blockingCheckDelay)
 	defer cancel()
 	if _, err := v.Latest(ctx2); err == nil {
-		t.Errorf("Latest with non-nil ctx but no value yet should block: got nil err, want err")
+		t.Errorf("Latest with no value yet should block: got nil err, want err")
 	}
 	if ctx2.Err() == nil {
-		t.Error("Latest with non-nil ctx but no value yet should block")
+		t.Error("Latest with no value yet should block")
 	}
 
 	// Call Latest concurrently. There's still no value.
@@ -223,14 +239,11 @@ func TestVariable_Latest(t *testing.T) {
 	ctx2, cancel = context.WithTimeout(ctx, blockingCheckDelay)
 	defer cancel()
 	if _, err := v.Latest(ctx2); err == nil {
-		t.Errorf("Latest with non-nil ctx but error value should block: got nil err, want err")
+		t.Errorf("Latest with error value should block: got nil err, want err")
 	}
 	if ctx2.Err() == nil {
-		t.Error("Latest with non-nil ctx but error value should block")
+		t.Error("Latest with error value should block")
 	}
-
-	// Set a good value.
-	fake.Set(&state{val: content1})
 
 	// Call Latest concurrently, only exiting each goroutine when they
 	// see the content1 value.
@@ -250,6 +263,10 @@ func TestVariable_Latest(t *testing.T) {
 			}
 		}()
 	}
+	// Set a good value, after a small delay to give the goroutines a chance
+	// to get into Latest.
+	time.Sleep(blockingCheckDelay)
+	fake.Set(&state{val: content1})
 	wg.Wait()
 
 	// Set a different value. At some point after this, Latest should start
@@ -313,6 +330,30 @@ func TestVariable_Latest(t *testing.T) {
 	if _, err := v.Latest(ctx); err != ErrClosed {
 		t.Errorf("Latest after close returned %v, want ErrClosed", err)
 	}
+}
+
+// Tests that Latest is interrupted by Close.
+func TestVariable_LatestBlockedDuringClose(t *testing.T) {
+	fake := &fakeWatcher{}
+	v := New(fake)
+
+	ctx := context.Background()
+
+	ch := make(chan struct{})
+	go func() {
+		// Latest should block until v is Closed.
+		if _, err := v.Latest(ctx); err != ErrClosed {
+			t.Errorf("Latest interrupted by Close got %v, want ErrClosed", err)
+		}
+		ch <- struct{}{}
+	}()
+	// Give it some time to get into Latest. This doesn't guarantee that it
+	// does, but the test will be a least flaky if Latest isn't interrupted.
+	time.Sleep(blockingCheckDelay)
+	if err := v.Close(); err != nil {
+		t.Error(err)
+	}
+	<-ch
 }
 
 var errFake = errors.New("fake")
