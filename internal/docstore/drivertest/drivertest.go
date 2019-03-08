@@ -39,8 +39,17 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// CodecTester describes functions that encode and decode values using both the
+// docstore codec for a provider, and that provider's own "native" codec.
+type CodecTester interface {
+	NativeEncode(interface{}) (interface{}, error)
+	NativeDecode(value, dest interface{}) error
+	DocstoreEncode(interface{}) (interface{}, error)
+	DocstoreDecode(value, dest interface{}) error
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
@@ -48,6 +57,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
+	t.Run("Codec", func(t *testing.T) { testCodec(t, ct) })
 }
 
 const KeyField = "_id"
@@ -225,10 +235,25 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
+
+	// Check that update is atomic.
+	doc = got
+	mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
+	if err := coll.Update(ctx, doc, mods); err == nil {
+		t.Fatal("got nil, want error")
+	}
+	got = docmap{KeyField: doc[KeyField]}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	// want should be unchanged
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
 
 func testData(t *testing.T, coll *ds.Collection) {
-	// All Go integer types except uint64 are supported, but they all come back as int64.
+	// All Go integer types are supported, but they all come back as int64.
 	ctx := context.Background()
 	for _, test := range []struct {
 		in, want interface{}
@@ -238,11 +263,11 @@ func testData(t *testing.T, coll *ds.Collection) {
 		{int16(-16), int64(-16)},
 		{int32(-32), int64(-32)},
 		{int64(-64), int64(-64)},
-		//		{uint(1), int64(1)}, TODO: support uint in firestore
+		//		{uint(1), int64(1)}, TODO(jba): support uint in firestore
 		{uint8(8), int64(8)},
 		{uint16(16), int64(16)},
 		{uint32(32), int64(32)},
-		// TODO: support uint64
+		// TODO(jba): support uint64
 		{float32(3.5), float64(3.5)},
 		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
 	} {
@@ -261,4 +286,45 @@ func testData(t *testing.T, coll *ds.Collection) {
 
 	// TODO: strings: valid vs. invalid unicode
 
+}
+
+func testCodec(t *testing.T, ct CodecTester) {
+	if ct == nil {
+		t.Skip("no CodecTester")
+	}
+	type S struct {
+		A int
+		B bool
+		C float64
+		D string
+		E []int
+		F map[string]bool
+	}
+	// TODO(jba): add more fields: more basic types; pointers; structs; embedding.
+
+	in := S{A: 1, B: true, C: 2.5, D: "foo", E: []int{3, 5, 7},
+		F: map[string]bool{"x": true, "y": false}}
+	ne, err := ct.NativeEncode(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dd S
+	if err := ct.DocstoreDecode(ne, &dd); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(in, dd); diff != "" {
+		t.Error(diff)
+	}
+
+	de, err := ct.DocstoreEncode(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var nd S
+	if err := ct.NativeDecode(de, &nd); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(in, nd); diff != "" {
+		t.Error(diff)
+	}
 }
