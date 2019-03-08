@@ -26,6 +26,19 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
+if [[ -z "$TRAVIS_BRANCH" || -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  echo "TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_SHA environment variables must be set." 1>&2
+  exit 1
+fi
+
+mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
+git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" --
+if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | go run ./internal/testing/shouldruntests.go; then
+  echo "goprogram success"
+else
+  echo "goprogram failure"
+fi
+
 result=0
 
 # Run Go tests for the root. Only do coverage for the Linux build
