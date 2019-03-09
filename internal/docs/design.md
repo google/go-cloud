@@ -59,7 +59,7 @@ language while focusing on their respective areas of expertise.
 ## Drivers and User-Facing Types
 
 The generic APIs that the Go CDK exports (like [`blob.Bucket`][] or
-[`runtimevar.Variable`][] are concrete types, not interfaces. To understand why,
+[`runtimevar.Variable`][]) are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
 ![Diagram showing user code depending on blob.Bucket, which is implemented by
