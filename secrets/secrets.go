@@ -167,7 +167,7 @@ func (mux *URLMux) RegisterKeeper(scheme string, opener KeeperURLOpener) {
 // OpenKeeper calls OpenKeeperURL with the URL parsed from urlstr.
 // OpenKeeper is safe to call from multiple goroutines.
 func (mux *URLMux) OpenKeeper(ctx context.Context, urlstr string) (*Keeper, error) {
-	opener, u, err := mux.schemes.FromString("secrets", "Keeper", urlstr)
+	opener, u, err := mux.schemes.FromString("Keeper", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (mux *URLMux) OpenKeeper(ctx context.Context, urlstr string) (*Keeper, erro
 // OpenKeeperURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenKeeperURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
-	opener, err := mux.schemes.FromURL("secrets", "Keeper", u)
+	opener, err := mux.schemes.FromURL("Keeper", u)
 	if err != nil {
 		return nil, err
 	}
