@@ -31,15 +31,22 @@ if [[ -z "$TRAVIS_BRANCH" || -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   exit 1
 fi
 
+tmpfile=$(mktemp)
+function cleanup() {
+  rm -rf "$tmpfile"
+}
+trap cleanup EXIT
+
 mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
-git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" --
-pushd ./internal/testing
-if git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- | go run ./shouldruntests.go; then
-  echo "goprogram success"
+git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
+# Find lines that don't start with internal/website in the diff log; if no such
+# lines are found, it means that we don't have to run tests. grep returns 1 in
+# this case.
+if grep -v ^internal/website $tmpfile; then
+  echo "should run tests"
 else
-  echo "goprogram failure"
+  echo "no tests"
 fi
-popd
 exit 1
 
 result=0
