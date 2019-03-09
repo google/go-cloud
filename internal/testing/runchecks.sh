@@ -39,15 +39,15 @@ trap cleanup EXIT
 
 mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
 git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
+
 # Find lines that don't start with internal/website in the diff log; if no such
 # lines are found, it means that we don't have to run tests. grep returns 1 in
 # this case.
 if grep -v ^internal/website $tmpfile; then
-  echo "should run tests"
+  echo "Running tests"
 else
-  echo "no tests"
+  echo "Diff doesn't affect tests; not running them"
 fi
-exit 1
 
 result=0
 
