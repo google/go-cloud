@@ -47,12 +47,17 @@ if grep -v ^internal/website $tmpfile; then
   echo "Running tests"
 else
   echo "Diff doesn't affect tests; not running them"
+  exit 0
 fi
 
-result=0
+# Install wire; it's needed to build the project. Moved here from the "install"
+# step because we don't need to install wire if the diff doesn't require testing
+# (see condition above).
+go install github.com/google/wire/cmd/wire
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
+result=0
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
