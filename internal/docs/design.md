@@ -58,7 +58,7 @@ language while focusing on their respective areas of expertise.
 
 ## Portable Types and Drivers
 
-The generic APIs that the Go CDK exports (like [`blob.Bucket`][] or
+The portable APIs that the Go CDK exports (like [`blob.Bucket`][] or
 [`runtimevar.Variable`][]) are concrete types, not interfaces. To understand why,
 imagine if we used a plain interface:
 
