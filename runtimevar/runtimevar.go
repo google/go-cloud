@@ -35,6 +35,8 @@
 // deploy it to multiple Cloud providers. You may find
 // http://github.com/google/wire useful for managing your initialization code.
 //
+// Variable implements health.Checker; it reports as healthy when Latest will
+// return a value without blocking.
 //
 // OpenCensus Integration
 //
@@ -53,9 +55,11 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"reflect"
+	"sync"
 	"time"
 
 	"go.opencensus.io/stats"
@@ -63,6 +67,7 @@ import (
 	"go.opencensus.io/tag"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
 )
 
@@ -81,26 +86,9 @@ type Snapshot struct {
 }
 
 // As converts i to provider-specific types.
-//
-// This function (and the other As functions in this package) are inherently
-// provider-specific, and using them will make that part of your application
-// non-portable, so use with care.
-//
-// See the documentation for the subpackage you used to instantiate Variable to
-// see which type(s) are supported.
-//
-// Usage:
-//
-// 1. Declare a variable of the provider-specific type you want to access.
-//
-// 2. Pass a pointer to it to As.
-//
-// 3. If the type is supported, As will return true and copy the
-// provider-specific type into your variable. Otherwise, it will return false.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (s *Snapshot) As(i interface{}) bool {
 	if s.asFunc == nil {
 		return false
@@ -113,6 +101,7 @@ const pkgName = "gocloud.dev/runtimevar"
 var (
 	changeMeasure = stats.Int64(pkgName+"/value_changes", "Count of variable value changes",
 		stats.UnitDimensionless)
+	// OpenCensusViews are predefined views for OpenCensus metrics.
 	OpenCensusViews = []*view.View{
 		{
 			Name:        pkgName + "/value_changes",
@@ -128,10 +117,25 @@ var (
 // variables. To create a Variable, use constructors found in provider-specific
 // subpackages.
 type Variable struct {
-	watcher  driver.Watcher
+	dw       driver.Watcher
 	provider string // for metric collection
-	nextCall time.Time
-	prev     driver.State
+
+	// For cancelling the background goroutine, and noticing when it has exited.
+	backgroundCancel context.CancelFunc
+	backgroundDone   chan struct{}
+
+	// haveGood is closed when we get the first good value for the variable.
+	haveGood chan struct{}
+	// A reference to changed at the last time Watch was called.
+	// Not protected by mu because it's only referenced in Watch, which is not
+	// supposed to be called from multiple goroutines.
+	lastWatch <-chan struct{}
+
+	mu       sync.Mutex
+	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
+	last     Snapshot
+	lastErr  error
+	lastGood Snapshot
 }
 
 // New is intended for use by provider implementations.
@@ -139,20 +143,35 @@ var New = newVar
 
 // newVar creates a new *Variable based on a specific driver implementation.
 func newVar(w driver.Watcher) *Variable {
-	return &Variable{
-		watcher:  w,
-		provider: oc.ProviderName(w),
+	ctx, cancel := context.WithCancel(context.Background())
+	changed := make(chan struct{})
+	v := &Variable{
+		dw:               w,
+		provider:         oc.ProviderName(w),
+		backgroundCancel: cancel,
+		backgroundDone:   make(chan struct{}),
+		haveGood:         make(chan struct{}),
+		changed:          changed,
+		lastWatch:        changed,
+		lastErr:          errors.New("no value yet"),
 	}
+	go v.background(ctx)
+	return v
 }
 
-// Watch returns a Snapshot of the current value of the variable.
+// ErrClosed is returned from Watch when the Variable has been Closed.
+var ErrClosed = errors.New("Variable has been closed")
+
+// Watch returns when there is a new Snapshot of the current value of the
+// variable.
 //
 // The first call to Watch will block while reading the variable from the
 // provider, and will return the resulting Snapshot or error. If an error is
 // returned, the returned Snapshot is a zero value and should be ignored.
-//
 // Subsequent calls will block until the variable's value changes or a different
 // error occurs.
+//
+// Watch returns an ErrClosed error if the Variable has been closed.
 //
 // Watch should not be called on the same variable from multiple goroutines
 // concurrently. The typical use case is to call it in a single goroutine in a
@@ -160,44 +179,153 @@ func newVar(w driver.Watcher) *Variable {
 //
 // If the variable does not exist, Watch returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
-func (c *Variable) Watch(ctx context.Context) (_ Snapshot, err error) {
+//
+// Alternatively, use Latest to retrieve the latest good value.
+func (c *Variable) Watch(ctx context.Context) (Snapshot, error) {
+	// Block until there's a change since the last Watch call, signaled
+	// by lastWatch being closed by the background goroutine.
+	var ctxErr error
+	select {
+	case <-c.lastWatch:
+	case <-ctx.Done():
+		ctxErr = ctx.Err()
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.lastErr == ErrClosed {
+		return Snapshot{}, ErrClosed
+	} else if ctxErr != nil {
+		return Snapshot{}, ctxErr
+	}
+	c.lastWatch = c.changed
+	return c.last, c.lastErr
+}
+
+func (c *Variable) background(ctx context.Context) {
+	var curState, prevState driver.State
+	var wait time.Duration
 	for {
-		wait := c.nextCall.Sub(time.Now())
-		if wait > 0 {
-			select {
-			case <-ctx.Done():
-				return Snapshot{}, ctx.Err()
-			case <-time.After(wait):
-				// Continue.
-			}
+		select {
+		case <-ctx.Done():
+			// We're shutting down; exit the goroutine.
+			close(c.backgroundDone)
+			return
+		case <-time.After(wait):
+			// Continue.
 		}
 
-		cur, wait := c.watcher.WatchVariable(ctx, c.prev)
-		c.nextCall = time.Now().Add(wait)
-		if cur == nil {
+		curState, wait = c.dw.WatchVariable(ctx, prevState)
+		if curState == nil {
 			// No change.
 			continue
 		}
-		// Something new to return!
-		c.prev = cur
-		v, err := cur.Value()
-		if err != nil {
-			return Snapshot{}, wrapError(c.watcher, err)
-		}
+
+		// There's something new to return!
+		prevState = curState
 		_ = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(oc.ProviderKey, c.provider)}, changeMeasure.M(1))
 		// Error from RecordWithTags is not possible.
-		return Snapshot{
-			Value:      v,
-			UpdateTime: cur.UpdateTime(),
-			asFunc:     cur.As,
-		}, nil
+
+		// Updates under the lock.
+		c.mu.Lock()
+		if c.lastErr == ErrClosed {
+			close(c.backgroundDone)
+			c.mu.Unlock()
+			return
+		}
+		if val, err := curState.Value(); err == nil {
+			// We got a good value!
+			c.last = Snapshot{
+				Value:      val,
+				UpdateTime: curState.UpdateTime(),
+				asFunc:     curState.As,
+			}
+			c.lastErr = nil
+			c.lastGood = c.last
+			// Close c.haveGood if it's not already closed.
+			select {
+			case <-c.haveGood:
+			default:
+				close(c.haveGood)
+			}
+		} else {
+			// We got an error value.
+			c.last = Snapshot{}
+			c.lastErr = wrapError(c.dw, err)
+		}
+		close(c.changed)
+		c.changed = make(chan struct{})
+		c.mu.Unlock()
 	}
 }
 
-// Close closes the Variable; don't call Watch after this.
+// Latest is intended to be called per request, with the request context.
+// It returns the latest good Snapshot of the variable value, blocking if no
+// good value has ever been received. If ctx is Done, it returns the latest
+// error indicating why no good value is available (not the ctx.Err()).
+// You can pass an already-Done ctx to make Latest not block.
+//
+// Latest returns ErrClosed if the Variable has been closed.
+func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
+	var haveGood bool
+	select {
+	case <-c.haveGood:
+		haveGood = true
+	case <-ctx.Done():
+		// We don't return ctx.Err().
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if haveGood && c.lastErr != ErrClosed {
+		return c.lastGood, nil
+	}
+	return Snapshot{}, c.lastErr
+}
+
+// CheckHealth returns an error unless Latest will return a good value
+// without blocking.
+func (c *Variable) CheckHealth() error {
+	haveGood := false
+	select {
+	case <-c.haveGood:
+		haveGood = true
+	default:
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if haveGood && c.lastErr != ErrClosed {
+		return nil
+	}
+	return c.lastErr
+}
+
+// Close closes the Variable. The Variable is unusable after Close returns.
 func (c *Variable) Close() error {
-	err := c.watcher.Close()
-	return wrapError(c.watcher, err)
+	// Record that we're closing. Subsequent calls to Watch/Latest will return ErrClosed.
+	c.mu.Lock()
+	if c.lastErr == ErrClosed {
+		c.mu.Unlock()
+		return ErrClosed
+	}
+	c.last = Snapshot{}
+	c.lastErr = ErrClosed
+
+	// Close any remaining channels to wake up any callers that are waiting on them.
+	close(c.changed)
+	// If it's the first good value, close haveGood so that Latest doesn't block.
+	select {
+	case <-c.haveGood:
+	default:
+		close(c.haveGood)
+	}
+	c.mu.Unlock()
+
+	// Shut down the background goroutine.
+	c.backgroundCancel()
+	<-c.backgroundDone
+
+	// Close the driver.
+	err := c.dw.Close()
+	return wrapError(c.dw, err)
 }
 
 func wrapError(w driver.Watcher, err error) error {
@@ -210,12 +338,12 @@ func wrapError(w driver.Watcher, err error) error {
 	return gcerr.New(w.ErrorCode(err), err, 2, "runtimevar")
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See Snapshot.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
-	return gcerr.ErrorAs(err, i, c.watcher.ErrorAs)
+	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
 
 // VariableURLOpener represents types than can open Variables based on a URL.
@@ -233,44 +361,33 @@ type VariableURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]VariableURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterVariable registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterVariable panics.
 func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]VariableURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("runtimevar", "Variable", scheme, opener)
 }
 
 // OpenVariable calls OpenVariableURL with the URL parsed from urlstr.
 // OpenVariable is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("runtimevar", "Variable", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open variable: %v", err)
+		return nil, err
 	}
-	return mux.OpenVariableURL(ctx, u)
+	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
 }
 
 // OpenVariableURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenVariableURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open variable %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("runtimevar", "Variable", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener VariableURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open variable %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenVariableURL(ctx, u)
+	return opener.(VariableURLOpener).OpenVariableURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
@@ -357,4 +474,25 @@ func bytesDecode(b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
+}
+
+// DecoderByName returns a *Decoder based on decoderName.
+// It is intended to be used by VariableURLOpeners in driver packages.
+// Supported values include:
+//   - (empty string), "bytes": Returns the default, BytesDecoder;
+//       Snapshot.Valuewill be of type []byte.
+//   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
+//       Snapshot.Value will be of type *map[string]interface{}.
+//   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
+func DecoderByName(decoderName string) (*Decoder, error) {
+	switch decoderName {
+	case "", "bytes":
+		return BytesDecoder, nil
+	case "jsonmap":
+		var m map[string]interface{}
+		return NewDecoder(&m, JSONDecode), nil
+	case "string":
+		return StringDecoder, nil
+	}
+	return nil, fmt.Errorf("unsupported decoder %q", decoderName)
 }

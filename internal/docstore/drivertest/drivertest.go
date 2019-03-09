@@ -39,14 +39,25 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// CodecTester describes functions that encode and decode values using both the
+// docstore codec for a provider, and that provider's own "native" codec.
+type CodecTester interface {
+	NativeEncode(interface{}) (interface{}, error)
+	NativeDecode(value, dest interface{}) error
+	DocstoreEncode(interface{}) (interface{}, error)
+	DocstoreDecode(value, dest interface{}) error
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
 	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
+	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
+	t.Run("Codec", func(t *testing.T) { testCodec(t, ct) })
 }
 
 const KeyField = "_id"
@@ -224,4 +235,107 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
+
+	// Check that update is atomic.
+	doc = got
+	mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
+	if err := coll.Update(ctx, doc, mods); err == nil {
+		t.Fatal("got nil, want error")
+	}
+	got = docmap{KeyField: doc[KeyField]}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	// want should be unchanged
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func testData(t *testing.T, coll *ds.Collection) {
+	// All Go integer types are supported, but they all come back as int64.
+	ctx := context.Background()
+	for _, test := range []struct {
+		in, want interface{}
+	}{
+		{int(-1), int64(-1)},
+		{int8(-8), int64(-8)},
+		{int16(-16), int64(-16)},
+		{int32(-32), int64(-32)},
+		{int64(-64), int64(-64)},
+		//		{uint(1), int64(1)}, TODO(jba): support uint in firestore
+		{uint8(8), int64(8)},
+		{uint16(16), int64(16)},
+		{uint32(32), int64(32)},
+		// TODO(jba): support uint64
+		{float32(3.5), float64(3.5)},
+		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
+	} {
+		doc := docmap{KeyField: "testData", "val": test.in}
+		got := docmap{KeyField: doc[KeyField]}
+		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
+			t.Fatal(err)
+		}
+		want := docmap{KeyField: doc[KeyField], "val": test.want}
+		if len(got) != len(want) {
+			t.Errorf("%v: got %v, want %v", test.in, got, want)
+		} else if g := got["val"]; !cmp.Equal(g, test.want) {
+			t.Errorf("%v: got %v (%T), want %v (%T)", test.in, g, g, test.want, test.want)
+		}
+	}
+
+	// TODO: strings: valid vs. invalid unicode
+
+}
+
+func testCodec(t *testing.T, ct CodecTester) {
+	if ct == nil {
+		t.Skip("no CodecTester")
+	}
+
+	type S struct {
+		N  *int
+		I  int
+		U  uint
+		F  float64
+		C  complex64
+		St string
+		B  bool
+		By []byte
+		L  []int
+		M  map[string]bool
+	}
+	// TODO(jba): add more fields: more basic types; pointers; structs; embedding.
+
+	in := S{
+		N:  nil,
+		I:  1,
+		U:  2,
+		F:  2.5,
+		C:  complex(9, 10),
+		St: "foo",
+		B:  true,
+		L:  []int{3, 4, 5},
+		M:  map[string]bool{"a": true, "b": false},
+		By: []byte{6, 7, 8},
+	}
+
+	check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
+		t.Helper()
+		enc, err := encode(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var dec S
+		if err := decode(enc, &dec); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(in, dec); diff != "" {
+			t.Error(diff)
+		}
+	}
+
+	check(ct.DocstoreEncode, ct.DocstoreDecode)
+	check(ct.DocstoreEncode, ct.NativeDecode)
+	check(ct.NativeEncode, ct.DocstoreDecode)
 }

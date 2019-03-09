@@ -86,14 +86,11 @@ type Topic interface {
 	IsRetryable(err error) bool
 
 	// As allows providers to expose provider-specific types.
-	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for errors.
-	// See As.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by
@@ -121,6 +118,11 @@ type Subscription interface {
 	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
+	// For at-most-once systems, AckFunc should return a function to be called
+	// whenever pubsub.Message.Ack is called. For at-least-once systems (those that
+	// support Ack), AckFunc should return nil.
+	AckFunc() func()
+
 	// SendAcks should acknowledge the messages with the given ackIDs on
 	// the server so that they will not be received again for this
 	// subscription if the server gets the acks before their deadlines.
@@ -139,15 +141,12 @@ type Subscription interface {
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.
 	IsRetryable(err error) bool
 
-	// As allows providers to expose provider-specific types.
-	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for errors.
-	// See As.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	ErrorAs(error, interface{}) bool
 
 	// ErrorCode should return a code that describes the error, which was returned by

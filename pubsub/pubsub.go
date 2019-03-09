@@ -16,7 +16,7 @@
 // subscribe systems.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
-// including Cloud and on-prem solutions. For example, "gcspubsub" supports
+// including Cloud and on-prem solutions. For example, "gcppubsub" supports
 // Google Cloud Pub/Sub. Your application should import one of these
 // provider-specific subpackages and use its exported functions to get a
 // *Topic and/or *Subscription; do not use the NewTopic/NewSubscription
@@ -62,6 +62,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -72,6 +73,7 @@ import (
 	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
 )
@@ -114,8 +116,10 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-// As converts m to provider-specific types.
-// See Topic.As for details.
+// As converts i to provider-specific types.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 // As panics unless it is called on a message obtained from Subscription.Receive.
 func (m *Message) As(i interface{}) bool {
 	if m.asFunc == nil {
@@ -192,39 +196,19 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-//
-// This function (and the other As functions in this package) are inherently
-// provider-specific, and using them will make that part of your application
-// non-portable, so use with care.
-//
-// See the documentation for the subpackage used to instantiate Bucket to see
-// which type(s) are supported.
-//
-// Usage:
-//
-// 1. Declare a variable of the provider-specific type you want to access.
-//
-// 2. Pass a pointer to it to As.
-//
-// 3. If the type is supported, As will return true and copy the
-// provider-specific type into your variable. Otherwise, it will return false.
-//
-// Provider-specific types that are intended to be mutable will be exposed
-// as a pointer to the underlying type.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (t *Topic) As(i interface{}) bool {
 	return t.driver.As(i)
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See Topic.As for more details.
-func (t *Topic) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, t.driver.ErrorAs)
+// See https://godoc.org/gocloud.dev#As for background information.
+func (t *Topic) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
 
 // NewTopic is for use by provider implementations.
@@ -296,6 +280,7 @@ type Subscription struct {
 	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and sends them to the server.
 	ackBatcher driver.Batcher
+	ackFunc    func() // if non-nil, used for Ack
 	cancel     func() // for canceling all SendAcks calls
 
 	mu             sync.Mutex    // protects everything below
@@ -441,16 +426,23 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 			Metadata: m.Metadata,
 			asFunc:   m.AsFunc,
 		}
-		m2.ack = func() {
-			// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
-			// will result if Message.Ack is ever called with s.mu held. That
-			// currently cannot happen, but we should be careful if/when implementing
-			// features like auto-ack.
-			s.addProcessingTime(time.Since(m2.processingStartTime))
+		if s.ackFunc == nil {
+			m2.ack = func() {
+				// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
+				// will result if Message.Ack is ever called with s.mu held. That
+				// currently cannot happen, but we should be careful if/when implementing
+				// features like auto-ack.
+				s.addProcessingTime(time.Since(m2.processingStartTime))
 
-			// Ignore the error channel. Errors are dealt with
-			// in the ackBatcher handler.
-			_ = s.ackBatcher.AddNoWait(id)
+				// Ignore the error channel. Errors are dealt with
+				// in the ackBatcher handler.
+				_ = s.ackBatcher.AddNoWait(id)
+			}
+		} else {
+			m2.ack = func() {
+				s.addProcessingTime(time.Since(m2.processingStartTime)) // see note above
+				s.ackFunc()
+			}
 		}
 		q = append(q, m2)
 	}
@@ -479,17 +471,19 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See Topic.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (s *Subscription) As(i interface{}) bool {
 	return s.driver.As(i)
 }
 
 // ErrorAs converts err to provider-specific types.
-// ErrorAs panics if target is nil or not a pointer.
+// ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
 // See Topic.As for more details.
-func (s *Subscription) ErrorAs(err error, target interface{}) bool {
-	return gcerr.ErrorAs(err, target, s.driver.ErrorAs)
+func (s *Subscription) ErrorAs(err error, i interface{}) bool {
+	return gcerr.ErrorAs(err, i, s.driver.ErrorAs)
 }
 
 // NewSubscription is for use by provider implementations.
@@ -509,6 +503,7 @@ func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context,
 		newAckBatcher = defaultAckBatcher
 	}
 	s.ackBatcher = newAckBatcher(ctx, s, ds)
+	s.ackFunc = ds.AckFunc()
 	return s
 }
 
@@ -545,4 +540,114 @@ func wrapError(ec errorCoder, err error) error {
 		return err
 	}
 	return gcerr.New(ec.ErrorCode(err), err, 2, "pubsub")
+}
+
+// TopicURLOpener represents types than can open Topics based on a URL.
+// The opener must not modify the URL argument. OpenTopicURL must be safe to
+// call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type TopicURLOpener interface {
+	OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error)
+}
+
+// SubscriptionURLOpener represents types than can open Subscriptions based on a URL.
+// The opener must not modify the URL argument. OpenSubscriptionURL must be safe to
+// call from multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type SubscriptionURLOpener interface {
+	OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs
+// against a set of registered schemes and calls the opener that matches the
+// URL's scheme.
+//
+// The zero value is a multiplexer with no registered schemes.
+type URLMux struct {
+	subscriptionSchemes openurl.SchemeMap
+	topicSchemes        openurl.SchemeMap
+}
+
+// RegisterTopic registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterTopic panics.
+func (mux *URLMux) RegisterTopic(scheme string, opener TopicURLOpener) {
+	mux.topicSchemes.Register("pubsub", "Topic", scheme, opener)
+}
+
+// RegisterSubscription registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterSubscription panics.
+func (mux *URLMux) RegisterSubscription(scheme string, opener SubscriptionURLOpener) {
+	mux.subscriptionSchemes.Register("pubsub", "Subscription", scheme, opener)
+}
+
+// OpenTopic calls OpenTopicURL with the URL parsed from urlstr.
+// OpenTopic is safe to call from multiple goroutines.
+func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
+	opener, u, err := mux.topicSchemes.FromString("pubsub", "Topic", urlstr)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(TopicURLOpener).OpenTopicURL(ctx, u)
+}
+
+// OpenSubscription calls OpenSubscriptionURL with the URL parsed from urlstr.
+// OpenSubscription is safe to call from multiple goroutines.
+func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
+	opener, u, err := mux.subscriptionSchemes.FromString("pubsub", "Subscription", urlstr)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(SubscriptionURLOpener).OpenSubscriptionURL(ctx, u)
+}
+
+// OpenTopicURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenTopicURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
+	opener, err := mux.topicSchemes.FromURL("pubsub", "Topic", u)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(TopicURLOpener).OpenTopicURL(ctx, u)
+}
+
+// OpenSubscriptionURL dispatches the URL to the opener that is registered with the
+// URL's scheme. OpenSubscriptionURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
+	opener, err := mux.subscriptionSchemes.FromURL("pubsub", "Subscription", u)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(SubscriptionURLOpener).OpenSubscriptionURL(ctx, u)
+}
+
+var defaultURLMux = &URLMux{}
+
+// DefaultURLMux returns the URLMux used by OpenTopic and OpenSubscription.
+//
+// Driver packages can use this to register their TopicURLOpener and/or
+// SubscriptionURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenTopic opens the Topic identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
+	return defaultURLMux.OpenTopic(ctx, urlstr)
+}
+
+// OpenSubscription opens the Subscription identified by the URL given. URL openers must be
+// registered in the DefaultURLMux, which is typically done in driver
+// packages' initialization.
+//
+// See the URLOpener documentation in provider-specific subpackages for more
+// details on supported scheme(s) and URL parameter(s).
+func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
+	return defaultURLMux.OpenSubscription(ctx, urlstr)
 }

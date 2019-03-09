@@ -15,16 +15,21 @@
 package driver
 
 import (
+	"reflect"
+
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/docstore/internal/fields"
 	"gocloud.dev/internal/gcerr"
 )
+
+var fieldCache = fields.NewCache(nil, nil, nil)
 
 // A Document is a lightweight wrapper around either a map[string]interface{} or a
 // struct pointer. It provides operations to get and set fields and field paths.
 type Document struct {
-	m map[string]interface{} // nil if it's a *struct
-	//s      reflect.Value          // the struct reflected
-	//fields fields.List            // for structs
+	m      map[string]interface{} // nil if it's a *struct
+	s      reflect.Value          // the struct reflected
+	fields fields.List            // for structs
 }
 
 // Create a new document from doc, which must be a map[string]interface{} or a struct pointer.
@@ -33,12 +38,20 @@ func NewDocument(doc interface{}) (Document, error) {
 	if m, ok := doc.(map[string]interface{}); ok {
 		return Document{m: m}, nil
 	}
-	panic("unimplemented")
-}
-
-// TODO(jba): remove this method after memdocstore uses the codec framework.
-func (d Document) Map() map[string]interface{} {
-	return d.m
+	v := reflect.ValueOf(doc)
+	t := v.Type()
+	if t.Kind() == reflect.Ptr {
+		v = v.Elem()
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting struct, *struct or map[string]interface{}, got %s", t)
+	}
+	fields, err := fieldCache.Fields(t)
+	if err != nil {
+		return Document{}, err
+	}
+	return Document{s: v, fields: fields}, nil
 }
 
 // GetField returns the value of the named document field.
@@ -49,8 +62,13 @@ func (d Document) GetField(field string) (interface{}, error) {
 			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in map", field)
 		}
 		return x, nil
+	} else {
+		v, err := d.structField(field)
+		if err != nil {
+			return nil, err
+		}
+		return v.Interface(), nil
 	}
-	panic("unimplemented")
 }
 
 // getDocument gets the value of the given field path, which must be a document.
@@ -87,6 +105,19 @@ func (d Document) Get(fp []string) (interface{}, error) {
 	return d2.GetField(fp[len(fp)-1])
 }
 
+func (d Document) structField(name string) (reflect.Value, error) {
+	f := d.fields.Match(name)
+	if f == nil {
+		return reflect.Value{}, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in struct type %s", name, d.s.Type())
+	}
+	fv, ok := fieldByIndex(d.s, f.Index)
+	if !ok {
+		return reflect.Value{}, gcerr.Newf(gcerr.InvalidArgument, nil, "nil embedded pointer; cannot get field %q from %s",
+			name, d.s.Type())
+	}
+	return fv, nil
+}
+
 // Set sets the value of the field path in the document.
 // This creates sub-maps as necessary, if possible.
 func (d Document) Set(fp []string, val interface{}) error {
@@ -103,5 +134,30 @@ func (d Document) SetField(field string, value interface{}) error {
 		d.m[field] = value
 		return nil
 	}
-	panic("unimplemented")
+	v, err := d.structField(field)
+	if err != nil {
+		return err
+	}
+	if !v.CanSet() {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set field %s in struct of type %s: not addressable",
+			field, d.s.Type())
+	}
+	v.Set(reflect.ValueOf(value))
+	return nil
+}
+
+// Encode encodes the document using the given Encoder.
+func (d Document) Encode(e Encoder) error {
+	if d.m != nil {
+		return encodeMap(reflect.ValueOf(d.m), e)
+	}
+	return encodeStructWithFields(d.s, d.fields, e)
+}
+
+// Decode decodes the document using the given Decoder.
+func (d Document) Decode(dec Decoder) error {
+	if d.m != nil {
+		return Decode(reflect.ValueOf(d.m), dec)
+	}
+	return Decode(d.s, dec)
 }

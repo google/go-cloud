@@ -106,6 +106,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 )
 
 // Reader reads bytes from a blob.
@@ -149,7 +150,9 @@ func (r *Reader) Size() int64 {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
@@ -191,7 +194,9 @@ type Attributes struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -336,7 +341,7 @@ type ListOptions struct {
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
 
@@ -403,7 +408,9 @@ type ListObject struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (o *ListObject) As(i interface{}) bool {
 	if o.asFunc == nil {
 		return false
@@ -467,29 +474,9 @@ func newBucket(b driver.Bucket) *Bucket {
 }
 
 // As converts i to provider-specific types.
-//
-// This function (and the other As functions in this package) are inherently
-// provider-specific, and using them will make that part of your application
-// non-portable, so use with care.
-//
-// See the documentation for the subpackage used to instantiate Bucket to see
-// which type(s) are supported.
-//
-// Usage:
-//
-// 1. Declare a variable of the provider-specific type you want to access.
-//
-// 2. Pass a pointer to it to As.
-//
-// 3. If the type is supported, As will return true and copy the
-// provider-specific type into your variable. Otherwise, it will return false.
-//
-// Provider-specific types that are intended to be mutable will be exposed
-// as a pointer to the underlying type.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (b *Bucket) As(i interface{}) bool {
 	if i == nil {
 		return false
@@ -497,10 +484,10 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
@@ -863,7 +850,7 @@ type WriterOptions struct {
 	// sending an upload request.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
@@ -882,44 +869,33 @@ type BucketURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]BucketURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterBucket registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterBucket panics.
 func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]BucketURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("blob", "Bucket", scheme, opener)
 }
 
 // OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
 // OpenBucket is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("blob", "Bucket", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open bucket: %v", err)
+		return nil, err
 	}
-	return mux.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenBucketURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open bucket %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("blob", "Bucket", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener BucketURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open bucket %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)

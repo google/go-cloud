@@ -282,6 +282,21 @@ func NewAzureTestPipeline(ctx context.Context, t *testing.T, api string, credent
 	return p, done, httpClient
 }
 
+// NewAzureKeyVaultTestClient creates a *http.Client for Azure KeyVault test recordings.
+func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *http.Client) {
+	mode := recorder.ModeReplaying
+	if *Record {
+		mode = recorder.ModeRecording
+	}
+
+	azMatchers := &replay.ProviderMatcher{}
+	r, done, err := replay.NewRecorder(t, mode, azMatchers, t.Name())
+	if err != nil {
+		t.Fatalf("unable to initialize recorder: %v", err)
+	}
+
+	return done, &http.Client{Transport: r}
+}
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
 // It returns a cleanup function.
 func FakeGCPDefaultCredentials(t *testing.T) func() {

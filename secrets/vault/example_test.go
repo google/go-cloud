@@ -19,6 +19,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/vault/api"
+	"gocloud.dev/secrets"
 	"gocloud.dev/secrets/vault"
 )
 
@@ -28,7 +29,7 @@ func Example_encrypt() {
 	ctx := context.Background()
 	client, err := vault.Dial(ctx, &vault.Config{
 		Token: "<Client (Root) Token>",
-		APIConfig: &api.Config{
+		APIConfig: api.Config{
 			Address: "http://127.0.0.1:8200",
 		},
 	})
@@ -44,4 +45,15 @@ func Example_encrypt() {
 	}
 	decrypted, err := keeper.Decrypt(ctx, ciphertext)
 	_ = decrypted
+}
+
+func Example_openKeeper() {
+	ctx := context.Background()
+
+	// OpenKeeper creates a *secrets.Keeper from a URL.
+	// The host+path are used as the keyID, and the "address" and "token"
+	// query parameters specify which Vault server to dial, and the auth token
+	// to use.
+	k, err := secrets.OpenKeeper(ctx, "vault://MYKEY?address=http://MYVAULT.SERVER.COM:8080&token=MYTOKEN")
+	_, _ = k, err
 }

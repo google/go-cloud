@@ -54,6 +54,8 @@ func (s *ackingDriverSub) IsRetryable(error) bool { return false }
 
 func (s *ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
+func (s *ackingDriverSub) AckFunc() func() { return nil }
+
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
 	var mu sync.Mutex
@@ -365,6 +367,8 @@ func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) e
 func (s *callbackDriverSub) IsRetryable(error) bool { return false }
 
 func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+
+func (s *callbackDriverSub) AckFunc() func() { return nil }
 
 // This test detects the root cause of
 // https://github.com/google/go-cloud/issues/1238.
