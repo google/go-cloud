@@ -189,7 +189,8 @@ func TestOpenVariable(t *testing.T) {
 	nonexistentPath := filepath.Join(dir, "filenotfound")
 	defer os.RemoveAll(dir)
 
-	// Convert paths to a URL path, adding a leading "/" if needed on Windows.
+	// Convert paths to a URL path, adding a leading "/" if needed on Windows
+	// (on Unix, dirpath already has a leading "/").
 	jsonPath = filepath.ToSlash(jsonPath)
 	txtPath = filepath.ToSlash(txtPath)
 	nonexistentPath = filepath.ToSlash(nonexistentPath)

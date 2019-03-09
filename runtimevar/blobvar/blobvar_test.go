@@ -106,7 +106,8 @@ func TestOpenVariable(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	// Convert dir to a URL path, adding a leading "/" if needed on Windows.
+	// Convert dir to a URL path, adding a leading "/" if needed on Windows
+	// (on Unix, dirpath already has a leading "/").
 	dirpath := filepath.ToSlash(dir)
 	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
 		dirpath = "/" + dirpath
