@@ -24,14 +24,12 @@ import (
 )
 
 func ExampleOpenVariable() {
-
 	// Connect to a Variable using a URL.
 	// This example uses "constantvar", an in-memory implementation.
 	// We need to add a blank import line to register the constantvar provider's
 	// URLOpener, which implements runtimevar.VariableURLOpener:
 	// import _ "gocloud.dev/runtimevar/constantvar"
 	// constantvar registers for the "constant" scheme.
-
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {
