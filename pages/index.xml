@@ -23,6 +23,19 @@ Supported Providers  AWS S3 blob GCS blob Azure blob In-memory local blob - main
     </item>
     
     <item>
+      <title>MySQL/Postgres</title>
+      <link>https://gocloud.dev/pages/sql/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://gocloud.dev/pages/sql/</guid>
+      <description> The mysql and postgres packages provide functions for connecting to MySQL and PostgreSQL databases for both on-premise and cloud-provided instances using the *sql.DB type from the Go standard library. Database connections opened using these packages will automatically collect diagnostic information via OpenCensus.
+Top-level package documentation: https://godoc.org/gocloud.dev/mysql and https://godoc.org/gocloud.dev/postgres.
+Supported Providers For MySQL:
+ GCP Cloud SQL AWS RDS On-Premise (or locally hosted)  For PostgreSQL:
+ GCP Cloud SQL AWS RDS On-Premise (or locally hosted)  Usage Samples  Guestbook sample  </description>
+    </item>
+    
+    <item>
       <title>Pubsub</title>
       <link>https://gocloud.dev/pages/pubsub/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Aws &middot; Go CDK</title>
+  <title>MySQL/Postgres &middot; Go CDK</title>
 
   
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -20,7 +20,7 @@
   <link rel="shortcut icon" href="/favicon-32x32.png">
 
   
-  <link href="https://gocloud.dev/tests/aws/index.xml" rel="alternate" type="application/rss+xml" title="Go CDK" />
+  <link href="" rel="alternate" type="application/rss+xml" title="Go CDK" />
 
   
 
@@ -45,9 +45,45 @@
 </div>
 
     <main class="content container">
-    <ul class="posts">
+    <div class="post">
+  <h1>MySQL/Postgres</h1>
+  
 
+<p>The <code>mysql</code> and <code>postgres</code> packages provide functions for connecting to
+<a href="https://www.mysql.com/">MySQL</a> and <a href="https://www.postgresql.org/">PostgreSQL</a> databases for both on-premise and cloud-provided
+instances using the <a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type from the Go standard library. Database
+connections opened using these packages will automatically collect diagnostic
+information via <a href="https://opencensus.io/">OpenCensus</a>.</p>
+
+<p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/mysql">https://godoc.org/gocloud.dev/mysql</a> and
+<a href="https://godoc.org/gocloud.dev/postgres">https://godoc.org/gocloud.dev/postgres</a>.</p>
+
+<h2 id="supported-providers">Supported Providers</h2>
+
+<p>For MySQL:</p>
+
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/mysql/cloudmysql">GCP Cloud SQL</a></li>
+<li><a href="https://godoc.org/gocloud.dev/mysql/rdsmysql">AWS RDS</a></li>
+<li><a href="https://godoc.org/gocloud.dev/mysql">On-Premise</a> (or locally hosted)</li>
 </ul>
+
+<p>For PostgreSQL:</p>
+
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/postgres/cloudpostgres">GCP Cloud SQL</a></li>
+<li><a href="https://godoc.org/gocloud.dev/postgres/rdspostgres">AWS RDS</a></li>
+<li><a href="https://godoc.org/gocloud.dev/postgres">On-Premise</a> (or locally hosted)</li>
+</ul>
+
+<h2 id="usage-samples">Usage Samples</h2>
+
+<ul>
+<li><a href="https://github.com/google/go-cloud/tree/master/samples/guestbook">Guestbook
+sample</a></li>
+</ul>
+
+</div>
     </main>
 
     
