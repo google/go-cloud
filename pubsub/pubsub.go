@@ -32,6 +32,10 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
+// Alternatively, you can construct a *Topic/*Subscription via a URL and
+// OpenTopic/OpenSubscription.
+// See https://godoc.org/gocloud.dev#URLs for more information.
+//
 //
 // OpenCensus Integration
 //
@@ -568,6 +572,7 @@ type SubscriptionURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
+// See https://godoc.org/gocloud.dev#URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -637,22 +642,18 @@ func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
 
-// OpenTopic opens the Topic identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenTopic opens the Topic identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 	return defaultURLMux.OpenTopic(ctx, urlstr)
 }
 
-// OpenSubscription opens the Subscription identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenSubscription opens the Subscription identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)
 }
