@@ -100,7 +100,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	if !v.ErrorAs(err, &e) {
 		return errors.New("ErrorAs expected to succeed with *httpvar.RequestError")
 	}
-	if !strings.Contains(e.Error(), e.URL) || !strings.Contains(e.Error(), strconv.Itoa(e.StatusCode)) {
+	if !strings.Contains(e.Error(), strconv.Itoa(e.Response.StatusCode)) {
 		return errors.New("should contain url and status code")
 	}
 
@@ -137,8 +137,8 @@ func TestNewVariable(t *testing.T) {
 }
 
 func TestEquivalentError(t *testing.T) {
-	notFoundErr := newRequestError(http.StatusNotFound, "http://example.com")
-	badGatewayErr := newRequestError(http.StatusBadGateway, "http://example.com")
+	notFoundErr := newRequestError(&http.Response{StatusCode: http.StatusNotFound})
+	badGatewayErr := newRequestError(&http.Response{StatusCode: http.StatusBadGateway})
 	tests := []struct {
 		Err1, Err2 error
 		Want       bool
@@ -163,14 +163,14 @@ func TestWatcher_ErrorCode(t *testing.T) {
 		Err   *RequestError
 		GCErr gcerr.ErrorCode
 	}{
-		{Err: newRequestError(http.StatusBadRequest, ""), GCErr: gcerr.InvalidArgument},
-		{Err: newRequestError(http.StatusNotFound, ""), GCErr: gcerr.NotFound},
-		{Err: newRequestError(http.StatusUnauthorized, ""), GCErr: gcerr.PermissionDenied},
-		{Err: newRequestError(http.StatusGatewayTimeout, ""), GCErr: gcerr.DeadlineExceeded},
-		{Err: newRequestError(http.StatusRequestTimeout, ""), GCErr: gcerr.DeadlineExceeded},
-		{Err: newRequestError(http.StatusInternalServerError, ""), GCErr: gcerr.Internal},
-		{Err: newRequestError(http.StatusServiceUnavailable, ""), GCErr: gcerr.Internal},
-		{Err: newRequestError(http.StatusBadGateway, ""), GCErr: gcerr.Internal},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusBadRequest}), GCErr: gcerr.InvalidArgument},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusNotFound}), GCErr: gcerr.NotFound},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusUnauthorized}), GCErr: gcerr.PermissionDenied},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusGatewayTimeout}), GCErr: gcerr.DeadlineExceeded},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusRequestTimeout}), GCErr: gcerr.DeadlineExceeded},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusInternalServerError}), GCErr: gcerr.Internal},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusServiceUnavailable}), GCErr: gcerr.Internal},
+		{Err: newRequestError(&http.Response{StatusCode: http.StatusBadGateway}), GCErr: gcerr.Internal},
 	}
 
 	endpointUrl, err := url.Parse("http://example.com")

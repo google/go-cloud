@@ -19,7 +19,7 @@
 //
 // httpvar exposes the following types for As:
 //  - Snapshot: *http.Response
-//  - Error: *httpvar.RequestError, *url.Error
+//  - Error: httpvar.RequestError, url.Error
 package httpvar // import "gocloud.dev/runtimevar/httpvar"
 
 import (
@@ -45,16 +45,15 @@ type Options struct {
 
 // RequestError represents an HTTP error that occurred during endpoint call.
 type RequestError struct {
-	StatusCode int
-	URL        string
+	Response *http.Response
 }
 
 func (e *RequestError) Error() string {
-	return fmt.Sprintf("httpvar: received status code %d while calling \"%s\"", e.StatusCode, e.URL)
+	return fmt.Sprintf("httpvar: received status code %d", e.Response.StatusCode)
 }
 
-func newRequestError(statusCode int, url string) *RequestError {
-	return &RequestError{statusCode, url}
+func newRequestError(response *http.Response) *RequestError {
+	return &RequestError{Response: response}
 }
 
 // New constructs a *runtimevar.Variable that uses http.Client
@@ -126,10 +125,10 @@ func equivalentError(err1, err2 error) bool {
 	}
 	var code1, code2 int
 	if e, ok := err1.(*RequestError); ok {
-		code1 = e.StatusCode
+		code1 = e.Response.StatusCode
 	}
 	if e, ok := err2.(*RequestError); ok {
-		code2 = e.StatusCode
+		code2 = e.Response.StatusCode
 	}
 	return code1 != 0 && code1 == code2
 }
@@ -152,7 +151,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		err := newRequestError(resp.StatusCode, w.endpoint.String())
+		err := newRequestError(resp)
 		return errorState(err, prev), w.wait
 	}
 
@@ -203,8 +202,8 @@ func (w *watcher) ErrorAs(err error, i interface{}) bool {
 
 // ErrorCode implements driver.ErrorCode.
 func (*watcher) ErrorCode(err error) gcerrors.ErrorCode {
-	if httpErr, ok := err.(*RequestError); ok {
-		switch httpErr.StatusCode {
+	if requestErr, ok := err.(*RequestError); ok {
+		switch requestErr.Response.StatusCode {
 		case http.StatusBadRequest:
 			return gcerr.InvalidArgument
 		case http.StatusNotFound:
