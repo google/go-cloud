@@ -571,11 +571,8 @@ func TestURLMux(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, gotErr = mux.OpenTopicURL(ctx, parsed)
-			if (gotErr != nil) != tc.wantErr {
-				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
-			}
 			if gotErr != nil {
-				return
+				t.Fatalf("got err %v, want nil", gotErr)
 			}
 			if got := fake.u.String(); got != tc.want {
 				t.Errorf("got %q want %q", got, tc.want)
@@ -598,11 +595,8 @@ func TestURLMux(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, gotErr = mux.OpenSubscriptionURL(ctx, parsed)
-			if (gotErr != nil) != tc.wantErr {
-				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
-			}
 			if gotErr != nil {
-				return
+				t.Fatalf("got err %v, want nil", gotErr)
 			}
 			if got := fake.u.String(); got != tc.want {
 				t.Errorf("got %q want %q", got, tc.want)
