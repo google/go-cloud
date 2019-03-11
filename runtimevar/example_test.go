@@ -100,6 +100,7 @@ func ExampleSnapshot_As() {
 	if s.As(&rcv) {
 		fmt.Println(rcv.UpdateTime)
 	}
+}
 
 func ExampleVariable_Watch() {
 	// Construct a *Variable using a constructor from one of the
