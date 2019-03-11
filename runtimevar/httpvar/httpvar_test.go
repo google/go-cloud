@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ func TestNewVariable(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := NewVariable(nil, test.URL, runtimevar.StringDecoder, nil)
+		_, err := NewVariable(http.DefaultClient, test.URL, runtimevar.StringDecoder, nil)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
@@ -195,7 +195,7 @@ func TestWatcher_WatchVariable(t *testing.T) {
 		}
 
 		// In order to force httpClient.Get to return an error, we pass custom *http.Client
-		// with every short timeout, so that request will timed out and return an error
+		// with every short timeout, so that request will timed out and return an error.
 		httpClient := &http.Client{
 			Timeout: time.Duration(1 * time.Millisecond),
 		}

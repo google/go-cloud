@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,37 +38,34 @@ import (
 
 // Options sets options.
 type Options struct {
-	// WaitDuration controls the rate at which http endpoint is called to check for changes.
+	// WaitDuration controls the rate at which the HTTP endpoint is called to check for changes.
 	// Defaults to 30 seconds.
 	WaitDuration time.Duration
 }
 
+// RequestError represents an HTTP error that occurred during endpoint call.
 type RequestError struct {
 	StatusCode int
 	URL        string
 }
 
 func (e *RequestError) Error() string {
-	return fmt.Sprintf("httpvar: recived status code %d while calling \"%s\"", e.StatusCode, e.URL)
+	return fmt.Sprintf("httpvar: received status code %d while calling \"%s\"", e.StatusCode, e.URL)
 }
 
 func newRequestError(statusCode int, url string) *RequestError {
 	return &RequestError{statusCode, url}
 }
 
-// New constructs a *runtimevar.Variable that uses http.Client to watch the variable
-// name on an http endpoint.
-func NewVariable(client *http.Client, endpoint string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
-	if client == nil {
-		client = http.DefaultClient
-	}
-
-	endpointUrl, err := url.Parse(endpoint)
+// New constructs a *runtimevar.Variable that uses http.Client
+// to retrieve the variable contents from endpoint.
+func NewVariable(client *http.Client, urlStr string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+	endpointURL, err := url.Parse(urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("httpvar: fail to parse url: %s", err.Error())
+		return nil, fmt.Errorf("httpvar: fail to parse url: %v", err)
 	}
 
-	return runtimevar.New(newWatcher(client, endpointUrl, decoder, opts)), nil
+	return runtimevar.New(newWatcher(client, endpointURL, decoder, opts)), nil
 }
 
 type state struct {
@@ -164,7 +161,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		return errorState(err, prev), w.wait
 	}
 
-	// when endpoint returns the same response again, we return nil as state to not trigger variable update
+	// When endpoint returns the same response again, we return nil as state to not trigger variable update.
 	if prev != nil && bytes.Equal(respBodyBytes, prev.(*state).rawBytes) {
 		return nil, w.wait
 	}
