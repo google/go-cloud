@@ -38,11 +38,11 @@ func TestSchemeMap(t *testing.T) {
 
 	for _, test := range tests {
 		// Empty SchemeMap should always return an error.
-		if _, _, err := emptyM.FromString("api", "type", test.url); err == nil {
+		if _, _, err := emptyM.FromString("type", test.url); err == nil {
 			t.Errorf("%s: empty SchemeMap got nil error, wanted non-nil error", test.url)
 		}
 
-		got, gotURL, gotErr := m.FromString("api", "type", test.url)
+		got, gotURL, gotErr := m.FromString("type", test.url)
 		if (gotErr != nil) != test.wantErr {
 			t.Errorf("%s: got error %v, want error: %v", test.url, gotErr, test.wantErr)
 		}

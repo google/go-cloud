@@ -881,7 +881,7 @@ func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
 // OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
 // OpenBucket is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
-	opener, u, err := mux.schemes.FromString("blob", "Bucket", urlstr)
+	opener, u, err := mux.schemes.FromString("Bucket", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, erro
 // OpenBucketURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenBucketURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	opener, err := mux.schemes.FromURL("blob", "Bucket", u)
+	opener, err := mux.schemes.FromURL("Bucket", u)
 	if err != nil {
 		return nil, err
 	}
