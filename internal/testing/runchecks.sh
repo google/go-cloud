@@ -31,7 +31,7 @@ result=0
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
@@ -39,7 +39,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
-  go test -race ./... || result=1
+  go test -mod=readonly -race ./... || result=1
   # No need to run wire checks or other module tests on OSs other than linux.
   exit $result
 fi
@@ -59,7 +59,7 @@ wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
 for path in "./internal/contributebot" "./samples/appengine"; do
-  ( cd "$path" && exec go test ./... ) || result=1
+  ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)
 done
