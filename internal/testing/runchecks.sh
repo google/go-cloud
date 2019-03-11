@@ -26,6 +26,9 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
+# The following logic lets us skip the (lengthy) installation process and tests
+# in some cases where the PR carries trivial changes that don't affect the code
+# (such as documentation-only).
 if [[ -z "$TRAVIS_BRANCH" || -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   echo "TRAVIS_BRANCH and TRAVIS_PULL_REQUEST_SHA environment variables must be set." 1>&2
   exit 1
