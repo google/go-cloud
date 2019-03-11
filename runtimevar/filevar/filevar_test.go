@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -187,6 +188,23 @@ func TestOpenVariable(t *testing.T) {
 	}
 	nonexistentPath := filepath.Join(dir, "filenotfound")
 	defer os.RemoveAll(dir)
+
+	// Convert paths to a URL path, adding a leading "/" if needed on Windows
+	// (on Unix, dirpath already has a leading "/").
+	jsonPath = filepath.ToSlash(jsonPath)
+	txtPath = filepath.ToSlash(txtPath)
+	nonexistentPath = filepath.ToSlash(nonexistentPath)
+	if os.PathSeparator != '/' {
+		if !strings.HasPrefix(jsonPath, "/") {
+			jsonPath = "/" + jsonPath
+		}
+		if !strings.HasPrefix(txtPath, "/") {
+			txtPath = "/" + txtPath
+		}
+		if !strings.HasPrefix(nonexistentPath, "/") {
+			nonexistentPath = "/" + nonexistentPath
+		}
+	}
 
 	tests := []struct {
 		URL          string

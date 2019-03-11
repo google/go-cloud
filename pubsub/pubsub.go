@@ -585,7 +585,7 @@ func (mux *URLMux) RegisterSubscription(scheme string, opener SubscriptionURLOpe
 // OpenTopic calls OpenTopicURL with the URL parsed from urlstr.
 // OpenTopic is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
-	opener, u, err := mux.topicSchemes.FromString("pubsub", "Topic", urlstr)
+	opener, u, err := mux.topicSchemes.FromString("Topic", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +595,7 @@ func (mux *URLMux) OpenTopic(ctx context.Context, urlstr string) (*Topic, error)
 // OpenSubscription calls OpenSubscriptionURL with the URL parsed from urlstr.
 // OpenSubscription is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
-	opener, u, err := mux.subscriptionSchemes.FromString("pubsub", "Subscription", urlstr)
+	opener, u, err := mux.subscriptionSchemes.FromString("Subscription", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -605,7 +605,7 @@ func (mux *URLMux) OpenSubscription(ctx context.Context, urlstr string) (*Subscr
 // OpenTopicURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenTopicURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error) {
-	opener, err := mux.topicSchemes.FromURL("pubsub", "Topic", u)
+	opener, err := mux.topicSchemes.FromURL("Topic", u)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +615,7 @@ func (mux *URLMux) OpenTopicURL(ctx context.Context, u *url.URL) (*Topic, error)
 // OpenSubscriptionURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenSubscriptionURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*Subscription, error) {
-	opener, err := mux.subscriptionSchemes.FromURL("pubsub", "Subscription", u)
+	opener, err := mux.subscriptionSchemes.FromURL("Subscription", u)
 	if err != nil {
 		return nil, err
 	}
