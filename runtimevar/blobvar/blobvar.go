@@ -162,14 +162,25 @@ func (o *URLOpener) bucketForURL(ctx context.Context, bucketURL string) (*blob.B
 	return rcBucket.bucket, nil
 }
 
-func (o *URLOpener) decBucketRef(bucket *blob.Bucket) {
+func (o *URLOpener) decBucketRef(bucket *blob.Bucket) error {
+	occurrences, drops := 0, 0
 	o.mu.Lock()
-	defer o.mu.Unlock()
-	for _, rcBucket := range o.buckets {
-		if rcBucket.bucket == bucket {
-			rcBucket.refs--
+	for key, rcBucket := range o.buckets {
+		if rcBucket.bucket != bucket {
+			continue
+		}
+		occurrences++
+		rcBucket.refs--
+		if rcBucket.refs <= 0 {
+			delete(o.buckets, key)
+			drops++
 		}
 	}
+	o.mu.Unlock()
+	if drops > 0 && occurrences == drops {
+		return bucket.Close()
+	}
+	return nil
 }
 
 // Options sets options.
@@ -275,11 +286,12 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 
 // Close implements driver.Close.
 func (w *watcher) Close() error {
+	var err error
 	if w.opener != nil {
-		w.opener.decBucketRef(w.bucket)
+		err = w.opener.decBucketRef(w.bucket)
 		w.opener = nil // Ensure that we don't call multiple times.
 	}
-	return nil
+	return err
 }
 
 // ErrorAs implements driver.ErrorAs.

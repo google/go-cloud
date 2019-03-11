@@ -823,7 +823,7 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 func (b *Bucket) Close() error {
 	b.mu.Lock()
 	prev := b.closed
-	b.closed = false
+	b.closed = true
 	b.mu.Unlock()
 	if prev {
 		return errClosed
