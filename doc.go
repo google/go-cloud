@@ -75,7 +75,7 @@ include credentials in the URL itself, since they are likely to be sensitive).
   - Instantiate the provider's URLOpener with the specific fields you need.
     For example, s3blob.URLOpener{ConfigProvider: myAWSProvider} using a
     ConfigProvider that holds explicit AWS credentials.
-    - Create your own instance of the URLMux, e.g., mymux := new(blob.URLMux).
+  - Create your own instance of the URLMux, e.g., mymux := new(blob.URLMux).
   - Register your custom URLOpener on your mux, e.g.,
     mymux.RegisterBucket(s3blob.Scheme, myS3URLOpener).
   - Now use your mux to open URLs, e.g. mymux.OpenBucket('s3://my-bucket').
