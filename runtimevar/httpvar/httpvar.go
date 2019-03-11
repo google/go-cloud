@@ -58,7 +58,7 @@ func newRequestError(statusCode int, url string) *RequestError {
 
 // New constructs a *runtimevar.Variable that uses http.Client to watch the variable
 // name on an http endpoint.
-func NewVariable(client *http.Client, endpoint string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error)  {
+func NewVariable(client *http.Client, endpoint string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	if client == nil {
 		client = http.DefaultClient
 	}

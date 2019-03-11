@@ -16,13 +16,10 @@ package httpvar_test
 
 import (
 	"context"
-	"encoding/json"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/httpvar"
 	"log"
 	"net/http"
-	"net/http/httptest"
-	"time"
 )
 
 // MyConfig is a sample configuration struct.
@@ -32,19 +29,11 @@ type MyConfig struct {
 }
 
 func Example() {
-	url, close := mockServer(MyConfig{
-		Server: "example.com",
-		Port: 8080,
-	})
-	defer close()
-
-	httpClient := &http.Client{
-		Timeout: time.Duration(15 * time.Second),
-	}
+	httpClient := http.DefaultClient
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := httpvar.NewVariable(httpClient, url, decoder, nil)
+	v, err := httpvar.NewVariable(httpClient, "http://example.com", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,13 +46,4 @@ func Example() {
 	}
 	cfg := snapshot.Value.(MyConfig)
 	_ = cfg
-}
-
-func mockServer(response interface{}) (string, func()) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Fatal(err)
-		}
-	}))
-	return server.URL, server.Close
 }

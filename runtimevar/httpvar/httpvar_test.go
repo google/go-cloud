@@ -18,10 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
-	"gocloud.dev/internal/gcerr"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -32,12 +32,11 @@ import (
 )
 
 type harness struct {
-	server *httptest.Server
-	closeServer func()
+	mockServer *mockServer
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	endpointUrl, err := url.Parse(h.server.URL)
+	endpointUrl, err := url.Parse(h.mockServer.url)
 	if err != nil {
 		return nil, err
 	}
@@ -45,31 +44,22 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	_, err := http.Get(fmt.Sprintf("%s/create-variable?value=%s", h.server.URL, url.QueryEscape(string(val))))
-	if err != nil {
-		return err
-	}
+	h.mockServer.SetResponse(string(val))
 	return nil
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	_, err := http.Get(fmt.Sprintf("%s/create-variable?value=%s", h.server.URL, url.QueryEscape(string(val))))
-	if err != nil {
-		return err
-	}
+	h.mockServer.SetResponse(string(val))
 	return nil
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	_, err := http.Get(fmt.Sprintf("%s/delete-variable", h.server.URL))
-	if err != nil {
-		return err
-	}
+	h.mockServer.DeleteResponse()
 	return nil
 }
 
 func (h *harness) Close() {
-	h.closeServer()
+	h.mockServer.close()
 }
 
 func (h *harness) Mutable() bool {
@@ -77,8 +67,9 @@ func (h *harness) Mutable() bool {
 }
 
 func newHarness(t *testing.T) (drivertest.Harness, error) {
-	server, closeServer := newMockServer()
-	return &harness{server: server, closeServer: closeServer }, nil
+	return &harness{
+		mockServer: newMockServer(),
+	}, nil
 }
 
 func TestConformance(t *testing.T) {
@@ -114,7 +105,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 	}
 
 	var e2 url.Error
-	urlError := &url.Error{ URL: "http://example.com", Op: "GET", Err: errors.New("example error") }
+	urlError := &url.Error{URL: "http://example.com", Op: "GET", Err: errors.New("example error")}
 	if !v.ErrorAs(urlError, &e2) {
 		return errors.New("ErrorAs expected to succeed with *url.Error")
 	}
@@ -133,8 +124,8 @@ func TestNewVariable(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
-		{ "http://example.com/config", false },
-		{ "%gh&%ij", true },
+		{"http://example.com/config", false},
+		{"%gh&%ij", true},
 	}
 
 	for _, test := range tests {
@@ -148,7 +139,7 @@ func TestNewVariable(t *testing.T) {
 func TestEquivalentError(t *testing.T) {
 	notFoundErr := newRequestError(http.StatusNotFound, "http://example.com")
 	badGatewayErr := newRequestError(http.StatusBadGateway, "http://example.com")
-	tests := []struct{
+	tests := []struct {
 		Err1, Err2 error
 		Want       bool
 	}{
@@ -168,18 +159,18 @@ func TestEquivalentError(t *testing.T) {
 }
 
 func TestWatcher_ErrorCode(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		Err   *RequestError
 		GCErr gcerr.ErrorCode
 	}{
-		{ Err: newRequestError(http.StatusBadRequest, ""), GCErr: gcerr.InvalidArgument },
-		{ Err: newRequestError(http.StatusNotFound, ""), GCErr: gcerr.NotFound },
-		{ Err: newRequestError(http.StatusUnauthorized, ""), GCErr: gcerr.PermissionDenied },
-		{ Err: newRequestError(http.StatusGatewayTimeout, ""), GCErr: gcerr.DeadlineExceeded },
-		{ Err: newRequestError(http.StatusRequestTimeout, ""), GCErr: gcerr.DeadlineExceeded },
-		{ Err: newRequestError(http.StatusInternalServerError, ""), GCErr: gcerr.Internal },
-		{ Err: newRequestError(http.StatusServiceUnavailable, ""), GCErr: gcerr.Internal },
-		{ Err: newRequestError(http.StatusBadGateway, ""), GCErr: gcerr.Internal },
+		{Err: newRequestError(http.StatusBadRequest, ""), GCErr: gcerr.InvalidArgument},
+		{Err: newRequestError(http.StatusNotFound, ""), GCErr: gcerr.NotFound},
+		{Err: newRequestError(http.StatusUnauthorized, ""), GCErr: gcerr.PermissionDenied},
+		{Err: newRequestError(http.StatusGatewayTimeout, ""), GCErr: gcerr.DeadlineExceeded},
+		{Err: newRequestError(http.StatusRequestTimeout, ""), GCErr: gcerr.DeadlineExceeded},
+		{Err: newRequestError(http.StatusInternalServerError, ""), GCErr: gcerr.Internal},
+		{Err: newRequestError(http.StatusServiceUnavailable, ""), GCErr: gcerr.Internal},
+		{Err: newRequestError(http.StatusBadGateway, ""), GCErr: gcerr.Internal},
 	}
 
 	endpointUrl, err := url.Parse("http://example.com")
@@ -219,4 +210,39 @@ func TestWatcher_WatchVariable(t *testing.T) {
 			t.Errorf("expected state value to be nil, got %v", val)
 		}
 	})
+}
+
+type mockServer struct {
+	url      string
+	close    func()
+	response interface{}
+}
+
+func (m *mockServer) Init() (string, func()) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if m.response == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		fmt.Fprint(w, m.response)
+	})
+	server := httptest.NewServer(mux)
+	return server.URL, server.Close
+}
+
+func (m *mockServer) SetResponse(response interface{}) {
+	m.response = response
+}
+
+func (m *mockServer) DeleteResponse() {
+	m.response = nil
+}
+
+func newMockServer() *mockServer {
+	mockServer := &mockServer{}
+	serverUrl, close := mockServer.Init()
+	mockServer.url = serverUrl
+	mockServer.close = close
+	return mockServer
 }
