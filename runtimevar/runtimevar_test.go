@@ -379,6 +379,11 @@ func TestVariable_LatestBlockedDuringClose(t *testing.T) {
 		t.Error(err)
 	}
 	<-ch
+
+	// Calling Close again should return ErrClosed.
+	if err := v.Close(); err != ErrClosed {
+		t.Errorf("calling Close 2x returned %v, want ErrClosed", err)
+	}
 }
 
 var errFake = errors.New("fake")
