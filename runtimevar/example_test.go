@@ -82,29 +82,27 @@ func ExampleVariable_Watch() {
 
 	// Call Watch in a loop from a background goroutine to see all changes,
 	// including errors.
-	ctx := context.Background()
-	ch := make(chan struct{})
+	//
+	// You can use this for logging, or to trigger behaviors when the
+	// config changes.
+	//
+	// Note that Latest always returns the latest "good" config, so seeing
+	// an error from Watch doesn't mean that Latest will return one.
 	go func() {
 		for {
-			if snapshot, err := v.Watch(ctx); err == nil {
-				fmt.Printf("New config: %v", snapshot.Value.(string))
-				close(ch)
-			} else if err != runtimevar.ErrClosed {
-				fmt.Printf("Error loading config: %v", err)
-				// Even though there's been an error loading the config,
-				// v.Latest will continue to return the latest "good" value.
-			} else {
+			snapshot, err := v.Watch(context.Background())
+			if err == runtimevar.ErrClosed {
 				// v has been closed; exit.
 				return
 			}
+			if err == nil {
+				// Casting to a string here because we used StringDecoder.
+				log.Printf("New config: %v", snapshot.Value.(string))
+			} else {
+				log.Printf("Error loading config: %v", err)
+				// Even though there's been an error loading the config,
+				// v.Latest will continue to return the latest "good" value.
+			}
 		}
 	}()
-
-	// Wait until the background goroutine's Watch has returned before finishing.
-	// The background goroutine will exit when it sees the runtimevar.ErrClosed
-	// error, after v.Close is called.
-	<-ch
-
-	// Output:
-	// New config: hello world
 }
