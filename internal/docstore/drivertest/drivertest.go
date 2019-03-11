@@ -94,14 +94,14 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	createThenGet := func(doc docmap) {
 		t.Helper()
 		if err := coll.Create(ctx, doc); err != nil {
-			t.Fatal(err)
+			t.Fatalf("Create: %v", err)
 		}
 		got := docmap{KeyField: doc[KeyField]}
 		if err := coll.Get(ctx, got); err != nil {
-			t.Fatal(err)
+			t.Fatalf("Get: %v", err)
 		}
 		if diff := cmp.Diff(got, doc); diff != "" {
-			t.Fatalf(diff)
+			t.Fatal(diff)
 		}
 	}
 
@@ -193,8 +193,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if _, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
-		t.Fatal(err)
+	if n, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
+		t.Fatalf("after %d successful actions: %v", n, err)
 	}
 	// The document should no longer exist.
 	if err := coll.Get(ctx, doc); err == nil {
