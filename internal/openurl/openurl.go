@@ -21,32 +21,40 @@ import (
 )
 
 // SchemeMap maps URL schemes to values. The zero value is an empty map, ready for use.
-type SchemeMap map[string]interface{}
+type SchemeMap struct {
+	api string
+	m   map[string]interface{}
+}
 
 // Register registers scheme for value; subsequent calls to FromString or
 // FromURL with scheme will return value.
-// api is the portable API name (e.g., "blob") and typ is the portable type
-// (e.g., "Bucket").
+// api is the portable API name (e.g., "blob"); the same value should always
+// be passed.
+// typ is the portable type (e.g., "Bucket").
 // Register panics if scheme has already been registered.
 // TODO(rvangent): Remove typ from here and use a single URLOpener per API.
-// TODO(rvangent): Remove api from the From* functions by storing it in the map in Register.
 func (m *SchemeMap) Register(api, typ, scheme string, value interface{}) {
-	if *m == nil {
-		*m = map[string]interface{}{}
+	if m.m == nil {
+		m.m = map[string]interface{}{}
 	}
-	if _, exists := (*m)[scheme]; exists {
+	if m.api == "" {
+		m.api = api
+	} else if m.api != api {
+		panic(fmt.Errorf("previously registered using api %q (now %q)", m.api, api))
+	}
+	if _, exists := m.m[scheme]; exists {
 		panic(fmt.Errorf("scheme %q already registered for %s.%s", scheme, api, typ))
 	}
-	(*m)[scheme] = value
+	m.m[scheme] = value
 }
 
 // FromString parses urlstr as an URL and looks up the value for the URL's scheme.
-func (m SchemeMap) FromString(api, typ, urlstr string) (interface{}, *url.URL, error) {
+func (m *SchemeMap) FromString(typ, urlstr string) (interface{}, *url.URL, error) {
 	u, err := url.Parse(urlstr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("open %s.%s: %v", api, typ, err)
+		return nil, nil, fmt.Errorf("open %s.%s: %v", m.api, typ, err)
 	}
-	val, err := m.FromURL(api, typ, u)
+	val, err := m.FromURL(typ, u)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -54,13 +62,13 @@ func (m SchemeMap) FromString(api, typ, urlstr string) (interface{}, *url.URL, e
 }
 
 // FromURL looks up the value for u's scheme.
-func (m SchemeMap) FromURL(api, typ string, u *url.URL) (interface{}, error) {
+func (m *SchemeMap) FromURL(typ string, u *url.URL) (interface{}, error) {
 	if u.Scheme == "" {
-		return nil, fmt.Errorf("open %s.%s: no scheme in URL %q", api, typ, u)
+		return nil, fmt.Errorf("open %s.%s: no scheme in URL %q", m.api, typ, u)
 	}
-	v, ok := m[u.Scheme]
+	v, ok := m.m[u.Scheme]
 	if !ok {
-		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q", api, typ, u.Scheme, u)
+		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q", m.api, typ, u.Scheme, u)
 	}
 	return v, nil
 }

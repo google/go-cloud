@@ -373,7 +373,7 @@ func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
 // OpenVariable calls OpenVariableURL with the URL parsed from urlstr.
 // OpenVariable is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
-	opener, u, err := mux.schemes.FromString("runtimevar", "Variable", urlstr)
+	opener, u, err := mux.schemes.FromString("Variable", urlstr)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +383,7 @@ func (mux *URLMux) OpenVariable(ctx context.Context, urlstr string) (*Variable, 
 // OpenVariableURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenVariableURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
-	opener, err := mux.schemes.FromURL("runtimevar", "Variable", u)
+	opener, err := mux.schemes.FromURL("Variable", u)
 	if err != nil {
 		return nil, err
 	}
