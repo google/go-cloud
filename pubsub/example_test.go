@@ -75,7 +75,7 @@ func Example_sendReceiveMultipleMessages() {
 		}
 	}
 
-	// Receive messages from the subscription.
+	// Receive and acknowledge messages from the subscription.
 	ms2 := []string{}
 	for i := 0; i < len(ms); i++ {
 		m2, err := s.Receive(ctx)
