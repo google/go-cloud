@@ -18,14 +18,14 @@
 // URLs
 //
 // For runtimevar.OpenVariable URLs, etcdvar registers for the scheme "etcd".
-// The host+path is used as the blob key. etcdvar supports the following URL
+// The host+path is used as the variable name. etcdvar supports the following URL
 // parameters:
 //   - client: The URL to be passed to etcd's
 //       go.etcd.io/etcd/clientv3.NewFromURL (required).
 //       NewFromURL will be called once per unique client URL.
 //   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
 //       See runtimevar.DecoderByName for supported values.
-// Example URL: "blob://myvar?client=http://my.etcd.server:8080&decoder=string".
+// Example URL: "etcd://myvar?client=http%3A%2F%2Fmy.etcd.server%3A8080&decoder=string".
 //
 // As
 //

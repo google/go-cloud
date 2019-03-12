@@ -179,17 +179,19 @@ func TestOpenVariable(t *testing.T) {
 	}{
 		// Variable construction succeeds, but nonexistentvar does not exist
 		// so we get an error from Watch.
-		{"etcd://nonexistentvar?client=http://localhost:2379", false, true, nil},
+		{"etcd://nonexistentvar?client=http%3A%2F%2Flocalhost%3A2379", false, true, nil},
 		// Variable construction fails due to missing client arg.
 		{"etcd://string-var", true, false, nil},
 		// Variable construction fails due to invalid decoder arg.
-		{"etcd://string-var?client=http://localhost:2379&decoder=notadecoder", true, false, nil},
+		{"etcd://string-var?client=http%3A%2F%2Flocalhost%3A2379&decoder=notadecoder", true, false, nil},
 		// Variable construction fails due to invalid arg.
-		{"etcd://string-var?client=http://localhost:2379&param=value", true, false, nil},
+		{"etcd://string-var?client=http%3A%2F%2Flocalhost%3A2379&param=value", true, false, nil},
 		// Working example with string decoder.
-		{"etcd://string-var?client=http://localhost:2379&decoder=string", false, false, "hello world"},
+		{"etcd://string-var?client=http%3A%2F%2Flocalhost%3A2379&decoder=string", false, false, "hello world"},
+		// Working example with default decoder.
+		{"etcd://string-var?client=http%3A%2F%2Flocalhost%3A2379", false, false, []byte("hello world")},
 		// Working example with JSON decoder.
-		{"etcd://json-var?client=http://localhost:2379&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"etcd://json-var?client=http%3A%2F%2Flocalhost%3A2379&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {
