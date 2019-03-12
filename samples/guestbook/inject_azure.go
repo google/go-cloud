@@ -56,8 +56,12 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), err
 
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, error) {
-	return azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // azureMOTDVar is a Wire provider function that returns the Message of the Day

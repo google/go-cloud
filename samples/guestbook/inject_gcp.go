@@ -52,8 +52,12 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
-func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
+func gcpBucket(ctx context.Context, flags *cliFlags, client *gcp.HTTPClient) (*blob.Bucket, func(), error) {
+	b, err := gcsblob.OpenBucket(ctx, client, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL

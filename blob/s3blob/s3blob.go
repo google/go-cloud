@@ -282,6 +282,10 @@ type bucket struct {
 	useLegacyList bool
 }
 
+func (b *bucket) Close() error {
+	return nil
+}
+
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	e, ok := err.(awserr.Error)
 	if !ok {

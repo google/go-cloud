@@ -76,7 +76,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(serverOptions)
-	bucket, err := awsBucket(ctx, sessionSession, flags)
+	bucket, cleanup4, err := awsBucket(ctx, sessionSession, flags)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -85,6 +85,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	variable, err := awsMOTDVar(ctx, sessionSession, flags)
 	if err != nil {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -92,6 +93,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	mainApplication := newApplication(serverServer, db, bucket, variable)
 	return mainApplication, func() {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -141,18 +143,20 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), err
 	}
 	pipelineOptions := _wirePipelineOptionsValue
 	pipeline := azureblob.NewPipeline(sharedKeyCredential, pipelineOptions)
-	bucket, err := azureBucket(ctx, pipeline, accountName, flags)
+	bucket, cleanup2, err := azureBucket(ctx, pipeline, accountName, flags)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
 	variable, err := azureMOTDVar(ctx, bucket, flags)
 	if err != nil {
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
 	mainApplication := newApplication(serverServer, db, bucket, variable)
 	return mainApplication, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }
@@ -204,20 +208,22 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(options)
-	bucket, err := gcpBucket(ctx, flags, httpClient)
+	bucket, cleanup3, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	runtimeConfigManagerClient, cleanup3, err := runtimeconfigurator.Dial(ctx, tokenSource)
+	runtimeConfigManagerClient, cleanup4, err := runtimeconfigurator.Dial(ctx, tokenSource)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
-	variable, cleanup4, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	variable, cleanup5, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
 	if err != nil {
+		cleanup4()
 		cleanup3()
 		cleanup2()
 		cleanup()
@@ -225,6 +231,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	}
 	mainApplication := newApplication(serverServer, db, bucket, variable)
 	return mainApplication, func() {
+		cleanup5()
 		cleanup4()
 		cleanup3()
 		cleanup2()
@@ -278,8 +285,12 @@ var (
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
-func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+func awsBucket(ctx context.Context, cp client.ConfigProvider, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // awsSQLParams is a Wire provider function that returns the RDS SQL connection
@@ -306,8 +317,12 @@ func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags
 
 // azureBucket is a Wire provider function that returns the Azure bucket based
 // on the command-line flags.
-func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, error) {
-	return azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob.AccountName, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := azureblob.OpenBucket(ctx, p, accountName, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // azureMOTDVar is a Wire provider function that returns the Message of the Day
@@ -322,8 +337,12 @@ func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtim
 
 // gcpBucket is a Wire provider function that returns the GCS bucket based on
 // the command-line flags.
-func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, error) {
-	return gcsblob.OpenBucket(ctx, client2, flags.bucket, nil)
+func gcpBucket(ctx context.Context, flags *cliFlags, client2 *gcp.HTTPClient) (*blob.Bucket, func(), error) {
+	b, err := gcsblob.OpenBucket(ctx, client2, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // gcpSQLParams is a Wire provider function that returns the Cloud SQL
