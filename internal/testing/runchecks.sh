@@ -47,7 +47,7 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   # If there are no such files, grep returns 1 and we don't have to run the
   # tests.
   echo "Looking for files that changed"
-  if grep -vP (^internal/website|.md$) $tmpfile; then
+  if grep -vP "(^internal/website|.md$)" $tmpfile; then
     echo "Running tests"
   else
     echo "Diff doesn't affect tests; not running them"
