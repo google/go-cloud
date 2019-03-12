@@ -73,7 +73,7 @@ type Options struct {
 }
 
 // New creates a new server. New(nil) is the same as new(Server).
-func New(opts *Options) *Server {
+func New(h http.Handler, opts *Options) *Server {
 	srv := new(Server)
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
