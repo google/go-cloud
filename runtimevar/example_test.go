@@ -24,6 +24,7 @@ import (
 
 	_ "gocloud.dev/runtimevar/runtimeconfigurator"
 	runtimeconfig "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc/status"
 )
 
 func ExampleVariable_Latest_jsonVariable() {
@@ -99,6 +100,30 @@ func ExampleSnapshot_As() {
 	var rcv *runtimeconfig.Variable
 	if s.As(&rcv) {
 		fmt.Println(rcv.UpdateTime)
+	}
+}
+
+func ExampleVariable_ErrorAs() {
+	// This example is specific to the runtimeconfigurator implementation; it
+	// demonstrates access to the underlying google.golang.org/grpc/status.Status
+	// type.
+	// The types exposed for As by runtimeconfigurator are documented in
+	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
+
+	ctx := context.Background()
+
+	const path = "runtimeconfigurator://proj/wrongconfig/key?decoder=string"
+	v, err := runtimevar.OpenVariable(ctx, path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = v.Watch(ctx)
+	if err != nil {
+		var s *status.Status
+		if v.ErrorAs(err, &s) {
+			fmt.Println(s.Code())
+		}
 	}
 }
 
