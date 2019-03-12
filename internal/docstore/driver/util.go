@@ -15,30 +15,9 @@
 package driver
 
 import (
-	"math/rand"
-	"sync"
-
 	"github.com/google/uuid"
 )
 
 // UniqueString generates a string that is unique with high probability.
 // Driver implementations can use it to generate keys for Create actions.
 func UniqueString() string { return uuid.New().String() }
-
-// Call when running tests that will be replayed.
-// Each seed value will result in UniqueString producing the same sequence of values.
-func MakeUniqueStringDeterministicForTesting(seed int64) {
-	r := &randReader{r: rand.New(rand.NewSource(seed))}
-	uuid.SetRand(r)
-}
-
-type randReader struct {
-	mu sync.Mutex
-	r  *rand.Rand
-}
-
-func (r *randReader) Read(buf []byte) (int, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.r.Read(buf)
-}

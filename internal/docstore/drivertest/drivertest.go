@@ -18,9 +18,12 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -341,4 +344,22 @@ func testCodec(t *testing.T, ct CodecTester) {
 	check(ct.DocstoreEncode, ct.DocstoreDecode)
 	check(ct.DocstoreEncode, ct.NativeDecode)
 	check(ct.NativeEncode, ct.DocstoreDecode)
+}
+
+// Call when running tests that will be replayed.
+// Each seed value will result in UniqueString producing the same sequence of values.
+func MakeUniqueStringDeterministicForTesting(seed int64) {
+	r := &randReader{r: rand.New(rand.NewSource(seed))}
+	uuid.SetRand(r)
+}
+
+type randReader struct {
+	mu sync.Mutex
+	r  *rand.Rand
+}
+
+func (r *randReader) Read(buf []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.r.Read(buf)
 }

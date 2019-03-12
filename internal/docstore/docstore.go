@@ -19,6 +19,7 @@ package docstore // import "gocloud.dev/internal/docstore"
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -204,7 +205,15 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 		// The map is easier for users to write, but the slice is easier
 		// to process.
 		// TODO(jba): check for prefix
-		for k, v := range a.mods {
+		// Sort keys so tests are deterministic.
+		var keys []string
+		for k := range a.mods {
+			keys = append(keys, string(k))
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			k := FieldPath(k)
+			v := a.mods[k]
 			fp, err := parseFieldPath(k)
 			if err != nil {
 				return nil, err

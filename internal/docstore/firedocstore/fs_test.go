@@ -58,7 +58,7 @@ func (h *harness) Close() {
 }
 
 func TestConformance(t *testing.T) {
-	driver.MakeUniqueStringDeterministicForTesting(1)
+	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	// TODO(jba): implement a CodecTester. This isn't easy, because the Firestore client
 	// (cloud.google.com/go/firestore) doesn't export its codec. We'll have to write a
 	// fake gRPC server to capture the protos.
