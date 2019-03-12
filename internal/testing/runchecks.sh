@@ -56,7 +56,7 @@ fi
 # Install wire; it's needed to build the project. Moved here from the "install"
 # step because we don't need to install wire if the diff doesn't require testing
 # (see condition above).
-go install github.com/google/wire/cmd/wire
+go install -mod=readonly github.com/google/wire/cmd/wire
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
