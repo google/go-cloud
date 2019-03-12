@@ -18,7 +18,6 @@ install:
   # converting \n to \r\n.
   - "git config --global core.autocrlf input"
   - "git checkout -- ."
-  - "go install github.com/google/wire/cmd/wire"
 
 script:
   - 'internal/testing/runchecks.sh'
