@@ -39,9 +39,9 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
   git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
 
-  # Find out if the diff has any files that are not:
+  # Find out if the diff has any files that are neither:
   #
-  # * in internal/website, or
+  # * in internal/website, nor
   # * end with .md
   #
   # If there are no such files, grep returns 1 and we don't have to run the
