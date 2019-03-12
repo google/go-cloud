@@ -35,12 +35,17 @@ import (
 
 type collection struct {
 	client    *vkit.Client
-	dbPath    string
-	collPath  string
+	dbPath    string // e.g. "projects/P/databases/(default)"
+	collPath  string // e.g. "projects/P/databases/(default)/documents/MyCollection"
 	nameField string
 }
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
+//
+// collPath is the path to the collection, starting from a root collection. It may
+// refer to a top-level collection, like "States", or it may be a path to a nested
+// collection, like "States/Wisconsin/Cities".
+//
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
