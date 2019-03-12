@@ -18,3 +18,4 @@ This will run the Hugo server that auto-updates its output based on the source
 contents. It will print out the `localhost:<PORT>` URL to point the browser to.
 
 This was tested with Hugo 0.53 but should work with subsequent versions as well.
+foo
