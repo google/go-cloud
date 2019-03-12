@@ -96,6 +96,10 @@ func OpenBucket(opts *Options) *blob.Bucket {
 	return blob.NewBucket(openBucket(opts))
 }
 
+func (b *bucket) Close() error {
+	return nil
+}
+
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	switch err {
 	case errNotFound:

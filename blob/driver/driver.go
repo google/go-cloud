@@ -265,6 +265,12 @@ type Bucket interface {
 	// If not supported, return an error for which IsNotImplemented returns
 	// true.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
+
+	// Close cleans up any resources used by the Bucket. Once Close is called,
+	// there will be no method calls to the Bucket other than As, ErrorAs, and
+	// ErrorCode. There may be open readers or writers that will receive calls.
+	// It is up to the driver as to how these will be handled.
+	Close() error
 }
 
 // SignedURLOptions sets options for SignedURL.

@@ -137,6 +137,10 @@ func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 	return blob.NewBucket(drv), nil
 }
 
+func (b *bucket) Close() error {
+	return nil
+}
+
 // escapeKey does all required escaping for UTF-8 strings to work the filesystem.
 func escapeKey(s string) string {
 	s = escape.HexEscape(s, func(r []rune, i int) bool {

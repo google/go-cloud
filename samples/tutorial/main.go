@@ -43,6 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to setup bucket: %s", err)
 	}
+	defer b.Close()
 
 	// Prepare the file for upload.
 	data, err := ioutil.ReadFile(file)
