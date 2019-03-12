@@ -83,11 +83,10 @@ func ExampleSnapshot_As() {
 	// google.golang.org/genproto/googleapis/cloud/runtimeconfig.Variable type.
 	// The types exposed for As by runtimeconfigurator are documented in
 	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
-
 	ctx := context.Background()
 
-	const path = "runtimeconfigurator://proj/config/key?decoder=string"
-	v, err := runtimevar.OpenVariable(ctx, path)
+	const url = "runtimeconfigurator://proj/config/key"
+	v, err := runtimevar.OpenVariable(ctx, url)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -109,11 +108,10 @@ func ExampleVariable_ErrorAs() {
 	// type.
 	// The types exposed for As by runtimeconfigurator are documented in
 	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
-
 	ctx := context.Background()
 
-	const path = "runtimeconfigurator://proj/wrongconfig/key?decoder=string"
-	v, err := runtimevar.OpenVariable(ctx, path)
+	const url = "runtimeconfigurator://proj/wrongconfig/key"
+	v, err := runtimevar.OpenVariable(ctx, url)
 	if err != nil {
 		log.Fatal(err)
 	}
