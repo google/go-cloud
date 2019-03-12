@@ -39,11 +39,15 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
   git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
 
-  # Find lines that don't start with internal/website in the diff log; if no such
-  # lines are found, it means that we don't have to run tests. grep returns 1 in
-  # this case.
+  # Find out if the diff has any files that are not:
+  #
+  # * in internal/website, or
+  # * end with .md
+  #
+  # If there are no such files, grep returns 1 and we don't have to run the
+  # tests.
   echo "Looking for files that changed"
-  if grep -v ^internal/website $tmpfile; then
+  if grep -vP (^internal/website|.md$) $tmpfile; then
     echo "Running tests"
   else
     echo "Diff doesn't affect tests; not running them"
@@ -77,10 +81,7 @@ fi
   echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
 
-# Install wire; Moved here from the "install" step because we don't need to
-# install wire if the diff doesn't require testing (see condition above).
 go install -mod=readonly github.com/google/wire/cmd/wire
-
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
