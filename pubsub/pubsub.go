@@ -317,6 +317,11 @@ const (
 
 // Add message processing time d to the weighted moving average.
 func (s *Subscription) addProcessingTime(d time.Duration) {
+	// Ensure d is non-zero; on some platforms, the granularity of time.Time
+	// isn't small enough to capture very fast message processing times.
+	if d == 0 {
+		d = 1 * time.Nanosecond
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.avgProcessTime == 0 {
