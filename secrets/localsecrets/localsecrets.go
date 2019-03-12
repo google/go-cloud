@@ -18,11 +18,11 @@
 //
 // URLs
 //
-// For secrets.OpenKeeper URLs, localsecrets registers for the schemes "stringkey"
-// and "base64key". For "stringkey" (e.g., "stringkey://my-secret-key"), the
-// first 32 bytes of the URL host are used as the secret key. For "base64key"
-// (e.g., "base64key://bXktc2VjcmV0LWtleQ=="), the URL host is base64-decoded
-// and the first 32 bytes of the result are used as the secret key.
+// For secrets.OpenKeeper, localsecrets registers for the schemes "stringkey"
+// and "base64key".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // As
 //
@@ -64,7 +64,7 @@ const (
 // bytes of the decoded bytes are used as the symmetric key for
 // encryption/decryption.
 //
-// No query parameters are accepted.
+// No query parameters are supported.
 type URLOpener struct {
 	base64 bool
 }

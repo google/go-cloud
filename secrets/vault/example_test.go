@@ -51,9 +51,8 @@ func Example_openKeeper() {
 	ctx := context.Background()
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
-	// The host+path are used as the keyID, and the "address" and "token"
-	// query parameters specify which Vault server to dial, and the auth token
-	// to use.
-	k, err := secrets.OpenKeeper(ctx, "vault://MYKEY?address=http://MYVAULT.SERVER.COM:8080&token=MYTOKEN")
+	// The default opener dials a default Vault server based on the environment
+	// variables VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
+	k, err := secrets.OpenKeeper(ctx, "vault://mykey")
 	_, _ = k, err
 }
