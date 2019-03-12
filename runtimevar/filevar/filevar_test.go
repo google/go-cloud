@@ -214,16 +214,14 @@ func TestOpenVariable(t *testing.T) {
 	}{
 		// Variable construction succeeds, but the file does not exist.
 		{"file://" + nonexistentPath, false, true, nil},
-		// Variable construction fails due to invalid wait arg.
-		{"file://" + txtPath + "?decoder=string&wait=notaduration", true, false, nil},
 		// Variable construction fails due to invalid decoder arg.
 		{"file://" + txtPath + "?decoder=notadecoder", true, false, nil},
 		// Variable construction fails due to invalid arg.
 		{"file://" + txtPath + "?param=value", true, false, nil},
 		// Working example with default decoder.
 		{"file://" + txtPath, false, false, []byte("hello world!")},
-		// Working example with string decoder and wait.
-		{"file://" + txtPath + "?decoder=string&wait=5s", false, false, "hello world!"},
+		// Working example with string decoder.
+		{"file://" + txtPath + "?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
 		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}

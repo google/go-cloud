@@ -18,17 +18,9 @@
 //
 // URLs
 //
-// For runtimevar.OpenVariable URLs, constantvar registers for the scheme
-// "constant". The host and path are ignored. It supports the following URL
-// parameters:
-//   - val: The value to use for the constant Variable. The bytes from val
-//       are passed to NewBytes.
-//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
-//       See runtimevar.DecoderByName for supported values.
-//   - err: The error to use for the constant Variable. A new error is created
-//       using errors.New and passed to NewError.
-// If both "err" and "val" are provided, "val" is ignored.
-// Example URL: "constant://?val=foo&decoder=string".
+// For runtimevar.OpenVariable, constantvar registers for the scheme "constant".
+// For more details on the URL format, see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // As
 //
@@ -54,36 +46,50 @@ func init() {
 // Scheme is the URL scheme constantvar registers its URLOpener under on blob.DefaultMux.
 const Scheme = "constant"
 
-// URLOpener opens Variable URLs like "constant://?val=foo&decoder=string".
-type URLOpener struct{}
+// URLOpener opens constantvar URLs like "constant://?val=foo&decoder=string".
+//
+// The host and path are ignored.
+//
+// The following URL parameters are supported:
+//   - val: The value to use for the constant Variable. The bytes from val
+//       are passed to NewBytes.
+//   - err: The error to use for the constant Variable. A new error is created
+//       using errors.New and passed to NewError.
+//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//       See runtimevar.DecoderByName for supported values.
+//
+// If both "err" and "val" are provided, "val" is ignored.
+type URLOpener struct {
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
+	Decoder *runtimevar.Decoder
+}
 
 // OpenVariableURL opens the variable at the URL's path. See the package doc
 // for more details.
-func (*URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
-	decoder, err := runtimevar.DecoderByName(q.Get("decoder"))
+
+	val := q.Get("val")
+	q.Del("val")
+
+	errVal := q.Get("err")
+	q.Del("err")
+
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
 	if err != nil {
 		return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
 	}
-	var value string
-	var errVal error
-	for param, values := range q {
-		val := values[0]
-		switch param {
-		case "decoder":
-			// processed elsewhere
-		case "val":
-			value = val
-		case "err":
-			errVal = errors.New(val)
-		default:
-			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
-		}
+
+	for param := range q {
+		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
 	}
-	if errVal != nil {
-		return NewError(errVal), nil
+	if errVal != "" {
+		return NewError(errors.New(errVal)), nil
 	}
-	return NewBytes([]byte(value), decoder), nil
+	return NewBytes([]byte(val), decoder), nil
 }
 
 var errNotExist = errors.New("variable does not exist")

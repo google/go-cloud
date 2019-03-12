@@ -18,16 +18,11 @@
 //
 // URLs
 //
-// For runtimevar.OpenVariable URLs, blobvar registers for the scheme "blob".
-// The host+path is used as the blob key. blobvar supports the following URL
-// parameters:
-//   - bucket: The URL to be passed to blob.OpenBucket (required).
-//       blob.OpenBucket will be called once per unique bucket URL.
-//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
-//       See runtimevar.DecoderByName for supported values.
-//   - wait: The poll interval; supported values are from time.ParseDuration.
-//       Defaults to 30s.
-// Example URL: "blob://myvar.txt?bucket=file:///foo/bar&decoder=string".
+// For runtimevar.OpenVariable, blobvar registers for the scheme "blob".
+// The host+path is used as the blobkey.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // As
 //
@@ -58,17 +53,14 @@ func init() {
 // Scheme is the URL scheme blobvar registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "blob"
 
-// URLOpener opens Variable URLs like "blob://myblobkey?decoder=string".
-// It supports the URL parameters:
+// URLOpener opens blob-backed URLs like "blob://myblobkey?decoder=string".
+// It supports the following URL parameters:
 //   - bucket: The URL to be passed to blob.OpenBucket. Required unless
 //       URLOpener.Bucket is provided explicitly.
 //       blob.OpenBucket will be called once per unique bucket URL.
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
-//   - wait: The poll interval; supported values are from time.ParseDuration.
-//       Defaults to 30s.
-//
 type URLOpener struct {
 	// Mux is required unless Bucket is provided. The "bucket" URL parameter
 	// must be provided, and Mux will be used to open it. Opened buckets are
@@ -78,9 +70,11 @@ type URLOpener struct {
 	// Bucket is optional; if it is provided, it is always used.
 	Bucket *blob.Bucket
 
-	// Decoder and Options can be specified at URLOpener construction time,
-	// or provided/overridden via URL parameters.
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
+
+	// Options specifies the Options for NewVariable.
 	Options Options
 
 	mu      sync.Mutex
@@ -98,8 +92,6 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q := u.Query()
 
 	bucket := o.Bucket
-	decoder := o.Decoder
-	options := o.Options
 	var watcherOpener *URLOpener // Set if bucket opened via URL to decrement references.
 
 	if bucket == nil {
@@ -118,28 +110,18 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		watcherOpener = o
 		q.Del("bucket")
 	}
-	if decoderName := q.Get("decoder"); decoderName != "" || decoder == nil {
-		var err error
-		decoder, err = runtimevar.DecoderByName(decoderName)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
-		}
-		q.Del("decoder")
+
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %q: invalid decoder: %v", u, err)
 	}
-	for param, values := range q {
-		val := values[0]
-		switch param {
-		case "wait":
-			var err error
-			options.WaitDuration, err = time.ParseDuration(val)
-			if err != nil {
-				return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
-			}
-		default:
-			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
-		}
+
+	for param := range q {
+		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
 	}
-	return runtimevar.New(newWatcher(bucket, path.Join(u.Host, u.Path), decoder, watcherOpener, &options)), nil
+	return runtimevar.New(newWatcher(bucket, path.Join(u.Host, u.Path), decoder, watcherOpener, &o.Options)), nil
 }
 
 func (o *URLOpener) bucketForURL(ctx context.Context, bucketURL string) (*blob.Bucket, error) {

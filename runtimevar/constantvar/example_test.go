@@ -39,7 +39,7 @@ func Example() {
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -60,7 +60,7 @@ func Example_bytes() {
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,8 +77,9 @@ func Example_error() {
 	v := constantvar.NewError(errFake)
 	defer v.Close()
 
-	// We can now read the current value of the variable from v
-	// (and always get an error back).
+	// We can now use Watch to read the current value of the variable
+	// from v. Note that Latest would block here since it waits for
+	// a "good" value, and v will never get one.
 	_, err := v.Watch(context.Background())
 	if err == nil {
 		log.Fatal("Expected an error!")
@@ -97,7 +98,7 @@ func Example_openVariable() {
 		log.Fatal(err)
 	}
 
-	snapshot, err := v.Watch(ctx)
+	snapshot, err := v.Latest(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
