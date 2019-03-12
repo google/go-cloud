@@ -14,7 +14,9 @@
 
 package driver
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 // UniqueString generates a string that is unique with high probability.
 // Driver implementations can use it to generate keys for Create actions.
