@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"log"
 
+	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/gcpkms"
 	"gocloud.dev/secrets/localsecrets"
+	"google.golang.org/grpc/status"
 )
 
 func Example() {
@@ -45,4 +48,28 @@ func Example() {
 
 	// Output:
 	// Go CDK Secrets
+}
+
+func ExampleKeeper_ErrorAs() {
+	// This example is specific to the gcpkms implementation; it
+	// demonstrates access to the underlying google.golang.org/grpc/status.Status
+	// type.
+	// The types exposed for As by gcpkms are documented in
+	// https://godoc.org/gocloud.dev/secrets/gcpkms#hdr-As
+	ctx := context.Background()
+
+	const url = "gcpkms://projects/proj/locations/global/keyRings/test/ring/wrongkey"
+	k, err := secrets.OpenKeeper(ctx, url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	plaintext := []byte("Go CDK secrets")
+	_, err = k.Encrypt(ctx, plaintext)
+	if err != nil {
+		var s *status.Status
+		if k.ErrorAs(err, &s) {
+			fmt.Println(s.Code())
+		}
+	}
 }
