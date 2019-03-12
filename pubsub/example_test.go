@@ -90,7 +90,7 @@ func Example_sendReceiveMultipleMessages() {
 	// sent.
 	sort.Strings(ms2)
 
-	// Print out and acknowledge the received messages.
+	// Print out the received messages.
 	for _, m2 := range ms2 {
 		fmt.Println(m2)
 	}
