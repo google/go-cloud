@@ -42,9 +42,9 @@ import (
 //
 // 4. Set your environment variables depending on the auth model selection. Modify helper initEnv() as needed.
 // For Service Principal, please set the following, see https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization.
-// - AZURE_TENANT_ID
-// - AZURE_CLIENT_ID
-// - AZURE_CLIENT_SECRET
+// - AZURE_TENANT_ID (The ID for the Active Directory tenant that the service principal belongs to.)
+// - AZURE_CLIENT_ID (The name or ID of the service principal.)
+// - AZURE_CLIENT_SECRET (The secret associated with the service principal.)
 // - AZURE_ENVIRONMENT
 // - AZURE_AD_RESOURCE to https://vault.azure.net
 //
@@ -53,7 +53,7 @@ import (
 // 6. Update constants below to match your Azure KeyVault settings.
 
 const (
-	keyVaultName = "go-cloud"
+	keyVaultName = "go-cdk"
 	keyID1       = "test1"
 	keyID2       = "test2"
 	// Important: an empty key version will default to 'Current Version' in Azure Key Vault.
@@ -127,9 +127,11 @@ func initEnv() {
 	// For Client Certificate and Azure Managed Service Identity, see doc below for help
 	// https://github.com/Azure/azure-sdk-for-go
 
-	// os.Setenv("AZURE_TENANT_ID", "Specifies the Tenant to which to authenticate")
-	// os.Setenv("AZURE_CLIENT_ID", "Specifies the app client ID to use")
-	// os.Setenv("AZURE_CLIENT_SECRET", "Specifies the app secret to use")
+	if os.Getenv("AZURE_TENANT_ID") == "" ||
+		os.Getenv("AZURE_CLIENT_ID") == "" ||
+		os.Getenv("AZURE_CLIENT_SECRET") == "" {
+		log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
+	}
 
 	os.Setenv("AZURE_ENVIRONMENT", env.Name)
 
