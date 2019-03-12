@@ -46,6 +46,7 @@ func Example_read() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	data, err := b.ReadAll(ctx, "my-key")
@@ -55,12 +56,12 @@ func Example_read() {
 	_ = data
 }
 
-func Example_open() {
+func Example_openBucket() {
 	ctx := context.Background()
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	// This URL will open the bucket "my-bucket" using default credentials.
 	b, err := blob.OpenBucket(ctx, "gs://my-bucket")
-	_ = b
-	_ = err
+	defer b.Close()
+	_, _ = b, err
 }

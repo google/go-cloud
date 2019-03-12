@@ -311,11 +311,12 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 			key := keyForIndex(i)
 			if !found[key] {
 				if err := b.WriteAll(ctx, key, content, nil); err != nil {
+					b.Close()
 					t.Fatal(err)
 				}
 			}
 		}
-		return drv, func() { h.Close() }
+		return drv, func() { b.Close(); h.Close() }
 	}
 
 	for _, tc := range tests {
@@ -478,11 +479,12 @@ func testListWeirdKeys(t *testing.T, newHarness HarnessMaker) {
 			key := keyPrefix + k
 			if !found[key] {
 				if err := b.WriteAll(ctx, key, content, nil); err != nil {
+					b.Close()
 					t.Fatal(err)
 				}
 			}
 		}
-		return b, func() { h.Close() }
+		return b, func() { b.Close(); h.Close() }
 	}
 
 	b, done := init(t)
@@ -778,11 +780,12 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			key := prefix + strings.Join(keyParts, delim)
 			if !found[key] {
 				if err := b.WriteAll(ctx, key, content, nil); err != nil {
+					b.Close()
 					t.Fatal(err)
 				}
 			}
 		}
-		return drv, b, func() { h.Close() }
+		return drv, b, func() { b.Close(); h.Close() }
 	}
 
 	for _, tc := range tests {
@@ -957,13 +960,15 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 		}
 		b := blob.NewBucket(drv)
 		if skipCreate {
-			return b, func() { h.Close() }
+			return b, func() { b.Close(); h.Close() }
 		}
 		if err := b.WriteAll(ctx, key, content, nil); err != nil {
+			b.Close()
 			t.Fatal(err)
 		}
 		return b, func() {
 			_ = b.Delete(ctx, key)
+			b.Close()
 			h.Close()
 		}
 	}
@@ -1039,10 +1044,12 @@ func testAttributes(t *testing.T, newHarness HarnessMaker) {
 			ContentLanguage:    contentLanguage,
 		}
 		if err := b.WriteAll(ctx, key, content, opts); err != nil {
+			b.Close()
 			t.Fatal(err)
 		}
 		return b, func() {
 			_ = b.Delete(ctx, key)
+			b.Close()
 			h.Close()
 		}
 	}
@@ -1232,10 +1239,12 @@ func testWrite(t *testing.T, newHarness HarnessMaker) {
 			// If the test wants the blob to already exist, write it.
 			if tc.exists {
 				if err := b.WriteAll(ctx, key, []byte(existingContent), nil); err != nil {
+					b.Close()
 					t.Fatal(err)
 				}
 				defer func() {
 					_ = b.Delete(ctx, key)
+					b.Close()
 				}()
 			}
 
@@ -1313,7 +1322,7 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 		exists      bool
 	}{
 		{
-			// The write will be buffered in the concrete type as part of
+			// The write will be buffered in the portable type as part of
 			// ContentType detection, so the first call to the Driver will be Close.
 			description: "EmptyContentType",
 		},
@@ -1345,6 +1354,7 @@ func testCanceledWrite(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			b := blob.NewBucket(drv)
+			defer b.Close()
 
 			opts := &blob.WriterOptions{
 				ContentType: test.contentType,
@@ -1510,6 +1520,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			b := blob.NewBucket(drv)
+			defer b.Close()
 			opts := &blob.WriterOptions{
 				Metadata:    tc.metadata,
 				ContentType: tc.contentType,
@@ -1556,6 +1567,7 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	b := blob.NewBucket(drv)
+	defer b.Close()
 
 	// Write the two blobs.
 	if err := b.WriteAll(ctx, aKey, aContent, nil); err != nil {
@@ -1626,6 +1638,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		b := blob.NewBucket(drv)
+		defer b.Close()
 
 		err = b.Delete(ctx, "does-not-exist")
 		if err == nil {
@@ -1646,6 +1659,7 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		b := blob.NewBucket(drv)
+		defer b.Close()
 
 		// Create the blob.
 		if err := b.WriteAll(ctx, key, []byte("Hello world"), nil); err != nil {
@@ -1689,6 +1703,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		b := blob.NewBucket(drv)
+		defer b.Close()
 
 		// Write the blob.
 		key := keyPrefix + escape.NonUTF8String
@@ -1709,6 +1724,7 @@ func testKeys(t *testing.T, newHarness HarnessMaker) {
 				t.Fatal(err)
 			}
 			b := blob.NewBucket(drv)
+			defer b.Close()
 
 			// Write the blob.
 			key = keyPrefix + key
@@ -1783,9 +1799,10 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	b := blob.NewBucket(drv)
+	defer b.Close()
 
 	// Verify that a negative Expiry gives an error. This is enforced in the
-	// concrete type, so works regardless of provider support.
+	// portable type, so works regardless of provider support.
 	_, err = b.SignedURL(ctx, key, &blob.SignedURLOptions{Expiry: -1 * time.Minute})
 	if err == nil {
 		t.Error("got nil error, expected error for negative SignedURLOptions.Expiry")
@@ -1847,6 +1864,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Fatal(err)
 	}
 	b := blob.NewBucket(drv)
+	defer b.Close()
 
 	// Verify Bucket.As.
 	if err := st.BucketCheck(b); err != nil {
@@ -1873,6 +1891,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer r.Close()
 	if err := st.ReaderCheck(r); err != nil {
 		t.Error(err)
 	}

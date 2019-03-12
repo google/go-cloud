@@ -179,7 +179,7 @@ func GRPCCode(err error) ErrorCode {
 	}
 }
 
-// ErrorAs is a helper for the ErrorAs method of an API's concrete type.
+// ErrorAs is a helper for the ErrorAs method of an API's portable type.
 // It performs some initial nil checks, and does a single level of unwrapping
 // when err is a *gcerr.Error. Then it calls its errorAs argument, which should
 // be a driver implementation of ErrorAs.

@@ -32,6 +32,9 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
+// Alternatively, you can construct a *Keeper via a URL and OpenKeeper.
+// See https://godoc.org/gocloud.dev#URLs for more information.
+//
 //
 // OpenCensus Integration
 //
@@ -57,11 +60,11 @@ package secrets // import "gocloud.dev/secrets"
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 	"gocloud.dev/secrets/driver"
 )
 
@@ -122,12 +125,10 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 	return b, nil
 }
 
-// ErrorAs converts i to provider-specific error types when you want to directly
-// handle the raw error types returned by the provider. This means that you
-// will write some provider-specific code to handle the error, so use with care.
-//
-// See the documentation for the subpackage used to instantiate Keeper to see
-// which error type(s) are supported.
+// ErrorAs converts i to provider-specific types. See
+// https://godoc.org/gocloud.dev#As for background information and the
+// provider-specific package documentation for the specific types supported for
+// that provider.
 //
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
@@ -154,47 +155,37 @@ type KeeperURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
+// See https://godoc.org/gocloud.dev#URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]KeeperURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterKeeper registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterKeeper panics.
 func (mux *URLMux) RegisterKeeper(scheme string, opener KeeperURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]KeeperURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("secrets", "Keeper", scheme, opener)
 }
 
 // OpenKeeper calls OpenKeeperURL with the URL parsed from urlstr.
 // OpenKeeper is safe to call from multiple goroutines.
 func (mux *URLMux) OpenKeeper(ctx context.Context, urlstr string) (*Keeper, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("Keeper", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open keeper: %v", err)
+		return nil, err
 	}
-	return mux.OpenKeeperURL(ctx, u)
+	return opener.(KeeperURLOpener).OpenKeeperURL(ctx, u)
 }
 
 // OpenKeeperURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenKeeperURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open keeper %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("Keeper", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener KeeperURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open keeper %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenKeeperURL(ctx, u)
+	return opener.(KeeperURLOpener).OpenKeeperURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
@@ -206,12 +197,10 @@ func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
 
-// OpenKeeper opens the Keeper identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenKeeper opens the Keeper identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenKeeper(ctx context.Context, urlstr string) (*Keeper, error) {
 	return defaultURLMux.OpenKeeper(ctx, urlstr)
 }

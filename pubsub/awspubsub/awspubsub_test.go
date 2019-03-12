@@ -16,18 +16,11 @@ package awspubsub
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
-
-	"github.com/googleapis/gax-go"
-	"gocloud.dev/internal/batcher"
-	"gocloud.dev/internal/retry"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -104,8 +97,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 	}
 	dt = openTopic(ctx, client, *out.TopicArn, nil)
 	cleanup = func() {
-		// TODO: Call client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 	}
 	return dt, cleanup, nil
 }
@@ -129,182 +121,72 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	}
 	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
 
-	// TODO: call
-	//   snsClient := sns.New(h.sess, h.cfg)
-	//   subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueURL, dt)
-	// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
-	//
-	// In the meantime, it's necessary to manually go into the AWS console
-	// in the SQS section and manually subscribe the queues to the topics
-	// after running the test once in -record mode and seeing it fail due
-	// to the queues not being subscribed.
+	snsClient := sns.New(sess, &aws.Config{})
+	cleanupSub, err := subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("subscribing: %v", err)
+	}
 	cleanup = func() {
-		// TODO: Call sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
-		// once https://github.com/aws/aws-sdk-go/issues/2415 is resolved.
+		sqsClient.DeleteQueue(&sqs.DeleteQueueInput{QueueUrl: out.QueueUrl})
+		cleanupSub()
 	}
 	return ds, cleanup, nil
 }
 
-// ackBatcher is a trivial batcher that sends off items as singleton batches.
-type ackBatcher struct {
-	handler func(items interface{}) error
-}
-
-func (ab *ackBatcher) Add(ctx context.Context, item interface{}) error {
-	item2 := item.(driver.AckID)
-	items := []driver.AckID{item2}
-	return ab.handler(items)
-}
-
-func (ab *ackBatcher) AddNoWait(item interface{}) <-chan error {
-	item2 := item.(driver.AckID)
-	items := []driver.AckID{item2}
-	c := make(chan error)
-	go func() {
-		c <- ab.handler(items)
-	}()
-	return c
-}
-
-func (ab *ackBatcher) Shutdown() {
-}
-
-func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) error {
+func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *sns.SNS, qURL *string, dt driver.Topic) (func(), error) {
 	out2, err := sqsClient.GetQueueAttributes(&sqs.GetQueueAttributesInput{
 		QueueUrl:       qURL,
 		AttributeNames: []*string{aws.String("QueueArn")},
 	})
 	if err != nil {
-		return fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
+		return nil, fmt.Errorf("getting queue ARN for %s: %v", *qURL, err)
 	}
 	qARN := out2.Attributes["QueueArn"]
 
 	t := dt.(*topic)
-	_, err = snsClient.Subscribe(&sns.SubscribeInput{
+	subOut, err := snsClient.Subscribe(&sns.SubscribeInput{
 		TopicArn: aws.String(t.arn),
 		Endpoint: qARN,
 		Protocol: aws.String("sqs"),
 	})
 	if err != nil {
-		return fmt.Errorf("subscribing: %v", err)
+		return nil, fmt.Errorf("subscribing: %v", err)
 	}
-
-	// Get the confirmation from the queue.
-	out3, err := sqsClient.ReceiveMessage(&sqs.ReceiveMessageInput{
-		QueueUrl: qURL,
-	})
-	if err != nil {
-		return fmt.Errorf("receiving subscription confirmation message from queue: %v", err)
-	}
-	ms := out3.Messages
-	var token *string
-	switch len(ms) {
-	case 0:
-		return errors.New("no subscription confirmation message found in queue")
-	case 1:
-		m := ms[0]
-		token = m.Body
-	default:
-		return fmt.Errorf("%d messages found in queue, want exactly 1", len(ms))
-	}
-	_, err = snsClient.ConfirmSubscription(&sns.ConfirmSubscriptionInput{
-		TopicArn: aws.String(t.arn),
-		Token:    token,
-	})
-	if err != nil {
-		return fmt.Errorf("confirming subscription: %v", err)
-	}
-	return nil
-}
-
-func makeAckBatcher(ctx context.Context, ds driver.Subscription, setPermanentError func(error)) driver.Batcher {
-	const maxHandlers = 1
-	h := func(items interface{}) error {
-		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() error {
-			return ds.SendAcks(ctx, ids)
+	cleanup := func() {
+		_, _ = snsClient.Unsubscribe(&sns.UnsubscribeInput{
+			SubscriptionArn: subOut.SubscriptionArn,
 		})
-		if err != nil {
-			setPermanentError(err)
-		}
-		return err
 	}
-	b := batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, h)
-	return &wrappedBatcher{b}
-	// return &simpleBatcher{handler: h, batch: nil}
+
+	queuePolicy := `{
+"Version": "2012-10-17",
+"Id": "AllowQueue",
+"Statement": [
+{
+"Sid": "MySQSPolicy001",
+"Effect": "Allow",
+"Principal": {
+"AWS": "*"
+},
+"Action": "sqs:SendMessage",
+"Resource": "` + *qARN + `",
+"Condition": {
+"ArnEquals": {
+"aws:SourceArn": "` + t.arn + `"
 }
-
-type wrappedBatcher struct {
-	b *batcher.Batcher
 }
-
-// Add adds an item to the batcher.
-func (wb *wrappedBatcher) Add(ctx context.Context, item interface{}) error {
-	return wb.b.Add(ctx, item)
 }
-
-// AddNoWait adds an item to the batcher. Unlike the method with the
-// same name on the production batcher (internal/batcher), this method
-// blocks in order to make acking and receiving happen in a deterministic
-// order, to support record/replay.
-func (wb *wrappedBatcher) AddNoWait(item interface{}) <-chan error {
-	c := make(chan error, 1)
-	defer close(c)
-	c <- wb.b.Add(context.Background(), item)
-	return c
-}
-
-// Shutdown waits for all active calls to Add to finish, then returns. After
-// Shutdown is called, all calls to Add fail.
-func (wb *wrappedBatcher) Shutdown() {
-	wb.b.Shutdown()
-}
-
-type simpleBatcher struct {
-	mu   sync.Mutex
-	done bool
-
-	handler func(items interface{}) error
-}
-
-// Add adds an item to the batcher.
-func (sb *simpleBatcher) Add(ctx context.Context, item interface{}) error {
-	c := sb.AddNoWait(item)
-	// Wait until either our result is ready or the context is done.
-	select {
-	case err := <-c:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// AddNoWait adds an item to the batcher. Unlike the method with the
-// same name on the production batcher (internal/batcher), this method
-// blocks in order to make acking and receiving happen in a deterministic
-// order, to support record/replay.
-func (sb *simpleBatcher) AddNoWait(item interface{}) <-chan error {
-	c := make(chan error, 1)
-	defer close(c)
-	if sb.done {
-		c <- errors.New("tried to add an item to a simpleBatcher after shutdown")
-		return c
-	}
-	m := item.(*pubsub.Message)
-	batch := []*pubsub.Message{m}
-	err := sb.handler(batch)
+]
+}`
+	_, err = sqsClient.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+		Attributes: map[string]*string{"Policy": &queuePolicy},
+		QueueUrl:   qURL,
+	})
 	if err != nil {
-		c <- err
+		return nil, fmt.Errorf("setting policy: %v", err)
 	}
-	return c
-}
 
-// Shutdown waits for all active calls to Add to finish, then returns. After
-// Shutdown is called, all calls to Add fail.
-func (sb *simpleBatcher) Shutdown() {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	sb.done = true
+	return cleanup, nil
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {

@@ -6,6 +6,10 @@ _Write once, run on any cloud ☁️_
 [![godoc](https://godoc.org/github.com/google/go-cloud?status.svg)][godoc]
 [![Coverage](https://codecov.io/gh/google/go-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/google/go-cloud)
 
+<p align="center">
+  <img width="509" height="276" src="internal/website/static/go-cdk-logo-gopherblue.png" alt="">
+</p>
+
 The Go Cloud Development Kit (Go CDK) allows Go application developers to
 seamlessly deploy cloud applications on any combination of cloud providers. It
 does this by providing stable, idiomatic interfaces for common uses like storage
@@ -20,6 +24,7 @@ bucket, err := blob.OpenBucket(ctx, "s3://my-bucket")
 if err != nil {
     return err
 }
+defer bucket.Close()
 blobReader, err := bucket.NewReader(ctx, "my-blob", nil)
 if err != nil {
     return err

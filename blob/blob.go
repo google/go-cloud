@@ -38,9 +38,8 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
-// Alternatively, you can construct a *Bucket using blob.OpenBucket by providing
-// a URL that's supported by a blob subpackage that you have linked
-// in to your application.
+// Alternatively, you can construct a *Bucket via a URL and OpenBucket.
+// See https://godoc.org/gocloud.dev#URLs for more information.
 //
 //
 // Errors
@@ -96,6 +95,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -106,6 +106,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
+	"gocloud.dev/internal/openurl"
 )
 
 // Reader reads bytes from a blob.
@@ -149,7 +150,9 @@ func (r *Reader) Size() int64 {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (r *Reader) As(i interface{}) bool {
 	return r.r.As(i)
 }
@@ -191,7 +194,9 @@ type Attributes struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (a *Attributes) As(i interface{}) bool {
 	if a.asFunc == nil {
 		return false
@@ -336,13 +341,13 @@ type ListOptions struct {
 	// BeforeList is a callback that will be called before each call to the
 	// the underlying provider's list functionality.
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeList func(asFunc func(interface{}) bool) error
 }
 
 // ListIterator iterates over List results.
 type ListIterator struct {
-	b       driver.Bucket
+	b       *Bucket
 	opts    *driver.ListOptions
 	page    *driver.ListPage
 	nextIdx int
@@ -373,10 +378,15 @@ func (i *ListIterator) Next(ctx context.Context) (*ListObject, error) {
 		// We need to load the next page.
 		i.opts.PageToken = i.page.NextPageToken
 	}
+	i.b.mu.RLock()
+	defer i.b.mu.RUnlock()
+	if i.b.closed {
+		return nil, errClosed
+	}
 	// Loading a new page.
-	p, err := i.b.ListPaged(ctx, i.opts)
+	p, err := i.b.b.ListPaged(ctx, i.opts)
 	if err != nil {
-		return nil, wrapError(i.b, err)
+		return nil, wrapError(i.b.b, err)
 	}
 	i.page = p
 	i.nextIdx = 0
@@ -403,7 +413,9 @@ type ListObject struct {
 }
 
 // As converts i to provider-specific types.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (o *ListObject) As(i interface{}) bool {
 	if o.asFunc == nil {
 		return false
@@ -418,6 +430,11 @@ func (o *ListObject) As(i interface{}) bool {
 type Bucket struct {
 	b      driver.Bucket
 	tracer *oc.Tracer
+
+	// mu protects the closed variable.
+	// Read locks are kept to prevent closing until a call finishes.
+	mu     sync.RWMutex
+	closed bool
 }
 
 const pkgName = "gocloud.dev/blob"
@@ -467,29 +484,9 @@ func newBucket(b driver.Bucket) *Bucket {
 }
 
 // As converts i to provider-specific types.
-//
-// This function (and the other As functions in this package) are inherently
-// provider-specific, and using them will make that part of your application
-// non-portable, so use with care.
-//
-// See the documentation for the subpackage used to instantiate Bucket to see
-// which type(s) are supported.
-//
-// Usage:
-//
-// 1. Declare a variable of the provider-specific type you want to access.
-//
-// 2. Pass a pointer to it to As.
-//
-// 3. If the type is supported, As will return true and copy the
-// provider-specific type into your variable. Otherwise, it will return false.
-//
-// Provider-specific types that are intended to be mutable will be exposed
-// as a pointer to the underlying type.
-//
-// See
-// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-// for more background.
+// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
 func (b *Bucket) As(i interface{}) bool {
 	if i == nil {
 		return false
@@ -497,10 +494,10 @@ func (b *Bucket) As(i interface{}) bool {
 	return b.b.As(i)
 }
 
-// ErrorAs converts i to provider-specific types.
+// ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See Bucket.As for more details.
+// See https://godoc.org/gocloud.dev#As for background information.
 func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, b.b.ErrorAs)
 }
@@ -508,6 +505,11 @@ func (b *Bucket) ErrorAs(err error, i interface{}) bool {
 // ReadAll is a shortcut for creating a Reader via NewReader with nil
 // ReaderOptions, and reading the entire blob.
 func (b *Bucket) ReadAll(ctx context.Context, key string) (_ []byte, err error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	r, err := b.NewReader(ctx, key, nil)
 	if err != nil {
 		return nil, err
@@ -533,7 +535,7 @@ func (b *Bucket) List(opts *ListOptions) *ListIterator {
 		Delimiter:  opts.Delimiter,
 		BeforeList: opts.BeforeList,
 	}
-	return &ListIterator{b: b.b, opts: dopts}
+	return &ListIterator{b: b, opts: dopts}
 }
 
 // Exists returns true if a blob exists at key, false if it does not exist, or
@@ -560,6 +562,11 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 		return Attributes{}, fmt.Errorf("blob.Attributes: key must be a valid UTF-8 string: %q", key)
 	}
 
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return Attributes{}, errClosed
+	}
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
@@ -608,6 +615,11 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	if offset < 0 {
 		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
 	}
@@ -704,6 +716,11 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		}
 		dopts.Metadata = md
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return nil, errClosed
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	tctx := b.tracer.Start(ctx, "NewWriter")
 	end := func(err error) { b.tracer.End(tctx, err) }
@@ -758,6 +775,11 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	if !utf8.ValidString(key) {
 		return fmt.Errorf("blob.Delete: key must be a valid UTF-8 string: %q", key)
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return errClosed
+	}
 	ctx = b.tracer.Start(ctx, "Delete")
 	defer func() { b.tracer.End(ctx, err) }()
 	return wrapError(b.b, b.b.Delete(ctx, key))
@@ -788,8 +810,25 @@ func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptio
 	dopts := driver.SignedURLOptions{
 		Expiry: opts.Expiry,
 	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return "", errClosed
+	}
 	url, err := b.b.SignedURL(ctx, key, &dopts)
 	return url, wrapError(b.b, err)
+}
+
+// Close releases any resources used for the bucket.
+func (b *Bucket) Close() error {
+	b.mu.Lock()
+	prev := b.closed
+	b.closed = true
+	b.mu.Unlock()
+	if prev {
+		return errClosed
+	}
+	return b.b.Close()
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.
@@ -863,7 +902,7 @@ type WriterOptions struct {
 	// sending an upload request.
 	//
 	// asFunc converts its argument to provider-specific types.
-	// See Bucket.As for more details.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
@@ -879,47 +918,37 @@ type BucketURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
+// See https://godoc.org/gocloud.dev#URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]BucketURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterBucket registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterBucket panics.
 func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]BucketURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("blob", "Bucket", scheme, opener)
 }
 
 // OpenBucket calls OpenBucketURL with the URL parsed from urlstr.
 // OpenBucket is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("Bucket", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open bucket: %v", err)
+		return nil, err
 	}
-	return mux.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 // OpenBucketURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenBucketURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open bucket %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("Bucket", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener BucketURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open bucket %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenBucketURL(ctx, u)
+	return opener.(BucketURLOpener).OpenBucketURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
@@ -931,12 +960,10 @@ func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
 
-// OpenBucket opens the bucket identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenBucket opens the bucket identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenBucket(ctx context.Context, urlstr string) (*Bucket, error) {
 	return defaultURLMux.OpenBucket(ctx, urlstr)
 }
@@ -950,3 +977,5 @@ func wrapError(b driver.Bucket, err error) error {
 	}
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
 }
+
+var errClosed = errors.New("blob: operation on closed bucket")

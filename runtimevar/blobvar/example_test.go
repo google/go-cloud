@@ -35,6 +35,7 @@ func Example() {
 	// Here, we use an in-memory implementation and write a sample
 	// configuration value.
 	bucket := memblob.OpenBucket(nil)
+	defer bucket.Close()
 	ctx := context.Background()
 	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte(`{"Server": "foo.com", "Port": 80}`), nil)
 	if err != nil {
@@ -62,4 +63,17 @@ func Example() {
 
 	// Output:
 	// foo.com running on port 80
+}
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	// This example watches a variable based on a file-based blob.Bucket with JSON.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?bucket=file:///mypath&decoder=json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Watch(ctx)
+	_, _ = snapshot, err
 }

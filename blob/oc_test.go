@@ -35,6 +35,7 @@ func TestOpenCensus(t *testing.T) {
 
 	bytes := []byte("foo")
 	b := memblob.OpenBucket(nil)
+	defer b.Close()
 	if err := b.WriteAll(ctx, "key", bytes, nil); err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,18 @@
 // Package etcdvar provides a runtimevar implementation with variables
 // backed by etcd. Use New to construct a *runtimevar.Variable.
 //
+// URLs
+//
+// For runtimevar.OpenVariable URLs, etcdvar registers for the scheme "etcd".
+// The host+path is used as the blob key. etcdvar supports the following URL
+// parameters:
+//   - client: The URL to be passed to etcd's
+//       go.etcd.io/etcd/clientv3.NewFromURL (required).
+//       NewFromURL will be called once per unique client URL.
+//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//       See runtimevar.DecoderByName for supported values.
+// Example URL: "blob://myvar?client=http://my.etcd.server:8080&decoder=string".
+//
 // As
 //
 // etcdvar exposes the following types for As:
@@ -26,6 +38,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"path"
+	"sync"
 	"time"
 
 	"go.etcd.io/etcd/clientv3"
@@ -35,6 +50,80 @@ import (
 	"gocloud.dev/runtimevar/driver"
 	"google.golang.org/grpc/codes"
 )
+
+func init() {
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &lazyClientOpener{})
+}
+
+// Scheme is the URL scheme etcdvar registers its URLOpener under on runtimevar.DefaultMux.
+const Scheme = "etcd"
+
+type lazyClientOpener struct {
+	mu      sync.Mutex
+	clients map[string]*clientv3.Client
+}
+
+func (o *lazyClientOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	clientURL := u.Query().Get("client")
+	if clientURL == "" {
+		return nil, fmt.Errorf("open variable %q: URL parameter \"client\" is required", u)
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.clients == nil {
+		o.clients = map[string]*clientv3.Client{}
+	}
+	cli := o.clients[clientURL]
+	if cli == nil {
+		var err error
+		cli, err = clientv3.NewFromURL(clientURL)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: NewFromURL failed: %v", u, err)
+		}
+		o.clients[clientURL] = cli
+	}
+	opener := URLOpener{Client: cli}
+	return opener.OpenVariableURL(ctx, u)
+}
+
+// URLOpener opens Variable URLs like "etcd://mykey?decoder=string".
+// It supports the URL parameters:
+//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//       See runtimevar.DecoderByName for supported values.
+type URLOpener struct {
+	// The Client to use; required.
+	Client *clientv3.Client
+
+	// Decoder and Options can be specified at URLOpener construction time,
+	// or provided/overridden via URL parameters.
+	Decoder *runtimevar.Decoder
+	Options Options
+}
+
+// OpenVariableURL opens the variable at the URL's path. See the package doc
+// for more details.
+func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	if o.Client == nil {
+		return nil, fmt.Errorf("open variable %q: a client is required", u)
+	}
+	q := u.Query()
+	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
+		var err error
+		o.Decoder, err = runtimevar.DecoderByName(decoderName)
+		if err != nil {
+			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
+		}
+	}
+	for param := range q {
+		switch param {
+		case "decoder", "client":
+			// processed elsewhere
+		default:
+			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		}
+	}
+	return New(o.Client, path.Join(u.Host, u.Path), o.Decoder, &o.Options)
+}
 
 // Options sets options.
 type Options struct {

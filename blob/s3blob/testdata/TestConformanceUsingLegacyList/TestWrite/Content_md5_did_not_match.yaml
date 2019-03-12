@@ -1,0 +1,33 @@
+---
+version: 1
+interactions:
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190307T170109Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
+    method: GET
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-reading</Key><RequestId>62D7A6CF3D7D75D8</RequestId><HostId>l0mRZzXZA36paq1svR2ZU/+Dyrm1vjVu/uHzGrIdWhEVjeECgxNYq+KZMnJuTWHFnU5p3mq4w1Y=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Thu, 07 Mar 2019 17:01:09 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - l0mRZzXZA36paq1svR2ZU/+Dyrm1vjVu/uHzGrIdWhEVjeECgxNYq+KZMnJuTWHFnU5p3mq4w1Y=
+      X-Amz-Request-Id:
+      - 62D7A6CF3D7D75D8
+    status: 404 Not Found
+    code: 404
+    duration: ""

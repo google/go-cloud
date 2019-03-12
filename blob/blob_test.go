@@ -213,7 +213,7 @@ func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
-// wrapped exactly once by the concrete type.
+// wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	buf := bytes.Repeat([]byte{'A'}, sniffLen)
@@ -290,23 +290,17 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var got *url.URL
 
 	mux := new(URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterBucket("foo", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
-		got = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterBucket("err", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
-		return nil, errors.New("fail")
-	}))
+	fake := &fakeOpener{}
+	mux.RegisterBucket("foo", fake)
+	mux.RegisterBucket("err", fake)
 
 	for _, tc := range []struct {
 		name    string
 		url     string
 		wantErr bool
+		want    string
 	}{
 		{
 			name:    "empty URL",
@@ -335,22 +329,27 @@ func TestURLMux(t *testing.T) {
 		{
 			name: "no query options",
 			url:  "foo://mybucket",
+			want: "foo://mybucket",
 		},
 		{
 			name: "empty query options",
 			url:  "foo://mybucket?",
+			want: "foo://mybucket?",
 		},
 		{
 			name: "query options",
 			url:  "foo://mybucket?aAa=bBb&cCc=dDd",
+			want: "foo://mybucket?aAa=bBb&cCc=dDd",
 		},
 		{
 			name: "multiple query options",
 			url:  "foo://mybucket?x=a&x=b&x=c",
+			want: "foo://mybucket?x=a&x=b&x=c",
 		},
 		{
 			name: "fancy bucket name",
 			url:  "foo:///foo/bar/baz",
+			want: "foo:///foo/bar/baz",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -361,19 +360,33 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
+			}
+			// Repeat with OpenBucketURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			_, gotErr = mux.OpenBucketURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
 			}
 		})
 	}
 }
 
-type bucketURLOpenFunc func(context.Context, *url.URL) (*Bucket, error)
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenBucketURL
+}
 
-func (f bucketURLOpenFunc) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	return f(ctx, u)
+func (o *fakeOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }

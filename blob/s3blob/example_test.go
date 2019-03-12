@@ -39,6 +39,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	data, err := b.ReadAll(ctx, "my-key")
@@ -48,10 +49,11 @@ func Example() {
 	_ = data
 }
 
-func Example_open() {
+func Example_openBucket() {
 	ctx := context.Background()
 
-	// Open creates a *blob.Bucket from a URL.
+	// OpenBucket creates a *blob.Bucket from a URL.
 	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
+	defer b.Close()
 	_, _ = b, err
 }

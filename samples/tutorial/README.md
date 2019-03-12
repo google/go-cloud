@@ -78,7 +78,7 @@ func main() {
     if err != nil {
         log.Fatalf("Failed to setup bucket: %s", err)
     }
-    _ = b
+    defer b.Close()
 }
 ```
 

@@ -46,6 +46,7 @@ func ExampleBucket_NewReader() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// Open a reader using the blob's key.
 	ctx := context.Background()
@@ -79,6 +80,7 @@ func ExampleBucket_NewRangeReader() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// Open a reader using the blob's key at a specific offset at length.
 	ctx := context.Background()
@@ -106,6 +108,7 @@ func ExampleBucket_NewWriter() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// Open a writer using the key "foo.txt" and the default options.
 	ctx := context.Background()
@@ -152,6 +155,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// We now have a *blob.Bucket! We can write our application using the
 	// *blob.Bucket type, and have the freedom to change the initialization code
@@ -184,6 +188,7 @@ func ExampleBucket_ErrorAs() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	_, err = b.ReadAll(ctx, "nosuchfile")
 	if err != nil {
@@ -205,6 +210,7 @@ func ExampleBucket_List() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// Create some blob objects for listing: "foo[0..4].txt".
 	ctx := context.Background()
@@ -248,6 +254,7 @@ func ExampleBucket_List_withDelimiter() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer bucket.Close()
 
 	// Create some blob objects in a hierarchy.
 	ctx := context.Background()
@@ -310,6 +317,7 @@ func ExampleBucket_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Access storage.Client fields via gcsClient here.
 	var gcsClient *storage.Client
@@ -336,6 +344,7 @@ func ExampleWriterOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	beforeWrite := func(as func(interface{}) bool) error {
 		var sw *storage.Writer
@@ -363,6 +372,7 @@ func ExampleListObject_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	iter := b.List(nil)
 	for {
@@ -393,6 +403,7 @@ func ExampleListOptions() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	beforeList := func(as func(interface{}) bool) error {
 		// Access storage.Query via q here.
@@ -428,6 +439,7 @@ func ExampleReader_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	r, err := b.NewReader(ctx, "gopher.png", nil)
 	if err != nil {
@@ -453,6 +465,7 @@ func ExampleAttributes_As() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	attrs, err := b.Attributes(ctx, "gopher.png")
 	if err != nil {

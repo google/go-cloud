@@ -18,7 +18,7 @@
 //
 // As
 //
-// gcspubsub exposes the following types for As:
+// gcppubsub exposes the following types for As:
 //  - Topic: *raw.PublisherClient
 //  - Subscription: *raw.SubscriberClient
 //  - Message: *pb.PubsubMessage
@@ -141,16 +141,16 @@ func (t *topic) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Topic.ErrorAs
-func (*topic) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (*topic) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
-func errorAs(err error, target interface{}) bool {
+func errorAs(err error, i interface{}) bool {
 	s, ok := status.FromError(err)
 	if !ok {
 		return false
 	}
-	p, ok := target.(**status.Status)
+	p, ok := i.(**status.Status)
 	if !ok {
 		return false
 	}
@@ -249,10 +249,13 @@ func (s *subscription) As(i interface{}) bool {
 }
 
 // ErrorAs implements driver.Subscription.ErrorAs
-func (*subscription) ErrorAs(err error, target interface{}) bool {
-	return errorAs(err, target)
+func (*subscription) ErrorAs(err error, i interface{}) bool {
+	return errorAs(err, i)
 }
 
 func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
+
+// AckFunc implements driver.Subscription.AckFunc.
+func (*subscription) AckFunc() func() { return nil }

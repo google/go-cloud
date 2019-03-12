@@ -21,9 +21,13 @@ import (
 
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
+
+	_ "gocloud.dev/runtimevar/runtimeconfigurator"
+	runtimeconfig "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"google.golang.org/grpc/status"
 )
 
-func Example_jsonVariable() {
+func ExampleVariable_Latest_jsonVariable() {
 	// DBConfig is the sample config struct we're going to parse our JSON into.
 	type DBConfig struct {
 		Host     string
@@ -42,8 +46,8 @@ func Example_jsonVariable() {
 	v := constantvar.NewBytes([]byte(jsonConfig), decoder)
 	defer v.Close()
 
-	// Call Watch to retrieve the value.
-	snapshot, err := v.Watch(context.Background())
+	// Call Latest to retrieve the value.
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
@@ -54,15 +58,15 @@ func Example_jsonVariable() {
 	// Config: {Host:gocloud.dev Port:8080 Username:testuser}
 }
 
-func Example_stringVariable() {
+func ExampleVariable_Latest_stringVariable() {
 	// Construct a *Variable using a constructor from one of the
 	// runtimevar subpackages. This example uses constantvar.
 	// The variable value is of type string, so we use StringDecoder.
 	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
 	defer v.Close()
 
-	// Call Watch to retrieve the value.
-	snapshot, err := v.Watch(context.Background())
+	// Call Latest to retrieve the value.
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatalf("Error in retrieving variable: %v", err)
 	}
@@ -71,4 +75,86 @@ func Example_stringVariable() {
 
 	// Output:
 	// "hello world"
+}
+
+func ExampleSnapshot_As() {
+	// This example is specific to the runtimeconfigurator implementation; it
+	// demonstrates access to the underlying
+	// google.golang.org/genproto/googleapis/cloud/runtimeconfig.Variable type.
+	// The types exposed for As by runtimeconfigurator are documented in
+	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
+	ctx := context.Background()
+
+	const url = "runtimeconfigurator://proj/config/key"
+	v, err := runtimevar.OpenVariable(ctx, url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, err := v.Latest(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var rcv *runtimeconfig.Variable
+	if s.As(&rcv) {
+		fmt.Println(rcv.UpdateTime)
+	}
+}
+
+func ExampleVariable_ErrorAs() {
+	// This example is specific to the runtimeconfigurator implementation; it
+	// demonstrates access to the underlying google.golang.org/grpc/status.Status
+	// type.
+	// The types exposed for As by runtimeconfigurator are documented in
+	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
+	ctx := context.Background()
+
+	const url = "runtimeconfigurator://proj/wrongconfig/key"
+	v, err := runtimevar.OpenVariable(ctx, url)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = v.Watch(ctx)
+	if err != nil {
+		var s *status.Status
+		if v.ErrorAs(err, &s) {
+			fmt.Println(s.Code())
+		}
+	}
+}
+
+func ExampleVariable_Watch() {
+	// Construct a *Variable using a constructor from one of the
+	// runtimevar subpackages. This example uses constantvar.
+	// The variable value is of type string, so we use StringDecoder.
+	v := constantvar.NewBytes([]byte("hello world"), runtimevar.StringDecoder)
+	defer v.Close()
+
+	// Call Watch in a loop from a background goroutine to see all changes,
+	// including errors.
+	//
+	// You can use this for logging, or to trigger behaviors when the
+	// config changes.
+	//
+	// Note that Latest always returns the latest "good" config, so seeing
+	// an error from Watch doesn't mean that Latest will return one.
+	go func() {
+		for {
+			snapshot, err := v.Watch(context.Background())
+			if err == runtimevar.ErrClosed {
+				// v has been closed; exit.
+				return
+			}
+			if err == nil {
+				// Casting to a string here because we used StringDecoder.
+				log.Printf("New config: %v", snapshot.Value.(string))
+			} else {
+				log.Printf("Error loading config: %v", err)
+				// Even though there's been an error loading the config,
+				// v.Latest will continue to return the latest "good" value.
+			}
+		}
+	}()
 }

@@ -66,7 +66,7 @@ type WriterOptions struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Language
 	ContentLanguage string
 	// ContentMD5 is used as a message integrity check.
-	// The concrete type checks that the MD5 hash of the bytes written matches
+	// The portable type checks that the MD5 hash of the bytes written matches
 	// ContentMD5.
 	// If len(ContentMD5) > 0, driver implementations may pass it to their
 	// underlying network service to guarantee the integrity of the bytes in
@@ -115,7 +115,7 @@ type Attributes struct {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
 	ContentType string
 	// Metadata holds key/value pairs associated with the blob.
-	// Keys will be lowercased by the concrete type before being returned
+	// Keys will be lowercased by the portable type before being returned
 	// to the user. If there are duplicate case-insensitive keys (e.g.,
 	// "foo" and "FOO"), only one value will be kept, and it is undefined
 	// which one.
@@ -208,32 +208,13 @@ type Bucket interface {
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
 
-	// As allows providers to expose provider-specific types.
-	//
-	// i will be a pointer to the type the user wants filled in.
-	// As should either fill it in and return true, or return false.
-	//
-	// Mutable objects should be exposed as a pointer to the object;
-	// i will therefore be a **.
-	//
-	// A provider should document the type(s) it support in package
-	// comments, and add conformance tests verifying them.
-	//
-	// A sample implementation might look like this, for supporting foo.MyType:
-	//   mt, ok := i.(*foo.MyType)
-	//   if !ok {
-	//     return false
-	//   }
-	//   *i = foo.MyType{}  // or, more likely, the existing value
-	//   return true
-	//
-	// See
-	// https://github.com/google/go-cloud/blob/master/internal/docs/design.md#as
-	// for more background.
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for returned
-	// errors; see Bucket.As for more details.
+	// errors.
+	// See https://godoc.org/gocloud.dev#As for background information.
 	ErrorAs(error, interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
@@ -284,6 +265,12 @@ type Bucket interface {
 	// If not supported, return an error for which IsNotImplemented returns
 	// true.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
+
+	// Close cleans up any resources used by the Bucket. Once Close is called,
+	// there will be no method calls to the Bucket other than As, ErrorAs, and
+	// ErrorCode. There may be open readers or writers that will receive calls.
+	// It is up to the driver as to how these will be handled.
+	Close() error
 }
 
 // SignedURLOptions sets options for SignedURL.

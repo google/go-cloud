@@ -17,13 +17,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -31,6 +30,7 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/mempubsub"
+	"golang.org/x/sync/errgroup"
 )
 
 type driverTopic struct {
@@ -107,6 +107,8 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 func (s *driverSub) IsRetryable(error) bool { return false }
 
 func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+
+func (*driverSub) AckFunc() func() { return nil }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -241,6 +243,8 @@ func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([
 	return nil, ctx.Err()
 }
 
+func (blockingDriverSub) AckFunc() func() { return nil }
+
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
 	// 1. Goroutine 1 calls Receive, obtains the lock (Subscription.mu),
@@ -335,6 +339,8 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 
 func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
 
+func (*failSub) AckFunc() func() { return nil }
+
 // TODO(jba): add a test for retry of SendAcks.
 
 var errDriver = errors.New("driver error")
@@ -358,9 +364,10 @@ func (erroringSubscription) ReceiveBatch(context.Context, int) ([]*driver.Messag
 func (erroringSubscription) SendAcks(context.Context, []driver.AckID) error { return errDriver }
 func (erroringSubscription) IsRetryable(err error) bool                     { return isRetryable(err) }
 func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
+func (erroringSubscription) AckFunc() func()                                { return nil }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
-// wrapped exactly once by the concrete type.
+// wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	top := pubsub.NewTopic(erroringTopic{}, nil)
@@ -474,4 +481,146 @@ func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+var (
+	testOpenOnce sync.Once
+	testOpenGot  *url.URL
+)
+
+func TestURLMux(t *testing.T) {
+	ctx := context.Background()
+
+	mux := new(pubsub.URLMux)
+	fake := &fakeOpener{}
+	mux.RegisterTopic("foo", fake)
+	mux.RegisterTopic("err", fake)
+	mux.RegisterSubscription("foo", fake)
+	mux.RegisterSubscription("err", fake)
+
+	for _, tc := range []struct {
+		name    string
+		url     string
+		wantErr bool
+		want    string
+	}{
+		{
+			name:    "empty URL",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL",
+			url:     ":foo",
+			wantErr: true,
+		},
+		{
+			name:    "invalid URL no scheme",
+			url:     "foo",
+			wantErr: true,
+		},
+		{
+			name:    "unregistered scheme",
+			url:     "bar://myps",
+			wantErr: true,
+		},
+		{
+			name:    "func returns error",
+			url:     "err://myps",
+			wantErr: true,
+		},
+		{
+			name: "no query options",
+			url:  "foo://myps",
+			want: "foo://myps",
+		},
+		{
+			name: "empty query options",
+			url:  "foo://myps?",
+			want: "foo://myps?",
+		},
+		{
+			name: "query options",
+			url:  "foo://myps?aAa=bBb&cCc=dDd",
+			want: "foo://myps?aAa=bBb&cCc=dDd",
+		},
+		{
+			name: "multiple query options",
+			url:  "foo://myps?x=a&x=b&x=c",
+			want: "foo://myps?x=a&x=b&x=c",
+		},
+		{
+			name: "fancy ps name",
+			url:  "foo:///foo/bar/baz",
+			want: "foo:///foo/bar/baz",
+		},
+	} {
+		t.Run("topic: "+tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenTopic(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
+			}
+			// Repeat with OpenTopicURL.
+			parsed, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, gotErr = mux.OpenTopicURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
+			}
+		})
+		t.Run("subscription: "+tc.name, func(t *testing.T) {
+			_, gotErr := mux.OpenSubscription(ctx, tc.url)
+			if (gotErr != nil) != tc.wantErr {
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
+			}
+			// Repeat with OpenSubscriptionURL.
+			parsed, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, gotErr = mux.OpenSubscriptionURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.want {
+				t.Errorf("got %q want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenTopicURL/OpenSubscriptionURL
+}
+
+func (o *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
+}
+
+func (o *fakeOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }

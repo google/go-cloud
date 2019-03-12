@@ -1,23 +1,18 @@
-<aside class="sidebar">
+<div class="sidebar">
   <div class="container">
     <div class="sidebar-about">
-      <a href="{{ .Site.BaseURL }}"><h1>{{ .Site.Title }}</h1></a>
-      <p class="lead">
-      {{ with .Site.Params.description }} {{.}} {{ else }}
-      Welcome to the Go Cloud Development Kit!
-      {{end}}
-      </p>
+      <a href="{{ .Site.BaseURL }}"><img class="sidebar-logo" src="{{ relURL "/go-cdk-logo-white.png" }}" alt="{{ .Site.Title }}"></a>
     </div>
-    <hr/>
+    <hr class="sidebar-line" />
     <nav>
       <ul class="sidebar-nav">
         {{ range sort .Site.RegularPages -}}
-          <li><a href="{{.URL}}"> {{ .Name }} </a></li>
+          <li><a href="{{.URL}}" class="sidebar-navlink"> {{ .Name }} </a></li>
         {{- end }}
       </ul>
       <a href="https://github.com/google/go-cloud">
-        <img class="stickcenter" src="{{ .Site.BaseURL }}/gh.png"></img>
+        <img class="stickcenter" src="{{ relURL "/gh.png" }}"></img>
       </a>
     </nav>
   </div>
-</aside>
+</div>
