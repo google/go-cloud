@@ -24,6 +24,7 @@ bucket, err := blob.OpenBucket(ctx, "s3://my-bucket")
 if err != nil {
     return err
 }
+defer bucket.Close()
 blobReader, err := bucket.NewReader(ctx, "my-blob", nil)
 if err != nil {
     return err

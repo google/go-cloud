@@ -202,6 +202,8 @@ func NewGCPDialOptions(t *testing.T, mode recorder.Mode, filename string) (opts 
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Uncomment for more verbose logging from the replayer.
+	// r.SetLogFunc(t.Logf)
 	opts = r.DialOptions()
 	done = func() {
 		if err := r.Close(); err != nil {

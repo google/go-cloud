@@ -45,6 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open bucket: %s", err)
 	}
+	defer b.Close()
 
 	data, err := b.ReadAll(ctx, blobKey)
 	if err != nil {

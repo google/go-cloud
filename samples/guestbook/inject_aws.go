@@ -51,8 +51,12 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 // awsBucket is a Wire provider function that returns the S3 bucket based on the
 // command-line flags.
-func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags) (*blob.Bucket, error) {
-	return s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+func awsBucket(ctx context.Context, cp awsclient.ConfigProvider, flags *cliFlags) (*blob.Bucket, func(), error) {
+	b, err := s3blob.OpenBucket(ctx, cp, flags.bucket, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	return b, func() { b.Close() }, nil
 }
 
 // awsSQLParams is a Wire provider function that returns the RDS SQL connection

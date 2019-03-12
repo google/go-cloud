@@ -244,6 +244,10 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
+func (b *bucket) Close() error {
+	return nil
+}
+
 // ListPaged implements driver.ListPaged.
 func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
 	bkt := b.client.Bucket(b.name)

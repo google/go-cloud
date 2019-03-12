@@ -302,6 +302,10 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
+func (b *bucket) Close() error {
+	return nil
+}
+
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	key = escapeKey(key, false)
