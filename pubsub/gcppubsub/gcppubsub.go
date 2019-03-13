@@ -113,8 +113,8 @@ const Scheme = "gcppubsub"
 // URLOpener opens GCP Pub/Sub URLs like "gcppubsub://myproject/mytopic" for
 // topics or "gcppubsub://myproject/mysub" for subscriptions.
 //
-// The URL's host is used as the projectID, and the URL path is used as the topic
-// or subscription name.
+// The URL's host is used as the projectID, and the URL's path (with the
+// leading "/" trimmed) is used as the topic or subscription name.
 //
 // No URL parameters are supported.
 type URLOpener struct {
