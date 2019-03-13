@@ -32,6 +32,9 @@ func ExampleOpenKeeper() {
 	// URLOpener, which implements secrets.KeeperURLOpener:
 	// import _ "gocloud.dev/secrets/localsecrets"
 	// localsecrets registers for the "base64key" scheme.
+	// All secrets.OpenKeeper URLs also work with "secrets+" or "secrets+keeper+" prefixes,
+	// e.g., "secrets+base64key://..." or "secrets+variable+base64key://...".
+	// All secrets URLs also work with the "secrets+" prefix, e.g., "secrets+base64key://".
 	k, err := secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
 	if err != nil {
 		log.Fatal(err)

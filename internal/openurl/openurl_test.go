@@ -29,12 +29,18 @@ func TestSchemeMap(t *testing.T) {
 	}{
 		{"invalid url", true, nil},
 		{"foo://a/b/c", false, foo},
+		{"api+foo://a/b/c", false, foo},
+		{"api+type+foo://a/b/c", false, foo},
 		{"bar://a?p=v", false, bar},
+		{"api+bar://a", false, bar},
+		{"api+type+bar://a", false, bar},
+		{"typ+bar://a", true, nil},
+		{"api+typ+bar://a", true, nil},
 	}
 
 	var emptyM, m openurl.SchemeMap
-	m.Register("api", "type", "foo", foo)
-	m.Register("api", "type", "bar", bar)
+	m.Register("api", "Type", "foo", foo)
+	m.Register("api", "Type", "bar", bar)
 
 	for _, test := range tests {
 		// Empty SchemeMap should always return an error.
