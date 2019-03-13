@@ -58,9 +58,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 			o.err = fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
 			return
 		}
-		o.opener = &URLOpener{
-			Connection: conn,
-		}
+		o.opener = &URLOpener{Connection: conn}
 	})
 	return o.opener, o.err
 }
@@ -86,9 +84,16 @@ const Scheme = "rabbit"
 
 // URLOpener opens RabbitMQ URLs like "rabbit://myexchange" for
 // topics or "rabbit://myqueue" for subscriptions.
+//
+// For topics, the URL's host+path is used as the exchange name.
+//
+// For subscriptions, the URL's host+path is used as the queue name.
+//
+// No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
+
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
 	// SubscriptionOptions specifies the options to pass to OpenSubscription.

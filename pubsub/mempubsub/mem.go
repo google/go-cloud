@@ -21,8 +21,11 @@
 //
 // URLs
 //
-// For pubsub.OpenTopic/Subscription URLs, mempubsub registers for the scheme "mem".
-// See URLOpener for more details.
+// For pubsub.OpenTopic and pubsub.OpenSubscription, mempubsub registers
+// for the scheme "mem".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // As
 //
@@ -53,7 +56,9 @@ func init() {
 const Scheme = "mem"
 
 // URLOpener opens mempubsub URLs like "mem://topic".
+//
 // The URL's host+path is used as the topic to create or subscribe to.
+//
 // Query parameters:
 //   - ackdeadline: The ack deadline for OpenSubscription, in time.ParseDuration formats.
 //       Defaults to 1m.
@@ -62,7 +67,7 @@ type URLOpener struct {
 	topics map[string]*pubsub.Topic
 }
 
-// OpenTopicURL opens the GCP Pub/Sub topic with the same name as the URL's host.
+// OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
@@ -81,7 +86,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	return t, nil
 }
 
-// OpenSubscriptionURL opens the GCS bucket with the same name as the URL's host.
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	q := u.Query()
 

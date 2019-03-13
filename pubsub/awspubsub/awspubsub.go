@@ -17,10 +17,14 @@
 //
 // URLs
 //
-// For pubsub.OpenTopic/Subscription URLs, awspubsub registers for the scheme
-// "awssnssqs". pubsub.OpenTopic/Subscription will create a new AWS
-// session with the default options. If you want to use a different session or
-// find details on the format of the URL, see URLOpener.
+// For pubsub.OpenTopic and pubsub.OpenSubscription, awspubsub registers
+// for the scheme "awssnssqs".
+// The default URL opener will use an AWS session with the default credentials
+// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+// for more details.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // Escaping
 //
@@ -87,7 +91,7 @@ func init() {
 }
 
 // lazySessionOpener obtains the AWS session from the environment on the first
-// call to OpenBucketURL.
+// call to OpenXXXURL.
 type lazySessionOpener struct {
 	init   sync.Once
 	opener *URLOpener
@@ -129,10 +133,14 @@ const Scheme = "awssnssqs"
 
 // URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
 // topics or "awssnssqs://sqs-queue-url" for subscriptions.
+//
 // For topics, the URL's host+path is used as the topic ARN.
+//
 // For subscriptions, the URL's host+path is prefixed with "https://" to create
 //    the queue URL.
-// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters.
+//
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// that affect the default AWS session.
 type URLOpener struct {
 	// ConfigProvider configures the connection to AWS.
 	ConfigProvider client.ConfigProvider
