@@ -17,11 +17,13 @@
 //
 // URLs
 //
-// For blob.OpenBucket URLs, gcsblob registers for the scheme "gs"; URLs start
-// with "gs://", like "gs://mybucket". blob.OpenBucket will use Application
-// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
-// If you want to use different credentials or find details on the format of the
-// URL, see URLOpener.
+// For blob.OpenBucket, gcsblob registers for the scheme "gs".
+// The default URL opener will creating a connection using use default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#URLs for background information.
 //
 // Escaping
 //
@@ -97,7 +99,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open GCS bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %q: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -108,10 +110,12 @@ const Scheme = "gs"
 
 // URLOpener opens GCS URLs like "gs://mybucket".
 //
-// This opener supports the following query parameters:
+// The URL host is used as the bucket name.
 //
-//     access_id: sets Options.GoogleAccessID
-//     private_key_path: path to read for Options.PrivateKey
+// The following query parameters are supported:
+//
+//   - access_id: sets Options.GoogleAccessID
+//   - private_key_path: path to read for Options.PrivateKey
 type URLOpener struct {
 	// Client must be set to a non-nil HTTP client authenticated with
 	// Cloud Storage scope or equivalent.
@@ -133,7 +137,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
 		if k != "access_id" && k != "private_key_path" {
-			return nil, fmt.Errorf("unknown GCS query parameter %s", k)
+			return nil, fmt.Errorf("unknown query parameter %q", k)
 		}
 	}
 	opts := new(Options)
