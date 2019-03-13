@@ -18,12 +18,12 @@
 // URLs
 //
 // For secrets.OpenKeeper, gcpkms registers for the scheme "gcpkms".
-// The default URL opener will creating a connection using use default
+// The default URL opener will create a connection using use default
 // credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
-// See https://godoc.org/gocloud.dev#URLs for background information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
