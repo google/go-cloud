@@ -36,6 +36,7 @@ package runtimeconfigurator // import "gocloud.dev/runtimevar/runtimeconfigurato
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -166,14 +167,9 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	for param := range q {
 		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
 	}
-	var rn ResourceName
-	rn.ProjectID = u.Host
-	if pathParts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2); len(pathParts) == 2 {
-		rn.Config = pathParts[0]
-		rn.Variable = pathParts[1]
-	}
-	if rn.ProjectID == "" || rn.Config == "" || rn.Variable == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
+	rn, err := newResourceNameFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
 	return NewVariable(o.Client, rn, o.Decoder, &o.Options)
 }
@@ -211,6 +207,25 @@ type ResourceName struct {
 	ProjectID string
 	Config    string
 	Variable  string
+}
+
+func newResourceNameFromURL(u *url.URL) (ResourceName, error) {
+	var rn ResourceName
+	rn.ProjectID = u.Host
+	// Using SplitN because the variable name can be hierarchical; we
+	// take the first path element as the Config and the result for the
+	// Variable.
+	if pathParts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2); len(pathParts) == 2 {
+		rn.Config = pathParts[0]
+		rn.Variable = pathParts[1]
+	}
+	if rn.ProjectID == "" {
+		return ResourceName{}, errors.New("URL must have a non-empty Host (the project ID)")
+	}
+	if rn.Config == "" || rn.Variable == "" {
+		return ResourceName{}, errors.New("URL must have a Path with at 2 non-empty elements (the key config and key name)")
+	}
+	return rn, nil
 }
 
 func (r ResourceName) configPath() string {

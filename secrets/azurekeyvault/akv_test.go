@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -155,6 +156,41 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 		return errors.New("Keeper.ErrorAs failed")
 	}
 	return nil
+}
+
+func TestKeyInfoFromURL(t *testing.T) {
+	tests := []struct {
+		URL         string
+		WantErr     bool
+		WantVault   string
+		WantKey     string
+		WantVersion string
+	}{
+		{"azurekeyvault://vault1/key1/version1", false, "vault1", "key1", "version1"},
+		{"azurekeyvault://vault2/key2/version2", false, "vault2", "key2", "version2"},
+		{"azurekeyvault://vault3/key3", false, "vault3", "key3", ""},
+		{"azurekeyvault://vault/key/version/extra", true, "", "", ""},
+		{"azurekeyvault://vault", true, "", "", ""},
+	}
+	for _, test := range tests {
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotVault, gotKey, gotVersion, gotErr := keyInfoFromURL(u)
+		if (gotErr != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
+		}
+		if gotVault != test.WantVault {
+			t.Errorf("%s: got vault %q want %q", test.URL, gotVault, test.WantVault)
+		}
+		if gotKey != test.WantKey {
+			t.Errorf("%s: got key %q want %q", test.URL, gotKey, test.WantKey)
+		}
+		if gotVersion != test.WantVersion {
+			t.Errorf("%s: got version %q want %q", test.URL, gotVersion, test.WantVersion)
+		}
+	}
 }
 
 func TestOpenKeeper(t *testing.T) {
