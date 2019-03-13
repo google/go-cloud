@@ -95,16 +95,16 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 
 	if bucket == nil {
 		if o.Mux == nil {
-			return nil, fmt.Errorf("open variable %q: URLOpener.Mux is required if Bucket is not provided", u)
+			return nil, fmt.Errorf("open variable %v: URLOpener.Mux is required if Bucket is not provided", u)
 		}
 		bucketURL := u.Query().Get("bucket")
 		if bucketURL == "" {
-			return nil, fmt.Errorf("open variable %q: URL parameter \"bucket\" is required", u)
+			return nil, fmt.Errorf("open variable %v: URL parameter \"bucket\" is required", u)
 		}
 		var err error
 		bucket, err = o.bucketForURL(ctx, bucketURL)
 		if err != nil {
-			return nil, fmt.Errorf("open variable %q: %v", u, err)
+			return nil, fmt.Errorf("open variable %v: %v", u, err)
 		}
 		watcherOpener = o
 		q.Del("bucket")
@@ -114,11 +114,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %q: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	return runtimevar.New(newWatcher(bucket, path.Join(u.Host, u.Path), decoder, watcherOpener, &o.Options)), nil
 }

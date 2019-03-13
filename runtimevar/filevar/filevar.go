@@ -91,11 +91,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %q: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	path := u.Path
 	if os.PathSeparator != '/' {

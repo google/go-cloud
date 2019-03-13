@@ -77,7 +77,7 @@ func (o *defaultDialer) OpenVariableURL(ctx context.Context, u *url.URL) (*runti
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %q: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -110,11 +110,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %q: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	return New(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
 }

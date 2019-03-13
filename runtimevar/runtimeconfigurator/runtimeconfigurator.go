@@ -109,7 +109,7 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %q: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -151,11 +151,11 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	q.Del("decoder")
 	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
 	if err != nil {
-		return nil, fmt.Errorf("open variable %q: invalid decoder: %v", u, err)
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	var rn ResourceName
 	rn.ProjectID = u.Host
@@ -164,7 +164,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		rn.Variable = pathParts[1]
 	}
 	if rn.ProjectID == "" || rn.Config == "" || rn.Variable == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
+		return nil, fmt.Errorf("open variable %v: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
 	}
 	return NewVariable(o.Client, rn, decoder, &o.Options)
 }
