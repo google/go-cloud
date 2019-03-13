@@ -300,7 +300,6 @@ func TestURLMux(t *testing.T) {
 		name    string
 		url     string
 		wantErr bool
-		want    string
 	}{
 		{
 			name:    "empty URL",
@@ -329,27 +328,30 @@ func TestURLMux(t *testing.T) {
 		{
 			name: "no query options",
 			url:  "foo://mybucket",
-			want: "foo://mybucket",
 		},
 		{
 			name: "empty query options",
 			url:  "foo://mybucket?",
-			want: "foo://mybucket?",
 		},
 		{
 			name: "query options",
 			url:  "foo://mybucket?aAa=bBb&cCc=dDd",
-			want: "foo://mybucket?aAa=bBb&cCc=dDd",
 		},
 		{
 			name: "multiple query options",
 			url:  "foo://mybucket?x=a&x=b&x=c",
-			want: "foo://mybucket?x=a&x=b&x=c",
 		},
 		{
 			name: "fancy bucket name",
 			url:  "foo:///foo/bar/baz",
-			want: "foo:///foo/bar/baz",
+		},
+		{
+			name: "using api scheme prefix",
+			url:  "blob+foo:///foo/bar/baz",
+		},
+		{
+			name: "using api+type scheme prefix",
+			url:  "blob+bucket+foo:///foo/bar/baz",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -360,8 +362,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 			// Repeat with OpenBucketURL.
 			parsed, err := url.Parse(tc.url)
@@ -372,8 +374,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				t.Fatalf("got err %v want nil", gotErr)
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
