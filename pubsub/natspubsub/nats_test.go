@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
@@ -154,13 +155,38 @@ func TestSimplePubSub(t *testing.T) {
 	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
 		t.Fatal(err)
 	}
-
 	m, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(m.Body, body) {
 		t.Fatalf("Body did not match. %q vs %q\n", m.Body, body)
+	}
+}
+
+// If we only send a body we should be able to get that from a direct NATS subscriber.
+func TestInteropWithDirectNATS(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+	h := dh.(*harness)
+	topic := "foo"
+	body := []byte("hello")
+	pt := CreateTopic(h.nc, topic)
+	nsub, _ := h.nc.SubscribeSync("foo")
+	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
+		t.Fatal(err)
+	}
+
+	m, err := nsub.NextMsg(50 * time.Millisecond)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	if !bytes.Equal(m.Data, body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
 	}
 }
 

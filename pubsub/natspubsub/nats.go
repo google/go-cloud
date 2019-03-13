@@ -95,15 +95,22 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 	enc := codec.NewEncoderBytes(&b, &mh)
 
 	for _, m := range msgs {
+		var payload []byte
+
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		enc.ResetBytes(&b)
-		em.Body, em.Metadata = m.Body, m.Metadata
-		if err := enc.Encode(em); err != nil {
-			return err
+		if len(m.Metadata) == 0 {
+			payload = m.Body
+		} else {
+			enc.ResetBytes(&b)
+			em.Body, em.Metadata = m.Body, m.Metadata
+			if err := enc.Encode(em); err != nil {
+				return err
+			}
+			payload = b
 		}
-		if err := t.nc.Publish(t.subj, b); err != nil {
+		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
 		}
 	}
@@ -234,10 +241,13 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 	var dm driver.Message
 	// Everything is in the msg.Data
 	dec := codec.NewDecoderBytes(msg.Data, &mh)
-	dec.Decode(&dm)
+	err := dec.Decode(&dm)
+	if err != nil {
+		// This may indicate a normal NATS message, so just treat as the body.
+		dm.Body = msg.Data
+	}
 	dm.AckID = -1 // Not applicable to NATS
 	dm.AsFunc = messageAsFunc(msg)
-
 	return &dm, nil
 }
 
