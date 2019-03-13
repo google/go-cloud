@@ -59,10 +59,15 @@ func TestOpenKeeper(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"stringkey://my-secret", false},
+		// Invalid parameter.
 		{"stringkey://my-secret?param=value", true},
+		// OK.
 		{"base64key://bXktc2VjcmV0LWtleQ==", false},
+		// Invalid parameter.
 		{"base64key://bXktc2VjcmV0LWtleQ==?param=value", true},
+		// Invalid base64 key.
 		{"base64key://not-valid-base64", true},
 	}
 
