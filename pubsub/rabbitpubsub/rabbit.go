@@ -18,6 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -28,6 +31,87 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
+
+func init() {
+	o := new(defaultDialer)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
+}
+
+// defaultDialer dials a default Rabbit server based on the environment
+// variable "RABBIT_SERVER".
+type defaultDialer struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
+	o.init.Do(func() {
+		serverURL := os.Getenv("RABBIT_SERVER_URL")
+		if serverURL == "" {
+			o.err = errors.New("RABBIT_SERVER_URL environment variable not set")
+			return
+		}
+		conn, err := amqp.Dial(serverURL)
+		if err != nil {
+			o.err = fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
+			return
+		}
+		o.opener = &URLOpener{
+			Connection: conn,
+		}
+	})
+	return o.opener, o.err
+}
+
+func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+// Scheme is the URL scheme rabbitpubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "rabbit"
+
+// URLOpener opens RabbitMQ URLs like "rabbit://myexchange" for
+// topics or "rabbit://myqueue" for subscriptions.
+type URLOpener struct {
+	// Connection to use for communication with the server.
+	Connection *amqp.Connection
+	// TopicOptions specifies the options to pass to OpenTopic.
+	TopicOptions TopicOptions
+	// SubscriptionOptions specifies the options to pass to OpenSubscription.
+	SubscriptionOptions SubscriptionOptions
+}
+
+// OpenTopicURL opens a pubsub.Topic based on u.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open topic %v: unknown query parameter %s", u, param)
+	}
+	exchangeName := path.Join(u.Host, u.Path)
+	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
+}
+
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open subscription %v: unknown query parameter %s", u, param)
+	}
+	queueName := path.Join(u.Host, u.Path)
+	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
+}
 
 type topic struct {
 	exchange string // the AMQP exchange
@@ -262,7 +346,7 @@ func (m MultiError) Error() string {
 func closeErr(closec <-chan *amqp.Error) error {
 	select {
 	case aerr := <-closec:
-		// This nil check is necessary. aerr is of type *ampq.Error. If we
+		// This nil check is necessary. aerr is of type *amqp.Error. If we
 		// returned it directly (effectively assigning it to a variable of
 		// type error), then the return value would not be a nil interface
 		// value even if aerr was a nil pointer, and that would break tests

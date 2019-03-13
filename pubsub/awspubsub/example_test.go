@@ -76,3 +76,16 @@ func ExampleOpenSubscription() {
 	// Handle message....
 	msg.Ack()
 }
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will open the topic with the topic ARN "arn:aws:service:region:accountid:resourceType/resourcePath".
+	t, err := pubsub.OpenTopic(ctx, "awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open the subscription with the URL "https://awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription".
+	s, err := pubsub.OpenSubscription(ctx, "awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription")
+	_, _, _ = t, s, err
+}

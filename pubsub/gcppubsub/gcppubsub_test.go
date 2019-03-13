@@ -285,3 +285,49 @@ func TestOpenSubscription(t *testing.T) {
 		t.Error("got nil, want error")
 	}
 }
+
+func TestOpenTopicFromURL(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"gcppubsub://myproject/mytopic", false},
+		// Invalid parameter.
+		{"gcppubsub://myproject/mytopic?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"gcppubsub://myproject/mysub", false},
+		// Invalid parameter.
+		{"gcppubsub://myproject/mysub?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
