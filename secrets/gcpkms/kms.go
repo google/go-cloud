@@ -17,14 +17,13 @@
 //
 // URLs
 //
-// For secrets.OpenKeeper URLs, gcpkms registers for the scheme "gcpkms".
-// The host+path are used as the key resource ID; see
-// https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
-// Example: "gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
-//
-// secrets.OpenKeeper will use Application Default Credentials, as described in
+// For secrets.OpenKeeper, gcpkms registers for the scheme "gcpkms".
+// The default URL opener will create a connection using use default
+// credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
-// If you want to use different credentials, see URLOpener.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -87,7 +86,7 @@ func (o *lazyCredsOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secre
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open GCP KMS %q: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }
@@ -95,10 +94,13 @@ func (o *lazyCredsOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secre
 // Scheme is the URL scheme gcpkms registers its URLOpener under on secrets.DefaultMux.
 const Scheme = "gcpkms"
 
-// URLOpener opens GCP KMS URLs like "gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
+// URLOpener opens GCP KMS URLs like
+// "gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
+//
 // The URL host+path are used as the key resource ID; see
 // https://cloud.gogle.com/kms/docs/object-hierarchy#key for more details.
-// No query parameters are accepted.
+//
+// No query parameters are supported.
 type URLOpener struct {
 	// Client must be non-nil and be authenticated with "cloudkms" scope or equivalent.
 	Client *cloudkms.KeyManagementClient
@@ -110,7 +112,7 @@ type URLOpener struct {
 // OpenKeeperURL opens the GCP KMS URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 	return NewKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
 }
