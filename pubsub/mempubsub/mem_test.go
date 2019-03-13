@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
 
@@ -72,5 +73,52 @@ func TestReceive(t *testing.T) {
 	msgs = sub.receiveNoWait(now, 10)
 	if got, want := len(msgs), 0; got != want {
 		t.Fatalf("got %d, want %d", got, want)
+	}
+}
+
+func TestOpenTopicFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"mem://mytopic", false},
+		// Invalid parameter.
+		{"mem://mytopic?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"mem://mytopic", false},
+		// OK with ackdeadline
+		{"mem://mytopic?ackdeadline=30s", false},
+		// Invalid ackdeadline
+		{"mem://mytopic?ackdeadline=notaduration", true},
+		// Nonexistent topic.
+		{"mem://nonexistenttopic", true},
+		// Invalid parameter.
+		{"mem://myproject/mysub?param=value", true},
+	}
+
+	ctx := context.Background()
+	pubsub.OpenTopic(ctx, "mem://mytopic")
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
 	}
 }

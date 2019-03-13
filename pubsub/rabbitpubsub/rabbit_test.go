@@ -451,3 +451,57 @@ func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
 	}
 	return nil
 }
+
+func fakeConnectionStringInEnv() func() {
+	oldEnvVal := os.Getenv("RABBIT_SERVER_URL")
+	os.Setenv("RABBIT_SERVER_URL", "amqp://localhost:10000/vhost")
+	return func() {
+		os.Setenv("RABBIT_SERVER_URL", oldEnvVal)
+	}
+}
+
+func TestOpenTopicFromURL(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK, but still error because Dial fails.
+		{"rabbit://myexchange", true},
+		// Invalid parameter.
+		{"rabbit://myexchange?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK, but error because Dial fails.
+		{"rabbit://myqueue", true},
+		// Invalid parameter.
+		{"rabbit://myqueue?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}

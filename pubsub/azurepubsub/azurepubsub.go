@@ -16,6 +16,13 @@
 // Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
+// URLs
+//
+// For pubsub.OpenTopic/Subscription URLs, azurepubsub registers for the scheme
+// "azuresb". The Service Bus Connection String defaults to the environment
+// variable "SERVICEBUS_CONNECTION_STRING". For details on the format of the
+// URL, see URLOpener.
+//
 // As
 //
 // azurepubsub exposes the following types for As:
@@ -29,6 +36,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+	"path"
 	"runtime"
 	"sync"
 	"time"
@@ -54,6 +64,131 @@ const (
 	rpcRetryDelay   = 1 * time.Second
 )
 
+func init() {
+	o := new(defaultConnectionStringOpener)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
+}
+
+// defaultURLOpener creates an URLOpener with ConnectionString initialized from
+// the environment variable SERVICEBUS_CONNECTION_STRING.
+type defaultConnectionStringOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *defaultConnectionStringOpener) defaultOpener() (*URLOpener, error) {
+	o.init.Do(func() {
+		cs := os.Getenv("SERVICEBUS_CONNECTION_STRING")
+		if cs == "" {
+			o.err = errors.New("SERVICEBUS_CONNECTION_STRING environment variable not set")
+			return
+		}
+		o.opener = &URLOpener{
+			ConnectionString: cs,
+		}
+	})
+	return o.opener, o.err
+}
+
+func (o *defaultConnectionStringOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	opener, err := o.defaultOpener()
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: %v", u, err)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+func (o *defaultConnectionStringOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opener, err := o.defaultOpener()
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: %v", u, err)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+// Scheme is the URL scheme azurepubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "azuresb"
+
+// URLOpener opens Azure Service Bus URLs like "azuresb://mytopic" for
+// topics or "azuresb://mysubscription?topic=mytopic" for subscriptions.
+//
+//   - The URL's host+path is used as the topic name.
+//   - For subscriptions, the subscription name must be provided in the
+//     "subscription" query parameter.
+type URLOpener struct {
+	// ConnectionString is the Service Bus connection string.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
+	ConnectionString string
+
+	// Options passed when creating the ServiceBus Topic/Subscription.
+	ServiceBusTopicOptions        []servicebus.TopicOption
+	ServiceBusSubscriptionOptions []servicebus.SubscriptionOption
+
+	// TopicOptions specifies the options to pass to OpenTopic.
+	TopicOptions TopicOptions
+	// SubscriptionOptions specifies the options to pass to OpenSubscription.
+	SubscriptionOptions SubscriptionOptions
+}
+
+// Gets the *servicebus.Namespace using a connection string from the
+// env, URLOpener, or query param.
+func (o *URLOpener) namespace(kind string, u *url.URL) (*servicebus.Namespace, error) {
+	if o.ConnectionString == "" {
+		return nil, fmt.Errorf("open %s %v: ConnectionString is required", kind, u)
+	}
+	ns, err := NewNamespaceFromConnectionString(o.ConnectionString)
+	if err != nil {
+		return nil, fmt.Errorf("open %s %v: invalid connection string %q: %v", kind, u, o.ConnectionString, err)
+	}
+	return ns, nil
+}
+
+// OpenTopicURL opens a pubsub.Topic based on u.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	ns, err := o.namespace("topic", u)
+	if err != nil {
+		return nil, err
+	}
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+	}
+	topicName := path.Join(u.Host, u.Path)
+	t, err := NewTopic(ns, topicName, o.ServiceBusTopicOptions)
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: couldn't open topic %q: %v", u, topicName, err)
+	}
+	return OpenTopic(ctx, t, &o.TopicOptions), nil
+}
+
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	ns, err := o.namespace("subscription", u)
+	if err != nil {
+		return nil, err
+	}
+	topicName := path.Join(u.Host, u.Path)
+	t, err := NewTopic(ns, topicName, o.ServiceBusTopicOptions)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: couldn't open topic %q: %v", u, topicName, err)
+	}
+	q := u.Query()
+	subName := q.Get("subscription")
+	q.Del("subscription")
+	if subName == "" {
+		return nil, fmt.Errorf("open subscription %q: missing required query parameter subscription", u)
+	}
+	for param := range q {
+		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+	}
+	sub, err := NewSubscription(t, subName, o.ServiceBusSubscriptionOptions)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: couldn't open subscription %q: %v", u, subName, err)
+	}
+	return OpenSubscription(ctx, ns, t, sub, &o.SubscriptionOptions), nil
+}
+
 type topic struct {
 	sbTopic *servicebus.Topic
 }
@@ -62,6 +197,7 @@ type topic struct {
 type TopicOptions struct{}
 
 // NewNamespaceFromConnectionString returns a *servicebus.Namespace from a Service Bus connection string.
+// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
 func NewNamespaceFromConnectionString(connectionString string) (*servicebus.Namespace, error) {
 	nsOptions := servicebus.NamespaceWithConnectionString(connectionString)
 	return servicebus.NewNamespace(nsOptions)
