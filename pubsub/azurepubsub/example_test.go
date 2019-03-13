@@ -165,7 +165,7 @@ func ExampleSubscriptionWithAutoDeleteAndNoAck() {
 	
 	// This package accommodates both kinds of systems. If your application uses
 	// at-least-once providers, it should always call Message.Ack. If your application
-	// only uses at-most-once providers (AutoDelete), it may call Message.Ack, but does not need to.
+	// only uses at-most-once providers (ReceiveAndDeleteMode), it may call Message.Ack, but does not need to.
 	//
 	// For more information on Service Bus ReceiveMode, see https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
 	//
