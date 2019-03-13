@@ -254,6 +254,9 @@ func (k *keeper) getKeyVaultURI() string {
 }
 
 func (k *keeper) validateOptions() error {
+	if k.options == nil {
+		return fmt.Errorf("no KeeperOptions provided")
+	}
 	if k.options != nil && k.options.Algorithm == "" {
 		return fmt.Errorf("invalid algorithm, choose from %s", getSupportedAlgorithmsForError())
 	}

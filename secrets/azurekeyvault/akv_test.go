@@ -157,6 +157,8 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 	return nil
 }
 
+// Key Vault-specific tests.
+
 func TestOpenKeeper(t *testing.T) {
 	tests := []struct {
 		URL     string
@@ -184,5 +186,23 @@ func TestOpenKeeper(t *testing.T) {
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
+	}
+}
+
+func TestNoConnectionError(t *testing.T) {
+	if _, err := Dial(); err == nil {
+		t.Errorf("got %v, want environment not set error", err)
+	}
+}
+
+func TestAlgorithmNotProvided(t *testing.T) {
+	ctx := context.Background()
+	k := new(keeper)
+	if _, err := k.Encrypt(ctx, []byte("secrets")); err == nil {
+		t.Errorf("Encrypt with no option: got %v, want ", err)
+	}
+	k.options = new(KeeperOptions)
+	if _, err := k.Decrypt(ctx, []byte("secrets")); err == nil {
+		t.Errorf("Decrypt with no algorithm: got %v, want ", err)
 	}
 }
