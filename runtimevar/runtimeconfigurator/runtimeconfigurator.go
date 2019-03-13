@@ -215,7 +215,8 @@ func newResourceNameFromURL(u *url.URL) (ResourceName, error) {
 	// Using SplitN because the variable name can be hierarchical; we
 	// take the first path element as the Config and the result for the
 	// Variable.
-	if pathParts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2); len(pathParts) == 2 {
+	pathParts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
+	if len(pathParts) == 2 {
 		rn.Config = pathParts[0]
 		rn.Variable = pathParts[1]
 	}
