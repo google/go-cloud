@@ -41,20 +41,21 @@ import (
 )
 
 // encodeDoc encodes a driver.Document into Firestore's representation.
-// The Firestore proto definition for Value is a oneof of various types,
-// including basic types like string as well as lists and maps.
-// A Firestore document is just a Go map from strings to Values.
-func encodeDoc(doc driver.Document) (map[string]*pb.Value, error) {
+// A Firestore document (*pb.Document) is just a Go map from strings to *pb.Values.
+func encodeDoc(doc driver.Document) (*pb.Document, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return e.pv.GetMapValue().Fields, nil
+	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
 }
 
 // TODO(jba): support encoding and decoding time.Time and latlng.LatLng specially, since Firestore has
 // special cases for those.
 
+// encodeValue encodes a Go value as a Firestore Value.
+// The Firestore proto definition for Value is a oneof of various types,
+// including basic types like string as well as lists and maps.
 func encodeValue(x interface{}) (*pb.Value, error) {
 	var e encoder
 	if err := driver.Encode(reflect.ValueOf(x), &e); err != nil {

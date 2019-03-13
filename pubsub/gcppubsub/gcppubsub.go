@@ -16,6 +16,14 @@
 // PubSub. Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
 // to construct a *pubsub.Subscription.
 //
+// URLs
+//
+// For pubsub.OpenTopic/Subscription URLs, gcppubsub registers for the scheme
+// "gcppubsub". pubsub.OpenTopic/Subscription will use Application
+// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
+// If you want to use different credentials or find details on the format of the
+// URL, see URLOpener.
+//
 // As
 //
 // gcppubsub exposes the following types for As:
@@ -28,6 +36,9 @@ package gcppubsub // import "gocloud.dev/pubsub/gcppubsub"
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
+	"sync"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"gocloud.dev/gcerrors"
@@ -45,6 +56,98 @@ import (
 )
 
 const endPoint = "pubsub.googleapis.com:443"
+
+func init() {
+	o := new(lazyCredsOpener)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
+}
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenTopicURL/OpenSubscriptionURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) defaultConn(ctx context.Context) (*URLOpener, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		conn, _, err := Dial(ctx, creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{Conn: conn}
+	})
+	return o.opener, o.err
+}
+
+func (o *lazyCredsOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+func (o *lazyCredsOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+// Scheme is the URL scheme gcppubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "gcppubsub"
+
+// URLOpener opens GCP Pub/Sub URLs like "gcppubsub://myproject/mytopic" for
+// topics or "gcppubsub://myprojects/mysub" for subscriptions.
+// The URL's host is used as the projectID, and the path is used as the topic
+// or subscription name.
+// No URL parameters are supported.
+type URLOpener struct {
+	// Conn must be set to a non-nil ClientConn authenticated with
+	// Cloud Pub/Sub scope or equivalent.
+	Conn *grpc.ClientConn
+
+	// TopicOptions specifies the options to pass to OpenTopic.
+	TopicOptions TopicOptions
+	// SubscriptionOptions specifies the options to pass to OpenSubscription.
+	SubscriptionOptions SubscriptionOptions
+}
+
+// OpenTopicURL opens the GCP Pub/Sub topic with the same name as the URL's host.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+	}
+	pc, err := PublisherClient(ctx, o.Conn)
+	if err != nil {
+		return nil, err
+	}
+	topicName := strings.TrimPrefix(u.Path, "/")
+	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &o.TopicOptions), nil
+}
+
+// OpenSubscriptionURL opens the GCS bucket with the same name as the URL's host.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+	}
+	sc, err := SubscriberClient(ctx, o.Conn)
+	if err != nil {
+		return nil, err
+	}
+	subName := strings.TrimPrefix(u.Path, "/")
+	return OpenSubscription(sc, gcp.ProjectID(u.Host), subName, &o.SubscriptionOptions), nil
+}
 
 type topic struct {
 	path   string
