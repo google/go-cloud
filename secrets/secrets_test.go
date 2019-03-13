@@ -103,7 +103,6 @@ func TestURLMux(t *testing.T) {
 		name    string
 		url     string
 		wantErr bool
-		want    string
 	}{
 		{
 			name:    "empty URL",
@@ -132,27 +131,30 @@ func TestURLMux(t *testing.T) {
 		{
 			name: "no query options",
 			url:  "foo://mykeeper",
-			want: "foo://mykeeper",
 		},
 		{
 			name: "empty query options",
 			url:  "foo://mykeeper?",
-			want: "foo://mykeeper?",
 		},
 		{
 			name: "query options",
 			url:  "foo://mykeeper?aAa=bBb&cCc=dDd",
-			want: "foo://mykeeper?aAa=bBb&cCc=dDd",
 		},
 		{
 			name: "multiple query options",
 			url:  "foo://mykeeper?x=a&x=b&x=c",
-			want: "foo://mykeeper?x=a&x=b&x=c",
 		},
 		{
 			name: "fancy keeper name",
 			url:  "foo:///foo/bar/baz",
-			want: "foo:///foo/bar/baz",
+		},
+		{
+			name: "using api scheme prefix",
+			url:  "secrets+foo://mykeeper",
+		},
+		{
+			name: "using api+type scheme prefix",
+			url:  "secrets+keeper+foo://mykeeper",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -163,8 +165,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 			// Repeat with OpenKeeperURL.
 			parsed, err := url.Parse(tc.url)
@@ -175,8 +177,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				t.Fatalf("got err %v, want nil", gotErr)
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}

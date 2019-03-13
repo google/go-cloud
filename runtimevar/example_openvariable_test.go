@@ -30,6 +30,8 @@ func ExampleOpenVariable() {
 	// URLOpener, which implements runtimevar.VariableURLOpener:
 	// import _ "gocloud.dev/runtimevar/constantvar"
 	// constantvar registers for the "constant" scheme.
+	// All runtimevar.OpenVariable URLs also work with "runtimevar+" or "runtimevar+variable+" prefixes,
+	// e.g., "runtimevar+constant://..." or "runtimevar+variable+constant://...".
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "constant://?val=hello+world&decoder=string")
 	if err != nil {

@@ -502,7 +502,6 @@ func TestURLMux(t *testing.T) {
 		name    string
 		url     string
 		wantErr bool
-		want    string
 	}{
 		{
 			name:    "empty URL",
@@ -531,27 +530,26 @@ func TestURLMux(t *testing.T) {
 		{
 			name: "no query options",
 			url:  "foo://myps",
-			want: "foo://myps",
 		},
 		{
 			name: "empty query options",
 			url:  "foo://myps?",
-			want: "foo://myps?",
 		},
 		{
 			name: "query options",
 			url:  "foo://myps?aAa=bBb&cCc=dDd",
-			want: "foo://myps?aAa=bBb&cCc=dDd",
 		},
 		{
 			name: "multiple query options",
 			url:  "foo://myps?x=a&x=b&x=c",
-			want: "foo://myps?x=a&x=b&x=c",
 		},
 		{
 			name: "fancy ps name",
 			url:  "foo:///foo/bar/baz",
-			want: "foo:///foo/bar/baz",
+		},
+		{
+			name: "using api schema prefix",
+			url:  "pubsub+foo://foo",
 		},
 	} {
 		t.Run("topic: "+tc.name, func(t *testing.T) {
@@ -562,8 +560,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 			// Repeat with OpenTopicURL.
 			parsed, err := url.Parse(tc.url)
@@ -574,8 +572,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				t.Fatalf("got err %v, want nil", gotErr)
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 		t.Run("subscription: "+tc.name, func(t *testing.T) {
@@ -586,8 +584,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 			// Repeat with OpenSubscriptionURL.
 			parsed, err := url.Parse(tc.url)
@@ -598,8 +596,8 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				t.Fatalf("got err %v, want nil", gotErr)
 			}
-			if got := fake.u.String(); got != tc.want {
-				t.Errorf("got %q want %q", got, tc.want)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
