@@ -302,9 +302,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	type S struct {
 		N  *int
 		I  int
-		U  uint
 		F  float64
-		C  complex64
 		St string
 		B  bool
 		By []byte
@@ -316,9 +314,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	in := S{
 		N:  nil,
 		I:  1,
-		U:  2,
 		F:  2.5,
-		C:  complex(9, 10),
 		St: "foo",
 		B:  true,
 		L:  []int{3, 4, 5},
