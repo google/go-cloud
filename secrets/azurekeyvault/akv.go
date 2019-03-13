@@ -86,7 +86,7 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open keeper %q: failed to Dial default KeyVault: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: failed to Dial default KeyVault: %v", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }
@@ -120,14 +120,14 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		q.Del("algorithm")
 	}
 	if o.Options.Algorithm == "" {
-		return nil, fmt.Errorf("open keeper %q: algorithm is required", u)
+		return nil, fmt.Errorf("open keeper %v: algorithm is required", u)
 	}
 	for param := range q {
-		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 
 	if u.Host == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the key vault name)", u)
+		return nil, fmt.Errorf("open keeper %v: URL is expected to have a non-empty Host (the key vault name)", u)
 	}
 	var keyName, keyVersion string
 	if pathParts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/"); len(pathParts) == 1 {
@@ -137,7 +137,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		keyVersion = pathParts[1]
 	}
 	if keyName == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version)", u)
+		return nil, fmt.Errorf("open keeper %v: URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version)", u)
 	}
 	return NewKeeper(o.Client, u.Host, keyName, keyVersion, &o.Options), nil
 }

@@ -72,12 +72,12 @@ type URLOpener struct {
 // OpenKeeperURL opens Keeper URLs.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 	if o.base64 {
 		sk, err := Base64Key(u.Host)
 		if err != nil {
-			return nil, fmt.Errorf("open keeper %q: base64 decode failed: %v", u, err)
+			return nil, fmt.Errorf("open keeper %v: base64 decode failed: %v", u, err)
 		}
 		return NewKeeper(sk), nil
 	}

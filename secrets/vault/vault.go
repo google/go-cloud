@@ -99,7 +99,7 @@ func (o *defaultDialer) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open keeper %q: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }
@@ -123,7 +123,7 @@ type URLOpener struct {
 // OpenKeeperURL opens the Keeper URL.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open keeper %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 	return NewKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
 }

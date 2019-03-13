@@ -83,7 +83,7 @@ func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*sec
 		}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open keeper %q: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }
