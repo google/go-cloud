@@ -190,8 +190,16 @@ func TestOpenKeeper(t *testing.T) {
 }
 
 func TestNoConnectionError(t *testing.T) {
-	if _, err := Dial(); err == nil {
-		t.Errorf("got %v, want environment not set error", err)
+	client := keyvault.NewWithoutDefaults()
+	k := &keeper{
+		client:       &client,
+		keyVaultName: keyVaultName,
+		keyName:      keyID1,
+		keyVersion:   keyVersion,
+		options:      &KeeperOptions{Algorithm: algorithm},
+	}
+	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
+		t.Error("Encrypt: got nil, want no connection error")
 	}
 }
 
@@ -199,10 +207,10 @@ func TestAlgorithmNotProvided(t *testing.T) {
 	ctx := context.Background()
 	k := new(keeper)
 	if _, err := k.Encrypt(ctx, []byte("secrets")); err == nil {
-		t.Errorf("Encrypt with no option: got %v, want ", err)
+		t.Error("Encrypt with no option: got nil, want no options error")
 	}
 	k.options = new(KeeperOptions)
 	if _, err := k.Decrypt(ctx, []byte("secrets")); err == nil {
-		t.Errorf("Decrypt with no algorithm: got %v, want ", err)
+		t.Error("Decrypt with no algorithm: got nil, want no algorithm error")
 	}
 }
