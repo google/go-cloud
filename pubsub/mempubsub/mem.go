@@ -70,7 +70,7 @@ type URLOpener struct {
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	topicName := path.Join(u.Host, u.Path)
 	o.mu.Lock()
@@ -95,12 +95,12 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 		var err error
 		ackDeadline, err = time.ParseDuration(s)
 		if err != nil {
-			return nil, fmt.Errorf("open subscription %q: invalid ackdeadline: %v", u, err)
+			return nil, fmt.Errorf("open subscription %v: invalid ackdeadline %q: %v", u, s, err)
 		}
 		q.Del("ackdeadline")
 	}
 	for param := range q {
-		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	topicName := path.Join(u.Host, u.Path)
 	o.mu.Lock()
@@ -110,7 +110,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	}
 	t := o.topics[topicName]
 	if t == nil {
-		return nil, fmt.Errorf("open subscription %q: no topic %q has been created", u, topicName)
+		return nil, fmt.Errorf("open subscription %v: no topic %q has been created", u, topicName)
 	}
 	return NewSubscription(t, ackDeadline), nil
 }

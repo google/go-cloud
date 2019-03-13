@@ -153,7 +153,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 		return nil, err
 	}
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	topicName := path.Join(u.Host, u.Path)
 	t, err := NewTopic(ns, topicName, o.ServiceBusTopicOptions)
@@ -179,11 +179,11 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	subName := q.Get("subscription")
 	q.Del("subscription")
 	if subName == "" {
-		return nil, fmt.Errorf("open subscription %q: missing required query parameter subscription", u)
+		return nil, fmt.Errorf("open subscription %v: missing required query parameter subscription", u)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	sub, err := NewSubscription(t, subName, o.ServiceBusSubscriptionOptions)
 	if err != nil {

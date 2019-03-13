@@ -103,7 +103,7 @@ type URLOpener struct {
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	exchangeName := path.Join(u.Host, u.Path)
 	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
@@ -112,7 +112,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	queueName := path.Join(u.Host, u.Path)
 	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
