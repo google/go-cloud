@@ -18,7 +18,6 @@
 // URLs
 //
 // For runtimevar.OpenVariable, etcdvar registers for the scheme "etcd".
-// The host+path is used as the variable name.
 // The default URL opener will dial an etcd server based on the environment
 // variable "ETCD_SERVER_URL".
 // To customize the URL opener, or for more details on the URL format,
