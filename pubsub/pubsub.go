@@ -37,6 +37,30 @@
 // See https://godoc.org/gocloud.dev#URLs for more information.
 //
 //
+// At-most-once vs. At-least-once Delivery
+//
+// Some PubSub systems guarantee that messages received by subscribers but
+// not acknowledged are delivered again. These at-least-once systems require
+// that subscribers call a function to indicate that they have fully processed a
+// message.
+//
+// In other PubSub systems, a message will be delivered only once, if it is delivered
+// at all. These at-most-once systems do not need an Ack method.
+//
+// To accommodate both kinds of systems, this package has a Message.Ack function
+// which should be called when using an at-least-once provider. When constructing a
+// subscription using an at-most-once provider, you must supply the function that
+// will run when Ack is called. When constructing a subscription using a provider
+// that supports both delivery modes, the ack function will be an option. If you
+// provide the ack function, you will get an at-most-once subscription; if you omit
+// the ack function, you will get an at-least-once subscription.
+//
+// Common implementations for an ack function are: do nothing, on the grounds that
+// you may want to test your at-least-once system with an at-most-once provider; or
+// panic, so that a system that assumes at-least-once delivery isn't accidentally
+// paired with an at-most-once provider.
+//
+//
 // OpenCensus Integration
 //
 // OpenCensus supports tracing and metric collection for multiple languages and
