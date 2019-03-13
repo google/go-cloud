@@ -50,7 +50,6 @@ func Example_openKeeper() {
 	ctx := context.Background()
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
-
 	// Using "stringkey://", the first 32 bytes of the URL hostname is used as the secret.
 	k, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
 
