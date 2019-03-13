@@ -99,7 +99,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }

@@ -120,7 +120,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -174,7 +174,7 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 // OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for k := range u.Query() {
-		return nil, fmt.Errorf("open Azure bucket %q: unknown query parameter %s", u, k)
+		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, k)
 	}
 	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
 }

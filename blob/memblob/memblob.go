@@ -69,7 +69,7 @@ type URLOpener struct{}
 // OpenBucketURL opens a blob.Bucket based on u.
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, param)
 	}
 	return OpenBucket(nil), nil
 }
