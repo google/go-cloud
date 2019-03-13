@@ -1,6 +1,13 @@
 language: go
 go_import_path: gocloud.dev
-go: "1.11.x"
+go:
+  - "1.11.x"
+  - "1.12.x"
+
+matrix:
+  exclude:
+    - go: "1.11.x"
+      os: osx
 
 before_install:
   - "df -k"

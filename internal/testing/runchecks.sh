@@ -77,9 +77,14 @@ fi
 # ./internal/testing/alldeps
 #
 # Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
-./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
-  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
-}
+#
+# Run this only on the latest version of Go, since module behavior may differ
+# across versions.
+if [[ $(go version) == *1\.12* ]]; then
+  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+    echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
+  }
+fi
 
 go install -mod=readonly github.com/google/wire/cmd/wire
 wire check ./... || result=1
