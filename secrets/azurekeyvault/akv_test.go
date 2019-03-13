@@ -191,12 +191,9 @@ func TestOpenKeeper(t *testing.T) {
 
 func TestNoConnectionError(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	k := &keeper{
-		client:       &client,
-		keyVaultName: keyVaultName,
-		keyName:      keyID1,
-		keyVersion:   keyVersion,
-		options:      &KeeperOptions{Algorithm: algorithm},
+	k, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
+	if err != nil {
+		t.Fatal(err)
 	}
 	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
 		t.Error("Encrypt: got nil, want no connection error")
@@ -204,13 +201,8 @@ func TestNoConnectionError(t *testing.T) {
 }
 
 func TestAlgorithmNotProvided(t *testing.T) {
-	ctx := context.Background()
-	k := new(keeper)
-	if _, err := k.Encrypt(ctx, []byte("secrets")); err == nil {
-		t.Error("Encrypt with no option: got nil, want no options error")
-	}
-	k.options = new(KeeperOptions)
-	if _, err := k.Decrypt(ctx, []byte("secrets")); err == nil {
-		t.Error("Decrypt with no algorithm: got nil, want no algorithm error")
+	client := keyvault.NewWithoutDefaults()
+	if _, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
+		t.Error("NewKeeper with no algorithm: got nil, want no algorithm error")
 	}
 }
