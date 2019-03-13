@@ -19,8 +19,12 @@ import (
 	"log"
 	"os"
 
+	"gocloud.dev/pubsub/driver"
+
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/azurepubsub"
+
+	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
 func ExampleOpenTopic() {
@@ -106,6 +110,83 @@ func ExampleOpenSubscription() {
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
 	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
+
+	// Receive a message from the *pubsub.Subscription backed by Service Bus.
+	msg, err := s.Receive(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Acknowledge the message, this operation issues a 'Complete' disposition on the Service Bus message.
+	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Message.Complete.
+	msg.Ack()
+}
+
+func ExampleSubscriptionWithAutoDeleteAndNoAck() {
+
+	ctx := context.Background()
+	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-get-started-with-queues
+	connString := os.Getenv("SERVICEBUS_CONNECTION_STRING")
+	topicName := "test-topic"
+	subscriptionName := "test-sub"
+
+	if connString == "" {
+		log.Fatal("Service Bus ConnectionString is not set")
+	}
+
+	// Construct a Service Bus Namespace from a SAS Token.
+	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
+	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
+	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
+	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sbTopic.Close(ctx)
+
+	// Construct Receiver to AutoDelete messages.
+	// See https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
+	var opts []servicebus.SubscriptionOption
+	opts = append(opts, servicebus.SubscriptionWithReceiveAndDelete())
+
+	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
+	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
+	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sbSub.Close(ctx)
+
+	// Construct a custom Ack Handler to override the driver acking.
+	// This is useful for a number of reasons including noAcks or custom acks.
+	subOpts := &azurepubsub.SubscriptionOptions{
+		AckOverride: func(ctx context.Context, ids []driver.AckID) error {
+			return nil
+		},
+	}
+	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
+	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
+
+	// Construct a *pubsub.Topic.
+	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	defer t.Shutdown(ctx)
+
+	// Send *pubsub.Message from *pubsub.Topic backed by Azure Service Bus.
+	err = t.Send(ctx, &pubsub.Message{
+		Body: []byte("example message"),
+		Metadata: map[string]string{
+			"Priority": "1",
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)

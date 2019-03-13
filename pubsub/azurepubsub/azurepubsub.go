@@ -154,6 +154,7 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
 	ListenerTimeout time.Duration
+	AckOverride     driver.AckHandlerFunc
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -165,6 +166,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) driver.Subscription {
 	topicName := ""
+
 	if sbTop != nil {
 		topicName = sbTop.Name
 	}
@@ -174,12 +176,19 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		defaultTimeout = opts.ListenerTimeout
 	}
 
+	// Determine if caller will handle acks.
+	var ackOverride func(ctx context.Context, ids []driver.AckID) error
+	if opts != nil && opts.AckOverride != nil {
+		ackOverride = opts.AckOverride
+	}
+
 	return &subscription{
 		sbSub:     sbSub,
 		topicName: topicName,
 		sbNs:      sbNs,
 		opts: &SubscriptionOptions{
 			ListenerTimeout: defaultTimeout,
+			AckOverride:     ackOverride,
 		},
 	}
 }
@@ -297,6 +306,11 @@ func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if len(ids) == 0 {
 		return nil
+	}
+
+	// Call Ack Override if provided.
+	if s.opts != nil && s.opts.AckOverride != nil {
+		return s.opts.AckOverride.Handle(ctx, ids)
 	}
 
 	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
