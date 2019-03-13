@@ -181,6 +181,9 @@ func TestKeyInfoFromURL(t *testing.T) {
 		if (gotErr != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
 		}
+		if gotErr != nil {
+			continue
+		}
 		if gotVault != test.WantVault {
 			t.Errorf("%s: got vault %q want %q", test.URL, gotVault, test.WantVault)
 		}
