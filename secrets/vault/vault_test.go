@@ -17,7 +17,7 @@ package vault
 import (
 	"context"
 	"errors"
-	"net/url"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -130,81 +130,29 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
-func TestURLCaching(t *testing.T) {
-
-	tests := []struct {
-		URL  string
-		Want int
-	}{
-		{
-			URL:  "vault://mykey?address=foo&token=bar",
-			Want: 1,
-		},
-		// Cached.
-		{
-			URL:  "vault://mykey?address=foo&token=bar",
-			Want: 1,
-		},
-		// Still cached despite parameter order change.
-		{
-			URL:  "vault://mykey?token=bar&address=foo",
-			Want: 1,
-		},
-		// Still cached despite key change.
-		{
-			URL:  "vault://anotherkey?token=bar&address=foo",
-			Want: 1,
-		},
-		// Still cached despite extra parameter.
-		{
-			URL:  "vault://anotherkey?token=bar&address=foo&someparam=somevalue",
-			Want: 1,
-		},
-		// New token.
-		{
-			URL:  "vault://mykey?token=newtoken&address=foo",
-			Want: 2,
-		},
-		// Old is still cached.
-		{
-			URL:  "vault://mykey?address=foo&token=bar",
-			Want: 2,
-		},
-		// And new is cached.
-		{
-			URL:  "vault://mykey?token=newtoken&address=foo",
-			Want: 2,
-		},
-		// New address.
-		{
-			URL:  "vault://mykey?token=bar&address=newaddress",
-			Want: 3,
-		},
-	}
-
-	ctx := context.Background()
-	o := &lazyDialer{}
-	for i, test := range tests {
-		u, err := url.Parse(test.URL)
-		if err != nil {
-			t.Fatal(err)
-		}
-		o.cachedClient(ctx, u)
-		if got := len(o.clients); got != test.Want {
-			t.Errorf("%d/%s: got %d want %d", i, test.URL, got, test.Want)
-		}
+func fakeConnectionStringInEnv() func() {
+	oldURLVal := os.Getenv("VAULT_SERVER_URL")
+	oldTokenVal := os.Getenv("VAULT_SERVER_TOKEN")
+	os.Setenv("VAULT_SERVER_URL", "http://myvaultserver")
+	os.Setenv("VAULT_SERVER_TOKEN", "faketoken")
+	return func() {
+		os.Setenv("VAULT_SERVER_URL", oldURLVal)
+		os.Setenv("VAULT_SERVER_TOKEN", oldTokenVal)
 	}
 }
 
 func TestOpenKeeper(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
-		{"vault://mykey?token=bar&address=address", false},
-		{"vault://mykey?token=bar&token=token", false},
-		{"vault://mykey?token=bar&address=address&token=token", false},
-		{"vault://mykey?token=bar&param=value", true},
+		// OK.
+		{"vault://mykey", false},
+		// Invalid parameter.
+		{"vault://mykey?param=value", true},
 	}
 
 	ctx := context.Background()

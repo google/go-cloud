@@ -15,7 +15,7 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.35.0
+	cloud.google.com/go v0.37.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/ocagent v0.4.2 // indirect
 	contrib.go.opencensus.io/exporter/stackdriver v0.9.1
@@ -123,13 +123,13 @@ require (
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
-	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
+	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 	golang.org/x/xerrors v0.0.0-20190129162528-20feca13ea86
 	google.golang.org/api v0.1.0
-	google.golang.org/genproto v0.0.0-20190122204518-eef12c790cc0
-	google.golang.org/grpc v1.18.0
+	google.golang.org/genproto v0.0.0-20190306203927-b5d61aea6440
+	google.golang.org/grpc v1.19.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
 	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect

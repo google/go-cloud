@@ -111,7 +111,9 @@ func TestOpenKeeper(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY", false},
+		// Invalid query parameter.
 		{"gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY?param=val", true},
 	}
 
