@@ -23,7 +23,7 @@ import (
 	"gocloud.dev/pubsub/natspubsub"
 )
 
-func ExampleOpenTopic() {
+func ExampleCreateTopic() {
 	ctx := context.Background()
 
 	// Create a connection to NATS
@@ -40,7 +40,7 @@ func ExampleOpenTopic() {
 	err = pt.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
 
-func ExampleOpenSubscription() {
+func ExampleCreateSubscription() {
 	ctx := context.Background()
 
 	// Create a connection to NATS
