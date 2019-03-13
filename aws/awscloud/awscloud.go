@@ -22,6 +22,10 @@ import (
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/server/xrayserver"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/pubsub/awspubsub"
+	"gocloud.dev/secrets/awskms"
+	"gocloud.dev/runtimevar/paramstore"
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface
@@ -37,5 +41,26 @@ var AWS = wire.NewSet(
 // AWS set, does not include credentials. Individual services may require
 // additional configuration.
 var Services = wire.NewSet(
+	s3blob.OpenBucket,
+	s3blob.Options{},
+	s3blob.URLOpener{},
+
+	awspubsub.OpenSubscription,
+	awspubsub.SubscriptionOptions{},
+	awspubsub.OpenTopic,
+	awspubsub.TopicOptions{},
+	awspubsub.URLOpener{},
+	// TODO: Include sqs.New, sns.New?
+
+	awskms.NewKeeper,
+	awskms.KeeperOptions{},
+	awskms.Dial,
+	awskms.URLOpener{},
+
+	paramstore.NewVariable,
+	paramstore.Options{},
+	paramstore.URLOpener{},
+
 	rds.CertFetcherSet,
-	xrayserver.Set)
+	xrayserver.Set,
+)
