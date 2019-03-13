@@ -482,8 +482,9 @@ func bytesDecode(b []byte, obj interface{}) error {
 // DecoderByName returns a *Decoder based on decoderName.
 // It is intended to be used by VariableURLOpeners in driver packages.
 // Supported values include:
-//   - empty string: Returns the URLEncoder default, or BytesDecoder
-//       if URLOpener.Decoder is nil.
+//   - empty string: Returns the default from the URLOpener.Decoder, or
+//       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
+//       using the default URLOpener).
 //   - "bytes": Returns a BytesDecoder; Snapshot.Value will be of type []byte.
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
