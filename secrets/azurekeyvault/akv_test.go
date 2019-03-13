@@ -94,9 +94,7 @@ func (h *harness) Close() {
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	// Use initEnv to setup your environment variables.
-	if *setup.Record {
-		initEnv()
-	}
+	initEnv()
 
 	done, sender := setup.NewAzureKeyVaultTestClient(ctx, t)
 	client, err := Dial()
@@ -127,10 +125,12 @@ func initEnv() {
 	// For Client Certificate and Azure Managed Service Identity, see doc below for help
 	// https://github.com/Azure/azure-sdk-for-go
 
-	if os.Getenv("AZURE_TENANT_ID") == "" ||
-		os.Getenv("AZURE_CLIENT_ID") == "" ||
-		os.Getenv("AZURE_CLIENT_SECRET") == "" {
-		log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
+	if *setup.Record {
+		if os.Getenv("AZURE_TENANT_ID") == "" ||
+			os.Getenv("AZURE_CLIENT_ID") == "" ||
+			os.Getenv("AZURE_CLIENT_SECRET") == "" {
+			log.Fatal("Missing environment for recording tests, set AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET")
+		}
 	}
 
 	os.Setenv("AZURE_ENVIRONMENT", env.Name)
