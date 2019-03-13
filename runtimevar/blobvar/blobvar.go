@@ -19,7 +19,6 @@
 // URLs
 //
 // For runtimevar.OpenVariable, blobvar registers for the scheme "blob".
-// The host+path is used as the blobkey.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#URLs for background information.

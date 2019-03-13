@@ -22,7 +22,8 @@
 // For runtimevar.OpenVariable, runtimeconfigurator registers for the scheme
 // "runtimeconfigurator".
 // The default URL opener will creating a connection using use default
-// credentials from the environment
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#URLs for background information.
