@@ -113,7 +113,7 @@ func (o *defaultOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 const Scheme = "azuresb"
 
 // URLOpener opens Azure Service Bus URLs like "azuresb://mytopic" for
-// topics or "azuresb://mysubscription?topic=mytopic" for subscriptions.
+// topics or "azuresb://mytopic?subscription=mysubscription" for subscriptions.
 //
 //   - The URL's host+path is used as the topic name.
 //   - For subscriptions, the subscription name must be provided in the
