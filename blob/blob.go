@@ -91,9 +91,11 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -117,6 +119,7 @@ type Reader struct {
 	r        driver.Reader
 	end      func(error) // called at Close to finish trace and metric collection
 	provider string      // for metric collection
+	closed   bool
 }
 
 // Read implements io.Reader (https://golang.org/pkg/io/#Reader).
@@ -129,6 +132,7 @@ func (r *Reader) Read(p []byte) (int, error) {
 
 // Close implements io.Closer (https://golang.org/pkg/io/#Closer).
 func (r *Reader) Close() error {
+	r.closed = true
 	err := wrapError(r.b, r.r.Close())
 	r.end(err)
 	return err
@@ -216,6 +220,7 @@ type Writer struct {
 	contentMD5 []byte
 	md5hash    hash.Hash
 	provider   string // for metric collection
+	closed     bool
 
 	// These fields exist only when w is not yet created.
 	//
@@ -270,6 +275,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Close may return an error if the context provided to create the Writer is
 // canceled or reaches its deadline.
 func (w *Writer) Close() (err error) {
+	w.closed = true
 	defer func() { w.end(err) }()
 	if len(w.contentMD5) > 0 {
 		// Verify the MD5 hash of what was written matches the ContentMD5 provided
@@ -638,12 +644,18 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 			b.tracer.End(tctx, err)
 		}
 	}()
-	r, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
+	dr, err := b.b.NewRangeReader(ctx, key, offset, length, dopts)
 	if err != nil {
 		return nil, wrapError(b.b, err)
 	}
 	end := func(err error) { b.tracer.End(tctx, err) }
-	return &Reader{b: b.b, r: r, end: end, provider: b.tracer.Provider}, nil
+	r := &Reader{b: b.b, r: dr, end: end, provider: b.tracer.Provider}
+	runtime.SetFinalizer(r, func(r *Reader) {
+		if !r.closed {
+			log.Printf("A blob.Reader reading from %q was never closed", key)
+		}
+	})
+	return r, nil
 }
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
@@ -675,8 +687,6 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
-	var dopts *driver.WriterOptions
-	var w driver.Writer
 
 	if !utf8.ValidString(key) {
 		return nil, fmt.Errorf("blob.NewWriter: key must be a valid UTF-8 string: %q", key)
@@ -684,7 +694,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	if opts == nil {
 		opts = &WriterOptions{}
 	}
-	dopts = &driver.WriterOptions{
+	dopts := &driver.WriterOptions{
 		CacheControl:       opts.CacheControl,
 		ContentDisposition: opts.ContentDisposition,
 		ContentEncoding:    opts.ContentEncoding,
@@ -724,13 +734,23 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	ctx, cancel := context.WithCancel(ctx)
 	tctx := b.tracer.Start(ctx, "NewWriter")
 	end := func(err error) { b.tracer.End(tctx, err) }
-
 	defer func() {
 		if err != nil {
 			end(err)
 		}
 	}()
 
+	w := &Writer{
+		b:          b.b,
+		end:        end,
+		cancel:     cancel,
+		key:        key,
+		opts:       dopts,
+		buf:        bytes.NewBuffer([]byte{}),
+		contentMD5: opts.ContentMD5,
+		md5hash:    md5.New(),
+		provider:   b.tracer.Provider,
+	}
 	if opts.ContentType != "" {
 		t, p, err := mime.ParseMediaType(opts.ContentType)
 		if err != nil {
@@ -738,33 +758,26 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 			return nil, err
 		}
 		ct := mime.FormatMediaType(t, p)
-		w, err = b.b.NewTypedWriter(ctx, key, ct, dopts)
+		dw, err := b.b.NewTypedWriter(ctx, key, ct, dopts)
 		if err != nil {
 			cancel()
 			return nil, wrapError(b.b, err)
 		}
-		return &Writer{
-			b:          b.b,
-			w:          w,
-			end:        end,
-			cancel:     cancel,
-			contentMD5: opts.ContentMD5,
-			md5hash:    md5.New(),
-			provider:   b.tracer.Provider,
-		}, nil
+		w.w = dw
+	} else {
+		// Save the fields needed to called NewTypedWriter later, once we've gotten
+		// sniffLen bytes.
+		w.ctx = ctx
+		w.key = key
+		w.opts = dopts
+		w.buf = bytes.NewBuffer([]byte{})
 	}
-	return &Writer{
-		ctx:        ctx,
-		cancel:     cancel,
-		b:          b.b,
-		end:        end,
-		key:        key,
-		opts:       dopts,
-		buf:        bytes.NewBuffer([]byte{}),
-		contentMD5: opts.ContentMD5,
-		md5hash:    md5.New(),
-		provider:   b.tracer.Provider,
-	}, nil
+	runtime.SetFinalizer(w, func(w *Writer) {
+		if !w.closed {
+			log.Printf("A blob.Writer writing to %q was never closed", key)
+		}
+	})
+	return w, nil
 }
 
 // Delete deletes the blob stored at key.
