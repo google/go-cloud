@@ -35,7 +35,10 @@ func ExampleCreateTopic() {
 	}
 	defer nc.Close()
 
-	pt := natspubsub.CreateTopic(nc, "go-cloud.example.send")
+	pt, err := natspubsub.CreateTopic(nc, "go-cloud.example.send")
+	if err != nil {
+		// Handle error....
+	}
 
 	err = pt.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
@@ -59,7 +62,10 @@ func ExampleCreateSubscription() {
 		// function to do nothing, or panic/log a warning if your application
 		// is built for at-most-once semantics and should never call Ack.
 	}
-	sub := natspubsub.CreateSubscription(nc, "go-cloud.example.send", ackFunc)
+	sub, err := natspubsub.CreateSubscription(nc, "go-cloud.example.receive", ackFunc)
+	if err != nil {
+		// Handle error....
+	}
 
 	// Now we can use sub to receive messages.
 	msg, err := sub.Receive(ctx)
@@ -68,6 +74,7 @@ func ExampleCreateSubscription() {
 	}
 	// Handle Message
 
-	// Ack will call ackFunc above.
+	// Ack will call ackFunc above. If you're only going to use at-most-once
+	// providers, you can omit it.
 	msg.Ack()
 }

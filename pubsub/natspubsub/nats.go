@@ -71,14 +71,21 @@ type encMsg struct {
 // CreateTopic returns a *pubsub.Topic for use with NATS.
 // We delay checking for the proper syntax here.
 // For more info, see https://nats.io/documentation/writing_applications/subjects
-func CreateTopic(nc *nats.Conn, topicName string) *pubsub.Topic {
-	return pubsub.NewTopic(createTopic(nc, topicName), nil)
+func CreateTopic(nc *nats.Conn, topicName string) (*pubsub.Topic, error) {
+	dt, err := createTopic(nc, topicName)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewTopic(dt, nil), nil
 }
 
 // createTopic returns the driver for CreateTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func createTopic(nc *nats.Conn, topicName string) driver.Topic {
-	return &topic{nc, topicName}
+func createTopic(nc *nats.Conn, topicName string) (driver.Topic, error) {
+	if nc == nil {
+		return nil, errors.New("natspubsub: nats.Conn is required")
+	}
+	return &topic{nc, topicName}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -162,18 +169,33 @@ type subscription struct {
 	nc      *nats.Conn
 	nsub    *nats.Subscription
 	ackFunc func()
-	err     error
 }
 
 // CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
+//
+// ackFunc will be called when the application calls pubsub.Topic.Ack on a
+// received message; Ack is a meaningless no-op for NATS. You can provide an
+// empty function to leave it a no-op, or panic/log a warning if you don't
+// expect Ack to be called.
+//
 // TODO(dlc) - Options for queue groups?
-func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) *pubsub.Subscription {
-	return pubsub.NewSubscription(createSubscription(nc, subscriptionName, ackFunc), nil)
+func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (*pubsub.Subscription, error) {
+	ds, err := createSubscription(nc, subscriptionName, ackFunc)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewSubscription(ds, nil), nil
 }
 
-func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) driver.Subscription {
+func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
 	sub, err := nc.SubscribeSync(subscriptionName)
-	return &subscription{nc, sub, ackFunc, err}
+	if err != nil {
+		return nil, err
+	}
+	if ackFunc == nil {
+		return nil, errors.New("natspubsub: ackFunc is required")
+	}
+	return &subscription{nc, sub, ackFunc}, nil
 }
 
 // AckFunc implements driver.Subscription.AckFunc.
