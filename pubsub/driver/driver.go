@@ -153,11 +153,3 @@ type Subscription interface {
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
 }
-
-// AckHandlerFunc exposes a common contract for Acknowledgement override/suppression.
-type AckHandlerFunc func(ctx context.Context, ids []AckID) error
-
-// Handle redirects by invoking AckHandleFunc.
-func (ahf AckHandlerFunc) Handle(ctx context.Context, ids []AckID) error {
-	return ahf(ctx, ids)
-}

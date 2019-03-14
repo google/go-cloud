@@ -19,8 +19,6 @@ import (
 	"log"
 	"os"
 
-	"gocloud.dev/pubsub/driver"
-
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/azurepubsub"
 
@@ -122,7 +120,7 @@ func ExampleOpenSubscription() {
 	msg.Ack()
 }
 
-func ExampleSubscriptionWithAutoDeleteAndNoAck() {
+func ExampleAckFuncForReceiveAndDelete() {
 
 	ctx := context.Background()
 	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
@@ -162,24 +160,24 @@ func ExampleSubscriptionWithAutoDeleteAndNoAck() {
 		log.Fatal(err)
 	}
 	defer sbSub.Close(ctx)
-	
+
 	// This package accommodates both kinds of systems. If your application uses
 	// at-least-once providers, it should always call Message.Ack. If your application
 	// only uses at-most-once providers (ReceiveAndDeleteMode), it may call Message.Ack, but does not need to.
 	//
 	// For more information on Service Bus ReceiveMode, see https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
 	//
-	// Use the options.AckOverride to supply your own logic for acking (optional regardless of modes). The custom AckOverride function can perform logging, no-ops, 
+	// Use the options.AckOverride to supply your own logic for acking (optional regardless of modes). The custom AckOverride function can perform logging, no-ops,
 	// or your own bulk disposition operation. See https://godoc.org/github.com/Azure/azure-service-bus-go#Subscription.SendBatchDisposition.
 	//
-	// Important: 
+	// Important:
 	// 1. AckOverride is optional for Service Bus Subscription in ReceiveAndDeleteMode (SubscriptionWithReceiveAndDelete option enabled).
 	//    Calling the default driver Ack (opts.AckOverride is nil) in at-most-once mode will be disregarded by Azure Service Bus.
 	// 2. AckOverride can be used for custom batch dispositions (SubscriptionWithReceiveAndDelete option not set) but not recommended.
+	noop := func() {
+	}
 	subOpts := &azurepubsub.SubscriptionOptions{
-		AckOverride: func(ctx context.Context, ids []driver.AckID) error {
-			return nil
-		},
+		AckFuncForReceiveAndDelete: noop,
 	}
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
 	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
@@ -205,6 +203,6 @@ func ExampleSubscriptionWithAutoDeleteAndNoAck() {
 		log.Fatal(err)
 	}
 
-	// Ack will redirect to the AckOverride option (if provided), otherwise the driver Ack will be called.	
+	// Ack will redirect to the AckOverride option (if provided), otherwise the driver Ack will be called.
 	msg.Ack()
 }

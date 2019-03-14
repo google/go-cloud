@@ -153,8 +153,8 @@ type subscription struct {
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ListenerTimeout time.Duration
-	AckOverride     driver.AckHandlerFunc
+	ListenerTimeout            time.Duration
+	AckFuncForReceiveAndDelete func() // AckFuncForReceiveAndDelete is used for at-most-once mode (SB Subscription with SubscriptionWithReceiveAndDelete option)
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -176,10 +176,10 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		defaultTimeout = opts.ListenerTimeout
 	}
 
-	// Determine if caller will handle acks.
-	var ackOverride func(ctx context.Context, ids []driver.AckID) error
-	if opts != nil && opts.AckOverride != nil {
-		ackOverride = opts.AckOverride
+	// Determine if caller will suppress acks (at-most-once mode).
+	var ackFunc func()
+	if opts != nil && opts.AckFuncForReceiveAndDelete != nil {
+		ackFunc = opts.AckFuncForReceiveAndDelete
 	}
 
 	return &subscription{
@@ -187,8 +187,8 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		topicName: topicName,
 		sbNs:      sbNs,
 		opts: &SubscriptionOptions{
-			ListenerTimeout: defaultTimeout,
-			AckOverride:     ackOverride,
+			ListenerTimeout:            defaultTimeout,
+			AckFuncForReceiveAndDelete: ackFunc,
 		},
 	}
 }
@@ -308,9 +308,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		return nil
 	}
 
-	// Call Ack Override if provided.
-	if s.opts != nil && s.opts.AckOverride != nil {
-		return s.opts.AckOverride.Handle(ctx, ids)
+	// Invoke AckFunc is provided (at-most-once mode).
+	if s.opts != nil && s.opts.AckFuncForReceiveAndDelete != nil {
+		s.opts.AckFuncForReceiveAndDelete()
 	}
 
 	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
