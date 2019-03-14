@@ -39,7 +39,7 @@ func init() {
 }
 
 // defaultDialer dials a default Rabbit server based on the environment
-// variable "RABBIT_SERVER".
+// variable "RABBIT_SERVER_URL".
 type defaultDialer struct {
 	init   sync.Once
 	opener *URLOpener
