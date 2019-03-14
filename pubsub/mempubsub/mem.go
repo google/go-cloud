@@ -253,19 +253,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err := s.wait(ctx, 0); err != nil {
 		return nil, err
 	}
-	// Loop until at least one message is available. Polling is inelegant, but the
-	// alternative would be complicated by the need to recognize expired messages
-	// promptly.
-	for {
-		if msgs := s.receiveNoWait(time.Now(), maxMessages); len(msgs) > 0 {
-			return msgs, nil
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(pollDuration):
-		}
+	msgs := s.receiveNoWait(time.Now(), maxMessages)
+	if len(msgs) == 0 {
+		time.Sleep(pollDuration)
 	}
+	return msgs, nil
 }
 
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
