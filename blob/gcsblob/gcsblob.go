@@ -137,7 +137,7 @@ func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket
 func (o *URLOpener) forParams(ctx context.Context, q url.Values) (*Options, error) {
 	for k := range q {
 		if k != "access_id" && k != "private_key_path" {
-			return nil, fmt.Errorf("unknown query parameter %q", k)
+			return nil, fmt.Errorf("invalid query parameter %q", k)
 		}
 	}
 	opts := new(Options)
