@@ -75,8 +75,7 @@ func newNativeCodec() (*nativeCodec, error) {
 // If this completes successfully, the encoded *pb.Document will be in c.doc.
 func (c *nativeCodec) interceptUnary(_ context.Context, method string, req, res interface{}, _ *grpc.ClientConn, _ grpc.UnaryInvoker, _ ...grpc.CallOption) error {
 	c.doc = req.(*pb.CommitRequest).Writes[0].GetUpdate()
-	cres := res.(*pb.CommitResponse)
-	cres.WriteResults = []*pb.WriteResult{{}}
+	res.(*pb.CommitResponse).WriteResults = []*pb.WriteResult{{}}
 	return nil
 }
 
@@ -100,9 +99,8 @@ func (cs *clientStream) RecvMsg(m interface{}) error {
 		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{cs.doc}
 		cs.doc = nil
 		return nil
-	} else {
-		return io.EOF
 	}
+	return io.EOF
 }
 
 func (cs *clientStream) Context() context.Context     { return cs.ctx }
