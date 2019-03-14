@@ -332,7 +332,9 @@ func TestOpenBucketFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"azblob://mybucket", false},
+		// Invalid parameter.
 		{"azblob://mybucket?param=value", true},
 	}
 

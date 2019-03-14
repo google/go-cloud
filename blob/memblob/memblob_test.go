@@ -53,7 +53,9 @@ func TestOpenBucketFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"mem://", false},
+		// Invalid parameter.
 		{"mem://?param=value", true},
 	}
 

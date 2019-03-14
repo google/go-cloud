@@ -375,10 +375,15 @@ func TestOpenBucketFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"gs://mybucket", false},
+		// OK, setting access_id.
 		{"gs://mybucket?access_id=foo", false},
+		// OK, setting private_key_path.
 		{"gs://mybucket?private_key_path=" + pkFile.Name(), false},
+		// Invalid private_key_path.
 		{"gs://mybucket?private_key_path=invalid-path", true},
+		// Invalid parameter.
 		{"gs://mybucket?param=value", true},
 	}
 

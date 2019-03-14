@@ -209,12 +209,12 @@ type Bucket interface {
 	ErrorCode(error) gcerrors.ErrorCode
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#As for background information.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for returned
 	// errors.
-	// See https://godoc.org/gocloud.dev#As for background information.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
 	ErrorAs(error, interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
