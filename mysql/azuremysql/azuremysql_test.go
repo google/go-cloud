@@ -14,7 +14,7 @@
 
 // Read the documentation on Azure Database for MySql for more information.
 // See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
-// In order to run this test, create a MYSQL instance using Azure Portal or Terraform.
+// To run this test, create a MySQL instance using Azure Portal or Terraform.
 // For Azure Portal, see https://docs.microsoft.com/en-us/azure/mysql/quickstart-create-mysql-server-database-using-azure-portal.
 // For Terraform, see https://www.terraform.io/docs/providers/azurerm/r/mysql_database.html.
 package azuremysql

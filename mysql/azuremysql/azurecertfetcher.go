@@ -34,8 +34,6 @@ type (
 	AzureCertFetcher struct {
 		client *http.Client
 		// certLocation can be a remote endpoint or a file path
-		// if certLocation is a remote endpoint, call AzureCertPool to fetch the certificate
-		// if certLocation is a os file location, call AzureCertPoolFromFile to load the certificate
 		certLocation string
 		useHTTP      bool
 	}
@@ -45,7 +43,7 @@ type (
 // See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
 func NewAzureCertFetcher(caBundleLocation string) (*AzureCertFetcher, error) {
 	if caBundleLocation == "" {
-		return nil, fmt.Errorf("invalid argument caBundleURL")
+		return nil, fmt.Errorf("invalid argument caBundleLocation")
 	}
 	useHTTP := strings.HasPrefix(caBundleLocation, "http")
 	return &AzureCertFetcher{
