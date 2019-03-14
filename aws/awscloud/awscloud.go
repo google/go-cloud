@@ -18,6 +18,8 @@ package awscloud // import "gocloud.dev/aws/awscloud"
 import (
 	"net/http"
 
+	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/google/wire"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
@@ -41,26 +43,27 @@ var AWS = wire.NewSet(
 // AWS set, does not include credentials. Individual services may require
 // additional configuration.
 var Services = wire.NewSet(
-	s3blob.OpenBucket,
+	// gocloud.dev/blob
 	s3blob.Options{},
 	s3blob.URLOpener{},
 
-	awspubsub.OpenSubscription,
+	// gocloud.dev/pubsub
 	awspubsub.SubscriptionOptions{},
-	awspubsub.OpenTopic,
 	awspubsub.TopicOptions{},
 	awspubsub.URLOpener{},
-	// TODO: Include sqs.New, sns.New?
+	sns.New,
+	sqs.New,
 
-	awskms.NewKeeper,
+	// gocloud.dev/runtimevar
+	paramstore.Options{},
+	paramstore.URLOpener{},
+
+	// gocloud.dev/secrets
 	awskms.KeeperOptions{},
 	awskms.Dial,
 	awskms.URLOpener{},
 
-	paramstore.NewVariable,
-	paramstore.Options{},
-	paramstore.URLOpener{},
-
+	// gocloud.dev/server
 	rds.CertFetcherSet,
 	xrayserver.Set,
 )
