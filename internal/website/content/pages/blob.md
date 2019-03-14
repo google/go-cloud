@@ -23,8 +23,8 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
   blob implementation using the file system
 
 The blob package can also interact with most any server that implements the AWS
-S3 HTTP API, like [Minio][] or [SeaweedFS][]. You can change the endpoint used
-in an S3 URL using query parameters like so:
+S3 HTTP API, like [Minio][], [Ceph][], or [SeaweedFS][]. You can change the
+endpoint used in an S3 URL using query parameters like so:
 
 ```go
 bucket, err := blob.OpenBucket("s3://mybucket?" +
@@ -36,6 +36,7 @@ bucket, err := blob.OpenBucket("s3://mybucket?" +
 See [`aws.ConfigFromURLParams`][] for more details on supported URL options for S3.
 
 [`aws.ConfigFromURLParams`]: https://godoc.org/gocloud.dev/aws#ConfigFromURLParams
+[Ceph]: https://ceph.com/
 [Minio]: https://www.minio.io/
 [SeaweedFS]: https://github.com/chrislusf/seaweedfs
 
