@@ -22,6 +22,23 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
 * [File-backed local blob](https://godoc.org/gocloud.dev/blob/fileblob) - local
   blob implementation using the file system
 
+The blob package can also interact with most any server that implements the AWS
+S3 HTTP API, like [Minio][] or [SeaweedFS][]. You can change the endpoint used
+in an S3 URL using query parameters like so:
+
+```go
+bucket, err := blob.OpenBucket("s3://mybucket?" +
+    "endpoint=my.minio.local:8080&" +
+    "disableSSL=true&" +
+    "s3ForcePathStyle=true")
+```
+
+See [`aws.ConfigFromURLParams`][] for more details on supported URL options for S3.
+
+[`aws.ConfigFromURLParams`]: https://godoc.org/gocloud.dev/aws#ConfigFromURLParams
+[Minio]: https://www.minio.io/
+[SeaweedFS]: https://github.com/chrislusf/seaweedfs
+
 ## Usage Samples
 
 * [Tutorial
