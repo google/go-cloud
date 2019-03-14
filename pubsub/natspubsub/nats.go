@@ -23,7 +23,6 @@
 //  - Topic: *nats.Conn
 //  - Subscription: *nats.Subscription
 //  - Message: *nats.Msg
-
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
 import (
@@ -70,16 +69,22 @@ type encMsg struct {
 }
 
 // CreateTopic returns a *pubsub.Topic for use with NATS.
-// We delay checking for the proper syntax here.
 // For more info, see https://nats.io/documentation/writing_applications/subjects
-func CreateTopic(nc *nats.Conn, topicName string) *pubsub.Topic {
-	return pubsub.NewTopic(createTopic(nc, topicName), nil)
+func CreateTopic(nc *nats.Conn, topicName string) (*pubsub.Topic, error) {
+	dt, err := createTopic(nc, topicName)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewTopic(dt, nil), nil
 }
 
 // createTopic returns the driver for CreateTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func createTopic(nc *nats.Conn, topicName string) driver.Topic {
-	return &topic{nc, topicName}
+func createTopic(nc *nats.Conn, topicName string) (driver.Topic, error) {
+	if nc == nil {
+		return nil, errors.New("natspubsub: nats.Conn is required")
+	}
+	return &topic{nc, topicName}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -160,24 +165,45 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 type subscription struct {
-	nc   *nats.Conn
-	nsub *nats.Subscription
-	err  error
+	nc      *nats.Conn
+	nsub    *nats.Subscription
+	ackFunc func()
 }
 
 // CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
+//
+// ackFunc will be called when the application calls pubsub.Topic.Ack on a
+// received message; Ack is a meaningless no-op for NATS. You can provide an
+// empty function to leave it a no-op, or panic/log a warning if you don't
+// expect Ack to be called.
+//
 // TODO(dlc) - Options for queue groups?
-func CreateSubscription(nc *nats.Conn, subscriptionName string) *pubsub.Subscription {
-	return pubsub.NewSubscription(createSubscription(nc, subscriptionName), nil)
+func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (*pubsub.Subscription, error) {
+	ds, err := createSubscription(nc, subscriptionName, ackFunc)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewSubscription(ds, nil), nil
 }
 
-func createSubscription(nc *nats.Conn, subscriptionName string) driver.Subscription {
+func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
 	sub, err := nc.SubscribeSync(subscriptionName)
-	return &subscription{nc, sub, err}
+	if err != nil {
+		return nil, err
+	}
+	if ackFunc == nil {
+		return nil, errors.New("natspubsub: ackFunc is required")
+	}
+	return &subscription{nc, sub, ackFunc}, nil
 }
 
 // AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
+func (s *subscription) AckFunc() func() {
+	if s == nil {
+		return nil
+	}
+	return s.ackFunc
+}
 
 // ReceiveBatch implements driver.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
@@ -262,10 +288,10 @@ func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
 	}
 }
 
-// SendAcks implements driver.Subscription.SendAcks. NATS does not need Acks since
-// it is At-Most-Once QoS.
+// SendAcks implements driver.Subscription.SendAcks. It should never be called
+// because we provide a non-nil AckFunc.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	return nil
+	panic("unreachable")
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
