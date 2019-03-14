@@ -131,7 +131,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, fmt.Errorf("open keeper %v: %v", u, err)
 	}
-	return NewKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options), nil
+	return NewKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options)
 }
 
 func keyInfoFromURL(u *url.URL) (vaultName, keyName, keyVersion string, err error) {
@@ -186,22 +186,24 @@ func Dial() (*keyvault.BaseClient, error) {
 // - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 // - keyVersion: string representing the keyVersion, or ""; see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 // - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
-func NewKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) *secrets.Keeper {
+func NewKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) (*secrets.Keeper, error) {
+	if opts == nil {
+		opts = &KeeperOptions{}
+	}
+	if opts.Algorithm == "" {
+		return nil, fmt.Errorf("invalid algorithm, choose from %s", getSupportedAlgorithmsForError())
+	}
 	return secrets.NewKeeper(&keeper{
 		client:       client,
 		keyVaultName: keyVaultName,
 		keyName:      keyName,
 		keyVersion:   keyVersion,
 		options:      opts,
-	})
+	}), nil
 }
 
 // Encrypt encrypts the plaintext into a ciphertext.
 func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) {
-	if err := k.validateOptions(); err != nil {
-		return nil, err
-	}
-
 	b64Text := base64.StdEncoding.EncodeToString(plaintext)
 	keyOpsResult, err := k.client.Encrypt(ctx, k.getKeyVaultURI(), k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
 		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
@@ -216,10 +218,6 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 
 // Decrypt decrypts the ciphertext into a plaintext.
 func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
-	if err := k.validateOptions(); err != nil {
-		return nil, err
-	}
-
 	cipherval := string(ciphertext)
 	keyOpsResult, err := k.client.Decrypt(ctx, k.getKeyVaultURI(), k.keyName, k.keyVersion, keyvault.KeyOperationsParameters{
 		Algorithm: keyvault.JSONWebKeyEncryptionAlgorithm(k.options.Algorithm),
@@ -261,14 +259,6 @@ func (k *keeper) ErrorCode(err error) gcerrors.ErrorCode {
 
 func (k *keeper) getKeyVaultURI() string {
 	return fmt.Sprintf("https://%s.%s/", k.keyVaultName, keyVaultEndpointSuffix)
-}
-
-func (k *keeper) validateOptions() error {
-	if k.options != nil && k.options.Algorithm == "" {
-		return fmt.Errorf("invalid algorithm, choose from %s", getSupportedAlgorithmsForError())
-	}
-
-	return nil
 }
 
 func getSupportedAlgorithmsForError() string {

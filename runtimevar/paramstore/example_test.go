@@ -50,7 +50,7 @@ func Example() {
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,6 +66,6 @@ func Example_openVariable() {
 		log.Fatal(err)
 	}
 
-	snapshot, err := v.Watch(ctx)
+	snapshot, err := v.Latest(ctx)
 	_, _ = snapshot, err
 }

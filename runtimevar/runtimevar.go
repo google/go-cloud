@@ -39,7 +39,7 @@
 // return a value without blocking.
 //
 // Alternatively, you can construct a *Variable via a URL and OpenVariable.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 //
 // OpenCensus Integration
@@ -90,7 +90,7 @@ type Snapshot struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (s *Snapshot) As(i interface{}) bool {
@@ -345,7 +345,7 @@ func wrapError(w driver.Watcher, err error) error {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#hdr-As for background information.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
@@ -362,7 +362,7 @@ type VariableURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -406,7 +406,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenVariable opens the variable identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
 // for more information.
 func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 	return defaultURLMux.OpenVariable(ctx, urlstr)
@@ -482,14 +482,21 @@ func bytesDecode(b []byte, obj interface{}) error {
 // DecoderByName returns a *Decoder based on decoderName.
 // It is intended to be used by VariableURLOpeners in driver packages.
 // Supported values include:
-//   - (empty string), "bytes": Returns the default, BytesDecoder;
-//       Snapshot.Valuewill be of type []byte.
+//   - empty string: Returns the default from the URLOpener.Decoder, or
+//       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
+//       using the default URLOpener).
+//   - "bytes": Returns a BytesDecoder; Snapshot.Value will be of type []byte.
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-func DecoderByName(decoderName string) (*Decoder, error) {
+func DecoderByName(decoderName string, dflt *Decoder) (*Decoder, error) {
+	if dflt == nil {
+		dflt = BytesDecoder
+	}
 	switch decoderName {
-	case "", "bytes":
+	case "":
+		return dflt, nil
+	case "bytes":
 		return BytesDecoder, nil
 	case "jsonmap":
 		var m map[string]interface{}

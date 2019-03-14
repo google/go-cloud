@@ -246,11 +246,7 @@ func TestOpenVariable(t *testing.T) {
 		{"runtimeconfigurator://myproject/mycfg", true},
 		// Invalid decoder.
 		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=notadecoder", true},
-		// OK, setting wait.
-		{"runtimeconfigurator://myproject/mycfg/myvar?wait=30s", false},
-		// Invalid wait.
-		{"runtimeconfigurator://myproject/mycfg/myvar?wait=notaduration", true},
-		// Unknown param.
+		// Invalid param.
 		{"runtimeconfigurator://myproject/mycfg/myvar?param=value", true},
 	}
 

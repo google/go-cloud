@@ -163,12 +163,15 @@ func TestOpenVariable(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"paramstore://myvar", false},
+		// OK, setting region.
 		{"paramstore://myvar?region=us-west-1", false},
+		// OK, setting decoder.
 		{"paramstore://myvar?decoder=string", false},
+		// Invalid decoder.
 		{"paramstore://myvar?decoder=notadecoder", true},
-		{"paramstore://myvar?wait=30s", false},
-		{"paramstore://myvar?wait=notaduration", true},
+		// Invalid parameter.
 		{"paramstore://myvar?param=value", true},
 	}
 

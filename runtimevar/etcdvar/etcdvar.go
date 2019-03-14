@@ -17,15 +17,12 @@
 //
 // URLs
 //
-// For runtimevar.OpenVariable URLs, etcdvar registers for the scheme "etcd".
-// The host+path is used as the blob key. etcdvar supports the following URL
-// parameters:
-//   - client: The URL to be passed to etcd's
-//       go.etcd.io/etcd/clientv3.NewFromURL (required).
-//       NewFromURL will be called once per unique client URL.
-//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
-//       See runtimevar.DecoderByName for supported values.
-// Example URL: "blob://myvar?client=http://my.etcd.server:8080&decoder=string".
+// For runtimevar.OpenVariable, etcdvar registers for the scheme "etcd".
+// The default URL opener will dial an etcd server based on the environment
+// variable "ETCD_SERVER_URL".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -39,6 +36,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -52,77 +50,73 @@ import (
 )
 
 func init() {
-	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &lazyClientOpener{})
+	runtimevar.DefaultURLMux().RegisterVariable(Scheme, &defaultDialer{})
 }
 
 // Scheme is the URL scheme etcdvar registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "etcd"
 
-type lazyClientOpener struct {
-	mu      sync.Mutex
-	clients map[string]*clientv3.Client
+type defaultDialer struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
 }
 
-func (o *lazyClientOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	clientURL := u.Query().Get("client")
-	if clientURL == "" {
-		return nil, fmt.Errorf("open variable %q: URL parameter \"client\" is required", u)
-	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	if o.clients == nil {
-		o.clients = map[string]*clientv3.Client{}
-	}
-	cli := o.clients[clientURL]
-	if cli == nil {
-		var err error
-		cli, err = clientv3.NewFromURL(clientURL)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: NewFromURL failed: %v", u, err)
+func (o *defaultDialer) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	o.init.Do(func() {
+		serverURL := os.Getenv("ETCD_SERVER_URL")
+		if serverURL == "" {
+			o.err = errors.New("ETCD_SERVER_URL environment variable is not set")
+			return
 		}
-		o.clients[clientURL] = cli
+		client, err := clientv3.NewFromURL(serverURL)
+		if err != nil {
+			o.err = fmt.Errorf("failed to connect to default client %q: %v", serverURL, err)
+			return
+		}
+		o.opener = &URLOpener{Client: client}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
 	}
-	opener := URLOpener{Client: cli}
-	return opener.OpenVariableURL(ctx, u)
+	return o.opener.OpenVariableURL(ctx, u)
 }
 
-// URLOpener opens Variable URLs like "etcd://mykey?decoder=string".
-// It supports the URL parameters:
+// URLOpener opens etcd URLs like "etcd://mykey?decoder=string".
+//
+// The host+path is used as the variable name.
+//
+// The following URL parameters are supported:
 //   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
 //       See runtimevar.DecoderByName for supported values.
 type URLOpener struct {
 	// The Client to use; required.
 	Client *clientv3.Client
 
-	// Decoder and Options can be specified at URLOpener construction time,
-	// or provided/overridden via URL parameters.
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
+
+	// Options specifies the options to pass to New.
 	Options Options
 }
 
 // OpenVariableURL opens the variable at the URL's path. See the package doc
 // for more details.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
-	if o.Client == nil {
-		return nil, fmt.Errorf("open variable %q: a client is required", u)
-	}
 	q := u.Query()
-	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
-		var err error
-		o.Decoder, err = runtimevar.DecoderByName(decoderName)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
-		}
+
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
+
 	for param := range q {
-		switch param {
-		case "decoder", "client":
-			// processed elsewhere
-		default:
-			return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
-		}
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
-	return New(o.Client, path.Join(u.Host, u.Path), o.Decoder, &o.Options)
+	return New(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.
