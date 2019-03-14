@@ -290,18 +290,11 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var got *url.URL
 
 	mux := new(URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterBucket("foo", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
-		got = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterBucket("err", bucketURLOpenFunc(func(_ context.Context, u *url.URL) (*Bucket, error) {
-		return nil, errors.New("fail")
-	}))
+	fake := &fakeOpener{}
+	mux.RegisterBucket("foo", fake)
+	mux.RegisterBucket("err", fake)
 
 	for _, tc := range []struct {
 		name    string
@@ -352,6 +345,14 @@ func TestURLMux(t *testing.T) {
 			name: "fancy bucket name",
 			url:  "foo:///foo/bar/baz",
 		},
+		{
+			name: "using api scheme prefix",
+			url:  "blob+foo:///foo/bar/baz",
+		},
+		{
+			name: "using api+type scheme prefix",
+			url:  "blob+bucket+foo:///foo/bar/baz",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenBucket(ctx, tc.url)
@@ -361,19 +362,33 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
+			}
+			// Repeat with OpenBucketURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			_, gotErr = mux.OpenBucketURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
 }
 
-type bucketURLOpenFunc func(context.Context, *url.URL) (*Bucket, error)
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenBucketURL
+}
 
-func (f bucketURLOpenFunc) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
-	return f(ctx, u)
+func (o *fakeOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*Bucket, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }

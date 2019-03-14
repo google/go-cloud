@@ -17,13 +17,13 @@
 //
 // URLs
 //
-// For secrets.OpenKeeper URLs, awskms registers for the scheme "awskms".
-// The host+path are used as the key ID; see
-// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-// for more details. Example: "awskms://alias/my-key".
-//
-// secrets.OpenKeeper will create a new AWS session with the default options.
-// If you want to use a different session, see URLOpener.
+// For secrets.OpenKeeper, awskms registers for the scheme "awskms".
+// The default URL opener will use an AWS session with the default credentials
+// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+// for more details.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -63,22 +63,6 @@ func Dial(p client.ConfigProvider) (*kms.KMS, error) {
 	return kms.New(p), nil
 }
 
-// URLOpener opens secrets.Keeper URLs for AWS KMS, like "awskms://keyID".
-// The key ID can be in the form of an Amazon Resource Name (ARN), alias
-// name, or alias ARN. See
-// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
-// for more details.
-// The URL Host + Path are used as the key ID, to support alias names like "awskms://alias/foo".
-// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
-// for modifying the aws.Session.
-type URLOpener struct {
-	// ConfigProvider must be set to a non-nil value.
-	ConfigProvider client.ConfigProvider
-
-	// Options specifies the options to pass to NewKeeper.
-	Options KeeperOptions
-}
-
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenKeeperURL.
 type lazySessionOpener struct {
@@ -99,13 +83,30 @@ func (o *lazySessionOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*sec
 		}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open AWS KMS Keeper %q: %v", u, o.err)
+		return nil, fmt.Errorf("open keeper %v: %v", u, o.err)
 	}
 	return o.opener.OpenKeeperURL(ctx, u)
 }
 
 // Scheme is the URL scheme awskms registers its URLOpener under on secrets.DefaultMux.
 const Scheme = "awskms"
+
+// URLOpener opens AWS KMS URLs like "awskms://keyID".
+//
+// The URL Host + Path are used as the key ID, which can be in the form of an
+// Amazon Resource Name (ARN), alias name, or alias ARN. See
+// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
+// for more details.
+//
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// for overriding the aws.Session from the URL.
+type URLOpener struct {
+	// ConfigProvider must be set to a non-nil value.
+	ConfigProvider client.ConfigProvider
+
+	// Options specifies the options to pass to NewKeeper.
+	Options KeeperOptions
+}
 
 // OpenKeeperURL opens an AWS KMS Keeper based on u.
 func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Keeper, error) {

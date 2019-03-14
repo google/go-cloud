@@ -51,7 +51,11 @@ by URL; for example, the blob package supports Buckets, while the pubsub
 package supports Topics and Subscriptions. Each provider implementation will
 document what scheme(s) it registers for, and what format of URL it expects.
 
-Each portable API package should also include an example using a URL, and
+Each portable type URL opener will accept URL schemes with an <api>+ prefix
+(e.g., blob+file:///dir" instead of "file:///dir", as well as schemes with an
+<api>+<type>+ prefix (e.g., blob+bucket+file:///dir).
+
+Each portable API package should include an example using a URL, and
 many providers will include provider-specific examples as well.
 
 

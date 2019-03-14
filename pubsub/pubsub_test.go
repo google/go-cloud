@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -491,25 +490,13 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var gotTopic, gotSub *url.URL
 
 	mux := new(pubsub.URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterTopic("foo", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
-		gotTopic = u
-		return nil, nil
-	}))
-	mux.RegisterSubscription("foo", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
-		gotSub = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterTopic("err", topicURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Topic, error) {
-		return nil, errors.New("fail")
-	}))
-	mux.RegisterSubscription("err", subscriptionURLOpenFunc(func(_ context.Context, u *url.URL) (*pubsub.Subscription, error) {
-		return nil, errors.New("fail")
-	}))
+	fake := &fakeOpener{}
+	mux.RegisterTopic("foo", fake)
+	mux.RegisterTopic("err", fake)
+	mux.RegisterSubscription("foo", fake)
+	mux.RegisterSubscription("err", fake)
 
 	for _, tc := range []struct {
 		name    string
@@ -560,6 +547,10 @@ func TestURLMux(t *testing.T) {
 			name: "fancy ps name",
 			url:  "foo:///foo/bar/baz",
 		},
+		{
+			name: "using api schema prefix",
+			url:  "pubsub+foo://foo",
+		},
 	} {
 		t.Run("topic: "+tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenTopic(ctx, tc.url)
@@ -569,41 +560,65 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
+			}
+			// Repeat with OpenTopicURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(gotTopic, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotTopic, want, diff)
+			_, gotErr = mux.OpenTopicURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 		t.Run("subscription: "+tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenSubscription(ctx, tc.url)
 			if (gotErr != nil) != tc.wantErr {
-				t.Fatalf("got err %v, want error: %v", gotErr, tc.wantErr)
+				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
 			}
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
+			}
+			// Repeat with OpenSubscriptionURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(gotSub, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", gotSub, want, diff)
+			_, gotErr = mux.OpenSubscriptionURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
 }
 
-type topicURLOpenFunc func(context.Context, *url.URL) (*pubsub.Topic, error)
-
-func (f topicURLOpenFunc) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
-	return f(ctx, u)
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenTopicURL/OpenSubscriptionURL
 }
 
-type subscriptionURLOpenFunc func(context.Context, *url.URL) (*pubsub.Subscription, error)
+func (o *fakeOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
+}
 
-func (f subscriptionURLOpenFunc) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	return f(ctx, u)
+func (o *fakeOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }

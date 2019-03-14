@@ -32,6 +32,32 @@
 // multiple Cloud providers. You may find http://github.com/google/wire useful
 // for managing your initialization code.
 //
+// Alternatively, you can construct a *Topic/*Subscription via a URL and
+// OpenTopic/OpenSubscription.
+// See https://godoc.org/gocloud.dev#URLs for more information.
+//
+//
+// At-most-once vs. At-least-once Delivery
+//
+// Some PubSub systems guarantee that messages received by subscribers but not
+// acknowledged are delivered again. These at-least-once systems require that
+// subscribers call an ack function to indicate that they have fully processed a
+// message.
+//
+// In other PubSub systems, a message will be delivered only once, if it is delivered
+// at all. These at-most-once systems do not need an Ack method.
+//
+// This package accommodates both kinds of systems. If your application uses
+// at-least-once providers, it should always call Message.Ack. If your application
+// only uses at-most-once providers, it may call Message.Ack, but does not need to.
+// The constructor for at-most-once-providers will require you to supply a function
+// to be called whenever the application calls Message.Ack. Common implementations
+// are: do nothing, on the grounds that you may want to test your at-least-once
+// system with an at-most-once provider; or panic, so that a system that assumes
+// at-least-once delivery isn't accidentally paired with an at-most-once provider.
+// Providers that support both at-most-once and at-least-once semantics will include
+// an optional ack function in their Options struct.
+//
 //
 // OpenCensus Integration
 //
@@ -568,6 +594,7 @@ type SubscriptionURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
+// See https://godoc.org/gocloud.dev#URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -637,22 +664,18 @@ func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
 
-// OpenTopic opens the Topic identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenTopic opens the Topic identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 	return defaultURLMux.OpenTopic(ctx, urlstr)
 }
 
-// OpenSubscription opens the Subscription identified by the URL given. URL openers must be
-// registered in the DefaultURLMux, which is typically done in driver
-// packages' initialization.
-//
-// See the URLOpener documentation in provider-specific subpackages for more
-// details on supported scheme(s) and URL parameter(s).
+// OpenSubscription opens the Subscription identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for
+// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// for more information.
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)
 }

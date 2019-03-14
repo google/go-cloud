@@ -305,3 +305,47 @@ func BenchmarkAwsPubSub(b *testing.B) {
 	defer sub.Shutdown(ctx)
 	drivertest.RunBenchmarks(b, topic, sub)
 }
+
+func TestOpenTopicFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath", false},
+		// OK, setting region.
+		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
+		// Invalid parameter.
+		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription", false},
+		// OK, setting region.
+		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?region=us-east-2", false},
+		// Invalid parameter.
+		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
