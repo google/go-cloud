@@ -33,7 +33,6 @@ import (
 // client. Since that package doesn't export its codec, we have to go behind the
 // scenes and intercept traffic at the gRPC level. We use interceptors to do that. (A
 // mock server would have worked too.)
-
 type nativeCodec struct {
 	client *firestore.Client
 	doc    *pb.Document
