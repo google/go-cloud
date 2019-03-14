@@ -12,51 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Read the documentation on Azure Database for MySql for more information.
+// See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
+// In order to run this test, create a MYSQL instance using Azure Portal or Terraform.
+// For Azure Portal, see https://docs.microsoft.com/en-us/azure/mysql/quickstart-create-mysql-server-database-using-azure-portal.
+// For Terraform, see https://www.terraform.io/docs/providers/azurerm/r/mysql_database.html.
 package azuremysql
 
 import (
 	"context"
-	"strconv"
 	"testing"
-
 	"gocloud.dev/internal/testing/terraform"
 )
 
 func TestOpen(t *testing.T) {
+	// This test will be skipped unless the project is set up with Terraform.
+	// Before running go test, run in this directory:
+	//
+	// terraform init
+	// terraform apply
+	
 	tfOut, err := terraform.ReadOutput(".")
 	if err != nil {
 		t.Skipf("Could not obtain harness info: %v", err)
 	}
-
 	serverName, _ := tfOut["serverName"].Value.(string)
-	port, _ := tfOut["port"].Value.(string)
 	username, _ := tfOut["username"].Value.(string)
 	password, _ := tfOut["password"].Value.(string)
 	databaseName, _ := tfOut["database"].Value.(string)
-	if serverName == "" || port == "" || username == "" || databaseName == "" {
-		t.Fatalf("Missing one or more required Terraform outputs; got servername=%q port=%q username=%q database=%q", serverName, port, username, databaseName)
-	}
-	portNum, err := strconv.ParseInt(port, 0, 32)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	ctx := context.Background()
-	acf := NewAzureCertFetcher("")
-	db, _, err := Open(ctx, acf, &Params{
+    acf, _ := NewAzureCertFetcher("https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem")
+	p := &Params{
 		ServerName: serverName,
-		Port:       portNum,
 		User:       username,
 		Password:   password,
 		Database:   databaseName,
-	})
+	}
+
+	db, _, err := Open(ctx, acf, p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Ping(); err != nil {
-		t.Error("Ping:", err)
+		t.Error("Ping: ", err)
+	}
+	if _, err = db.ExecContext(ctx, "CREATE TABLE tblTester (id INT NOT NULL, PRIMARY KEY(id))"); err != nil {
+		t.Error("ExecContext: ", err)
+	}
+	if _, err = db.ExecContext(ctx, "DROP TABLE tblTester"); err != nil {
+		t.Error("ExecContext: ", err)
 	}
 	if err := db.Close(); err != nil {
-		t.Error("Close:", err)
+		t.Error("Close: ", err)
 	}
 }

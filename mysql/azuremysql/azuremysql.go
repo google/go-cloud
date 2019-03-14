@@ -12,31 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azuremysql provides connections to Azure Database for MySql.
+// Package azuremysql provides connections to Azure Database for MySQL.
+// See https://docs.microsoft.com/en-us/azure/mysql.
 package azuremysql // import "gocloud.dev/mysql/azuremysql"
 
 import (
-	"io/ioutil"
-	"crypto/x509"
-	"context"
 	"crypto/tls"
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"sync"
-
+	
 	"contrib.go.opencensus.io/integrations/ocsql"
-	"github.com/go-sql-driver/mysql"
-	"github.com/google/wire"
-
-)
-
-// https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl
-
-// Set is a Wire provider set that provides a *sql.DB given
-// *Params and an HTTP client.
-var Set = wire.NewSet(
-	Open,	
+	"github.com/go-sql-driver/mysql"	
 )
 
 const (
@@ -44,46 +32,38 @@ const (
 	endpointSuffix = "mysql.database.azure.com"
 )
 
-// Params specifies how to connect to an Azure Database for MySql.
+// Params specifies how to connect to an Azure Database for MySQL.
 type Params struct {
-	// ServerName is the MySql instance name without domain suffex. Example: gocloud
-	ServerName string
-	// Port is the TCP port for Azure MySql Server
-	Port int64
+	// ServerName is the MYSQL instance name without domain suffix. Example: gocloud
+	ServerName string	
 	// User is the database user to connect as.
 	User string
 	// Password is the database user password to use.
 	Password string
-	// Database is the MySQL database name to connect to.
+	// Database is the MYSQL database name to connect to.
 	Database string
-	// CertFilePath
-	CertFilePath string
-
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
 }
-// GetHost constructs the FQDN for Azure Database for MySql
-func (p *Params) GetHost() string {
-	return ""
-}
-func (p *Params) MakeConnectionString() string {
-	var connectionString string
-	username := fmt.Sprintf("%s@%s", p.User, p.ServerName)
+// GetFQDN constructs the FQDN for Azure Database for MySQL.
+func (p *Params) GetFQDN() string {
 	fqdn := fmt.Sprintf("%s.%s:%v", p.ServerName, endpointSuffix, defaultPort) 
-	connectionString = fmt.Sprintf("%s:%s@tcp(%s)/%s?allowNativePasswords=true&tls=custom", username, p.Password, fqdn, p.Database)  
-	return connectionString
+	return fqdn;
 }
-
+// Validate ensures all required parameters are set.
 func (p *Params) Validate() error {
+	if p.ServerName == "" || p.User == "" || p.Database == "" {
+		return fmt.Errorf("Missing one or more required params; got servername=%q username=%q database=%q", p.ServerName, p.User, p.Database)
+	}
 	return nil
 }
-
+// Open opens an encrypted connection to an Azure Database for MySql database.
 func Open(ctx context.Context, acf *AzureCertFetcher, params *Params) (*sql.DB, func(), error) {	
 	if e := params.Validate(); e != nil {
 		return nil, nil, e
 	}
 	c := &connector{		
-		//provider: *acf,
+		provider: *acf,
 		params:   *params,
 		sem:      make(chan struct{}, 1),
 		ready:    make(chan struct{}),
@@ -95,12 +75,11 @@ func Open(ctx context.Context, acf *AzureCertFetcher, params *Params) (*sql.DB, 
 	db := sql.OpenDB(c)
 	return db, func() { db.Close() }, nil
 }
-
 type connector struct {
 	params Params
 
 	sem      chan struct{} // receive to acquire, send to release	
-	provider struct{}
+	provider AzureCertFetcher
 
 	ready chan struct{} // closed after writing dsn
 	dsn   string
@@ -108,16 +87,35 @@ type connector struct {
 
 func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 	select {
-	case <-c.sem:
-		rootCertPool := x509.NewCertPool()
-		pem, _ := ioutil.ReadFile(c.params.CertFilePath)
-		if ok := rootCertPool.AppendCertsFromPEM(pem); !ok {
-			return nil, fmt.Errorf("failed to append PEM")
+	case <-c.sem:		
+		certPool, err := c.provider.AzureCertPool(ctx)
+		if err != nil {
+			c.sem <- struct{}{} // release
+			return nil, fmt.Errorf("connect Azure MySql: %v", err)
 		}
-		mysql.RegisterTLSConfig("custom", &tls.Config{RootCAs: rootCertPool})
+		
+		tlsConfigName := fmt.Sprintf("gocloud.dev/mysql/azuresql/%s", c.params.ServerName)
+		err = mysql.RegisterTLSConfig(tlsConfigName, &tls.Config{
+			RootCAs: certPool,
+		})
+		if err != nil {
+			c.sem <- struct{}{} // release
+			return nil, fmt.Errorf("connect Azure MySql: register TLS: %v", err)
+		}
+		cfg := &mysql.Config{
+			Net:                     "tcp",
+			Addr:                    c.params.GetFQDN(),
+			User:                    c.params.User,
+			Passwd:                  c.params.Password,
+			TLSConfig:               tlsConfigName,
+			AllowCleartextPasswords: true,
+			AllowNativePasswords:    true,
+			DBName:                  c.params.Database,
+		}
+		c.dsn = cfg.FormatDSN()
+		close(c.ready)
 
 	case <-c.ready:
-		// Already succeeded.
 	case <-ctx.Done():
 		return nil, fmt.Errorf("connect Azure MySql: waiting for certificates: %v", ctx.Err())
 	}
@@ -126,9 +124,4 @@ func (c *connector) Connect(ctx context.Context) (driver.Conn, error) {
 
 func (c *connector) Driver() driver.Driver {
 	return ocsql.Wrap(mysql.MySQLDriver{}, c.params.TraceOpts...)
-}
-
-var tlsConfigCounter struct {
-	mu sync.Mutex
-	n  int
 }
