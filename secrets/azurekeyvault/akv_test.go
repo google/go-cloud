@@ -43,13 +43,19 @@ import (
 //
 // 4. Set your environment variables depending on the auth model selection. Modify helper initEnv() as needed.
 // For Service Principal, please set the following, see https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization.
-// - AZURE_TENANT_ID (The ID for the Active Directory tenant that the service principal belongs to.)
-// - AZURE_CLIENT_ID (The name or ID of the service principal.)
-// - AZURE_CLIENT_SECRET (The secret associated with the service principal.)
-// - AZURE_ENVIRONMENT
-// - AZURE_AD_RESOURCE to https://vault.azure.net
 //
-// 5. Create/Import a Key. This can be done in the Azure Portal or by code.
+// - AZURE_TENANT_ID: Go to "Azure Active Directory", then "Properties". The
+//     "Directory ID" property is your AZURE_TENANT_ID.
+// - AZURE_CLIENT_ID: Go to "Azure Active Directory", then "App Registrations",
+//     then "View all applications". The "Application ID" column shows your
+//     AZURE_CLIENT_ID.
+// - AZURE_CLIENT_SECRET: Click on the application from the previous step,
+//     then "Settings" and then "Keys". Create a key and use it as your
+//     AZURE_CLIENT_SECRET.
+// - AZURE_ENVIRONMENT: (optional).
+// - AZURE_AD_RESOURCE: (optional).
+//
+// 5. Create/Import a Key. This can be done in the Azure Portal under "Key vaults".
 //
 // 6. Update constants below to match your Azure KeyVault settings.
 
