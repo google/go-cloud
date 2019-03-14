@@ -17,6 +17,16 @@
 // to construct a *pubsub.Subscription. This package uses msgPack and the
 // ugorji driver to encode and decode driver.Message to []byte.
 //
+// URLs
+//
+// For pubsub.OpenTopic and pubsub.OpenSubscription, natspubsub registers
+// for the scheme "nats".
+// The default URL opener will connect to a default server based on the
+// environment variable "NATS_SERVER_URL".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
 // As
 //
 // natspubsub exposes the following types for As:
@@ -28,7 +38,12 @@ package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"path"
 	"reflect"
+	"sync"
 
 	"github.com/nats-io/go-nats"
 	"github.com/ugorji/go/codec"
@@ -38,6 +53,95 @@ import (
 )
 
 var errNotInitialized = errors.New("natspubsub: topic not initialized")
+
+func init() {
+	o := new(defaultDialer)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
+}
+
+// defaultDialer dials a default NATS server based on the environment
+// variable "NATS_SERVER_URL".
+type defaultDialer struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
+	o.init.Do(func() {
+		serverURL := os.Getenv("NATS_SERVER_URL")
+		if serverURL == "" {
+			o.err = errors.New("NATS_SERVER_URL environment variable not set")
+			return
+		}
+		conn, err := nats.Connect(serverURL)
+		if err != nil {
+			o.err = fmt.Errorf("failed to dial NATS_SERVER_URL %q: %v", serverURL, err)
+			return
+		}
+		o.opener = &URLOpener{Connection: conn}
+	})
+	return o.opener, o.err
+}
+
+func (o *defaultDialer) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open topic %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenTopicURL(ctx, u)
+}
+
+func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	opener, err := o.defaultConn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open subscription %v: failed to open default connection: %v", u, err)
+	}
+	return opener.OpenSubscriptionURL(ctx, u)
+}
+
+// Scheme is the URL scheme natspubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "nats"
+
+// URLOpener opens NATS URLs like "nats://mytopic".
+//
+// The URL host+path is used as the topic name.
+//
+// No query parameters are supported.
+type URLOpener struct {
+	// Connection to use for communication with the server.
+	Connection *nats.Conn
+	// TopicOptions specifies the options to pass to OpenTopic.
+	TopicOptions TopicOptions
+	// SubscriptionOptions specifies the options to pass to OpenSubscription.
+	SubscriptionOptions SubscriptionOptions
+}
+
+// OpenTopicURL opens a pubsub.Topic based on u.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %s", u, param)
+	}
+	topicName := path.Join(u.Host, u.Path)
+	return CreateTopic(o.Connection, topicName, &o.TopicOptions)
+}
+
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
+	}
+	topicName := path.Join(u.Host, u.Path)
+	return CreateSubscription(o.Connection, topicName, func() {}, &o.SubscriptionOptions)
+}
+
+// TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
+type TopicOptions struct{}
+
+// SubscriptionOptions sets options for constructing a *pubsub.Subscription
+// backed by NATS.
+type SubscriptionOptions struct{}
 
 type topic struct {
 	nc   *nats.Conn
@@ -70,7 +174,7 @@ type encMsg struct {
 
 // CreateTopic returns a *pubsub.Topic for use with NATS.
 // For more info, see https://nats.io/documentation/writing_applications/subjects
-func CreateTopic(nc *nats.Conn, topicName string) (*pubsub.Topic, error) {
+func CreateTopic(nc *nats.Conn, topicName string, _ *TopicOptions) (*pubsub.Topic, error) {
 	dt, err := createTopic(nc, topicName)
 	if err != nil {
 		return nil, err
@@ -178,7 +282,7 @@ type subscription struct {
 // expect Ack to be called.
 //
 // TODO(dlc) - Options for queue groups?
-func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (*pubsub.Subscription, error) {
+func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
 	ds, err := createSubscription(nc, subscriptionName, ackFunc)
 	if err != nil {
 		return nil, err

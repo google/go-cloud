@@ -35,7 +35,7 @@ func ExampleCreateTopic() {
 	}
 	defer nc.Close()
 
-	pt, err := natspubsub.CreateTopic(nc, "go-cloud.example.send")
+	pt, err := natspubsub.CreateTopic(nc, "go-cloud.example.send", nil)
 	if err != nil {
 		// Handle error....
 	}
@@ -62,7 +62,7 @@ func ExampleCreateSubscription() {
 		// function to do nothing, or panic/log a warning if your application
 		// is built for at-most-once semantics and should never call Ack.
 	}
-	sub, err := natspubsub.CreateSubscription(nc, "go-cloud.example.receive", ackFunc)
+	sub, err := natspubsub.CreateSubscription(nc, "go-cloud.example.receive", ackFunc, nil)
 	if err != nil {
 		// Handle error....
 	}
@@ -77,4 +77,19 @@ func ExampleCreateSubscription() {
 	// Ack will call ackFunc above. If you're only going to use at-most-once
 	// providers, you can omit it.
 	msg.Ack()
+}
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will Dial the NATS server at the URL in the environment
+	// variable NATS_SERVER_URL and send messages with subject "mytopic".
+	t, err := pubsub.OpenTopic(ctx, "nats://mytopic")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will use the same connection and receive messages with subject
+	// "mytopic".
+	s, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
+	_, _, _ = t, s, err
 }

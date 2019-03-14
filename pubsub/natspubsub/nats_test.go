@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -155,11 +156,11 @@ func TestSimplePubSub(t *testing.T) {
 	h := dh.(*harness)
 	topic := "foo"
 	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
+	pt, err := CreateTopic(h.nc, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
+	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +187,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	h := dh.(*harness)
 	topic := "foo"
 	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
+	pt, err := CreateTopic(h.nc, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,11 +215,11 @@ func TestCanceledContext(t *testing.T) {
 	h := dh.(*harness)
 	topic := "foo"
 	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
+	pt, err := CreateTopic(h.nc, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
+	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +315,7 @@ func TestBadSubjects(t *testing.T) {
 	defer dh.Close()
 	h := dh.(*harness)
 
-	sub, err := CreateSubscription(h.nc, "..bad", func() { t.Fatal("ack called unexpectedly") })
+	sub, err := CreateSubscription(h.nc, "..bad", func() { t.Fatal("ack called unexpectedly") }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +323,7 @@ func TestBadSubjects(t *testing.T) {
 		t.Fatal("Expected an error with bad subject")
 	}
 
-	pt, err := CreateTopic(h.nc, "..bad")
+	pt, err := CreateTopic(h.nc, "..bad", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,4 +358,70 @@ func BenchmarkNatsPubSub(b *testing.B) {
 	}
 	defer cleanup()
 	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil))
+}
+
+func fakeConnectionStringInEnv() func() {
+	oldEnvVal := os.Getenv("NATS_SERVER_URL")
+	os.Setenv("NATS_SERVER_URL", fmt.Sprintf("nats://localhost:%d", testPort))
+	return func() {
+		os.Setenv("NATS_SERVER_URL", oldEnvVal)
+	}
+}
+
+func TestOpenTopicFromURL(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"nats://mytopic", false},
+		// Invalid parameter.
+		{"nats://mytopic?param=value", true},
+	}
+
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	ctx := context.Background()
+	dh, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dh.Close()
+
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"nats://mytopic", false},
+		// Invalid parameter.
+		{"nats://mytopic?param=value", true},
+	}
+
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }
