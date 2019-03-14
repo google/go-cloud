@@ -382,8 +382,11 @@ func decode(v reflect.Value, d Decoder) error {
 	}
 
 	if done, val, err := d.AsSpecial(v); done {
+		if err != nil {
+			return err
+		}
 		v.Set(reflect.ValueOf(val))
-		return err
+		return nil
 	}
 
 	// Handle implemented interfaces first.
