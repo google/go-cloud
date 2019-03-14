@@ -52,7 +52,14 @@ func ExampleCreateSubscription() {
 	}
 	defer nc.Close()
 
-	sub := natspubsub.CreateSubscription(nc, "go-cloud.example.send")
+	ackFunc := func() {
+		// This function will be called when the application calls "Ack" on a
+		// received message.
+		// Since Ack is a meaningless no-op for NATS, you can provide an empty
+		// function to do nothing, or panic/log a warning if your application
+		// is built for at-most-once semantics and should never call Ack.
+	}
+	sub := natspubsub.CreateSubscription(nc, "go-cloud.example.send", ackFunc)
 
 	// Now we can use sub to receive messages.
 	msg, err := sub.Receive(ctx)
@@ -61,6 +68,6 @@ func ExampleCreateSubscription() {
 	}
 	// Handle Message
 
-	// Ack is a no-op with NATS.
+	// Ack will call ackFunc above.
 	msg.Ack()
 }

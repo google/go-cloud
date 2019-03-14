@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	TEST_PORT  = 11222
-	BENCH_PORT = 9222
+	testPort  = 11222
+	benchPort = 9222
 )
 
 type harness struct {
@@ -43,9 +43,9 @@ type harness struct {
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	opts := gnatsd.DefaultTestOptions
-	opts.Port = TEST_PORT
+	opts.Port = testPort
 	s := gnatsd.RunServer(&opts)
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", TEST_PORT))
+	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", testPort))
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds := createSubscription(h.nc, testName)
+	ds := createSubscription(h.nc, testName, func() {})
 	// FIXME(dlc) - Check for error?
 	cleanup := func() {
 		var sub *nats.Subscription
@@ -151,7 +151,7 @@ func TestSimplePubSub(t *testing.T) {
 	topic := "foo"
 	body := []byte("hello")
 	pt := CreateTopic(h.nc, topic)
-	sub := CreateSubscription(h.nc, topic)
+	sub := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
 	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestCanceledContext(t *testing.T) {
 	topic := "foo"
 	body := []byte("hello")
 	pt := CreateTopic(h.nc, topic)
-	sub := CreateSubscription(h.nc, topic)
+	sub := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
 
 	// Cancel the ctx, make sure we get the right error.
 	cancel()
@@ -249,7 +249,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds := createSubscription(h.nc, "bar")
+	ds := createSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
 	if gce := ds.ErrorCode(nil); gce != gcerrors.OK {
 		t.Fatalf("Expected %v, got %v", gcerrors.OK, gce)
 	}
@@ -288,7 +288,7 @@ func TestBadSubjects(t *testing.T) {
 	defer dh.Close()
 	h := dh.(*harness)
 
-	sub := CreateSubscription(h.nc, "..bad")
+	sub := CreateSubscription(h.nc, "..bad", func() { t.Fatal("ack called unexpectedly") })
 	if _, err = sub.Receive(ctx); err == nil {
 		t.Fatal("Expected an error with bad subject")
 	}
@@ -303,11 +303,11 @@ func BenchmarkNatsPubSub(b *testing.B) {
 	ctx := context.Background()
 
 	opts := gnatsd.DefaultTestOptions
-	opts.Port = BENCH_PORT
+	opts.Port = benchPort
 	s := gnatsd.RunServer(&opts)
 	defer s.Shutdown()
 
-	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", BENCH_PORT))
+	nc, err := nats.Connect(fmt.Sprintf("nats://127.0.0.1:%d", benchPort))
 	if err != nil {
 		b.Fatal(err)
 	}
