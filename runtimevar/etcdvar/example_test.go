@@ -49,7 +49,7 @@ func Example() {
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
-	snapshot, err := v.Watch(context.Background())
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,13 +59,14 @@ func Example() {
 
 func Example_openVariable() {
 	// OpenVariable creates a *runtimevar.Variable from a URL.
-	// This example watches a variable based on a file-based blob.Bucket with JSON.
+	// The default opener connects to an etcd server based on the environment
+	// variable ETCD_SERVER_URL.
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname?client=my.etcd.server:9999")
+	v, err := runtimevar.OpenVariable(ctx, "etcd://myvarname")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	snapshot, err := v.Watch(ctx)
+	snapshot, err := v.Latest(ctx)
 	_, _ = snapshot, err
 }

@@ -19,12 +19,14 @@
 //
 // URLs
 //
-// For runtimevar.OpenVariable URLs, runtimeconfigurator registers for the
-// scheme "runtimeconfigurator". runtimevar.OpenVariable will use Application
-// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
-// If you want to use different credentials or find details on the format of the
-// URL, see URLOpener.
-// Example URL: runtimeconfigurator://myproject/myconfig/myvar?decoder=string
+// For runtimevar.OpenVariable, runtimeconfigurator registers for the scheme
+// "runtimeconfigurator".
+// The default URL opener will creating a connection using use default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -107,7 +109,7 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 		o.opener = &URLOpener{Client: client}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %q: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -115,8 +117,7 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 // Scheme is the URL scheme runtimeconfigurator registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "runtimeconfigurator"
 
-// URLOpener opens runtimeconfigurator URLs like "runtimeconfigurator://myproject/mycfg/myvar",
-// where:
+// URLOpener opens runtimeconfigurator URLs like "runtimeconfigurator://myproject/mycfg/myvar".
 //
 //   - The URL's host holds the GCP projectID.
 //   - The first element of the URL's path holds the GCP RuntimeConfigurator ConfigID.
@@ -124,47 +125,37 @@ const Scheme = "runtimeconfigurator"
 // See https://cloud.google.com/deployment-manager/runtime-configurator/
 // for more details.
 //
-// This opener supports the following query parameters:
+// The following query parameters are supported:
 //
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
-//   - wait: The poll interval; supported values are from time.ParseDuration.
-//       Defaults to 30s.
 type URLOpener struct {
 	// Client must be set to a non-nil client authenticated with
 	// Cloud RuntimeConfigurator scope or equivalent.
 	Client pb.RuntimeConfigManagerClient
 
-	// Decoder and Options can be specified at URLOpener construction time,
-	// or provided/overridden via URL parameters.
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
+
+	// Options specifies the options to pass to New.
 	Options Options
 }
 
 // OpenVariableURL opens a runtimeconfigurator Variable for u.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
-	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
-		var err error
-		o.Decoder, err = runtimevar.DecoderByName(q.Get("decoder"))
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
-		}
-		q.Del("decoder")
-	}
 
-	if wait := q.Get("wait"); wait != "" {
-		var err error
-		o.Options.WaitDuration, err = time.ParseDuration(wait)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
-		}
-		q.Del("wait")
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	for param := range q {
-		return nil, fmt.Errorf("open variable %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
 	var rn ResourceName
 	rn.ProjectID = u.Host
@@ -173,9 +164,9 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		rn.Variable = pathParts[1]
 	}
 	if rn.ProjectID == "" || rn.Config == "" || rn.Variable == "" {
-		return nil, fmt.Errorf("open keeper %q: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
+		return nil, fmt.Errorf("open variable %v: URL is expected to have a non-empty Host (the project ID), and a Path with 2 non-empty elements (the key config and key name)", u)
 	}
-	return NewVariable(o.Client, rn, o.Decoder, &o.Options)
+	return NewVariable(o.Client, rn, decoder, &o.Options)
 }
 
 // Options sets options.

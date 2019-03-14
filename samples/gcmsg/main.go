@@ -28,6 +28,10 @@ import (
 
 	"github.com/google/subcommands"
 	"gocloud.dev/pubsub"
+	_ "gocloud.dev/pubsub/awspubsub"
+	_ "gocloud.dev/pubsub/azurepubsub"
+	_ "gocloud.dev/pubsub/gcppubsub"
+	_ "gocloud.dev/pubsub/rabbitpubsub"
 )
 
 type pubCmd struct{}
@@ -35,8 +39,13 @@ type pubCmd struct{}
 func (*pubCmd) Name() string     { return "pub" }
 func (*pubCmd) Synopsis() string { return "Publish a message to a topic" }
 func (*pubCmd) Usage() string {
-	return `pub <topic>:
-  Read messages from stdin, one per line and send them to <topic>.
+	return `pub <topic URL>:
+  Read messages from stdin, one per line and send them to <topic URL>.
+
+  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  Go CDK URLs, and sub-packages under gocloud.dev/pubsub
+  (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
+  for details on the topic URL format.
 `
 }
 
@@ -57,23 +66,18 @@ func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 }
 
 func (p *pubCmd) pub(ctx context.Context, topicURL string, r io.Reader) error {
-	u, err := parseTopicURL(topicURL)
+	t, err := pubsub.OpenTopic(ctx, topicURL)
 	if err != nil {
-		return fmt.Errorf("parsing topic URL: %v", err)
+		return err
 	}
-	t, cleanup, err := openTopic(ctx, u)
-	if err != nil {
-		return fmt.Errorf("opening topic: %v", err)
-	}
-	defer cleanup()
 
 	// Get lines from r and send them as messages to the topic.
-	fmt.Fprintf(os.Stderr, "Enter messages, one per line to be published to \"%s\".\n", topicURL)
+	fmt.Fprintf(os.Stderr, "Enter messages, one per line to be published to %q.\n", topicURL)
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if line == "" && u.Provider == "gcp" {
-			log.Printf("skipping empty message for %s", u.Provider)
+		if line == "" {
+			log.Printf("skipping empty message")
 			continue
 		}
 		m := &pubsub.Message{Body: []byte(line)}
@@ -91,8 +95,13 @@ type subCmd struct {
 func (*subCmd) Name() string     { return "sub" }
 func (*subCmd) Synopsis() string { return "Receive messages from a subscription" }
 func (*subCmd) Usage() string {
-	return `sub [-n N] <subscription>:
+	return `sub [-n N] <subscription URL>:
   Receive messages from <subscription> and send them to stdout, one per line.
+
+  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  Go CDK URLs, and sub-packages under gocloud.dev/pubsub
+  (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
+  for details on the subscription URL format.
 `
 }
 
@@ -114,15 +123,11 @@ func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 }
 
 func (s *subCmd) sub(ctx context.Context, subURL string, w io.Writer) error {
-	u, err := parseSubscriptionURL(subURL)
+	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
-		return fmt.Errorf("parsing subscription URL: %v", err)
+		return err
 	}
-	sub, cleanup, err := openSubscription(ctx, u)
-	if err != nil {
-		return fmt.Errorf("opening subscription: %v", err)
-	}
-	defer cleanup()
+	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
 
 	// Receive messages and send them to w.
 	for i := 0; s.n == 0 || i < s.n; i++ {
