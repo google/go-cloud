@@ -290,7 +290,13 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
 	ListenerTimeout            time.Duration
-	AckFuncForReceiveAndDelete func() // AckFuncForReceiveAndDelete is used for at-most-once mode (SB Subscription with SubscriptionWithReceiveAndDelete option)
+
+	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
+	// to complete it, otherwise you run the risk of deadlettering messages.
+	// If non-nil, the subscription MUST be in Receive-and-Delete mode, and this function will be called
+	// whenever Ack is called on a message.
+	// See the "At-most-once vs. At-least-once Delivery" section in the pubsub package documentation.
+	AckFuncForReceiveAndDelete func()
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.

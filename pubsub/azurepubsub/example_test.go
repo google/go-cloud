@@ -176,19 +176,11 @@ func ExampleAckFuncForReceiveAndDelete() {
 
 	// This package accommodates both kinds of systems. If your application uses
 	// at-least-once providers, it should always call Message.Ack. If your application
-	// only uses at-most-once providers (ReceiveAndDeleteMode), it may call Message.Ack, but does not need to.
+	// only uses at-most-once providers (ReceiveAndDeleteMode), it may call Message.Ack, but does not need to. To avoid
+	// calling message.Ack, set option.AckFuncForReceiveAndDelete to a no-op as shown below.
 	//
 	// For more information on Service Bus ReceiveMode, see https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
-	//
-	// Use the options.AckOverride to supply your own logic for acking (optional regardless of modes). The custom AckOverride function can perform logging, no-ops,
-	// or your own bulk disposition operation. See https://godoc.org/github.com/Azure/azure-service-bus-go#Subscription.SendBatchDisposition.
-	//
-	// Important:
-	// 1. AckOverride is optional for Service Bus Subscription in ReceiveAndDeleteMode (SubscriptionWithReceiveAndDelete option enabled).
-	//    Calling the default driver Ack (opts.AckOverride is nil) in at-most-once mode will be disregarded by Azure Service Bus.
-	// 2. AckOverride can be used for custom batch dispositions (SubscriptionWithReceiveAndDelete option not set) but not recommended.
-	noop := func() {
-	}
+	noop := func() {}
 	subOpts := &azurepubsub.SubscriptionOptions{
 		AckFuncForReceiveAndDelete: noop,
 	}
