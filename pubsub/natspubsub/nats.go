@@ -69,7 +69,6 @@ type encMsg struct {
 }
 
 // CreateTopic returns a *pubsub.Topic for use with NATS.
-// We delay checking for the proper syntax here.
 // For more info, see https://nats.io/documentation/writing_applications/subjects
 func CreateTopic(nc *nats.Conn, topicName string) (*pubsub.Topic, error) {
 	dt, err := createTopic(nc, topicName)
