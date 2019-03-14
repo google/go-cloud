@@ -51,7 +51,8 @@ import (
 //     AZURE_CLIENT_ID.
 // - AZURE_CLIENT_SECRET: Click on the application from the previous step,
 //     then "Settings" and then "Keys". Create a key and use it as your
-//     AZURE_CLIENT_SECRET.
+//     AZURE_CLIENT_SECRET. Make sure to save the value as it's hidden after
+//     the initial creation.
 // - AZURE_ENVIRONMENT: (optional).
 // - AZURE_AD_RESOURCE: (optional).
 //
