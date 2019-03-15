@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
@@ -120,10 +119,18 @@ func (natsAsTest) SubscriptionCheck(sub *pubsub.Subscription) error {
 }
 
 func (natsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
+	var dummy string
+	if t.ErrorAs(err, &dummy) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &dummy)
+	}
 	return nil
 }
 
 func (natsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var dummy string
+	if s.ErrorAs(err, &dummy) {
+		return fmt.Errorf("cast succeeded for %T, want failure", &dummy)
+	}
 	return nil
 }
 
@@ -145,35 +152,6 @@ func TestConformance(t *testing.T) {
 }
 
 // These are natspubsub specific to increase coverage.
-func TestSimplePubSub(t *testing.T) {
-	ctx := context.Background()
-	dh, err := newHarness(ctx, t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer dh.Close()
-	h := dh.(*harness)
-	topic := "foo"
-	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
-		t.Fatal(err)
-	}
-	m, err := sub.Receive(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(m.Body, body) {
-		t.Fatalf("Body did not match. %q vs %q\n", m.Body, body)
-	}
-}
 
 // If we only send a body we should be able to get that from a direct NATS subscriber.
 func TestInteropWithDirectNATS(t *testing.T) {
@@ -183,57 +161,39 @@ func TestInteropWithDirectNATS(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer dh.Close()
-	h := dh.(*harness)
-	topic := "foo"
+	conn := dh.(*harness).nc
+
+	const topic = "foo"
 	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
+
+	// Send a message using Go CDK and receive it using NATS directly.
+	pt, err := CreateTopic(conn, topic)
 	if err != nil {
 		t.Fatal(err)
 	}
-	nsub, _ := h.nc.SubscribeSync("foo")
+	nsub, _ := conn.SubscribeSync(topic)
 	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err != nil {
 		t.Fatal(err)
 	}
-
-	m, err := nsub.NextMsg(50 * time.Millisecond)
+	m, err := nsub.NextMsgWithContext(ctx)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
 	if !bytes.Equal(m.Data, body) {
 		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
 	}
-}
 
-func TestCanceledContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	dh, err := newHarness(ctx, t)
+	// Send a message using NATS directly and receive it using Go CDK.
+	ps, err := CreateSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") })
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer dh.Close()
-	h := dh.(*harness)
-	topic := "foo"
-	body := []byte("hello")
-	pt, err := CreateTopic(h.nc, topic)
-	if err != nil {
+	if err := conn.Publish(topic, body); err != nil {
 		t.Fatal(err)
 	}
-	sub, err := CreateSubscription(h.nc, topic, func() { t.Fatal("ack called unexpectedly") })
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Cancel the ctx, make sure we get the right error.
-	cancel()
-
-	if err = pt.Send(ctx, &pubsub.Message{Body: body}); err == nil {
-		t.Fatal("Expected an error with canceled context")
-	}
-	if pt.ErrorAs(err, dh) {
-		t.Fatalf("Expected to return false")
-	}
-	if _, err = sub.Receive(ctx); err == nil {
-		t.Fatal("Expected an error with canceled context")
+	msg, err := ps.Receive(ctx)
+	if !bytes.Equal(msg.Body, body) {
+		t.Fatalf("Data did not match. %q vs %q\n", m.Data, body)
 	}
 }
 
@@ -305,6 +265,8 @@ func TestErrorCode(t *testing.T) {
 	}
 }
 
+/* Temporarily disabled due to #1556, a data race in NATS.
+
 func TestBadSubjects(t *testing.T) {
 	ctx := context.Background()
 	dh, err := newHarness(ctx, t)
@@ -330,6 +292,7 @@ func TestBadSubjects(t *testing.T) {
 		t.Fatal("Expected an error with bad subject")
 	}
 }
+*/
 
 func BenchmarkNatsPubSub(b *testing.B) {
 	ctx := context.Background()
