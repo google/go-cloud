@@ -22,9 +22,12 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
 * [File-backed local blob](https://godoc.org/gocloud.dev/blob/fileblob) - local
   blob implementation using the file system
 
-The blob package can also interact with [S3-compatible storage servers][] that recognize the same REST
-HTTP endpoints as S3, like [Minio][], [Ceph][], or [SeaweedFS][]. You can
-change the endpoint used in an S3 URL using query parameters like so:
+The blob package can also interact with [S3-compatible storage servers][] that
+recognize the same REST HTTP endpoints as S3, like [Minio][], [Ceph][], or
+[SeaweedFS][]. You can change the endpoint by changing the [`Endpoint` field][]
+on the `*aws.Config` you pass to `s3blob.OpenBucket`. If you are using
+`blob.OpenBucket`, you can switch endpoints by using the S3 URL using query
+parameters like so:
 
 ```go
 bucket, err := blob.OpenBucket("s3://mybucket?" +
@@ -36,6 +39,7 @@ bucket, err := blob.OpenBucket("s3://mybucket?" +
 See [`aws.ConfigFromURLParams`][] for more details on supported URL options for S3.
 
 [`aws.ConfigFromURLParams`]: https://godoc.org/gocloud.dev/aws#ConfigFromURLParams
+[`Endpoint` field]: https://godoc.org/github.com/aws/aws-sdk-go/aws#Config.Endpoint
 [Ceph]: https://ceph.com/
 [Minio]: https://www.minio.io/
 [SeaweedFS]: https://github.com/chrislusf/seaweedfs
