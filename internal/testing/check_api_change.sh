@@ -15,8 +15,8 @@
 
 # This script checks to see if there are any incompatible API changes on the
 # current branch relative to master@HEAD.
-# It fails if it finds any, unless there is a commit message with
-# BREAKING_CHANGE_OK in it.
+# It fails if it finds any, unless there is a commit with BREAKING_CHANGE_OK
+# in the first line of the commit message.
 
 set -euo pipefail
 
@@ -80,6 +80,6 @@ if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then
   exit 0;
 fi
 
-echo "FAIL. If this is expected and OK, you can pass this check by adding a commit message with BREAKING_CHANGE_OK in it."
+echo "FAIL. If this is expected and OK, you can pass this check by adding a commit with BREAKING_CHANGE_OK in the first line of the message."
 exit 1
 
