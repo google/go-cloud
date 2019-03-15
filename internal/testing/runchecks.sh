@@ -26,12 +26,40 @@ if [[ $# -gt 0 ]]; then
   exit 64
 fi
 
-result=0
+# The following logic lets us skip the (lengthy) installation process and tests
+# in some cases where the PR carries trivial changes that don't affect the code
+# (such as documentation-only).
+if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  tmpfile=$(mktemp)
+  function cleanup() {
+    rm -rf "$tmpfile"
+  }
+  trap cleanup EXIT
+
+  mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
+  git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
+
+  # Find out if the diff has any files that are neither:
+  #
+  # * in internal/website, nor
+  # * end with .md
+  #
+  # If there are no such files, grep returns 1 and we don't have to run the
+  # tests.
+  echo "Looking for files that changed"
+  if grep -vP "(^internal/website|.md$)" $tmpfile; then
+    echo "Running tests"
+  else
+    echo "Diff doesn't affect tests; not running them"
+    exit 0
+  fi
+fi
 
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
+result=0
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  go test -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
+  go test -mod=readonly -race -coverpkg=./... -coverprofile=coverage.out ./... || result=1
   if [ -f coverage.out ] && [ $result -eq 0 ]; then
     # Filter out test and sample packages.
     grep -v test coverage.out | grep -v samples > coverage2.out
@@ -39,7 +67,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     bash <(curl -s https://codecov.io/bash)
   fi
 else
-  go test -race ./... || result=1
+  go test -mod=readonly -race ./... || result=1
   # No need to run wire checks or other module tests on OSs other than linux.
   exit $result
 fi
@@ -53,13 +81,14 @@ fi
   echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
 
+go install -mod=readonly github.com/google/wire/cmd/wire
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
 for path in "./internal/contributebot" "./samples/appengine"; do
-  ( cd "$path" && exec go test ./... ) || result=1
+  ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)
 done

@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -188,6 +189,23 @@ func TestOpenVariable(t *testing.T) {
 	nonexistentPath := filepath.Join(dir, "filenotfound")
 	defer os.RemoveAll(dir)
 
+	// Convert paths to a URL path, adding a leading "/" if needed on Windows
+	// (on Unix, dirpath already has a leading "/").
+	jsonPath = filepath.ToSlash(jsonPath)
+	txtPath = filepath.ToSlash(txtPath)
+	nonexistentPath = filepath.ToSlash(nonexistentPath)
+	if os.PathSeparator != '/' {
+		if !strings.HasPrefix(jsonPath, "/") {
+			jsonPath = "/" + jsonPath
+		}
+		if !strings.HasPrefix(txtPath, "/") {
+			txtPath = "/" + txtPath
+		}
+		if !strings.HasPrefix(nonexistentPath, "/") {
+			nonexistentPath = "/" + nonexistentPath
+		}
+	}
+
 	tests := []struct {
 		URL          string
 		WantErr      bool
@@ -196,16 +214,14 @@ func TestOpenVariable(t *testing.T) {
 	}{
 		// Variable construction succeeds, but the file does not exist.
 		{"file://" + nonexistentPath, false, true, nil},
-		// Variable construction fails due to invalid wait arg.
-		{"file://" + txtPath + "?decoder=string&wait=notaduration", true, false, nil},
 		// Variable construction fails due to invalid decoder arg.
 		{"file://" + txtPath + "?decoder=notadecoder", true, false, nil},
 		// Variable construction fails due to invalid arg.
 		{"file://" + txtPath + "?param=value", true, false, nil},
 		// Working example with default decoder.
 		{"file://" + txtPath, false, false, []byte("hello world!")},
-		// Working example with string decoder and wait.
-		{"file://" + txtPath + "?decoder=string&wait=5s", false, false, "hello world!"},
+		// Working example with string decoder.
+		{"file://" + txtPath + "?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
 		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}

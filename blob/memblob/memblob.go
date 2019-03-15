@@ -17,8 +17,10 @@
 //
 // URLs
 //
-// For blob.OpenBucket URLs, memblob registers for the scheme "mem"; URLs
-// are always "mem://". For more details, see URLOpener.
+// For blob.OpenBucket memblob registers for the scheme "mem".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -60,13 +62,14 @@ func init() {
 const Scheme = "mem"
 
 // URLOpener opens URLs like "mem://".
+//
 // No query parameters are supported.
 type URLOpener struct{}
 
-// OpenBucketURL returns a new in-memory bucket.
+// OpenBucketURL opens a blob.Bucket based on u.
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, param)
 	}
 	return OpenBucket(nil), nil
 }
@@ -94,6 +97,10 @@ func openBucket(_ *Options) driver.Bucket {
 // OpenBucket creates a *blob.Bucket backed by memory.
 func OpenBucket(opts *Options) *blob.Bucket {
 	return blob.NewBucket(openBucket(opts))
+}
+
+func (b *bucket) Close() error {
+	return nil
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {

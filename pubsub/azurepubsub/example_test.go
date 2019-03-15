@@ -117,3 +117,17 @@ func ExampleOpenSubscription() {
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Message.Complete.
 	msg.Ack()
 }
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will open the topic "mytopic" using a connection string
+	// from the environment variable SERVICEBUS_CONNECTION_STRING.
+	t, err := pubsub.OpenTopic(ctx, "azuresb://mytopic")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open the subscription "mysub" for the topic "mytopic".
+	s, err := pubsub.OpenSubscription(ctx, "azuresb://mytopic?subscription=mysub")
+	_, _, _ = t, s, err
+}

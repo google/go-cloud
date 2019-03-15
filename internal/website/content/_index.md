@@ -22,7 +22,7 @@ For more background about the project, check out the
 [our talk from Cloud Next 2018](https://www.youtube.com/watch?v=_2ZwhvIkgek).
 
 If you're interested in contributing to the Go CDK or are interested in checking
-out the code, head to [our Github project
+out the code, head to [our GitHub project
 page](https://github.com/google/go-cloud).
 
 ## Installing and getting started

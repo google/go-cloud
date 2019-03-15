@@ -379,6 +379,11 @@ func TestVariable_LatestBlockedDuringClose(t *testing.T) {
 		t.Error(err)
 	}
 	<-ch
+
+	// Calling Close again should return ErrClosed.
+	if err := v.Close(); err != ErrClosed {
+		t.Errorf("calling Close 2x returned %v, want ErrClosed", err)
+	}
 }
 
 var errFake = errors.New("fake")
@@ -431,18 +436,11 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var got *url.URL
 
 	mux := new(URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterVariable("foo", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
-		got = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterVariable("err", variableURLOpenFunc(func(_ context.Context, u *url.URL) (*Variable, error) {
-		return nil, errors.New("fail")
-	}))
+	fake := &fakeOpener{}
+	mux.RegisterVariable("foo", fake)
+	mux.RegisterVariable("err", fake)
 
 	for _, tc := range []struct {
 		name    string
@@ -493,6 +491,14 @@ func TestURLMux(t *testing.T) {
 			name: "fancy var name",
 			url:  "foo:///foo/bar/baz",
 		},
+		{
+			name: "using api scheme prefix",
+			url:  "runtimevar+foo:///foo/bar/baz",
+		},
+		{
+			name: "using api+type scheme prefix",
+			url:  "runtimevar+variable+foo:///foo/bar/baz",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenVariable(ctx, tc.url)
@@ -502,21 +508,35 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
+			}
+			// Repeat with OpenVariableURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			_, gotErr = mux.OpenVariableURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
 }
 
-type variableURLOpenFunc func(context.Context, *url.URL) (*Variable, error)
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenVariableURL
+}
 
-func (f variableURLOpenFunc) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
-	return f(ctx, u)
+func (o *fakeOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*Variable, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }
 
 func TestDecoder(t *testing.T) {

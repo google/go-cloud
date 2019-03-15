@@ -209,12 +209,12 @@ type Bucket interface {
 	ErrorCode(error) gcerrors.ErrorCode
 
 	// As converts i to provider-specific types.
-	// See https://godoc.org/gocloud.dev#As for background information.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
 	As(i interface{}) bool
 
 	// ErrorAs allows providers to expose provider-specific types for returned
 	// errors.
-	// See https://godoc.org/gocloud.dev#As for background information.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
 	ErrorAs(error, interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
@@ -265,6 +265,12 @@ type Bucket interface {
 	// If not supported, return an error for which IsNotImplemented returns
 	// true.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
+
+	// Close cleans up any resources used by the Bucket. Once Close is called,
+	// there will be no method calls to the Bucket other than As, ErrorAs, and
+	// ErrorCode. There may be open readers or writers that will receive calls.
+	// It is up to the driver as to how these will be handled.
+	Close() error
 }
 
 // SignedURLOptions sets options for SignedURL.

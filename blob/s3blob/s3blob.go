@@ -17,10 +17,13 @@
 //
 // URLs
 //
-// For blob.OpenBucket URLs, s3blob registers for the scheme "s3"; URLs start
-// with "s3://" like "s3://mybucket". blob.OpenBucket will create a new AWS
-// session with the default options. If you want to use a different session or
-// find details on the format of the URL, see URLOpener.
+// For blob.OpenBucket, s3blob registers for the scheme "s3".
+// The default URL opener will use an AWS session with the default credentials
+// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+// for more details.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // Escaping
 //
@@ -82,16 +85,6 @@ func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazySessionOpener))
 }
 
-// URLOpener opens S3 URLs like "s3://mybucket".
-// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters.
-type URLOpener struct {
-	// ConfigProvider must be set to a non-nil value.
-	ConfigProvider client.ConfigProvider
-
-	// Options specifies the options to pass to OpenBucket.
-	Options Options
-}
-
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenBucketURL.
 type lazySessionOpener struct {
@@ -112,7 +105,7 @@ func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blo
 		}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open S3 bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -121,7 +114,21 @@ func (o *lazySessionOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blo
 // blob.DefaultMux.
 const Scheme = "s3"
 
-// OpenBucketURL opens the S3 bucket with the same name as the host in the URL.
+// URLOpener opens S3 URLs like "s3://mybucket".
+//
+// The URL host is used as the bucket name.
+//
+// See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
+// that affect the default AWS session.
+type URLOpener struct {
+	// ConfigProvider must be set to a non-nil value.
+	ConfigProvider client.ConfigProvider
+
+	// Options specifies the options to pass to OpenBucket.
+	Options Options
+}
+
+// OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	configProvider := &gcaws.ConfigOverrider{
 		Base: o.ConfigProvider,
@@ -280,6 +287,10 @@ type bucket struct {
 	name          string
 	client        *s3.S3
 	useLegacyList bool
+}
+
+func (b *bucket) Close() error {
+	return nil
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {

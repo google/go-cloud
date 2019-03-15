@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2018-2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 module gocloud.dev
 
 require (
-	cloud.google.com/go v0.35.0
+	cloud.google.com/go v0.37.0
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20181029163544-2befc13012d0
 	contrib.go.opencensus.io/exporter/ocagent v0.4.2 // indirect
 	contrib.go.opencensus.io/exporter/stackdriver v0.9.1
@@ -107,6 +107,9 @@ require (
 	github.com/mitchellh/hashstructure v1.0.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/nats-io/gnatsd v1.4.1
+	github.com/nats-io/go-nats v1.7.2
+	github.com/nats-io/nkeys v0.0.2 // indirect
 	github.com/ory-am/common v0.4.0 // indirect
 	github.com/ory/dockertest v3.3.4+incompatible // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -118,18 +121,18 @@ require (
 	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516 // indirect
+	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
-	golang.org/x/net v0.0.0-20190119204137-ed066c81e75e
+	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
+	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 	golang.org/x/xerrors v0.0.0-20190129162528-20feca13ea86
 	google.golang.org/api v0.1.0
-	google.golang.org/genproto v0.0.0-20190122204518-eef12c790cc0
-	google.golang.org/grpc v1.18.0
+	google.golang.org/genproto v0.0.0-20190306203927-b5d61aea6440
+	google.golang.org/grpc v1.19.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
 	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect

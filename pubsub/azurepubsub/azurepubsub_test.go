@@ -252,3 +252,59 @@ func deleteSubscription(ctx context.Context, topicName string, subscriptionName 
 	}
 	return nil
 }
+
+func fakeConnectionStringInEnv() func() {
+	oldEnvVal := os.Getenv("SERVICEBUS_CONNECTION_STRING")
+	os.Setenv("SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://foo.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=mykey")
+	return func() {
+		os.Setenv("SERVICEBUS_CONNECTION_STRING", oldEnvVal)
+	}
+}
+
+func TestOpenTopicFromURL(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"azuresb://mytopic", false},
+		// Invalid parameter.
+		{"azuresb://mytopic?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenTopic(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestOpenSubscriptionFromURL(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"azuresb://mytopic?subscription=mysub", false},
+		// Missing subscription.
+		{"azuresb://mytopic", true},
+		// Invalid parameter.
+		{"azuresb://mytopic?subscription=mysub&param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}

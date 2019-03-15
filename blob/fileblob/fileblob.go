@@ -17,9 +17,10 @@
 //
 // URLs
 //
-// For blob.OpenBucket URLs, fileblob registers for the scheme "file"; URLs
-// start with "file://" like "file:///path/to/directory". For full details, see
-// URLOpener.
+// For blob.OpenBucket, fileblob registers for the scheme "file".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // Escaping
 //
@@ -73,11 +74,12 @@ func init() {
 const Scheme = "file"
 
 // URLOpener opens file bucket URLs like "file:///foo/bar/baz".
-type URLOpener struct{}
-
-// OpenBucketURL opens the file bucket at the URL's path. The URL's host is
-// ignored. If os.PathSeparator != "/", any leading "/" from the path is dropped
+//
+// The URL's host is ignored.
+//
+// If os.PathSeparator != "/", any leading "/" from the path is dropped
 // and remaining '/' characters are converted to os.PathSeparator.
+//
 // No query options are supported. Examples:
 //
 //  - file:///a/directory
@@ -88,9 +90,12 @@ type URLOpener struct{}
 //    -> Passes "c:\foo\bar".
 //  - file://localhost/c:/foo/bar on Windows.
 //    -> Also passes "c:\foo\bar".
+type URLOpener struct{}
+
+// OpenBucketURL opens a blob.Bucket based on u.
 func (*URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open bucket %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, param)
 	}
 	path := u.Path
 	if os.PathSeparator != '/' {
@@ -135,6 +140,10 @@ func OpenBucket(dir string, opts *Options) (*blob.Bucket, error) {
 		return nil, err
 	}
 	return blob.NewBucket(drv), nil
+}
+
+func (b *bucket) Close() error {
+	return nil
 }
 
 // escapeKey does all required escaping for UTF-8 strings to work the filesystem.

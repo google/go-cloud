@@ -41,6 +41,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	ctx := context.Background()
@@ -79,6 +80,7 @@ func Example_openBucket() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)

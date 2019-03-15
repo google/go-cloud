@@ -24,6 +24,7 @@ import (
 )
 
 func ExampleOpenBucket() {
+	ctx := context.Background()
 
 	// Connect to a bucket using a URL.
 	// This example uses "memblob", the in-memory implementation.
@@ -31,8 +32,8 @@ func ExampleOpenBucket() {
 	// URLOpener, which implements blob.BucketURLOpener:
 	// import _ "gocloud.dev/blob/memblob"
 	// memblob registers for the "mem" scheme.
-
-	ctx := context.Background()
+	// All blob.OpenBucket URLs also work with "blob+" or "blob+bucket+" prefixes,
+	// e.g., "blob+mem://" or "blob+bucket+mem://".
 	b, err := blob.OpenBucket(ctx, "mem://")
 	if err != nil {
 		log.Fatal(err)

@@ -48,6 +48,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	data, err := b.ReadAll(ctx, "my-key")
@@ -81,6 +82,7 @@ func Example_sasToken() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer b.Close()
 
 	// Now we can use b to read or write files to the container.
 	data, err := b.ReadAll(ctx, "my-key")
@@ -99,5 +101,6 @@ func Example_openBucket() {
 	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
 	// and AZURE_STORAGE_SAS_TOKEN.
 	b, err := blob.OpenBucket(ctx, "azblob://mycontainer")
+	defer b.Close()
 	_, _ = b, err
 }

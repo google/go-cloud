@@ -58,3 +58,17 @@ func ExampleOpenSubscription() {
 	}
 	msg.Ack()
 }
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will Dial the RabbitMQ server at the URL in the environment
+	// variable RABBIT_SERVER_URL and open the exchange "myexchange".
+	t, err := pubsub.OpenTopic(ctx, "rabbit://myexchange")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will use the same connection and open the queue "myqueue".
+	s, err := pubsub.OpenSubscription(ctx, "rabbit://myqueue")
+	_, _, _ = t, s, err
+}

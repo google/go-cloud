@@ -50,3 +50,17 @@ func Example() {
 	// Output:
 	// Hello World
 }
+
+func Example_openfromURL() {
+	ctx := context.Background()
+
+	// OpenTopic creates a *pubsub.Topic from a URL.
+	// This URL will open the topic "mytopic".
+	t, err := pubsub.OpenTopic(ctx, "mem://mytopic")
+
+	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open a subscription to the topic "mytopic", which must
+	// have been previously opened using OpenTopic.
+	s, err := pubsub.OpenSubscription(ctx, "mem://mytopic")
+	_, _, _ = t, s, err
+}

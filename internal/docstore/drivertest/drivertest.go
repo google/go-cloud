@@ -18,9 +18,12 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -236,20 +239,23 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		t.Error("got nil, want error")
 	}
 
+	// TODO(jba): this test doesn't work for all providers, because some (e.g. Firestore) do allow
+	// setting a subpath of a non-map field. So move this test to memdocstore.
+
 	// Check that update is atomic.
-	doc = got
-	mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
-	if err := coll.Update(ctx, doc, mods); err == nil {
-		t.Fatal("got nil, want error")
-	}
-	got = docmap{KeyField: doc[KeyField]}
-	if err := coll.Get(ctx, got); err != nil {
-		t.Fatal(err)
-	}
-	// want should be unchanged
-	if !cmp.Equal(got, want) {
-		t.Errorf("got %v, want %v", got, want)
-	}
+	// doc = got
+	// mods := ds.Mods{"a": "Y", "c.d": "Z"} // "c" is not a map, so "c.d" is an error
+	// if err := coll.Update(ctx, doc, mods); err == nil {
+	// 	t.Fatal("got nil, want error")
+	// }
+	// got = docmap{KeyField: doc[KeyField]}
+	// if err := coll.Get(ctx, got); err != nil {
+	// 	t.Fatal(err)
+	// }
+	// // want should be unchanged
+	// if !cmp.Equal(got, want) {
+	// 	t.Errorf("got %v, want %v", got, want)
+	// }
 }
 
 func testData(t *testing.T, coll *ds.Collection) {
@@ -296,9 +302,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	type S struct {
 		N  *int
 		I  int
-		U  uint
 		F  float64
-		C  complex64
 		St string
 		B  bool
 		By []byte
@@ -310,9 +314,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	in := S{
 		N:  nil,
 		I:  1,
-		U:  2,
 		F:  2.5,
-		C:  complex(9, 10),
 		St: "foo",
 		B:  true,
 		L:  []int{3, 4, 5},
@@ -338,4 +340,22 @@ func testCodec(t *testing.T, ct CodecTester) {
 	check(ct.DocstoreEncode, ct.DocstoreDecode)
 	check(ct.DocstoreEncode, ct.NativeDecode)
 	check(ct.NativeEncode, ct.DocstoreDecode)
+}
+
+// Call when running tests that will be replayed.
+// Each seed value will result in UniqueString producing the same sequence of values.
+func MakeUniqueStringDeterministicForTesting(seed int64) {
+	r := &randReader{r: rand.New(rand.NewSource(seed))}
+	uuid.SetRand(r)
+}
+
+type randReader struct {
+	mu sync.Mutex
+	r  *rand.Rand
+}
+
+func (r *randReader) Read(buf []byte) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.r.Read(buf)
 }

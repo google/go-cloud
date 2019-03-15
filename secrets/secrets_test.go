@@ -22,7 +22,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -94,18 +93,11 @@ var (
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
-	var got *url.URL
 
 	mux := new(URLMux)
-	// Register scheme foo to always return nil. Sets got as a side effect
-	mux.RegisterKeeper("foo", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
-		got = u
-		return nil, nil
-	}))
-	// Register scheme err to always return an error.
-	mux.RegisterKeeper("err", keeperURLOpenFunc(func(_ context.Context, u *url.URL) (*Keeper, error) {
-		return nil, errors.New("fail")
-	}))
+	fake := &fakeOpener{}
+	mux.RegisterKeeper("foo", fake)
+	mux.RegisterKeeper("err", fake)
 
 	for _, tc := range []struct {
 		name    string
@@ -156,6 +148,14 @@ func TestURLMux(t *testing.T) {
 			name: "fancy keeper name",
 			url:  "foo:///foo/bar/baz",
 		},
+		{
+			name: "using api scheme prefix",
+			url:  "secrets+foo://mykeeper",
+		},
+		{
+			name: "using api+type scheme prefix",
+			url:  "secrets+keeper+foo://mykeeper",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, gotErr := mux.OpenKeeper(ctx, tc.url)
@@ -165,19 +165,33 @@ func TestURLMux(t *testing.T) {
 			if gotErr != nil {
 				return
 			}
-			want, err := url.Parse(tc.url)
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
+			}
+			// Repeat with OpenKeeperURL.
+			parsed, err := url.Parse(tc.url)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if diff := cmp.Diff(got, want); diff != "" {
-				t.Errorf("got\n%v\nwant\n%v\ndiff\n%s", got, want, diff)
+			_, gotErr = mux.OpenKeeperURL(ctx, parsed)
+			if gotErr != nil {
+				t.Fatalf("got err %v, want nil", gotErr)
+			}
+			if got := fake.u.String(); got != tc.url {
+				t.Errorf("got %q want %q", got, tc.url)
 			}
 		})
 	}
 }
 
-type keeperURLOpenFunc func(context.Context, *url.URL) (*Keeper, error)
+type fakeOpener struct {
+	u *url.URL // last url passed to OpenKeeperURL
+}
 
-func (f keeperURLOpenFunc) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
-	return f(ctx, u)
+func (o *fakeOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, error) {
+	if u.Scheme == "err" {
+		return nil, errors.New("fail")
+	}
+	o.u = u
+	return nil, nil
 }

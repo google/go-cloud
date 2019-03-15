@@ -19,6 +19,14 @@
 // mempubsub should not be used for production: it is intended for local
 // development and testing.
 //
+// URLs
+//
+// For pubsub.OpenTopic and pubsub.OpenSubscription, mempubsub registers
+// for the scheme "mem".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
 // As
 //
 // mempubsub does not support any types for As.
@@ -27,6 +35,9 @@ package mempubsub // import "gocloud.dev/pubsub/mempubsub"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/url"
+	"path"
 	"sync"
 	"time"
 
@@ -34,6 +45,75 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
 )
+
+func init() {
+	o := new(URLOpener)
+	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
+	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
+}
+
+// Scheme is the URL scheme mempubsub registers its URLOpeners under on pubsub.DefaultMux.
+const Scheme = "mem"
+
+// URLOpener opens mempubsub URLs like "mem://topic".
+//
+// The URL's host+path is used as the topic to create or subscribe to.
+//
+// Query parameters:
+//   - ackdeadline: The ack deadline for OpenSubscription, in time.ParseDuration formats.
+//       Defaults to 1m.
+type URLOpener struct {
+	mu     sync.Mutex
+	topics map[string]*pubsub.Topic
+}
+
+// OpenTopicURL opens a pubsub.Topic based on u.
+func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
+	}
+	topicName := path.Join(u.Host, u.Path)
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.topics == nil {
+		o.topics = map[string]*pubsub.Topic{}
+	}
+	t := o.topics[topicName]
+	if t == nil {
+		t = NewTopic()
+		o.topics[topicName] = t
+	}
+	return t, nil
+}
+
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
+func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	q := u.Query()
+
+	ackDeadline := 1 * time.Minute
+	if s := q.Get("ackdeadline"); s != "" {
+		var err error
+		ackDeadline, err = time.ParseDuration(s)
+		if err != nil {
+			return nil, fmt.Errorf("open subscription %v: invalid ackdeadline %q: %v", u, s, err)
+		}
+		q.Del("ackdeadline")
+	}
+	for param := range q {
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
+	}
+	topicName := path.Join(u.Host, u.Path)
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.topics == nil {
+		o.topics = map[string]*pubsub.Topic{}
+	}
+	t := o.topics[topicName]
+	if t == nil {
+		return nil, fmt.Errorf("open subscription %v: no topic %q has been created", u, topicName)
+	}
+	return NewSubscription(t, ackDeadline), nil
+}
 
 var errNotExist = errors.New("mempubsub: topic does not exist")
 

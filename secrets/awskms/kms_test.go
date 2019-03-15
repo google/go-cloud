@@ -119,9 +119,12 @@ func TestOpenKeeper(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"awskms://alias/my-key", false},
+		// OK, overriding region.
 		{"awskms://alias/my-key?region=us-west1", false},
-		{"awskms://alias/my-key?someparam=foo", true},
+		// Unknown parameter.
+		{"awskms://alias/my-key?param=value", true},
 	}
 
 	ctx := context.Background()

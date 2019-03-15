@@ -18,9 +18,11 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -49,7 +51,7 @@ func newHarness(t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	return newWatcher(h.bucket, name, decoder, nil), nil
+	return newWatcher(h.bucket, name, decoder, nil, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
@@ -65,6 +67,7 @@ func (h *harness) DeleteVariable(ctx context.Context, name string) error {
 }
 
 func (h *harness) Close() {
+	h.bucket.Close()
 	_ = os.RemoveAll(h.dir)
 }
 
@@ -105,34 +108,38 @@ func TestOpenVariable(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
+	// Convert dir to a URL path, adding a leading "/" if needed on Windows
+	// (on Unix, dirpath already has a leading "/").
+	dirpath := filepath.ToSlash(dir)
+	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
+		dirpath = "/" + dirpath
+	}
+	bucketArg := url.QueryEscape("file://" + dirpath)
+
 	tests := []struct {
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
 		Want         interface{}
 	}{
-		// Variable construction succeeds, but myvar does not exist.
-		{"blob://myvar?bucket=mem://&decoder=string", false, true, nil},
-		// Variable construction fails because the directory dirnotfound does not
-		// exist, so the Bucket creation fails.
-		{"blob://myvar.txt?bucket=file:///dirnotfound&decoder=string", true, false, nil},
-		// Variable construction succeeds, but filenotfound does not exist so Watch
-		// returns an error.
-		{"blob://filenotfound?bucket=file://" + dir + "&decoder=string", false, true, nil},
-		// Variable construction fails due to missing bucket arg.
-		{"blob://myvar.txt?decoder=string", true, false, nil},
-		// Variable construction fails due to invalid wait arg.
-		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=string&wait=notaduration", true, false, nil},
-		// Variable construction fails due to invalid decoder arg.
-		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=notadecoder", true, false, nil},
-		// Variable construction fails due to invalid arg.
-		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=string&param=value", true, false, nil},
+		// myvar does not exist.
+		{"blob://myvar?bucket=" + url.QueryEscape("mem://"), false, true, nil},
+		// directory dirnotfound does not exist, so Bucket creation fails.
+		{"blob://myvar.txt?bucket=" + url.QueryEscape("file:///dirnotfound"), true, false, nil},
+		// filenotfound does not exist so Watch returns an error.
+		{"blob://filenotfound?bucket=" + bucketArg, false, true, nil},
+		// Missing bucket arg.
+		{"blob://myvar.txt", true, false, nil},
+		// Invalid decoder.
+		{"blob://myvar.txt?bucket=" + bucketArg + "&decoder=notadecoder", true, false, nil},
+		// Invalid arg.
+		{"blob://myvar.txt?bucket=" + bucketArg + "&param=value", true, false, nil},
 		// Working example with default decoder.
-		{"blob://myvar.txt?bucket=file://" + dir, false, false, []byte("hello world!")},
-		// Working example with string decoder and wait.
-		{"blob://myvar.txt?bucket=file://" + dir + "&decoder=string&wait=5s", false, false, "hello world!"},
+		{"blob://myvar.txt?bucket=" + bucketArg, false, false, []byte("hello world!")},
+		// Working example with string decoder.
+		{"blob://myvar.txt?bucket=" + bucketArg + "&decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
-		{"blob://myvar.json?bucket=file://" + dir + "&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"blob://myvar.json?bucket=" + bucketArg + "&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	ctx := context.Background()
