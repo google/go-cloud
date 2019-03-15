@@ -29,6 +29,7 @@ import (
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/lib/pq"
 	"gocloud.dev/aws/rds"
+	"gocloud.dev/postgres"
 )
 
 // Params specifies how to connect to an RDS database.
@@ -53,21 +54,45 @@ type Params struct {
 	TraceOpts []ocsql.TraceOption
 }
 
+// URLOpener opens RDS PostgreSQL URLs
+// like "rdspostgres://user:password@myinstance.borkxyzzy.us-west-1.rds.amazonaws.com:5432/mydb".
+type URLOpener struct {
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
+}
+
+// Scheme is the URL scheme rdspostgres registers its URLOpener under on
+// postgres.DefaultMux.
+const Scheme = "rdspostgres"
+
+func init() {
+	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
+}
+
+func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	cf := new(rds.CertFetcher)
+	vals := u.Query()
+	u.RawQuery = vals.Encode()
+
+	password, _ := u.User.Password()
+	params := Params{
+		Endpoint:  u.Host,
+		User:      u.User.Username(),
+		Password:  password,
+		Database:  u.RawPath,
+		Values:    u.Query(),
+		TraceOpts: uo.TraceOpts,
+	}
+	db, _, err := Open(ctx, cf, &params)
+
+	return db, err
+}
+
 // Open opens an encrypted connection to an RDS database.
 //
 // The second return value is a Wire cleanup function that calls Close on the
 // database and ignores the error.
 func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*sql.DB, func(), error) {
-	vals := make(url.Values)
-	for k, v := range params.Values {
-		// Only permit parameters that do not conflict with other behavior.
-		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, nil, fmt.Errorf("rdspostgres: open: extra parameter %s not allowed; use Params fields instead", k)
-		}
-		vals[k] = v
-	}
-	vals.Set("sslmode", "disable")
-
 	var user *url.Userinfo
 	if params.User != "" && params.Password != "" {
 		if params.Password != "" {
@@ -82,7 +107,7 @@ func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*
 		User:     user,
 		Host:     params.Endpoint,
 		Path:     "/" + params.Database,
-		RawQuery: vals.Encode(),
+		RawQuery: params.Values.Encode(),
 	}
 	db := sql.OpenDB(connector{
 		provider:  provider,
