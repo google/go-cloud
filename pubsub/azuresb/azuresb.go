@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azurepubsub provides an implementation of pubsub using Azure Service
+// Package azuresb provides an implementation of pubsub using Azure Service
 // Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
 // URLs
 //
-// For pubsub.OpenTopic and pubsub.OpenSubscription, azurepubsub registers
+// For pubsub.OpenTopic and pubsub.OpenSubscription, azuresb registers
 // for the scheme "azuresb".
 // The default URL opener will use a Service Bus Connection String based on
 // the environment variable "SERVICEBUS_CONNECTION_STRING".
@@ -28,12 +28,12 @@
 //
 // As
 //
-// azurepubsub exposes the following types for As:
+// azuresb exposes the following types for As:
 //  - Topic: *servicebus.Topic
 //  - Subscription: *servicebus.Subscription
 //  - Message: *servicebus.Message
 //  - Error: common.Retryable
-package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
+package azuresb // import "gocloud.dev/pubsub/azuresb"
 
 import (
 	"context"
@@ -109,7 +109,7 @@ func (o *defaultOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// Scheme is the URL scheme azurepubsub registers its URLOpeners under on pubsub.DefaultMux.
+// Scheme is the URL scheme azuresb registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "azuresb"
 
 // URLOpener opens Azure Service Bus URLs like "azuresb://mytopic" for
@@ -326,13 +326,13 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 // testSBSubscription ensures the subscription exists before listening for incoming messages.
 func (s *subscription) testSBSubscription(ctx context.Context) error {
 	if s.topicName == "" {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Topic")
+		return errors.New("azuresb: driver.Subscription requires a Service Bus Topic")
 	}
 	if s.sbNs == nil {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Namespace")
+		return errors.New("azuresb: driver.Subscription requires a Service Bus Namespace")
 	}
 	if s.sbSub == nil {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Subscription")
+		return errors.New("azuresb: driver.Subscription requires a Service Bus Subscription")
 	}
 
 	sm, err := s.sbNs.NewSubscriptionManager(s.topicName)
@@ -343,7 +343,7 @@ func (s *subscription) testSBSubscription(ctx context.Context) error {
 	// An empty SubscriptionEntity means no Service Bus Subscription exists for the given name.
 	se, _ := sm.Get(ctx, s.sbSub.Name)
 	if se == nil {
-		return fmt.Errorf("azurepubsub: no such subscription %q", s.sbSub.Name)
+		return fmt.Errorf("azuresb: no such subscription %q", s.sbSub.Name)
 	}
 	return nil
 }

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package azurepubsub_test
+package azuresb_test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 	"os"
 
 	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/azurepubsub"
+	"gocloud.dev/pubsub/azuresb"
 )
 
 func ExampleOpenTopic() {
@@ -37,21 +37,21 @@ func ExampleOpenTopic() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sbTopic.Close(ctx)
 
 	// Construct a *pubsub.Topic.
-	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t := azuresb.OpenTopic(ctx, sbTopic, nil)
 	defer t.Shutdown(ctx)
 
 	// Construct a *pubsub.Message.
@@ -83,14 +83,14 @@ func ExampleOpenSubscription() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -98,14 +98,14 @@ func ExampleOpenSubscription() {
 
 	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
-	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, nil)
+	sbSub, err := azuresb.NewSubscription(sbTopic, subscriptionName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sbSub.Close(ctx)
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
+	s := azuresb.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package azurepubsub
+package azuresb
 
 import (
 	"context"
@@ -49,7 +49,7 @@ type harness struct {
 
 func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	if connString == "" {
-		return nil, fmt.Errorf("azurepubsub: test harness requires environment variable SERVICEBUS_CONNECTION_STRING to run")
+		return nil, fmt.Errorf("azuresb: test harness requires environment variable SERVICEBUS_CONNECTION_STRING to run")
 	}
 
 	ns, err := NewNamespaceFromConnectionString(connString)
@@ -133,8 +133,8 @@ func (h *harness) Close() {
 	h.closer()
 }
 
-// Please run the TestConformance with an extended timeout since each test needs to preform CRUD for ServiceBus Topics and Subscriptions.
-// Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azurepubsub -run ^TestConformance$
+// Please run the TestConformance with an extended timeout since each test needs to perform CRUD for ServiceBus Topics and Subscriptions.
+// Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azuresb -run ^TestConformance$
 func TestConformance(t *testing.T) {
 	if !*setup.Record {
 		t.Skip("replaying is not yet supported for Azure pubsub")
