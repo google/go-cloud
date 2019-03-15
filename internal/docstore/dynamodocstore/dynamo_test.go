@@ -54,7 +54,7 @@ func TestConformance(t *testing.T) {
 	if *setup.Record {
 		clearTable(t)
 	}
-	driver.MakeUniqueStringDeterministicForTesting(1)
+	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
 
