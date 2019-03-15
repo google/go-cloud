@@ -90,6 +90,9 @@ func Example_openfromURL() {
 	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will use the same connection and receive messages with subject
 	// "mytopic".
+	// Note that by default, s.Ack will result in a panic, as Ack is a meaningless
+	// no-op for NATS. You can disable the panic using "?ackfunc=log" or
+	// "?ackfunc=noop".
 	s, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
 	_, _, _ = t, s, err
 }
