@@ -656,9 +656,15 @@ func TestDecryptDecoder(t *testing.T) {
 		postDecFn Decode
 	}{
 		{
-			desc:     "Raw Bytes",
+			desc:     "Bytes",
 			in:       []byte("hello world"),
 			encodeFn: func(obj interface{}) ([]byte, error) { return obj.([]byte), nil },
+		},
+		{
+			desc:      "String",
+			in:        "hello world",
+			encodeFn:  func(obj interface{}) ([]byte, error) { return []byte(obj.(string)), nil },
+			postDecFn: StringDecode,
 		},
 		{
 			desc: "JSON",
@@ -670,12 +676,12 @@ func TestDecryptDecoder(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		t.Run("Decrypt+"+tc.desc, func(t *testing.T) {
+		t.Run(tc.desc, func(t *testing.T) {
 			decoder := NewDecoder(tc.in, DecryptDecode(ctx, keeper, tc.postDecFn))
 
 			b, err := tc.encodeFn(tc.in)
 			if err != nil {
-				t.Fatalf("marshal error %v", err)
+				t.Fatalf("encode error %v", err)
 			}
 			encrypted, err := keeper.Encrypt(ctx, b)
 			if err != nil {
