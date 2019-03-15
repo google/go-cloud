@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html {{- with .Site.LanguageCode}} lang="{{.}}"{{end}}>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  {{ .Hugo.Generator }}
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {{ if .IsHome -}}
+  <title>{{ .Site.Title }}</title>
+  {{- else -}}
+  <title>{{ .Title }} &middot; {{ .Site.Title }}</title>
+  {{- end }}
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:400,700">
+  <link type="text/css" rel="stylesheet" href="{{ relURL "css/syntax.css" }}">
+  <link type="text/css" rel="stylesheet" href="{{ relURL "css/style.css" }}">
+  <link rel="shortcut icon" href="{{ relURL "/favicon-32x32.png" }}">
+  {{- range .AlternativeOutputFormats }}
+  <link rel="{{.Rel}}" type="{{.MediaType.Type}}" href="{{.RelPermalink}}" title="{{with $.CurrentSection}}{{.Title}}{{else}}{{$.Page.Title}}{{end}}" />
+  {{- end }}
+  {{- if .Page.Params.pkgmeta }}
+  <meta name="go-import" content="gocloud.dev git https://github.com/google/go-cloud">
+  <meta name="go-source" content="gocloud.dev https://github.com/google/go-cloud https://github.com/google/go-cloud/tree/master{/dir} https://github.com/google/go-cloud/tree/master{/dir}/{file}#L{line}">
+  {{- end }}
+</head>
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="{{ .Site.BaseURL }}"><h1 class="PageLogo"><img class="PageLogo-image" src="{{ relURL "/go-cdk-logo-white.png" }}" alt="{{ .Site.Title }}"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds">
+        {{- block "main" .}}{{end -}}
+      </div>
+    </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="{{(.GetPage "/_index.md").RelPermalink}}" class="Sidenav-sectionLink">Home</a>
+        </li>
+        {{- range .Site.Sections}}
+        {{- if .Params.showInSidenav }}
+        <li class="Sidenav-section">
+          <a href="{{.RelPermalink}}" class="Sidenav-sectionLink">{{.LinkTitle}}</a>
+          {{- if .Params.pagesInSidenav }}
+            <ul class="Sidenav-pageList">
+              {{- range .Pages.GroupBy "Weight" }}
+              {{- range .Pages.ByTitle }}
+              <li class="Sidenav-page">
+                <a href="{{.RelPermalink}}" class="Sidenav-pageLink">{{.LinkTitle}}</a>
+              </li>
+              {{- end }}
+              {{- end }}
+            </ul>
+          {{- end}}
+        </li>
+        {{- end }}
+        {{- end}}
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          {{- range .Site.Menus.footer}}
+          <li class="FooterLinks-item"><a href="{{.URL}}" class="FooterLinks-link">{{.Name}}</a></li>
+          {{- end}}
+        </ul>
+      </nav>
+
+      {{with .Site.Copyright -}}
+      <p class="PageFooter-paragraph">
+        {{.}}.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      {{- end}}
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/{{.Page.File.Path}}" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
+</html>
