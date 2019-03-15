@@ -73,6 +73,7 @@ import (
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/secrets"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -477,6 +478,27 @@ func bytesDecode(b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
+}
+
+// DecryptDecode returns a decode function that can be passed to NewDecoder when
+// decoding an encrypted message (https://godoc.org/gocloud.dev/secrets).
+//
+// The decode function by default will decode the input into raw bytes. An
+// optional decoder can be passed in to do further decode operation based on the
+// decrypted message.
+func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
+	return func(b []byte, obj interface{}) error {
+		decrypted, err := k.Decrypt(ctx, b)
+		if err != nil {
+			return err
+		}
+		if post == nil {
+			v := obj.(*[]byte)
+			*v = decrypted
+			return nil
+		}
+		return post(decrypted, obj)
+	}
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
