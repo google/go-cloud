@@ -331,6 +331,8 @@ func testCodec(t *testing.T, ct CodecTester) {
 		}
 	}
 
+	// A round trip with the docstore codec should work for all docstore-supported types,
+	// regardless of native driver support.
 	type DocstoreRoundTrip struct {
 		N  *int
 		I  int
@@ -365,6 +367,9 @@ func testCodec(t *testing.T, ct CodecTester) {
 	}
 
 	check(dsrt, &DocstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
+
+	// Test native-to-docstore and docstore-to-native round trips with a smaller set
+	// of types.
 
 	// All native codecs should support these types. If one doesn't, remove it from this
 	// struct and make a new single-field struct for it.
