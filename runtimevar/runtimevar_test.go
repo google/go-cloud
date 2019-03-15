@@ -159,45 +159,32 @@ func TestVariable_Watch(t *testing.T) {
 		t.Error("Watch after no change in good value should block")
 	}
 
-	// Start a blocking Watch in the background, to ensure it's interrupted
-	// when a new value arrives.
-	ch := make(chan struct{})
-	go func() {
-		if snap, err := v.Watch(ctx); err != nil {
-			t.Errorf("Watch interrupted by new value returned %v, want nil", err)
-		} else if snap.Value != "hello6" {
-			t.Errorf("Watch got %v, want hello6", snap.Value)
-		}
-		ch <- struct{}{}
-	}()
-	// Give it some time to get into the Watch. This doesn't guarantee that it
-	// does, but the test will be a least flaky if Watch isn't interrupted.
-	time.Sleep(blockingCheckDelay)
-	fake.Set(&state{val: "hello6"})
-	<-ch
-
-	// Start a blocking Watch in the background, to ensure it's interrupted
-	// by Close.
-	go func() {
-		if _, err := v.Watch(ctx); err != ErrClosed {
-			t.Errorf("Watch interrupted by Close returned %v, want ErrClosed", err)
-		}
-		ch <- struct{}{}
-	}()
-	// Give it some time to get into the Watch. This doesn't guarantee that it
-	// does, but the test will be a least flaky if Watch isn't interrupted.
-	time.Sleep(blockingCheckDelay)
-
-	// Close the variable.
-	if err := v.Close(); err != nil {
-		t.Error(err)
+	// Ensure a blocking Watch returns when a new value arrives.
+	// Wait blockingCheckDelay to give some time to be blocking in Watch.
+	// There's no guarantee it will get there, but if Watch doesn't handle
+	// cancelation properly, then the test will fail whenever it does get there,
+	// so at least we'll observe a flaky test.
+	time.AfterFunc(blockingCheckDelay, func() { fake.Set(&state{val: "hello6"}) })
+	if snap, err := v.Watch(ctx); err != nil {
+		t.Errorf("Watch interrupted by new value returned %v, want nil", err)
+	} else if snap.Value != "hello6" {
+		t.Errorf("Watch got %v, want hello6", snap.Value)
 	}
+
+	// Similarly, ensure a blocking Watch is interrupted by Close.
+	time.AfterFunc(blockingCheckDelay, func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	if _, err := v.Watch(ctx); err != ErrClosed {
+		t.Errorf("Watch interrupted by Close returned %v, want ErrClosed", err)
+	}
+
 	// Watch should now return ErrClosed.
 	if _, err := v.Watch(ctx); err != ErrClosed {
 		t.Errorf("Watch after Close returned %v, want ErrClosed", err)
 	}
-	// Wait for the background Watch to exit as well.
-	<-ch
 }
 
 func TestVariable_Latest(t *testing.T) {
@@ -364,21 +351,18 @@ func TestVariable_LatestBlockedDuringClose(t *testing.T) {
 
 	ctx := context.Background()
 
-	ch := make(chan struct{})
-	go func() {
-		// Latest should block until v is Closed.
-		if _, err := v.Latest(ctx); err != ErrClosed {
-			t.Errorf("Latest interrupted by Close got %v, want ErrClosed", err)
+	// Wait blockingCheckDelay to give some time to be blocking in Latest.
+	// There's no guarantee it will get there, but if Latest doesn't handle
+	// cancelation properly, then the test will fail whenever it does get there,
+	// so at least we'll observe a flaky test.
+	time.AfterFunc(blockingCheckDelay, func() {
+		if err := v.Close(); err != nil {
+			t.Error(err)
 		}
-		ch <- struct{}{}
-	}()
-	// Give it some time to get into Latest. This doesn't guarantee that it
-	// does, but the test will be a least flaky if Latest isn't interrupted.
-	time.Sleep(blockingCheckDelay)
-	if err := v.Close(); err != nil {
-		t.Error(err)
+	})
+	if _, err := v.Latest(ctx); err != ErrClosed {
+		t.Errorf("Latest interrupted by Close got %v, want ErrClosed", err)
 	}
-	<-ch
 
 	// Calling Close again should return ErrClosed.
 	if err := v.Close(); err != ErrClosed {
