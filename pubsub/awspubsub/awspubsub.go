@@ -404,10 +404,9 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 	return &subscription{client: client, qURL: qURL}
 }
 
-const (
-	// How often ReceiveBatch should poll if no messages are available.
-	pollDuration = 250 * time.Millisecond
-)
+// How long ReceiveBatch should wait if no messages are available; controls
+// the poll interval of requests to SQS.
+const noMessagesPollDuration = 250 * time.Millisecond
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
@@ -475,7 +474,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 		ms = append(ms, m2)
 	}
 	if len(ms) == 0 {
-		time.Sleep(pollDuration)
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
+		// with RPCs.
+		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
 }
