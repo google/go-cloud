@@ -28,7 +28,7 @@ import (
 
 type collection struct {
 	db           *dyn.DynamoDB
-	name         string // DynamoDB table name
+	table        string // DynamoDB table name
 	partitionKey string
 	sortKey      string
 	ean          map[string]*string
@@ -46,7 +46,7 @@ var (
 func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *collection {
 	c := &collection{
 		db:           db,
-		name:         tableName,
+		table:        tableName,
 		partitionKey: partitionKey,
 		sortKey:      sortKey,
 		ean: map[string]*string{
@@ -60,9 +60,8 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *c
 func (c *collection) KeyFields() []string {
 	if c.sortKey == "" {
 		return []string{c.partitionKey}
-	} else {
-		return []string{c.partitionKey, c.sortKey}
 	}
+	return []string{c.partitionKey, c.sortKey}
 }
 
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
@@ -120,7 +119,7 @@ func (c *collection) put(ctx context.Context, doc driver.Document, condition *st
 		return fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 	in := &dyn.PutItemInput{
-		TableName:           &c.name,
+		TableName:           &c.table,
 		Item:                item,
 		ConditionExpression: condition,
 	}
@@ -143,7 +142,7 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 		return errors.New("Get with field paths unimplemented")
 	}
 	in := &dyn.GetItemInput{
-		TableName: &c.name,
+		TableName: &c.table,
 		Key:       key,
 	}
 	out, err := c.db.GetItemWithContext(ctx, in)
@@ -159,7 +158,7 @@ func (c *collection) delete(ctx context.Context, doc driver.Document) error {
 		return err
 	}
 	in := &dyn.DeleteItemInput{
-		TableName: &c.name,
+		TableName: &c.table,
 		Key:       key,
 	}
 	_, err = c.db.DeleteItemWithContext(ctx, in)
@@ -197,7 +196,7 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 	}
 	uexp := setexp + " " + delexp
 	in := &dyn.UpdateItemInput{
-		TableName:                 &c.name,
+		TableName:                 &c.table,
 		Key:                       key,
 		ConditionExpression:       &existsCond,
 		UpdateExpression:          &uexp,

@@ -51,7 +51,9 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 }
 
 func TestConformance(t *testing.T) {
-	clearTable(t)
+	if *setup.Record {
+		clearTable(t)
+	}
 	driver.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
