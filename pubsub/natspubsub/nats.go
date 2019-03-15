@@ -39,6 +39,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path"
@@ -108,6 +109,12 @@ const Scheme = "nats"
 //
 // The URL host+path is used as the topic name.
 //
+// The following query parameters are supported:
+//   - ackfunc: One of "log", "noop", "panic"; defaults to "panic". Determines
+//       the behavior if pubsub.Subscription.Ack (which is a meaningless no-op
+//       for NATS) is called. "log" means a log.Printf warning will be emitted;
+//       "noop" means nothing will happen; and "panic" means the application
+//       will panic.
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -127,13 +134,32 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	return CreateTopic(o.Connection, topicName, &o.TopicOptions)
 }
 
+// AckWarning is a message that may be used in ackFuncs.
+const AckWarning = "pubsub.Subscription.Ack was called for a NATS message; Ack is a meaningless no-op for NATS due to its at-most-once semantics. See the package documentation for how to disable this message."
+
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
-	for param := range u.Query() {
+	q := u.Query()
+
+	var ackFunc func()
+	s := q.Get("ackfunc")
+	switch s {
+	case "log":
+		ackFunc = func() { log.Printf(AckWarning) }
+	case "noop":
+		ackFunc = func() {}
+	case "", "panic":
+		ackFunc = func() { log.Fatal(AckWarning) }
+	default:
+		return nil, fmt.Errorf("open subscription %v: invalid ackfunc %q (valid values are log, noop, panic)", u, s)
+	}
+	q.Del("ackfunc")
+
+	for param := range q {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
 	}
 	topicName := path.Join(u.Host, u.Path)
-	return CreateSubscription(o.Connection, topicName, func() {}, &o.SubscriptionOptions)
+	return CreateSubscription(o.Connection, topicName, ackFunc, &o.SubscriptionOptions)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.

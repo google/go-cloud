@@ -377,6 +377,14 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}{
 		// OK.
 		{"nats://mytopic", false},
+		// OK, setting ackfunc.
+		{"nats://mytopic?ackfunc=log", false},
+		// OK, setting ackfunc.
+		{"nats://mytopic?ackfunc=panic", false},
+		// OK, setting ackfunc.
+		{"nats://mytopic?ackfunc=noop", false},
+		// Invalid ackfunc.
+		{"nats://mytopic?ackfunc=fail", true},
 		// Invalid parameter.
 		{"nats://mytopic?param=value", true},
 	}
