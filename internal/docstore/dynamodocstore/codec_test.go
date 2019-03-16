@@ -15,7 +15,6 @@
 package dynamodocstore
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -87,8 +86,8 @@ func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
 }
 
 func (ct *codecTester) NativeDecode(value, dest interface{}) error {
-	v := value.(map[string]*dyn.AttributeValue)
-	return dynattr.Unmarshal(&dyn.AttributeValue{M: v}, dest)
+	// v := value.(map[string]*dyn.AttributeValue)
+	return dynattr.Unmarshal(value.(*dyn.AttributeValue), dest)
 }
 
 func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
@@ -104,13 +103,5 @@ func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("v: %#v\n\n", value)
-	switch v := value.(type) {
-	case *dyn.AttributeValue:
-		return decodeDoc(doc, v.M)
-	case map[string]*dyn.AttributeValue:
-		return decodeDoc(doc, v)
-	default:
-		return fmt.Errorf("unexpected type: %T", v)
-	}
+	return decodeDoc(doc, value.(*dyn.AttributeValue))
 }

@@ -101,18 +101,18 @@ func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
 }
 
 func (c *collection) put(ctx context.Context, doc driver.Document, condition *string) error {
-	item, err := encodeDoc(doc)
+	av, err := encodeDoc(doc)
 	if err != nil {
 		return err
 	}
-	mf := c.missingKeyField(item)
+	mf := c.missingKeyField(av.M)
 	if condition != &notExistsCond && mf != "" {
 		return fmt.Errorf("missing key field %q", mf)
 	}
 	var newPartitionKey string
 	if mf == c.partitionKey {
 		newPartitionKey = driver.UniqueString()
-		item[c.partitionKey] = new(dyn.AttributeValue).SetS(newPartitionKey)
+		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(newPartitionKey)
 	}
 	if c.sortKey != "" && mf == c.sortKey {
 		// It doesn't make sense to generate a random sort key.
@@ -120,7 +120,7 @@ func (c *collection) put(ctx context.Context, doc driver.Document, condition *st
 	}
 	in := &dyn.PutItemInput{
 		TableName:           &c.table,
-		Item:                item,
+		Item:                av.M,
 		ConditionExpression: condition,
 	}
 	if condition != nil {
@@ -134,7 +134,7 @@ func (c *collection) put(ctx context.Context, doc driver.Document, condition *st
 }
 
 func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths [][]string) error {
-	key, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return err
 	}
@@ -143,30 +143,30 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 	}
 	in := &dyn.GetItemInput{
 		TableName: &c.table,
-		Key:       key,
+		Key:       av.M,
 	}
 	out, err := c.db.GetItemWithContext(ctx, in)
 	if err != nil {
 		return err
 	}
-	return decodeDoc(doc, out.Item)
+	return decodeDoc(doc, &dyn.AttributeValue{M: out.Item})
 }
 
 func (c *collection) delete(ctx context.Context, doc driver.Document) error {
-	key, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return err
 	}
 	in := &dyn.DeleteItemInput{
 		TableName: &c.table,
-		Key:       key,
+		Key:       av.M,
 	}
 	_, err = c.db.DeleteItemWithContext(ctx, in)
 	return err
 }
 
 func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod) error {
-	key, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
+	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 	uexp := setexp + " " + delexp
 	in := &dyn.UpdateItemInput{
 		TableName:                 &c.table,
-		Key:                       key,
+		Key:                       av.M,
 		ConditionExpression:       &existsCond,
 		UpdateExpression:          &uexp,
 		ExpressionAttributeNames:  c.ean,

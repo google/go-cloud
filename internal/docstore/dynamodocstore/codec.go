@@ -82,12 +82,12 @@ type mapEncoder struct {
 
 func (e *mapEncoder) MapKey(k string) { e.m[k] = e.av }
 
-func encodeDoc(doc driver.Document) (map[string]*dyn.AttributeValue, error) {
+func encodeDoc(doc driver.Document) (*dyn.AttributeValue, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return e.av.M, nil
+	return e.av, nil
 }
 
 // Encode only the key fields of the given document.
@@ -97,8 +97,8 @@ func encodeDoc(doc driver.Document) (map[string]*dyn.AttributeValue, error) {
 // Currently, we do this by encoding the entire document, then removing everything that is
 // not a key field.
 // TODO: improve driver.Encoder to make this efficient.
-func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn.AttributeValue, error) {
-	m, err := encodeDoc(doc)
+func encodeDocKeyFields(doc driver.Document, pkey, skey string) (*dyn.AttributeValue, error) {
+	av, err := encodeDoc(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn
 		// If there is no sort key, assume we found it.
 		hasS = true
 	}
-	for f := range m {
+	for f := range av.M {
 		switch f {
 		case pkey:
 			hasP = true
@@ -117,13 +117,13 @@ func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn
 			hasS = true
 		default:
 			// Delete any non-key field from the result.
-			delete(m, f)
+			delete(av.M, f)
 		}
 	}
 	if !hasP || !hasS {
 		return nil, errors.New("missing key field(s)")
 	}
-	return m, nil
+	return av, nil
 }
 
 func encodeValue(v interface{}) (*dyn.AttributeValue, error) {
@@ -140,8 +140,8 @@ func encodeFloat(f float64) *dyn.AttributeValue {
 
 ////////////////////////////////////////////////////////////////
 
-func decodeDoc(doc driver.Document, item map[string]*dyn.AttributeValue) error {
-	return doc.Decode(decoder{&dyn.AttributeValue{M: item}})
+func decodeDoc(doc driver.Document, item *dyn.AttributeValue) error {
+	return doc.Decode(decoder{av: item})
 }
 
 type decoder struct {
