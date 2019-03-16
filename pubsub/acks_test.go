@@ -313,10 +313,10 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 	ackChan := make(chan struct{})
 	ds := &ackingDriverSub{
 		q: []*driver.Message{
-			&driver.Message{AckID: 0},
-			&driver.Message{AckID: 1},
-			&driver.Message{AckID: 2},
-			&driver.Message{AckID: 3},
+			{AckID: 0},
+			{AckID: 1},
+			{AckID: 2},
+			{AckID: 3},
 		},
 		sendAcks: func(context.Context, []driver.AckID) error {
 			close(ackChan)
