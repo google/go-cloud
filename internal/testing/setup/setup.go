@@ -15,9 +15,9 @@
 package setup // import "gocloud.dev/internal/testing/setup"
 
 import (
-	"io/ioutil"
 	"context"
 	"flag"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -95,7 +95,7 @@ func awsSession(region string, client *http.Client) (*session.Session, error) {
 	})
 }
 
-// NewAWSSession2 is like NewAWSSession, but it uses a diffrent record/replay proxy.
+// NewAWSSession2 is like NewAWSSession, but it uses a different record/replay proxy.
 func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *session.Session, rt http.RoundTripper, cleanup func()) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
@@ -297,6 +297,7 @@ func NewAzureKeyVaultTestClient(ctx context.Context, t *testing.T) (func(), *htt
 
 	return done, &http.Client{Transport: r}
 }
+
 // FakeGCPDefaultCredentials sets up the environment with fake GCP credentials.
 // It returns a cleanup function.
 func FakeGCPDefaultCredentials(t *testing.T) func() {
