@@ -33,6 +33,7 @@ import (
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/secrets/localsecrets"
 )
 
 // How long we wait on a call that is expected to block forever before cancelling it.
@@ -624,5 +625,63 @@ func TestBytesDecoder(t *testing.T) {
 	}
 	if diff := cmp.Diff(got, input); diff != "" {
 		t.Errorf("output got %v, want %q", got, input)
+	}
+}
+
+func TestDecryptDecoder(t *testing.T) {
+	ctx := context.Background()
+	secretKey := localsecrets.ByteKey("I'm a secret string!")
+	keeper := localsecrets.NewKeeper(secretKey)
+
+	tests := []struct {
+		desc      string
+		in        interface{}
+		encodeFn  func(interface{}) ([]byte, error)
+		postDecFn Decode
+	}{
+		{
+			desc:     "Bytes",
+			in:       []byte("hello world"),
+			encodeFn: func(obj interface{}) ([]byte, error) { return obj.([]byte), nil },
+		},
+		{
+			desc:      "String",
+			in:        "hello world",
+			encodeFn:  func(obj interface{}) ([]byte, error) { return []byte(obj.(string)), nil },
+			postDecFn: StringDecode,
+		},
+		{
+			desc: "JSON",
+			in: map[string]string{
+				"slice": "pizza",
+			},
+			encodeFn:  json.Marshal,
+			postDecFn: JSONDecode,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			decoder := NewDecoder(tc.in, DecryptDecode(ctx, keeper, tc.postDecFn))
+
+			b, err := tc.encodeFn(tc.in)
+			if err != nil {
+				t.Fatalf("encode error %v", err)
+			}
+			encrypted, err := keeper.Encrypt(ctx, b)
+			if err != nil {
+				t.Fatalf("encrypt error: %v", err)
+			}
+
+			got, err := decoder.Decode(encrypted)
+			if err != nil {
+				t.Fatalf("parse input\n%s\nerror: %v", string(b), err)
+			}
+			if reflect.TypeOf(got) != reflect.TypeOf(tc.in) {
+				t.Errorf("type mismatch got %T, want %T", got, tc.in)
+			}
+			if diff := cmp.Diff(got, tc.in); diff != "" {
+				t.Errorf("value diff:\n%v", diff)
+			}
+		})
 	}
 }

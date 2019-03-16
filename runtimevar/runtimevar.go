@@ -73,6 +73,7 @@ import (
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/secrets"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -453,10 +454,10 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 
 var (
 	// StringDecoder decodes into strings.
-	StringDecoder = NewDecoder("", stringDecode)
+	StringDecoder = NewDecoder("", StringDecode)
 
 	// BytesDecoder copies the slice of bytes.
-	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
+	BytesDecoder = NewDecoder([]byte{}, BytesDecode)
 
 	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
 	JSONDecode = json.Unmarshal
@@ -467,16 +468,36 @@ func GobDecode(data []byte, obj interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
 
-func stringDecode(b []byte, obj interface{}) error {
+// StringDecode decodes raw bytes b into a string.
+func StringDecode(b []byte, obj interface{}) error {
 	v := obj.(*string)
 	*v = string(b)
 	return nil
 }
 
-func bytesDecode(b []byte, obj interface{}) error {
+// BytesDecode copies the slice of bytes b into obj.
+func BytesDecode(b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
+}
+
+// DecryptDecode returns a decode function that can be passed to NewDecoder when
+// decoding an encrypted message (https://godoc.org/gocloud.dev/secrets).
+//
+// post defaults to BytesDecode. An optional decoder can be passed in to do
+// further decode operation based on the decrypted message.
+func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
+	return func(b []byte, obj interface{}) error {
+		decrypted, err := k.Decrypt(ctx, b)
+		if err != nil {
+			return err
+		}
+		if post == nil {
+			return BytesDecode(decrypted, obj)
+		}
+		return post(decrypted, obj)
+	}
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
