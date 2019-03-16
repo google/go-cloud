@@ -15,13 +15,16 @@
 package dynamodocstore
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	dynattr "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/docstore/drivertest"
 )
 
 func TestEncodeValue(t *testing.T) {
@@ -70,5 +73,44 @@ func TestEncodeValue(t *testing.T) {
 		if !cmp.Equal(got, test.want, cmpopts.IgnoreUnexported(dyn.AttributeValue{})) {
 			t.Errorf("%#v: got %#v, want %#v", test.in, got, test.want)
 		}
+	}
+}
+
+type codecTester struct{}
+
+func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{drivertest.Complex}
+}
+
+func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
+	return dynattr.Marshal(obj)
+}
+
+func (ct *codecTester) NativeDecode(value, dest interface{}) error {
+	v := value.(map[string]*dyn.AttributeValue)
+	return dynattr.Unmarshal(&dyn.AttributeValue{M: v}, dest)
+}
+
+func (ct *codecTester) DocstoreEncode(obj interface{}) (interface{}, error) {
+	doc, err := driver.NewDocument(obj)
+	if err != nil {
+		return nil, err
+	}
+	return encodeDoc(doc)
+}
+
+func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
+	doc, err := driver.NewDocument(dest)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("v: %#v\n\n", value)
+	switch v := value.(type) {
+	case *dyn.AttributeValue:
+		return decodeDoc(doc, v.M)
+	case map[string]*dyn.AttributeValue:
+		return decodeDoc(doc, v)
+	default:
+		return fmt.Errorf("unexpected type: %T", v)
 	}
 }
