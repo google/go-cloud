@@ -485,8 +485,8 @@ func BytesDecode(b []byte, obj interface{}) error {
 // DecryptDecode returns a decode function that can be passed to NewDecoder when
 // decoding an encrypted message (https://godoc.org/gocloud.dev/secrets).
 //
-// The decode function default to BytesDecode. An optional decoder can be passed
-// in to do further decode operation based on the decrypted message.
+// post defaults to BytesDecode. An optional decoder can be passed in to do
+// further decode operation based on the decrypted message.
 func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 	return func(b []byte, obj interface{}) error {
 		decrypted, err := k.Decrypt(ctx, b)
