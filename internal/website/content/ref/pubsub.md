@@ -1,5 +1,8 @@
 ---
 title: "Pubsub"
+date: 2019-02-21T16:21:29-08:00
+aliases:
+- /pages/pubsub/
 ---
 
 Pub/Sub refers to implementations of the [publish-subscribe
@@ -10,6 +13,8 @@ messages that could be delivered to subscribers.
 Package `pubsub` provides an easy and portable way to interact with
 publish/subscribe systems that have [at-least-once
 delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overview).
+
+<!--more-->
 
 Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
 

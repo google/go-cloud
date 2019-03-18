@@ -1,9 +1,14 @@
 ---
 title: "Runtimevar"
+date: 2019-02-21T16:21:29-08:00
+aliases:
+- /pages/runtimevar/
 ---
 
 Package `runtimevar` provides easy and portable access to the latest value of
 remote configuration variables.
+
+<!--more-->
 
 Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 
@@ -13,7 +18,7 @@ Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 * [GCP Runtime
   Configurator](https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator)
 * [blobvar](https://godoc.org/gocloud.dev/runtimevar/blobvar) - a blob-backed
-  implementation supported by any provider that has [blob support]({{< relref "/pages/blob.md#supported-providers">}})
+  implementation supported by any provider that has [blob support]({{< relref "blob.md#supported-providers">}})
 * [Local read-only constant
   vars](https://godoc.org/gocloud.dev/runtimevar/constantvar) - an in-memory
   local implementation, mainly useful for testing
