@@ -71,7 +71,7 @@ func TestReceivePerformance(t *testing.T) {
 	t.Skip("Skipping by default")
 
 	msgs := make([]*driver.Message, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range msgs {
 		msgs[i] = &driver.Message{}
 	}
 	sub := newSubscription(&fakeSub{msgs: msgs}, nil)
