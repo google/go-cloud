@@ -292,8 +292,6 @@ type subscription struct {
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ListenerTimeout time.Duration
-
 	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
 	// to complete it, otherwise you run the risk of deadlettering messages.
 	// If non-nil, the subscription MUST be in Receive-and-Delete mode, and this function will be called
@@ -316,11 +314,6 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		topicName = sbTop.Name
 	}
 
-	defaultTimeout := listenerTimeout
-	if opts != nil && opts.ListenerTimeout > 0 {
-		defaultTimeout = opts.ListenerTimeout
-	}
-
 	// Determine if caller will suppress acks (at-most-once mode).
 	var ackFunc func()
 	if opts != nil && opts.AckFuncForReceiveAndDelete != nil {
@@ -332,7 +325,6 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		topicName: topicName,
 		sbNs:      sbNs,
 		opts: &SubscriptionOptions{
-			ListenerTimeout:            defaultTimeout,
 			AckFuncForReceiveAndDelete: ackFunc,
 		},
 	}
@@ -407,7 +399,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, err
 	}
 
-	rctx, cancel := context.WithTimeout(ctx, s.opts.ListenerTimeout)
+	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
 	var messages []*driver.Message
 	var wg sync.WaitGroup
