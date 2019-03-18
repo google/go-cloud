@@ -133,14 +133,14 @@ func TestEncode(t *testing.T) {
 			map[string]interface{}{"17": true},
 		},
 		{
-			map[te]bool{te{'B'}: true},
+			map[te]bool{{'B'}: true},
 			map[string]interface{}{"B": true},
 		},
 		{
 			MyStruct{
 				A:      1,
 				B:      &tru,
-				C:      []*te{&te{'T'}},
+				C:      []*te{{'T'}},
 				D:      []time.Time{tm},
 				T:      ts,
 				Embed1: Embed1{E1: "E1"},
@@ -286,7 +286,7 @@ func TestDecode(t *testing.T) {
 		{
 			new(map[te]bool),
 			map[string]interface{}{"B": true},
-			map[te]bool{te{'B'}: true},
+			map[te]bool{{'B'}: true},
 		},
 		{
 			new(map[interface{}]bool),
@@ -300,8 +300,8 @@ func TestDecode(t *testing.T) {
 				"b": []interface{}{false, true},
 			},
 			map[string][]bool{
-				"a": []bool{true, false},
-				"b": []bool{false, true},
+				"a": {true, false},
+				"b": {false, true},
 			},
 		},
 		{new(myString), "x", myString("x")},
@@ -342,7 +342,7 @@ func TestDecode(t *testing.T) {
 				"E3": "E3",
 				"E4": "E4",
 			},
-			MyStruct{A: 1, B: &tru, C: []*te{&te{'T'}}, D: []time.Time{tm}, T: ts,
+			MyStruct{A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
 				Embed1: Embed1{E1: "E1"},
 				Embed2: &Embed2{E2: "E2"},
 				embed3: embed3{E3: "E3"},

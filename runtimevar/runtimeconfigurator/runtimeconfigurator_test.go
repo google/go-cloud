@@ -17,9 +17,8 @@ package runtimeconfigurator
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
-
-	"google.golang.org/grpc/codes"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
@@ -27,6 +26,7 @@ import (
 	"gocloud.dev/runtimevar/drivertest"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
@@ -193,6 +193,35 @@ func TestNoConnectionError(t *testing.T) {
 	}
 }
 
+func TestResourceNameFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+		Want    ResourceName
+	}{
+		{"runtimeconfigurator://proj1/cfg1/var1", false, ResourceName{"proj1", "cfg1", "var1"}},
+		{"runtimeconfigurator://proj2/cfg2/var2", false, ResourceName{"proj2", "cfg2", "var2"}},
+		{"runtimeconfigurator://proj/cfg/var/morevar", false, ResourceName{"proj", "cfg", "var/morevar"}},
+		{"runtimeconfigurator://proj/cfg", true, ResourceName{}},
+		{"runtimeconfigurator://proj/cfg/", true, ResourceName{}},
+		{"runtimeconfigurator:///cfg/var", true, ResourceName{}},
+		{"runtimeconfigurator://proj//var", true, ResourceName{}},
+	}
+	for _, test := range tests {
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, gotErr := newResourceNameFromURL(u)
+		if (gotErr != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
+		}
+		if got != test.Want {
+			t.Errorf("%s: got %v want %v", test.URL, got, test.Want)
+		}
+	}
+}
+
 func TestOpenVariable(t *testing.T) {
 	cleanup := setup.FakeGCPDefaultCredentials(t)
 	defer cleanup()
@@ -217,11 +246,7 @@ func TestOpenVariable(t *testing.T) {
 		{"runtimeconfigurator://myproject/mycfg", true},
 		// Invalid decoder.
 		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=notadecoder", true},
-		// OK, setting wait.
-		{"runtimeconfigurator://myproject/mycfg/myvar?wait=30s", false},
-		// Invalid wait.
-		{"runtimeconfigurator://myproject/mycfg/myvar?wait=notaduration", true},
-		// Unknown param.
+		// Invalid param.
 		{"runtimeconfigurator://myproject/mycfg/myvar?param=value", true},
 	}
 

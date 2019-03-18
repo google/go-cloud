@@ -1,0 +1,80 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"Item":{"_id":{"S":"testGet1"},"f":{"N":"32.3"},"i":{"N":"95"},"s":{"S":"a
+      string"}},"TableName":"docstore-test"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "114"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.PutItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - 274SB47HAUK94T9VMD0DFF7SHBVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Key":{"_id":{"S":"testGet1"}},"TableName":"docstore-test"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "60"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.GetItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Item":{"i":{"N":"95"},"_id":{"S":"testGet1"},"s":{"S":"a string"},"f":{"N":"32.3"}}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "86"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "298036633"
+      X-Amzn-Requestid:
+      - VVT7MU6FKOEOHS6E7QKIGIMRQFVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""

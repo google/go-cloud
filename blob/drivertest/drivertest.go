@@ -255,34 +255,34 @@ func testList(t *testing.T, newHarness HarnessMaker) {
 		{
 			name:      "exactly 1 object due to prefix",
 			prefix:    keyForIndex(1),
-			wantPages: [][]int{[]int{1}},
+			wantPages: [][]int{{1}},
 			want:      []int{1},
 		},
 		{
 			name:      "no pagination",
 			prefix:    keyPrefix,
-			wantPages: [][]int{[]int{0, 1, 2}},
+			wantPages: [][]int{{0, 1, 2}},
 			want:      []int{0, 1, 2},
 		},
 		{
 			name:      "by 1",
 			prefix:    keyPrefix,
 			pageSize:  1,
-			wantPages: [][]int{[]int{0}, []int{1}, []int{2}},
+			wantPages: [][]int{{0}, {1}, {2}},
 			want:      []int{0, 1, 2},
 		},
 		{
 			name:      "by 2",
 			prefix:    keyPrefix,
 			pageSize:  2,
-			wantPages: [][]int{[]int{0, 1}, []int{2}},
+			wantPages: [][]int{{0, 1}, {2}},
 			want:      []int{0, 1, 2},
 		},
 		{
 			name:      "by 3",
 			prefix:    keyPrefix,
 			pageSize:  3,
-			wantPages: [][]int{[]int{0, 1, 2}},
+			wantPages: [][]int{{0, 1, 2}},
 			want:      []int{0, 1, 2},
 		},
 	}
@@ -557,12 +557,12 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 	// dir2/e.txt
 	// f.txt
 	keys := [][]string{
-		[]string{"dir1", "a.txt"},
-		[]string{"dir1", "b.txt"},
-		[]string{"dir1", "subdir", "c.txt"},
-		[]string{"dir1", "subdir", "d.txt"},
-		[]string{"dir2", "e.txt"},
-		[]string{"f.txt"},
+		{"dir1", "a.txt"},
+		{"dir1", "b.txt"},
+		{"dir1", "subdir", "c.txt"},
+		{"dir1", "subdir", "d.txt"},
+		{"dir2", "e.txt"},
+		{"f.txt"},
 	}
 
 	// Test with several different delimiters.
@@ -588,168 +588,168 @@ func testListDelimiters(t *testing.T, newHarness HarnessMaker) {
 			name:  "fwdslash",
 			delim: "/",
 			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "/dir1/a.txt"},
-				listResult{Key: keyPrefix + "/dir1/b.txt"},
-				listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
-				listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
-				listResult{Key: keyPrefix + "/dir2/e.txt"},
-				listResult{Key: keyPrefix + "/f.txt"},
+				{Key: keyPrefix + "/dir1/a.txt"},
+				{Key: keyPrefix + "/dir1/b.txt"},
+				{Key: keyPrefix + "/dir1/subdir/c.txt"},
+				{Key: keyPrefix + "/dir1/subdir/d.txt"},
+				{Key: keyPrefix + "/dir2/e.txt"},
+				{Key: keyPrefix + "/f.txt"},
 			},
 			wantRecursive: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "/dir1/",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "/dir1/a.txt"},
-						listResult{Key: keyPrefix + "/dir1/b.txt"},
-						listResult{
+						{Key: keyPrefix + "/dir1/a.txt"},
+						{Key: keyPrefix + "/dir1/b.txt"},
+						{
 							Key:   keyPrefix + "/dir1/subdir/",
 							IsDir: true,
 							Sub: []listResult{
-								listResult{Key: keyPrefix + "/dir1/subdir/c.txt"},
-								listResult{Key: keyPrefix + "/dir1/subdir/d.txt"},
+								{Key: keyPrefix + "/dir1/subdir/c.txt"},
+								{Key: keyPrefix + "/dir1/subdir/d.txt"},
 							},
 						},
 					},
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "/dir2/",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "/dir2/e.txt"},
+						{Key: keyPrefix + "/dir2/e.txt"},
 					},
 				},
-				listResult{Key: keyPrefix + "/f.txt"},
+				{Key: keyPrefix + "/f.txt"},
 			},
 			wantPaged: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "/dir1/",
 					IsDir: true,
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "/dir2/",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "/f.txt"},
+				{Key: keyPrefix + "/f.txt"},
 			},
 			wantAfterDel: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "/dir1/",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "/f.txt"},
+				{Key: keyPrefix + "/f.txt"},
 			},
 		},
 		{
 			name:  "backslash",
 			delim: "\\",
 			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-				listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
-				listResult{Key: keyPrefix + "\\dir2\\e.txt"},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				{Key: keyPrefix + "\\dir1\\a.txt"},
+				{Key: keyPrefix + "\\dir1\\b.txt"},
+				{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+				{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+				{Key: keyPrefix + "\\dir2\\e.txt"},
+				{Key: keyPrefix + "\\f.txt"},
 			},
 			wantRecursive: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "\\dir1\\",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir1\\a.txt"},
-						listResult{Key: keyPrefix + "\\dir1\\b.txt"},
-						listResult{
+						{Key: keyPrefix + "\\dir1\\a.txt"},
+						{Key: keyPrefix + "\\dir1\\b.txt"},
+						{
 							Key:   keyPrefix + "\\dir1\\subdir\\",
 							IsDir: true,
 							Sub: []listResult{
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
-								listResult{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
+								{Key: keyPrefix + "\\dir1\\subdir\\c.txt"},
+								{Key: keyPrefix + "\\dir1\\subdir\\d.txt"},
 							},
 						},
 					},
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "\\dir2\\",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "\\dir2\\e.txt"},
+						{Key: keyPrefix + "\\dir2\\e.txt"},
 					},
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				{Key: keyPrefix + "\\f.txt"},
 			},
 			wantPaged: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "\\dir1\\",
 					IsDir: true,
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "\\dir2\\",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				{Key: keyPrefix + "\\f.txt"},
 			},
 			wantAfterDel: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "\\dir1\\",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "\\f.txt"},
+				{Key: keyPrefix + "\\f.txt"},
 			},
 		},
 		{
 			name:  "abc",
 			delim: "abc",
 			wantFlat: []listResult{
-				listResult{Key: keyPrefix + "abcdir1abca.txt"},
-				listResult{Key: keyPrefix + "abcdir1abcb.txt"},
-				listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
-				listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
-				listResult{Key: keyPrefix + "abcdir2abce.txt"},
-				listResult{Key: keyPrefix + "abcf.txt"},
+				{Key: keyPrefix + "abcdir1abca.txt"},
+				{Key: keyPrefix + "abcdir1abcb.txt"},
+				{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+				{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+				{Key: keyPrefix + "abcdir2abce.txt"},
+				{Key: keyPrefix + "abcf.txt"},
 			},
 			wantRecursive: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "abcdir1abc",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "abcdir1abca.txt"},
-						listResult{Key: keyPrefix + "abcdir1abcb.txt"},
-						listResult{
+						{Key: keyPrefix + "abcdir1abca.txt"},
+						{Key: keyPrefix + "abcdir1abcb.txt"},
+						{
 							Key:   keyPrefix + "abcdir1abcsubdirabc",
 							IsDir: true,
 							Sub: []listResult{
-								listResult{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
-								listResult{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
+								{Key: keyPrefix + "abcdir1abcsubdirabcc.txt"},
+								{Key: keyPrefix + "abcdir1abcsubdirabcd.txt"},
 							},
 						},
 					},
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "abcdir2abc",
 					IsDir: true,
 					Sub: []listResult{
-						listResult{Key: keyPrefix + "abcdir2abce.txt"},
+						{Key: keyPrefix + "abcdir2abce.txt"},
 					},
 				},
-				listResult{Key: keyPrefix + "abcf.txt"},
+				{Key: keyPrefix + "abcf.txt"},
 			},
 			wantPaged: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "abcdir1abc",
 					IsDir: true,
 				},
-				listResult{
+				{
 					Key:   keyPrefix + "abcdir2abc",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "abcf.txt"},
+				{Key: keyPrefix + "abcf.txt"},
 			},
 			wantAfterDel: []listResult{
-				listResult{
+				{
 					Key:   keyPrefix + "abcdir1abc",
 					IsDir: true,
 				},
-				listResult{Key: keyPrefix + "abcf.txt"},
+				{Key: keyPrefix + "abcf.txt"},
 			},
 		},
 	}

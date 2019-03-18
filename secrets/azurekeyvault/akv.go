@@ -34,6 +34,7 @@ package azurekeyvault
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -126,10 +127,18 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
 
-	if u.Host == "" {
-		return nil, fmt.Errorf("open keeper %v: URL is expected to have a non-empty Host (the key vault name)", u)
+	vaultName, keyName, keyVersion, err := keyInfoFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("open keeper %v: %v", u, err)
 	}
-	var keyName, keyVersion string
+	return NewKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options)
+}
+
+func keyInfoFromURL(u *url.URL) (vaultName, keyName, keyVersion string, err error) {
+	vaultName = u.Host
+	if vaultName == "" {
+		return "", "", "", errors.New("URL Host (the key vault name) cannot be empty")
+	}
 	if pathParts := strings.Split(strings.TrimPrefix(u.Path, "/"), "/"); len(pathParts) == 1 {
 		keyName = pathParts[0]
 	} else if len(pathParts) == 2 {
@@ -137,9 +146,9 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 		keyVersion = pathParts[1]
 	}
 	if keyName == "" {
-		return nil, fmt.Errorf("open keeper %v: URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version)", u)
+		return "", "", "", errors.New("URL is expected to have a Path with 1 or 2 non-empty elements (the key name and optionally, key version")
 	}
-	return NewKeeper(o.Client, u.Host, keyName, keyVersion, &o.Options)
+	return vaultName, keyName, keyVersion, nil
 }
 
 type (

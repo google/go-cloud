@@ -32,11 +32,14 @@ func ExampleOpenTopic() {
 	// URLOpener, which implements pubsub.TopicURLOpener:
 	// import _ "gocloud.dev/secrets/mempubsub"
 	// mempubsub registers for the "mem" scheme.
+	// All pubsub.OpenTopic URLs also work with "pubsub+" or "pubsub+topic+" prefixes,
+	// e.g., "pubsub+mem://mytopic" or "pubsub+topic+mem://mytopic".
 	topic, err := pubsub.OpenTopic(ctx, "mem://mytopic")
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Similarly, we can open a subscription using a URL.
+	// Prefixes "pubsub+" or "pubsub+subscription+" work as well.
 	sub, err := pubsub.OpenSubscription(ctx, "mem://mytopic")
 	if err != nil {
 		log.Fatal(err)

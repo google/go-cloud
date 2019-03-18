@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -42,9 +43,26 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
+// Enum of types not supported by native codecs. We chose to describe this negatively
+// (types that aren't supported rather than types that are) to make the more
+// inclusive cases easier to write. A driver can return nil for
+// CodecTester.UnsupportedTypes, then add values from this enum one by one until all
+// tests pass.
+type UnsupportedType int
+
+const (
+	// Native codec doesn't support any unsigned integer type
+	Uint UnsupportedType = iota
+	// Native codec doesn't support any complex type
+	Complex
+	// Native codec doesn't support arrays
+	Arrays
+)
+
 // CodecTester describes functions that encode and decode values using both the
 // docstore codec for a provider, and that provider's own "native" codec.
 type CodecTester interface {
+	UnsupportedTypes() []UnsupportedType
 	NativeEncode(interface{}) (interface{}, error)
 	NativeDecode(value, dest interface{}) error
 	DocstoreEncode(interface{}) (interface{}, error)
@@ -97,14 +115,14 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	createThenGet := func(doc docmap) {
 		t.Helper()
 		if err := coll.Create(ctx, doc); err != nil {
-			t.Fatal(err)
+			t.Fatalf("Create: %v", err)
 		}
 		got := docmap{KeyField: doc[KeyField]}
 		if err := coll.Get(ctx, got); err != nil {
-			t.Fatal(err)
+			t.Fatalf("Get: %v", err)
 		}
 		if diff := cmp.Diff(got, doc); diff != "" {
-			t.Fatalf(diff)
+			t.Fatal(diff)
 		}
 	}
 
@@ -196,8 +214,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if _, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
-		t.Fatal(err)
+	if n, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
+		t.Fatalf("after %d successful actions: %v", n, err)
 	}
 	// The document should no longer exist.
 	if err := coll.Get(ctx, doc); err == nil {
@@ -299,41 +317,13 @@ func testCodec(t *testing.T, ct CodecTester) {
 		t.Skip("no CodecTester")
 	}
 
-	type S struct {
-		N  *int
-		I  int
-		U  uint
-		F  float64
-		C  complex64
-		St string
-		B  bool
-		By []byte
-		L  []int
-		M  map[string]bool
-	}
-	// TODO(jba): add more fields: more basic types; pointers; structs; embedding.
-
-	in := S{
-		N:  nil,
-		I:  1,
-		U:  2,
-		F:  2.5,
-		C:  complex(9, 10),
-		St: "foo",
-		B:  true,
-		L:  []int{3, 4, 5},
-		M:  map[string]bool{"a": true, "b": false},
-		By: []byte{6, 7, 8},
-	}
-
-	check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
+	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
 		t.Helper()
 		enc, err := encode(in)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var dec S
-		if err := decode(enc, &dec); err != nil {
+		if err := decode(enc, dec); err != nil {
 			t.Fatal(err)
 		}
 		if diff := cmp.Diff(in, dec); diff != "" {
@@ -341,9 +331,111 @@ func testCodec(t *testing.T, ct CodecTester) {
 		}
 	}
 
-	check(ct.DocstoreEncode, ct.DocstoreDecode)
-	check(ct.DocstoreEncode, ct.NativeDecode)
-	check(ct.NativeEncode, ct.DocstoreDecode)
+	// A round trip with the docstore codec should work for all docstore-supported types,
+	// regardless of native driver support.
+	type DocstoreRoundTrip struct {
+		N  *int
+		I  int
+		U  uint
+		F  float64
+		C  complex128
+		St string
+		B  bool
+		By []byte
+		L  []int
+		A  [2]int
+		M  map[string]bool
+		P  *string
+		T  time.Time
+	}
+	// TODO(jba): add more fields: structs; embedding.
+
+	s := "bar"
+	dsrt := &DocstoreRoundTrip{
+		N:  nil,
+		I:  1,
+		U:  2,
+		F:  2.5,
+		C:  complex(3.0, 4.0),
+		St: "foo",
+		B:  true,
+		L:  []int{3, 4, 5},
+		A:  [2]int{6, 7},
+		M:  map[string]bool{"a": true, "b": false},
+		By: []byte{6, 7, 8},
+		P:  &s,
+		T:  time.Now(),
+	}
+
+	check(dsrt, &DocstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
+
+	// Test native-to-docstore and docstore-to-native round trips with a smaller set
+	// of types.
+
+	// All native codecs should support these types. If one doesn't, remove it from this
+	// struct and make a new single-field struct for it.
+	type NativeMinimal struct {
+		N  *int
+		I  int
+		F  float64
+		St string
+		B  bool
+		By []byte
+		L  []int
+		M  map[string]bool
+		P  *string
+		T  time.Time
+	}
+	nm := &NativeMinimal{
+		N:  nil,
+		I:  1,
+		F:  2.5,
+		St: "foo",
+		B:  true,
+		L:  []int{3, 4, 5},
+		M:  map[string]bool{"a": true, "b": false},
+		By: []byte{6, 7, 8},
+		P:  &s,
+		T:  time.Now(),
+	}
+	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
+	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
+
+	// Test various other types, unless they are unsupported.
+	unsupported := map[UnsupportedType]bool{}
+	for _, u := range ct.UnsupportedTypes() {
+		unsupported[u] = true
+	}
+
+	// Unsigned integers.
+	if !unsupported[Uint] {
+		type Uint struct {
+			U uint
+		}
+		u := &Uint{10}
+		check(u, &Uint{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(u, &Uint{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
+
+	// Complex numbers.
+	if !unsupported[Complex] {
+		type Complex struct {
+			C complex128
+		}
+		c := &Complex{complex(11, 12)}
+		check(c, &Complex{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(c, &Complex{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
+
+	// Arrays.
+	if !unsupported[Arrays] {
+		type Arrays struct {
+			A [2]int
+		}
+		a := &Arrays{[2]int{13, 14}}
+		check(a, &Arrays{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(a, &Arrays{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 }
 
 // Call when running tests that will be replayed.
