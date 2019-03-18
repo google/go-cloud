@@ -140,7 +140,7 @@ func encodeFloat(f float64) *dyn.AttributeValue {
 
 ////////////////////////////////////////////////////////////////
 
-func decodeDoc(doc driver.Document, item *dyn.AttributeValue) error {
+func decodeDoc(item *dyn.AttributeValue, doc driver.Document) error {
 	return doc.Decode(decoder{av: item})
 }
 

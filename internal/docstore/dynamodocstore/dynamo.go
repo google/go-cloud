@@ -149,7 +149,7 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 	if err != nil {
 		return err
 	}
-	return decodeDoc(doc, &dyn.AttributeValue{M: out.Item})
+	return decodeDoc(&dyn.AttributeValue{M: out.Item}, doc)
 }
 
 func (c *collection) delete(ctx context.Context, doc driver.Document) error {

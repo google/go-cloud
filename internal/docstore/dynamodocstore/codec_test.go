@@ -86,7 +86,6 @@ func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {
 }
 
 func (ct *codecTester) NativeDecode(value, dest interface{}) error {
-	// v := value.(map[string]*dyn.AttributeValue)
 	return dynattr.Unmarshal(value.(*dyn.AttributeValue), dest)
 }
 
@@ -103,5 +102,5 @@ func (ct *codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	return decodeDoc(doc, value.(*dyn.AttributeValue))
+	return decodeDoc(value.(*dyn.AttributeValue), doc)
 }
