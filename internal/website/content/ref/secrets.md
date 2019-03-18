@@ -1,5 +1,8 @@
 ---
 title: "Secrets"
+date: 2019-02-22T13:03:06-08:00
+aliases:
+- /pages/secrets/
 ---
 
 Package `secrets` provides an easy and portable way to encrypt and decrypt
@@ -11,6 +14,8 @@ example, using our blob, runtimevar packages etc. It is also integrated with
 OpenCensus to get metrics and traces for `Encrypt` and `Decrypt`, and some
 providers also have automatic audit logs for all key management related
 activites.
+
+<!--more-->
 
 Top-level package documentation: <https://godoc.org/gocloud.dev/secrets>
 

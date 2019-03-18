@@ -33,5 +33,5 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-# Sort usnig the native byte values to keep results from different environment consistent.
+# Sort using the native byte values to keep results from different environment consistent.
 LC_ALL=C sort "$tmpfile" | uniq
