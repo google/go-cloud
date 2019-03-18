@@ -129,6 +129,9 @@ func openBucket(dir string, opts *Options) (driver.Bucket, error) {
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
+	if opts == nil {
+		opts = &Options{}
+	}
 	return &bucket{dir: dir, opts: opts}, nil
 }
 

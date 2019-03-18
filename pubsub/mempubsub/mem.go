@@ -242,10 +242,9 @@ func (s *subscription) receiveNoWait(now time.Time, max int) []*driver.Message {
 	return msgs
 }
 
-const (
-	// How often ReceiveBatch should poll.
-	pollDuration = 250 * time.Millisecond
-)
+// How long ReceiveBatch should wait if no messages are available, to avoid
+// spinning.
+const pollDuration = 250 * time.Millisecond
 
 // ReceiveBatch implements driver.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
@@ -253,19 +252,13 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err := s.wait(ctx, 0); err != nil {
 		return nil, err
 	}
-	// Loop until at least one message is available. Polling is inelegant, but the
-	// alternative would be complicated by the need to recognize expired messages
-	// promptly.
-	for {
-		if msgs := s.receiveNoWait(time.Now(), maxMessages); len(msgs) > 0 {
-			return msgs, nil
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(pollDuration):
-		}
+	msgs := s.receiveNoWait(time.Now(), maxMessages)
+	if len(msgs) == 0 {
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid spinning.
+		time.Sleep(pollDuration)
 	}
+	return msgs, nil
 }
 
 func (s *subscription) wait(ctx context.Context, dur time.Duration) error {
