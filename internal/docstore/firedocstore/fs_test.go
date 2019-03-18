@@ -63,6 +63,10 @@ type codecTester struct {
 	nc *nativeCodec
 }
 
+func (*codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{drivertest.Uint, drivertest.Complex, drivertest.Arrays}
+}
+
 func (c *codecTester) NativeEncode(x interface{}) (interface{}, error) {
 	return c.nc.Encode(x)
 }
