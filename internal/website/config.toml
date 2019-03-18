@@ -1,4 +1,28 @@
 baseURL = "https://gocloud.dev/"
 languageCode = "en-us"
 title = "Go CDK"
-theme = "hyde"
+copyright = "Copyright © 2018–2019 The Go Cloud Development Kit Authors"
+
+[outputs]
+home = ["HTML", "RSS"]
+section = ["HTML"]
+taxonomy = ["HTML"]
+taxonomyTerm = ["HTML", "RSS"]
+
+[[menu.footer]]
+identifier = "github"
+name = "GitHub"
+url = "https://github.com/google/go-cloud/"
+weight = 1
+
+[[menu.footer]]
+identifier = "mailing-list"
+name = "Google Groups"
+url = "https://groups.google.com/forum/#!forum/go-cloud"
+weight = 2
+
+[[menu.footer]]
+identifier = "private-contact"
+name = "Contact Team"
+url = "mailto:go-cdk-feedback@google.com"
+weight = 3
