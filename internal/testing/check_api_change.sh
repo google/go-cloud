@@ -25,7 +25,7 @@ echo
 
 go install -mod=readonly golang.org/x/exp/cmd/apidiff
 
-MASTER_CLONE_DIR="/tmp/go-cloud"
+MASTER_CLONE_DIR="$(mktemp -d)"
 PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
@@ -52,9 +52,7 @@ for pkg in ${PKGS}; do
   apidiff -w ${PKGINFO_BRANCH} ${pkg}
 
   # Compute export data for master@HEAD.
-  cd ${MASTER_CLONE_DIR}
-  apidiff -w ${PKGINFO_MASTER} ${pkg}
-  cd - > /dev/null
+  (cd ${MASTER_CLONE_DIR}; apidiff -w ${PKGINFO_MASTER} ${pkg})
 
   # Print all changes for posterity.
   apidiff ${PKGINFO_MASTER} ${PKGINFO_BRANCH}
