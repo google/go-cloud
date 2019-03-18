@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Samples &middot; Go CDK</title>
+  <title>Blob &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -18,9 +18,38 @@
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Samples</h1>
+      <div class="MainContent-bounds"><h1>Blob</h1>
+<p>Blobs are a common abstraction for storing unstructured data on cloud storage
+providers and accessing them via HTTP.</p>
 
-</div>
+<p>Package <code>blob</code> provides an easy and portable way to interact with blobs within a
+storage location (&ldquo;bucket&rdquo;). It supports operations like reading and writing
+blobs (using standard interfaces from the <code>io</code> package), deleting blobs, and
+listing blobs in a bucket.</p>
+
+<p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/blob">https://godoc.org/gocloud.dev/blob</a></p>
+
+<h2 id="supported-providers">Supported Providers</h2>
+
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/blob/s3blob">AWS S3 blob</a></li>
+<li><a href="https://godoc.org/gocloud.dev/blob/gcsblob">GCS blob</a></li>
+<li><a href="https://godoc.org/gocloud.dev/blob/azureblob">Azure blob</a></li>
+<li><a href="https://godoc.org/gocloud.dev/blob/memblob">In-memory local blob</a> - mainly
+useful for local testing</li>
+<li><a href="https://godoc.org/gocloud.dev/blob/fileblob">File-backed local blob</a> - local
+blob implementation using the file system</li>
+</ul>
+
+<h2 id="usage-samples">Usage Samples</h2>
+
+<ul>
+<li><a href="https://github.com/google/go-cloud/tree/master/samples/tutorial">Tutorial
+sample</a></li>
+<li><a href="https://github.com/google/go-cloud/tree/master/samples/guestbook">Guestbook
+sample</a></li>
+<li><a href="https://godoc.org/gocloud.dev/blob#pkg-examples">blob package examples</a></li>
+</ul></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -65,7 +94,7 @@
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/ref/blob.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>

@@ -6,77 +6,90 @@
     <description>Recent content on Go CDK</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
+    <copyright>Copyright © 2018–2019 The Go Cloud Development Kit Authors</copyright>
+    <lastBuildDate>Mon, 11 Mar 2019 10:02:56 -0700</lastBuildDate>
     
 	<atom:link href="https://gocloud.dev/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Blob</title>
-      <link>https://gocloud.dev/pages/blob/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://gocloud.dev/pages/blob/</guid>
-      <description> Blobs are a common abstraction for storing unstructured data on cloud storage providers and accessing them via HTTP.
-Package blob provides an easy and portable way to interact with blobs within a storage location (&amp;ldquo;bucket&amp;rdquo;). It supports operations like reading and writing blobs (using standard interfaces from the io package), deleting blobs, and listing blobs in a bucket.
-Top-level package documentation: https://godoc.org/gocloud.dev/blob
-Supported Providers  AWS S3 blob GCS blob Azure blob In-memory local blob - mainly useful for local testing File-backed local blob - local blob implementation using the file system  Usage Samples  Tutorial sample Guestbook sample blob package examples  </description>
-    </item>
-    
-    <item>
       <title>MySQL/Postgres</title>
-      <link>https://gocloud.dev/pages/sql/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <link>https://gocloud.dev/ref/sql/</link>
+      <pubDate>Mon, 11 Mar 2019 10:02:56 -0700</pubDate>
       
-      <guid>https://gocloud.dev/pages/sql/</guid>
-      <description> The mysql and postgres packages provide functions for connecting to MySQL and PostgreSQL databases for both on-premise and cloud-provided instances using the *sql.DB type from the Go standard library. Database connections opened using these packages will automatically collect diagnostic information via OpenCensus.
-Top-level package documentation: https://godoc.org/gocloud.dev/mysql and https://godoc.org/gocloud.dev/postgres.
-Supported Providers For MySQL:
- GCP Cloud SQL AWS RDS On-Premise (or locally hosted)  For PostgreSQL:
- GCP Cloud SQL AWS RDS On-Premise (or locally hosted)  Usage Samples  Guestbook sample  </description>
-    </item>
-    
-    <item>
-      <title>Pubsub</title>
-      <link>https://gocloud.dev/pages/pubsub/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://gocloud.dev/pages/pubsub/</guid>
-      <description> Pub/Sub refers to implementations of the publish-subscribe pattern, wherein clients connect to a cloud service to subscribe to topics or publish messages that could be delivered to subscribers.
-Package pubsub provides an easy and portable way to interact with publish/subscribe systems that have at-least-once delivery.
-Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
-Supported Providers  GCP AWS Azure In-memory local pubsub - mainly useful for local testing RabbitMQ - local implementation using the RabbitMQ message broker  Usage Samples  gcmsg sample pubsub package examples  </description>
-    </item>
-    
-    <item>
-      <title>Runtimevar</title>
-      <link>https://gocloud.dev/pages/runtimevar/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      
-      <guid>https://gocloud.dev/pages/runtimevar/</guid>
-      <description> Package runtimevar provides easy and portable access to the latest value of remote configuration variables.
-Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
-Supported Providers  AWS Paramstore GCP Runtime Configurator blobvar - a blob-backed implementation supported by any provider that has blob support Local read-only constant vars - an in-memory local implementation, mainly useful for testing Local etcd runtimevar - a local implementation using the etcd distributed key-value store  Usage Samples  Guestbook sample runtimevar package examples  </description>
+      <guid>https://gocloud.dev/ref/sql/</guid>
+      <description>&lt;p&gt;The &lt;code&gt;mysql&lt;/code&gt; and &lt;code&gt;postgres&lt;/code&gt; packages provide functions for connecting to
+&lt;a href=&#34;https://www.mysql.com/&#34;&gt;MySQL&lt;/a&gt; and &lt;a href=&#34;https://www.postgresql.org/&#34;&gt;PostgreSQL&lt;/a&gt; databases for both on-premise and cloud-provided
+instances using the &lt;a href=&#34;https://godoc.org/database/sql#DB&#34;&gt;&lt;code&gt;*sql.DB&lt;/code&gt;&lt;/a&gt; type from the Go standard library. Database
+connections opened using these packages will automatically collect diagnostic
+information via &lt;a href=&#34;https://opencensus.io/&#34;&gt;OpenCensus&lt;/a&gt;.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Secrets</title>
-      <link>https://gocloud.dev/pages/secrets/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <link>https://gocloud.dev/ref/secrets/</link>
+      <pubDate>Fri, 22 Feb 2019 13:03:06 -0800</pubDate>
       
-      <guid>https://gocloud.dev/pages/secrets/</guid>
-      <description>Package secrets provides an easy and portable way to encrypt and decrypt messages.
-This package lets you do symmetric encryption and decryption within your application layer. You can then store the secret data anywhere safely, for example, using our blob, runtimevar packages etc. It is also integrated with OpenCensus to get metrics and traces for Encrypt and Decrypt, and some providers also have automatic audit logs for all key management related activites.</description>
+      <guid>https://gocloud.dev/ref/secrets/</guid>
+      <description>&lt;p&gt;Package &lt;code&gt;secrets&lt;/code&gt; provides an easy and portable way to encrypt and decrypt
+messages.&lt;/p&gt;
+
+&lt;p&gt;This package lets you do symmetric encryption and decryption within your
+application layer. You can then store the secret data anywhere safely, for
+example, using our blob, runtimevar packages etc. It is also integrated with
+OpenCensus to get metrics and traces for &lt;code&gt;Encrypt&lt;/code&gt; and &lt;code&gt;Decrypt&lt;/code&gt;, and some
+providers also have automatic audit logs for all key management related
+activites.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Blob</title>
+      <link>https://gocloud.dev/ref/blob/</link>
+      <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
+      
+      <guid>https://gocloud.dev/ref/blob/</guid>
+      <description>&lt;p&gt;Blobs are a common abstraction for storing unstructured data on cloud storage
+providers and accessing them via HTTP.&lt;/p&gt;
+
+&lt;p&gt;Package &lt;code&gt;blob&lt;/code&gt; provides an easy and portable way to interact with blobs within a
+storage location (&amp;ldquo;bucket&amp;rdquo;). It supports operations like reading and writing
+blobs (using standard interfaces from the &lt;code&gt;io&lt;/code&gt; package), deleting blobs, and
+listing blobs in a bucket.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Pubsub</title>
+      <link>https://gocloud.dev/ref/pubsub/</link>
+      <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
+      
+      <guid>https://gocloud.dev/ref/pubsub/</guid>
+      <description>&lt;p&gt;Pub/Sub refers to implementations of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern&#34;&gt;publish-subscribe
+pattern&lt;/a&gt;,
+wherein clients connect to a cloud service to subscribe to topics or publish
+messages that could be delivered to subscribers.&lt;/p&gt;
+
+&lt;p&gt;Package &lt;code&gt;pubsub&lt;/code&gt; provides an easy and portable way to interact with
+publish/subscribe systems that have &lt;a href=&#34;https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overview&#34;&gt;at-least-once
+delivery&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Runtimevar</title>
+      <link>https://gocloud.dev/ref/runtimevar/</link>
+      <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
+      
+      <guid>https://gocloud.dev/ref/runtimevar/</guid>
+      <description>&lt;p&gt;Package &lt;code&gt;runtimevar&lt;/code&gt; provides easy and portable access to the latest value of
+remote configuration variables.&lt;/p&gt;</description>
     </item>
     
     <item>
       <title>Server</title>
-      <link>https://gocloud.dev/pages/server/</link>
-      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <link>https://gocloud.dev/ref/server/</link>
+      <pubDate>Thu, 21 Feb 2019 16:21:29 -0800</pubDate>
       
-      <guid>https://gocloud.dev/pages/server/</guid>
-      <description> Package server provides a preconfigured HTTP server with diagnostic hooks.
-Top-level package documentation: https://godoc.org/gocloud.dev/server
-Supported Providers  Stackdriver AWS X-Ray  Usage Samples  Guestbook sample  </description>
+      <guid>https://gocloud.dev/ref/server/</guid>
+      <description>&lt;p&gt;Package &lt;code&gt;server&lt;/code&gt; provides a preconfigured HTTP server with diagnostic hooks.&lt;/p&gt;</description>
     </item>
     
   </channel>

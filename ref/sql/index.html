@@ -5,7 +5,7 @@
   <meta name="generator" content="Hugo 0.54.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Samples &middot; Go CDK</title>
+  <title>MySQL/Postgres &middot; Go CDK</title>
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
@@ -18,9 +18,40 @@
       <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
     </header>
     <main class="MainContent">
-      <div class="MainContent-bounds"><h1>Samples</h1>
+      <div class="MainContent-bounds"><h1>MySQL/Postgres</h1>
+<p>The <code>mysql</code> and <code>postgres</code> packages provide functions for connecting to
+<a href="https://www.mysql.com/">MySQL</a> and <a href="https://www.postgresql.org/">PostgreSQL</a> databases for both on-premise and cloud-provided
+instances using the <a href="https://godoc.org/database/sql#DB"><code>*sql.DB</code></a> type from the Go standard library. Database
+connections opened using these packages will automatically collect diagnostic
+information via <a href="https://opencensus.io/">OpenCensus</a>.</p>
 
-</div>
+<p>Top-level package documentation: <a href="https://godoc.org/gocloud.dev/mysql">https://godoc.org/gocloud.dev/mysql</a> and
+<a href="https://godoc.org/gocloud.dev/postgres">https://godoc.org/gocloud.dev/postgres</a>.</p>
+
+<h2 id="supported-providers">Supported Providers</h2>
+
+<p>For MySQL:</p>
+
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/mysql/cloudmysql">GCP Cloud SQL</a></li>
+<li><a href="https://godoc.org/gocloud.dev/mysql/rdsmysql">AWS RDS</a></li>
+<li><a href="https://godoc.org/gocloud.dev/mysql">On-Premise</a> (or locally hosted)</li>
+</ul>
+
+<p>For PostgreSQL:</p>
+
+<ul>
+<li><a href="https://godoc.org/gocloud.dev/postgres/cloudpostgres">GCP Cloud SQL</a></li>
+<li><a href="https://godoc.org/gocloud.dev/postgres/rdspostgres">AWS RDS</a></li>
+<li><a href="https://godoc.org/gocloud.dev/postgres">On-Premise</a> (or locally hosted)</li>
+</ul>
+
+<h2 id="usage-samples">Usage Samples</h2>
+
+<ul>
+<li><a href="https://github.com/google/go-cloud/tree/master/samples/guestbook">Guestbook
+sample</a></li>
+</ul></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
@@ -65,7 +96,7 @@
         Copyright © 2018–2019 The Go Cloud Development Kit Authors.
         All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
       </p>
-      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/ref/sql.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
     </footer>
   </div>
 </body>

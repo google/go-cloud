@@ -1,54 +1,27 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<html lang="en-us">
 <head>
-  <link href="//gmpg.org/xfn/11" rel="profile">
   <meta http-equiv="content-type" content="text/html; charset=utf-8">
   <meta name="generator" content="Hugo 0.54.0" />
-
-  
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <title>Go CDK</title>
 
-  
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:400,700">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
-  <link type="text/css" rel="stylesheet" href="/css/hyde.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:700">
-
-
-  
+  <link type="text/css" rel="stylesheet" href="/css/style.css">
   <link rel="shortcut icon" href="/favicon-32x32.png">
-
-  
-  <link href="https://gocloud.dev/index.xml" rel="alternate" type="application/rss+xml" title="Go CDK" />
-
-  
-    <meta name="go-import" content="gocloud.dev git https://github.com/google/go-cloud">
-    <meta name="go-source" content="gocloud.dev https://github.com/google/go-cloud https://github.com/google/go-cloud/tree/master{/dir} https://github.com/google/go-cloud/tree/master{/dir}/{file}#L{line}">
-
-
+  <link rel="alternate" type="application/rss&#43;xml" href="/index.xml" title="Go CDK" />
+  <meta name="go-import" content="gocloud.dev git https://github.com/google/go-cloud">
+  <meta name="go-source" content="gocloud.dev https://github.com/google/go-cloud https://github.com/google/go-cloud/tree/master{/dir} https://github.com/google/go-cloud/tree/master{/dir}/{file}#L{line}">
 </head>
-
-  <body>
-  <div class="sidebar">
-  <div class="container">
-    <div class="sidebar-about">
-      <a href="https://gocloud.dev/"><img class="sidebar-logo" src="/go-cdk-logo-white.png" alt="Go CDK"></a>
-    </div>
-    <hr class="sidebar-line" />
-    <nav>
-      <ul class="sidebar-nav">
-        <li><a href="/pages/blob/" class="sidebar-navlink"> Blob </a></li><li><a href="/pages/sql/" class="sidebar-navlink"> MySQL/Postgres </a></li><li><a href="/pages/pubsub/" class="sidebar-navlink"> Pubsub </a></li><li><a href="/pages/runtimevar/" class="sidebar-navlink"> Runtimevar </a></li><li><a href="/pages/secrets/" class="sidebar-navlink"> Secrets </a></li><li><a href="/pages/server/" class="sidebar-navlink"> Server </a></li>
-      </ul>
-      <a href="https://github.com/google/go-cloud">
-        <img class="stickcenter" src="/gh.png"></img>
-      </a>
-    </nav>
-  </div>
-</div>
-
-    <main class="content container">
-    
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds">
 
 <h1 id="the-go-cloud-development-kit">The Go Cloud Development Kit</h1>
 
@@ -97,12 +70,13 @@ with only minimal setup-time changes.</p>
 examples of how to use it:</p>
 
 <ul>
-<li>Unstructured binary storage (<a href="https://gocloud.dev/pages/blob/">blob</a>)</li>
-<li>Publisher/Subscriber (<a href="https://gocloud.dev/pages/pubsub/">pubsub</a>)</li>
-<li>Variables that change at runtime (<a href="https://gocloud.dev/pages/runtimevar/">runtimevar</a>)</li>
+<li>Unstructured binary storage (<a href="https://gocloud.dev/ref/blob/">blob</a>)</li>
+<li>Publisher/Subscriber (<a href="https://gocloud.dev/ref/pubsub/">pubsub</a>)</li>
+<li>Variables that change at runtime (<a href="https://gocloud.dev/ref/runtimevar/">runtimevar</a>)</li>
 <li>HTTP server with request logging, tracing and health checking
-(<a href="https://gocloud.dev/pages/server/">server</a>)</li>
-<li>Secret management, encryption and decryption (<a href="https://gocloud.dev/pages/secrets/">secrets</a>)</li>
+(<a href="https://gocloud.dev/ref/server/">server</a>)</li>
+<li>Secret management, encryption and decryption (<a href="https://gocloud.dev/ref/secrets/">secrets</a>)</li>
+<li>Connecting to hosted SQL services (<a href="https://gocloud.dev/ref/sql/">mysql/postgres</a>)</li>
 </ul>
 
 <h2 id="project-status">Project status</h2>
@@ -111,25 +85,58 @@ examples of how to use it:</p>
 a beta version. Please try it and provide feedback!</p>
 
 <ul>
-<li>File a <a href="https://github.com/google/go-cloud/issues">Github issue</a></li>
+<li>File a <a href="https://github.com/google/go-cloud/issues">GitHub issue</a></li>
 <li>Post questions to the
 <a href="https://groups.google.com/forum/#!forum/go-cloud">project&rsquo;s mailing list</a></li>
 <li>Send us private feedback at <a href="mailto:go-cdk-feedback@google.com">go-cdk-feedback@google.com</a></li>
 </ul>
-
+</div>
     </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="/" class="Sidenav-sectionLink">Home</a>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/ref/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/sql/" class="Sidenav-pageLink">MySQL/Postgres</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">Pubsub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">Runtimevar</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/server/" class="Sidenav-pageLink">Server</a>
+              </li>
+            </ul>
+        </li>
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
+          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
+          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+        </ul>
+      </nav>
 
-    
-<script type="application/javascript">
-var doNotTrack = false;
-if (!doNotTrack) {
-	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-	ga('create', 'UA-135118641-1', 'auto');
-	
-	ga('send', 'pageview');
-}
-</script>
-<script async src='https://www.google-analytics.com/analytics.js'></script>
-
-  </body>
+      <p class="PageFooter-paragraph">
+        Copyright © 2018–2019 The Go Cloud Development Kit Authors.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/_index.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
 </html>
