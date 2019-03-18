@@ -55,8 +55,8 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
-DIFF=$(gofmt -s -d `find . -name '*.go' -type f ! -path "*/bindata.go"`)
-
+# Ensure .go files are formatted with "gofmt -s".
+DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
 if [ -n "$DIFF" ]; then
   echo "Please run gofmt -s and commit the result"
   echo "$DIFF";
