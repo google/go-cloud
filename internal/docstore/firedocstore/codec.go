@@ -18,7 +18,6 @@
 // - complex64/128: encoded as an array of two float32/64s.
 //
 // Docstore types handled specially by Firestore:
-// TODO(jba): implement these
 // - time.Time: encoded as a ts.Timestamp [ts = "github.com/golang/protobuf/ptypes/timestamp"]
 // - *ts.Timestamp: encoded as itself
 // - *latlng.LatLng: encoded as itself [latlng = "google.golang.org/genproto/googleapis/type/latlng"]
@@ -34,10 +33,13 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	ts "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/internal/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
 // encodeDoc encodes a driver.Document into Firestore's representation.
@@ -49,9 +51,6 @@ func encodeDoc(doc driver.Document) (*pb.Document, error) {
 	}
 	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
 }
-
-// TODO(jba): support encoding and decoding time.Time and latlng.LatLng specially, since Firestore has
-// special cases for those.
 
 // encodeValue encodes a Go value as a Firestore Value.
 // The Firestore proto definition for Value is a oneof of various types,
@@ -99,9 +98,40 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-// TODO(jba): make this work for time.Time, latlng.LatLng, and ts.Timestamp.
-func (e *encoder) EncodeSpecial(reflect.Value) (bool, error) {
-	return false, nil
+var (
+	typeOfGoTime         = reflect.TypeOf(time.Time{})
+	typeOfProtoTimestamp = reflect.TypeOf((*ts.Timestamp)(nil))
+	typeOfLatLng         = reflect.TypeOf((*latlng.LatLng)(nil))
+)
+
+// Encode time.Time, latlng.LatLng, and ts.Timestamp specially, because the Go Firestore
+// client does.
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		ts, err := ptypes.TimestampProto(v.Interface().(time.Time))
+		if err != nil {
+			return false, err
+		}
+		e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{ts}}
+		return true, nil
+	case typeOfProtoTimestamp:
+		if v.IsNil() {
+			e.pv = nullValue
+		} else {
+			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{v.Interface().(*ts.Timestamp)}}
+		}
+		return true, nil
+	case typeOfLatLng:
+		if v.IsNil() {
+			e.pv = nullValue
+		} else {
+			e.pv = &pb.Value{ValueType: &pb.Value_GeoPointValue{v.Interface().(*latlng.LatLng)}}
+		}
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
 type listEncoder struct {
@@ -220,6 +250,7 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 	case *pb.Value_BytesValue:
 		return v.BytesValue, nil
 	case *pb.Value_TimestampValue:
+		// Return TimestampValue as time.Time.
 		t, err := ptypes.Timestamp(v.TimestampValue)
 		if err != nil {
 			return nil, err
@@ -229,8 +260,8 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 		// TODO(jba): support references
 		return nil, errors.New("references are not currently supported")
 	case *pb.Value_GeoPointValue:
-		// TODO(jba): support geopoints
-		return nil, errors.New("GeoPoints are not currently supported")
+		// Return GeoPointValue as *latlng.LatLng.
+		return v.GeoPointValue, nil
 	case *pb.Value_ArrayValue:
 		s := make([]interface{}, len(v.ArrayValue.Values))
 		for i, pv := range v.ArrayValue.Values {
@@ -285,7 +316,30 @@ func (d decoder) DecodeMap(f func(string, driver.Decoder) bool) {
 	}
 }
 
-// TODO(jba): see above TODO for EncodeSpecial.
-func (c decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
-	return false, nil, nil
+func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		if ts, ok := d.pv.ValueType.(*pb.Value_TimestampValue); ok {
+			if ts.TimestampValue == nil {
+				return true, time.Time{}, nil
+			}
+			t, err := ptypes.Timestamp(ts.TimestampValue)
+			return true, t, err
+		}
+		return true, nil, fmt.Errorf("expected TimestampValue for time.Time, got %+v", d.pv.ValueType)
+	case typeOfProtoTimestamp:
+		if ts, ok := d.pv.ValueType.(*pb.Value_TimestampValue); ok {
+			return true, ts.TimestampValue, nil
+		}
+		return true, nil, fmt.Errorf("expected TimestampValue for *ts.Timestamp, got %+v", d.pv.ValueType)
+
+	case typeOfLatLng:
+		if ll, ok := d.pv.ValueType.(*pb.Value_GeoPointValue); ok {
+			return true, ll.GeoPointValue, nil
+		}
+		return true, nil, fmt.Errorf("expected GeoPointValue for *latlng.LatLng, got %+v", d.pv.ValueType)
+
+	default:
+		return false, nil, nil
+	}
 }
