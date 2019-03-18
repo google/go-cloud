@@ -76,7 +76,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   fi
 else
   go test -mod=readonly -race ./... || result=1
-  # No need to run wire checks or other module tests on OSs other than linux.
+  # No need to run other checks on OSs other than linux.
   exit $result
 fi
 
@@ -88,6 +88,12 @@ fi
 ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
   echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
+
+# For pull requests, check if there are undeclared incompatible API changes.
+# Skip this if we're already going to fail since it is expensive.
+if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  ./internal/testing/check_api_change.sh || result=1;
+fi
 
 go install -mod=readonly github.com/google/wire/cmd/wire
 wire check ./... || result=1
