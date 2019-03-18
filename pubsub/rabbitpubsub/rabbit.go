@@ -563,7 +563,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	// Get up to maxMessages waiting messages, but don't take too long.
 	var ms []*driver.Message
-	maxTime := time.After(50 * time.Millisecond)
+	maxTime := time.Tick(50 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -592,8 +592,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			}
 
 		case <-maxTime:
-			// Timed out. Return whatever we have.
-			return ms, nil
+			// Timed out. Return whatever we have, or continue waiting if
+			// we haven't gotten anything yet.
+			if len(ms) > 0 {
+				return ms, nil
+			}
 		}
 	}
 }

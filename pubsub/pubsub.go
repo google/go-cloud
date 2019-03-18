@@ -314,6 +314,9 @@ type Subscription struct {
 	err            error         // permanent error
 	waitc          chan struct{} // for goroutines waiting on ReceiveBatch
 	avgProcessTime float64       // moving average of the seconds to process a message
+
+	// Used in tests.
+	onReceiveBatchHook func(numMessages, maxMessages int)
 }
 
 const (
@@ -422,6 +425,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
 		msgs, err := s.getNextBatch(ctx, nMessages)
+		if s.onReceiveBatchHook != nil {
+			s.onReceiveBatchHook(len(msgs), nMessages)
+		}
 		s.mu.Lock()
 		close(s.waitc)
 		s.waitc = nil

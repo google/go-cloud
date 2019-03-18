@@ -107,13 +107,11 @@ type Subscription interface {
 	// should return a nil slice and an error. The concrete API will take
 	// care of retry logic.
 	//
-	// If the service returns no messages for some other reason, this
-	// method should return the empty slice of messages and not attempt to
-	// retry.
-	//
-	// Implementations of ReceiveBatch should request that the underlying
-	// service wait some non-zero amount of time before returning, if there
-	// are no messages yet.
+	// If no messages are currently available, this method can return an empty
+	// slice of messages and no error. ReceiveBatch will be called again
+	// immediately, so implementations should try to wait for messages for some
+	// non-zero amount of time before returning zero messages. If the underlying
+	// service doesn't support waiting, then a time.Sleep can be used.
 	//
 	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)

@@ -55,6 +55,14 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
+DIFF=$(gofmt -s -d `find . -name '*.go' -type f ! -path "*/bindata.go"`)
+
+if [ -n "$DIFF" ]; then
+  echo "Please run gofmt -s and commit the result"
+  echo "$DIFF";
+  exit 1;
+fi;
+
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0

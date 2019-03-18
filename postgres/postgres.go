@@ -41,19 +41,10 @@ type URLOpener struct{}
 
 // OpenPostgresURL opens a new database connection wrapped with OpenCensus instrumentation.
 func (*URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	for k, _ := range u.Query() {
-		// Only permit parameters that do not conflict with other behavior.
-		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" {
-			return nil, fmt.Errorf("postgres: openPostgresURL: extra parameter %s not allowed", k)
-		}
-	}
-
-	db, err := openWithUrl(u)
-	return db, err
-}
-
-func openWithUrl(url *url.URL) (*sql.DB, error) {
-	return sql.OpenDB(connector{dsn: url.String()}), nil
+	u2 := new(url.URL)
+	*u2 = *u
+	u2.Scheme = "postgres"
+	return sql.OpenDB(connector{dsn: u2.String()}), nil
 }
 
 type connector struct {
