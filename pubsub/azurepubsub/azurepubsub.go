@@ -292,7 +292,12 @@ type subscription struct {
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ListenerTimeout time.Duration
+	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
+	// to complete it, otherwise you run the risk of deadlettering messages.
+	// If non-nil, the subscription MUST be in Receive-and-Delete mode, and this function will be called
+	// whenever Ack is called on a message.
+	// See the "At-most-once vs. At-least-once Delivery" section in the pubsub package documentation.
+	AckFuncForReceiveAndDelete func()
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
@@ -304,13 +309,15 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) driver.Subscription {
 	topicName := ""
+
 	if sbTop != nil {
 		topicName = sbTop.Name
 	}
 
-	defaultTimeout := listenerTimeout
-	if opts != nil && opts.ListenerTimeout > 0 {
-		defaultTimeout = opts.ListenerTimeout
+	// Determine if caller will suppress acks (at-most-once mode).
+	var ackFunc func()
+	if opts != nil && opts.AckFuncForReceiveAndDelete != nil {
+		ackFunc = opts.AckFuncForReceiveAndDelete
 	}
 
 	return &subscription{
@@ -318,7 +325,7 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 		topicName: topicName,
 		sbNs:      sbNs,
 		opts: &SubscriptionOptions{
-			ListenerTimeout: defaultTimeout,
+			AckFuncForReceiveAndDelete: ackFunc,
 		},
 	}
 }
@@ -373,6 +380,15 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// AckFunc implements driver.Subscription.AckFunc.
+func (s *subscription) AckFunc() func() {
+	var ackFunc func()
+	if s != nil && s.opts != nil && s.opts.AckFuncForReceiveAndDelete != nil {
+		ackFunc = s.opts.AckFuncForReceiveAndDelete
+	}
+	return ackFunc
+}
+
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Test to ensure existence of the Service Bus Subscription before listening for messages.
@@ -383,7 +399,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		return nil, err
 	}
 
-	rctx, cancel := context.WithTimeout(ctx, s.opts.ListenerTimeout)
+	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
 	var messages []*driver.Message
 	var wg sync.WaitGroup
@@ -518,6 +534,3 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 }
-
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
