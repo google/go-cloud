@@ -292,7 +292,7 @@ type subscription struct {
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ListenerTimeout            time.Duration
+	ListenerTimeout time.Duration
 
 	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
 	// to complete it, otherwise you run the risk of deadlettering messages.
@@ -388,6 +388,15 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// AckFunc implements driver.Subscription.AckFunc.
+func (s *subscription) AckFunc() func() {
+	var ackFunc func()
+	if s != nil && s.opts != nil && s.opts.AckFuncForReceiveAndDelete != nil {
+		ackFunc = s.opts.AckFuncForReceiveAndDelete
+	}
+	return ackFunc
+}
+
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Test to ensure existence of the Service Bus Subscription before listening for messages.
@@ -451,11 +460,6 @@ func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if len(ids) == 0 {
 		return nil
-	}
-
-	// Invoke AckFunc is provided (at-most-once mode).
-	if s.opts != nil && s.opts.AckFuncForReceiveAndDelete != nil {
-		s.opts.AckFuncForReceiveAndDelete()
 	}
 
 	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
@@ -538,6 +542,3 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 }
-
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }
