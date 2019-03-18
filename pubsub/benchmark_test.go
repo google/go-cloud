@@ -24,6 +24,7 @@ import (
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -169,7 +170,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 			// Each goroutine loops until ctx is canceled.
 			for {
 				m, err := sub.Receive(ctx)
-				if err == context.Canceled {
+				if xerrors.Is(err, context.Canceled) {
 					return nil
 				}
 				// TODO(rvangent): This is annoying. Maybe retry should return
