@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"gocloud.dev/internal/docstore/driver"
@@ -64,8 +65,18 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-func (*encoder) EncodeSpecial(reflect.Value) (bool, error) {
-	return false, nil
+var typeOfGoTime = reflect.TypeOf(time.Time{})
+
+// EncodeSpecial encodes time.Time specially.
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		ts := v.Interface().(time.Time).Format(time.RFC3339Nano)
+		e.EncodeString(ts)
+	default:
+		return false, errors.New("Not implemented")
+	}
+	return true, nil
 }
 
 type listEncoder struct {
@@ -320,6 +331,12 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 	}
 }
 
-func (decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
-	return false, nil, nil
+func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
+		return true, t, err
+	default:
+		return false, nil, nil
+	}
 }
