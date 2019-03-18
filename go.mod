@@ -41,8 +41,6 @@ require (
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/etcd v3.3.11+incompatible // indirect
 	github.com/coreos/go-oidc v2.0.0+incompatible // indirect
-	github.com/coreos/go-semver v0.2.0 // indirect
-	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect
 	github.com/dancannon/gorethink v4.0.0+incompatible // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190121005146-b04fd42d9952 // indirect
 	github.com/dimchansky/utfbom v1.1.0 // indirect
@@ -67,11 +65,7 @@ require (
 	github.com/google/wire v0.2.1
 	github.com/googleapis/gax-go v2.0.2+incompatible
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75 // indirect
-	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
-	github.com/gorilla/websocket v1.4.0 // indirect
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
-	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/go-gcp-common v0.0.0-20180425173946-763e39302965 // indirect
 	github.com/hashicorp/go-hclog v0.0.0-20190109152822-4783caec6f2e // indirect
 	github.com/hashicorp/go-msgpack v0.5.3 // indirect
@@ -98,7 +92,6 @@ require (
 	github.com/influxdata/influxdb v1.7.3 // indirect
 	github.com/influxdata/platform v0.0.0-20190117200541-d500d3cf5589 // indirect
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
-	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/keybase/go-crypto v0.0.0-20181127160227-255a5089e85a // indirect
 	github.com/lib/pq v1.0.0
@@ -118,13 +111,13 @@ require (
 	github.com/pquerna/otp v1.1.0 // indirect
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/sirupsen/logrus v1.3.0 // indirect
-	github.com/soheilhy/cmux v0.1.4 // indirect
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
 	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
+	gocloud.dev/internal/contributebot v0.0.0-20190318160410-5743a1928349 // indirect
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c

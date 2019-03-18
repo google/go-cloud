@@ -50,7 +50,7 @@ func Example() {
 	// Go CDK Secrets
 }
 
-func ExampleKeeper_ErrorAs() {
+func Example_errorAs() {
 	// This example is specific to the gcpkms implementation; it
 	// demonstrates access to the underlying google.golang.org/grpc/status.Status
 	// type.

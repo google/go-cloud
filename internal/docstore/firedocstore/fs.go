@@ -253,7 +253,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 			docName = driver.UniqueString()
 			newName = docName
 		}
-		w, err = c.putWrite(a.Doc, docName, &pb.Precondition{ConditionType: &pb.Precondition_Exists{false}})
+		w, err = c.putWrite(a.Doc, docName, &pb.Precondition{ConditionType: &pb.Precondition_Exists{Exists: false}})
 
 	case driver.Replace:
 		// If the given document has a revision, use it as the precondition (it implies existence).
@@ -263,7 +263,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 		}
 		// Otherwise, just require that the document exists.
 		if pc == nil {
-			pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{true}}
+			pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{Exists: true}}
 		}
 		w, err = c.putWrite(a.Doc, docName, pc)
 
@@ -299,7 +299,7 @@ func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precon
 	}
 	pdoc.Name = c.collPath + "/" + docName
 	return &pb.Write{
-		Operation:       &pb.Write_Update{pdoc},
+		Operation:       &pb.Write_Update{Update: pdoc},
 		CurrentDocument: pc,
 	}, nil
 }
@@ -310,7 +310,7 @@ func (c *collection) deleteWrite(doc driver.Document, docName string) (*pb.Write
 		return nil, err
 	}
 	return &pb.Write{
-		Operation:       &pb.Write_Delete{c.collPath + "/" + docName},
+		Operation:       &pb.Write_Delete{Delete: c.collPath + "/" + docName},
 		CurrentDocument: pc,
 	}, nil
 }
@@ -324,7 +324,7 @@ func (c *collection) updateWrites(doc driver.Document, docName string, mods []dr
 	}
 	// If there is no revision in the document, add a precondition that the document exists.
 	if pc == nil {
-		pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{true}}
+		pc = &pb.Precondition{ConditionType: &pb.Precondition_Exists{Exists: true}}
 	}
 	pdoc := &pb.Document{
 		Name:   c.collPath + "/" + docName,
@@ -350,7 +350,7 @@ func (c *collection) updateWrites(doc driver.Document, docName string, mods []dr
 		}
 	}
 	w := &pb.Write{
-		Operation:       &pb.Write_Update{pdoc},
+		Operation:       &pb.Write_Update{Update: pdoc},
 		UpdateMask:      &pb.DocumentMask{FieldPaths: fps},
 		CurrentDocument: pc,
 	}
@@ -383,7 +383,7 @@ func getParentMap(m map[string]*pb.Value, fp []string, create bool) (map[string]
 			if !create {
 				return nil, nil
 			}
-			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: map[string]*pb.Value{}}}}
+			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{}}}}
 		}
 		mv := m[k].GetMapValue()
 		if mv == nil {

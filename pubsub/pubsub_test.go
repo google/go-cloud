@@ -418,14 +418,14 @@ func TestOpenCensus(t *testing.T) {
 	_, _ = sub.Receive(ctx)
 
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub/mempubsub", []octest.Call{
-		{"driver.Topic.SendBatch", gcerrors.OK},
-		{"Topic.Send", gcerrors.OK},
-		{"Topic.Shutdown", gcerrors.OK},
-		{"driver.Subscription.ReceiveBatch", gcerrors.OK},
-		{"Subscription.Receive", gcerrors.OK},
-		{"driver.Subscription.SendAcks", gcerrors.OK},
-		{"Subscription.Shutdown", gcerrors.OK},
-		{"Subscription.Receive", gcerrors.FailedPrecondition},
+		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
+		{Method: "Topic.Send", Code: gcerrors.OK},
+		{Method: "Topic.Shutdown", Code: gcerrors.OK},
+		{Method: "driver.Subscription.ReceiveBatch", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.OK},
+		{Method: "driver.Subscription.SendAcks", Code: gcerrors.OK},
+		{Method: "Subscription.Shutdown", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.FailedPrecondition},
 	})
 	if diff != "" {
 		t.Error(diff)

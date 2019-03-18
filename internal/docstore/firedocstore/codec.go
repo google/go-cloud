@@ -70,31 +70,41 @@ type encoder struct {
 
 var nullValue = &pb.Value{ValueType: &pb.Value_NullValue{}}
 
-func (e *encoder) EncodeNil()            { e.pv = nullValue }
-func (e *encoder) EncodeBool(x bool)     { e.pv = &pb.Value{ValueType: &pb.Value_BooleanValue{x}} }
-func (e *encoder) EncodeInt(x int64)     { e.pv = &pb.Value{ValueType: &pb.Value_IntegerValue{x}} }
-func (e *encoder) EncodeUint(x uint64)   { e.pv = &pb.Value{ValueType: &pb.Value_IntegerValue{int64(x)}} }
-func (e *encoder) EncodeBytes(x []byte)  { e.pv = &pb.Value{ValueType: &pb.Value_BytesValue{x}} }
+func (e *encoder) EncodeNil() { e.pv = nullValue }
+func (e *encoder) EncodeBool(x bool) {
+	e.pv = &pb.Value{ValueType: &pb.Value_BooleanValue{BooleanValue: x}}
+}
+func (e *encoder) EncodeInt(x int64) {
+	e.pv = &pb.Value{ValueType: &pb.Value_IntegerValue{IntegerValue: x}}
+}
+func (e *encoder) EncodeUint(x uint64) {
+	e.pv = &pb.Value{ValueType: &pb.Value_IntegerValue{IntegerValue: int64(x)}}
+}
+func (e *encoder) EncodeBytes(x []byte) {
+	e.pv = &pb.Value{ValueType: &pb.Value_BytesValue{BytesValue: x}}
+}
 func (e *encoder) EncodeFloat(x float64) { e.pv = floatval(x) }
-func (e *encoder) EncodeString(x string) { e.pv = &pb.Value{ValueType: &pb.Value_StringValue{x}} }
+func (e *encoder) EncodeString(x string) {
+	e.pv = &pb.Value{ValueType: &pb.Value_StringValue{StringValue: x}}
+}
 
 func (e *encoder) ListIndex(int) { panic("impossible") }
 func (e *encoder) MapKey(string) { panic("impossible") }
 
 func (e *encoder) EncodeComplex(x complex128) {
 	vals := []*pb.Value{floatval(real(x)), floatval(imag(x))}
-	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{&pb.ArrayValue{Values: vals}}}
+	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{ArrayValue: &pb.ArrayValue{Values: vals}}}
 }
 
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	s := make([]*pb.Value, n)
-	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{&pb.ArrayValue{Values: s}}}
+	e.pv = &pb.Value{ValueType: &pb.Value_ArrayValue{ArrayValue: &pb.ArrayValue{Values: s}}}
 	return &listEncoder{s: s}
 }
 
 func (e *encoder) EncodeMap(n int) driver.Encoder {
 	m := make(map[string]*pb.Value, n)
-	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
+	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: m}}}
 	return &mapEncoder{m: m}
 }
 
@@ -113,20 +123,20 @@ func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{ts}}
+		e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{TimestampValue: ts}}
 		return true, nil
 	case typeOfProtoTimestamp:
 		if v.IsNil() {
 			e.pv = nullValue
 		} else {
-			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{v.Interface().(*ts.Timestamp)}}
+			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{TimestampValue: v.Interface().(*ts.Timestamp)}}
 		}
 		return true, nil
 	case typeOfLatLng:
 		if v.IsNil() {
 			e.pv = nullValue
 		} else {
-			e.pv = &pb.Value{ValueType: &pb.Value_GeoPointValue{v.Interface().(*latlng.LatLng)}}
+			e.pv = &pb.Value{ValueType: &pb.Value_GeoPointValue{GeoPointValue: v.Interface().(*latlng.LatLng)}}
 		}
 		return true, nil
 	default:
@@ -148,13 +158,13 @@ type mapEncoder struct {
 
 func (e *mapEncoder) MapKey(k string) { e.m[k] = e.pv }
 
-func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_DoubleValue{x}} }
+func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_DoubleValue{DoubleValue: x}} }
 
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes a Firestore document into a driver.Document.
 func decodeDoc(pdoc *pb.Document, ddoc driver.Document) error {
-	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
+	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: pdoc.Fields}}}
 	return ddoc.Decode(decoder{mv})
 }
 

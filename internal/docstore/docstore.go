@@ -218,7 +218,7 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 			if err != nil {
 				return nil, err
 			}
-			d.Mods = append(d.Mods, driver.Mod{fp, v})
+			d.Mods = append(d.Mods, driver.Mod{FieldPath: fp, Value: v})
 		}
 	}
 	return d, nil
