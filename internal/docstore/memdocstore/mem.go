@@ -27,6 +27,8 @@ import (
 	"gocloud.dev/internal/gcerr"
 )
 
+// TODO(jba): make this package thread-safe.
+
 // Options sets options for constructing a *docstore.Collection backed by memory.
 type Options struct{}
 
@@ -42,8 +44,9 @@ func OpenCollection(keyField string, opts *Options) *docstore.Collection {
 
 func newCollection(keyField string) driver.Collection {
 	return &collection{
-		keyField: keyField,
-		docs:     map[interface{}]map[string]interface{}{},
+		keyField:     keyField,
+		docs:         map[interface{}]map[string]interface{}{},
+		nextRevision: 1,
 	}
 }
 
@@ -52,7 +55,8 @@ type collection struct {
 	// map from keys to documents. Documents are represented as map[string]interface{},
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
-	docs map[interface{}]map[string]interface{}
+	docs         map[interface{}]map[string]interface{}
+	nextRevision int64 // incremented on each write
 }
 
 // ErrorCode implements driver.ErrorCode.
@@ -112,16 +116,28 @@ func (c *collection) runAction(a *driver.Action) error {
 		fallthrough
 
 	case driver.Replace, driver.Put:
+		if a.Kind != driver.Create {
+			if err := checkRevision(a.Doc, current); err != nil {
+				return err
+			}
+		}
 		doc, err := encodeDoc(a.Doc)
 		if err != nil {
 			return err
 		}
+		c.changeRevision(doc)
 		c.docs[key] = doc
 
 	case driver.Delete:
+		if err := checkRevision(a.Doc, current); err != nil {
+			return err
+		}
 		delete(c.docs, key)
 
 	case driver.Update:
+		if err := checkRevision(a.Doc, current); err != nil {
+			return err
+		}
 		if err := c.update(current, a.Mods); err != nil {
 			return err
 		}
@@ -159,6 +175,33 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 			// This can't fail because we checked it above.
 			_ = setAtFieldPath(doc, m.FieldPath, m.Value)
 		}
+	}
+	if len(mods) > 0 {
+		c.changeRevision(doc)
+	}
+	return nil
+}
+
+func (c *collection) changeRevision(doc map[string]interface{}) {
+	c.nextRevision++
+	doc[docstore.RevisionField] = c.nextRevision
+}
+
+func checkRevision(arg driver.Document, current map[string]interface{}) error {
+	if current == nil {
+		return nil // no existing document
+	}
+	curRev := current[docstore.RevisionField].(int64)
+	r, err := arg.GetField(docstore.RevisionField)
+	if err != nil || r == nil {
+		return nil // no incoming revision information: nothing to check
+	}
+	wantRev, ok := r.(int64)
+	if !ok {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "revision field %s is not an int64", docstore.RevisionField)
+	}
+	if wantRev != curRev {
+		return gcerr.Newf(gcerr.FailedPrecondition, nil, "mismatched revisions: want %d, current %d", wantRev, curRev)
 	}
 	return nil
 }

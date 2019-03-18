@@ -166,6 +166,8 @@ func GRPCCode(err error) ErrorCode {
 		return Internal
 	case codes.Unimplemented:
 		return Unimplemented
+	case codes.FailedPrecondition:
+		return FailedPrecondition
 	case codes.PermissionDenied:
 		return PermissionDenied
 	case codes.ResourceExhausted:

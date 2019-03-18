@@ -50,6 +50,15 @@ func newCollection(d driver.Collection) *Collection {
 	return &Collection{driver: d}
 }
 
+// RevisionField is the name of the document field used for document revision
+// information, to implement optimistic locking.
+// Every retrieved document will have this field set to a non-nil value
+// of unspecified type (different providers might use different types).
+// When defining a struct for storing docstore data, define the field to be of type
+// interface{}. For example,
+//    type User { Name string; DocstoreRevision interface{} }
+const RevisionField = "DocstoreRevision"
+
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
 //   room
 //   room.size
@@ -100,6 +109,9 @@ func (l *ActionList) Create(doc Document) *ActionList {
 // The key fields must be set.
 // The document must already exist; an error for which gcerrors.Code returns NotFound
 // is returned if it does not.
+// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
+// returns FailedPrecondition is returned if the stored document's revision does not
+// match the given document's.
 func (l *ActionList) Replace(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Replace, doc: doc})
 }
@@ -107,13 +119,19 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 // Put adds an action that adds or replaces a document.
 // The key fields must be set.
 // The document may or may not already exist.
+// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
+// returns FailedPrecondition is returned if the stored document's revision does not
+// match the given document's.
 func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
 // Delete adds an action that deletes a document.
 // Only the key fields and RevisionField of doc are used.
-// If the document doesn't exist, nothing happens and no error is returned.
+// If the argument document has a non-nil RevisionField, then an error for which
+// gcerrors.Code returns FailedPrecondition is returned if the stored document
+// doesn't exist or its revision does not match the given document's. Otherwise, if
+// the document doesn't exist, nothing happens and no error is returned.
 func (l *ActionList) Delete(doc Document) *ActionList {
 	// Rationale for not returning an error if the document does not exist:
 	// Returning an error might be informative and could be ignored, but if the
@@ -143,6 +161,10 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 //
 // No field path in mods can be a prefix of another. (It makes no sense
 // to, say, set foo but increment foo.bar.)
+//
+// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
+// returns FailedPrecondition is returned if the stored document's revision does not
+// match the given document's.
 //
 // It is undefined whether updating a sub-field of a non-map field will succeed.
 // For instance, if the current document is {a: 1} and Update is called with the
