@@ -55,14 +55,6 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
-# Ensure .go files are formatted with "gofmt -s".
-DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
-if [ -n "$DIFF" ]; then
-  echo "Please run gofmt -s and commit the result"
-  echo "$DIFF";
-  exit 1;
-fi;
-
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0
@@ -79,6 +71,14 @@ else
   # No need to run wire checks or other module tests on OSs other than linux.
   exit $result
 fi
+
+# Ensure .go files are formatted with "gofmt -s".
+DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
+if [ -n "$DIFF" ]; then
+  echo "Please run gofmt -s and commit the result"
+  echo "$DIFF";
+  exit 1;
+fi;
 
 # Ensure that the code has no extra dependencies (including transitive
 # dependencies) that we're not already aware of by comparing with
