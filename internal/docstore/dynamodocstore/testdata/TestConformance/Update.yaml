@@ -1,0 +1,236 @@
+---
+version: 1
+interactions:
+- request:
+    body: '{"Item":{"_id":{"S":"testUpdate"},"a":{"S":"A"},"b":{"S":"B"}},"TableName":"docstore-test"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "91"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.PutItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - 3LJOCAC7AMS94F24HHUCRRAHT3VV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ConditionExpression":"attribute_exists(#pk)","ExpressionAttributeNames":{"#pk":"_id"},"ExpressionAttributeValues":{":0":{"S":"X"},":1":{"S":"C"}},"Key":{"_id":{"S":"testUpdate"}},"TableName":"docstore-test","UpdateExpression":"SET
+      a = :0, c = :1 REMOVE b"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "258"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.UpdateItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "2"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "2745614147"
+      X-Amzn-Requestid:
+      - P4R07CLPUA0UMM9CN60DBIIIJ3VV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"Key":{"_id":{"S":"testUpdate"}},"TableName":"docstore-test"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "62"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.GetItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Item":{"_id":{"S":"testUpdate"},"a":{"S":"X"},"c":{"S":"C"}}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "63"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "137113432"
+      X-Amzn-Requestid:
+      - 11R4DR7P5MV0RQ2JDHMKCST307VV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: '{"ConditionExpression":"attribute_exists(#pk)","ExpressionAttributeNames":{"#pk":"_id"},"ExpressionAttributeValues":{},"Key":{"_id":{"S":"doesNotExist"}},"TableName":"docstore-test","UpdateExpression":"
+      "}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "205"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.UpdateItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"com.amazon.coral.validate#ValidationException","message":"ExpressionAttributeValues
+      must not be empty"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "114"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "1909467339"
+      X-Amzn-Requestid:
+      - 5ICP0BLGRC1UC869VTUUFVCJMRVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: '{"ConditionExpression":"attribute_exists(#pk)","ExpressionAttributeNames":{"#pk":"_id"},"ExpressionAttributeValues":{":0":{"S":"Y"},":1":{"S":"Z"}},"Key":{"_id":{"S":"testUpdate"}},"TableName":"docstore-test","UpdateExpression":"SET
+      a = :0, c.d = :1 "}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "252"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.UpdateItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"__type":"com.amazon.coral.validate#ValidationException","message":"The
+      document path provided in the update expression is invalid for update"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "144"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "4252509992"
+      X-Amzn-Requestid:
+      - 057JD1RMGHI72OODCFH9FEN50FVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 400 Bad Request
+    code: 400
+    duration: ""
+- request:
+    body: '{"Key":{"_id":{"S":"testUpdate"}},"TableName":"docstore-test"}'
+    form: {}
+    headers:
+      Accept-Encoding:
+      - identity
+      Content-Length:
+      - "62"
+      Content-Type:
+      - application/x-amz-json-1.0
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Date:
+      - 20190311T215348Z
+      X-Amz-Target:
+      - DynamoDB_20120810.GetItem
+    url: https://dynamodb.us-east-2.amazonaws.com/
+    method: POST
+  response:
+    body: '{"Item":{"_id":{"S":"testUpdate"},"a":{"S":"X"},"c":{"S":"C"}}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - "63"
+      Content-Type:
+      - application/x-amz-json-1.0
+      Date:
+      - Mon, 11 Mar 2019 21:53:48 GMT
+      Server:
+      - Server
+      X-Amz-Crc32:
+      - "137113432"
+      X-Amzn-Requestid:
+      - 3S9PIL0I4SMSFF8MCOKGOIIJUJVV4KQNSO5AEMVJF66Q9ASUAAJG
+    status: 200 OK
+    code: 200
+    duration: ""

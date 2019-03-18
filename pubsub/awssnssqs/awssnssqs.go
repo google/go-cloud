@@ -58,6 +58,7 @@ import (
 	"net/url"
 	"path"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -378,6 +379,7 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	sqs.ErrCodeOverLimit:                            gcerr.ResourceExhausted,
 	sns.ErrCodeKMSThrottlingException:               gcerr.ResourceExhausted,
 	sns.ErrCodeThrottledException:                   gcerr.ResourceExhausted,
+	"RequestCanceled":                               gcerr.Canceled,
 	sns.ErrCodeEndpointDisabledException:            gcerr.Unknown,
 	sns.ErrCodePlatformApplicationDisabledException: gcerr.Unknown,
 }
@@ -401,6 +403,10 @@ func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *S
 func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
 	return &subscription{client: client, qURL: qURL}
 }
+
+// How long ReceiveBatch should wait if no messages are available; controls
+// the poll interval of requests to SQS.
+const noMessagesPollDuration = 250 * time.Millisecond
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
@@ -466,6 +472,12 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 			},
 		}
 		ms = append(ms, m2)
+	}
+	if len(ms) == 0 {
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
+		// with RPCs.
+		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
 }
