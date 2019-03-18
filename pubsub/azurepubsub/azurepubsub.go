@@ -483,7 +483,6 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		"disposition-status": completedStatus,
 		"lock-tokens":        lockIds,
 	}
-
 	msg := &amqp.Message{
 		ApplicationProperties: map[string]interface{}{
 			"operation": "com.microsoft:update-disposition",
