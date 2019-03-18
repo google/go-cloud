@@ -74,7 +74,7 @@ func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 		ts := v.Interface().(time.Time).Format(time.RFC3339Nano)
 		e.EncodeString(ts)
 	default:
-		return false, errors.New("Not implemented")
+		return false, nil
 	}
 	return true, nil
 }
@@ -334,6 +334,9 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 	switch v.Type() {
 	case typeOfGoTime:
+		if d.av.S == nil {
+			return false, nil, errors.New("time value not found")
+		}
 		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
 		return true, t, err
 	default:
