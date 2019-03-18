@@ -39,7 +39,7 @@ func init() {
 }
 
 // defaultDialer dials a default Rabbit server based on the environment
-// variable "RABBIT_SERVER".
+// variable "RABBIT_SERVER_URL".
 type defaultDialer struct {
 	init   sync.Once
 	opener *URLOpener
@@ -58,9 +58,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 			o.err = fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
 			return
 		}
-		o.opener = &URLOpener{
-			Connection: conn,
-		}
+		o.opener = &URLOpener{Connection: conn}
 	})
 	return o.opener, o.err
 }
@@ -86,9 +84,16 @@ const Scheme = "rabbit"
 
 // URLOpener opens RabbitMQ URLs like "rabbit://myexchange" for
 // topics or "rabbit://myqueue" for subscriptions.
+//
+// For topics, the URL's host+path is used as the exchange name.
+//
+// For subscriptions, the URL's host+path is used as the queue name.
+//
+// No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
+
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
 	// SubscriptionOptions specifies the options to pass to OpenSubscription.
@@ -98,7 +103,7 @@ type URLOpener struct {
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	exchangeName := path.Join(u.Host, u.Path)
 	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
@@ -107,7 +112,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	queueName := path.Join(u.Host, u.Path)
 	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
@@ -558,7 +563,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	// Get up to maxMessages waiting messages, but don't take too long.
 	var ms []*driver.Message
-	maxTime := time.After(50 * time.Millisecond)
+	maxTime := time.Tick(50 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -587,8 +592,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			}
 
 		case <-maxTime:
-			// Timed out. Return whatever we have.
-			return ms, nil
+			// Timed out. Return whatever we have, or continue waiting if
+			// we haven't gotten anything yet.
+			if len(ms) > 0 {
+				return ms, nil
+			}
 		}
 	}
 }

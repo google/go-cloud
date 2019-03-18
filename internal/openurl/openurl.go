@@ -18,6 +18,7 @@ package openurl // import "gocloud.dev/internal/openurl"
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -78,7 +79,16 @@ func (m *SchemeMap) FromURL(typ string, u *url.URL) (interface{}, error) {
 	}
 	v, ok := m.m[scheme]
 	if !ok {
-		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q", m.api, typ, scheme, u)
+		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q; available schemes: %v", m.api, typ, scheme, u, strings.Join(m.availableSchemes(), ", "))
 	}
 	return v, nil
+}
+
+func (m *SchemeMap) availableSchemes() []string {
+	var schemes []string
+	for s := range m.m {
+		schemes = append(schemes, s)
+	}
+	sort.Strings(schemes)
+	return schemes
 }

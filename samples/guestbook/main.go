@@ -128,19 +128,19 @@ var applicationSet = wire.NewSet(
 // application is the main server struct for Guestbook. It contains the state of
 // the most recently read message of the day.
 type application struct {
-	srv    *server.Server
-	db     *sql.DB
-	bucket *blob.Bucket
-	motdVar   *runtimevar.Variable
+	srv     *server.Server
+	db      *sql.DB
+	bucket  *blob.Bucket
+	motdVar *runtimevar.Variable
 }
 
 // newApplication creates a new application struct based on the backends and the message
 // of the day variable.
 func newApplication(srv *server.Server, db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
 	return &application{
-		srv:    srv,
-		db:     db,
-		bucket: bucket,
+		srv:     srv,
+		db:      db,
+		bucket:  bucket,
 		motdVar: motdVar,
 	}
 }

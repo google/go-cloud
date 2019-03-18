@@ -18,11 +18,14 @@
 //
 // URLs
 //
-// For pubsub.OpenTopic/Subscription URLs, gcppubsub registers for the scheme
-// "gcppubsub". pubsub.OpenTopic/Subscription will use Application
-// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
-// If you want to use different credentials or find details on the format of the
-// URL, see URLOpener.
+// For pubsub.OpenTopic and pubsub.OpenSubscription, gcppubsub registers
+// for the scheme "gcppubsub".
+// The default URL opener will creating a connection using use default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -108,9 +111,11 @@ func (o *lazyCredsOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (
 const Scheme = "gcppubsub"
 
 // URLOpener opens GCP Pub/Sub URLs like "gcppubsub://myproject/mytopic" for
-// topics or "gcppubsub://myprojects/mysub" for subscriptions.
-// The URL's host is used as the projectID, and the path is used as the topic
-// or subscription name.
+// topics or "gcppubsub://myproject/mysub" for subscriptions.
+//
+// The URL's host is used as the projectID, and the URL's path (with the
+// leading "/" trimmed) is used as the topic or subscription name.
+//
 // No URL parameters are supported.
 type URLOpener struct {
 	// Conn must be set to a non-nil ClientConn authenticated with
@@ -123,10 +128,10 @@ type URLOpener struct {
 	SubscriptionOptions SubscriptionOptions
 }
 
-// OpenTopicURL opens the GCP Pub/Sub topic with the same name as the URL's host.
+// OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	pc, err := PublisherClient(ctx, o.Conn)
 	if err != nil {
@@ -136,10 +141,10 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &o.TopicOptions), nil
 }
 
-// OpenSubscriptionURL opens the GCS bucket with the same name as the URL's host.
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	sc, err := SubscriberClient(ctx, o.Conn)
 	if err != nil {
