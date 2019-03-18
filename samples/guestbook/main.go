@@ -27,7 +27,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/wire"
@@ -129,41 +128,20 @@ var applicationSet = wire.NewSet(
 // application is the main server struct for Guestbook. It contains the state of
 // the most recently read message of the day.
 type application struct {
-	srv    *server.Server
-	db     *sql.DB
-	bucket *blob.Bucket
-
-	// The following fields are protected by mu:
-	mu   sync.RWMutex
-	motd string // message of the day
+	srv     *server.Server
+	db      *sql.DB
+	bucket  *blob.Bucket
+	motdVar *runtimevar.Variable
 }
 
 // newApplication creates a new application struct based on the backends and the message
 // of the day variable.
 func newApplication(srv *server.Server, db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
-	app := &application{
-		srv:    srv,
-		db:     db,
-		bucket: bucket,
-	}
-	go app.watchMOTDVar(motdVar)
-	return app
-}
-
-// watchMOTDVar listens for changes in v and updates the app's message of the
-// day. It is run in a separate goroutine.
-func (app *application) watchMOTDVar(v *runtimevar.Variable) {
-	ctx := context.Background()
-	for {
-		snap, err := v.Watch(ctx)
-		if err != nil {
-			log.Printf("watch MOTD variable: %v", err)
-			continue
-		}
-		log.Println("updated MOTD to", snap.Value)
-		app.mu.Lock()
-		app.motd = snap.Value.(string)
-		app.mu.Unlock()
+	return &application{
+		srv:     srv,
+		db:      db,
+		bucket:  bucket,
+		motdVar: motdVar,
 	}
 }
 
@@ -177,9 +155,14 @@ func (app *application) index(w http.ResponseWriter, r *http.Request) {
 		BannerSrc string
 		Greetings []greeting
 	}
-	app.mu.RLock()
-	data.MOTD = app.motd
-	app.mu.RUnlock()
+	snap, err := app.motdVar.Latest(r.Context())
+	if err != nil {
+		log.Println("index page error:", err)
+		http.Error(w, "could not load motd", http.StatusInternalServerError)
+		return
+	}
+	data.MOTD = snap.Value.(string)
+
 	switch envFlag {
 	case "gcp":
 		data.Env = "GCP"

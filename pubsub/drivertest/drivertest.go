@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
@@ -383,6 +384,12 @@ func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
 	if _, err := sub.Receive(ctx); !isCanceled(err) {
 		t.Errorf("sub.Receive returned %v (%T), want context.Canceled", err, err)
 	}
+
+	// It would be nice to add a test that cancels an in-flight blocking Receive.
+	// However, because pubsub.Subscription.Receive repeatedly calls
+	// driver.ReceiveBatch if it returns 0 messages, it's difficult to write
+	// such a test without it being flaky for drivers with record/replay
+	// (the number of times driver.ReceiveBatch is called is timing-dependent).
 }
 
 func testMetadata(t *testing.T, newHarness HarnessMaker) {
@@ -488,7 +495,7 @@ func isCanceled(err error) bool {
 	if cerr, ok := err.(*retry.ContextError); ok {
 		return cerr.CtxErr == context.Canceled
 	}
-	return false
+	return gcerrors.Code(err) == gcerrors.Canceled
 }
 
 func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
@@ -498,6 +505,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 	}
 	ds, subCleanup, err := h.CreateSubscription(ctx, dt, testName)
 	if err != nil {
+		topicCleanup()
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt, nil)
@@ -640,5 +648,4 @@ func runConcurrently(n, g int, f func(context.Context) error) error {
 		})
 	}
 	return gr.Wait()
-
 }

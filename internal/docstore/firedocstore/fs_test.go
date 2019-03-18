@@ -23,6 +23,7 @@ import (
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/option"
+	pb "google.golang.org/genproto/googleapis/firestore/v1"
 )
 
 const (
@@ -57,10 +58,44 @@ func (h *harness) Close() {
 	h.done()
 }
 
+// codecTester implements drivertest.CodecTester.
+type codecTester struct {
+	nc *nativeCodec
+}
+
+func (*codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{drivertest.Uint, drivertest.Complex, drivertest.Arrays}
+}
+
+func (c *codecTester) NativeEncode(x interface{}) (interface{}, error) {
+	return c.nc.Encode(x)
+}
+
+func (c *codecTester) NativeDecode(value, dest interface{}) error {
+	return c.nc.Decode(value.(*pb.Document), dest)
+}
+
+func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
+	doc, err := driver.NewDocument(x)
+	if err != nil {
+		return nil, err
+	}
+	return encodeDoc(doc)
+}
+
+func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
+	doc, err := driver.NewDocument(dest)
+	if err != nil {
+		return err
+	}
+	return decodeDoc(value.(*pb.Document), doc)
+}
+
 func TestConformance(t *testing.T) {
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	// TODO(jba): implement a CodecTester. This isn't easy, because the Firestore client
-	// (cloud.google.com/go/firestore) doesn't export its codec. We'll have to write a
-	// fake gRPC server to capture the protos.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	nc, err := newNativeCodec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
 }

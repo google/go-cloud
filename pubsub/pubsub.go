@@ -34,7 +34,7 @@
 //
 // Alternatively, you can construct a *Topic/*Subscription via a URL and
 // OpenTopic/OpenSubscription.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 //
 // At-most-once vs. At-least-once Delivery
@@ -143,7 +143,7 @@ func (m *Message) Ack() {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 // As panics unless it is called on a message obtained from Subscription.Receive.
@@ -222,7 +222,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (t *Topic) As(i interface{}) bool {
@@ -232,7 +232,7 @@ func (t *Topic) As(i interface{}) bool {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#hdr-As for background information.
 func (t *Topic) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, t.driver.ErrorAs)
 }
@@ -314,6 +314,9 @@ type Subscription struct {
 	err            error         // permanent error
 	waitc          chan struct{} // for goroutines waiting on ReceiveBatch
 	avgProcessTime float64       // moving average of the seconds to process a message
+
+	// Used in tests.
+	onReceiveBatchHook func(numMessages, maxMessages int)
 }
 
 const (
@@ -422,6 +425,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
 		msgs, err := s.getNextBatch(ctx, nMessages)
+		if s.onReceiveBatchHook != nil {
+			s.onReceiveBatchHook(len(msgs), nMessages)
+		}
 		s.mu.Lock()
 		close(s.waitc)
 		s.waitc = nil
@@ -502,7 +508,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (s *Subscription) As(i interface{}) bool {
@@ -594,7 +600,7 @@ type SubscriptionURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -666,7 +672,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenTopic opens the Topic identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
 // for more information.
 func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 	return defaultURLMux.OpenTopic(ctx, urlstr)
@@ -674,7 +680,7 @@ func OpenTopic(ctx context.Context, urlstr string) (*Topic, error) {
 
 // OpenSubscription opens the Subscription identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
 // for more information.
 func OpenSubscription(ctx context.Context, urlstr string) (*Subscription, error) {
 	return defaultURLMux.OpenSubscription(ctx, urlstr)

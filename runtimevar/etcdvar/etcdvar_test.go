@@ -17,6 +17,7 @@ package etcdvar
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -163,6 +164,8 @@ func TestOpenVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	os.Setenv("ETCD_SERVER_URL", "http://localhost:2379")
+
 	ctx := context.Background()
 	if err := h.CreateVariable(ctx, "string-var", []byte("hello world")); err != nil {
 		t.Fatal(err)
@@ -177,19 +180,18 @@ func TestOpenVariable(t *testing.T) {
 		WantWatchErr bool
 		Want         interface{}
 	}{
-		// Variable construction succeeds, but nonexistentvar does not exist
-		// so we get an error from Watch.
-		{"etcd://nonexistentvar?client=http://localhost:2379", false, true, nil},
-		// Variable construction fails due to missing client arg.
-		{"etcd://string-var", true, false, nil},
-		// Variable construction fails due to invalid decoder arg.
-		{"etcd://string-var?client=http://localhost:2379&decoder=notadecoder", true, false, nil},
-		// Variable construction fails due to invalid arg.
-		{"etcd://string-var?client=http://localhost:2379&param=value", true, false, nil},
+		// Nonexistentvar does not exist, so we get an error from Watch.
+		{"etcd://nonexistentvar", false, true, nil},
+		// Invalid decoder arg.
+		{"etcd://string-var?decoder=notadecoder", true, false, nil},
+		// Invalid parameter.
+		{"etcd://string-var?param=value", true, false, nil},
 		// Working example with string decoder.
-		{"etcd://string-var?client=http://localhost:2379&decoder=string", false, false, "hello world"},
+		{"etcd://string-var?decoder=string", false, false, "hello world"},
+		// Working example with default decoder.
+		{"etcd://string-var", false, false, []byte("hello world")},
 		// Working example with JSON decoder.
-		{"etcd://json-var?client=http://localhost:2379&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"etcd://json-var?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {

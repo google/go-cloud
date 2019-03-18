@@ -19,10 +19,13 @@
 //
 // URLs
 //
-// For runtimevar.OpenVariable URLs, paramstore registers for the scheme
-// "paramstore". runtimevar.OpenVariable will create a new AWS session with the
-// default options. If you want to use a different session or
-// find details on the format of the URL, see URLOpener.
+// For runtimevar.OpenVariable, paramstore registers for the scheme "paramstore".
+// The default URL opener will use an AWS session with the default credentials
+// and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
+// for more details.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -62,15 +65,15 @@ func init() {
 //   - decoder: The decoder to use. Defaults to URLOpener.Decoder, or
 //       runtimevar.BytesDecoder if URLOpener.Decoder is nil.
 //       See runtimevar.DecoderByName for supported values.
-//   - wait: The poll interval; supported values are from time.ParseDuration.
-//       Defaults to 30s.
 type URLOpener struct {
 	// ConfigProvider must be set to a non-nil value.
 	ConfigProvider client.ConfigProvider
 
-	// Decoder and Options can be specified at URLOpener construction time,
-	// or provided/overridden via URL parameters.
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
+
+	// Options specifies the options to pass to New.
 	Options Options
 }
 
@@ -94,7 +97,7 @@ func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*r
 		}
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open variable %q: %v", u, o.err)
+		return nil, fmt.Errorf("open variable %v: %v", u, o.err)
 	}
 	return o.opener.OpenVariableURL(ctx, u)
 }
@@ -102,25 +105,16 @@ func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*r
 // Scheme is the URL scheme paramstore registers its URLOpener under on runtimevar.DefaultMux.
 const Scheme = "paramstore"
 
-// OpenVariableURL opens the paramstore variable with the name as the host+path from the URL.
+// OpenVariableURL opens the variable at the URL's path. See the package doc
+// for more details.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
-	if decoderName := q.Get("decoder"); decoderName != "" || o.Decoder == nil {
-		var err error
-		o.Decoder, err = runtimevar.DecoderByName(q.Get("decoder"))
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"decoder\": %v", u, err)
-		}
-		q.Del("decoder")
-	}
 
-	if wait := q.Get("wait"); wait != "" {
-		var err error
-		o.Options.WaitDuration, err = time.ParseDuration(wait)
-		if err != nil {
-			return nil, fmt.Errorf("open variable %q: invalid \"wait\": %v", u, err)
-		}
-		q.Del("wait")
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}
 
 	configProvider := &gcaws.ConfigOverrider{
@@ -131,7 +125,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 		return nil, fmt.Errorf("open variable %v: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	return NewVariable(configProvider, path.Join(u.Host, u.Path), o.Decoder, &o.Options)
+	return NewVariable(configProvider, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.

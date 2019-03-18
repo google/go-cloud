@@ -39,7 +39,7 @@
 // return a value without blocking.
 //
 // Alternatively, you can construct a *Variable via a URL and OpenVariable.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 //
 // OpenCensus Integration
@@ -73,6 +73,7 @@ import (
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/secrets"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -90,7 +91,7 @@ type Snapshot struct {
 }
 
 // As converts i to provider-specific types.
-// See https://godoc.org/gocloud.dev#As for background information, the "As"
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
 // examples in this package for examples, and the provider-specific package
 // documentation for the specific types supported for that provider.
 func (s *Snapshot) As(i interface{}) bool {
@@ -345,7 +346,7 @@ func wrapError(w driver.Watcher, err error) error {
 // ErrorAs converts err to provider-specific types.
 // ErrorAs panics if i is nil or not a pointer.
 // ErrorAs returns false if err == nil.
-// See https://godoc.org/gocloud.dev#As for background information.
+// See https://godoc.org/gocloud.dev#hdr-As for background information.
 func (c *Variable) ErrorAs(err error, i interface{}) bool {
 	return gcerr.ErrorAs(err, i, c.dw.ErrorAs)
 }
@@ -362,7 +363,7 @@ type VariableURLOpener interface {
 // URLMux is a URL opener multiplexer. It matches the scheme of the URLs
 // against a set of registered schemes and calls the opener that matches the
 // URL's scheme.
-// See https://godoc.org/gocloud.dev#URLs for more information.
+// See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
@@ -406,7 +407,7 @@ func DefaultURLMux() *URLMux {
 
 // OpenVariable opens the variable identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for
-// details on supported URL formats, and https://godoc.org/gocloud.dev#URLs
+// details on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs
 // for more information.
 func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 	return defaultURLMux.OpenVariable(ctx, urlstr)
@@ -453,10 +454,10 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 
 var (
 	// StringDecoder decodes into strings.
-	StringDecoder = NewDecoder("", stringDecode)
+	StringDecoder = NewDecoder("", StringDecode)
 
 	// BytesDecoder copies the slice of bytes.
-	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
+	BytesDecoder = NewDecoder([]byte{}, BytesDecode)
 
 	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
 	JSONDecode = json.Unmarshal
@@ -467,29 +468,56 @@ func GobDecode(data []byte, obj interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
 
-func stringDecode(b []byte, obj interface{}) error {
+// StringDecode decodes raw bytes b into a string.
+func StringDecode(b []byte, obj interface{}) error {
 	v := obj.(*string)
 	*v = string(b)
 	return nil
 }
 
-func bytesDecode(b []byte, obj interface{}) error {
+// BytesDecode copies the slice of bytes b into obj.
+func BytesDecode(b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
 }
 
+// DecryptDecode returns a decode function that can be passed to NewDecoder when
+// decoding an encrypted message (https://godoc.org/gocloud.dev/secrets).
+//
+// post defaults to BytesDecode. An optional decoder can be passed in to do
+// further decode operation based on the decrypted message.
+func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
+	return func(b []byte, obj interface{}) error {
+		decrypted, err := k.Decrypt(ctx, b)
+		if err != nil {
+			return err
+		}
+		if post == nil {
+			return BytesDecode(decrypted, obj)
+		}
+		return post(decrypted, obj)
+	}
+}
+
 // DecoderByName returns a *Decoder based on decoderName.
 // It is intended to be used by VariableURLOpeners in driver packages.
 // Supported values include:
-//   - (empty string), "bytes": Returns the default, BytesDecoder;
-//       Snapshot.Valuewill be of type []byte.
+//   - empty string: Returns the default from the URLOpener.Decoder, or
+//       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
+//       using the default URLOpener).
+//   - "bytes": Returns a BytesDecoder; Snapshot.Value will be of type []byte.
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-func DecoderByName(decoderName string) (*Decoder, error) {
+func DecoderByName(decoderName string, dflt *Decoder) (*Decoder, error) {
+	if dflt == nil {
+		dflt = BytesDecoder
+	}
 	switch decoderName {
-	case "", "bytes":
+	case "":
+		return dflt, nil
+	case "bytes":
 		return BytesDecoder, nil
 	case "jsonmap":
 		var m map[string]interface{}

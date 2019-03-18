@@ -17,16 +17,13 @@
 //
 // URLs
 //
-// For blob.OpenBucket URLs, azureblob registers for the scheme "azblob"; URLs
-// start with "azblob://", like "azblob://mybucket". blob.OpenBucket will obtain
-// credentials from the environment variables AZURE_STORAGE_ACCOUNT,
-// AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN. AZURE_STORAGE_ACCOUNT is
-// required, along with one of the other two. If you want to obtain this
-// information differently or find details on the format of the URL, see
-// URLOpener.
-//
-// For more on SAS tokens, see
-// https://docs.microsoft.com/en-us/azure/storage/common/storage-dotnet-shared-access-signature-part-1#what-is-a-shared-access-signature
+// For blob.OpenBucket, azureblob registers for the scheme "azblob".
+// The default URL opener will use credentials from the environment variables
+// AZURE_STORAGE_ACCOUNT, AZURE_STORAGE_KEY, and AZURE_STORAGE_SAS_TOKEN.
+// AZURE_STORAGE_ACCOUNT is required, along with one of the other two.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // Escaping
 //
@@ -123,7 +120,7 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 		o.opener, o.err = openerFromEnv(accountName, accountKey, sasToken)
 	})
 	if o.err != nil {
-		return nil, fmt.Errorf("open bucket %q: %v", u, o.err)
+		return nil, fmt.Errorf("open bucket %v: %v", u, o.err)
 	}
 	return o.opener.OpenBucketURL(ctx, u)
 }
@@ -133,6 +130,10 @@ func (o *lazyCredsOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.
 const Scheme = "azblob"
 
 // URLOpener opens Azure URLs like "azblob://mybucket".
+//
+// The URL host is used as the bucket name.
+//
+// No query parameters are supported.
 type URLOpener struct {
 	// AccountName must be specified.
 	AccountName AccountName
@@ -170,11 +171,10 @@ func openerFromEnv(accountName AccountName, accountKey AccountKey, sasToken SAST
 	}, nil
 }
 
-// OpenBucketURL opens the Azure Storage Account Container with the same name as
-// the host in the URL.
+// OpenBucketURL opens a blob.Bucket based on u.
 func (o *URLOpener) OpenBucketURL(ctx context.Context, u *url.URL) (*blob.Bucket, error) {
 	for k := range u.Query() {
-		return nil, fmt.Errorf("open Azure bucket %q: unknown query parameter %s", u, k)
+		return nil, fmt.Errorf("open bucket %v: invalid query parameter %q", u, k)
 	}
 	return OpenBucket(ctx, o.Pipeline, o.AccountName, u.Host, &o.Options)
 }

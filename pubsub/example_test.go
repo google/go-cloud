@@ -75,7 +75,7 @@ func Example_sendReceiveMultipleMessages() {
 		}
 	}
 
-	// Receive messages from the subscription.
+	// Receive and acknowledge messages from the subscription.
 	ms2 := []string{}
 	for i := 0; i < len(ms); i++ {
 		m2, err := s.Receive(ctx)
@@ -90,7 +90,7 @@ func Example_sendReceiveMultipleMessages() {
 	// sent.
 	sort.Strings(ms2)
 
-	// Print out and acknowledge the received messages.
+	// Print out the received messages.
 	for _, m2 := range ms2 {
 		fmt.Println(m2)
 	}

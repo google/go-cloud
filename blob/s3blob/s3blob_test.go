@@ -245,8 +245,11 @@ func TestOpenBucketFromURL(t *testing.T) {
 		URL     string
 		WantErr bool
 	}{
+		// OK.
 		{"s3://mybucket", false},
+		// OK, setting region.
 		{"s3://mybucket?region=us-west1", false},
+		// Invalid parameter.
 		{"s3://mybucket?param=value", true},
 	}
 
