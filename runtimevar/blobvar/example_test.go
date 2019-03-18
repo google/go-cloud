@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 
 	"gocloud.dev/blob/memblob"
 	"gocloud.dev/runtimevar"
@@ -68,9 +67,11 @@ func Example() {
 
 func Example_openVariable() {
 	// OpenVariable creates a *runtimevar.Variable from a URL.
-	// This example watches a variable based on a file-based blob.Bucket with JSON.
+	// The default opener opens a blob.Bucket via a URL, based on the environment
+	// variable BLOBVAR_BUCKET_URL.
+	// This example watches a JSON variable.
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?bucket="+url.QueryEscape("file://mypath")+"&decoder=json")
+	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?decoder=json")
 	if err != nil {
 		log.Fatal(err)
 	}
