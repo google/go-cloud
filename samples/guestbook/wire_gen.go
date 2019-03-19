@@ -27,10 +27,10 @@ import (
 	"gocloud.dev/mysql/rdsmysql"
 	"gocloud.dev/requestlog"
 	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/awsparamstore"
 	"gocloud.dev/runtimevar/blobvar"
 	"gocloud.dev/runtimevar/filevar"
-	"gocloud.dev/runtimevar/paramstore"
-	"gocloud.dev/runtimevar/runtimeconfigurator"
+	"gocloud.dev/runtimevar/gcpruntimeconfig"
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
@@ -214,7 +214,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		cleanup()
 		return nil, nil, err
 	}
-	runtimeConfigManagerClient, cleanup4, err := runtimeconfigurator.Dial(ctx, tokenSource)
+	runtimeConfigManagerClient, cleanup4, err := gcpruntimeconfig.Dial(ctx, tokenSource)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -308,7 +308,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return paramstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+	return awsparamstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -362,12 +362,12 @@ func gcpSQLParams(id gcp.ProjectID, flags *cliFlags) *cloudmysql.Params {
 // gcpMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from Runtime Configurator.
 func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerClient, project gcp.ProjectID, flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	name := runtimeconfigurator.ResourceName{
+	name := gcpruntimeconfig.ResourceName{
 		ProjectID: string(project),
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := runtimeconfigurator.NewVariable(client2, name, runtimevar.StringDecoder, &runtimeconfigurator.Options{
+	v, err := gcpruntimeconfig.NewVariable(client2, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
