@@ -149,7 +149,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	case "noop":
 		ackFunc = func() {}
 	case "", "panic":
-		ackFunc = func() { log.Fatal(AckWarning) }
+		ackFunc = func() { panic(AckWarning) }
 	default:
 		return nil, fmt.Errorf("open subscription %v: invalid ackfunc %q (valid values are log, noop, panic)", u, s)
 	}
