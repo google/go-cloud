@@ -74,6 +74,8 @@ echo "Found breaking API change(s) in: ${incompatible_change_pkgs[@]}."
 
 # Found incompatible changes; see if they were declared as OK via a commit.
 echo Travis commit message: ${TRAVIS_COMMIT_MESSAGE}
+
+
 if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then
   echo "Allowing them due to a commit message with BREAKING_CHANGE_OK.";
   exit 0;
