@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/natspubsub"
 )
-x
+
 func ExampleCreateTopic() {
 	ctx := context.Background()
 
