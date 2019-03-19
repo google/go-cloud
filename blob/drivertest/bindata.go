@@ -136,9 +136,9 @@ type _bintreeT struct {
 }
 
 var _bintree = &_bintreeT{nil, map[string]*_bintreeT{
-	"testdata": &_bintreeT{nil, map[string]*_bintreeT{
-		"test-large.jpg":   &_bintreeT{testLargeJpg, map[string]*_bintreeT{}},
-		"test-medium.html": &_bintreeT{testMediumHTML, map[string]*_bintreeT{}},
-		"test-small.txt":   &_bintreeT{testSmallTxt, map[string]*_bintreeT{}},
+	"testdata": {nil, map[string]*_bintreeT{
+		"test-large.jpg":   {testLargeJpg, map[string]*_bintreeT{}},
+		"test-medium.html": {testMediumHTML, map[string]*_bintreeT{}},
+		"test-small.txt":   {testSmallTxt, map[string]*_bintreeT{}},
 	}},
 }}

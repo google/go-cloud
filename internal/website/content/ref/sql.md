@@ -1,5 +1,8 @@
 ---
 title: "MySQL/Postgres"
+date: 2019-03-11T10:02:56-07:00
+aliases:
+- /pages/sql/
 ---
 
 The `mysql` and `postgres` packages provide functions for connecting to
@@ -7,6 +10,8 @@ The `mysql` and `postgres` packages provide functions for connecting to
 instances using the [`*sql.DB`][] type from the Go standard library. Database
 connections opened using these packages will automatically collect diagnostic
 information via [OpenCensus][].
+
+<!--more-->
 
 Top-level package documentation: https://godoc.org/gocloud.dev/mysql and
 https://godoc.org/gocloud.dev/postgres.
