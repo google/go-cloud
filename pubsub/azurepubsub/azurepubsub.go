@@ -227,7 +227,7 @@ func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOption
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOptions) (driver.Topic, error) {
+func openTopic(ctx context.Context, sbTopic *servicebus.Topic, _ *TopicOptions) (driver.Topic, error) {
 	if sbTopic == nil {
 		return nil, errors.New("azurepubsub: OpenTopic requires a Service Bus Topic")
 	}
