@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package paramstore_test
+package gcpruntimeconfig_test
 
 import (
 	"context"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws/session"
+	"gocloud.dev/gcp"
 	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/paramstore"
+	"gocloud.dev/runtimevar/gcpruntimeconfig"
 )
 
 // MyConfig is a sample configuration struct.
@@ -30,20 +30,36 @@ type MyConfig struct {
 }
 
 func Example() {
-	// Establish an AWS session.
-	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	session, err := session.NewSession(nil)
+	// Your GCP credentials.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
+	ctx := context.Background()
+	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Connect to the Runtime Configurator service.
+	client, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
+	// Fill these in with the values from the Cloud Console.
+	// For this example, the GCP Cloud Runtime Configurator variable being
+	// referenced should have a JSON string that decodes into MyConfig.
+	name := gcpruntimeconfig.ResourceName{
+		ProjectID: "gcp-project-id",
+		Config:    "cfg-name",
+		Variable:  "cfg-variable-name",
+	}
+
 	// Construct a *runtimevar.Variable that watches the variable.
-	// For this example, the Parameter Store variable being referenced
-	// should have a JSON string that decodes into MyConfig.
-	v, err := paramstore.NewVariable(session, "cfg-variable-name", decoder, nil)
+	v, err := gcpruntimeconfig.NewVariable(client, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -61,7 +77,7 @@ func Example() {
 func Example_openVariable() {
 	// OpenVariable creates a *runtimevar.Variable from a URL.
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "paramstore://myvar?region=us-west-1")
+	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://myproject/myconfigid/myvar?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}

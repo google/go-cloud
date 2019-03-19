@@ -22,7 +22,7 @@ import (
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/constantvar"
 
-	_ "gocloud.dev/runtimevar/runtimeconfigurator"
+	_ "gocloud.dev/runtimevar/gcpruntimeconfig"
 	runtimeconfig "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc/status"
 )
@@ -78,14 +78,14 @@ func ExampleVariable_Latest_stringVariable() {
 }
 
 func ExampleSnapshot_As() {
-	// This example is specific to the runtimeconfigurator implementation; it
+	// This example is specific to the gcpruntimeconfig implementation; it
 	// demonstrates access to the underlying
 	// google.golang.org/genproto/googleapis/cloud/runtimeconfig.Variable type.
-	// The types exposed for As by runtimeconfigurator are documented in
-	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
+	// The types exposed for As by gcpruntimeconfig are documented in
+	// https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#hdr-As
 	ctx := context.Background()
 
-	const url = "runtimeconfigurator://proj/config/key"
+	const url = "gcpruntimeconfig://proj/config/key"
 	v, err := runtimevar.OpenVariable(ctx, url)
 	if err != nil {
 		log.Fatal(err)
@@ -103,14 +103,14 @@ func ExampleSnapshot_As() {
 }
 
 func ExampleVariable_ErrorAs() {
-	// This example is specific to the runtimeconfigurator implementation; it
+	// This example is specific to the gcpruntimeconfig implementation; it
 	// demonstrates access to the underlying google.golang.org/grpc/status.Status
 	// type.
-	// The types exposed for As by runtimeconfigurator are documented in
-	// https://godoc.org/gocloud.dev/runtimevar/runtimeconfigurator#hdr-As
+	// The types exposed for As by gcpruntimeconfig are documented in
+	// https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig#hdr-As
 	ctx := context.Background()
 
-	const url = "runtimeconfigurator://proj/wrongconfig/key"
+	const url = "gcpruntimeconfig://proj/wrongconfig/key"
 	v, err := runtimevar.OpenVariable(ctx, url)
 	if err != nil {
 		log.Fatal(err)
