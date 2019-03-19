@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtimeconfigurator
+package gcpruntimeconfig
 
 import (
 	"context"
@@ -199,13 +199,13 @@ func TestResourceNameFromURL(t *testing.T) {
 		WantErr bool
 		Want    ResourceName
 	}{
-		{"runtimeconfigurator://proj1/cfg1/var1", false, ResourceName{"proj1", "cfg1", "var1"}},
-		{"runtimeconfigurator://proj2/cfg2/var2", false, ResourceName{"proj2", "cfg2", "var2"}},
-		{"runtimeconfigurator://proj/cfg/var/morevar", false, ResourceName{"proj", "cfg", "var/morevar"}},
-		{"runtimeconfigurator://proj/cfg", true, ResourceName{}},
-		{"runtimeconfigurator://proj/cfg/", true, ResourceName{}},
-		{"runtimeconfigurator:///cfg/var", true, ResourceName{}},
-		{"runtimeconfigurator://proj//var", true, ResourceName{}},
+		{"gcpruntimeconfig://proj1/cfg1/var1", false, ResourceName{"proj1", "cfg1", "var1"}},
+		{"gcpruntimeconfig://proj2/cfg2/var2", false, ResourceName{"proj2", "cfg2", "var2"}},
+		{"gcpruntimeconfig://proj/cfg/var/morevar", false, ResourceName{"proj", "cfg", "var/morevar"}},
+		{"gcpruntimeconfig://proj/cfg", true, ResourceName{}},
+		{"gcpruntimeconfig://proj/cfg/", true, ResourceName{}},
+		{"gcpruntimeconfig:///cfg/var", true, ResourceName{}},
+		{"gcpruntimeconfig://proj//var", true, ResourceName{}},
 	}
 	for _, test := range tests {
 		u, err := url.Parse(test.URL)
@@ -231,23 +231,23 @@ func TestOpenVariable(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"runtimeconfigurator://myproject/mycfg/myvar", false},
+		{"gcpruntimeconfig://myproject/mycfg/myvar", false},
 		// OK, hierarchical key name.
-		{"runtimeconfigurator://myproject/mycfg/myvar1/myvar2", false},
+		{"gcpruntimeconfig://myproject/mycfg/myvar1/myvar2", false},
 		// OK, setting decoder.
-		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=string", false},
+		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=string", false},
 		// Missing project ID.
-		{"runtimeconfigurator:///mycfg/myvar", true},
+		{"gcpruntimeconfig:///mycfg/myvar", true},
 		// Empty config.
-		{"runtimeconfigurator://myproject//myvar", true},
+		{"gcpruntimeconfig://myproject//myvar", true},
 		// Empty key name.
-		{"runtimeconfigurator://myproject/mycfg/", true},
+		{"gcpruntimeconfig://myproject/mycfg/", true},
 		// Missing key name.
-		{"runtimeconfigurator://myproject/mycfg", true},
+		{"gcpruntimeconfig://myproject/mycfg", true},
 		// Invalid decoder.
-		{"runtimeconfigurator://myproject/mycfg/myvar?decoder=notadecoder", true},
+		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=notadecoder", true},
 		// Invalid param.
-		{"runtimeconfigurator://myproject/mycfg/myvar?param=value", true},
+		{"gcpruntimeconfig://myproject/mycfg/myvar?param=value", true},
 	}
 
 	ctx := context.Background()
