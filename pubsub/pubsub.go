@@ -309,6 +309,8 @@ type Subscription struct {
 	ackFunc    func() // if non-nil, used for Ack
 	cancel     func() // for canceling all SendAcks calls
 
+	dynamicBatchSizes bool // if false, batch size is always 2
+
 	mu             sync.Mutex    // protects everything below
 	q              []*Message    // local queue of messages downloaded from server
 	err            error         // permanent error
@@ -406,8 +408,8 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// Ask for a number of messages that will give us the desired queue length.
 		// Unless we don't have information about process time (at the beginning), in
 		// which case just get one message.
-		nMessages := 1
-		if s.avgProcessTime > 0 {
+		nMessages := 2
+		if s.dynamicBatchSizes && s.avgProcessTime > 0 {
 			// Using Ceil guarantees at least one message.
 			n := math.Ceil(desiredQueueDuration.Seconds() / s.avgProcessTime)
 			// Cap nMessages at some non-ridiculous value.
@@ -533,12 +535,15 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-func newSubscription(ds driver.Subscription, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
+// dynamicBatchSizes should be true except for tests, where stability is
+// necessary for record/replay.
+func newSubscription(ds driver.Subscription, dynamicBatchSizes bool, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver: ds,
 		tracer: newTracer(ds),
 		cancel: cancel,
+		dynamicBatchSizes: dynamicBatchSizes,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
