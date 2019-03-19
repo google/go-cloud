@@ -160,7 +160,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: couldn't open topic %q: %v", u, topicName, err)
 	}
-	return OpenTopic(ctx, t, &o.TopicOptions), nil
+	return OpenTopic(ctx, t, &o.TopicOptions)
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
@@ -189,7 +189,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: couldn't open subscription %q: %v", u, subName, err)
 	}
-	return OpenSubscription(ctx, ns, t, sub, &o.SubscriptionOptions), nil
+	return OpenSubscription(ctx, ns, t, sub, &o.SubscriptionOptions)
 }
 
 type topic struct {
@@ -217,17 +217,21 @@ func NewSubscription(parentTopic *servicebus.Topic, subscriptionName string, opt
 }
 
 // OpenTopic initializes a pubsub Topic on a given Service Bus Topic.
-func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOptions) *pubsub.Topic {
-	t := openTopic(ctx, sbTopic)
-	return pubsub.NewTopic(t, nil)
+func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOptions) (*pubsub.Topic, error) {
+	t, err := openTopic(ctx, sbTopic, opts)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewTopic(t, nil), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, sbTopic *servicebus.Topic) driver.Topic {
-	return &topic{
-		sbTopic: sbTopic,
+func openTopic(ctx context.Context, sbTopic *servicebus.Topic, _ *TopicOptions) (driver.Topic, error) {
+	if sbTopic == nil {
+		return nil, errors.New("azurepubsub: OpenTopic requires a Service Bus Topic")
 	}
+	return &topic{sbTopic: sbTopic}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -284,57 +288,57 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 type subscription struct {
-	sbSub     *servicebus.Subscription
-	opts      *SubscriptionOptions
-	topicName string                // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
-	sbNs      *servicebus.Namespace // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
+	sbSub           *servicebus.Subscription
+	opts            *SubscriptionOptions
+	topicName       string                // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
+	sbNs            *servicebus.Namespace // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
+	verifyExists    sync.Once
+	verifyExistsErr error
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct {
-	ListenerTimeout time.Duration
+	// If nil, the subscription MUST be in Peek-Lock mode. The Ack method must be called on each message
+	// to complete it, otherwise you run the risk of deadlettering messages.
+	// If non-nil, the subscription MUST be in Receive-and-Delete mode, and this function will be called
+	// whenever Ack is called on a message.
+	// See the "At-most-once vs. At-least-once Delivery" section in the pubsub package documentation.
+	AckFuncForReceiveAndDelete func()
 }
 
 // OpenSubscription initializes a pubsub Subscription on a given Service Bus Subscription and its parent Service Bus Topic.
-func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace, parentTopic *servicebus.Topic, sbSubscription *servicebus.Subscription, opts *SubscriptionOptions) *pubsub.Subscription {
-	ds := openSubscription(ctx, parentNamespace, parentTopic, sbSubscription, opts)
-	return pubsub.NewSubscription(ds, nil)
+func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace, parentTopic *servicebus.Topic, sbSubscription *servicebus.Subscription, opts *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(ctx, parentNamespace, parentTopic, sbSubscription, opts)
+	if err != nil {
+		return nil, err
+	}
+	return pubsub.NewSubscription(ds, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) driver.Subscription {
-	topicName := ""
-	if sbTop != nil {
-		topicName = sbTop.Name
+func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) (driver.Subscription, error) {
+	if sbNs == nil {
+		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Namespace")
 	}
-
-	defaultTimeout := listenerTimeout
-	if opts != nil && opts.ListenerTimeout > 0 {
-		defaultTimeout = opts.ListenerTimeout
+	if sbTop == nil {
+		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Topic")
 	}
-
+	if sbSub == nil {
+		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Subscription")
+	}
+	if opts == nil {
+		opts = &SubscriptionOptions{}
+	}
 	return &subscription{
 		sbSub:     sbSub,
-		topicName: topicName,
+		topicName: sbTop.Name,
 		sbNs:      sbNs,
-		opts: &SubscriptionOptions{
-			ListenerTimeout: defaultTimeout,
-		},
-	}
+		opts:      opts,
+	}, nil
 }
 
-// testSBSubscription ensures the subscription exists before listening for incoming messages.
-func (s *subscription) testSBSubscription(ctx context.Context) error {
-	if s.topicName == "" {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Topic")
-	}
-	if s.sbNs == nil {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Namespace")
-	}
-	if s.sbSub == nil {
-		return errors.New("azurepubsub: driver.Subscription requires a Service Bus Subscription")
-	}
-
+// verifySBSubscriptionExists ensures the subscription exists before listening for incoming messages.
+func (s *subscription) verifySBSubscriptionExists(ctx context.Context) error {
 	sm, err := s.sbNs.NewSubscriptionManager(s.topicName)
 	if err != nil {
 		return err
@@ -373,17 +377,27 @@ func (s *subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// AckFunc implements driver.Subscription.AckFunc.
+func (s *subscription) AckFunc() func() {
+	if s == nil {
+		return nil
+	}
+	return s.opts.AckFuncForReceiveAndDelete
+}
+
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// Test to ensure existence of the Service Bus Subscription before listening for messages.
-	// Listening on a non-existence Service Bus Subscription does not fail. This check is also needed for conformance tests which
-	// requires this scenario to fail on ReceiveBatch.
-	err := s.testSBSubscription(ctx)
-	if err != nil {
-		return nil, err
+	// Verify existence of the Service Bus Subscription before listening for
+	// messages; listening on a non-existent Service Bus Subscription does not
+	// fail. Only required once.
+	s.verifyExists.Do(func() {
+		s.verifyExistsErr = s.verifySBSubscriptionExists(ctx)
+	})
+	if s.verifyExistsErr != nil {
+		return nil, s.verifyExistsErr
 	}
 
-	rctx, cancel := context.WithTimeout(ctx, s.opts.ListenerTimeout)
+	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
 	defer cancel()
 	var messages []*driver.Message
 	var wg sync.WaitGroup
@@ -392,12 +406,10 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	go func() {
 		s.sbSub.Receive(rctx, servicebus.HandlerFunc(func(innerctx context.Context, sbmsg *servicebus.Message) error {
 			metadata := map[string]string{}
-
 			sbmsg.ForeachKey(func(k, v string) error {
 				metadata[k] = v
 				return nil
 			})
-
 			messages = append(messages, &driver.Message{
 				Body:     sbmsg.Data,
 				Metadata: metadata,
@@ -471,7 +483,6 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		"disposition-status": completedStatus,
 		"lock-tokens":        lockIds,
 	}
-
 	msg := &amqp.Message{
 		ApplicationProperties: map[string]interface{}{
 			"operation": "com.microsoft:update-disposition",
@@ -518,6 +529,3 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 }
-
-// AckFunc implements driver.Subscription.AckFunc.
-func (*subscription) AckFunc() func() { return nil }

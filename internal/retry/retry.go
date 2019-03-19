@@ -72,3 +72,7 @@ type ContextError struct {
 func (e *ContextError) Error() string {
 	return fmt.Sprintf("%v; last error: %v", e.CtxErr, e.FuncErr)
 }
+
+func (e *ContextError) Is(target error) bool {
+	return e.CtxErr == target || e.FuncErr == target
+}

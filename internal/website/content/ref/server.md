@@ -1,8 +1,13 @@
 ---
 title: "Server"
+date: 2019-02-21T16:21:29-08:00
+aliases:
+- /pages/server/
 ---
 
 Package `server` provides a preconfigured HTTP server with diagnostic hooks.
+
+<!--more-->
 
 Top-level package documentation: https://godoc.org/gocloud.dev/server
 

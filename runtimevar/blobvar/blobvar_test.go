@@ -114,52 +114,62 @@ func TestOpenVariable(t *testing.T) {
 	if os.PathSeparator != '/' && !strings.HasPrefix(dirpath, "/") {
 		dirpath = "/" + dirpath
 	}
-	bucketArg := url.QueryEscape("file://" + dirpath)
+	bucketURL := "file://" + dirpath
 
 	tests := []struct {
+		BucketURL    string
 		URL          string
 		WantErr      bool
 		WantWatchErr bool
 		Want         interface{}
 	}{
 		// myvar does not exist.
-		{"blob://myvar?bucket=" + url.QueryEscape("mem://"), false, true, nil},
+		{"mem://", "blob://myvar", false, true, nil},
+		// badscheme does not exist.
+		{"badscheme://", "blob://myvar", true, false, nil},
 		// directory dirnotfound does not exist, so Bucket creation fails.
-		{"blob://myvar.txt?bucket=" + url.QueryEscape("file:///dirnotfound"), true, false, nil},
+		{"file:///dirnotfound", "blob://myvar.txt", true, false, nil},
 		// filenotfound does not exist so Watch returns an error.
-		{"blob://filenotfound?bucket=" + bucketArg, false, true, nil},
-		// Missing bucket arg.
-		{"blob://myvar.txt", true, false, nil},
+		{bucketURL, "blob://filenotfound", false, true, nil},
+		// Missing bucket env variable.
+		{"", "blob://myvar.txt", true, false, nil},
 		// Invalid decoder.
-		{"blob://myvar.txt?bucket=" + bucketArg + "&decoder=notadecoder", true, false, nil},
+		{bucketURL, "blob://myvar.txt?decoder=notadecoder", true, false, nil},
 		// Invalid arg.
-		{"blob://myvar.txt?bucket=" + bucketArg + "&param=value", true, false, nil},
+		{bucketURL, "blob://myvar.txt?param=value", true, false, nil},
 		// Working example with default decoder.
-		{"blob://myvar.txt?bucket=" + bucketArg, false, false, []byte("hello world!")},
+		{bucketURL, "blob://myvar.txt", false, false, []byte("hello world!")},
 		// Working example with string decoder.
-		{"blob://myvar.txt?bucket=" + bucketArg + "&decoder=string", false, false, "hello world!"},
+		{bucketURL, "blob://myvar.txt?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
-		{"blob://myvar.json?bucket=" + bucketArg + "&decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{bucketURL, "blob://myvar.json?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	ctx := context.Background()
 	for _, test := range tests {
-		v, err := runtimevar.OpenVariable(ctx, test.URL)
+		os.Setenv("BLOBVAR_BUCKET_URL", test.BucketURL)
+
+		opener := &defaultOpener{}
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Error(err)
+		}
+		v, err := opener.OpenVariableURL(ctx, u)
 		if (err != nil) != test.WantErr {
-			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+			t.Errorf("BucketURL %s URL %s: got error %v, want error %v", test.BucketURL, test.URL, err, test.WantErr)
 		}
 		if err != nil {
 			continue
 		}
 		snapshot, err := v.Watch(ctx)
 		if (err != nil) != test.WantWatchErr {
-			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+			t.Errorf("BucketURL %s URL %s: got Watch error %v, want error %v", test.BucketURL, test.URL, err, test.WantWatchErr)
 		}
 		if err != nil {
 			continue
 		}
 		if !cmp.Equal(snapshot.Value, test.Want) {
-			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+			t.Errorf("BucketURL %s URL %s: got snapshot value\n%v\n  want\n%v", test.BucketURL, test.URL, snapshot.Value, test.Want)
 		}
 	}
 }
