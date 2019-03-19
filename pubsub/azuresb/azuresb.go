@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azurepubsub provides an implementation of pubsub using Azure Service
+// Package azuresb provides an implementation of pubsub using Azure Service
 // Bus Topic and Subscription.
 // See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview for an overview.
 //
 // URLs
 //
-// For pubsub.OpenTopic and pubsub.OpenSubscription, azurepubsub registers
+// For pubsub.OpenTopic and pubsub.OpenSubscription, azuresb registers
 // for the scheme "azuresb".
 // The default URL opener will use a Service Bus Connection String based on
 // the environment variable "SERVICEBUS_CONNECTION_STRING".
@@ -28,12 +28,12 @@
 //
 // As
 //
-// azurepubsub exposes the following types for As:
+// azuresb exposes the following types for As:
 //  - Topic: *servicebus.Topic
 //  - Subscription: *servicebus.Subscription
 //  - Message: *servicebus.Message
 //  - Error: common.Retryable
-package azurepubsub // import "gocloud.dev/pubsub/azurepubsub"
+package azuresb // import "gocloud.dev/pubsub/azuresb"
 
 import (
 	"context"
@@ -109,7 +109,7 @@ func (o *defaultOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// Scheme is the URL scheme azurepubsub registers its URLOpeners under on pubsub.DefaultMux.
+// Scheme is the URL scheme azuresb registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "azuresb"
 
 // URLOpener opens Azure Service Bus URLs like "azuresb://mytopic" for
@@ -229,7 +229,7 @@ func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOption
 // harness can get the driver interface implementation if it needs to.
 func openTopic(ctx context.Context, sbTopic *servicebus.Topic, _ *TopicOptions) (driver.Topic, error) {
 	if sbTopic == nil {
-		return nil, errors.New("azurepubsub: OpenTopic requires a Service Bus Topic")
+		return nil, errors.New("azuresb: OpenTopic requires a Service Bus Topic")
 	}
 	return &topic{sbTopic: sbTopic}, nil
 }
@@ -318,13 +318,13 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *servicebus.Topic, sbSub *servicebus.Subscription, opts *SubscriptionOptions) (driver.Subscription, error) {
 	if sbNs == nil {
-		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Namespace")
+		return nil, errors.New("azuresb: OpenSubscription requires a Service Bus Namespace")
 	}
 	if sbTop == nil {
-		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Topic")
+		return nil, errors.New("azuresb: OpenSubscription requires a Service Bus Topic")
 	}
 	if sbSub == nil {
-		return nil, errors.New("azurepubsub: OpenSubscription requires a Service Bus Subscription")
+		return nil, errors.New("azuresb: OpenSubscription requires a Service Bus Subscription")
 	}
 	if opts == nil {
 		opts = &SubscriptionOptions{}
@@ -347,7 +347,7 @@ func (s *subscription) verifySBSubscriptionExists(ctx context.Context) error {
 	// An empty SubscriptionEntity means no Service Bus Subscription exists for the given name.
 	se, _ := sm.Get(ctx, s.sbSub.Name)
 	if se == nil {
-		return fmt.Errorf("azurepubsub: no such subscription %q", s.sbSub.Name)
+		return fmt.Errorf("azuresb: no such subscription %q", s.sbSub.Name)
 	}
 	return nil
 }

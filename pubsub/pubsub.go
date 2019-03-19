@@ -37,7 +37,7 @@
 // See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 //
-// At-most-once vs. At-least-once Delivery
+// At-most-once and At-least-once Delivery
 //
 // Some PubSub systems guarantee that messages received by subscribers but not
 // acknowledged are delivered again. These at-least-once systems require that
@@ -316,7 +316,8 @@ type Subscription struct {
 	avgProcessTime float64       // moving average of the seconds to process a message
 
 	// Used in tests.
-	onReceiveBatchHook func(numMessages, maxMessages int)
+	preReceiveBatchHook  func(maxMessages int)
+	postReceiveBatchHook func(numMessages int)
 }
 
 const (
@@ -424,9 +425,12 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// Even though the mutex is unlocked, only one goroutine can be here.
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
+		if s.preReceiveBatchHook != nil {
+			s.preReceiveBatchHook(nMessages)
+		}
 		msgs, err := s.getNextBatch(ctx, nMessages)
-		if s.onReceiveBatchHook != nil {
-			s.onReceiveBatchHook(len(msgs), nMessages)
+		if s.postReceiveBatchHook != nil {
+			s.postReceiveBatchHook(len(msgs))
 		}
 		s.mu.Lock()
 		close(s.waitc)
