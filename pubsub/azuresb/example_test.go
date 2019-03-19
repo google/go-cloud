@@ -147,14 +147,14 @@ func ExampleAckFuncForReceiveAndDelete() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func ExampleAckFuncForReceiveAndDelete() {
 
 	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
-	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, opts)
+	sbSub, err := azuresb.NewSubscription(sbTopic, subscriptionName, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,14 +180,14 @@ func ExampleAckFuncForReceiveAndDelete() {
 	//
 	// For more information on Service Bus ReceiveMode, see https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
 	noop := func() {}
-	subOpts := &azurepubsub.SubscriptionOptions{
+	subOpts := &azuresb.SubscriptionOptions{
 		AckFuncForReceiveAndDelete: noop,
 	}
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
+	s := azuresb.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
 
 	// Construct a *pubsub.Topic.
-	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t := azuresb.OpenTopic(ctx, sbTopic, nil)
 	defer t.Shutdown(ctx)
 
 	// Send *pubsub.Message from *pubsub.Topic backed by Azure Service Bus.
