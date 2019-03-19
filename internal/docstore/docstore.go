@@ -15,6 +15,26 @@
 // Package docstore provides a portable implementation of a document store.
 // TODO(jba): link to an explanation of document stores (https://en.wikipedia.org/wiki/Document-oriented_database?)
 // TODO(jba): expand package doc to batch other Go CDK APIs.
+//
+//
+// Revisions
+//
+// Every document is given a revision when it is created. Docstore uses the field
+// name "DocstoreRevision" (stored in the constant docstore.RevisionField) to hold
+// the revision. Whenever document is modified, its revision changes. Revisions can
+// be used for optimistic locking: whenever a Put, Replace, Update or Delete action
+// is given a document with a revision, then an error for which gcerrors.Code returns
+// FailedPrecondition is returned if the stored document's revision does not match
+// the given document's. Thus a Get followed by one of those write actions will fail
+// if the document was changed between the Get and the write.
+//
+// Since different providers use different types for revisions, the type of the
+// revision field is unspecified. When defining a struct for storing docstore data,
+// define the field to be of type interface{}. For example,
+//    type User { Name string; DocstoreRevision interface{} }
+// If a struct doesn't have a DocstoreRevision field, then the logic described above
+// won't apply to documents read and written with that struct. All writes with the
+// struct will succeed even if the document was changed since the last Get.
 package docstore // import "gocloud.dev/internal/docstore"
 
 import (
@@ -52,11 +72,7 @@ func newCollection(d driver.Collection) *Collection {
 
 // RevisionField is the name of the document field used for document revision
 // information, to implement optimistic locking.
-// Every retrieved document will have this field set to a non-nil value
-// of unspecified type (different providers might use different types).
-// When defining a struct for storing docstore data, define the field to be of type
-// interface{}. For example,
-//    type User { Name string; DocstoreRevision interface{} }
+// See the Revisions section of the package documentation.
 const RevisionField = "DocstoreRevision"
 
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
@@ -109,9 +125,8 @@ func (l *ActionList) Create(doc Document) *ActionList {
 // The key fields must be set.
 // The document must already exist; an error for which gcerrors.Code returns NotFound
 // is returned if it does not.
-// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
-// returns FailedPrecondition is returned if the stored document's revision does not
-// match the given document's.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
 func (l *ActionList) Replace(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Replace, doc: doc})
 }
@@ -119,19 +134,18 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 // Put adds an action that adds or replaces a document.
 // The key fields must be set.
 // The document may or may not already exist.
-// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
-// returns FailedPrecondition is returned if the stored document's revision does not
-// match the given document's.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
 func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
 // Delete adds an action that deletes a document.
 // Only the key fields and RevisionField of doc are used.
-// If the argument document has a non-nil RevisionField, then an error for which
-// gcerrors.Code returns FailedPrecondition is returned if the stored document
-// doesn't exist or its revision does not match the given document's. Otherwise, if
-// the document doesn't exist, nothing happens and no error is returned.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
+// If doc has no revision and the document doesn't exist, nothing happens and no
+// error is returned.
 func (l *ActionList) Delete(doc Document) *ActionList {
 	// Rationale for not returning an error if the document does not exist:
 	// Returning an error might be informative and could be ignored, but if the
@@ -162,9 +176,8 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 // No field path in mods can be a prefix of another. (It makes no sense
 // to, say, set foo but increment foo.bar.)
 //
-// If the document has a non-nil RevisionField, then an error for which gcerrors.Code
-// returns FailedPrecondition is returned if the stored document's revision does not
-// match the given document's.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
 //
 // It is undefined whether updating a sub-field of a non-map field will succeed.
 // For instance, if the current document is {a: 1} and Update is called with the

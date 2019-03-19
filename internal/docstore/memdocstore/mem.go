@@ -116,10 +116,8 @@ func (c *collection) runAction(a *driver.Action) error {
 		fallthrough
 
 	case driver.Replace, driver.Put:
-		if a.Kind != driver.Create {
-			if err := checkRevision(a.Doc, current); err != nil {
-				return err
-			}
+		if err := checkRevision(a.Doc, current); err != nil {
+			return err
 		}
 		doc, err := encodeDoc(a.Doc)
 		if err != nil {
