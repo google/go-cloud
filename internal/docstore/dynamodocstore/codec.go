@@ -335,7 +335,7 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 	switch v.Type() {
 	case typeOfGoTime:
 		if d.av.S == nil {
-			return false, nil, errors.New("time value not found")
+			return false, nil, errors.New("expected string field for time.Time")
 		}
 		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
 		return true, t, err
