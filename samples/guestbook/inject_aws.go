@@ -26,7 +26,7 @@ import (
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/mysql/rdsmysql"
 	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/paramstore"
+	"gocloud.dev/runtimevar/awsparamstore"
 )
 
 // This file wires the generic interfaces up to Amazon Web Services (AWS). It
@@ -74,7 +74,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess awsclient.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return paramstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &paramstore.Options{
+	return awsparamstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }

@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package paramstore provides a runtimevar implementation with variables
+// Package awsparamstore provides a runtimevar implementation with variables
 // read from AWS Systems Manager Parameter Store
 // (https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-paramstore.html)
 // Use NewVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
-// For runtimevar.OpenVariable, paramstore registers for the scheme "paramstore".
+// For runtimevar.OpenVariable, awsparamstore registers for the scheme "awsparamstore".
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
@@ -29,10 +29,10 @@
 //
 // As
 //
-// paramstore exposes the following types for As:
+// awsparamstore exposes the following types for As:
 //  - Snapshot: *ssm.GetParameterOutput, *ssm.DescribeParametersOutput
 //  - Error: awserr.Error
-package paramstore // import "gocloud.dev/runtimevar/paramstore"
+package awsparamstore // import "gocloud.dev/runtimevar/awsparamstore"
 
 import (
 	"context"
@@ -64,7 +64,7 @@ var Set = wire.NewSet(
 	URLOpener{},
 )
 
-// URLOpener opens AWS Paramstore URLs like "paramstore://myvar".
+// URLOpener opens AWS Paramstore URLs like "awsparamstore://myvar".
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // that affect the default AWS session.
 //
@@ -109,8 +109,8 @@ func (o *lazySessionOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*r
 	return o.opener.OpenVariableURL(ctx, u)
 }
 
-// Scheme is the URL scheme paramstore registers its URLOpener under on runtimevar.DefaultMux.
-const Scheme = "paramstore"
+// Scheme is the URL scheme awsparamstore registers its URLOpener under on runtimevar.DefaultMux.
+const Scheme = "awsparamstore"
 
 // OpenVariableURL opens the variable at the URL's path. See the package doc
 // for more details.

@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package runtimeconfigurator provides a runtimevar implementation with
+// Package gcpruntimeconfig provides a runtimevar implementation with
 // variables read from GCP Cloud Runtime Configurator
 // (https://cloud.google.com/deployment-manager/runtime-configurator).
 // Use NewVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
-// For runtimevar.OpenVariable, runtimeconfigurator registers for the scheme
-// "runtimeconfigurator".
+// For runtimevar.OpenVariable, gcpruntimeconfig registers for the scheme
+// "gcpruntimeconfig".
 // The default URL opener will creating a connection using use default
 // credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
@@ -30,10 +30,10 @@
 //
 // As
 //
-// runtimeconfigurator exposes the following types for As:
+// gcpruntimeconfig exposes the following types for As:
 //  - Snapshot: *pb.Variable
 //  - Error: *status.Status
-package runtimeconfigurator // import "gocloud.dev/runtimevar/runtimeconfigurator"
+package gcpruntimeconfig // import "gocloud.dev/runtimevar/gcpruntimeconfig"
 
 import (
 	"bytes"
@@ -115,10 +115,10 @@ func (o *lazyCredsOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*run
 	return o.opener.OpenVariableURL(ctx, u)
 }
 
-// Scheme is the URL scheme runtimeconfigurator registers its URLOpener under on runtimevar.DefaultMux.
-const Scheme = "runtimeconfigurator"
+// Scheme is the URL scheme gcpruntimeconfig registers its URLOpener under on runtimevar.DefaultMux.
+const Scheme = "gcpruntimeconfig"
 
-// URLOpener opens runtimeconfigurator URLs like "runtimeconfigurator://myproject/mycfg/myvar".
+// URLOpener opens gcpruntimeconfig URLs like "gcpruntimeconfig://myproject/mycfg/myvar".
 //
 //   - The URL's host holds the GCP projectID.
 //   - The first element of the URL's path holds the GCP RuntimeConfigurator ConfigID.
@@ -144,7 +144,7 @@ type URLOpener struct {
 	Options Options
 }
 
-// OpenVariableURL opens a runtimeconfigurator Variable for u.
+// OpenVariableURL opens a gcpruntimeconfig Variable for u.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
 
