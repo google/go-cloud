@@ -540,9 +540,9 @@ var NewSubscription = newSubscription
 func newSubscription(ds driver.Subscription, dynamicBatchSizes bool, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver: ds,
-		tracer: newTracer(ds),
-		cancel: cancel,
+		driver:            ds,
+		tracer:            newTracer(ds),
+		cancel:            cancel,
 		dynamicBatchSizes: dynamicBatchSizes,
 	}
 	if newAckBatcher == nil {
