@@ -283,7 +283,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	ctx := context.Background()
 
 	if connString == "" {
-		b.Fatal("azurepubsub: benchmark requires environment variable SERVICEBUS_CONNECTION_STRING to run")
+		b.Fatal("azuresb: benchmark requires environment variable SERVICEBUS_CONNECTION_STRING to run")
 	}
 	ns, err := NewNamespaceFromConnectionString(connString)
 	if err != nil {
