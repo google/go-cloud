@@ -37,7 +37,7 @@
 // See https://godoc.org/gocloud.dev#hdr-URLs for more information.
 //
 //
-// At-most-once vs. At-least-once Delivery
+// At-most-once and At-least-once Delivery
 //
 // Some PubSub systems guarantee that messages received by subscribers but not
 // acknowledged are delivered again. These at-least-once systems require that
