@@ -25,7 +25,7 @@ import (
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/server/xrayserver"
 	"gocloud.dev/blob/s3blob"
-	"gocloud.dev/pubsub/awspubsub"
+	"gocloud.dev/pubsub/awssnssqs"
 	"gocloud.dev/secrets/awskms"
 	"gocloud.dev/runtimevar/paramstore"
 )
@@ -48,9 +48,9 @@ var Services = wire.NewSet(
 	s3blob.URLOpener{},
 
 	// gocloud.dev/pubsub
-	awspubsub.SubscriptionOptions{},
-	awspubsub.TopicOptions{},
-	awspubsub.URLOpener{},
+	awssnssqs.SubscriptionOptions{},
+	awssnssqs.TopicOptions{},
+	awssnssqs.URLOpener{},
 	sns.New,
 	sqs.New,
 
