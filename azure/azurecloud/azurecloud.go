@@ -18,11 +18,24 @@ package azurecloud // import "gocloud.dev/azure/azurecloud"
 import (
 	"github.com/google/wire"
 	"gocloud.dev/blob/azureblob"
+	"gocloud.dev/pubsub/azuresb"
+	"gocloud.dev/secrets/azurekeyvault"
 )
 
 // Azure is a Wire provider set that includes the default wiring for all
 // Microsoft Azure services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
 var Azure = wire.NewSet(
-	azureblob.NewPipeline,
+	azureblob.DefaultIdentity,
+	azureblob.SASTokenIdentity,
+	Services,
+)
+
+// Services is a Wire provider set that includes the default wiring for all
+// Azure services in this repository, but does not include credentials.
+// Individual services may require additional configuration.
+var Services = wire.NewSet(
+	azurekeyvault.Set,
+	azuresb.Set,
+	azureblob.Set,
 )
