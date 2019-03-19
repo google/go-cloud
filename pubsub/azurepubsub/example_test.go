@@ -53,7 +53,10 @@ func ExampleOpenTopic() {
 	defer sbTopic.Close(ctx)
 
 	// Construct a *pubsub.Topic.
-	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t, err := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer t.Shutdown(ctx)
 
 	// Construct a *pubsub.Message.
@@ -107,7 +110,10 @@ func ExampleOpenSubscription() {
 	defer sbSub.Close(ctx)
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
+	s, err := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)
@@ -133,7 +139,7 @@ func Example_openfromURL() {
 	_, _, _ = t, s, err
 }
 
-func ExampleAckFuncForReceiveAndDelete() {
+func Example_ackFuncForReceiveAndDelete() {
 
 	ctx := context.Background()
 	// See docs below on how to provision an Azure Service Bus Namespace and obtaining the connection string.
@@ -185,10 +191,16 @@ func ExampleAckFuncForReceiveAndDelete() {
 		AckFuncForReceiveAndDelete: noop,
 	}
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
+	s, err := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Construct a *pubsub.Topic.
-	t := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t, err := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer t.Shutdown(ctx)
 
 	// Send *pubsub.Message from *pubsub.Topic backed by Azure Service Bus.
