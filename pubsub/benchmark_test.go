@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,8 +31,11 @@ import (
 const (
 	// How long to run the test.
 	runFor = 10 * time.Second
-	// Minimum frequency for reporting throughput.
-	reportPeriod = 250 * time.Millisecond
+	// How long the "warmup period" is, during which we report more frequently.
+	reportWarmup = 500 * time.Millisecond
+	// Minimum frequency for reporting throughput, during warmup and after that.
+	reportPeriodWarmup = 25 * time.Millisecond
+	reportPeriod       = 500 * time.Millisecond
 	// Number of output lines per test. We set this to a constant so that it's
 	// easy to copy/paste the output into a Google Sheet with pre-created graphs.
 	// Should be above runFor / reportPeriod.
@@ -57,7 +61,7 @@ func (s *fakeSub) AckFunc() func() { return func() {} }
 // TestReceivePerformance enables characterization of Receive under various
 // situations, characterized in "tests" below.
 func TestReceivePerformance(t *testing.T) {
-	//t.Skip("Skipped by default")
+	t.Skip("Skipped by default")
 
 	const defaultNumGoRoutines = 100
 	defaultReceiveProfile := func(maxMessages int) (int, time.Duration) { return maxMessages, 0 }
@@ -117,7 +121,9 @@ func TestReceivePerformance(t *testing.T) {
 		if test.processProfile == nil {
 			test.processProfile = defaultProcessProfile
 		}
-		runBenchmark(t, test.description, test.numGoRoutines, test.receiveProfile, test.processProfile, test.noAck)
+		t.Run(test.description, func(t *testing.T) {
+			runBenchmark(t, test.description, test.numGoRoutines, test.receiveProfile, test.processProfile, test.noAck)
+		})
 	}
 }
 
@@ -131,39 +137,68 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	sub := newSubscription(fake, nil)
 
 	// Configure our output in a hook called whenever ReceiveBatch returns.
-	start := time.Now()
-	lastReport := start
-	numMsgs := 0
-	numRPCs := 0
-	nLines := 0
 
 	// Header row.
 	fmt.Printf("%s\tmsgs/sec\tRPCs/sec\tbatchsize\n", description)
-	nLines++
 
-	sub.onReceiveBatchHook = func(numMessages, maxMessages int) {
-		numMsgs += numMessages
+	var mu sync.Mutex
+	start := time.Now()
+	var lastReport time.Time
+	numMsgs := 0
+	numRPCs := 0
+	lastMaxMessages := 0
+	nLines := 1 // header
+
+	// mu must be locked when called.
+	reportLine := func(now time.Time) {
+		elapsed := now.Sub(start)
+		elapsedSinceReport := now.Sub(lastReport)
+		msgsPerSec := float64(numMsgs) / elapsedSinceReport.Seconds()
+		rpcsPerSec := float64(numRPCs) / elapsedSinceReport.Seconds()
+		fmt.Printf("%f\t%f\t%f\t%d\n", elapsed.Seconds(), msgsPerSec, rpcsPerSec, lastMaxMessages)
+		nLines++
+
+		lastReport = now
+		numMsgs = 0
+		numRPCs = 0
+	}
+
+	sub.preReceiveBatchHook = func(maxMessages int) {
+		mu.Lock()
+		defer mu.Unlock()
+		lastMaxMessages = maxMessages
 		numRPCs++
-
-		// Emit a timepoint if maxMessages has changed, or if reportPeriod has
-		// elapsed since our last timepoint.
-		now := time.Now()
-		elapsed := now.Sub(lastReport)
-		if elapsed > reportPeriod {
-			secsSinceStart := now.Sub(start).Seconds()
-			msgsPerSec := float64(numMsgs) / elapsed.Seconds()
-			rpcsPerSec := float64(numRPCs) / elapsed.Seconds()
-			fmt.Printf("%f\t%f\t%f\t%d\n", secsSinceStart, msgsPerSec, rpcsPerSec, maxMessages)
-			nLines++
-
-			lastReport = now
-			numMsgs = 0
-			numRPCs = 0
+		if lastReport.IsZero() {
+			reportLine(time.Now())
 		}
+	}
+	sub.postReceiveBatchHook = func(numMessages int) {
+		mu.Lock()
+		defer mu.Unlock()
+		numMsgs += numMessages
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	time.AfterFunc(runFor, cancel)
+	done := make(chan struct{})
+	go func() {
+		period := reportPeriodWarmup
+		for {
+			select {
+			case now := <-time.After(period):
+				mu.Lock()
+				reportLine(now)
+				mu.Unlock()
+				if now.Sub(start) > reportWarmup {
+					period = reportPeriod
+				}
+			case <-ctx.Done():
+				close(done)
+				return
+			}
+		}
+	}()
+
 	var grp errgroup.Group
 	for i := 0; i < numGoRoutines; i++ {
 		grp.Go(func() error {
@@ -194,8 +229,9 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	if err := grp.Wait(); err != nil {
 		t.Errorf("%s: %v", description, err)
 	}
+	<-done
 	if nLines > numLinesPerTest {
-		t.Errorf("%s: produced too many lines (%d)", description, nLines)
+		t.Errorf("produced too many lines (%d)", nLines)
 	}
 	for n := nLines; n < numLinesPerTest; n++ {
 		fmt.Println()
