@@ -606,7 +606,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 
 // NewReader is a shortcut for NewRangedReader with offset=0 and length=-1.
 func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions) (*Reader, error) {
-	return b.NewRangeReader(ctx, key, 0, -1, opts)
+	return b.newRangeReader(ctx, key, 0, -1, opts)
 }
 
 // NewRangeReader returns a Reader to read content from the blob stored at key.
@@ -621,6 +621,10 @@ func (b *Bucket) NewReader(ctx context.Context, key string, opts *ReaderOptions)
 //
 // The caller must call Close on the returned Reader when done reading.
 func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
+	return b.newRangeReader(ctx, key, offset, length, opts)
+}
+
+func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (_ *Reader, err error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
@@ -650,9 +654,14 @@ func (b *Bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	}
 	end := func(err error) { b.tracer.End(tctx, err) }
 	r := &Reader{b: b.b, r: dr, end: end, provider: b.tracer.Provider}
+	_, file, lineno, ok := runtime.Caller(2)
 	runtime.SetFinalizer(r, func(r *Reader) {
 		if !r.closed {
-			log.Printf("A blob.Reader reading from %q was never closed", key)
+			var caller string
+			if ok {
+				caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+			}
+			log.Printf("A blob.Reader reading from %q was never closed%s", key, caller)
 		}
 	})
 	return r, nil
@@ -772,9 +781,14 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		w.opts = dopts
 		w.buf = bytes.NewBuffer([]byte{})
 	}
+	_, file, lineno, ok := runtime.Caller(1)
 	runtime.SetFinalizer(w, func(w *Writer) {
 		if !w.closed {
-			log.Printf("A blob.Writer writing to %q was never closed", key)
+			var caller string
+			if ok {
+				caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+			}
+			log.Printf("A blob.Writer writing to %q was never closed%s", key, caller)
 		}
 	})
 	return w, nil
