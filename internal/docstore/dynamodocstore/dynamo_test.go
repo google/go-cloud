@@ -55,7 +55,7 @@ func TestConformance(t *testing.T) {
 		clearTable(t)
 	}
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, new(codecTester))
 }
 
 func clearTable(t *testing.T) {
