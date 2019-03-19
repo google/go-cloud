@@ -31,6 +31,7 @@ import (
 	_ "gocloud.dev/pubsub/awspubsub"
 	_ "gocloud.dev/pubsub/azurepubsub"
 	_ "gocloud.dev/pubsub/gcppubsub"
+	_ "gocloud.dev/pubsub/natspubsub"
 	_ "gocloud.dev/pubsub/rabbitpubsub"
 )
 
