@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package awspubsub provides an implementation of pubsub that uses AWS
+// Package awssnssqs provides an implementation of pubsub that uses AWS
 // SNS (Simple Notification Service) and SQS (Simple Queueing Service).
 //
 // URLs
 //
-// For pubsub.OpenTopic and pubsub.OpenSubscription, awspubsub registers
+// For pubsub.OpenTopic and pubsub.OpenSubscription, awssnssqs registers
 // for the scheme "awssnssqs".
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
@@ -30,7 +30,7 @@
 //
 // Go CDK supports all UTF-8 strings; to make this work with providers lacking
 // full UTF-8 support, strings must be escaped (during writes) and unescaped
-// (during reads). The following escapes are required for awspubsub:
+// (during reads). The following escapes are required for awssnssqs:
 //  - Metadata keys: Characters other than "a-zA-z0-9_-.", and additionally "."
 //    when it's at the start of the key or the previous character was ".",
 //    are escaped using "__0x<hex>__". These characters were determined by
@@ -43,12 +43,12 @@
 //
 // As
 //
-// awspubsub exposes the following types for As:
+// awssnssqs exposes the following types for As:
 //  - Topic: *sns.SNS
 //  - Subscription: *sqs.SQS
 //  - Message: *sqs.Message
 //  - Error: awserror.Error
-package awspubsub
+package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
 import (
 	"context"
@@ -129,7 +129,7 @@ func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL)
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// Scheme is the URL scheme awspubsub registers its URLOpeners under on pubsub.DefaultMux.
+// Scheme is the URL scheme awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "awssnssqs"
 
 // URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
