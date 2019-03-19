@@ -47,6 +47,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/runtimevar"
@@ -56,6 +57,12 @@ import (
 func init() {
 	runtimevar.DefaultURLMux().RegisterVariable(Scheme, new(lazySessionOpener))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Options{},
+	URLOpener{},
+)
 
 // URLOpener opens AWS Paramstore URLs like "paramstore://myvar".
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters

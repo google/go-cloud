@@ -67,6 +67,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
@@ -90,6 +91,15 @@ func init() {
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, lazy)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, lazy)
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	SubscriptionOptions{},
+	TopicOptions{},
+	URLOpener{},
+	sns.New,
+	sqs.New,
+)
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenXXXURL.
