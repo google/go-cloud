@@ -69,6 +69,9 @@ func Example_openVariable() {
 	// OpenVariable creates a *runtimevar.Variable from a URL.
 	// The default opener opens a blob.Bucket via a URL, based on the environment
 	// variable BLOBVAR_BUCKET_URL.
+
+
+
 	// This example watches a JSON variable.
 	ctx := context.Background()
 	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?decoder=json")
