@@ -17,10 +17,12 @@ package retry
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	gax "github.com/googleapis/gax-go"
+	"golang.org/x/xerrors"
 )
 
 // Errors to distinguish retryable and non-retryable cases.
@@ -128,4 +130,16 @@ func equalContextError(got error, want *ContextError) bool {
 		return false
 	}
 	return cerr.CtxErr == want.CtxErr && cerr.FuncErr == want.FuncErr
+}
+
+func TestErrorsIs(t *testing.T) {
+	err := &ContextError{
+		CtxErr:  context.Canceled,
+		FuncErr: os.ErrExist,
+	}
+	for _, target := range []error{err, context.Canceled, os.ErrExist} {
+		if !xerrors.Is(err, target) {
+			t.Errorf("xerrors.Is(%v) == false, want true", target)
+		}
+	}
 }

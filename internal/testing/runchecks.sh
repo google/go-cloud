@@ -55,14 +55,6 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
-DIFF=$(gofmt -s -d `find . -name '*.go' -type f ! -path "*/bindata.go"`)
-
-if [ -n "$DIFF" ]; then
-  echo "Please run gofmt -s and commit the result"
-  echo "$DIFF";
-  exit 1;
-fi;
-
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0
@@ -76,9 +68,17 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   fi
 else
   go test -mod=readonly -race ./... || result=1
-  # No need to run wire checks or other module tests on OSs other than linux.
+  # No need to run other checks on OSs other than linux.
   exit $result
 fi
+
+# Ensure .go files are formatted with "gofmt -s".
+DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
+if [ -n "$DIFF" ]; then
+  echo "Please run gofmt -s and commit the result"
+  echo "$DIFF";
+  exit 1;
+fi;
 
 # Ensure that the code has no extra dependencies (including transitive
 # dependencies) that we're not already aware of by comparing with
@@ -88,6 +88,12 @@ fi
 ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
   echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
+
+# For pull requests, check if there are undeclared incompatible API changes.
+# Skip this if we're already going to fail since it is expensive.
+if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  ./internal/testing/check_api_change.sh || result=1;
+fi
 
 go install -mod=readonly github.com/google/wire/cmd/wire
 wire check ./... || result=1

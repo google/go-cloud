@@ -141,15 +141,15 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                                         testSendReceive,
-		"TestSendReceiveTwo":                                      testSendReceiveTwo,
-		"TestErrorOnSendToClosedTopic":                            testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":                testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                                   testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":        testNonExistentTopicSucceedsOnOpenButFailsOnSend,
-		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnSend": testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend,
-		"TestMetadata":                                            testMetadata,
-		"TestNonUTF8MessageBody":                                  testNonUTF8MessageBody,
+		"TestSendReceive":                                            testSendReceive,
+		"TestSendReceiveTwo":                                         testSendReceiveTwo,
+		"TestErrorOnSendToClosedTopic":                               testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription":                   testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                                      testCancelSendReceive,
+		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":           testNonExistentTopicSucceedsOnOpenButFailsOnSend,
+		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive": testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive,
+		"TestMetadata":                                               testMetadata,
+		"TestNonUTF8MessageBody":                                     testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -201,7 +201,7 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 	}
 }
 
-func testNonExistentSubscriptionSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness HarnessMaker) {
+func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, newHarness HarnessMaker) {
 	// Set up.
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)

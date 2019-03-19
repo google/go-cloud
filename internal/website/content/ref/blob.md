@@ -1,5 +1,8 @@
 ---
 title: "Blob"
+date: 2019-02-21T16:21:29-08:00
+aliases:
+- /pages/blob/
 ---
 
 Blobs are a common abstraction for storing unstructured data on cloud storage
@@ -9,6 +12,8 @@ Package `blob` provides an easy and portable way to interact with blobs within a
 storage location ("bucket"). It supports operations like reading and writing
 blobs (using standard interfaces from the `io` package), deleting blobs, and
 listing blobs in a bucket.
+
+<!--more-->
 
 Top-level package documentation: https://godoc.org/gocloud.dev/blob
 
