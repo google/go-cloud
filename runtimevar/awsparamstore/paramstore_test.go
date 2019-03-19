@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package paramstore
+package awsparamstore
 
 import (
 	"context"
@@ -164,15 +164,15 @@ func TestOpenVariable(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"paramstore://myvar", false},
+		{"awsparamstore://myvar", false},
 		// OK, setting region.
-		{"paramstore://myvar?region=us-west-1", false},
+		{"awsparamstore://myvar?region=us-west-1", false},
 		// OK, setting decoder.
-		{"paramstore://myvar?decoder=string", false},
+		{"awsparamstore://myvar?decoder=string", false},
 		// Invalid decoder.
-		{"paramstore://myvar?decoder=notadecoder", true},
+		{"awsparamstore://myvar?decoder=notadecoder", true},
 		// Invalid parameter.
-		{"paramstore://myvar?param=value", true},
+		{"awsparamstore://myvar?param=value", true},
 	}
 
 	ctx := context.Background()
