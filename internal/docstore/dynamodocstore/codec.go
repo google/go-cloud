@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"gocloud.dev/internal/docstore/driver"
@@ -64,8 +65,18 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-func (*encoder) EncodeSpecial(reflect.Value) (bool, error) {
-	return false, nil
+var typeOfGoTime = reflect.TypeOf(time.Time{})
+
+// EncodeSpecial encodes time.Time specially.
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		ts := v.Interface().(time.Time).Format(time.RFC3339Nano)
+		e.EncodeString(ts)
+	default:
+		return false, nil
+	}
+	return true, nil
 }
 
 type listEncoder struct {
@@ -82,12 +93,12 @@ type mapEncoder struct {
 
 func (e *mapEncoder) MapKey(k string) { e.m[k] = e.av }
 
-func encodeDoc(doc driver.Document) (map[string]*dyn.AttributeValue, error) {
+func encodeDoc(doc driver.Document) (*dyn.AttributeValue, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return e.av.M, nil
+	return e.av, nil
 }
 
 // Encode only the key fields of the given document.
@@ -97,8 +108,8 @@ func encodeDoc(doc driver.Document) (map[string]*dyn.AttributeValue, error) {
 // Currently, we do this by encoding the entire document, then removing everything that is
 // not a key field.
 // TODO: improve driver.Encoder to make this efficient.
-func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn.AttributeValue, error) {
-	m, err := encodeDoc(doc)
+func encodeDocKeyFields(doc driver.Document, pkey, skey string) (*dyn.AttributeValue, error) {
+	av, err := encodeDoc(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +120,7 @@ func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn
 		// If there is no sort key, assume we found it.
 		hasS = true
 	}
-	for f := range m {
+	for f := range av.M {
 		switch f {
 		case pkey:
 			hasP = true
@@ -117,13 +128,13 @@ func encodeDocKeyFields(doc driver.Document, pkey, skey string) (map[string]*dyn
 			hasS = true
 		default:
 			// Delete any non-key field from the result.
-			delete(m, f)
+			delete(av.M, f)
 		}
 	}
 	if !hasP || !hasS {
 		return nil, errors.New("missing key field(s)")
 	}
-	return m, nil
+	return av, nil
 }
 
 func encodeValue(v interface{}) (*dyn.AttributeValue, error) {
@@ -140,8 +151,8 @@ func encodeFloat(f float64) *dyn.AttributeValue {
 
 ////////////////////////////////////////////////////////////////
 
-func decodeDoc(doc driver.Document, item map[string]*dyn.AttributeValue) error {
-	return doc.Decode(decoder{&dyn.AttributeValue{M: item}})
+func decodeDoc(item *dyn.AttributeValue, doc driver.Document) error {
+	return doc.Decode(decoder{av: item})
 }
 
 type decoder struct {
@@ -320,6 +331,15 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 	}
 }
 
-func (decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
-	return false, nil, nil
+func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		if d.av.S == nil {
+			return false, nil, errors.New("expected string field for time.Time")
+		}
+		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
+		return true, t, err
+	default:
+		return false, nil, nil
+	}
 }
