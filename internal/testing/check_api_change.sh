@@ -43,6 +43,8 @@ trap cleanup EXIT
 git clone https://github.com/google/go-cloud ${MASTER_CLONE_DIR}
 echo
 
+echo Travis commit message: ${TRAVIS_COMMIT_MESSAGE}
+
 incompatible_change_pkgs=()
 PKGS=$(go list ./... | grep -v internal | grep -v test | grep -v samples)
 for pkg in ${PKGS}; do
@@ -73,7 +75,6 @@ fi
 echo "Found breaking API change(s) in: ${incompatible_change_pkgs[@]}."
 
 # Found incompatible changes; see if they were declared as OK via a commit.
-echo Travis commit message: ${TRAVIS_COMMIT_MESSAGE}
 if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then
   echo "Allowing them due to a commit message with BREAKING_CHANGE_OK.";
   exit 0;
