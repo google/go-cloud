@@ -23,11 +23,11 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
-	"gocloud.dev/server/xrayserver"
 	"gocloud.dev/blob/s3blob"
 	"gocloud.dev/pubsub/awssnssqs"
-	"gocloud.dev/secrets/awskms"
 	"gocloud.dev/runtimevar/paramstore"
+	"gocloud.dev/secrets/awskms"
+	"gocloud.dev/server/xrayserver"
 )
 
 // AWS is a Wire provider set that includes all Amazon Web Services interface
