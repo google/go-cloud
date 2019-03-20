@@ -166,6 +166,10 @@ As a contributor:
     that are associated with a specific commit to be lost. This implies that
     once you've sent a Pull Request, you should use `git merge` instead of `git
     rebase` to incorporate commits from the master branch.
+-   Travis checks will fail if you haven't run `gofmt -w -s`.
+-   Travis checks will fail if your PR has backwards-incompatible changes,
+    unless one of your commits has the strings `BREAKING_CHANGE_OK` in the first
+    line of the commit message.
 
 As a reviewer:
 
@@ -185,10 +189,10 @@ When squashing-and-merging:
 -   Mark breaking changes with `BREAKING_CHANGE` in the commit message (e.g.,
     "blob: BREAKING_CHANGE remove old blob").
     -   If the PR includes a breaking change, it will be declared via a commit
-        with `BREAKING_CHANGE_OK` in it; Travis checks for this.
+        with `BREAKING_CHANGE_OK` in it (see Contributor section above).
     -   You can omit the marker if the change is technically breaking, but not
         expected to affect users (e.g., it's a breaking change to an object that
-        wasn't in the last tagged release yet, or it's a change to a portable
-        API function that's only expected to be used by driver implementations).
+        wasn't in the last tagged release, or it's a change to a portable API
+        function that's only expected to be used by driver implementations).
 -   Delete the automatically added commit lines; these are generally not
     interesting and make commit history harder to read.
