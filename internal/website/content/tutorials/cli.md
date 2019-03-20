@@ -29,7 +29,7 @@ When we're done, our command line application will work like this:
 $ ./upload gs://go-cloud-bucket gopher.png
 
 # uploads gopher.png to S3
-$ AWS_REGION=us-west-1 ./upload s3://go-cloud-bucket gopher.png
+$ ./upload s3://go-cloud-bucket gopher.png
 
 # uploads gopher.png to Azure
 $ ./upload azblob://go-cloud-bucket gopher.png
