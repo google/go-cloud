@@ -62,7 +62,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -510,20 +512,42 @@ func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-func DecoderByName(decoderName string, dflt *Decoder) (*Decoder, error) {
+// It also supports using "decrypt/<decoderName>" (or "decrypt" for default
+// decoder) to decrypt the data before decoding. It uses the secrets package to
+// open a keeper by the URL string stored in a envrionment variable
+// "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
+// for more details.
+func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
+	var post *Decoder
 	if dflt == nil {
-		dflt = BytesDecoder
+		post = BytesDecoder
+	}
+	var k *secrets.Keeper
+	var err error
+	if strings.HasPrefix(decoderName, "decrypt") {
+		if k, err = secrets.OpenKeeper(ctx, os.Getenv("RUNTIMEVAR_KEEPER_URL")); err != nil {
+			return nil, err
+		}
+		if decoderName == "decrypt" {
+			decoderName = ""
+		} else {
+			decoderName = strings.TrimPrefix(decoderName, "decrypt/")
+		}
 	}
 	switch decoderName {
 	case "":
-		return dflt, nil
 	case "bytes":
-		return BytesDecoder, nil
+		post = BytesDecoder
 	case "jsonmap":
 		var m map[string]interface{}
-		return NewDecoder(&m, JSONDecode), nil
+		post = NewDecoder(&m, JSONDecode)
 	case "string":
-		return StringDecoder, nil
+		post = StringDecoder
+	default:
+		return nil, fmt.Errorf("unsupported decoder %q", decoderName)
 	}
-	return nil, fmt.Errorf("unsupported decoder %q", decoderName)
+	if k != nil {
+		return NewDecoder(reflect.New(post.typ).Elem().Interface(), DecryptDecode(ctx, k, post.fn)), nil
+	}
+	return post, nil
 }

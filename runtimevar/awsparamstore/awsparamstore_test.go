@@ -20,9 +20,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -30,6 +29,7 @@ import (
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
+	_ "gocloud.dev/secrets/awskms"
 )
 
 // This constant records the region used for the last --record.
@@ -173,13 +173,26 @@ func TestOpenVariable(t *testing.T) {
 		{"awsparamstore://myvar?decoder=notadecoder", true},
 		// Invalid parameter.
 		{"awsparamstore://myvar?param=value", true},
+		// Decrypt+bytes decoder.
+		{"awsparamstore://mysecretvar?decoder=decrypt/bytes", false},
 	}
 
 	ctx := context.Background()
+	cleanup := setupTestSecrets(ctx)
+	defer cleanup()
+
 	for _, test := range tests {
 		_, err := runtimevar.OpenVariable(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 	}
+}
+
+func setupTestSecrets(ctx context.Context) func() {
+	keeperEnv := "RUNTIMEVAR_KEEPER_URL"
+	oldURL := os.Getenv(keeperEnv)
+	keeperURL := "awskms://test-secrets?region=us-east-2"
+	os.Setenv(keeperEnv, keeperURL)
+	return func() { os.Setenv(keeperEnv, oldURL) }
 }
