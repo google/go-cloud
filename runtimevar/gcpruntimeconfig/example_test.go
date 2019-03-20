@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Development Kit Authors
+// Copyright 2018 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package blobvar_test
+package gcpruntimeconfig_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 
-	"gocloud.dev/blob/memblob"
+	"gocloud.dev/gcp"
 	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/blobvar"
+	"gocloud.dev/runtimevar/gcpruntimeconfig"
 )
 
 // MyConfig is a sample configuration struct.
@@ -31,47 +30,54 @@ type MyConfig struct {
 }
 
 func Example() {
-	// Create a *blob.Bucket.
-	// Here, we use an in-memory implementation and write a sample
-	// configuration value.
-	bucket := memblob.OpenBucket(nil)
-	defer bucket.Close()
+	// Your GCP credentials.
+	// See https://cloud.google.com/docs/authentication/production
+	// for more info on alternatives.
 	ctx := context.Background()
-	err := bucket.WriteAll(ctx, "cfg-variable-name", []byte(`{"Server": "foo.com", "Port": 80}`), nil)
+	creds, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Connect to the Runtime Configurator service.
+	client, cleanup, err := gcpruntimeconfig.Dial(ctx, creds.TokenSource)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+
 	// Create a decoder for decoding JSON strings into MyConfig.
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
-	// Construct a *runtimevar.Variable that watches the blob.
-	v, err := blobvar.NewVariable(bucket, "cfg-variable-name", decoder, nil)
+	// Fill these in with the values from the Cloud Console.
+	// For this example, the GCP Cloud Runtime Configurator variable being
+	// referenced should have a JSON string that decodes into MyConfig.
+	name := gcpruntimeconfig.ResourceName{
+		ProjectID: "gcp-project-id",
+		Config:    "cfg-name",
+		Variable:  "cfg-variable-name",
+	}
+
+	// Construct a *runtimevar.Variable that watches the variable.
+	v, err := gcpruntimeconfig.NewVariable(client, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer v.Close()
 
 	// We can now read the current value of the variable from v.
-	snapshot, err := v.Latest(ctx)
+	snapshot, err := v.Latest(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	// runtimevar.Snapshot.Value is decoded to type MyConfig.
 	cfg := snapshot.Value.(MyConfig)
-	fmt.Printf("%s running on port %d", cfg.Server, cfg.Port)
-
-	// Output:
-	// foo.com running on port 80
+	_ = cfg
 }
 
 func Example_openVariable() {
 	// OpenVariable creates a *runtimevar.Variable from a URL.
-	// The default opener opens a blob.Bucket via a URL, based on the environment
-	// variable BLOBVAR_BUCKET_URL.
-	// This example watches a JSON variable.
 	ctx := context.Background()
-	v, err := runtimevar.OpenVariable(ctx, "blob://myvar.json?decoder=json")
+	v, err := runtimevar.OpenVariable(ctx, "gcpruntimeconfig://myproject/myconfigid/myvar?decoder=string")
 	if err != nil {
 		log.Fatal(err)
 	}
