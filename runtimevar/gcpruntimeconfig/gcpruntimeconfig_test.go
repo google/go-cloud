@@ -18,14 +18,12 @@ import (
 	"context"
 	"errors"
 	"net/url"
-	"os"
 	"testing"
 
 	"gocloud.dev/internal/testing/setup"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
-	_ "gocloud.dev/secrets/gcpkms"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -250,26 +248,13 @@ func TestOpenVariable(t *testing.T) {
 		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=notadecoder", true},
 		// Invalid param.
 		{"gcpruntimeconfig://myproject/mycfg/myvar?param=value", true},
-		// Decrypt+bytes decoder.
-		{"gcpruntimeconfig://myproject/mycfg/myvar?decoder=decrypt/bytes", false},
 	}
 
 	ctx := context.Background()
-	cleanupKMS := setupTestSecrets(ctx)
-	defer cleanupKMS()
-
 	for _, test := range tests {
 		_, err := runtimevar.OpenVariable(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 	}
-}
-
-func setupTestSecrets(ctx context.Context) func() {
-	keeperEnv := "RUNTIMEVAR_KEEPER_URL"
-	oldURL := os.Getenv(keeperEnv)
-	keeperURL := "gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY"
-	os.Setenv(keeperEnv, keeperURL)
-	return func() { os.Setenv(keeperEnv, oldURL) }
 }

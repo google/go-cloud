@@ -24,12 +24,11 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/secrets"
-
 	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
+	"gocloud.dev/secrets"
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
@@ -235,8 +234,12 @@ func TestOpenVariable(t *testing.T) {
 		{"file://" + txtPath + "?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
 		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Working example with decrypt (default) decoder.
+		{"file://" + secretsPath + "?decoder=decrypt", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+bytes decoder.
-		{"file://" + secretsPath + "?decoder=decrypt/bytes", false, false, []byte("hello world!")},
+		{"file://" + secretsPath + "?decoder=decrypt/bytes", false, false, []byte(`{"Foo":"Bar"}`)},
+		// Working example with decrypt+json decoder.
+		{"file://" + secretsPath + "?decoder=decrypt/jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {
@@ -261,9 +264,9 @@ func TestOpenVariable(t *testing.T) {
 }
 
 func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), error) {
-	keeperEnv := "RUNTIMEVAR_KEEPER_URL"
+	const keeperEnv = "RUNTIMEVAR_KEEPER_URL"
+	const keeperURL = "stringkey://my-key"
 	oldURL := os.Getenv(keeperEnv)
-	keeperURL := "stringkey://my-key"
 	os.Setenv(keeperEnv, keeperURL)
 	cleanup := func() { os.Setenv(keeperEnv, oldURL) }
 
@@ -271,7 +274,7 @@ func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), err
 	if err != nil {
 		return cleanup, err
 	}
-	sc, err := k.Encrypt(ctx, []byte("hello world!"))
+	sc, err := k.Encrypt(ctx, []byte(`{"Foo":"Bar"}`))
 	if err != nil {
 		return cleanup, err
 	}
