@@ -35,7 +35,7 @@ type CertPoolProvider interface {
 // AzureCertFetcher is a default CertPoolProvider that can fetch CA certificates from
 // any publicly accessible URI or File.
 type AzureCertFetcher struct {
-	client *http.Client
+	Client *http.Client
 	// certLocation can be a remote endpoint or a file path
 	certLocation string
 	useHTTP      bool
@@ -85,7 +85,7 @@ func (acf *AzureCertFetcher) load(ctx context.Context) ([]*x509.Certificate, err
 }
 
 func (acf *AzureCertFetcher) fetch(ctx context.Context) ([]*x509.Certificate, error) {
-	client := acf.client
+	client := acf.Client
 	if client == nil {
 		client = http.DefaultClient
 	}
