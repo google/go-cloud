@@ -1006,7 +1006,6 @@ func testRead(t *testing.T, newHarness HarnessMaker) {
 			if r.ModTime().IsZero() {
 				t.Errorf("got zero mod time, want non-zero")
 			}
-			r.Close()
 		})
 	}
 }
