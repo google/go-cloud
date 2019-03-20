@@ -182,3 +182,9 @@ func TestOpenVariable(t *testing.T) {
 		}
 	}
 }
+
+func TestDecryptWithNoURLEnv(t *testing.T) {
+	if _, err := runtimevar.OpenVariable(context.Background(), "constant://?decoder=decrypt"); err == nil {
+		t.Error("got nil error, want environment vairable not set")
+	}
+}
