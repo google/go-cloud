@@ -69,6 +69,7 @@ func init() {
 	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
 }
 
+// OpenPostgresURL opens a new RDS database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
 	cf := new(rds.CertFetcher)
 	vals := u.Query()
@@ -93,6 +94,17 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 // The second return value is a Wire cleanup function that calls Close on the
 // database and ignores the error.
 func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*sql.DB, func(), error) {
+	vals := make(url.Values)
+	for k, v := range params.Values {
+		// Only permit parameters that do not conflict with other behavior.
+		if k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
+			return nil, nil, fmt.Errorf("rdspostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+		}
+		vals[k] = v
+	}
+	// sslmode must be disabled because the underlying dialer is already providing TLS.
+	vals.Set("sslmode", "disable")
+
 	var user *url.Userinfo
 	if params.User != "" && params.Password != "" {
 		if params.Password != "" {
@@ -107,7 +119,7 @@ func Open(ctx context.Context, provider rds.CertPoolProvider, params *Params) (*
 		User:     user,
 		Host:     params.Endpoint,
 		Path:     "/" + params.Database,
-		RawQuery: params.Values.Encode(),
+		RawQuery: vals.Encode(),
 	}
 	db := sql.OpenDB(connector{
 		provider:  provider,
