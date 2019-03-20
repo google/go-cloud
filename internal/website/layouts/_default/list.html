@@ -1,0 +1,11 @@
+{{ define "main" -}}
+<h1>{{ .Title }}</h1>
+{{ .Content }}
+{{ with .Data.Pages }}
+<div class="PageList">
+{{- range .}}
+  {{.Render "li"}}
+{{- end }}
+</div>
+{{end}}
+{{- end }}

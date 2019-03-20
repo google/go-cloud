@@ -19,7 +19,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
-	"gocloud.dev/runtimevar/runtimeconfigurator"
+	"gocloud.dev/runtimevar/gcpruntimeconfig"
 	"gocloud.dev/server/sdserver"
 )
 
@@ -34,5 +34,5 @@ var Services = wire.NewSet(
 	cloudsql.CertSourceSet,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
-	runtimeconfigurator.Dial,
+	gcpruntimeconfig.Dial,
 	sdserver.Set)
