@@ -396,9 +396,9 @@ func (s *Subscription) updateBatchSize() int {
 	// We first combine the previous value and the new value, with weighting
 	// based on decay, and then cap the growth/shrinkage.
 	newBatchSize := s.runningBatchSize*(1-decay) + idealBatchSize*decay
-	if max := s.runningBatchSize*maxGrowthFactor; newBatchSize > max {
+	if max := s.runningBatchSize * maxGrowthFactor; newBatchSize > max {
 		s.runningBatchSize = max
-	} else if min := s.runningBatchSize*maxShrinkFactor; newBatchSize < min {
+	} else if min := s.runningBatchSize * maxShrinkFactor; newBatchSize < min {
 		s.runningBatchSize = min
 	} else {
 		s.runningBatchSize = newBatchSize
@@ -406,7 +406,7 @@ func (s *Subscription) updateBatchSize() int {
 	s.runningBatchSize = math.Min(s.runningBatchSize, maxBatchSize)
 
 	// Using Ceil guarantees at least one message.
-	return int( math.Ceil(s.runningBatchSize))
+	return int(math.Ceil(s.runningBatchSize))
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
