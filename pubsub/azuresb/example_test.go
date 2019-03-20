@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package azurepubsub_test
+package azuresb_test
 
 import (
 	"context"
 	"log"
 	"os"
 
-	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/azurepubsub"
-
 	servicebus "github.com/Azure/azure-service-bus-go"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/azuresb"
 )
 
 func ExampleOpenTopic() {
@@ -39,21 +38,21 @@ func ExampleOpenTopic() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sbTopic.Close(ctx)
 
 	// Construct a *pubsub.Topic.
-	t, err := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t, err := azuresb.OpenTopic(ctx, sbTopic, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -88,14 +87,14 @@ func ExampleOpenSubscription() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,14 +102,14 @@ func ExampleOpenSubscription() {
 
 	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
-	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, nil)
+	sbSub, err := azuresb.NewSubscription(sbTopic, subscriptionName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sbSub.Close(ctx)
 
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s, err := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
+	s, err := azuresb.OpenSubscription(ctx, ns, sbTopic, sbSub, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,14 +153,14 @@ func Example_ackFuncForReceiveAndDelete() {
 
 	// Construct a Service Bus Namespace from a SAS Token.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Namespace.
-	ns, err := azurepubsub.NewNamespaceFromConnectionString(connString)
+	ns, err := azuresb.NewNamespaceFromConnectionString(connString)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a Service Bus Topic for a topicName associated with a NameSpace.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.
-	sbTopic, err := azurepubsub.NewTopic(ns, topicName, nil)
+	sbTopic, err := azuresb.NewTopic(ns, topicName, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -174,7 +173,7 @@ func Example_ackFuncForReceiveAndDelete() {
 
 	// Construct a Service Bus Subscription which is a child to a Service Bus Topic.
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Topic.NewSubscription.
-	sbSub, err := azurepubsub.NewSubscription(sbTopic, subscriptionName, opts)
+	sbSub, err := azuresb.NewSubscription(sbTopic, subscriptionName, opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,17 +186,17 @@ func Example_ackFuncForReceiveAndDelete() {
 	//
 	// For more information on Service Bus ReceiveMode, see https://godoc.org/github.com/Azure/azure-service-bus-go#SubscriptionWithReceiveAndDelete.
 	noop := func() {}
-	subOpts := &azurepubsub.SubscriptionOptions{
+	subOpts := &azuresb.SubscriptionOptions{
 		AckFuncForReceiveAndDelete: noop,
 	}
 	// Construct a *pubsub.Subscription for a given Service Bus NameSpace and Topic.
-	s, err := azurepubsub.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
+	s, err := azuresb.OpenSubscription(ctx, ns, sbTopic, sbSub, subOpts)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *pubsub.Topic.
-	t, err := azurepubsub.OpenTopic(ctx, sbTopic, nil)
+	t, err := azuresb.OpenTopic(ctx, sbTopic, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -44,12 +44,18 @@ git clone https://github.com/google/go-cloud ${MASTER_CLONE_DIR}
 echo
 
 incompatible_change_pkgs=()
-PKGS=$(go list ./... | grep -v internal | grep -v test | grep -v samples)
+PKGS=$(cd ${MASTER_CLONE_DIR}; go list ./... | grep -v internal | grep -v test | grep -v samples | grep pubsub)
 for pkg in ${PKGS}; do
   echo "Testing ${pkg}..."
 
   # Compute export data for the current branch.
-  apidiff -w ${PKGINFO_BRANCH} ${pkg}
+  package_deleted=0
+  apidiff -w ${PKGINFO_BRANCH} ${pkg} || package_deleted=1
+  if [ ${package_deleted} -eq 1 ]; then
+    echo "  Package ${pkg} was deleted! Recording as an incompatible change.";
+    incompatible_change_pkgs+=(${pkg});
+    continue;
+  fi
 
   # Compute export data for master@HEAD.
   (cd ${MASTER_CLONE_DIR}; apidiff -w ${PKGINFO_MASTER} ${pkg})
