@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -240,6 +241,8 @@ func TestOpenVariable(t *testing.T) {
 		{"file://" + secretsPath + "?decoder=decrypt+bytes", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+json decoder.
 		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Working example with escaped decrypt+json decoder
+		{"file://" + secretsPath + "?decoder=" + url.QueryEscape("decrypt+jsonmap"), false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {

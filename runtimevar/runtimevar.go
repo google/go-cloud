@@ -514,7 +514,7 @@ var DecoderByName = decoderByName
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-// It also supports using "decrypt/<decoderName>" (or "decrypt" for default
+// It also supports using "decrypt+<decoderName>" (or "decrypt" for default
 // decoder) to decrypt the data before decoding. It uses the secrets package to
 // open a keeper by the URL string stored in a envrionment variable
 // "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
@@ -552,17 +552,20 @@ func decryptByName(ctx context.Context, decoderName string) (*secrets.Keeper, st
 	}
 	keeperURL := os.Getenv("RUNTIMEVAR_KEEPER_URL")
 	if keeperURL == "" {
-		return nil, "", errors.New("environment varialbe RUNTIMEVAR_KEEPER_URL needed to open a *secrets.Keeper for decryption")
+		return nil, "", errors.New("environment variable RUNTIMEVAR_KEEPER_URL needed to open a *secrets.Keeper for decryption")
 	}
 	k, err := secrets.OpenKeeper(ctx, keeperURL)
 	if err != nil {
 		return nil, "", err
 	}
-	if decoderName == "decrypt" {
-		return k, "", nil
+	decoderName = strings.TrimPrefix(decoderName, "decrypt")
+	if decoderName != "" {
+		decoderName = strings.TrimLeftFunc(decoderName, func(r rune) bool {
+			return r == ' ' || r == '+'
+		})
 	}
 	// The parsed value is "decrypt <decoderName>".
-	return k, strings.TrimPrefix(decoderName, "decrypt "), nil
+	return k, decoderName, nil
 }
 
 func maybeDecrypt(ctx context.Context, k *secrets.Keeper, dec *Decoder) *Decoder {
