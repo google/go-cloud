@@ -182,5 +182,12 @@ When squashing-and-merging:
 -   Do a final review of the one-line PR summary, ensuring that it meets the
     guidelines (e.g., "blob: add more blobbing") and accurately describes the
     change.
+-   If the PR includes a breaking change, which should be declared via a commit
+    with `BREAKING_CHANGE_OK` in it (Travis checks for this), add
+    `BREAKING_CHANGE` to the PR summary (e.g., "blob: BREAKING_CHANGE remove old
+    blob"). You can omit this if the change is technically breaking, but not
+    expected to affect users (e.g., it's a breaking change to an object that
+    wasn't in the last tagged release yet, or it's a change to a portable API
+    function that's only expected to be used by driver implementations)
 -   Delete the automatically added commit lines; these are generally not
     interesting and make commit history harder to read.
