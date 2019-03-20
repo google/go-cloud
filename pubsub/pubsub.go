@@ -408,7 +408,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// Ask for a number of messages that will give us the desired queue length.
 		// Unless we don't have information about process time (at the beginning), in
 		// which case just get one message.
-		nMessages := 2
+		nMessages := 1
 		if s.dynamicBatchSizes && s.avgProcessTime > 0 {
 			// Using Ceil guarantees at least one message.
 			n := math.Ceil(desiredQueueDuration.Seconds() / s.avgProcessTime)
