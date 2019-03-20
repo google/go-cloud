@@ -1,4 +1,4 @@
-// Copyright 2018 The Go Cloud Development Kit Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package azuremysql provides connections to Azure Database for MySql.
-package azuremysql // import "gocloud.dev/mysql/azuremysql"
+package azuredb
 
 import (
 	"context"
@@ -28,16 +27,19 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-type (
+// A CertPoolProvider returns a certificate pool that contains the Azure CA certificate.
+type CertPoolProvider interface {
+	GetCertPool(context.Context) (*x509.CertPool, error)
+}
 
-	// AzureCertFetcher loads the CA certificates from remote endpoint or file.
-	AzureCertFetcher struct {
-		client *http.Client
-		// certLocation can be a remote endpoint or a file path
-		certLocation string
-		useHTTP      bool
-	}
-)
+// AzureCertFetcher is a default CertPoolProvider that can fetch CA certificates from
+// any publicly accessible URI or File.
+type AzureCertFetcher struct {
+	client *http.Client
+	// certLocation can be a remote endpoint or a file path
+	certLocation string
+	useHTTP      bool
+}
 
 // NewAzureCertFetcher constructs a new *AzureCertFetcher.
 // See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
@@ -52,8 +54,8 @@ func NewAzureCertFetcher(caBundleLocation string) (*AzureCertFetcher, error) {
 	}, nil
 }
 
-// AzureCertPool fetches the Azure CA certificate from a remote URL.
-func (acf *AzureCertFetcher) AzureCertPool(ctx context.Context) (*x509.CertPool, error) {
+// GetCertPool fetches the Azure CA certificate from a remote URL.
+func (acf *AzureCertFetcher) GetCertPool(ctx context.Context) (*x509.CertPool, error) {
 	var certs []*x509.Certificate
 	var err error
 

@@ -22,6 +22,8 @@ package azuremysql
 import (
 	"context"
 	"testing"
+
+	"gocloud.dev/azure/azuredb"
 	"gocloud.dev/internal/testing/terraform"
 )
 
@@ -31,18 +33,19 @@ func TestOpen(t *testing.T) {
 	//
 	// terraform init
 	// terraform apply
-	
+
 	tfOut, err := terraform.ReadOutput(".")
 	if err != nil {
 		t.Skipf("Could not obtain harness info: %v", err)
 	}
+
 	serverName, _ := tfOut["serverName"].Value.(string)
 	username, _ := tfOut["username"].Value.(string)
 	password, _ := tfOut["password"].Value.(string)
 	databaseName, _ := tfOut["database"].Value.(string)
 
 	ctx := context.Background()
-    acf, _ := NewAzureCertFetcher("https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem")
+	acp, _ := azuredb.NewAzureCertFetcher("https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem")
 	p := &Params{
 		ServerName: serverName,
 		User:       username,
@@ -50,7 +53,7 @@ func TestOpen(t *testing.T) {
 		Database:   databaseName,
 	}
 
-	db, _, err := Open(ctx, acf, p)
+	db, _, err := Open(ctx, acp, p)
 	if err != nil {
 		t.Fatal(err)
 	}
