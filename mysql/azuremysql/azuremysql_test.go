@@ -45,7 +45,7 @@ func TestOpen(t *testing.T) {
 	databaseName, _ := tfOut["database"].Value.(string)
 
 	ctx := context.Background()
-	acp, _ := azuredb.NewAzureCertFetcher("https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem")
+	acp, _ := azuredb.NewAzureCertFetcherWithDefault()
 	p := &Params{
 		ServerName: serverName,
 		User:       username,
