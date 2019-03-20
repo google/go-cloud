@@ -29,7 +29,7 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
 
 ## Usage Samples
 
-* [CLI Tutorial]({{< ref "/tutorials/cli-uploader.md" >}}
+* [CLI Tutorial]({{< ref "/tutorials/cli-uploader.md" >}})
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
 * [blob package examples](https://godoc.org/gocloud.dev/blob#pkg-examples)
