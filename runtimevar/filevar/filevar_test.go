@@ -237,9 +237,9 @@ func TestOpenVariable(t *testing.T) {
 		// Working example with decrypt (default) decoder.
 		{"file://" + secretsPath + "?decoder=decrypt", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+bytes decoder.
-		{"file://" + secretsPath + "?decoder=decrypt/bytes", false, false, []byte(`{"Foo":"Bar"}`)},
+		{"file://" + secretsPath + "?decoder=decrypt+bytes", false, false, []byte(`{"Foo":"Bar"}`)},
 		// Working example with decrypt+json decoder.
-		{"file://" + secretsPath + "?decoder=decrypt/jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
 	for _, test := range tests {
