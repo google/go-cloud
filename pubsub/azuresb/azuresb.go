@@ -312,7 +312,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, nil), nil
+	return pubsub.NewSubscription(ds, true, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
