@@ -21,6 +21,10 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/aws"
 	"gocloud.dev/aws/rds"
+	"gocloud.dev/blob/s3blob"
+	"gocloud.dev/pubsub/awssnssqs"
+	"gocloud.dev/runtimevar/awsparamstore"
+	"gocloud.dev/secrets/awskms"
 	"gocloud.dev/server/xrayserver"
 )
 
@@ -37,5 +41,10 @@ var AWS = wire.NewSet(
 // AWS set, does not include credentials. Individual services may require
 // additional configuration.
 var Services = wire.NewSet(
+	s3blob.Set,
+	awssnssqs.Set,
+	awsparamstore.Set,
+	awskms.Set,
 	rds.CertFetcherSet,
-	xrayserver.Set)
+	xrayserver.Set,
+)

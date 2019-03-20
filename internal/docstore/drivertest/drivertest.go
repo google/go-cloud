@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"gocloud.dev/gcerrors"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -121,6 +122,8 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 		if err := coll.Get(ctx, got); err != nil {
 			t.Fatalf("Get: %v", err)
 		}
+		// got has a revision field that doc doesn't have.
+		doc[ds.RevisionField] = got[ds.RevisionField]
 		if diff := cmp.Diff(got, doc); diff != "" {
 			t.Fatal(diff)
 		}
@@ -149,6 +152,7 @@ func testPut(t *testing.T, coll *ds.Collection) {
 	must(coll.Put(ctx, named))
 	got := docmap{KeyField: named[KeyField]}
 	must(coll.Get(ctx, got))
+	named[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, named); diff != "" {
 		t.Fatalf(diff)
 	}
@@ -157,9 +161,16 @@ func testPut(t *testing.T, coll *ds.Collection) {
 	named["b"] = false
 	must(coll.Put(ctx, named))
 	must(coll.Get(ctx, got))
+	named[ds.RevisionField] = got[ds.RevisionField]
 	if diff := cmp.Diff(got, named); diff != "" {
 		t.Fatalf(diff)
 	}
+
+	t.Run("revision", func(t *testing.T) {
+		testRevisionField(t, coll, func(dm docmap) error {
+			return coll.Put(ctx, dm)
+		})
+	})
 }
 
 func testReplace(t *testing.T, coll *ds.Collection) {
@@ -177,6 +188,7 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 	must(coll.Replace(ctx, doc1))
 	got := docmap{KeyField: doc1[KeyField]}
 	must(coll.Get(ctx, got))
+	doc1[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc1); diff != "" {
 		t.Fatalf(diff)
 	}
@@ -184,6 +196,13 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 	if err := coll.Replace(ctx, nonexistentDoc); err == nil {
 		t.Fatal("got nil, want error")
 	}
+
+	t.Run("revision", func(t *testing.T) {
+		testRevisionField(t, coll, func(dm docmap) error {
+			return coll.Replace(ctx, dm)
+		})
+	})
+
 }
 
 func testGet(t *testing.T, coll *ds.Collection) {
@@ -205,6 +224,7 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	// If only the key fields are present, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
+	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
 		t.Error(diff)
 	}
@@ -225,6 +245,19 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 	if err := coll.Delete(ctx, nonexistentDoc); err != nil {
 		t.Fatal(err)
 	}
+
+	// Delete will fail if the revision field is mismatched.
+	got := docmap{KeyField: doc[KeyField]}
+	if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	doc["x"] = "y"
+	if err := coll.Put(ctx, doc); err != nil {
+		t.Fatal(err)
+	}
+	if err := coll.Delete(ctx, got); gcerrors.Code(err) != gcerrors.FailedPrecondition {
+		t.Errorf("got %v, want FailedPrecondition", err)
+	}
 }
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
@@ -244,9 +277,10 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		t.Fatal(err)
 	}
 	want := docmap{
-		KeyField: doc[KeyField],
-		"a":      "X",
-		"c":      "C",
+		KeyField:         doc[KeyField],
+		ds.RevisionField: got[ds.RevisionField],
+		"a":              "X",
+		"c":              "C",
 	}
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
@@ -256,6 +290,12 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
 		t.Error("got nil, want error")
 	}
+
+	t.Run("revision", func(t *testing.T) {
+		testRevisionField(t, coll, func(dm docmap) error {
+			return coll.Update(ctx, dm, ds.Mods{"s": "c"})
+		})
+	})
 
 	// TODO(jba): this test doesn't work for all providers, because some (e.g. Firestore) do allow
 	// setting a subpath of a non-map field. So move this test to memdocstore.
@@ -274,6 +314,33 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	// if !cmp.Equal(got, want) {
 	// 	t.Errorf("got %v, want %v", got, want)
 	// }
+}
+
+func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) error) {
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	doc1 := docmap{KeyField: "testRevisionField", "s": "a"}
+	must(coll.Put(ctx, doc1))
+	got := docmap{KeyField: doc1[KeyField]}
+	must(coll.Get(ctx, got))
+	rev, ok := got[ds.RevisionField]
+	if !ok || rev == nil {
+		t.Fatal("missing revision field")
+	}
+	got["s"] = "b"
+	// A write should succeed, because the document hasn't changed since it was gotten.
+	if err := write(got); err != nil {
+		t.Fatalf("write with revision field got %v, want nil", err)
+	}
+	// This write should fail: got's revision field hasn't changed, but the stored document has.
+	if err := write(got); gcerrors.Code(err) != gcerrors.FailedPrecondition {
+		t.Errorf("write with old revision field: got %v, wanted FailedPrecondition", err)
+	}
 }
 
 func testData(t *testing.T, coll *ds.Collection) {
@@ -300,7 +367,11 @@ func testData(t *testing.T, coll *ds.Collection) {
 		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
 			t.Fatal(err)
 		}
-		want := docmap{KeyField: doc[KeyField], "val": test.want}
+		want := docmap{
+			"val":            test.want,
+			KeyField:         doc[KeyField],
+			ds.RevisionField: got[ds.RevisionField],
+		}
 		if len(got) != len(want) {
 			t.Errorf("%v: got %v, want %v", test.in, got, want)
 		} else if g := got["val"]; !cmp.Equal(g, test.want) {
