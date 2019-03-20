@@ -29,8 +29,7 @@ Top-level package documentation: https://godoc.org/gocloud.dev/blob
 
 ## Usage Samples
 
-* [Tutorial
-  sample](https://github.com/google/go-cloud/tree/master/samples/tutorial)
+* [CLI Tutorial]({{< ref "/tutorial/cli.md" >}}
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
 * [blob package examples](https://godoc.org/gocloud.dev/blob#pkg-examples)
