@@ -39,12 +39,12 @@ import (
 	"path"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
@@ -54,6 +54,13 @@ import (
 func init() {
 	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazySessionOpener))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	KeeperOptions{},
+	URLOpener{},
+	Dial,
+)
 
 // Dial gets an AWS KMS service client.
 func Dial(p client.ConfigProvider) (*kms.KMS, error) {

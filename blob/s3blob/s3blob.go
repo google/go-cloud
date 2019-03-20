@@ -65,18 +65,18 @@ import (
 	"strings"
 	"sync"
 
-	gcaws "gocloud.dev/aws"
-	"gocloud.dev/blob"
-	"gocloud.dev/blob/driver"
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/escape"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/google/wire"
+	gcaws "gocloud.dev/aws"
+	"gocloud.dev/blob"
+	"gocloud.dev/blob/driver"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/escape"
 )
 
 const defaultPageSize = 1000
@@ -84,6 +84,12 @@ const defaultPageSize = 1000
 func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazySessionOpener))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Options{},
+	URLOpener{},
+)
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenBucketURL.

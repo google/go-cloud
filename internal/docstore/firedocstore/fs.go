@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	ts "github.com/golang/protobuf/ptypes/timestamp"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
@@ -167,8 +168,7 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 			return i, err
 		}
 		// Set the revision field in the document, if it exists, to the update time.
-		// TODO(jba): uncomment this line when we implement revision fields.
-		//_ = gets[i].Doc.SetField(docstore.RevisionField, pdoc.UpdateTime)
+		_ = gets[i].Doc.SetField(docstore.RevisionField, pdoc.UpdateTime)
 	}
 	return len(gets), nil
 }
@@ -221,8 +221,8 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 			_ = actions[i].Doc.SetField(c.nameField, nn)
 		}
 	}
-	// Set the revision fields of all docs to the returned update times.
-	// TODO(jba): uncomment when we support revisions.
+	// TODO(jba): should we set the revision fields of all docs to the returned update times?
+	// We should only do this if we can for all providers.
 	_ = wrs
 	// for i, wr := range wrs {
 	// 	// Ignore errors. It's fine if the doc doesn't have a revision field.
@@ -431,8 +431,20 @@ func toServiceFieldPathComponent(key string) string {
 // revisionPrecondition returns a Firestore precondition that asserts that the stored document's
 // revision matches the revision of doc.
 func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
-	// TODO(jba): implement when adding support for revisions
-	return nil, nil
+	v, err := doc.GetField(docstore.RevisionField)
+	if err != nil { // revision field not present
+		return nil, nil
+	}
+	rev, ok := v.(*ts.Timestamp)
+	if !ok {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
+			"%s field contains wrong type: got %T, want proto Timestamp",
+			docstore.RevisionField, v)
+	}
+	if rev == nil || (rev.Seconds == 0 && rev.Nanos == 0) { // ignore a missing or zero revision
+		return nil, nil
+	}
+	return &pb.Precondition{ConditionType: &pb.Precondition_UpdateTime{rev}}, nil
 }
 
 // TODO(jba): make sure we enforce these Firestore commit constraints:
