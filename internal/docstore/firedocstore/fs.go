@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package firedocstore provides an implementation of the docstore API for Google
-// Cloud Firestore.
-package firedocstore // import "gocloud.dev/internal/docstore/firedocstore"
+package firedocstore
 
 import (
 	"bytes"

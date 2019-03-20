@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package docstore provides a portable implementation of a document store.
-// TODO(jba): link to an explanation of document stores (https://en.wikipedia.org/wiki/Document-oriented_database?)
-// TODO(jba): expand package doc to batch other Go CDK APIs.
-package docstore // import "gocloud.dev/internal/docstore"
+package docstore
 
 import (
 	"context"

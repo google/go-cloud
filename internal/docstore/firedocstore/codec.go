@@ -12,19 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package firedocstore implements the docstore API for Cloud Firestore.
-//
-// Docstore types not supported by Firestore:
-// - complex64/128: encoded as an array of two float32/64s.
-//
-// Docstore types handled specially by Firestore:
-// - time.Time: encoded as a ts.Timestamp [ts = "github.com/golang/protobuf/ptypes/timestamp"]
-// - *ts.Timestamp: encoded as itself
-// - *latlng.LatLng: encoded as itself [latlng = "google.golang.org/genproto/googleapis/type/latlng"]
-//
-// Firestore types not supported by Docstore:
-// - Document reference (a pointer to another Firestore document)
-// TODO(jba): figure out how to support this
 package firedocstore
 
 // Encoding and decoding between supported docstore types and Firestore protos.
