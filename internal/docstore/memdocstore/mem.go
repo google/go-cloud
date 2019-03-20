@@ -130,7 +130,7 @@ func (c *collection) runAction(a *driver.Action) error {
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
 		// TODO(jba): support field paths.
-		if err := decodeDoc(a.Doc, current); err != nil {
+		if err := decodeDoc(current, a.Doc); err != nil {
 			return err
 		}
 	default:
