@@ -31,6 +31,7 @@ import (
 const (
 	defaultBundleURI = "https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem"
 )
+
 // A CertPoolProvider returns a certificate pool that contains the Azure CA certificate.
 type CertPoolProvider interface {
 	GetCertPool(context.Context) (*x509.CertPool, error)
@@ -61,7 +62,7 @@ func NewAzureCertFetcher(caBundleLocation string) (*AzureCertFetcher, error) {
 // NewAzureCertFetcherWithDefault constructs a new *AzureCertFetcher with default
 // location URI as per below documentation.
 // See https://docs.microsoft.com/en-us/azure/mysql/howto-configure-ssl.
-func NewAzureCertFetcherWithDefault() (*AzureCertFetcher, error) {		
+func NewAzureCertFetcherWithDefault() (*AzureCertFetcher, error) {
 	return &AzureCertFetcher{
 		certLocation: defaultBundleURI,
 		useHTTP:      true,
