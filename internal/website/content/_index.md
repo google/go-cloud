@@ -36,7 +36,7 @@ go get gocloud.dev
 Then follow the [Go CDK tutorial][]. Links to additional documentation and
 samples are available below and in the site navigation bar.
 
-[Go CDK tutorial]: {{< ref "/tutorials/cli.md" >}}
+[Go CDK tutorial]: {{< ref "/tutorials/cli-uploader.md" >}}
 
 ## Portable Cloud APIs in Go
 

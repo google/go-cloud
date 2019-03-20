@@ -2,4 +2,4 @@
 
 This is the source directory for the [command-line uploader tutorial][].
 
-[command-line uploader tutorial]: https://gocloud.dev/tutorials/cli/
+[command-line uploader tutorial]: https://gocloud.dev/tutorials/cli-uploader/
