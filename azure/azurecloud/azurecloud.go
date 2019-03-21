@@ -26,15 +26,6 @@ import (
 // Microsoft Azure services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
 var Azure = wire.NewSet(
-	azureblob.DefaultIdentity,
-	azureblob.SASTokenIdentity,
-	Services,
-)
-
-// Services is a Wire provider set that includes the default wiring for all
-// Azure services in this repository, but does not include credentials.
-// Individual services may require additional configuration.
-var Services = wire.NewSet(
 	azurekeyvault.Set,
 	azuresb.Set,
 	azureblob.Set,
