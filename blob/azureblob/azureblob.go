@@ -101,6 +101,13 @@ func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	NewPipeline,
+	Options{},
+	URLOpener{},
+)
+
 // lazyCredsOpener obtains credentials from the environment on the first call
 // to OpenBucketURL.
 type lazyCredsOpener struct {

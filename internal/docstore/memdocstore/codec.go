@@ -76,7 +76,7 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(ddoc driver.Document, m map[string]interface{}) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document) error {
 	return ddoc.Decode(decoder{m})
 }
 

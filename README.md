@@ -52,7 +52,7 @@ talk at Next 2018:
 [travis]: https://travis-ci.com/google/go-cloud
 [video]: https://www.youtube.com/watch?v=_2ZwhvIkgek
 
-## Installation instructions
+## Installation
 
 ```shell
 # First "cd" into your project directory if you have one to ensure "go get" uses
@@ -63,21 +63,14 @@ go get gocloud.dev
 The Go CDK builds at the latest stable release of Go. Previous Go versions may
 compile but are not supported.
 
-## Samples
+## Documentation
 
-[`samples/tutorial`][tutorial] shows how to get started with the project by
-using blob storage.
+Documentation for the project lives primarily on https://gocloud.dev/, including
+[tutorials][].
 
-[`samples/guestbook`][guestbook] contains an example guestbook application (just
-like it's 1999!) that can be run locally, on Google Cloud Platform or on Amazon
-Web Services. The instructions take about 5 minutes to follow if running
-locally. If you want to see the guestbook app running on cloud resources, it
-will take about 30 minutes to follow, and uses [Terraform](http://terraform.io)
-to automatically provision the resources needed.
+You can also browse Go package reference on [godoc.org][godoc].
 
-[tutorial]: https://github.com/google/go-cloud/tree/master/samples/tutorial
-[guestbook]: https://github.com/google/go-cloud/tree/master/samples/guestbook
-[gcmsg]: https://github.com/google/go-cloud/tree/master/pubsub/samples/gcmsg
+[tutorials]: https://gocloud.dev/tutorials/
 
 ## Project status
 
