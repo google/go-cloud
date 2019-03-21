@@ -1,6 +1,7 @@
-## Clone the Guestbook Sample
+## Prerequisite: Cloning the Guestbook Sample
 
-First, download the Go CDK repository:
+Before you can do anything else, you need to clone the Go CDK repository. The
+repository contains the Guestbook sample.
 
 ```shell
 git clone https://github.com/google/go-cloud.git

@@ -19,7 +19,6 @@ You will need to install the following software for this tutorial:
 -   [Git](https://git-scm.com/)
 -   [Go](https://golang.org/doc/install)
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
--   [Docker Desktop](https://docs.docker.com/install/)
 -   [Terraform](https://www.terraform.io/intro/getting-started/install.html)
 -   [gcloud CLI](https://cloud.google.com/sdk/downloads)
 
