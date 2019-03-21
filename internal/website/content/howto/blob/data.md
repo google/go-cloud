@@ -14,7 +14,7 @@ store and access data from it using the standard Go I/O patterns.
 
 To write data to a bucket, you create a writer, write data to it, and then close
 the writer. The writer implements [`io.Writer`][], so you can use any functions
-that take in an `io.Writer` like `io.Copy` or `fmt.Fprintln`.
+that take an `io.Writer` like `io.Copy` or `fmt.Fprintln`.
 
 ```go
 // Open the key "foo.txt" for writing with the default options.
@@ -23,6 +23,7 @@ if err != nil {
     return w
 }
 _, writeErr := fmt.Fprintln(w, "Hello, World!")
+// Always check the return value of Close when writing.
 closeErr := w.Close()
 if writeErr != nil {
     return writeErr
@@ -63,7 +64,7 @@ if err := w.Close(); err != nil {
 
 Once you have written data to a bucket, you can read it back by creating a
 reader. The reader implements [`io.Reader`][], so you can use any functions
-that take in an `io.Reader` like `io.Copy` or `io/ioutil.ReadAll`. You must
+that take an `io.Reader` like `io.Copy` or `io/ioutil.ReadAll`. You must
 always close a reader after using it to avoid leaking resources.
 
 ```go

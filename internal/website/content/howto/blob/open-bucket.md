@@ -258,10 +258,9 @@ defer bucket.Close()
 
 ## Local Storage
 
-The Go CDK provides bucket drivers for storing data in memory and on the
-local filesystem. These are primarily intended for testing and local
-development, but may be useful in production scenarios where an NFS mount is
-used.
+The Go CDK provides blob drivers for storing data in memory and on the local
+filesystem. These are primarily intended for testing and local development,
+but may be useful in production scenarios where an NFS mount is used.
 
 Local storage URLs take the form of either `mem://` or `file:///` URLs.
 Memory URLs are always `mem://` with no other information and always create a
