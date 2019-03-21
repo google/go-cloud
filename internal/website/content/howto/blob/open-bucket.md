@@ -6,20 +6,20 @@ weight: 1
 ---
 
 The first step in interacting with unstructured storage is connecting to your
-storage backend. Every storage provider is a little different, but the Go CDK
+storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the [`*blob.Bucket` type][].
 
 [`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
 
 ## Constructors versus URL openers
 
-If you know that your program is always going to use a particular backend
-storage type or you need fine-grained control over the connection settings,
-you should call the constructor function in the driver package directly (like
-`s3blob.OpenBucket`). However, if you want to change backends based on
-configuration, you can use `blob.OpenBucket`, making sure you ["blank import"][]
-the driver package to link it in. This guide will show how to use both forms for
-each storage provider.
+If you know that your program is always going to use a particular storage
+provider or you need fine-grained control over the connection settings, you
+should call the constructor function in the driver package directly (like
+`s3blob.OpenBucket`). However, if you want to change providers based on
+configuration, you can use `blob.OpenBucket`, making sure you ["blank
+import"][] the driver package to link it in. This guide will show how to use
+both forms for each storage provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
 
@@ -258,9 +258,10 @@ defer bucket.Close()
 
 ## Local Storage
 
-The Go CDK provides bucket drivers for storing in-memory and on the local
-filesystem. These are primarily intended for testing and local development,
-but may be useful in production scenarios where an NFS mount is used.
+The Go CDK provides bucket drivers for storing data in memory and on the
+local filesystem. These are primarily intended for testing and local
+development, but may be useful in production scenarios where an NFS mount is
+used.
 
 Local storage URLs take the form of either `mem://` or `file:///` URLs.
 Memory URLs are always `mem://` with no other information and always create a

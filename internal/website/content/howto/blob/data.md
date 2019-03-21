@@ -6,7 +6,7 @@ weight: 2
 ---
 
 Once you have [opened a bucket][] for the storage provider you want, you can
-store and access data from them using the standard Go I/O patterns.
+store and access data from it using the standard Go I/O patterns.
 
 [opened a bucket]: {{< ref "./open-bucket.md" >}}
 
@@ -82,7 +82,7 @@ if _, err := io.Copy(os.Stdout, r); err != nil {
 }
 ```
 
-Many storage backends provide efficient random-access to data in buckets. To
+Many storage providers provide efficient random-access to data in buckets. To
 start reading from an arbitrary offset in the blob, use `NewRangeReader`.
 
 ```go
