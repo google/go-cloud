@@ -46,6 +46,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/gcerr"
@@ -86,6 +87,12 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (pb.RuntimeConfigManagerClien
 func init() {
 	runtimevar.DefaultURLMux().RegisterVariable(Scheme, new(lazyCredsOpener))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	URLOpener{},
+)
 
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenVariableURL.
@@ -150,7 +157,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 
 	decoderName := q.Get("decoder")
 	q.Del("decoder")
-	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}

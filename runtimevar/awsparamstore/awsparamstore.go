@@ -119,7 +119,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 
 	decoderName := q.Get("decoder")
 	q.Del("decoder")
-	decoder, err := runtimevar.DecoderByName(decoderName, o.Decoder)
+	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
 	if err != nil {
 		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
 	}

@@ -62,7 +62,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -502,6 +504,8 @@ func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 
 // DecoderByName returns a *Decoder based on decoderName.
 // It is intended to be used by VariableURLOpeners in driver packages.
+var DecoderByName = decoderByName
+
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
 //       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
@@ -510,20 +514,63 @@ func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-func DecoderByName(decoderName string, dflt *Decoder) (*Decoder, error) {
+// It also supports using "decrypt+<decoderName>" (or "decrypt" for default
+// decoder) to decrypt the data before decoding. It uses the secrets package to
+// open a keeper by the URL string stored in a envrionment variable
+// "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
+// for more details.
+func decoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
+	// Open a *secrets.Keeper if the decoderName contains "decrypt".
+	k, decoderName, err := decryptByName(ctx, decoderName)
+	if err != nil {
+		return nil, err
+	}
+
 	if dflt == nil {
 		dflt = BytesDecoder
 	}
 	switch decoderName {
 	case "":
-		return dflt, nil
+		return maybeDecrypt(ctx, k, dflt), nil
 	case "bytes":
-		return BytesDecoder, nil
+		return maybeDecrypt(ctx, k, BytesDecoder), nil
 	case "jsonmap":
 		var m map[string]interface{}
-		return NewDecoder(&m, JSONDecode), nil
+		return maybeDecrypt(ctx, k, NewDecoder(&m, JSONDecode)), nil
 	case "string":
-		return StringDecoder, nil
+		return maybeDecrypt(ctx, k, StringDecoder), nil
+	default:
+		return nil, fmt.Errorf("unsupported decoder %q", decoderName)
 	}
-	return nil, fmt.Errorf("unsupported decoder %q", decoderName)
+}
+
+// decryptByName returns a *secrets.Keeper for decryption when decoderName
+// contains "decrypt".
+func decryptByName(ctx context.Context, decoderName string) (*secrets.Keeper, string, error) {
+	if !strings.HasPrefix(decoderName, "decrypt") {
+		return nil, decoderName, nil
+	}
+	keeperURL := os.Getenv("RUNTIMEVAR_KEEPER_URL")
+	if keeperURL == "" {
+		return nil, "", errors.New("environment variable RUNTIMEVAR_KEEPER_URL needed to open a *secrets.Keeper for decryption")
+	}
+	k, err := secrets.OpenKeeper(ctx, keeperURL)
+	if err != nil {
+		return nil, "", err
+	}
+	decoderName = strings.TrimPrefix(decoderName, "decrypt")
+	if decoderName != "" {
+		decoderName = strings.TrimLeftFunc(decoderName, func(r rune) bool {
+			return r == ' ' || r == '+'
+		})
+	}
+	// The parsed value is "decrypt <decoderName>".
+	return k, decoderName, nil
+}
+
+func maybeDecrypt(ctx context.Context, k *secrets.Keeper, dec *Decoder) *Decoder {
+	if k == nil {
+		return dec
+	}
+	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(ctx, k, dec.fn))
 }
