@@ -12,9 +12,12 @@ To do a release:
     one, but follow [semantic versioning](https://semver.org/).
 -   Compile release notes by reviewing the commits since the last release (use
     the [Compare](https://github.com/google/go-cloud/compare/v0.1.1...v0.2.0)
-    page for this), and listing highlights in the form: `**<component>**:
-    <description of change, past tense>`. For example, `**blob**: Added feature
-    foo.`.
+    page for this).
+    -   Put breaking changes in a separate section. They should be marked with a
+        `BREAKING_CHANGE` in the PR title; however, that's not enforced so do
+        your best to look for them.
+    -   List highlights in the form: `**<component>**: <description of change,
+        past tense>`. For example, `**blob**: Added feature foo.`.
 -   Go to [Releases](https://github.com/google/go-cloud/releases). Click `Draft
     a new release`, enter your release name, select your tag from the dropdown,
     and enter your release notes. Note that Github only has the last few commits
