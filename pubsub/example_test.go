@@ -27,6 +27,7 @@ import (
 
 	pbraw "cloud.google.com/go/pubsub/apiv1"
 	pbapi "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc/status"
 )
 
 func Example_sendReceive() {
@@ -298,7 +299,7 @@ func ExampleSubscription_ErrorAs() {
 	if err != nil {
 		var s *status.Status
 		if sub.ErrorAs(err, &s) {
-			_ s.Code()
+			_ = s.Code()
 		}
 		log.Fatal(err)
 	}
