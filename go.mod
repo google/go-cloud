@@ -124,7 +124,7 @@ require (
 	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/etcd v3.3.11+incompatible
-	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
+	go.opencensus.io v0.19.1
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c

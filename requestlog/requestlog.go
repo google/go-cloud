@@ -23,6 +23,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"go.opencensus.io/trace"
 )
 
 // Logger wraps the Log method.  Log must be safe to call from multiple
@@ -53,6 +55,8 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 // even if the underlying handler does not.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+	sc := trace.FromContext(r.Context()).SpanContext()
+	traceID := sc.TraceID.String()
 	ent := &Entry{
 		ReceivedTime:      start,
 		RequestMethod:     r.Method,
@@ -62,6 +66,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Referer:           r.Referer(),
 		Proto:             r.Proto,
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
+		TraceID:           traceID,
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
@@ -107,6 +112,7 @@ type Entry struct {
 	ResponseHeaderSize int64
 	ResponseBodySize   int64
 	Latency            time.Duration
+	TraceID            string
 }
 
 func ipFromHostPort(hp string) string {

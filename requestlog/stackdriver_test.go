@@ -16,6 +16,7 @@ package requestlog
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,6 +39,7 @@ func TestStackdriverLog(t *testing.T) {
 		endTime      = startTime + latencySec
 		endTimeNanos = startTimeNanos + latencyNanos
 	)
+	var traceID = hex.EncodeToString([]byte("test"))
 	buf := new(bytes.Buffer)
 	var logErr error
 	l := NewStackdriverLogger(buf, func(e error) { logErr = e })
@@ -56,6 +58,7 @@ func TestStackdriverLog(t *testing.T) {
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
 		Latency:            latencySec*time.Second + latencyNanos*time.Nanosecond,
+		TraceID:            traceID,
 	}
 	ent := *want // copy in case Log accidentally mutates
 	l.Log(&ent)
@@ -112,6 +115,9 @@ func TestStackdriverLog(t *testing.T) {
 		}
 		if got, want := jsonNumber(ts, "nanos"), float64(endTimeNanos); got != want {
 			t.Errorf("timestamp.nanos = %g; want %g", got, want)
+		}
+		if got, want := jsonString(r, "trace"), ent.TraceID; got != want {
+			t.Errorf("traceID = %q; want %q", got, want)
 		}
 	}
 }

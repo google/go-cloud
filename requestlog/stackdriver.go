@@ -74,6 +74,7 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 			Seconds int64 `json:"seconds"`
 			Nanos   int   `json:"nanos"`
 		} `json:"timestamp"`
+		TraceID string `json:"trace"`
 	}
 	r.HTTPRequest.RequestMethod = ent.RequestMethod
 	r.HTTPRequest.RequestURL = ent.RequestURL
@@ -90,6 +91,7 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 	t := ent.ReceivedTime.Add(ent.Latency)
 	r.Timestamp.Seconds = t.Unix()
 	r.Timestamp.Nanos = t.Nanosecond()
+	r.TraceID = ent.TraceID
 	if err := l.enc.Encode(r); err != nil {
 		return err
 	}

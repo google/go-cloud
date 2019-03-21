@@ -21,6 +21,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"go.opencensus.io/trace"
 )
 
 func TestHandler(t *testing.T) {
@@ -33,6 +35,9 @@ func TestHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal("NewRequest:", err)
 	}
+	ctx, span := trace.StartSpan(r.Context(), "test")
+	defer span.End()
+	r = r.WithContext(ctx)
 	r.Header.Set("User-Agent", userAgent)
 	r.Header.Set("Referer", referer)
 	requestHdrSize := len(fmt.Sprintf("User-Agent: %s\r\nReferer: %s\r\nContent-Length: %v\r\n", userAgent, referer, len(requestMsg)))
@@ -74,6 +79,9 @@ func TestHandler(t *testing.T) {
 	}
 	if ent.ResponseBodySize != int64(len(responseMsg)) {
 		t.Errorf("ResponseBodySize = %d; want %d", ent.ResponseBodySize, len(responseMsg))
+	}
+	if ent.TraceID == "" {
+		t.Error("TraceID is empty")
 	}
 }
 
