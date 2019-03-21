@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Tutorial: Connect to Azure &middot; Go CDK</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,400i,700|Source+Code+Pro|Work+Sans:400,700">
+  <link type="text/css" rel="stylesheet" href="/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="/css/style.css">
+  <link rel="shortcut icon" href="/favicon-32x32.png">
+</head>
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds"><h1>Tutorial: Connect to Azure</h1>
+<p>In this tutorial, we will run an existing Go CDK application called Guestbook
+backed by services running on Microsoft Azure. The Go CDK doesn&rsquo;t have
+support for SQL on Azure yet (<a href="https://github.com/google/go-cloud/issues/1305">#1305</a>), so we&rsquo;ll run MySQL and the
+binary locally. This tutorial will show how to use Azure storage for the MOTD
+and Gopher logo.</p>
+
+Guestbook is a sample application that records visitors&rsquo; messages and
+displays a cloud banner with an administrative message. The main business
+logic is written in a cloud-agnostic manner using MySQL, the generic blob
+API, and the generic runtimevar API. All platform-specific code is set up by
+<a href="https://github.com/google/wire">Wire</a>.
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<p>You will need to install the following software for this tutorial:</p>
+
+<ul>
+<li><a href="https://git-scm.com/">Git</a></li>
+<li><a href="https://golang.org/doc/install">Go</a></li>
+<li><a href="https://github.com/google/wire/blob/master/README.md#installing">Wire</a></li>
+<li><a href="https://docs.docker.com/install/">Docker Desktop</a></li>
+<li><a href="https://www.terraform.io/intro/getting-started/install.html">Terraform</a></li>
+<li><a href="https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest">az CLI</a></li>
+</ul>
+
+<h2 id="prerequisite-cloning-the-guestbook-sample">Prerequisite: Cloning the Guestbook Sample</h2>
+
+<p>Before you can do anything else, you need to clone the Go CDK repository. The
+repository contains the Guestbook sample.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">git clone https://github.com/google/go-cloud.git
+<span class="nb">cd</span> go-cloud/samples/guestbook</code></pre></div>
+<h2 id="building">Building</h2>
+
+<p>Run the following in the <code>samples/guestbook</code> directory:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go generate <span class="o">&amp;&amp;</span> go build</code></pre></div>
+<h2 id="running-locally">Running Locally</h2>
+
+<p>You will need to run a local MySQL database server and create a local message of
+the day. <code>localdb/main.go</code> runs the local MySQL database server using Docker:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">go get ./localdb/... <span class="c1"># Get package dependencies.</span>
+go run localdb/main.go</code></pre></div>
+<p>In another terminal, run the <code>guestbook</code> application:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Set a local Message of the Day.</span>
+<span class="nb">echo</span> <span class="s1">&#39;Hello, World!&#39;</span> &gt; motd.txt
+
+<span class="c1"># Run the server.</span>
+<span class="c1"># For blob, it uses fileblob, pointing at the local directory ./blobs.</span>
+<span class="c1"># For runtimevar, it uses filevar, pointing at the local file ./motd.txt.</span>
+<span class="c1">#   You can update the ./motd.txt while the server is running, refresh</span>
+<span class="c1">#   the page, and see it change.</span>
+./guestbook -env<span class="o">=</span><span class="nb">local</span> -bucket<span class="o">=</span>blobs -motd_var<span class="o">=</span>motd.txt</code></pre></div>
+<p>Your server is now running on <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
+
+<p>You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
+(SIGINT).</p>
+
+
+<h2 id="running-on-azure">Running on Azure</h2>
+
+<p>If you want to run this sample on Azure, you first need to set up an Azure
+account. Use the <code>az</code> CLI to log in.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell">az login</code></pre></div>
+<h3 id="provision-resources-with-terraform">Provision resources with Terraform</h3>
+
+<p>We&rsquo;ll use <a href="https://www.terraform.io/">Terraform</a>, a tool for initializing cloud resources, to set up your
+project.</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># Enter the Azure directory from samples/guestbook.</span>
+<span class="nb">cd</span> azure
+terraform init
+
+<span class="c1"># Provisioning can take up to 10 minutes.</span>
+<span class="c1"># Keep track of the output of this command as it is needed later.</span>
+terraform apply -var <span class="nv">location</span><span class="o">=</span><span class="s2">&#34;West US&#34;</span>
+
+&lt;snip&gt;
+Outputs:
+
+<span class="nv">access_key</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span>
+<span class="nv">storage_account</span> <span class="o">=</span> <span class="o">[</span>redacated<span class="o">]</span>
+<span class="nv">storage_container</span> <span class="o">=</span> <span class="o">[</span>redacted<span class="o">]</span></code></pre></div>
+<h3 id="running">Running</h3>
+
+<p>You will need to run a local MySQL database server, similar to what we did for
+running locally earlier. Open a new terminal window, and run:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="nb">cd</span> .. <span class="c1"># back up to samples/guestbook</span>
+go get ./localdb/... <span class="c1"># Get package dependencies.</span>
+go run localdb/main.go</code></pre></div>
+<p>In the original terminal, add your Azure credentials to the environment and run
+the <code>guestbook</code> application:</p>
+<div class="highlight"><pre class="chroma"><code class="language-shell" data-lang="shell"><span class="c1"># You should be in the &#34;samples/guestbook/azure&#34; directory.</span>
+
+<span class="c1"># Enter the storage_account from the Terraform output earlier.</span>
+<span class="nb">export</span> <span class="nv">AZURE_STORAGE_ACCOUNT</span><span class="o">=</span>&lt;your storage_account&gt;
+<span class="c1"># Enter the access_key from the Terraform output earlier.</span>
+<span class="nb">export</span> <span class="nv">AZURE_STORAGE_KEY</span><span class="o">=</span>&lt;your access_key&gt;
+
+<span class="c1"># Run the binary.</span>
+<span class="c1"># Fill in the -bucket command-line argument with the value from the Terraform</span>
+<span class="c1"># output.</span>
+#
+./guestbook -env<span class="o">=</span>azure -bucket<span class="o">=</span>&lt;your storage_container&gt; -motd_var<span class="o">=</span>motd</code></pre></div>
+<p>Your server is now running on <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
+
+<p>You can stop the MySQL database server with Ctrl-\. MySQL ignores Ctrl-C
+(SIGINT).</p>
+
+<h2 id="cleanup">Cleanup</h2>
+
+<p>To clean up the created resources, run <code>terraform destroy</code> inside the <code>azure</code>
+directory using the same variables you entered during <code>terraform apply</code>.</p>
+
+<h2 id="gophers">Gophers</h2>
+
+<p>The Go gopher was designed by Renee French and used under the
+<a href="https://creativecommons.org/licenses/by/3.0/">Creative Commons 3.0 Attributions</a>
+license.</div>
+    </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="/" class="Sidenav-sectionLink">Home</a>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/tutorials/" class="Sidenav-sectionLink">Tutorials</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/tutorials/cli-uploader/" class="Sidenav-pageLink">Command-Line Uploader</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-aws/" class="Sidenav-pageLink">Deploy to AWS</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-gcp/" class="Sidenav-pageLink">Deploy to GCP</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-azure/" class="Sidenav-pageLink">Connect to Azure</a>
+              </li>
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/ref/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/sql/" class="Sidenav-pageLink">MySQL/Postgres</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">Pubsub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">Runtimevar</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/server/" class="Sidenav-pageLink">Server</a>
+              </li>
+            </ul>
+        </li>
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
+          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
+          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+        </ul>
+      </nav>
+
+      <p class="PageFooter-paragraph">
+        Copyright © 2018–2019 The Go Cloud Development Kit Authors.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/tutorials/deploy-azure.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
+</html>
