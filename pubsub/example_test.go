@@ -268,7 +268,7 @@ func ExampleMessage_As() {
 
 func ExampleSubscription_As() {
 	// This example is specific to the gcppubsub implementation; it demonstrates
-	// access to the underlying subscriberClient type.
+	// access to the underlying SubscriberClient type.
 	// The types exposed for As by gcppubsub are documented in
 	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
 
