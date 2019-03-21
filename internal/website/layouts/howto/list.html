@@ -1,0 +1,14 @@
+{{ define "main" -}}
+<h1>{{ .Title }}</h1>
+{{ .Content }}
+{{ if or .Data.Pages .Sections }}
+<ul class="HowtoList">
+{{- range .Sections}}
+  {{.Render "li"}}
+{{- end }}
+{{- range .Data.Pages}}
+  {{.Render "li"}}
+{{- end }}
+</ul>
+{{end}}
+{{- end }}
