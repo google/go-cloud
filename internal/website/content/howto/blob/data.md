@@ -116,4 +116,4 @@ These are the most common operations you will need to use with a bucket.
 Other operations like listing and reading metadata are documented in the
 [`blob` package documentation][].
 
-[`blob` package documentation]: https://gocloud.dev/blob
+[`blob` package documentation]: https://godoc.org/gocloud.dev/blob

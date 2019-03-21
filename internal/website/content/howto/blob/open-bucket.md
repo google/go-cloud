@@ -25,6 +25,33 @@ each storage provider.
 
 ## S3
 
+S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
+You can specify the `region` query parameter to ensure your application connects
+to the correct region, but otherwise `blob.OpenBucket` will use the region found
+in the environment variables or your AWS CLI configuration.
+
+```go
+import (
+    "gocloud.dev/blob"
+    _ "gocloud.dev/blob/s3blob"
+)
+
+// ...
+
+bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
+if err != nil {
+    return err
+}
+defer bucket.Close()
+```
+
+Full details about acceptable URLs can be found under the API reference for
+[`s3blob.URLOpener`][].
+
+[`s3blob.URLOpener`]: https://godoc.org/gocloud.dev/blob/s3blob#URLOpener
+
+### S3 Constructor
+
 The [`s3blob.OpenBucket`][] constructor opens an [S3][] bucket. You must first
 create an [AWS session][] with the same region as your bucket:
 
@@ -57,33 +84,6 @@ defer bucket.Close()
 [AWS session]: https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 [S3]: https://aws.amazon.com/s3/
 
-### S3 URLs
-
-S3 URLs in the Go CDK closely resemble the URLs you would see in the AWS CLI.
-You can specify the `region` query parameter to ensure your application connects
-to the correct region, but otherwise `blob.OpenBucket` will use the region found
-in the environment variables or your AWS CLI configuration.
-
-```go
-import (
-    "gocloud.dev/blob"
-    _ "gocloud.dev/blob/s3blob"
-)
-
-// ...
-
-bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
-if err != nil {
-    return err
-}
-defer bucket.Close()
-```
-
-Full details about acceptable URLs can be found under the API reference for
-[`s3blob.URLOpener`][].
-
-[`s3blob.URLOpener`]: https://godoc.org/gocloud.dev/blob/s3blob#URLOpener
-
 ### S3-compatible storage servers
 
 The Go CDK can also interact with [S3-compatible storage servers][] that
@@ -111,11 +111,38 @@ See [`aws.ConfigFromURLParams`][] for more details on supported URL options for 
 
 ## Google Cloud Storage
 
-The [`gcsblob.OpenBucket`][] constructor opens a [Google Cloud Storage][]
-(GCS) bucket. You must first create a `*net/http.Client` that sends requests
-authorized by [Google Cloud Platform credentials][GCP creds]. (You can reuse
-the same client for any other API that takes in a `*gcp.HTTPClient`.) You can
-find functions in the [`gocloud.dev/gcp`][] package to set this up for you.
+[Google Cloud Storage][] (GCS) URLs in the Go CDK closely resemble the URLs
+you would see in the `gsutil` CLI. `blob.OpenBucket` will use [Application
+Default Credentials][GCP creds].
+
+```go
+import (
+    "gocloud.dev/blob"
+    _ "gocloud.dev/blob/gcsblob"
+)
+
+// ...
+
+bucket, err := blob.OpenBucket(ctx, "gs://my-bucket")
+if err != nil {
+    return err
+}
+defer bucket.Close()
+```
+
+Full details about acceptable URLs can be found under the API reference for
+[`gcsblob.URLOpener`][].
+
+[Google Cloud Storage]: https://cloud.google.com/storage/
+[`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
+
+### Google Cloud Storage Constructor
+
+The [`gcsblob.OpenBucket`][] constructor opens a GCS bucket. You must first
+create a `*net/http.Client` that sends requests authorized by [Google Cloud
+Platform credentials][GCP creds]. (You can reuse the same client for any
+other API that takes in a `*gcp.HTTPClient`.) You can find functions in the
+[`gocloud.dev/gcp`][] package to set this up for you.
 
 ```go
 import (
@@ -152,24 +179,25 @@ defer bucket.Close()
 ```
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
-[Google Cloud Storage]: https://cloud.google.com/storage/
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
 
-### Google Cloud Storage URLs
+## Azure Storage
 
-GCS URLs in the Go CDK closely resemble the URLs you would see in the
-`gsutil` CLI. `blob.OpenBucket` will use [Application Default
-Credentials][GCP creds].
+Azure Storage URLs in the Go CDK allow you to identify [Azure Storage][] containers
+when opening a bucket with `blob.OpenBucket`. Go CDK uses the environment
+variables `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, and
+`AZURE_STORAGE_SAS_TOKEN` to configure the credentials. `AZURE_STORAGE_ACCOUNT`
+is required, along with one of the other two.
 
 ```go
 import (
     "gocloud.dev/blob"
-    _ "gocloud.dev/blob/gcsblob"
+    _ "gocloud.dev/blob/azureblob"
 )
 
 // ...
 
-bucket, err := blob.OpenBucket(ctx, "gs://my-bucket")
+bucket, err := blob.OpenBucket(ctx, "azblob://my-container")
 if err != nil {
     return err
 }
@@ -177,16 +205,17 @@ defer bucket.Close()
 ```
 
 Full details about acceptable URLs can be found under the API reference for
-[`gcsblob.URLOpener`][].
+[`azureblob.URLOpener`][].
 
-[`gcsblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener
+[Azure Storage]: https://azure.microsoft.com/en-us/services/storage/
+[`azureblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/azureblob#URLOpener
 
-## Azure Storage
+### Azure Storage Constructor
 
-The [`azureblob.OpenBucket`][] constructor opens an [Azure Storage][]
-container. `azureblob` operates on [Azure Storage Block Blobs][]. You must
-first create Azure Storage credentials and then create an Azure Storage
-pipeline before you can open a container.
+The [`azureblob.OpenBucket`][] constructor opens an Azure Storage container.
+`azureblob` operates on [Azure Storage Block Blobs][]. You must first create
+Azure Storage credentials and then create an Azure Storage pipeline before
+you can open a container.
 
 ```go
 import (
@@ -224,43 +253,44 @@ if err != nil {
 defer bucket.Close()
 ```
 
-[Azure Storage]: https://azure.microsoft.com/en-us/services/storage/
 [Azure Storage Block Blobs]: https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
 [`azureblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket
-
-### Azure Storage URLs
-
-Azure Storage URLs in the Go CDK allow you to identify Azure Storage containers
-when opening a bucket with `blob.OpenBucket`. Go CDK uses the environment
-variables `AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, and
-`AZURE_STORAGE_SAS_TOKEN` to configure the credentials. `AZURE_STORAGE_ACCOUNT`
-is required, along with one of the other two.
-
-```go
-import (
-    "gocloud.dev/blob"
-    _ "gocloud.dev/blob/azureblob"
-)
-
-// ...
-
-bucket, err := blob.OpenBucket(ctx, "azblob://my-container")
-if err != nil {
-    return err
-}
-defer bucket.Close()
-```
-
-Full details about acceptable URLs can be found under the API reference for
-[`azureblob.URLOpener`][].
-
-[`azureblob.URLOpener`]: https://godoc.org/gocloud.dev/blob/azureblob#URLOpener
 
 ## Local Storage
 
 The Go CDK provides bucket drivers for storing in-memory and on the local
 filesystem. These are primarily intended for testing and local development,
 but may be useful in production scenarios where an NFS mount is used.
+
+Local storage URLs take the form of either `mem://` or `file:///` URLs.
+Memory URLs are always `mem://` with no other information and always create a
+new bucket. File URLs convert slashes to the operating system's native file
+separator, so on Windows, `C:\foo\bar` would be written as
+`file:///C:/foo/bar`.
+
+```go
+import (
+    "gocloud.dev/blob"
+    _ "gocloud.dev/blob/fileblob"
+    _ "gocloud.dev/blob/memblob"
+)
+
+// ...
+
+bucket1, err := blob.OpenBucket(ctx, "mem://")
+if err != nil {
+    return err
+}
+defer b1.Close()
+
+bucket2, err := blob.OpenBucket(ctx, "file:///path/to/dir")
+if err != nil {
+    return err
+}
+defer bucket2.Close()
+```
+
+### Local Storage Constructors
 
 You can create an in-memory bucket with [`memblob.OpenBucket`][]:
 
@@ -296,33 +326,3 @@ defer bucket.Close()
 
 [`fileblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket
 [`memblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/memblob#OpenBucket
-
-### Local Storage URLs
-
-Local storage URLs take the form of either `mem://` or `file:///` URLs.
-Memory URLs are always `mem://` with no other information and always create a
-new bucket. File URLs convert slashes to the operating system's native file
-separator, so on Windows, `C:\foo\bar` would be written as
-`file:///C:/foo/bar`.
-
-```go
-import (
-    "gocloud.dev/blob"
-    _ "gocloud.dev/blob/fileblob"
-    _ "gocloud.dev/blob/memblob"
-)
-
-// ...
-
-bucket1, err := blob.OpenBucket(ctx, "mem://")
-if err != nil {
-    return err
-}
-defer b1.Close()
-
-bucket2, err := blob.OpenBucket(ctx, "file:///path/to/dir")
-if err != nil {
-    return err
-}
-defer bucket2.Close()
-```
