@@ -132,7 +132,7 @@ func TestDecodeDoc(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := decodeDoc(doc, test.in); err != nil {
+		if err := decodeDoc(test.in, doc); err != nil {
 			t.Fatal(err)
 		}
 		if diff := cmp.Diff(got, test.want, cmp.AllowUnexported(aStruct{})); diff != "" {

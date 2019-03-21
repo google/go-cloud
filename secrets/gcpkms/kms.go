@@ -39,6 +39,7 @@ import (
 	"sync"
 
 	cloudkms "cloud.google.com/go/kms/apiv1"
+	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/gcerr"
@@ -63,6 +64,14 @@ func init() {
 	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(lazyCredsOpener))
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	KeeperOptions{},
+	URLOpener{},
+)
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenKeeperURL.
 type lazyCredsOpener struct {

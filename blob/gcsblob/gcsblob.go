@@ -57,14 +57,14 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/storage"
+	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/useragent"
-
-	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -76,6 +76,13 @@ func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Options{},
+	URLOpener{},
+)
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenBucketURL.
 type lazyCredsOpener struct {
