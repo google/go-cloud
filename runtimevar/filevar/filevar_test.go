@@ -17,17 +17,20 @@ package filevar
 import (
 	"context"
 	"errors"
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/driver"
 	"gocloud.dev/runtimevar/drivertest"
+	"gocloud.dev/secrets"
+	_ "gocloud.dev/secrets/localsecrets"
 )
 
 type harness struct {
@@ -178,6 +181,8 @@ func TestOpenVariable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
+
 	jsonPath := filepath.Join(dir, "myvar.json")
 	if err := ioutil.WriteFile(jsonPath, []byte(`{"Foo": "Bar"}`), 0666); err != nil {
 		t.Fatal(err)
@@ -187,7 +192,13 @@ func TestOpenVariable(t *testing.T) {
 		t.Fatal(err)
 	}
 	nonexistentPath := filepath.Join(dir, "filenotfound")
-	defer os.RemoveAll(dir)
+	ctx := context.Background()
+	secretsPath := filepath.Join(dir, "mysecret.txt")
+	cleanup, err := setupTestSecrets(ctx, dir, secretsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
 
 	// Convert paths to a URL path, adding a leading "/" if needed on Windows
 	// (on Unix, dirpath already has a leading "/").
@@ -224,9 +235,16 @@ func TestOpenVariable(t *testing.T) {
 		{"file://" + txtPath + "?decoder=string", false, false, "hello world!"},
 		// Working example with JSON decoder.
 		{"file://" + jsonPath + "?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Working example with decrypt (default) decoder.
+		{"file://" + secretsPath + "?decoder=decrypt", false, false, []byte(`{"Foo":"Bar"}`)},
+		// Working example with decrypt+bytes decoder.
+		{"file://" + secretsPath + "?decoder=decrypt+bytes", false, false, []byte(`{"Foo":"Bar"}`)},
+		// Working example with decrypt+json decoder.
+		{"file://" + secretsPath + "?decoder=decrypt+jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+		// Working example with escaped decrypt+json decoder
+		{"file://" + secretsPath + "?decoder=" + url.QueryEscape("decrypt+jsonmap"), false, false, &map[string]interface{}{"Foo": "Bar"}},
 	}
 
-	ctx := context.Background()
 	for _, test := range tests {
 		v, err := runtimevar.OpenVariable(ctx, test.URL)
 		if (err != nil) != test.WantErr {
@@ -246,4 +264,25 @@ func TestOpenVariable(t *testing.T) {
 			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
 		}
 	}
+}
+
+func setupTestSecrets(ctx context.Context, dir, secretsPath string) (func(), error) {
+	const keeperEnv = "RUNTIMEVAR_KEEPER_URL"
+	const keeperURL = "stringkey://my-key"
+	oldURL := os.Getenv(keeperEnv)
+	os.Setenv(keeperEnv, keeperURL)
+	cleanup := func() { os.Setenv(keeperEnv, oldURL) }
+
+	k, err := secrets.OpenKeeper(ctx, keeperURL)
+	if err != nil {
+		return cleanup, err
+	}
+	sc, err := k.Encrypt(ctx, []byte(`{"Foo":"Bar"}`))
+	if err != nil {
+		return cleanup, err
+	}
+	if err := ioutil.WriteFile(secretsPath, sc, 0666); err != nil {
+		return cleanup, err
+	}
+	return cleanup, nil
 }

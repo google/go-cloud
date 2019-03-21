@@ -17,9 +17,12 @@ package gcpcloud // import "gocloud.dev/gcp/gcpcloud"
 
 import (
 	"github.com/google/wire"
+	"gocloud.dev/blob/gcsblob"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
+	"gocloud.dev/pubsub/gcppubsub"
 	"gocloud.dev/runtimevar/gcpruntimeconfig"
+	"gocloud.dev/secrets/gcpkms"
 	"gocloud.dev/server/sdserver"
 )
 
@@ -31,8 +34,13 @@ var GCP = wire.NewSet(Services, gcp.DefaultIdentity)
 // Google Cloud Platform services in this repository, but does not include
 // credentials. Individual services may require additional configuration.
 var Services = wire.NewSet(
-	cloudsql.CertSourceSet,
 	gcp.DefaultTransport,
 	gcp.NewHTTPClient,
-	gcpruntimeconfig.Dial,
-	sdserver.Set)
+
+	gcpruntimeconfig.Set,
+	gcpkms.Set,
+	gcppubsub.Set,
+	gcsblob.Set,
+	cloudsql.CertSourceSet,
+	sdserver.Set,
+)
