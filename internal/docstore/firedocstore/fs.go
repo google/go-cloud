@@ -381,7 +381,7 @@ func getParentMap(m map[string]*pb.Value, fp []string, create bool) (map[string]
 			if !create {
 				return nil, nil
 			}
-			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{}}}}
+			m[k] = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: map[string]*pb.Value{}}}}
 		}
 		mv := m[k].GetMapValue()
 		if mv == nil {
