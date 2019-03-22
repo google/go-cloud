@@ -95,7 +95,7 @@ func (cs *clientStream) RecvMsg(m interface{}) error {
 	if cs.doc != nil {
 		cs.doc.CreateTime = &ts.Timestamp{}
 		cs.doc.UpdateTime = &ts.Timestamp{}
-		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{cs.doc}
+		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{Found: cs.doc}
 		cs.doc = nil
 		return nil
 	}
