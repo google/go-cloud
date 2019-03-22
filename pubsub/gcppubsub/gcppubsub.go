@@ -295,7 +295,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, true, nil)
+	return pubsub.NewSubscription(ds, 0, nil)
 }
 
 // openSubscription returns a driver.Subscription.

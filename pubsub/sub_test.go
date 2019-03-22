@@ -55,7 +55,7 @@ func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 			{&driver.Message{}},
 		},
 	}
-	sub := pubsub.NewSubscription(ds, true, nil)
+	sub := pubsub.NewSubscription(ds, 0, nil)
 	defer sub.Shutdown(ctx)
 	_, err := sub.Receive(ctx)
 	if err != nil {
