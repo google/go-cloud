@@ -3,12 +3,16 @@
 {{ .Content }}
 {{ if or .Data.Pages .Sections }}
 <ul class="HowtoList">
-{{- range .Sections}}
+{{- range .Sections.GroupBy "Weight" }}
+{{- range .ByTitle }}
   {{.Render "li"}}
 {{- end }}
-{{- range .Data.Pages}}
+{{- end }}
+{{- range .Data.Pages.GroupBy "Weight" }}
+{{- range .ByTitle }}
   {{.Render "li"}}
+{{- end }}
 {{- end }}
 </ul>
-{{end}}
+{{- end }}
 {{- end }}
