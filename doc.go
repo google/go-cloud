@@ -33,9 +33,7 @@ allows the Go CDK to grow to support any number of cloud providers, without
 increasing compile times or binary sizes, and avoiding any side effects from
 `init()` functions.
 
-For sample applications and a tutorial, see the samples directory
-(https://github.com/google/go-cloud/tree/master/samples).
-
+For non-reference documentation, see https://gocloud.dev/
 
 URLs
 

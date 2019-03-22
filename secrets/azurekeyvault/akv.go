@@ -43,6 +43,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
@@ -69,6 +70,13 @@ var (
 func init() {
 	secrets.DefaultURLMux().RegisterKeeper(Scheme, new(defaultDialer))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	KeeperOptions{},
+	URLOpener{},
+)
 
 // defaultDialer dials Azure KeyVault from the environment on the first call to OpenKeeperURL.
 type defaultDialer struct {

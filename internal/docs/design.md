@@ -59,8 +59,8 @@ language while focusing on their respective areas of expertise.
 ## Portable Types and Drivers
 
 The portable APIs that the Go CDK exports (like [`blob.Bucket`][] or
-[`runtimevar.Variable`][]) are concrete types, not interfaces. To understand why,
-imagine if we used a plain interface:
+[`runtimevar.Variable`][]) are concrete types, not interfaces. To understand
+why, imagine if we used a plain interface:
 
 ![Diagram showing user code depending on blob.Bucket, which is implemented by
 awsblob.Bucket.](img/user-facing-type-no-driver.png)
@@ -74,10 +74,9 @@ makes the interfaces hard to implement, which runs counter to the goals of the
 project.
 
 Instead, we follow the example of [`database/sql`][] and separate out the
-implementation-agnostic logic from the interface. The implementation-agnostic 
-logic-containing concrete type is the **portable type**. We call the interface the
-**driver**. Visually, it looks
-like this:
+implementation-agnostic logic from the interface. The implementation-agnostic
+logic-containing concrete type is the **portable type**. We call the interface
+the **driver**. Visually, it looks like this:
 
 ![Diagram showing user code depending on blob.Bucket, which holds a
 driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
@@ -93,10 +92,10 @@ This has a number of benefits:
 -   As new operations on the driver are added as new optional interfaces, the
     portable type can hide the need for type-assertions from the user.
 
-As a rule, if a method `Foo` has the same inputs and semantics in the
-portable type and the driver type, then the driver method may be called
-`Foo`, even though the return signatures may differ. Otherwise, the driver
-method name should be different to reduce confusion.
+As a rule, if a method `Foo` has the same inputs and semantics in the portable
+type and the driver type, then the driver method may be called `Foo`, even
+though the return signatures may differ. Otherwise, the driver method name
+should be different to reduce confusion.
 
 New Go CDK APIs should always follow this portable type and driver pattern.
 
@@ -128,8 +127,22 @@ cloud provider may provide a unique offering for a particular API, they may not
 always provide only one, so distinguishing them in this way keeps the API
 symbols stable over time.
 
-The exception to this rule is if the name is not unique across providers. The
-canonical example is `gcpkms` and `awskms`.
+The naming convention is `<provider><product><api>`, where:
+
+*   `<provider>` is the provider name, like `aws` or `gcp` or `azure`.
+    *   Omit for 3rd party/open source/local packages.
+    *   May also be omitted in cases where the product name is sufficient (e.g.,
+        `s3blob` not `awss3blob` since S3 is well-known, `gcsblob` not
+        `gcpgcsblob` since GCS already references Google).
+    *   Required if the product name is not unique across providers (e.g.,
+        `gcpkms` and `awskms`).
+*   `<product>`is the product/service name.
+*   `<api>` is the portable API name.
+    *   Include for local/test packages like (e.g., `fileblob`, `mempubsub`).
+    *   May be omitted when it makes the package name too long (e.g. `awssnssqs`
+        is long enough, don't add `pubsub`).
+    *   Encouraged when it helps distinguish the package from the provider's own
+        package name (e.g., `s3blob` not `s3`).
 
 ## Portable Type Constructors
 
@@ -177,8 +190,8 @@ breaking backward compatibility.
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
     appropriate audience (e.g. end-users for the portable type, provider
-    implementors for the driver interface), and also allows the
-    structs to diverge over time if appropriate.
+    implementors for the driver interface), and also allows the structs to
+    diverge over time if appropriate.
 -   Required arguments must not be in an `Options` struct, and all fields of the
     `Options` struct must have reasonable defaults. Exception: struct arguments
     that don't have `Options` in the name can contain required arguments (e.g.,

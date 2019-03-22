@@ -46,18 +46,17 @@ import (
 	"sync"
 	"time"
 
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/useragent"
-	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/driver"
-
-	"pack.ag/amqp"
-
 	common "github.com/Azure/azure-amqp-common-go"
 	"github.com/Azure/azure-amqp-common-go/cbs"
 	"github.com/Azure/azure-amqp-common-go/rpc"
 	"github.com/Azure/azure-amqp-common-go/uuid"
 	servicebus "github.com/Azure/azure-service-bus-go"
+	"github.com/google/wire"
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/useragent"
+	"gocloud.dev/pubsub"
+	"gocloud.dev/pubsub/driver"
+	"pack.ag/amqp"
 )
 
 const (
@@ -72,6 +71,13 @@ func init() {
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	SubscriptionOptions{},
+	TopicOptions{},
+	URLOpener{},
+)
 
 // defaultURLOpener creates an URLOpener with ConnectionString initialized from
 // the environment variable SERVICEBUS_CONNECTION_STRING.
@@ -312,7 +318,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, nil), nil
+	return pubsub.NewSubscription(ds, true, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.

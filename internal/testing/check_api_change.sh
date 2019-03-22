@@ -44,7 +44,7 @@ git clone https://github.com/google/go-cloud ${MASTER_CLONE_DIR}
 echo
 
 incompatible_change_pkgs=()
-PKGS=$(cd ${MASTER_CLONE_DIR}; go list ./... | grep -v internal | grep -v test | grep -v samples | grep pubsub)
+PKGS=$(cd ${MASTER_CLONE_DIR}; go list ./... | grep -v internal | grep -v test | grep -v samples)
 for pkg in ${PKGS}; do
   echo "Testing ${pkg}..."
 

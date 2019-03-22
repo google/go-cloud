@@ -44,6 +44,7 @@ import (
 	"sync"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/gcerr"
@@ -66,6 +67,17 @@ func init() {
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	PublisherClient,
+	SubscriberClient,
+	SubscriptionOptions{},
+	TopicOptions{},
+	URLOpener{},
+)
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenTopicURL/OpenSubscriptionURL.
 type lazyCredsOpener struct {
@@ -283,7 +295,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, nil)
+	return pubsub.NewSubscription(ds, true, nil)
 }
 
 // openSubscription returns a driver.Subscription.

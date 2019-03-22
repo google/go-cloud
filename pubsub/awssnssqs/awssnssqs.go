@@ -67,6 +67,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/escape"
@@ -90,6 +91,15 @@ func init() {
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, lazy)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, lazy)
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	SubscriptionOptions{},
+	TopicOptions{},
+	URLOpener{},
+	sns.New,
+	sqs.New,
+)
 
 // lazySessionOpener obtains the AWS session from the environment on the first
 // call to OpenXXXURL.
@@ -396,7 +406,7 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), nil)
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), true, nil)
 }
 
 // openSubscription returns a driver.Subscription.

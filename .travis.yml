@@ -53,6 +53,6 @@ jobs:
           branch: master
 
 stages:
-  - test
   - name: website
     if: branch = master AND type = push
+  - test

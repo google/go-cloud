@@ -134,7 +134,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	}
 
 	fake := &fakeSub{msgs: msgs, profile: receiveProfile}
-	sub := newSubscription(fake, nil)
+	sub := newSubscription(fake, true, nil)
 
 	// Configure our output in a hook called whenever ReceiveBatch returns.
 

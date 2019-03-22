@@ -89,6 +89,14 @@ fi;
   echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
 }
 
+# Ensure that any new packages have the corresponding entries in Hugo.
+missing_packages="$(internal/website/listnewpkgs.sh)"
+if ! [[ -z "$missing_packages" ]]; then
+  echo "FAIL: missing package meta tags for:" 1>&2
+  echo "$missing_packages" 1>&2
+  result=1
+fi
+
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
 if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then

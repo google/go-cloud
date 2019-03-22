@@ -214,7 +214,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 	if err != nil {
 		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
-	sub := pubsub.NewSubscription(ds, nil)
+	sub := pubsub.NewSubscription(ds, false, nil)
 	defer sub.Shutdown(ctx)
 
 	_, err = sub.Receive(ctx)
@@ -272,7 +272,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		s := pubsub.NewSubscription(ds, nil)
+		s := pubsub.NewSubscription(ds, false, nil)
 		defer s.Shutdown(ctx)
 		ss = append(ss, s)
 	}
@@ -509,7 +509,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt, nil)
-	s := pubsub.NewSubscription(ds, nil)
+	s := pubsub.NewSubscription(ds, false, nil)
 	cleanup := func() {
 		topicCleanup()
 		subCleanup()
@@ -566,7 +566,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, nil)
+	sub = pubsub.NewSubscription(ds, false, nil)
 	defer sub.Shutdown(ctx)
 	_, subErr := sub.Receive(ctx)
 	if subErr == nil {

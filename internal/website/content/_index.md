@@ -33,9 +33,10 @@ To start using the Go CDK, install it using `go get`:
 go get gocloud.dev
 ```
 
-Then follow the [Go CDK
-tutorial](https://github.com/google/go-cloud/tree/master/samples/tutorial).
-Links to additional documentation and samples are available below.
+Then follow the [Go CDK tutorial][]. Links to additional documentation and
+samples are available below and in the site navigation bar.
+
+[Go CDK tutorial]: {{< ref "/tutorials/cli-uploader.md" >}}
 
 ## Portable Cloud APIs in Go
 
