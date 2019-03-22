@@ -354,11 +354,11 @@ func testData(t *testing.T, coll *ds.Collection) {
 		{int16(-16), int64(-16)},
 		{int32(-32), int64(-32)},
 		{int64(-64), int64(-64)},
-		//		{uint(1), int64(1)}, TODO(jba): support uint in firestore
+		{uint(1), int64(1)},
 		{uint8(8), int64(8)},
 		{uint16(16), int64(16)},
 		{uint32(32), int64(32)},
-		// TODO(jba): support uint64
+		{uint64(64), int64(64)},
 		{float32(3.5), float64(3.5)},
 		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
 	} {
