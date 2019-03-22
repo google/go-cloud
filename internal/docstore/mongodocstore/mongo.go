@@ -108,7 +108,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 		return res.Err()
 	}
 	var m map[string]interface{}
-	// TODO(jba): Consider if we can avoid the double decode here.
+	// TODO(jba): Benchmark the double decode to see if it's worth trying to avoid it.
 	if err := res.Decode(&m); err != nil {
 		return err
 	}
@@ -125,12 +125,10 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 	if err != nil {
 		return err
 	}
-	if result.InsertedID != nil {
-		if err := a.Doc.SetField(idField, result.InsertedID); err != nil {
-			return err
-		}
+	if result.InsertedID == nil {
+		return nil
 	}
-	return nil
+	return a.Doc.SetField(idField, result.InsertedID)
 }
 
 func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool) error {
