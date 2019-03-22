@@ -88,9 +88,9 @@ const (
 	maxReceiveConcurrency = 100
 	// maxAckConcurrency limits the number of DeleteMessage RPCs (for Acks) to SQS in flight.
 	maxAckConcurrency = 100
-  // How long ReceiveBatch should wait if no messages are available; controls
-  // the poll interval of requests to SQS.
-   noMessagesPollDuration = 250 * time.Millisecond
+	// How long ReceiveBatch should wait if no messages are available; controls
+	// the poll interval of requests to SQS.
+	noMessagesPollDuration = 250 * time.Millisecond
 )
 
 func init() {
