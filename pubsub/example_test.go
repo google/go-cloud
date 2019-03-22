@@ -24,6 +24,10 @@ import (
 
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/mempubsub"
+
+	pbraw "cloud.google.com/go/pubsub/apiv1"
+	pbapi "google.golang.org/genproto/googleapis/pubsub/v1"
+	"google.golang.org/grpc/status"
 )
 
 func Example_sendReceive() {
@@ -237,4 +241,107 @@ func Example_receiveWithTraditionalWorkerPool() {
 
 	// Output:
 	// Read 100 messages
+}
+
+func ExampleMessage_As() {
+	// This example is specific to the gcppubsub implementation; it demonstrates
+	// access to the underlying PubsubMessage type.
+	// The types exposed for As by gcppubsub are documented in
+	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
+
+	ctx := context.Background()
+	sub, err := pubsub.OpenSubscription(ctx, "gcppubsub://project/topic")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var pm *pbapi.PubsubMessage
+	if msg.As(&pm) {
+		_ = pm.GetAttributes()
+	}
+	msg.Ack()
+}
+
+func ExampleSubscription_As() {
+	// This example is specific to the gcppubsub implementation; it demonstrates
+	// access to the underlying SubscriberClient type.
+	// The types exposed for As by gcppubsub are documented in
+	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
+
+	ctx := context.Background()
+	sub, err := pubsub.OpenSubscription(ctx, "gcppubsub://project/topic")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var sc *pbraw.SubscriberClient
+	if sub.As(&sc) {
+		_ = sc.CallOptions
+	}
+}
+
+func ExampleSubscription_ErrorAs() {
+	// This example is specific to the gcppubsub implementation; it demonstrates
+	// access to the underlying Status type.
+	// The types exposed for As by gcppubsub are documented in
+	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
+
+	ctx := context.Background()
+	sub, err := pubsub.OpenSubscription(ctx, "gcppubsub://project/badtopic")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg, err := sub.Receive(ctx)
+	if err != nil {
+		var s *status.Status
+		if sub.ErrorAs(err, &s) {
+			_ = s.Code()
+		}
+		log.Fatal(err)
+	}
+	msg.Ack()
+}
+
+func ExampleTopic_As() {
+	// This example is specific to the gcppubsub implementation; it demonstrates
+	// access to the underlying PublisherClient type.
+	// The types exposed for As by gcppubsub are documented in
+	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
+
+	ctx := context.Background()
+	topic, err := pubsub.OpenTopic(ctx, "gcppubsub://project/topic")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var pc *pbraw.PublisherClient
+	if topic.As(&pc) {
+		_ = pc
+	}
+}
+
+func ExampleTopic_ErrorAs() {
+	// This example is specific to the gcppubsub implementation; it demonstrates
+	// access to the underlying Status type.
+	// The types exposed for As by gcppubsub are documented in
+	// https://godoc.org/gocloud.dev/pubsub/gcppubsub#hdr-As
+
+	ctx := context.Background()
+	topic, err := pubsub.OpenTopic(ctx, "gcppubsub://project/topic")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello")})
+	if err != nil {
+		var s *status.Status
+		if topic.ErrorAs(err, &s) {
+			_ = s.Code()
+		}
+		log.Fatal(err)
+	}
 }
