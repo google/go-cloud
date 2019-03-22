@@ -20,7 +20,7 @@ import (
 	"gocloud.dev/internal/docstore"
 )
 
-func ExampleActions() {
+func Example_actions() {
 	ctx := context.Background()
 
 	type Player struct {

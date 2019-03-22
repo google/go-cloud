@@ -78,8 +78,8 @@ func TestOpenCensus(t *testing.T) {
 	k.Encrypt(ctx, nil)
 	k.Decrypt(ctx, nil)
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/secrets", "gocloud.dev/secrets", []octest.Call{
-		{"Encrypt", gcerrors.Internal},
-		{"Decrypt", gcerrors.Internal},
+		{Method: "Encrypt", Code: gcerrors.Internal},
+		{Method: "Decrypt", Code: gcerrors.Internal},
 	})
 	if diff != "" {
 		t.Error(diff)

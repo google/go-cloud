@@ -55,11 +55,11 @@ func TestOpenCensus(t *testing.T) {
 	const provider = "gocloud.dev/blob/memblob"
 
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/blob", provider, []octest.Call{
-		{"NewWriter", gcerrors.OK},
-		{"NewRangeReader", gcerrors.OK},
-		{"Attributes", gcerrors.OK},
-		{"Delete", gcerrors.OK},
-		{"NewRangeReader", gcerrors.NotFound},
+		{Method: "NewWriter", Code: gcerrors.OK},
+		{Method: "NewRangeReader", Code: gcerrors.OK},
+		{Method: "Attributes", Code: gcerrors.OK},
+		{Method: "Delete", Code: gcerrors.OK},
+		{Method: "NewRangeReader", Code: gcerrors.NotFound},
 	})
 	if diff != "" {
 		t.Error(diff)
