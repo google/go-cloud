@@ -63,7 +63,6 @@ func TestUpdateAtomic(t *testing.T) {
 		"a":                    "A",
 		"b":                    "B",
 	}
-	// want should be unchanged
 	if !cmp.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
