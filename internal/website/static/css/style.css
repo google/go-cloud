@@ -43,7 +43,7 @@ body {
 }
 @media (max-width: 768px) {
   .PageLayout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 100%;
     grid-template-areas: "hd" "main" "sd" "ft";
   }
 }
@@ -82,7 +82,6 @@ body {
   font-size: 0.8rem;
   grid-area: sd;
   margin: 0;
-  overflow: auto;
   padding: 1rem 2rem 2rem 1rem;
 }
 .Sidenav-list {
@@ -226,28 +225,27 @@ body {
   font-family: "Source Code Pro", monospace;
 }
 .MainContent pre {
+  box-sizing: border-box;
   background: #f9f9f9;
+  border-radius: 4px;
   display: block;
   font: 0.8rem/1.4 "Source Code Pro", monospace;
   margin: 0 0 1rem;
+  overflow: auto;
   padding: 1rem;
-  white-space: pre-wrap;
   white-space: pre;
+  width: 100%;
   word-break: break-all;
   word-wrap: break-word;
 }
 .MainContent pre code {
-  padding: 0;
   font-size: 100%;
-  color: inherit;
-  background-color: transparent;
 }
 .highlight {
-  margin-bottom: 1rem;
-  border-radius: 4px;
-}
-.highlight pre {
-  margin-bottom: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
 /* Links */
 .MainContent :link {

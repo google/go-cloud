@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 )
@@ -37,4 +39,31 @@ func (h *harness) Close() {}
 func TestConformance(t *testing.T) {
 	// CodecTester is nil because memdocstore has no native representation.
 	drivertest.RunConformanceTests(t, newHarness, nil)
+}
+
+type docmap = map[string]interface{}
+
+func TestUpdateAtomic(t *testing.T) {
+	// Check that update is atomic.
+	ctx := context.Background()
+	coll := docstore.NewCollection(newCollection(drivertest.KeyField))
+	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
+
+	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
+	if _, err := coll.Actions().Put(doc).Update(doc, mods).Do(ctx); err == nil {
+		t.Fatal("got nil, want error")
+	}
+	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
+	if err := coll.Get(ctx, got); err != nil {
+		t.Fatal(err)
+	}
+	want := docmap{
+		drivertest.KeyField:    doc[drivertest.KeyField],
+		docstore.RevisionField: got[docstore.RevisionField],
+		"a":                    "A",
+		"b":                    "B",
+	}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
 }
