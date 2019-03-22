@@ -121,6 +121,7 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 	if err != nil {
 		return err
 	}
+	mdoc[docstore.RevisionField] = int64(1)
 	result, err := c.coll.InsertOne(ctx, mdoc)
 	if err != nil {
 		return err
