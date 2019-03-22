@@ -463,6 +463,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			s.postReceiveBatchHook(len(msgs))
 		}
 		s.mu.Lock()
+		// Update these even if there was an error; the next call to Receive will
+		// try again to get more messages, and updateBatchSize based on 0 messages
+		// proceesed, which is fine.
 		s.lastBatchRecv = time.Now()
 		s.lastBatchNumMsgs = len(msgs)
 		close(s.waitc)
