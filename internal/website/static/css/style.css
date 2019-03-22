@@ -16,7 +16,7 @@ limitations under the License.
 
 /* Basic layout {{{1 */
 html {
-  font: 16px/1.5 "Roboto", sans-serif;
+  font: 16px/1.5 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
 }
@@ -33,18 +33,18 @@ body {
 }
 .PageLayout {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: 15rem 1fr;
   grid-template-rows: minmax(4rem, auto) 1fr minmax(4rem, auto);
   grid-template-areas:
-    "hd hd"
-    "sd main"
-    "ft ft";
+    'hd hd'
+    'sd main'
+    'ft ft';
   min-height: 100vh;
 }
 @media (max-width: 768px) {
   .PageLayout {
     grid-template-columns: 100%;
-    grid-template-areas: "hd" "main" "sd" "ft";
+    grid-template-areas: 'hd' 'main' 'sd' 'ft';
   }
 }
 .PageHeader {
@@ -98,19 +98,19 @@ body {
   margin: 0.5rem 0 0;
   padding: 0;
 }
+.Sidenav-sectionLink {
+  color: #000;
+  font-family: 'Work Sans', 'Roboto', sans-serif;
+  font-weight: bold;
+  text-decoration: none;
+}
 .Sidenav-page {
   margin: 0.3rem 0 0;
   padding: 0;
 }
-.Sidenav-sectionLink {
-  color: #000;
-  font-family: "Work Sans", "Roboto", sans-serif;
-  font-weight: bold;
-  text-decoration: none;
-}
 .Sidenav-pageLink {
   color: #000;
-  font-family: "Work Sans", "Roboto", sans-serif;
+  font-family: 'Work Sans', 'Roboto', sans-serif;
   font-weight: normal;
   text-decoration: none;
 }
@@ -194,42 +194,51 @@ body {
   margin: 1rem 0 0;
   padding: 0;
 }
+.HowtoList {
+  font: 300 1.5rem/1.25 'Roboto', sans-serif;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.HowtoList-item {
+  margin: 0.5rem 0 0.5rem 2rem;
+  padding: 0;
+}
 
 /* Content styling {{{1 */
 /* Headings */
 .MainContent h1 {
-  font: 700 2rem/1.25 "Work Sans", "Roboto", sans-serif;
+  font: 700 2rem/1.25 'Work Sans', 'Roboto', sans-serif;
   margin: 0 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 .MainContent h2 {
-  font: 700 1.5rem/1.25 "Work Sans", "Roboto", sans-serif;
+  font: 700 1.5rem/1.25 'Work Sans', 'Roboto', sans-serif;
   margin: 2rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 .MainContent h3 {
-  font: 700 1.25rem/1.25 "Work Sans", "Roboto", sans-serif;
+  font: 700 1.25rem/1.25 'Work Sans', 'Roboto', sans-serif;
   margin: 3rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 .MainContent h4,
 .MainContent h5,
 .MainContent h6 {
-  font: 700 1rem/1.25 "Work Sans", "Roboto", sans-serif;
+  font: 700 1rem/1.25 'Work Sans', 'Roboto', sans-serif;
   margin: 2rem 0 0.5rem;
   text-rendering: optimizeLegibility;
 }
 /* Code */
 .MainContent code {
   font-size: 85%;
-  font-family: "Source Code Pro", monospace;
+  font-family: 'Source Code Pro', monospace;
 }
 .MainContent pre {
   box-sizing: border-box;
   background: #f9f9f9;
   border-radius: 4px;
   display: block;
-  font: 0.8rem/1.4 "Source Code Pro", monospace;
+  font: 0.8rem/1.4 'Source Code Pro', monospace;
   margin: 0 0 1rem;
   overflow: auto;
   padding: 1rem;
