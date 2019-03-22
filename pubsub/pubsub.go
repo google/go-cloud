@@ -311,9 +311,9 @@ type Subscription struct {
 	q                []*Message    // local queue of messages downloaded from server
 	err              error         // permanent error
 	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
-	runningBatchSize float64       // running # of messages to request via ReceiveBatch
+	runningBatchSize float64       // running number of messages to request via ReceiveBatch
 	lastBatchRecv    time.Time     // time when the last ReceiveBatch finished
-	lastBatchNumMsgs int           // actual # of msgs received in the last ReceiveBatch
+	lastBatchNumMsgs int           // actual number of msgs received in the last ReceiveBatch
 
 	// Used in tests.
 	preReceiveBatchHook  func(maxMessages int)
@@ -558,6 +558,7 @@ var NewSubscription = newSubscription
 // If newAckBatcher is nil, a default batcher implementation will be used.
 // dynamicBatchSizes should be true except for tests, where stability is
 // necessary for record/replay.
+// TODO(rvangent): Change dynamicBatchSizes to fixedBatchSize.
 func newSubscription(ds driver.Subscription, dynamicBatchSizes bool, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
