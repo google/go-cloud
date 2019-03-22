@@ -69,20 +69,7 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 	// - Consecutive gets with the same field paths are grouped together.
 	// TODO(jba): when we have transforms, apply the constraint that at most one transform per document
 	// is allowed in a given request (see write.proto).
-	groups := driver.SplitActions(actions, func(cur, new *driver.Action) bool {
-		// If the new action isn't a Get but the current group consists of Gets, split.
-		if new.Kind != driver.Get && cur.Kind == driver.Get {
-			return true
-		}
-		// If the new  action is a Get and either (1) the current group consists of writes, or (2) the current group
-		// of gets has a different list of field paths to retrieve, then split.
-		// (The BatchGetDocuments RPC we use for Gets supports only a single set of field paths.)
-		if new.Kind == driver.Get && (cur.Kind != driver.Get || !fpsEqual(cur.FieldPaths, new.FieldPaths)) {
-			return true
-		}
-		return false
-	})
-
+	groups := driver.SplitActions(actions, shouldSplit)
 	nRun := 0 // number of actions successfully run
 	var n int
 	var err error
@@ -102,6 +89,18 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 		}
 	}
 	return nRun, nil
+}
+
+// Reports whether two consecutive actions in a list should be split into different groups.
+func shouldSplit(cur, new *driver.Action) bool {
+	// If the new action isn't a Get but the current group consists of Gets, split.
+	if new.Kind != driver.Get && cur.Kind == driver.Get {
+		return true
+	}
+	// If the new  action is a Get and either (1) the current group consists of writes, or (2) the current group
+	// of gets has a different list of field paths to retrieve, then split.
+	// (The BatchGetDocuments RPC we use for Gets supports only a single set of field paths.)
+	return new.Kind == driver.Get && (cur.Kind != driver.Get || !fpsEqual(cur.FieldPaths, new.FieldPaths))
 }
 
 // Run a sequence of Get actions by calling the BatchGetDocuments RPC.
