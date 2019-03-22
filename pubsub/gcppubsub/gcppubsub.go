@@ -42,6 +42,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
 	"github.com/google/wire"
@@ -51,6 +52,7 @@ import (
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
@@ -306,9 +308,54 @@ func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	// GCP Pub/Sub returns at most 1000 messages per RPC.
+	// If maxMessages is larger than 1000, we make up to maxReceiveConcurrency RPCs
+	// in parallel to try to get more.
+	const maxMessagesPerRPC = 1000
+	const maxReceiveConcurrency = 10
+
+	var mu sync.Mutex
+	var ms []*driver.Message
+
+	// Whether to ask Pull to return immediately, or wait for some messages to
+	// arrive. If we're making multiple RPCs, we don't want any of them to wait;
+	// we might have gotten messages from one of the other RPCs.
+	// maxMessages will only be high enough to set this to true in high-throughput
+	// situations, so the likelihood of getting 0 messages is small anyway.
+	returnImmediately := maxMessages >= maxMessagesPerRPC
+
+	g, ctx := errgroup.WithContext(ctx)
+	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
+		maxThisRPC := maxMessages
+		if maxThisRPC > maxMessagesPerRPC {
+			maxThisRPC = maxMessagesPerRPC
+		}
+		maxMessages -= maxThisRPC
+		g.Go(func() error {
+			msgs, err := s.pull(ctx, maxThisRPC, returnImmediately)
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			ms = append(ms, msgs...)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	// If we did happen to get 0 messages, wait a bit to avoid spinning.
+	if len(ms) == 0 && returnImmediately {
+		time.Sleep(100 * time.Millisecond)
+	}
+	return ms, nil
+}
+
+func (s *subscription) pull(ctx context.Context, maxMessages int, returnImmediately bool) ([]*driver.Message, error) {
 	req := &pb.PullRequest{
 		Subscription:      s.path,
-		ReturnImmediately: false,
+		ReturnImmediately: returnImmediately,
 		MaxMessages:       int32(maxMessages),
 	}
 	resp, err := s.client.Pull(ctx, req)
@@ -342,14 +389,29 @@ func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	var ids2 []string
-	for _, id := range ids {
-		ids2 = append(ids2, id.(string))
+	// The PubSub service limits the size of Acknowledge RPCs.
+	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
+	const maxAckCount = 1000
+
+	for len(ids) > 0 {
+		n := len(ids)
+		if n > maxAckCount {
+			n = maxAckCount
+		}
+		batch := ids[:n]
+		ids = ids[n:]
+		ids2 := make([]string, 0, len(batch))
+		for _, id := range batch {
+			ids2 = append(ids2, id.(string))
+		}
+		if err := s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
+			Subscription: s.path,
+			AckIds:       ids2,
+		}); err != nil {
+			return err
+		}
 	}
-	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
-		Subscription: s.path,
-		AckIds:       ids2,
-	})
+	return nil
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.

@@ -361,9 +361,10 @@ const (
 	// by more than that.
 	maxShrinkFactor = 0.75
 
-	// The maximum batch size to request.
-	// TODO(rvangent): Increase this.
-	maxBatchSize = 1000
+	// The maximum batch size to request. Setting this too low doesn't allow
+	// drivers to get lots of messages at once; setting it too small risks having
+	// drivers spend a long time in ReceiveBatch trying to achieve it.
+	maxBatchSize = 3000
 )
 
 // updateBatchSize updates the # of messages to request in ReceiveBatch based
