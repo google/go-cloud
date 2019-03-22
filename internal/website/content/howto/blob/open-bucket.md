@@ -326,3 +326,10 @@ defer bucket.Close()
 
 [`fileblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket
 [`memblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/memblob#OpenBucket
+
+## What's Next
+
+Now that you have opened a bucket, you can [store data in and access data
+from][] the bucket using portable operations.
+
+[store data in and access data from]: {{< ref "./data.md" >}}
