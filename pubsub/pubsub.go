@@ -112,10 +112,6 @@ type Message struct {
 	// Metadata has key/value metadata for the message.
 	Metadata map[string]string
 
-	// processingStartTime is the time that this message was returned
-	// from Receive, or the zero time if it wasn't.
-	processingStartTime time.Time
-
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
@@ -309,13 +305,15 @@ type Subscription struct {
 	ackFunc    func() // if non-nil, used for Ack
 	cancel     func() // for canceling all SendAcks calls
 
-	dynamicBatchSizes bool // if false, batch size is always 2
+	fixedBatchSize int // if 0, batch size is computed dynamically via updateBatchSize
 
-	mu             sync.Mutex    // protects everything below
-	q              []*Message    // local queue of messages downloaded from server
-	err            error         // permanent error
-	waitc          chan struct{} // for goroutines waiting on ReceiveBatch
-	avgProcessTime float64       // moving average of the seconds to process a message
+	mu               sync.Mutex    // protects everything below
+	q                []*Message    // local queue of messages downloaded from server
+	err              error         // permanent error
+	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
+	runningBatchSize float64       // running number of messages to request via ReceiveBatch
+	lastBatchRecv    time.Time     // time when the last ReceiveBatch finished
+	lastBatchNumMsgs int           // actual number of msgs received in the last ReceiveBatch
 
 	// Used in tests.
 	preReceiveBatchHook  func(maxMessages int)
@@ -341,26 +339,74 @@ const (
 	// by another process receiving from the same subscription.
 	desiredQueueDuration = 2 * time.Second
 
-	// The factor by which old points decay when a new point is added to the moving
-	// average. The larger this number, the more weight will be given to the newest
-	// point in preference to older ones.
-	decay = 0.05
+	// The initial # of messages to request via ReceiveBatch.
+	initialBatchSize = 1
+
+	// The factor by which old batch sizes decay when a new value is added to the
+	// running value. The larger this number, the more weight will be given to the
+	// newest value in preference to older ones.
+	//
+	// The delta based on a single value is capped by the constants below.
+	decay = 0.5
+
+	// The maximum growth factor in a single jump. Higher values mean that the
+	// batch size can increase more aggressively. For example, 2.0 means that the
+	// batch size will at most double from one ReceiveBatch call to the next.
+	maxGrowthFactor = 2.0
+
+	// Similarly, the maximum shrink factor. Lower values mean that the batch size
+	// can shrink more aggressively. For example; 0.75 means that the batch size
+	// will at most shrink to 75% of what it was before. Note that values less
+	// than (1-decay) will have no effect because the running value can't change
+	// by more than that.
+	maxShrinkFactor = 0.75
+
+	// The maximum batch size to request.
+	// TODO(rvangent): Increase this.
+	maxBatchSize = 1000
 )
 
-// Add message processing time d to the weighted moving average.
-func (s *Subscription) addProcessingTime(d time.Duration) {
-	// Ensure d is non-zero; on some platforms, the granularity of time.Time
-	// isn't small enough to capture very fast message processing times.
-	if d == 0 {
-		d = 1 * time.Nanosecond
+// updateBatchSize updates the # of messages to request in ReceiveBatch based
+// on the previous batch size and rate of messages being pulled from the queue.
+//
+// It returns the number of messages to request in this ReceiveBatch call.
+//
+// s.mu must be held.
+func (s *Subscription) updateBatchSize() int {
+	if s.fixedBatchSize != 0 {
+		return s.fixedBatchSize
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.avgProcessTime == 0 {
-		s.avgProcessTime = d.Seconds()
+	if s.lastBatchRecv.IsZero() {
+		// First call, no data yet.
+		s.runningBatchSize = initialBatchSize
+		return initialBatchSize
+	}
+
+	// Compute how many msgs/sec have been pulled from the queue since our
+	// last batch of messages was received.
+	// Note that there's no guarantee that they have been processed yet.
+	elapsed := time.Since(s.lastBatchRecv)
+	msgsPerSec := float64(s.lastBatchNumMsgs) / elapsed.Seconds()
+
+	// The "ideal" batch size is how many messages we'd need in the queue to
+	// support desiredQueueDuration at the msgsPerSec rate.
+	idealBatchSize := desiredQueueDuration.Seconds() * msgsPerSec
+
+	// Move the s.runningBatchSize towards the ideal.
+	// We first combine the previous value and the new value, with weighting
+	// based on decay, and then cap the growth/shrinkage.
+	newBatchSize := s.runningBatchSize*(1-decay) + idealBatchSize*decay
+	if max := s.runningBatchSize * maxGrowthFactor; newBatchSize > max {
+		s.runningBatchSize = max
+	} else if min := s.runningBatchSize * maxShrinkFactor; newBatchSize < min {
+		s.runningBatchSize = min
 	} else {
-		s.avgProcessTime = s.avgProcessTime*(1-decay) + d.Seconds()*decay
+		s.runningBatchSize = newBatchSize
 	}
+	s.runningBatchSize = math.Min(s.runningBatchSize, maxBatchSize)
+
+	// Using Ceil guarantees at least one message.
+	return int(math.Ceil(s.runningBatchSize))
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
@@ -384,7 +430,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// At least one message is available. Return it.
 			m := s.q[0]
 			s.q = s.q[1:]
-			m.processingStartTime = time.Now()
 			// TODO(jba): pre-fetch more messages if the queue gets too small.
 			return m, nil
 		}
@@ -404,37 +449,25 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		}
 		// No messages are available and there are no calls to ReceiveBatch in flight.
 		// Make a call.
-		//
-		// Ask for a number of messages that will give us the desired queue length.
-		// Unless we don't have information about process time (at the beginning), in
-		// which case just get one message.
-		nMessages := 1
-		if s.dynamicBatchSizes && s.avgProcessTime > 0 {
-			// Using Ceil guarantees at least one message.
-			n := math.Ceil(desiredQueueDuration.Seconds() / s.avgProcessTime)
-			// Cap nMessages at some non-ridiculous value.
-			// Slight hack: we should be using a larger cap, like MaxInt32. But
-			// that messes up replay: since the tests take very little time to ack,
-			// n is very large, and since our averaging process is time-sensitive,
-			// values can differ slightly from run to run. The current cap happens
-			// to work, but we should come up with a more robust solution.
-			// (Currently it doesn't matter for performance, because gcppubsub
-			// caps maxMessages to 1000 anyway.)
-			nMessages = int(math.Min(n, 1000))
-		}
+		batchSize := s.updateBatchSize()
 		s.waitc = make(chan struct{})
 		s.mu.Unlock()
 		// Even though the mutex is unlocked, only one goroutine can be here.
 		// The only way here is if s.waitc was nil. This goroutine just set
 		// s.waitc to non-nil while holding the lock.
 		if s.preReceiveBatchHook != nil {
-			s.preReceiveBatchHook(nMessages)
+			s.preReceiveBatchHook(batchSize)
 		}
-		msgs, err := s.getNextBatch(ctx, nMessages)
+		msgs, err := s.getNextBatch(ctx, batchSize)
 		if s.postReceiveBatchHook != nil {
 			s.postReceiveBatchHook(len(msgs))
 		}
 		s.mu.Lock()
+		// Update these even if there was an error; the next call to Receive will
+		// try again to get more messages, and updateBatchSize based on 0 messages
+		// proceesed, which is fine.
+		s.lastBatchRecv = time.Now()
+		s.lastBatchNumMsgs = len(msgs)
 		close(s.waitc)
 		s.waitc = nil
 		if err != nil {
@@ -471,21 +504,12 @@ func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Mess
 		}
 		if s.ackFunc == nil {
 			m2.ack = func() {
-				// Note: This call locks s.mu, and m2.mu is locked here as well. Deadlock
-				// will result if Message.Ack is ever called with s.mu held. That
-				// currently cannot happen, but we should be careful if/when implementing
-				// features like auto-ack.
-				s.addProcessingTime(time.Since(m2.processingStartTime))
-
 				// Ignore the error channel. Errors are dealt with
 				// in the ackBatcher handler.
 				_ = s.ackBatcher.AddNoWait(id)
 			}
 		} else {
-			m2.ack = func() {
-				s.addProcessingTime(time.Since(m2.processingStartTime)) // see note above
-				s.ackFunc()
-			}
+			m2.ack = s.ackFunc
 		}
 		q = append(q, m2)
 	}
@@ -535,15 +559,15 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-// dynamicBatchSizes should be true except for tests, where stability is
-// necessary for record/replay.
-func newSubscription(ds driver.Subscription, dynamicBatchSizes bool, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
+// fixedBatchSize should be 0 except in tests, where stability is necessary for
+// record/replay.
+func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver:            ds,
-		tracer:            newTracer(ds),
-		cancel:            cancel,
-		dynamicBatchSizes: dynamicBatchSizes,
+		driver:         ds,
+		tracer:         newTracer(ds),
+		cancel:         cancel,
+		fixedBatchSize: fixedBatchSize,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher

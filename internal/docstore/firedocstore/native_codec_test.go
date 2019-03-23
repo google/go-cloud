@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ func (cs *clientStream) RecvMsg(m interface{}) error {
 	if cs.doc != nil {
 		cs.doc.CreateTime = &ts.Timestamp{}
 		cs.doc.UpdateTime = &ts.Timestamp{}
-		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{cs.doc}
+		m.(*pb.BatchGetDocumentsResponse).Result = &pb.BatchGetDocumentsResponse_Found{Found: cs.doc}
 		cs.doc = nil
 		return nil
 	}

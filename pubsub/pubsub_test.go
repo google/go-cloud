@@ -123,7 +123,7 @@ func TestSendReceive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ds, true, nil)
+	sub := pubsub.NewSubscription(ds, 0, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -146,7 +146,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ds, true, nil)
+	s := pubsub.NewSubscription(ds, 0, nil)
 	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
@@ -223,7 +223,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ds, true, nil)
+	s := pubsub.NewSubscription(ds, 0, nil)
 	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
@@ -254,7 +254,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
 	inReceiveBatch := make(chan int, 1)
-	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, true, nil)
+	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, 0, nil)
 	go func() {
 		s.Receive(context.Background())
 		t.Fatal("Receive should never return")
@@ -314,7 +314,7 @@ func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown 
 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
-	sub := pubsub.NewSubscription(fs, true, nil)
+	sub := pubsub.NewSubscription(fs, 0, nil)
 	_, err := sub.Receive(context.Background())
 	if err != nil {
 		t.Errorf("Receive: got %v, want nil", err)
@@ -371,7 +371,7 @@ func (erroringSubscription) AckFunc() func()                                { re
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	top := pubsub.NewTopic(erroringTopic{}, nil)
-	sub := pubsub.NewSubscription(erroringSubscription{}, true, nil)
+	sub := pubsub.NewSubscription(erroringSubscription{}, 0, nil)
 
 	verify := func(err error) {
 		t.Helper()
@@ -418,14 +418,14 @@ func TestOpenCensus(t *testing.T) {
 	_, _ = sub.Receive(ctx)
 
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/pubsub", "gocloud.dev/pubsub/mempubsub", []octest.Call{
-		{"driver.Topic.SendBatch", gcerrors.OK},
-		{"Topic.Send", gcerrors.OK},
-		{"Topic.Shutdown", gcerrors.OK},
-		{"driver.Subscription.ReceiveBatch", gcerrors.OK},
-		{"Subscription.Receive", gcerrors.OK},
-		{"driver.Subscription.SendAcks", gcerrors.OK},
-		{"Subscription.Shutdown", gcerrors.OK},
-		{"Subscription.Receive", gcerrors.FailedPrecondition},
+		{Method: "driver.Topic.SendBatch", Code: gcerrors.OK},
+		{Method: "Topic.Send", Code: gcerrors.OK},
+		{Method: "Topic.Shutdown", Code: gcerrors.OK},
+		{Method: "driver.Subscription.ReceiveBatch", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.OK},
+		{Method: "driver.Subscription.SendAcks", Code: gcerrors.OK},
+		{Method: "Subscription.Shutdown", Code: gcerrors.OK},
+		{Method: "Subscription.Receive", Code: gcerrors.FailedPrecondition},
 	})
 	if diff != "" {
 		t.Error(diff)
