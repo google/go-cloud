@@ -58,6 +58,9 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 	l.mu.Lock()
 
 	l.buf.Reset()
+	// r represents the fluent-plugin-google-cloud format
+	// See https://github.com/GoogleCloudPlatform/fluent-plugin-google-cloud/blob/f93046d92f7722db2794a042c3f2dde5df91a90b/lib/fluent/plugin/out_google_cloud.rb#L145
+	// to check json tags
 	var r struct {
 		HTTPRequest struct {
 			RequestMethod string `json:"requestMethod"`
@@ -74,7 +77,8 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 			Seconds int64 `json:"seconds"`
 			Nanos   int   `json:"nanos"`
 		} `json:"timestamp"`
-		TraceID string `json:"trace"`
+		TraceID string `json:"logging.googleapis.com/trace"`
+		SpanID  string `json:"logging.googleapis.com/spanId"`
 	}
 	r.HTTPRequest.RequestMethod = ent.RequestMethod
 	r.HTTPRequest.RequestURL = ent.RequestURL
@@ -91,11 +95,13 @@ func (l *StackdriverLogger) log(ent *Entry) error {
 	t := ent.ReceivedTime.Add(ent.Latency)
 	r.Timestamp.Seconds = t.Unix()
 	r.Timestamp.Nanos = t.Nanosecond()
-	r.TraceID = ent.TraceID
+	r.TraceID = ent.TraceID.String()
+	r.SpanID = ent.SpanID.String()
 	if err := l.enc.Encode(r); err != nil {
 		return err
 	}
 	_, err := l.w.Write(l.buf.Bytes())
+
 	return err
 }
 

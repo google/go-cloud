@@ -30,19 +30,15 @@ func TestHandler(t *testing.T) {
 	const responseMsg = "I see you."
 	const userAgent = "Request Log Test UA"
 	const referer = "http://www.example.com/"
-
 	r, err := http.NewRequest("POST", "http://localhost/foo", strings.NewReader(requestMsg))
 	if err != nil {
 		t.Fatal("NewRequest:", err)
 	}
-	ctx, span := trace.StartSpan(r.Context(), "test")
-	defer span.End()
-	r = r.WithContext(ctx)
 	r.Header.Set("User-Agent", userAgent)
 	r.Header.Set("Referer", referer)
 	requestHdrSize := len(fmt.Sprintf("User-Agent: %s\r\nReferer: %s\r\nContent-Length: %v\r\n", userAgent, referer, len(requestMsg)))
 	responseHdrSize := len(fmt.Sprintf("Content-Length: %v\r\n", len(responseMsg)))
-	ent, err := roundTrip(r, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ent, spanCtx, err := roundTrip(r, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", fmt.Sprint(len(responseMsg)))
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, responseMsg)
@@ -80,23 +76,41 @@ func TestHandler(t *testing.T) {
 	if ent.ResponseBodySize != int64(len(responseMsg)) {
 		t.Errorf("ResponseBodySize = %d; want %d", ent.ResponseBodySize, len(responseMsg))
 	}
-	if ent.TraceID == "" {
-		t.Error("TraceID is empty")
+	if ent.TraceID != spanCtx.TraceID {
+		t.Errorf("TraceID = %v; want %v", ent.TraceID, spanCtx.TraceID)
+	}
+	if ent.SpanID != spanCtx.SpanID {
+		t.Errorf("SpanID = %v; want %v", ent.SpanID, spanCtx.SpanID)
 	}
 }
 
-func roundTrip(r *http.Request, h http.Handler) (*Entry, error) {
+type testSpanHandler struct {
+	h       http.Handler
+	spanCtx *trace.SpanContext
+}
+
+func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "test")
+	defer span.End()
+	r = r.WithContext(ctx)
+	sc := trace.FromContext(ctx).SpanContext()
+	sh.spanCtx = &sc
+	sh.h.ServeHTTP(w, r)
+}
+
+func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, error) {
 	capture := new(captureLogger)
 	hh := NewHandler(capture, h)
-	s := httptest.NewServer(hh)
+	handler := &testSpanHandler{h: hh}
+	s := httptest.NewServer(handler)
 	defer s.Close()
 	r.URL.Host = s.URL[len("http://"):]
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return nil, err
+		return nil, trace.SpanContext{}, err
 	}
 	resp.Body.Close()
-	return &capture.ent, nil
+	return &capture.ent, *handler.spanCtx, nil
 }
 
 type captureLogger struct {

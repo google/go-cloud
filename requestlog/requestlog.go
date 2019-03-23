@@ -56,7 +56,6 @@ func NewHandler(log Logger, h http.Handler) *Handler {
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	sc := trace.FromContext(r.Context()).SpanContext()
-	traceID := sc.TraceID.String()
 	ent := &Entry{
 		ReceivedTime:      start,
 		RequestMethod:     r.Method,
@@ -66,7 +65,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Referer:           r.Referer(),
 		Proto:             r.Proto,
 		RemoteIP:          ipFromHostPort(r.RemoteAddr),
-		TraceID:           traceID,
+		TraceID:           sc.TraceID,
+		SpanID:            sc.SpanID,
 	}
 	if addr, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr); ok {
 		ent.ServerIP = ipFromHostPort(addr.String())
@@ -112,7 +112,8 @@ type Entry struct {
 	ResponseHeaderSize int64
 	ResponseBodySize   int64
 	Latency            time.Duration
-	TraceID            string
+	TraceID            trace.TraceID
+	SpanID             trace.SpanID
 }
 
 func ipFromHostPort(hp string) string {

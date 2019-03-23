@@ -16,7 +16,7 @@ package requestlog
 
 import (
 	"bytes"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"go.opencensus.io/trace"
 )
 
 func TestStackdriverLog(t *testing.T) {
@@ -39,7 +41,9 @@ func TestStackdriverLog(t *testing.T) {
 		endTime      = startTime + latencySec
 		endTimeNanos = startTimeNanos + latencyNanos
 	)
-	var traceID = hex.EncodeToString([]byte("test"))
+	ctx, span := trace.StartSpan(context.Background(), "test")
+	defer span.End()
+	sc := trace.FromContext(ctx).SpanContext()
 	buf := new(bytes.Buffer)
 	var logErr error
 	l := NewStackdriverLogger(buf, func(e error) { logErr = e })
@@ -58,7 +62,8 @@ func TestStackdriverLog(t *testing.T) {
 		ResponseHeaderSize: 555,
 		ResponseBodySize:   789000,
 		Latency:            latencySec*time.Second + latencyNanos*time.Nanosecond,
-		TraceID:            traceID,
+		TraceID:            sc.TraceID,
+		SpanID:             sc.SpanID,
 	}
 	ent := *want // copy in case Log accidentally mutates
 	l.Log(&ent)
@@ -116,8 +121,11 @@ func TestStackdriverLog(t *testing.T) {
 		if got, want := jsonNumber(ts, "nanos"), float64(endTimeNanos); got != want {
 			t.Errorf("timestamp.nanos = %g; want %g", got, want)
 		}
-		if got, want := jsonString(r, "trace"), ent.TraceID; got != want {
+		if got, want := jsonString(r, "logging.googleapis.com/trace"), ent.TraceID.String(); got != want {
 			t.Errorf("traceID = %q; want %q", got, want)
+		}
+		if got, want := jsonString(r, "logging.googleapis.com/spanId"), ent.SpanID.String(); got != want {
+			t.Errorf("spanID = %q; want %q", got, want)
 		}
 	}
 }
