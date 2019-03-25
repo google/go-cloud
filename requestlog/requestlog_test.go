@@ -98,7 +98,7 @@ func (sh *testSpanHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sh.h.ServeHTTP(w, r)
 }
 
-func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, error) {
+func roundTrip(r *http.Request, h http.Handler) (*Entry, *trace.SpanContext, error) {
 	capture := new(captureLogger)
 	hh := NewHandler(capture, h)
 	handler := &testSpanHandler{h: hh}
@@ -107,10 +107,10 @@ func roundTrip(r *http.Request, h http.Handler) (*Entry, trace.SpanContext, erro
 	r.URL.Host = s.URL[len("http://"):]
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
-		return nil, trace.SpanContext{}, err
+		return nil, nil, err
 	}
 	resp.Body.Close()
-	return &capture.ent, *handler.spanCtx, nil
+	return &capture.ent, handler.spanCtx, nil
 }
 
 type captureLogger struct {
