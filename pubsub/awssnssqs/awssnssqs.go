@@ -543,7 +543,7 @@ Loop:
 			id := id
 			g.Go(func() error {
 				defer func() { <-s.acksem }()
-				_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
+				_, err := s.client.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
 					QueueUrl:      &s.qURL,
 					ReceiptHandle: id.(*string),
 				})
