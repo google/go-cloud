@@ -31,7 +31,6 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -160,33 +159,16 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 	if rev != nil {
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
 	}
-
 	updateDoc := map[string]bson.D{}
 	if len(sets) > 0 {
 		updateDoc["$set"] = sets
 	}
-	// Always add or increment the revision field of the stored document, even if the argument doc
-	// didn't have one.
-	updateDoc["$inc"] = bson.D{{Key: docstore.RevisionField, Value: 1}}
-	opts := options.Update()
-	if upsert {
-		opts.SetUpsert(true) // Document will be created if it doesn't exist.
-	}
-	// fmt.Printf("### UpdateOne\n")
-	// fmt.Printf("- filter: %+v\n", filter)
-	// ups := false
-	// if opts.Upsert != nil && *opts.Upsert {
-	// 	ups = true
-	// }
-	//	fmt.Printf("- upsert: %t\n", ups)
-	result, err := c.coll.UpdateOne(ctx, filter, updateDoc, opts)
-	//fmt.Printf("- result: %+v\n", result)
-	//	fmt.Printf("- err: %v (%T)\n", err, err)
+	result, err := c.doUpdate(ctx, filter, updateDoc, upsert)
 	if err != nil {
 		return err
 	}
 	if !upsert && result.MatchedCount == 0 {
-		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
+		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist or revision is wrong", id)
 	}
 	return nil
 }
@@ -203,13 +185,15 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 	// Only select the document with the given ID.
 	filter := bson.D{{"_id", id}}
 	// If the given document has a revision, it must match the stored document.
-	findc := make(chan error, 1)
+	var exists bool
 	if rev != nil {
-		go func() {
-			res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
-			findc <- res.Err()
-		}()
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
+		// Distinguish between non-existence and revision mismatch.
+		// TODO(jba): find a way to do this that doesn't require two RPCs.
+		res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+		// TODO(jba): distinguish between not found and other errors.
+		exists = res.Err() == nil
+
 	}
 	result, err := c.coll.DeleteOne(ctx, filter)
 	if err != nil {
@@ -218,13 +202,7 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 	if result.DeletedCount == 0 {
 		// If we didn't delete anything because the document doesn't exist, return nil.
 		// But if the document exists and the revision is wrong, return FailedPrecondition.
-		if rev == nil {
-			return nil
-		}
-		err := <-findc
-		fmt.Printf("#### find error: %v (%T)\n", err, err)
-		// TODO(jba): test the case where we delete a missing doc with a revision
-		if err != nil { // assume non-nil means doesn't exist (WRONG!)
+		if rev == nil || !exists {
 			return nil
 		}
 		return gcerr.Newf(gcerr.FailedPrecondition, nil, "document with ID %v does not have revision %v", id, rev)
@@ -266,9 +244,6 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 		// as a no-op.
 		return nil
 	}
-	// Always add or increment the revision field of the stored document, even if the argument doc
-	// didn't have one.
-	updateDoc["$inc"] = bson.D{{Key: docstore.RevisionField, Value: 1}}
 	filter := bson.D{{"_id", id}}
 	rev, err := a.Doc.GetField(docstore.RevisionField)
 	if err != nil && gcerrors.Code(err) != gcerrors.NotFound {
@@ -277,7 +252,7 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	if rev != nil {
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
 	}
-	result, err := c.coll.UpdateOne(ctx, filter, updateDoc)
+	result, err := c.doUpdate(ctx, filter, updateDoc, false)
 	if err != nil {
 		return err
 	}
@@ -285,6 +260,17 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 		return gcerr.Newf(gcerr.NotFound, nil, "document with ID %v does not exist", id)
 	}
 	return nil
+}
+
+func (c *collection) doUpdate(ctx context.Context, filter bson.D, updateDoc map[string]bson.D, upsert bool) (*mongo.UpdateResult, error) {
+	opts := options.Update()
+	if upsert {
+		opts.SetUpsert(true) // Document will be created if it doesn't exist.
+	}
+	// Always add or increment the revision field of the stored document, even if the argument doc
+	// didn't have one.
+	updateDoc["$inc"] = bson.D{{Key: docstore.RevisionField, Value: 1}}
+	return c.coll.UpdateOne(ctx, filter, updateDoc, opts)
 }
 
 // Error code for a write error when no documents match a filter.
