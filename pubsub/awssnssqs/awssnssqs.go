@@ -83,7 +83,14 @@ const (
 	base64EncodedKey = "base64encoded"
 	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
 	// at once, per Topic.
-	maxPublishConcurrency = 10
+	maxPublishConcurrency = 100
+	// maxReceiveConcurrency limits the number of Receive RPCs to SQS in flight.
+	maxReceiveConcurrency = 100
+	// maxAckConcurrency limits the number of DeleteMessage RPCs (for Acks) to SQS in flight.
+	maxAckConcurrency = 100
+	// How long ReceiveBatch should wait if no messages are available; controls
+	// the poll interval of requests to SQS.
+	noMessagesPollDuration = 250 * time.Millisecond
 )
 
 func init() {
@@ -187,7 +194,7 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 type topic struct {
 	client *sns.SNS
 	arn    string
-	sem    chan struct{} // limits maximum in-flight Public RPCs across SendBatch
+	sem    chan struct{} // limits maximum in-flight Publish RPCs across SendBatch
 	opts   *TopicOptions
 }
 
@@ -397,6 +404,7 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 type subscription struct {
 	client *sqs.SQS
 	qURL   string
+	acksem chan struct{} // limits maximum in-flight DeleteMessage RPCs across SendAcks
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -411,21 +419,55 @@ func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *S
 
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
-	return &subscription{client: client, qURL: qURL}
+	return &subscription{
+		client: client,
+		qURL:   qURL,
+		acksem: make(chan struct{}, maxAckConcurrency),
+	}
 }
 
-// How long ReceiveBatch should wait if no messages are available; controls
-// the poll interval of requests to SQS.
-const noMessagesPollDuration = 250 * time.Millisecond
-
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
-func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs []*driver.Message, er error) {
+func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// SQS supports receiving at most 10 messages at a time:
 	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html
-	max := int64(maxMessages)
-	if max > 10 {
-		max = 10
+	// If maxMessages is larger than 10, we make up to maxReceiveConcurrency RPCs
+	// in parallel to try to get more.
+	const maxMessagesPerRPC = 10
+
+	var mu sync.Mutex
+	var ms []*driver.Message
+
+	g, ctx := errgroup.WithContext(ctx)
+	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
+		maxThisRPC := maxMessages
+		if maxThisRPC > maxMessagesPerRPC {
+			maxThisRPC = maxMessagesPerRPC
+		}
+		maxMessages -= maxThisRPC
+		g.Go(func() error {
+			msgs, err := s.receiveMessages(ctx, int64(maxThisRPC))
+			if err != nil {
+				return err
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			ms = append(ms, msgs...)
+			return nil
+		})
 	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	if len(ms) == 0 {
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
+		// with RPCs.
+		time.Sleep(noMessagesPollDuration)
+	}
+	return ms, nil
+}
+
+func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*driver.Message, error) {
 	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(s.qURL),
 		MaxNumberOfMessages: aws.Int64(max),
@@ -483,27 +525,36 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) (msgs 
 		}
 		ms = append(ms, m2)
 	}
-	if len(ms) == 0 {
-		// When we return no messages and no error, the portable type will call
-		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
-		// with RPCs.
-		time.Sleep(noMessagesPollDuration)
-	}
 	return ms, nil
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	g, ctx := errgroup.WithContext(ctx)
+	var ctxErr error
+
+Loop:
 	for _, id := range ids {
-		_, err := s.client.DeleteMessage(&sqs.DeleteMessageInput{
-			QueueUrl:      &s.qURL,
-			ReceiptHandle: id.(*string),
-		})
-		if err != nil {
-			return err
+		select {
+		case <-ctx.Done():
+			ctxErr = ctx.Err()
+			break Loop
+		case s.acksem <- struct{}{}:
+			id := id
+			g.Go(func() error {
+				defer func() { <-s.acksem }()
+				_, err := s.client.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
+					QueueUrl:      &s.qURL,
+					ReceiptHandle: id.(*string),
+				})
+				return err
+			})
 		}
 	}
-	return nil
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	return ctxErr
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.

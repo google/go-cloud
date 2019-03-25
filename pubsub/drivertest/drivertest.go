@@ -583,9 +583,9 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const (
-		nMessages          = 1000
-		concurrencySend    = 10
-		concurrencyReceive = 10
+		nMessages          = 10000
+		concurrencySend    = 100
+		concurrencyReceive = 100
 	)
 	if nMessages%concurrencySend != 0 || nMessages%concurrencyReceive != 0 {
 		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
@@ -608,7 +608,7 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 			b.Fatalf("receiving: %v", err)
 		}
 		b.SetBytes(nMessages * 1e6)
-		b.Log("MB/s is actually number of messages received per second")
+		b.Logf("MB/s is actually number of messages received per second, %d/%d", i, b.N)
 		if timeSend {
 			b.StartTimer()
 		}
