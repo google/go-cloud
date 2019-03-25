@@ -37,7 +37,6 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   trap cleanup EXIT
 
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
-  echo "merge-base is $mergebase"
   if [[ -z $mergebase ]]; then
     echo "merge-base empty. Please ensure that the PR is mergeable."
     exit 1
