@@ -185,14 +185,8 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 	// Only select the document with the given ID.
 	filter := bson.D{{"_id", id}}
 	// If the given document has a revision, it must match the stored document.
-	var exists bool
 	if rev != nil {
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
-		// Distinguish between non-existence and revision mismatch.
-		// TODO(jba): find a way to do this that doesn't require two RPCs.
-		res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
-		// TODO(jba): distinguish between not found and other errors.
-		exists = res.Err() == nil
 
 	}
 	result, err := c.coll.DeleteOne(ctx, filter)
@@ -200,10 +194,13 @@ func (c *collection) delete(ctx context.Context, a *driver.Action) error {
 		return err
 	}
 	if result.DeletedCount == 0 {
-		// If we didn't delete anything because the document doesn't exist, return nil.
-		// But if the document exists and the revision is wrong, return FailedPrecondition.
-		if rev == nil || !exists {
+		if rev == nil {
 			return nil
+		}
+		// Not sure if the document doesn't exist, or the revision is wrong. Distinguish the two.
+		res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+		if res.Err() != nil { // TODO(jba): distinguish between not found and other errors.
+			return gcerr.Newf(gcerr.NotFound, res.Err(), "document with ID %v does not exist", id)
 		}
 		return gcerr.Newf(gcerr.FailedPrecondition, nil, "document with ID %v does not have revision %v", id, rev)
 	}
