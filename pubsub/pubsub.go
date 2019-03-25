@@ -104,6 +104,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 )
 
+var zeroTime time.Time
+
 // Message contains data to be published.
 type Message struct {
 	// Body contains the content of the message.
@@ -301,9 +303,10 @@ type Subscription struct {
 	driver driver.Subscription
 	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and sends them to the server.
-	ackBatcher driver.Batcher
-	ackFunc    func() // if non-nil, used for Ack
-	cancel     func() // for canceling all SendAcks calls
+	ackBatcher    driver.Batcher
+	ackFunc       func()          // if non-nil, used for Ack
+	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
+	cancel        func()          // for canceling backgroundCtx
 
 	fixedBatchSize int // if 0, batch size is computed dynamically via updateBatchSize
 
@@ -312,8 +315,9 @@ type Subscription struct {
 	err              error         // permanent error
 	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
 	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	lastBatchRecv    time.Time     // time when the last ReceiveBatch finished
-	lastBatchNumMsgs int           // actual number of msgs received in the last ReceiveBatch
+	throughputStart  time.Time     // start time for throughput measurement, or zeroTime if queue is empty
+	throughputEnd    time.Time     // end time for throughput measurement, or zeroTime if queue is not empty
+	throughputCount  int           // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
 	preReceiveBatchHook  func(maxMessages int)
@@ -338,6 +342,18 @@ const (
 	// their ack deadline will be exceeded). Those messages could have been handled
 	// by another process receiving from the same subscription.
 	desiredQueueDuration = 2 * time.Second
+
+	// Expected duration of calls to driver.ReceiveBatch, at some high percentile.
+	// We'll try to fetch more messages when the current queue is predicted
+	// to be used up in expectedReceiveBatchDuration.
+	expectedReceiveBatchDuration = 1 * time.Second
+
+	// s.runningBatchSize holds our current best guess for how many messages to
+	// fetch in order to have a buffer of desiredQueueDuration. When we have
+	// fewer than prefetchRatio * s.runningBatchSize messages left, that means
+	// we expect to run out of messages in expectedReceiveBatchDuration, so we
+	// should initiate another ReceiveBatch call.
+	prefetchRatio = float64(expectedReceiveBatchDuration) / float64(desiredQueueDuration)
 
 	// The initial # of messages to request via ReceiveBatch.
 	initialBatchSize = 1
@@ -367,8 +383,9 @@ const (
 	maxBatchSize = 3000
 )
 
-// updateBatchSize updates the # of messages to request in ReceiveBatch based
-// on the previous batch size and rate of messages being pulled from the queue.
+// updateBatchSize updates the number of messages to request in ReceiveBatch
+// based on the previous batch size and the rate of messages being pulled from
+// the queue, measured using s.throughput*.
 //
 // It returns the number of messages to request in this ReceiveBatch call.
 //
@@ -377,44 +394,76 @@ func (s *Subscription) updateBatchSize() int {
 	if s.fixedBatchSize != 0 {
 		return s.fixedBatchSize
 	}
-	if s.lastBatchRecv.IsZero() {
-		// First call, no data yet.
-		s.runningBatchSize = initialBatchSize
-		return initialBatchSize
-	}
-
-	// Compute how many msgs/sec have been pulled from the queue since our
-	// last batch of messages was received.
-	// Note that there's no guarantee that they have been processed yet.
-	elapsed := time.Since(s.lastBatchRecv)
-	msgsPerSec := float64(s.lastBatchNumMsgs) / elapsed.Seconds()
-
-	// The "ideal" batch size is how many messages we'd need in the queue to
-	// support desiredQueueDuration at the msgsPerSec rate.
-	idealBatchSize := desiredQueueDuration.Seconds() * msgsPerSec
-
-	// Move the s.runningBatchSize towards the ideal.
-	// We first combine the previous value and the new value, with weighting
-	// based on decay, and then cap the growth/shrinkage.
-	newBatchSize := s.runningBatchSize*(1-decay) + idealBatchSize*decay
-	if max := s.runningBatchSize * maxGrowthFactor; newBatchSize > max {
-		s.runningBatchSize = max
-	} else if min := s.runningBatchSize * maxShrinkFactor; newBatchSize < min {
-		s.runningBatchSize = min
+	now := time.Now()
+	if s.throughputStart.IsZero() {
+		// No throughput measurement; don't update s.runningBatchSize.
 	} else {
-		s.runningBatchSize = newBatchSize
+		// Update s.runningBatchSize based on throughput since our last time here,
+		// as measured by the ratio of the number of messages returned to elapsed
+		// time when there were messages available in the queue.
+		if s.throughputEnd.IsZero() {
+			s.throughputEnd = now
+		}
+		elapsed := s.throughputEnd.Sub(s.throughputStart)
+		if elapsed == 0 {
+			// Avoid divide-by-zero.
+			elapsed = 1 * time.Millisecond
+		}
+		msgsPerSec := float64(s.throughputCount) / elapsed.Seconds()
+
+		// The "ideal" batch size is how many messages we'd need in the queue to
+		// support desiredQueueDuration at the msgsPerSec rate.
+		idealBatchSize := desiredQueueDuration.Seconds() * msgsPerSec
+
+		// Move s.runningBatchSize towards the ideal.
+		// We first combine the previous value and the new value, with weighting
+		// based on decay, and then cap the growth/shrinkage.
+		newBatchSize := s.runningBatchSize*(1-decay) + idealBatchSize*decay
+		if max := s.runningBatchSize * maxGrowthFactor; newBatchSize > max {
+			s.runningBatchSize = max
+		} else if min := s.runningBatchSize * maxShrinkFactor; newBatchSize < min {
+			s.runningBatchSize = min
+		} else {
+			s.runningBatchSize = newBatchSize
+		}
 	}
-	s.runningBatchSize = math.Min(s.runningBatchSize, maxBatchSize)
+
+	// Reset throughput measurement markers.
+	if len(s.q) > 0 {
+		s.throughputStart = now
+		// Otherwise, will get set when we receive some messages.
+	}
+	s.throughputEnd = zeroTime
+	s.throughputCount = 0
 
 	// Using Ceil guarantees at least one message.
-	return int(math.Ceil(s.runningBatchSize))
+	return int(math.Ceil(math.Min(s.runningBatchSize, maxBatchSize)))
 }
 
 // Receive receives and returns the next message from the Subscription's queue,
-// blocking and polling if none are available. This method can be called
-// concurrently from multiple goroutines. The Ack() method of the returned
-// Message has to be called once the message has been processed, to prevent it
-// from being received again.
+// blocking and polling if none are available. It can be called
+// concurrently from multiple goroutines.
+//
+// Receive retries retryable errors from the underlying provider forever.
+// Therefore, if Receive returns an error, either:
+// 1. It is a non-retryable error from the underlying provider, either from
+//    an attempt to fetch more messages or from an attempt to ack messages.
+//    Operator intervention may be required (e.g., invalid resource, quota
+//    error, etc.). Receive will return the same error from then on, so the
+//    application should log the error and either recreate the Subscription,
+//    or exit.
+// 2. The provided ctx is Done. Error() on the returned error will include both
+//    the ctx error and the underyling provider error, and ErrorAs on it
+//    can access the underlying provider error type if needed. Receive may
+//    be called again with a fresh ctx.
+//
+// Callers can distinguish between the two by checking if the ctx they passed
+// is Done, or via xerrors.Is(err, context.DeadlineExceeded) on the returned
+// error.
+//
+// The Ack method of the returned Message must be called once the message has
+// been processed, to prevent it from being received again, unless
+// only at-most-once providers are being used; see the package doc for more).
 func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 	ctx = s.tracer.Start(ctx, "Subscription.Receive")
 	defer func() { s.tracer.End(ctx, err) }()
@@ -427,67 +476,70 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			// The Subscription is in a permanent error state. Return the error.
 			return nil, s.err // s.err wrapped when set
 		}
+
+		if s.waitc == nil && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio {
+			// We think we're going to run out of messages in expectedReceiveBatchDuration,
+			// and there's no outstanding ReceiveBatch call, so initiate one in the
+			// background.
+			// Completion will be signalled to this goroutine, and to any other
+			// waiting goroutines, by closing s.waitc.
+			s.waitc = make(chan struct{})
+			batchSize := s.updateBatchSize()
+
+			go func() {
+				if s.preReceiveBatchHook != nil {
+					s.preReceiveBatchHook(batchSize)
+				}
+				msgs, err := s.getNextBatch(batchSize)
+				if s.postReceiveBatchHook != nil {
+					s.postReceiveBatchHook(len(msgs))
+				}
+				s.mu.Lock()
+				defer s.mu.Unlock()
+				if err != nil {
+					// Non-retryable error from ReceiveBatch -> permanent error.
+					s.err = err
+				} else if len(msgs) > 0 {
+					s.q = append(s.q, msgs...)
+					if s.throughputStart.IsZero() {
+						s.throughputStart = time.Now()
+					}
+				}
+				close(s.waitc)
+				s.waitc = nil
+			}()
+		}
 		if len(s.q) > 0 {
 			// At least one message is available. Return it.
 			m := s.q[0]
 			s.q = s.q[1:]
-			// TODO(jba): pre-fetch more messages if the queue gets too small.
+			s.throughputCount++
 			return m, nil
 		}
-		if s.waitc != nil {
-			// A call to ReceiveBatch is in flight. Wait for it.
-			// TODO(jba): support multiple calls in flight simultaneously.
-			waitc := s.waitc
-			s.mu.Unlock()
-			select {
-			case <-waitc:
-				s.mu.Lock()
-				continue
-			case <-ctx.Done():
-				s.mu.Lock()
-				return nil, ctx.Err()
-			}
+		// No messages are available.
+		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
+			s.throughputEnd = time.Now()
 		}
-		// No messages are available and there are no calls to ReceiveBatch in flight.
-		// Make a call.
-		batchSize := s.updateBatchSize()
-		s.waitc = make(chan struct{})
+		// A call to ReceiveBatch must be in flight. Wait for it.
+		waitc := s.waitc
 		s.mu.Unlock()
-		// Even though the mutex is unlocked, only one goroutine can be here.
-		// The only way here is if s.waitc was nil. This goroutine just set
-		// s.waitc to non-nil while holding the lock.
-		if s.preReceiveBatchHook != nil {
-			s.preReceiveBatchHook(batchSize)
+		select {
+		case <-waitc:
+			s.mu.Lock()
+			// Continue to top of loop.
+		case <-ctx.Done():
+			s.mu.Lock()
+			return nil, ctx.Err()
 		}
-		msgs, err := s.getNextBatch(ctx, batchSize)
-		if s.postReceiveBatchHook != nil {
-			s.postReceiveBatchHook(len(msgs))
-		}
-		s.mu.Lock()
-		// Update these even if there was an error; the next call to Receive will
-		// try again to get more messages, and updateBatchSize based on 0 messages
-		// proceesed, which is fine.
-		s.lastBatchRecv = time.Now()
-		s.lastBatchNumMsgs = len(msgs)
-		close(s.waitc)
-		s.waitc = nil
-		if err != nil {
-			// This goroutine's call failed, perhaps because its context was done.
-			// Some waiting goroutine will wake up when s.waitc is closed,
-			// go to the top of the loop, and (since s.q is empty and s.waitc is
-			// now nil) will try the RPC for itself.
-			return nil, err
-		}
-		s.q = append(s.q, msgs...)
 	}
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(ctx context.Context, nMessages int) ([]*Message, error) {
+func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 	var msgs []*driver.Message
-	err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+	err := retry.Call(s.backgroundCtx, gax.Backoff{}, s.driver.IsRetryable, func() error {
 		var err error
-		ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+		ctx2 := s.tracer.Start(s.backgroundCtx, "driver.Subscription.ReceiveBatch")
 		defer func() { s.tracer.End(ctx2, err) }()
 		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
 		return err
@@ -565,10 +617,12 @@ var NewSubscription = newSubscription
 func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver:         ds,
-		tracer:         newTracer(ds),
-		cancel:         cancel,
-		fixedBatchSize: fixedBatchSize,
+		driver:           ds,
+		tracer:           newTracer(ds),
+		cancel:           cancel,
+		backgroundCtx:    ctx,
+		fixedBatchSize:   fixedBatchSize,
+		runningBatchSize: initialBatchSize,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
