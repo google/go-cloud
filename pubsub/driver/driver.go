@@ -61,7 +61,7 @@ type Message struct {
 
 // Topic publishes messages.
 type Topic interface {
-	// SendBatch publishes all the messages in ms. This method should
+	// SendBatch should publish all the messages in ms. It should
 	// return only after all the messages are sent, an error occurs, or the
 	// context is done.
 	//
@@ -113,7 +113,7 @@ type Subscription interface {
 	// non-zero amount of time before returning zero messages. If the underlying
 	// service doesn't support waiting, then a time.Sleep can be used.
 	//
-	// ReceiveBatch should be safe for concurrent access from multiple goroutines.
+	// ReceiveBatch may be called concurrently from multiple goroutines.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// For at-most-once systems, AckFunc should return a function to be called
@@ -127,12 +127,9 @@ type Subscription interface {
 	// This method should return only after all the ackIDs are sent, an
 	// error occurs, or the context is done.
 	//
-	// Only one RPC should be made to send the messages, and the returned
-	// error should be based on the result of that RPC.  Implementations
-	// that send only one ack at a time should return a non-nil error if
-	// len(ackIDs) != 1.
+	// If AckFunc returns a non-nil func, SendAcks will never be called.
 	//
-	// SendAcks should be safe for concurrent access from multiple goroutines.
+	// SendAcks may be called concurrently from multiple goroutines.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// IsRetryable should report whether err can be retried.

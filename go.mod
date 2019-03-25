@@ -53,11 +53,9 @@ require (
 	github.com/gammazero/deque v0.0.0-20180920172122-f6adf94963e4 // indirect
 	github.com/gammazero/workerpool v0.0.0-20181230203049-86a96b5d5d92 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
-	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-ldap/ldap v3.0.0+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.4.1
-	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/go-stomp/stomp v2.0.2+incompatible // indirect
 	github.com/gocql/gocql v0.0.0-20190122205811-30de9a1866a8 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
@@ -130,7 +128,7 @@ require (
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/etcd v3.3.11+incompatible
 	go.mongodb.org/mongo-driver v1.0.0
-	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b
+	go.opencensus.io v0.19.1
 	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd
 	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c

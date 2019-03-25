@@ -305,7 +305,7 @@ type Subscription struct {
 	ackFunc    func() // if non-nil, used for Ack
 	cancel     func() // for canceling all SendAcks calls
 
-	dynamicBatchSizes bool // if false, batch size is always initialBatchSize
+	fixedBatchSize int // if 0, batch size is computed dynamically via updateBatchSize
 
 	mu               sync.Mutex    // protects everything below
 	q                []*Message    // local queue of messages downloaded from server
@@ -361,9 +361,10 @@ const (
 	// by more than that.
 	maxShrinkFactor = 0.75
 
-	// The maximum batch size to request.
-	// TODO(rvangent): Increase this.
-	maxBatchSize = 1000
+	// The maximum batch size to request. Setting this too low doesn't allow
+	// drivers to get lots of messages at once; setting it too small risks having
+	// drivers spend a long time in ReceiveBatch trying to achieve it.
+	maxBatchSize = 3000
 )
 
 // updateBatchSize updates the # of messages to request in ReceiveBatch based
@@ -373,12 +374,12 @@ const (
 //
 // s.mu must be held.
 func (s *Subscription) updateBatchSize() int {
+	if s.fixedBatchSize != 0 {
+		return s.fixedBatchSize
+	}
 	if s.lastBatchRecv.IsZero() {
 		// First call, no data yet.
 		s.runningBatchSize = initialBatchSize
-		return initialBatchSize
-	}
-	if !s.dynamicBatchSizes {
 		return initialBatchSize
 	}
 
@@ -559,16 +560,15 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription
 // and a function to make a batcher that sends batches of acks to the provider.
 // If newAckBatcher is nil, a default batcher implementation will be used.
-// dynamicBatchSizes should be true except for tests, where stability is
-// necessary for record/replay.
-// TODO(rvangent): Change dynamicBatchSizes to fixedBatchSize.
-func newSubscription(ds driver.Subscription, dynamicBatchSizes bool, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
+// fixedBatchSize should be 0 except in tests, where stability is necessary for
+// record/replay.
+func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
-		driver:            ds,
-		tracer:            newTracer(ds),
-		cancel:            cancel,
-		dynamicBatchSizes: dynamicBatchSizes,
+		driver:         ds,
+		tracer:         newTracer(ds),
+		cancel:         cancel,
+		fixedBatchSize: fixedBatchSize,
 	}
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher

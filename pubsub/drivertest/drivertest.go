@@ -214,7 +214,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 	if err != nil {
 		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
-	sub := pubsub.NewSubscription(ds, false, nil)
+	sub := pubsub.NewSubscription(ds, 1, nil)
 	defer sub.Shutdown(ctx)
 
 	_, err = sub.Receive(ctx)
@@ -272,7 +272,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		s := pubsub.NewSubscription(ds, false, nil)
+		s := pubsub.NewSubscription(ds, 1, nil)
 		defer s.Shutdown(ctx)
 		ss = append(ss, s)
 	}
@@ -509,7 +509,7 @@ func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *
 		return nil, nil, nil, err
 	}
 	t := pubsub.NewTopic(dt, nil)
-	s := pubsub.NewSubscription(ds, false, nil)
+	s := pubsub.NewSubscription(ds, 1, nil)
 	cleanup := func() {
 		topicCleanup()
 		subCleanup()
@@ -566,7 +566,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, false, nil)
+	sub = pubsub.NewSubscription(ds, 1, nil)
 	defer sub.Shutdown(ctx)
 	_, subErr := sub.Receive(ctx)
 	if subErr == nil {
@@ -583,9 +583,9 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 	attrs := map[string]string{"label": "value"}
 	body := []byte("hello, world")
 	const (
-		nMessages          = 1000
-		concurrencySend    = 10
-		concurrencyReceive = 10
+		nMessages          = 10000
+		concurrencySend    = 100
+		concurrencyReceive = 100
 	)
 	if nMessages%concurrencySend != 0 || nMessages%concurrencyReceive != 0 {
 		b.Fatal("nMessages must be divisible by # of sending/receiving goroutines")
@@ -608,7 +608,7 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 			b.Fatalf("receiving: %v", err)
 		}
 		b.SetBytes(nMessages * 1e6)
-		b.Log("MB/s is actually number of messages received per second")
+		b.Logf("MB/s is actually number of messages received per second, %d/%d", i, b.N)
 		if timeSend {
 			b.StartTimer()
 		}
