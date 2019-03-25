@@ -37,7 +37,11 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   trap cleanup EXIT
 
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
-  echo "mergebase is $mergebase"
+  echo "merge-base is $mergebase"
+  if [[ ! -z $mergebase ]]; then
+    echo "merge-base empty. Please ensure that the PR is mergeable."
+    exit 1
+  fi
   git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
 
   # Find out if the diff has any files that are neither:
