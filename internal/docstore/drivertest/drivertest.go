@@ -286,9 +286,11 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 
-	// Can't update a nonexistent doc
-	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{}); err == nil {
-		t.Error("got nil, want error")
+	// TODO(jba): test that empty mods is a no-op.
+
+	// Can't update a nonexistent doc.
+	if err := coll.Update(ctx, nonexistentDoc, ds.Mods{"x": "y"}); err == nil {
+		t.Error("nonexistent document: got nil, want error")
 	}
 
 	t.Run("revision", func(t *testing.T) {
