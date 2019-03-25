@@ -23,8 +23,8 @@ import (
 
 func TestListenAndServe(t *testing.T) {
 	td := new(testDriver)
-	s := New(&Options{Driver: td})
-	err := s.ListenAndServe(":8080", http.NotFoundHandler())
+	s := New(http.NotFoundHandler(), &Options{Driver: td})
+	err := s.ListenAndServe(":8080")
 	if err != nil {
 		t.Fatal(err)
 	}
