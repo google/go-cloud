@@ -19,10 +19,10 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"fmt"
 	"net/url"
 
 	"github.com/go-sql-driver/mysql"
+	"gocloud.dev/internal/openurl"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 )
@@ -76,44 +76,33 @@ type MySQLURLOpener interface {
 //
 // The zero value is a multiplexer with no registered schemes.
 type URLMux struct {
-	schemes map[string]MySQLURLOpener
+	schemes openurl.SchemeMap
 }
 
 // RegisterMySQL registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterMySQL panics.
 func (mux *URLMux) RegisterMySQL(scheme string, opener MySQLURLOpener) {
-	if mux.schemes == nil {
-		mux.schemes = make(map[string]MySQLURLOpener)
-	} else if _, exists := mux.schemes[scheme]; exists {
-		panic(fmt.Errorf("scheme %q already registered on mux", scheme))
-	}
-	mux.schemes[scheme] = opener
+	mux.schemes.Register("mysql", "DB", scheme, opener)
 }
 
 // OpenMySQL calls OpenMySQLURL with the URL parsed from urlstr.
 // OpenMySQL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenMySQL(ctx context.Context, urlstr string) (*sql.DB, error) {
-	u, err := url.Parse(urlstr)
+	opener, u, err := mux.schemes.FromString("DB", urlstr)
 	if err != nil {
-		return nil, fmt.Errorf("open connection: %v", err)
+		return nil, err
 	}
-	return mux.OpenMySQLURL(ctx, u)
+	return opener.(MySQLURLOpener).OpenMySQLURL(ctx, u)
 }
 
 // OpenMySQLURL dispatches the URL to the opener that is registered with the
 // URL's scheme. OpenMySQLURL is safe to call from multiple goroutines.
 func (mux *URLMux) OpenMySQLURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	if u.Scheme == "" {
-		return nil, fmt.Errorf("open connection %q: no scheme in URL", u)
+	opener, err := mux.schemes.FromURL("DB", u)
+	if err != nil {
+		return nil, err
 	}
-	var opener MySQLURLOpener
-	if mux != nil {
-		opener = mux.schemes[u.Scheme]
-	}
-	if opener == nil {
-		return nil, fmt.Errorf("open connection %q: no provider registered for %s", u, u.Scheme)
-	}
-	return opener.OpenMySQLURL(ctx, u)
+	return opener.(MySQLURLOpener).OpenMySQLURL(ctx, u)
 }
 
 var defaultURLMux = new(URLMux)
