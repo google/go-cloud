@@ -163,7 +163,7 @@ if err != nil {
     return err
 }
 
-// Create a *blob.Bucket.
+// Create a *secrets.Keeper.
 const keyID = gcpkms.KeyResourceID(
     "MYPROJECT", "MYLOCATION", "MYKEYRING", "MYKEY")
 keeper, err := gcpkms.NewKeeper(client, keyID, nil)
@@ -213,7 +213,7 @@ import (
 // ...
 
 vaultClient, err := vault.Dial(ctx, &vault.Config{
-    Token: "<Client (Root) Token>",
+    Token: "CLIENT_TOKEN",
     APIConfig: api.Config{
         Address: "http://127.0.0.1:8200",
     },
