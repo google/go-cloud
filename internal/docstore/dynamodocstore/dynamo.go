@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"gocloud.dev/gcerrors"
 
@@ -132,7 +131,7 @@ func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Do
 		return fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 
-	if av.M[docstore.RevisionField], err = encodeValue(time.Now().UTC()); err != nil {
+	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
 		return err
 	}
 	in := &dyn.PutItemInput{
@@ -215,7 +214,7 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 			ub = ub.Set(expression.Name(fp), expression.Value(m.Value))
 		}
 	}
-	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(time.Now().UTC()))
+	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
 	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
 	if err != nil {
 		return err
@@ -267,7 +266,7 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 var errorCodeMap = map[string]gcerrors.ErrorCode{
 	dyn.ErrCodeConditionalCheckFailedException:          gcerr.FailedPrecondition,
 	dyn.ErrCodeProvisionedThroughputExceededException:   gcerr.ResourceExhausted,
-	dyn.ErrCodeResourceNotFoundException:                gcerr.FailedPrecondition,
+	dyn.ErrCodeResourceNotFoundException:                gcerr.NotFound,
 	dyn.ErrCodeItemCollectionSizeLimitExceededException: gcerr.ResourceExhausted,
 	dyn.ErrCodeTransactionConflictException:             gcerr.Internal,
 	dyn.ErrCodeRequestLimitExceeded:                     gcerr.ResourceExhausted,
