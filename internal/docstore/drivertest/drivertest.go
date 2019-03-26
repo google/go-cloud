@@ -373,7 +373,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	}
 
 	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
-		// t.Helper()
+		t.Helper()
 		enc, err := encode(in)
 		if err != nil {
 			t.Fatal(err)
