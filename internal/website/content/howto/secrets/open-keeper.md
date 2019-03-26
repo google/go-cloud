@@ -112,7 +112,8 @@ if err != nil {
 ## Google Cloud Key Management Service
 
 The Go CDK can use keys from Google Cloud Platform's [Key Management
-Service][GCP KMS] (GCP KMS) to keep information secret. GCP KMS URLs are very
+Service][GCP KMS] (GCP KMS) to keep information secret. `secrets.OpenKeeper`
+will use [Application Default Credentials][GCP credentials]. GCP KMS URLs are
 similar to [key resource IDs][]:
 
 ```go
