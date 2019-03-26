@@ -2,20 +2,20 @@
 version: 1
 interactions:
 - request:
-    body: '{"Item":{"_id":{"S":"testGet1"},"f":{"N":"32.3"},"i":{"N":"95"},"s":{"S":"a
+    body: '{"Item":{"DocstoreRevision":{"S":"2019-03-26T02:27:57.981106Z"},"_id":{"S":"testGet1"},"f":{"N":"32.3"},"i":{"N":"95"},"s":{"S":"a
       string"}},"TableName":"docstore-test"}'
     form: {}
     headers:
       Accept-Encoding:
       - identity
       Content-Length:
-      - "114"
+      - "169"
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.16.23 (go1.12.1; darwin; amd64)
       X-Amz-Date:
-      - 20190311T215348Z
+      - 20190326T022757Z
       X-Amz-Target:
       - DynamoDB_20120810.PutItem
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -30,13 +30,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Mon, 11 Mar 2019 21:53:48 GMT
+      - Tue, 26 Mar 2019 02:27:57 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "2745614147"
       X-Amzn-Requestid:
-      - 274SB47HAUK94T9VMD0DFF7SHBVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - CJ0F4037KQK61GKJRGL3EI96KRVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -51,30 +51,30 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.16.23 (go1.12.1; darwin; amd64)
       X-Amz-Date:
-      - 20190311T215348Z
+      - 20190326T022758Z
       X-Amz-Target:
       - DynamoDB_20120810.GetItem
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Item":{"i":{"N":"95"},"_id":{"S":"testGet1"},"s":{"S":"a string"},"f":{"N":"32.3"}}}'
+    body: '{"Item":{"i":{"N":"95"},"_id":{"S":"testGet1"},"s":{"S":"a string"},"DocstoreRevision":{"S":"2019-03-26T02:27:57.981106Z"},"f":{"N":"32.3"}}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - "86"
+      - "141"
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Mon, 11 Mar 2019 21:53:48 GMT
+      - Tue, 26 Mar 2019 02:27:57 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "298036633"
+      - "1183290229"
       X-Amzn-Requestid:
-      - VVT7MU6FKOEOHS6E7QKIGIMRQFVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - VR7FBPM4IB25D5G4VIRKAUUB6JVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""

@@ -55,8 +55,7 @@ func TestConformance(t *testing.T) {
 		clearTable(t)
 	}
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	t.Skip("needs implementation of RevisionField")
-	//	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{})
 }
 
 func clearTable(t *testing.T) {
