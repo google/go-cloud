@@ -30,16 +30,18 @@ import (
 
 const (
 	// How long to run the test.
-	runFor = 10 * time.Second
+	runFor = 25 * time.Second
 	// How long the "warmup period" is, during which we report more frequently.
 	reportWarmup = 500 * time.Millisecond
 	// Minimum frequency for reporting throughput, during warmup and after that.
-	reportPeriodWarmup = 25 * time.Millisecond
-	reportPeriod       = 500 * time.Millisecond
+	reportPeriodWarmup = 50 * time.Millisecond
+	reportPeriod       = 1 * time.Second
 	// Number of output lines per test. We set this to a constant so that it's
 	// easy to copy/paste the output into a Google Sheet with pre-created graphs.
-	// Should be above runFor / reportPeriod.
+	// Should be above runFor / reportPeriod + reportWarmup / reportPeriodWarmup.
 	numLinesPerTest = 50
+	// Number of data points to smooth msgs/sec and RPCs/sec over.
+	smoothing = 5
 )
 
 type fakeSub struct {
@@ -103,6 +105,13 @@ func TestReceivePerformance(t *testing.T) {
 			processProfile: func() time.Duration { return 1 * time.Second },
 		},
 		{
+			description: "receive 1s process 70ms",
+			receiveProfile: func(maxMessages int) (int, time.Duration) {
+				return maxMessages, 1 * time.Second
+			},
+			processProfile: func() time.Duration { return 70 * time.Millisecond },
+		},
+		{
 			description: "receive 250ms+stddev 150ms, process 10ms + stddev 5ms",
 			receiveProfile: func(maxMessages int) (int, time.Duration) {
 				return maxMessages, time.Duration(rand.NormFloat64()*150+250) * time.Millisecond
@@ -128,7 +137,7 @@ func TestReceivePerformance(t *testing.T) {
 }
 
 func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(int) (int, time.Duration), processProfile func() time.Duration, noAck bool) {
-	msgs := make([]*driver.Message, 1000)
+	msgs := make([]*driver.Message, maxBatchSize)
 	for i := range msgs {
 		msgs[i] = &driver.Message{}
 	}
@@ -145,6 +154,8 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	start := time.Now()
 	var lastReport time.Time
 	numMsgs := 0
+	var prevMsgsPerSec, prevRPCsPerSec []float64     // last <smoothing> datapoints
+	var runningMsgsPerSec, runningRPCsPerSec float64 // sum of values in above slices
 	numRPCs := 0
 	lastMaxMessages := 0
 	nLines := 1 // header
@@ -153,9 +164,26 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	reportLine := func(now time.Time) {
 		elapsed := now.Sub(start)
 		elapsedSinceReport := now.Sub(lastReport)
+
+		// Smooth msgsPerSec over the last <smoothing> datapoints.
 		msgsPerSec := float64(numMsgs) / elapsedSinceReport.Seconds()
+		prevMsgsPerSec = append(prevMsgsPerSec, msgsPerSec)
+		runningMsgsPerSec += msgsPerSec
+		if len(prevMsgsPerSec) > smoothing {
+			runningMsgsPerSec -= prevMsgsPerSec[0]
+			prevMsgsPerSec = prevMsgsPerSec[1:]
+		}
+
+		// Smooth rpcsPerSec over the last <smoothing> datapoints.
 		rpcsPerSec := float64(numRPCs) / elapsedSinceReport.Seconds()
-		fmt.Printf("%f\t%f\t%f\t%d\n", elapsed.Seconds(), msgsPerSec, rpcsPerSec, lastMaxMessages)
+		prevRPCsPerSec = append(prevRPCsPerSec, rpcsPerSec)
+		runningRPCsPerSec += rpcsPerSec
+		if len(prevRPCsPerSec) > smoothing {
+			runningRPCsPerSec -= prevRPCsPerSec[0]
+			prevRPCsPerSec = prevRPCsPerSec[1:]
+		}
+
+		fmt.Printf("%f\t%f\t%f\t%d\n", elapsed.Seconds(), runningMsgsPerSec/float64(len(prevMsgsPerSec)), runningRPCsPerSec/float64(len(prevRPCsPerSec)), lastMaxMessages)
 		nLines++
 
 		lastReport = now
