@@ -104,8 +104,6 @@ import (
 	"gocloud.dev/pubsub/driver"
 )
 
-var zeroTime time.Time
-
 // Message contains data to be published.
 type Message struct {
 	// Body contains the content of the message.
@@ -315,8 +313,8 @@ type Subscription struct {
 	err              error         // permanent error
 	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
 	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time     // start time for throughput measurement, or zeroTime if queue is empty
-	throughputEnd    time.Time     // end time for throughput measurement, or zeroTime if queue is not empty
+	throughputStart  time.Time     // start time for throughput measurement, or the zero Time if queue is empty
+	throughputEnd    time.Time     // end time for throughput measurement, or the zero Time if queue is not empty
 	throughputCount  int           // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
@@ -431,9 +429,11 @@ func (s *Subscription) updateBatchSize() int {
 	// Reset throughput measurement markers.
 	if len(s.q) > 0 {
 		s.throughputStart = now
-		// Otherwise, will get set when we receive some messages.
+	} else {
+		// Will get set to non-zero value when we receive some messages.
+		s.throughputStart = time.Time{}
 	}
-	s.throughputEnd = zeroTime
+	s.throughputEnd = time.Time{}
 	s.throughputCount = 0
 
 	// Using Ceil guarantees at least one message.
@@ -458,8 +458,8 @@ func (s *Subscription) updateBatchSize() int {
 //    be called again with a fresh ctx.
 //
 // Callers can distinguish between the two by checking if the ctx they passed
-// is Done, or via xerrors.Is(err, context.DeadlineExceeded) on the returned
-// error.
+// is Done, or via xerrors.Is(err, context.DeadlineExceeded or context.Canceled)
+// on the returned error.
 //
 // The Ack method of the returned Message must be called once the message has
 // been processed, to prevent it from being received again, unless
