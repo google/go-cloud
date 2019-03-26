@@ -49,7 +49,7 @@ encrypting or decrypting large amounts of data is prohibitively slow (and in
 some providers not permitted). If you need your application to encrypt or
 decrypt large amounts of data, you should:
 
-1. generate a key for the encryption algorithm (16KiB chunks with
+1. Generate a key for the encryption algorithm (16KiB chunks with
    [`secretbox`][] is a reasonable approach).
 2. Encrypt the key with secret keeper.
 3. Store the encrypted key somewhere accessible to the application.
