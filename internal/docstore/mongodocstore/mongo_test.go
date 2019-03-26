@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"gocloud.dev/internal/docstore/driver"
@@ -73,6 +74,46 @@ func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error)
 
 func (h *harness) Close() {}
 
+type codecTester struct {
+}
+
+func (codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{
+		drivertest.Complex, drivertest.NanosecondTimes}
+}
+
+func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
+	doc, err := driver.NewDocument(x)
+	if err != nil {
+		return nil, err
+	}
+	m, err := encodeDoc(doc)
+	if err != nil {
+		return nil, err
+	}
+	return bson.Marshal(m)
+}
+
+func (codecTester) DocstoreDecode(value, dest interface{}) error {
+	doc, err := driver.NewDocument(dest)
+	if err != nil {
+		return err
+	}
+	var m map[string]interface{}
+	if err := bson.Unmarshal(value.([]byte), &m); err != nil {
+		return err
+	}
+	return decodeDoc(m, doc)
+}
+
+func (codecTester) NativeEncode(x interface{}) (interface{}, error) {
+	return bson.Marshal(x)
+}
+
+func (codecTester) NativeDecode(value, dest interface{}) error {
+	return bson.Unmarshal(value.([]byte), dest)
+}
+
 func TestConformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -88,6 +129,5 @@ func TestConformance(t *testing.T) {
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
 	}
-	// TODO(jba): add codec tests (using bson.Marshal/Unmarshal).
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, codecTester{})
 }

@@ -58,6 +58,8 @@ const (
 	Complex
 	// Native codec doesn't support arrays
 	Arrays
+	// Native codec doesn't support full time precision
+	NanosecondTimes
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -372,15 +374,19 @@ func testCodec(t *testing.T, ct CodecTester) {
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
+	// A time with non-zero milliseconds, but zero nanoseconds.
+	milliTime := time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6, time.UTC)
+	// A time with non-zero nanoseconds.
+	nanoTime := time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6+7, time.UTC)
 
 	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
 		t.Helper()
 		enc, err := encode(in)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%+v", err)
 		}
 		if err := decode(enc, dec); err != nil {
-			t.Fatal(err)
+			t.Fatalf("%+v", err)
 		}
 		if diff := cmp.Diff(in, dec); diff != "" {
 			t.Error(diff)
@@ -420,7 +426,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
-		T:  time.Now(),
+		T:  milliTime,
 	}
 
 	check(dsrt, &DocstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
@@ -452,10 +458,10 @@ func testCodec(t *testing.T, ct CodecTester) {
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
-		T:  time.Now(),
+		T:  milliTime,
 	}
 	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
-	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
+	//	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
 
 	// Test various other types, unless they are unsupported.
 	unsupported := map[UnsupportedType]bool{}
@@ -491,6 +497,34 @@ func testCodec(t *testing.T, ct CodecTester) {
 		a := &Arrays{[2]int{13, 14}}
 		check(a, &Arrays{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(a, &Arrays{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
+	// Nanosecond-precision time.
+	type NT struct {
+		T time.Time
+	}
+	nt := &NT{nanoTime}
+	if unsupported[NanosecondTimes] {
+		// Expect rounding (or truncation) to the nearest millisecond.
+		check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
+			enc, err := encode(nt)
+			if err != nil {
+				t.Fatalf("%+v", err)
+			}
+			var got NT
+			if err := decode(enc, &got); err != nil {
+				t.Fatalf("%+v", err)
+			}
+			want := nt.T.Round(time.Millisecond)
+			if !got.T.Equal(want) {
+				t.Errorf("got %v, want %v", got.T, want)
+			}
+		}
+		check(ct.DocstoreEncode, ct.NativeDecode)
+		check(ct.NativeEncode, ct.DocstoreDecode)
+	} else {
+		// Expect perfect round-tripping of nanosecond times.
+		check(nt, &NT{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(nt, &NT{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
 }
 
