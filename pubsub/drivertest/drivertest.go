@@ -608,7 +608,7 @@ func benchmark(b *testing.B, topic *pubsub.Topic, sub *pubsub.Subscription, time
 			b.Fatalf("receiving: %v", err)
 		}
 		b.SetBytes(nMessages * 1e6)
-		b.Logf("MB/s is actually number of messages received per second, %d/%d", i, b.N)
+		b.Log("MB/s is actually number of messages received per second")
 		if timeSend {
 			b.StartTimer()
 		}
