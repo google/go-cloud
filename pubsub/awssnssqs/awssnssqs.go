@@ -531,18 +531,18 @@ func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*drive
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	// SQS supports deleting at most 10 messages at a time:
-	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.DeleteMessageBatch
-	// If len(ids) is larger than 10, we make up to maxAckConcurrency RPCs
-	// (across calls to SendAcks) in parallel.
-	const maxPerRPC = 10
-
-	g, ctx := errgroup.WithContext(ctx)
-	var ctxErr error
-
-	// sendBatch sends a single RPC deleting up to maxPerRPC messages.
-	sendBatch := func(req *sqs.DeleteMessageBatchInput) error {
-		defer func() { <-s.acksem }()
+	newReq := func() interface{} {
+		return &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
+	}
+	addToReq := func(reqi interface{}, id driver.AckID) {
+		req := reqi.(*sqs.DeleteMessageBatchInput)
+		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
+			Id:            aws.String(strconv.Itoa(len(req.Entries))),
+			ReceiptHandle: id.(*string),
+		})
+	}
+	sendReq := func(ctx context.Context, reqi interface{}) error {
+		req := reqi.(*sqs.DeleteMessageBatchInput)
 		resp, err := s.client.DeleteMessageBatchWithContext(ctx, req)
 		if err != nil {
 			return err
@@ -553,16 +553,56 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		}
 		return nil
 	}
+	return s.handleAcksInBatches(ctx, ids, newReq, addToReq, sendReq)
+}
 
-	req := &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	newReq := func() interface{} {
+		return &sqs.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
+	}
+	addToReq := func(reqi interface{}, id driver.AckID) {
+		req := reqi.(*sqs.ChangeMessageVisibilityBatchInput)
+		req.Entries = append(req.Entries, &sqs.ChangeMessageVisibilityBatchRequestEntry{
+			Id:                aws.String(strconv.Itoa(len(req.Entries))),
+			ReceiptHandle:     id.(*string),
+			VisibilityTimeout: aws.Int64(0),
+		})
+	}
+	sendReq := func(ctx context.Context, reqi interface{}) error {
+		req := reqi.(*sqs.ChangeMessageVisibilityBatchInput)
+		resp, err := s.client.ChangeMessageVisibilityBatchWithContext(ctx, req)
+		if err != nil {
+			return err
+		}
+		if numFailed := len(resp.Failed); numFailed > 0 {
+			first := resp.Failed[0]
+			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		}
+		return nil
+	}
+	return s.handleAcksInBatches(ctx, ids, newReq, addToReq, sendReq)
+}
+
+func (s *subscription) handleAcksInBatches(ctx context.Context, ids []driver.AckID, newReq func() interface{}, addToReq func(req interface{}, id driver.AckID), sendReq func(ctx context.Context, req interface{}) error) error {
+	// SQS supports deleting/updating at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.DeleteMessageBatch
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ChangeMessageVisibilityBatch
+	// If len(ids) is larger than 10, we make up to maxAckConcurrency RPCs
+	// (across calls to SendAcks/SendNacks) in parallel.
+	const maxPerRPC = 10
+
+	g, ctx := errgroup.WithContext(ctx)
+	var ctxErr error
+
+	req := newReq()
+	n := 0
 Loop:
 	for i, id := range ids {
-		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
-			Id:            aws.String(strconv.Itoa(i)),
-			ReceiptHandle: id.(*string),
-		})
+		addToReq(req, id)
+		n++
 		// Send if we've reached the limit, or if this is the last one.
-		if len(req.Entries) == maxPerRPC || i == len(ids)-1 {
+		if n == maxPerRPC || i == len(ids)-1 {
 			select {
 			case <-ctx.Done():
 				ctxErr = ctx.Err()
@@ -570,11 +610,12 @@ Loop:
 			case s.acksem <- struct{}{}:
 				req := req
 				g.Go(func() error {
-					return sendBatch(req)
+					defer func() { <-s.acksem }()
+					return sendReq(ctx, req)
 				})
 			}
 			// Start the next batch.
-			req = &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
+			req = newReq()
 		}
 	}
 	if err := g.Wait(); err != nil {

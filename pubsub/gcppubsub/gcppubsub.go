@@ -389,6 +389,26 @@ func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	return s.batchAcks(ids, func(ids []string) error {
+		return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
+			Subscription: s.path,
+			AckIds:       ids,
+		})
+	})
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	return s.batchAcks(ids, func(ids []string) error {
+		return s.client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
+			Subscription:       s.path,
+			AckIds:             ids,
+			AckDeadlineSeconds: 0,
+		})
+	})
+}
+
+func (s *subscription) batchAcks(ids []driver.AckID, fn func(ids []string) error) error {
 	// The PubSub service limits the size of Acknowledge RPCs.
 	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
 	const maxAckCount = 1000
@@ -404,10 +424,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		for _, id := range batch {
 			ids2 = append(ids2, id.(string))
 		}
-		if err := s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
-			Subscription: s.path,
-			AckIds:       ids2,
-		}); err != nil {
+		if err := fn(ids2); err != nil {
 			return err
 		}
 	}

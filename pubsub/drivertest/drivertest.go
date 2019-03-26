@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -143,6 +144,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
 		"TestSendReceive":                                            testSendReceive,
 		"TestSendReceiveTwo":                                         testSendReceiveTwo,
+		"TestNack":                                                   testNack,
 		"TestErrorOnSendToClosedTopic":                               testErrorOnSendToClosedTopic,
 		"TestErrorOnReceiveFromClosedSubscription":                   testErrorOnReceiveFromClosedSubscription,
 		"TestCancelSendReceive":                                      testCancelSendReceive,
@@ -298,6 +300,76 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		if diff := diffMessageSets(got, want); diff != "" {
 			t.Errorf("sub #%d: %s", i, diff)
 		}
+	}
+}
+
+func testNack(t *testing.T, newHarness HarnessMaker) {
+	const nMessages = 2
+
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	dt, topicCleanup, err := h.CreateTopic(ctx, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer topicCleanup()
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCleanup()
+	if ds.AckFunc() != nil {
+		t.Skip("Nack not supported")
+	}
+	top := pubsub.NewTopic(dt, nil)
+	defer func() {
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+	sub := pubsub.NewSubscription(ds, 1, nil)
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	want := publishN(ctx, t, top, nMessages)
+
+	// Get the messages, but nack them.
+	var got []*pubsub.Message
+	for i := 0; i < nMessages; i++ {
+		m, err := sub.Receive(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, m)
+		m.Nack()
+	}
+	// Check that the received messages match the sent ones.
+	if diff := diffMessageSets(got, want); diff != "" {
+		t.Error(diff)
+	}
+	// We should be able to receive them again, fairly quickly.
+	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	got = nil
+	for i := 0; i < nMessages; i++ {
+		m, err := sub.Receive(ctx2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, m)
+		m.Ack()
+	}
+	if diff := diffMessageSets(got, want); diff != "" {
+		t.Error(diff)
 	}
 }
 

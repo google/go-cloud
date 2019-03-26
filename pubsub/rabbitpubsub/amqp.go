@@ -50,6 +50,7 @@ type amqpChannel interface {
 	Publish(exchange string, msg amqp.Publishing) error
 	Consume(queue, consumer string) (<-chan amqp.Delivery, error)
 	Ack(tag uint64) error
+	Nack(tag uint64) error
 	Cancel(consumer string) error
 	Close() error
 	NotifyPublish(chan amqp.Confirmation) chan amqp.Confirmation
@@ -103,6 +104,10 @@ func (ch *channel) Consume(queue, consumer string) (<-chan amqp.Delivery, error)
 
 func (ch *channel) Ack(tag uint64) error {
 	return ch.ch.Ack(tag, false) // multiple=false: acking only this ID
+}
+
+func (ch *channel) Nack(tag uint64) error {
+	return ch.ch.Nack(tag, false, true) // multiple=false: acking only this ID, requeue: true to redeliver
 }
 
 func (ch *channel) Confirm() error {

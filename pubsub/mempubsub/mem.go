@@ -295,6 +295,26 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	return nil
 }
 
+// SendNacks implements driver.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
+	if s.topic == nil {
+		return errNotExist
+	}
+	// Check for context done before doing any work.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	// Nack messages by setting their expiration to the zero time.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, id := range ackIDs {
+		if m := s.msgs[id]; m != nil {
+			m.expiration = time.Time{}
+		}
+	}
+	return nil
+}
+
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (*subscription) IsRetryable(error) bool { return false }
 
