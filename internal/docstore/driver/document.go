@@ -32,7 +32,8 @@ type Document struct {
 	fields fields.List            // for structs
 }
 
-// Create a new document from doc, which must be a map[string]interface{} or a struct pointer.
+// NewDocument creates a new document from doc, which must be a
+// map[string]interface{} or a struct pointer.
 func NewDocument(doc interface{}) (Document, error) {
 	// TODO: handle a nil *struct?
 	if m, ok := doc.(map[string]interface{}); ok {
@@ -62,13 +63,12 @@ func (d Document) GetField(field string) (interface{}, error) {
 			return nil, gcerr.Newf(gcerr.NotFound, nil, "field %q not found in map", field)
 		}
 		return x, nil
-	} else {
-		v, err := d.structField(field)
-		if err != nil {
-			return nil, err
-		}
-		return v.Interface(), nil
 	}
+	v, err := d.structField(field)
+	if err != nil {
+		return nil, err
+	}
+	return v.Interface(), nil
 }
 
 // getDocument gets the value of the given field path, which must be a document.

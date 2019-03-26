@@ -373,11 +373,12 @@ func testCodec(t *testing.T, ct CodecTester) {
 	}
 
 	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
-		t.Helper()
+		// t.Helper()
 		enc, err := encode(in)
 		if err != nil {
 			t.Fatal(err)
 		}
+		// fmt.Printf("%#v\n", enc)
 		if err := decode(enc, dec); err != nil {
 			t.Fatal(err)
 		}
@@ -397,6 +398,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		St string
 		B  bool
 		By []byte
+		BB [][]byte
 		L  []int
 		A  [2]int
 		M  map[string]bool
@@ -418,6 +420,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		A:  [2]int{6, 7},
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
+		BB: [][]byte{{9}, {10}, {11}},
 		P:  &s,
 		T:  time.Now(),
 	}
@@ -436,6 +439,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		St string
 		B  bool
 		By []byte
+		BB [][]byte
 		L  []int
 		M  map[string]bool
 		P  *string
@@ -450,6 +454,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		L:  []int{3, 4, 5},
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
+		BB: [][]byte{{9}, {10}, {11}},
 		P:  &s,
 		T:  time.Now(),
 	}

@@ -65,7 +65,10 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-var typeOfGoTime = reflect.TypeOf(time.Time{})
+var (
+	typeOfGoTime    = reflect.TypeOf(time.Time{})
+	typeOfBinarySet = reflect.TypeOf([][]byte{})
+)
 
 // EncodeSpecial encodes time.Time specially.
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
@@ -73,6 +76,9 @@ func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 	case typeOfGoTime:
 		ts := v.Interface().(time.Time).Format(time.RFC3339Nano)
 		e.EncodeString(ts)
+	case typeOfBinarySet:
+		bs := v.Interface().([][]byte)
+		e.av = new(dyn.AttributeValue).SetBS(bs)
 	default:
 		return false, nil
 	}
@@ -339,6 +345,11 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 		}
 		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
 		return true, t, err
+	case typeOfBinarySet:
+		if d.av.BS == nil {
+			return false, nil, errors.New("expected binary set field")
+		}
+		return true, d.av.BS, nil
 	default:
 		return false, nil, nil
 	}
