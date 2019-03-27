@@ -20,11 +20,10 @@ import (
 	"fmt"
 	"strings"
 
-	"gocloud.dev/gcerrors"
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
