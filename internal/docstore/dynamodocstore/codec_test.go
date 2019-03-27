@@ -78,7 +78,7 @@ func TestEncodeValue(t *testing.T) {
 type codecTester struct{}
 
 func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
-	return []drivertest.UnsupportedType{drivertest.Complex}
+	return []drivertest.UnsupportedType{drivertest.Complex, drivertest.BinarySet}
 }
 
 func (ct *codecTester) NativeEncode(obj interface{}) (interface{}, error) {

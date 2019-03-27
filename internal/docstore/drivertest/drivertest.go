@@ -44,20 +44,21 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
-// Enum of types not supported by native codecs. We chose to describe this negatively
-// (types that aren't supported rather than types that are) to make the more
-// inclusive cases easier to write. A driver can return nil for
-// CodecTester.UnsupportedTypes, then add values from this enum one by one until all
-// tests pass.
+// UnsupportedType is an enum for types not supported by native codecs. We chose
+// to describe this negatively (types that aren't supported rather than types
+// that are) to make the more inclusive cases easier to write. A driver can
+// return nil for CodecTester.UnsupportedTypes, then add values from this enum
+// one by one until all tests pass.
 type UnsupportedType int
 
+// These are known unsupported types by one or more driver. Each of them
+// corresponses to an unsupported type specific test which if the driver
+// actually supports.
 const (
-	// Native codec doesn't support any unsigned integer type
-	Uint UnsupportedType = iota
-	// Native codec doesn't support any complex type
-	Complex
-	// Native codec doesn't support arrays
-	Arrays
+	Uint      UnsupportedType = iota // uint
+	Complex                          // complex
+	Arrays                           // Go arrays
+	BinarySet                        // [][]byte
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -492,10 +493,22 @@ func testCodec(t *testing.T, ct CodecTester) {
 		check(a, &Arrays{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(a, &Arrays{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
+
+	// Binary sets.
+	if !unsupported[BinarySet] {
+		type BinarySet struct {
+			B [][]byte
+		}
+		b := &BinarySet{[][]byte{{15}, {16}, {17}}}
+		check(b, &BinarySet{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(b, &BinarySet{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 }
 
+// MakeUniqueStringDeterministicForTesting uses a specified seed value to
+// produce the same sequence of values in driver.UniqueString for testing.
+//
 // Call when running tests that will be replayed.
-// Each seed value will result in UniqueString producing the same sequence of values.
 func MakeUniqueStringDeterministicForTesting(seed int64) {
 	r := &randReader{r: rand.New(rand.NewSource(seed))}
 	uuid.SetRand(r)
