@@ -21,8 +21,6 @@
 // TODO(jba): write
 package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
-// TODO(jba): revision field
-
 // MongoDB reference manual: https://docs.mongodb.com/manual
 // Client documentation: https://godoc.org/go.mongodb.org/mongo-driver/mongo
 //
@@ -121,7 +119,7 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 	if err != nil {
 		return err
 	}
-	mdoc[docstore.RevisionField] = int64(1)
+	mdoc[docstore.RevisionField] = driver.UniqueString()
 	result, err := c.coll.InsertOne(ctx, mdoc)
 	if err != nil {
 		return err
@@ -134,19 +132,20 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 
 func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool) error {
 	// See https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne
-	id, err := a.Doc.GetField(idField)
-	if err != nil {
-		return err
-	}
 	doc, err := encodeDoc(a.Doc)
 	if err != nil {
 		return err
 	}
+	doc[docstore.RevisionField] = driver.UniqueString()
 	opts := options.Replace()
 	if upsert {
 		opts.SetUpsert(true) // Document will be created if it doesn't exist.
 	}
-	result, err := c.coll.ReplaceOne(ctx, bson.D{{"_id", id}}, doc, opts)
+	filter, id, _, err := makeFilter(a.Doc)
+	if err != nil {
+		return err
+	}
+	result, err := c.coll.ReplaceOne(ctx, filter, doc, opts)
 	if err != nil {
 		return err
 	}
@@ -157,20 +156,29 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 }
 
 func (c *collection) delete(ctx context.Context, a *driver.Action) error {
-	id, err := a.Doc.GetField(idField)
+	filter, id, rev, err := makeFilter(a.Doc)
 	if err != nil {
 		return err
 	}
-	_, err = c.coll.DeleteOne(ctx, bson.D{{"_id", id}})
+	result, err := c.coll.DeleteOne(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if result.DeletedCount == 0 {
+		if rev == nil {
+			return nil
+		}
+		// Not sure if the document doesn't exist, or the revision is wrong. Distinguish the two.
+		res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+		if res.Err() != nil { // TODO(jba): distinguish between not found and other errors.
+			return gcerr.Newf(gcerr.NotFound, res.Err(), "document with ID %v does not exist", id)
+		}
+		return gcerr.Newf(gcerr.FailedPrecondition, nil, "document with ID %v does not have revision %v", id, rev)
+	}
 	return err
 }
 
 func (c *collection) update(ctx context.Context, a *driver.Action) error {
-	id, err := a.Doc.GetField(idField)
-	if err != nil {
-		return err
-	}
-
 	var (
 		sets   bson.D
 		unsets bson.D
@@ -187,19 +195,21 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 			sets = append(sets, bson.E{Key: key, Value: val})
 		}
 	}
-	updateDoc := map[string]bson.D{}
-	if len(sets) > 0 {
-		updateDoc["$set"] = sets
-	}
-	if len(unsets) > 0 {
-		updateDoc["$unset"] = unsets
-	}
-	if len(updateDoc) == 0 {
+	if len(sets) == 0 && len(unsets) == 0 {
 		// MongoDB returns an error if there are no updates, but docstore treats it
 		// as a no-op.
 		return nil
 	}
-	result, err := c.coll.UpdateOne(ctx, bson.D{{"_id", id}}, updateDoc)
+	updateDoc := map[string]bson.D{}
+	updateDoc["$set"] = append(sets, bson.E{Key: docstore.RevisionField, Value: driver.UniqueString()})
+	if len(unsets) > 0 {
+		updateDoc["$unset"] = unsets
+	}
+	filter, id, _, err := makeFilter(a.Doc)
+	if err != nil {
+		return err
+	}
+	result, err := c.coll.UpdateOne(ctx, filter, updateDoc)
 	if err != nil {
 		return err
 	}
@@ -209,6 +219,36 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	return nil
 }
 
+func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err error) {
+	id, err = doc.GetField(idField)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	rev, err = doc.GetField(docstore.RevisionField)
+	if err != nil && gcerrors.Code(err) != gcerrors.NotFound {
+		return nil, nil, nil, err
+	}
+	// Only select the document with the given ID.
+	filter = bson.D{{"_id", id}}
+	// If the given document has a revision, it must match the stored document.
+	if rev != nil {
+		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
+	}
+	return filter, id, rev, nil
+}
+
+// Error code for a write error when no documents match a filter.
+// (The Go mongo driver doesn't define an exported constant for this.)
+const mongoNotFoundCode = 11000
+
 func (c *collection) ErrorCode(err error) gcerrors.ErrorCode {
-	return gcerr.GRPCCode(err)
+	if g, ok := err.(*gcerr.Error); ok {
+		return g.Code
+	}
+	if wexc, ok := err.(mongo.WriteException); ok && len(wexc.WriteErrors) > 0 {
+		if wexc.WriteErrors[0].Code == mongoNotFoundCode {
+			return gcerrors.NotFound
+		}
+	}
+	return gcerrors.Unknown
 }

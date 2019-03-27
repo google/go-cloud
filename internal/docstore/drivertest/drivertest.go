@@ -243,7 +243,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 	}
 	// Delete doesn't fail if the doc doesn't exist.
 	if err := coll.Delete(ctx, nonexistentDoc); err != nil {
-		t.Fatal(err)
+		t.Errorf("delete nonexistent doc: want nil, got %v", err)
 	}
 
 	// Delete will fail if the revision field is mismatched.
@@ -322,8 +322,9 @@ func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) err
 		t.Fatalf("write with revision field got %v, want nil", err)
 	}
 	// This write should fail: got's revision field hasn't changed, but the stored document has.
-	if err := write(got); gcerrors.Code(err) != gcerrors.FailedPrecondition {
-		t.Errorf("write with old revision field: got %v, wanted FailedPrecondition", err)
+	err := write(got)
+	if c := gcerrors.Code(err); c != gcerrors.FailedPrecondition && c != gcerrors.NotFound {
+		t.Errorf("write with old revision field: got %v, wanted FailedPrecondition or NotFound", err)
 	}
 }
 

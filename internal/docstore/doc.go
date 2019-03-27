@@ -19,14 +19,15 @@
 //
 // Revisions
 //
-// Every document is given a revision when it is created. Docstore uses the field
-// name "DocstoreRevision" (stored in the constant docstore.RevisionField) to hold
-// the revision. Whenever document is modified, its revision changes. Revisions can
-// be used for optimistic locking: whenever a Put, Replace, Update or Delete action
-// is given a document with a revision, then an error for which gcerrors.Code returns
-// FailedPrecondition is returned if the stored document's revision does not match
-// the given document's. Thus a Get followed by one of those write actions will fail
-// if the document was changed between the Get and the write.
+// Docstore gives every document a revision when it is created. Docstore uses the
+// field name "DocstoreRevision" (stored in the constant docstore.RevisionField) to
+// hold the revision. Whenever a document is modified, its revision changes.
+// Revisions can be used for optimistic locking: whenever a Put, Replace, Update or
+// Delete action is given a document with a revision, then an error for which
+// gcerrors.Code returns FailedPrecondition or NotFound is
+// returned if the stored document's revision does not match the given document's.
+// Thus a Get followed by one of those write actions will fail if the document was
+// changed between the Get and the write.
 //
 // Since different providers use different types for revisions, the type of the
 // revision field is unspecified. When defining a struct for storing docstore data,
