@@ -57,6 +57,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -86,7 +87,7 @@ const (
 	maxPublishConcurrency = 100
 	// maxReceiveConcurrency limits the number of Receive RPCs to SQS in flight.
 	maxReceiveConcurrency = 100
-	// maxAckConcurrency limits the number of DeleteMessage RPCs (for Acks) to SQS in flight.
+	// maxAckConcurrency limits the number of DeleteMessageBatch RPCs (for Acks) to SQS in flight.
 	maxAckConcurrency = 100
 	// How long ReceiveBatch should wait if no messages are available; controls
 	// the poll interval of requests to SQS.
@@ -404,7 +405,7 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 type subscription struct {
 	client *sqs.SQS
 	qURL   string
-	acksem chan struct{} // limits maximum in-flight DeleteMessage RPCs across SendAcks
+	acksem chan struct{} // limits maximum in-flight DeleteMessageBatch RPCs across SendAcks
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -429,7 +430,7 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// SQS supports receiving at most 10 messages at a time:
-	// https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_ReceiveMessage.html
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
 	// If maxMessages is larger than 10, we make up to maxReceiveConcurrency RPCs
 	// in parallel to try to get more.
 	const maxMessagesPerRPC = 10
@@ -530,25 +531,50 @@ func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*drive
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	// SQS supports deleting at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.DeleteMessageBatch
+	// If len(ids) is larger than 10, we make up to maxAckConcurrency RPCs
+	// (across calls to SendAcks) in parallel.
+	const maxPerRPC = 10
+
 	g, ctx := errgroup.WithContext(ctx)
 	var ctxErr error
 
+	// sendBatch sends a single RPC deleting up to maxPerRPC messages.
+	sendBatch := func(req *sqs.DeleteMessageBatchInput) error {
+		defer func() { <-s.acksem }()
+		resp, err := s.client.DeleteMessageBatchWithContext(ctx, req)
+		if err != nil {
+			return err
+		}
+		if numFailed := len(resp.Failed); numFailed > 0 {
+			first := resp.Failed[0]
+			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+		}
+		return nil
+	}
+
+	req := &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
 Loop:
-	for _, id := range ids {
-		select {
-		case <-ctx.Done():
-			ctxErr = ctx.Err()
-			break Loop
-		case s.acksem <- struct{}{}:
-			id := id
-			g.Go(func() error {
-				defer func() { <-s.acksem }()
-				_, err := s.client.DeleteMessageWithContext(ctx, &sqs.DeleteMessageInput{
-					QueueUrl:      &s.qURL,
-					ReceiptHandle: id.(*string),
+	for i, id := range ids {
+		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
+			Id:            aws.String(strconv.Itoa(i)),
+			ReceiptHandle: id.(*string),
+		})
+		// Send if we've reached the limit, or if this is the last one.
+		if len(req.Entries) == maxPerRPC || i == len(ids)-1 {
+			select {
+			case <-ctx.Done():
+				ctxErr = ctx.Err()
+				break Loop
+			case s.acksem <- struct{}{}:
+				req := req
+				g.Go(func() error {
+					return sendBatch(req)
 				})
-				return err
-			})
+			}
+			// Start the next batch.
+			req = &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
 		}
 	}
 	if err := g.Wait(); err != nil {
