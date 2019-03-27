@@ -344,11 +344,17 @@ func (ch *fakeChannel) Close() error {
 }
 
 func (ch *fakeChannel) ExchangeDelete(name string) error {
+	ch.conn.mu.Lock()
+	defer ch.conn.mu.Unlock()
+
 	delete(ch.conn.exchanges, name)
 	return nil
 }
 
 func (ch *fakeChannel) QueueDelete(name string) error {
+	ch.conn.mu.Lock()
+	defer ch.conn.mu.Unlock()
+
 	delete(ch.conn.queues, name)
 	return nil
 }
