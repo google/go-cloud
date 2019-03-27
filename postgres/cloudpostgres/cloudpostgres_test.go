@@ -16,6 +16,7 @@ package cloudpostgres
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -132,5 +133,27 @@ func TestOpenBadValue(t *testing.T) {
 				db.Close()
 			}
 		})
+	}
+}
+
+func TestGetGCPInstanceFromUrl(t *testing.T) {
+	project := "my-project-id"
+	region := "us-central1"
+	instance := "my-instance-id"
+	username := "username"
+	password := "password"
+	db := "my-db"
+
+	urlString := fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, db)
+	urlStruct, _ := url.Parse(urlString)
+	instanceSplited, err := GetGCPInstanceFromUrl(urlStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if instanceSplited[0] != project {
+		t.Errorf("Expected that projectId = %s got %s:", project, instanceSplited[0])
+	}
+	if instanceSplited[2] != instance {
+		t.Errorf("Expected that instanceId = %s got %s:", instance, instanceSplited[2])
 	}
 }

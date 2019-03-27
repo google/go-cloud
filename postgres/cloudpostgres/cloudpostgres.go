@@ -14,6 +14,30 @@
 
 // Package cloudpostgres provides connections to managed PostgreSQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/postgres/ for more information.
+
+// URLs
+//
+// For postgres.Open, gcpostgres registers for the scheme "cloudpostgres".
+// The default URL opener will creating a connection using use default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// Escaping
+//
+// Go CDK supports all UTF-8 strings; to make this work with providers lacking
+// full UTF-8 support, strings must be escaped (during writes) and unescaped
+// (during reads). The following escapes are performed for gcsblob:
+//  - Blob keys: ASCII characters 10 and 13 are escaped to "__0x<hex>__".
+//    Additionally, the "/" in "../" is escaped in the same way.
+//
+// As
+//
+// gcpostgres exposes the following types for As:
+//  - DB: *sql.DB
+//  - Error: *googleapi.Error
 package cloudpostgres // import "gocloud.dev/postgres/cloudpostgres"
 
 import (
@@ -24,11 +48,13 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/lib/pq"
+	"gocloud.dev/postgres"
 )
 
 // Params specifies how to connect to a Cloud SQL database.
@@ -53,6 +79,43 @@ type Params struct {
 
 	// TraceOpts contains options for OpenCensus.
 	TraceOpts []ocsql.TraceOption
+}
+
+// URLOpener opens GCP PostgreSQL URLs
+// like "cloudpostgres://user:password@myproject/us-central1/instanceId/mydb".
+type URLOpener struct {
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts  []ocsql.TraceOption
+	CertSource proxy.CertSource
+}
+
+// Scheme is the URL scheme cloudpostgres registers its URLOpener under on
+// postgres.DefaultMux.
+const Scheme = "cloudpostgres"
+
+func init() {
+	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
+}
+
+// OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
+func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	gcpInstance, err := GetGCPInstanceFromUrl(u)
+	if err != nil {
+		return nil, fmt.Errorf("cloudpostgres: open url: %s", err.Error())
+	}
+	projectId, region, instanceId, dbName := gcpInstance[0], gcpInstance[1], gcpInstance[2], gcpInstance[3]
+	password, _ := u.User.Password()
+	params := &Params{
+		User:      u.User.Username(),
+		ProjectID: projectId,
+		Region:    region,
+		Instance:  instanceId,
+		Password:  password,
+		Database:  dbName,
+		Values:    u.Query(),
+		TraceOpts: uo.TraceOpts,
+	}
+	return Open(ctx, uo.CertSource, params)
 }
 
 // Open opens a Cloud SQL database.
@@ -138,4 +201,13 @@ func (d dialer) Dial(network, address string) (net.Conn, error) {
 
 func (d dialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
 	return nil, errors.New("cloudpostgres: DialTimeout not supported")
+}
+
+func GetGCPInstanceFromUrl(u *url.URL) ([]string, error) {
+	gcpInstance := strings.Split(u.Host+u.Path, "/")
+	if len(gcpInstance) != 4 {
+		return nil, fmt.Errorf("cloudpostgres: open url: %s is not in the form project/region/instance/dbname", u.Host+u.Path)
+	}
+
+	return gcpInstance, nil
 }
