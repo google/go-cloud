@@ -185,6 +185,8 @@ type subscription struct {
 
 // NewSubscription creates a new subscription for the given topic.
 // It panics if the given topic did not come from mempubsub.
+// If a message is not acked within in the given ack deadline from when
+// it is received, then it will be redelivered.
 func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
 	if !top.As(&t) {
