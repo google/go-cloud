@@ -80,7 +80,6 @@ var Set = wire.NewSet(
 )
 
 // lazyCredsOpener obtains Application Default Credentials on the first call
-// lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenTopicURL/OpenSubscriptionURL.
 type lazyCredsOpener struct {
 	init   sync.Once
