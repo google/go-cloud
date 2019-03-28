@@ -73,7 +73,7 @@ func TestSaturation(t *testing.T) {
 	ctx := context.Background()
 	const (
 		maxHandlers  = 10
-		maxBatchSize = 500
+		maxBatchSize = 50
 	)
 	var (
 		mu               sync.Mutex
