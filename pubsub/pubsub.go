@@ -110,7 +110,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Metadata has key/value metadata for the message.
+	// Metadata has key/value metadata for the message. It will be nil if the
+	// message has no associated metadata.
 	Metadata map[string]string
 
 	// asFunc invokes driver.Message.AsFunc.
@@ -573,9 +574,13 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 	var q []*Message
 	for _, m := range msgs {
 		id := m.AckID
+		md := m.Metadata
+		if len(md) == 0 {
+			md = nil
+		}
 		m2 := &Message{
 			Body:     m.Body,
-			Metadata: m.Metadata,
+			Metadata: md,
 			asFunc:   m.AsFunc,
 		}
 		if s.ackFunc == nil {
