@@ -68,8 +68,6 @@ func (e *encoder) EncodeMap(n int) driver.Encoder {
 var (
 	typeOfGoTime    = reflect.TypeOf(time.Time{})
 	typeOfBinarySet = reflect.TypeOf([][]byte{})
-	typeOfStringSet = reflect.TypeOf([]string{})
-	typeOfNumberSet = reflect.TypeOf([]float64{})
 )
 
 // EncodeSpecial encodes time.Time specially.
@@ -341,7 +339,11 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 }
 
 func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
-	unsupportedFmt := "unsupported type: %v, the docstore driver for DynamoDB does not decode set types"
+	unsupportedTypes := `unsupported type, the docstore driver for DynamoDB does
+	not decode DynamoDB set types, such as string set, number set and binary set`
+	if d.av.SS != nil || d.av.NS != nil || d.av.BS != nil {
+		return true, nil, errors.New(unsupportedTypes)
+	}
 	switch v.Type() {
 	case typeOfGoTime:
 		if d.av.S == nil {
@@ -349,20 +351,6 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 		}
 		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
 		return true, t, err
-	case typeOfBinarySet:
-		return true, nil, fmt.Errorf(unsupportedFmt, `dynamodbav:",binaryset"`)
-	case typeOfStringSet:
-		if d.av.SS == nil {
-			// List of string should work.
-			break
-		}
-		return true, nil, fmt.Errorf(unsupportedFmt, `dynamodbav:",stringset"`)
-	case typeOfNumberSet:
-		if d.av.NS == nil {
-			// List of number should work.
-			break
-		}
-		return true, nil, fmt.Errorf(unsupportedFmt, `dynamodbav:",numberset"`)
 	}
 	return false, nil, nil
 }
