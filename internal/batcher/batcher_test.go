@@ -51,17 +51,37 @@ func TestSequential(t *testing.T) {
 	}
 }
 
+func TestMinBatchSize(t *testing.T) {
+	// Verify the MinBatchSize option works.
+	var got [][]int
+	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MinBatchSize: 3}, func(items interface{}) error {
+		got = append(got, items.([]int))
+		return nil
+	})
+	for i := 0; i < 6; i++ {
+		b.AddNoWait(i)
+	}
+	b.Shutdown()
+	want := [][]int{{0, 1, 2}, {3, 4, 5}}
+	if !cmp.Equal(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
 func TestSaturation(t *testing.T) {
 	// Verify that under high load the maximum number of handlers are running.
 	ctx := context.Background()
-	const maxHandlers = 10
+	const (
+		maxHandlers  = 10
+		maxBatchSize = 500
+	)
 	var (
 		mu               sync.Mutex
 		outstanding, max int             // number of handlers
 		maxBatch         int             // size of largest batch
 		count            = map[int]int{} // how many of each item the handlers observe
 	)
-	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: maxHandlers}, func(x interface{}) error {
+	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: maxHandlers, MaxBatchSize: maxBatchSize}, func(x interface{}) error {
 		items := x.([]int)
 		mu.Lock()
 		outstanding++
@@ -100,8 +120,8 @@ func TestSaturation(t *testing.T) {
 		t.Errorf("max concurrent handlers = %d, want %d", max, maxHandlers)
 	}
 	// Check that at least one batch had more than one item.
-	if maxBatch <= 1 {
-		t.Errorf("got max batch size of %d, expected > 1", maxBatch)
+	if maxBatch <= 1 || maxBatch > maxBatchSize {
+		t.Errorf("got max batch size of %d, expected > 1 and <= %d", maxBatch, maxBatchSize)
 	}
 	// Check that handlers saw every item exactly once.
 	want := map[int]int{}
