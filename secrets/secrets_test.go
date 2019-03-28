@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -98,6 +99,16 @@ func TestURLMux(t *testing.T) {
 	fake := &fakeOpener{}
 	mux.RegisterKeeper("foo", fake)
 	mux.RegisterKeeper("err", fake)
+
+	if diff := cmp.Diff(mux.KeeperSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidKeeperScheme("foo") || !mux.ValidKeeperScheme("err") {
+		t.Errorf("ValidKeeperScheme didn't return true for valid scheme")
+	}
+	if mux.ValidKeeperScheme("foo2") || mux.ValidKeeperScheme("http") {
+		t.Errorf("ValidKeeperScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string

@@ -16,6 +16,7 @@ package openurl_test
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/internal/openurl"
 )
 
@@ -41,6 +42,16 @@ func TestSchemeMap(t *testing.T) {
 	var emptyM, m openurl.SchemeMap
 	m.Register("api", "Type", "foo", foo)
 	m.Register("api", "Type", "bar", bar)
+
+	if diff := cmp.Diff(m.Schemes(), []string{"bar", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !m.ValidScheme("foo") || !m.ValidScheme("bar") {
+		t.Errorf("ValidScheme didn't return true for valid scheme")
+	}
+	if m.ValidScheme("foo2") || m.ValidScheme("http") {
+		t.Errorf("ValidScheme didn't return false for invalid scheme")
+	}
 
 	for _, test := range tests {
 		// Empty SchemeMap should always return an error.
