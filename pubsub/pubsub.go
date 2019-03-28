@@ -496,6 +496,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		}
 
 		// Short circuit if ctx is Done.
+		// Otherwise, we'll continue to return messages from the queue, and even
+		// get new messages if driver.ReceiveBatch doesn't return an error when
+		// ctx is done.
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
