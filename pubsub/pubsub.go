@@ -110,7 +110,8 @@ type Message struct {
 	// Body contains the content of the message.
 	Body []byte
 
-	// Metadata has key/value metadata for the message.
+	// Metadata has key/value metadata for the message. It will be nil if the
+	// message has no associated metadata.
 	Metadata map[string]string
 
 	// asFunc invokes driver.Message.AsFunc.
@@ -337,8 +338,7 @@ type Subscription struct {
 	throughputCount  int           // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
-	preReceiveBatchHook  func(maxMessages int)
-	postReceiveBatchHook func(numMessages int)
+	preReceiveBatchHook func(maxMessages int)
 }
 
 const (
@@ -496,6 +496,14 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			return nil, s.err // s.err wrapped when set
 		}
 
+		// Short circuit if ctx is Done.
+		// Otherwise, we'll continue to return messages from the queue, and even
+		// get new messages if driver.ReceiveBatch doesn't return an error when
+		// ctx is done.
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		if s.waitc == nil && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio {
 			// We think we're going to run out of messages in expectedReceiveBatchDuration,
 			// and there's no outstanding ReceiveBatch call, so initiate one in the
@@ -510,9 +518,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					s.preReceiveBatchHook(batchSize)
 				}
 				msgs, err := s.getNextBatch(batchSize)
-				if s.postReceiveBatchHook != nil {
-					s.postReceiveBatchHook(len(msgs))
-				}
 				s.mu.Lock()
 				defer s.mu.Unlock()
 				if err != nil {
@@ -569,9 +574,13 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 	var q []*Message
 	for _, m := range msgs {
 		id := m.AckID
+		md := m.Metadata
+		if len(md) == 0 {
+			md = nil
+		}
 		m2 := &Message{
 			Body:     m.Body,
-			Metadata: m.Metadata,
+			Metadata: md,
 			asFunc:   m.AsFunc,
 		}
 		if s.ackFunc == nil {
