@@ -117,7 +117,7 @@ type Message struct {
 	asFunc func(interface{}) bool
 
 	// ack is a closure that queues this message for the action (ack or nack).
-	ack func(driver.AckAction)
+	ack func(isAck bool)
 
 	// mu guards isAcked in case Ack/Nack is called concurrently.
 	mu sync.Mutex
@@ -136,12 +136,12 @@ func (m *Message) Ack() {
 	if m.isAcked {
 		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
 	}
-	m.ack(driver.ActionAck)
+	m.ack(true)
 	m.isAcked = true
 }
 
 // Nack tells the server that this Message was not processed and should be
-// redelivered. It returns immediately, but the/ actual nack is sent in the
+// redelivered. It returns immediately, but the actual nack is sent in the
 // background, and is not guaranteed to succeed.
 //
 // Nack panics for at-most-once providers, as Nack is meaningless when
@@ -152,7 +152,7 @@ func (m *Message) Nack() {
 	if m.isAcked {
 		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
 	}
-	m.ack(driver.ActionNack)
+	m.ack(false)
 	m.isAcked = true
 }
 
@@ -575,14 +575,14 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 			asFunc:   m.AsFunc,
 		}
 		if s.ackFunc == nil {
-			m2.ack = func(action driver.AckAction) {
+			m2.ack = func(isAck bool) {
 				// Ignore the error channel. Errors are dealt with
 				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, Action: action})
+				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
 			}
 		} else {
-			m2.ack = func(action driver.AckAction) {
-				if action == driver.ActionAck {
+			m2.ack = func(isAck bool) {
+				if isAck {
 					s.ackFunc()
 					return
 				}
@@ -672,13 +672,10 @@ func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscript
 	handler := func(items interface{}) error {
 		var acks, nacks []driver.AckID
 		for _, a := range items.([]*driver.AckInfo) {
-			switch a.Action {
-			case driver.ActionAck:
+			if a.IsAck {
 				acks = append(acks, a.AckID)
-			case driver.ActionNack:
+			} else {
 				nacks = append(nacks, a.AckID)
-			default:
-				panic("unknown action")
 			}
 		}
 		g, ctx := errgroup.WithContext(ctx)

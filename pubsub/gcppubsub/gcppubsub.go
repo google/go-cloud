@@ -389,7 +389,7 @@ func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	return s.batchAcks(ids, func(ids []string) error {
+	return s.handleAcksInBatches(ids, func(ids []string) error {
 		return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
 			Subscription: s.path,
 			AckIds:       ids,
@@ -399,7 +399,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
-	return s.batchAcks(ids, func(ids []string) error {
+	return s.handleAcksInBatches(ids, func(ids []string) error {
 		return s.client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
 			Subscription:       s.path,
 			AckIds:             ids,
@@ -408,7 +408,7 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 	})
 }
 
-func (s *subscription) batchAcks(ids []driver.AckID, fn func(ids []string) error) error {
+func (s *subscription) handleAcksInBatches(ids []driver.AckID, fn func(ids []string) error) error {
 	// The PubSub service limits the size of Acknowledge RPCs.
 	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
 	const maxAckCount = 1000

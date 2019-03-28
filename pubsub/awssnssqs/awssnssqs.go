@@ -616,6 +616,7 @@ Loop:
 			}
 			// Start the next batch.
 			req = newReq()
+			n = 0
 		}
 	}
 	if err := g.Wait(); err != nil {

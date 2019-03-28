@@ -38,22 +38,12 @@ type Batcher interface {
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
-// AckAction is an enum of possible actions on an AckID.
-type AckAction int
-
-const (
-	// ActionAck acks the message.
-	ActionAck AckAction = 1
-	// ActionNack nacks the message.
-	ActionNack AckAction = 2
-)
-
 // AckInfo represents an action on an AckID.
 type AckInfo struct {
 	// AckID is the AckID the action is for.
 	AckID AckID
-	// Action is the action to perform on the AckID.
-	Action AckAction
+	// IsAck is true if the AckID should be acked, false if it should be nacked.
+	IsAck bool
 }
 
 // Message is data to be published (sent) to a topic and later received from
