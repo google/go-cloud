@@ -39,6 +39,7 @@ func ExampleCreateTopic() {
 	if err != nil {
 		// Handle error....
 	}
+	defer pt.Shutdown(ctx)
 
 	err = pt.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
@@ -66,6 +67,7 @@ func ExampleCreateSubscription() {
 	if err != nil {
 		// Handle error....
 	}
+	defer sub.Shutdown(ctx)
 
 	// Now we can use sub to receive messages.
 	msg, err := sub.Receive(ctx)
@@ -86,6 +88,10 @@ func Example_openfromURL() {
 	// This URL will Dial the NATS server at the URL in the environment
 	// variable NATS_SERVER_URL and send messages with subject "mytopic".
 	t, err := pubsub.OpenTopic(ctx, "nats://mytopic")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer t.Shutdown(ctx)
 
 	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will use the same connection and receive messages with subject
@@ -94,5 +100,8 @@ func Example_openfromURL() {
 	// no-op for NATS. You can disable the panic using "?ackfunc=log" or
 	// "?ackfunc=noop".
 	s, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
-	_, _, _ = t, s, err
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer s.Shutdown(ctx)
 }
