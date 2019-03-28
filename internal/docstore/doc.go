@@ -17,6 +17,18 @@
 // TODO(jba): expand package doc to batch other Go CDK APIs.
 //
 //
+// Representing Times
+//
+// Docstore can store and retrieve values of type time.Time, with two caveats. First,
+// the timezone may not be preserved. Second, Docstore guarantees only that time.Time
+// values are represented to millisecond precision. Many providers will do better,
+// but if you need to be sure that times are stored with nanosecond precision,
+// convert the time.Time to another type before storing, and re-create when you
+// retrieve it. For instance, you could call the time's UnixNano method to get an
+// int64, and get the original time back (in the local timezone) with the time.Unix
+// function.
+//
+//
 // Revisions
 //
 // Docstore gives every document a revision when it is created. Docstore uses the

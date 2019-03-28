@@ -102,6 +102,7 @@ import (
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
+	"golang.org/x/sync/errgroup"
 )
 
 // Message contains data to be published.
@@ -115,13 +116,14 @@ type Message struct {
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
-	// ack is a closure that queues this message for acknowledgement.
-	ack func()
-	// mu guards isAcked in case Ack() is called concurrently.
+	// ack is a closure that queues this message for the action (ack or nack).
+	ack func(isAck bool)
+
+	// mu guards isAcked in case Ack/Nack is called concurrently.
 	mu sync.Mutex
 
-	// isAcked tells whether this message has already had its Ack method
-	// called.
+	// isAcked tells whether this message has already had its Ack or Nack
+	// method called.
 	isAcked bool
 }
 
@@ -132,9 +134,25 @@ func (m *Message) Ack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.isAcked {
-		panic(fmt.Sprintf("Ack() called twice on message: %+v", m))
+		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
 	}
-	m.ack()
+	m.ack(true)
+	m.isAcked = true
+}
+
+// Nack tells the server that this Message was not processed and should be
+// redelivered. It returns immediately, but the actual nack is sent in the
+// background, and is not guaranteed to succeed.
+//
+// Nack panics for at-most-once providers, as Nack is meaningless when
+// messages can't be redelivered.
+func (m *Message) Nack() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.isAcked {
+		panic(fmt.Sprintf("Ack/Nack called twice on message: %+v", m))
+	}
+	m.ack(false)
 	m.isAcked = true
 }
 
@@ -301,7 +319,7 @@ func newTracer(driver interface{}) *oc.Tracer {
 type Subscription struct {
 	driver driver.Subscription
 	tracer *oc.Tracer
-	// ackBatcher makes batches of acks and sends them to the server.
+	// ackBatcher makes batches of acks and nacks and sends them to the server.
 	ackBatcher    driver.Batcher
 	ackFunc       func()          // if non-nil, used for Ack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
@@ -558,13 +576,19 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 			asFunc:   m.AsFunc,
 		}
 		if s.ackFunc == nil {
-			m2.ack = func() {
+			m2.ack = func(isAck bool) {
 				// Ignore the error channel. Errors are dealt with
 				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(id)
+				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
 			}
 		} else {
-			m2.ack = s.ackFunc
+			m2.ack = func(isAck bool) {
+				if isAck {
+					s.ackFunc()
+					return
+				}
+				panic("Message.Nack is not supported for this provider")
+			}
 		}
 		q = append(q, m2)
 	}
@@ -582,7 +606,9 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	c := make(chan struct{})
 	go func() {
 		defer close(c)
-		s.ackBatcher.Shutdown()
+		if s.ackBatcher != nil {
+			s.ackBatcher.Shutdown()
+		}
 	}()
 	select {
 	case <-ctx.Done():
@@ -633,8 +659,10 @@ func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher f
 	if newAckBatcher == nil {
 		newAckBatcher = defaultAckBatcher
 	}
-	s.ackBatcher = newAckBatcher(ctx, s, ds)
 	s.ackFunc = ds.AckFunc()
+	if s.ackFunc == nil {
+		s.ackBatcher = newAckBatcher(ctx, s, ds)
+	}
 	return s
 }
 
@@ -643,13 +671,35 @@ func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher f
 func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
-		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
-			ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
-			defer func() { s.tracer.End(ctx2, err) }()
-			return ds.SendAcks(ctx2, ids)
-		})
-		// Remember a non-retryable error from SendAcks. It will be returned on the
+		var acks, nacks []driver.AckID
+		for _, a := range items.([]*driver.AckInfo) {
+			if a.IsAck {
+				acks = append(acks, a.AckID)
+			} else {
+				nacks = append(nacks, a.AckID)
+			}
+		}
+		g, ctx := errgroup.WithContext(ctx)
+		if len(acks) > 0 {
+			g.Go(func() error {
+				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
+					ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
+					defer func() { s.tracer.End(ctx2, err) }()
+					return ds.SendAcks(ctx2, acks)
+				})
+			})
+		}
+		if len(nacks) > 0 {
+			g.Go(func() error {
+				return retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
+					ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendNacks")
+					defer func() { s.tracer.End(ctx2, err) }()
+					return ds.SendNacks(ctx2, nacks)
+				})
+			})
+		}
+		err := g.Wait()
+		// Remember a non-retryable error from SendAcks/Nacks. It will be returned on the
 		// next call to Receive.
 		if err != nil {
 			err = wrapError(s.driver, err)
@@ -659,7 +709,7 @@ func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscript
 		}
 		return err
 	}
-	return batcher.New(reflect.TypeOf([]driver.AckID{}).Elem(), maxHandlers, handler)
+	return batcher.New(reflect.TypeOf([]*driver.AckInfo{}).Elem(), maxHandlers, handler)
 }
 
 type errorCoder interface {

@@ -60,7 +60,10 @@ import (
 )
 
 const (
-	completedStatus = "completed"
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-amqp-request-response#update-disposition-status
+	dispositionForAck  = "completed"
+	dispositionForNack = "abandoned"
+
 	listenerTimeout = 1 * time.Second
 	rpcTries        = 5
 	rpcRetryDelay   = 1 * time.Second
@@ -450,12 +453,23 @@ func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
-// IMPORTANT: This is a workaround to issue 'completed' message dispositions in bulk which is not supported in the Service Bus SDK.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	return s.updateMessageDispositions(ctx, ids, dispositionForAck)
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	return s.updateMessageDispositions(ctx, ids, dispositionForNack)
+}
+
+// IMPORTANT: This is a workaround to issue message dispositions in bulk which is not supported in the Service Bus SDK.
+func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driver.AckID, disposition string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
+	// TODO(rvangent): Can we cache this on the subscription instead of
+	// re-dialing every time?
 	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
 	client, err := amqp.Dial(host,
 		amqp.ConnSASLAnonymous(),
@@ -486,7 +500,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 
 	value := map[string]interface{}{
-		"disposition-status": completedStatus,
+		"disposition-status": disposition,
 		"lock-tokens":        lockIds,
 	}
 	msg := &amqp.Message{

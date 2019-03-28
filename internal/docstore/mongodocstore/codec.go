@@ -17,6 +17,8 @@ package mongodocstore
 import (
 	"fmt"
 	"reflect"
+	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"gocloud.dev/internal/docstore/driver"
@@ -49,17 +51,27 @@ type encoder struct {
 	val interface{}
 }
 
-func (e *encoder) EncodeNil()                                { e.val = nil }
-func (e *encoder) EncodeBool(x bool)                         { e.val = x }
-func (e *encoder) EncodeInt(x int64)                         { e.val = x }
-func (e *encoder) EncodeUint(x uint64)                       { e.val = int64(x) }
-func (e *encoder) EncodeBytes(x []byte)                      { e.val = x }
-func (e *encoder) EncodeFloat(x float64)                     { e.val = x }
-func (e *encoder) EncodeComplex(x complex128)                { e.val = x }
-func (e *encoder) EncodeString(x string)                     { e.val = x }
-func (e *encoder) ListIndex(int)                             { panic("impossible") }
-func (e *encoder) MapKey(string)                             { panic("impossible") }
-func (e *encoder) EncodeSpecial(reflect.Value) (bool, error) { return false, nil } // no special handling
+func (e *encoder) EncodeNil()                 { e.val = nil }
+func (e *encoder) EncodeBool(x bool)          { e.val = x }
+func (e *encoder) EncodeInt(x int64)          { e.val = x }
+func (e *encoder) EncodeUint(x uint64)        { e.val = int64(x) }
+func (e *encoder) EncodeBytes(x []byte)       { e.val = x }
+func (e *encoder) EncodeFloat(x float64)      { e.val = x }
+func (e *encoder) EncodeComplex(x complex128) { e.val = []float64{real(x), imag(x)} }
+func (e *encoder) EncodeString(x string)      { e.val = x }
+func (e *encoder) ListIndex(int)              { panic("impossible") }
+func (e *encoder) MapKey(string)              { panic("impossible") }
+
+var typeOfGoTime = reflect.TypeOf(time.Time{})
+
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	// Treat time "specially" as itself (otherwise its BinaryMarshal method will be called).
+	if v.Type() == typeOfGoTime {
+		e.val = v.Interface()
+		return true, nil
+	}
+	return false, nil
+}
 
 func (e *encoder) EncodeList(n int) driver.Encoder {
 	// All slices and arrays are encoded as []interface{}
@@ -76,17 +88,24 @@ type listEncoder struct {
 func (e *listEncoder) ListIndex(i int) { e.s[i] = e.val }
 
 type mapEncoder struct {
-	m map[string]interface{}
+	m        map[string]interface{}
+	isStruct bool
 	encoder
 }
 
-func (e *encoder) EncodeMap(n int) driver.Encoder {
+func (e *encoder) EncodeMap(n int, isStruct bool) driver.Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
-	return &mapEncoder{m: m}
+	return &mapEncoder{m: m, isStruct: isStruct}
 }
 
-func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
+func (e *mapEncoder) MapKey(k string) {
+	// The BSON codec encodes structs by  lower-casing field names.
+	if e.isStruct {
+		k = strings.ToLower(k)
+	}
+	e.m[k] = e.val
+}
 
 ////////////////////////////////////////////////////////////////
 
@@ -118,8 +137,14 @@ func (d decoder) AsString() (string, bool) {
 }
 
 func (d decoder) AsInt() (int64, bool) {
-	i, ok := d.val.(int64)
-	return i, ok
+	switch v := d.val.(type) {
+	case int64:
+		return v, true
+	case int32:
+		return int64(v), true
+	default:
+		return 0, false
+	}
 }
 
 func (d decoder) AsUint() (uint64, bool) {
@@ -133,8 +158,28 @@ func (d decoder) AsFloat() (float64, bool) {
 }
 
 func (d decoder) AsComplex() (complex128, bool) {
-	c, ok := d.val.(complex128)
-	return c, ok
+	switch v := d.val.(type) {
+	case []float64:
+		if len(v) != 2 {
+			return 0, false
+		}
+		return complex(v[0], v[1]), true
+	case primitive.A: // []interface{}
+		if len(v) != 2 {
+			return 0, false
+		}
+		r, ok := v[0].(float64)
+		if !ok {
+			return 0, false
+		}
+		i, ok := v[1].(float64)
+		if !ok {
+			return 0, false
+		}
+		return complex(r, i), true
+	default:
+		return 0, false
+	}
 }
 
 func (d decoder) AsBytes() ([]byte, bool) {
@@ -153,14 +198,14 @@ func (d decoder) AsInterface() (interface{}, error) {
 }
 
 func (d decoder) ListLen() (int, bool) {
-	if s, ok := d.val.([]interface{}); ok {
+	if s, ok := d.val.(primitive.A); ok {
 		return len(s), true
 	}
 	return 0, false
 }
 
 func (d decoder) DecodeList(f func(i int, d2 driver.Decoder) bool) {
-	for i, e := range d.val.([]interface{}) {
+	for i, e := range d.val.(primitive.A) {
 		if !f(i, decoder{e}) {
 			return
 		}
@@ -183,8 +228,13 @@ func (d decoder) DecodeMap(f func(key string, d2 driver.Decoder) bool) {
 }
 
 func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
-	if bin, ok := d.val.(primitive.Binary); ok {
-		return true, bin.Data, nil
+	switch v := d.val.(type) {
+	case primitive.Binary:
+		return true, v.Data, nil
+	case primitive.DateTime:
+		// A DateTime represents milliseconds since the Unix epoch.
+		return true, time.Unix(int64(v)/1000, int64(v)%1000*1e6), nil
+	default:
+		return false, nil, nil
 	}
-	return false, nil, nil
 }

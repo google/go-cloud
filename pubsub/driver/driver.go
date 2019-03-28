@@ -38,6 +38,14 @@ type Batcher interface {
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
 
+// AckInfo represents an action on an AckID.
+type AckInfo struct {
+	// AckID is the AckID the action is for.
+	AckID AckID
+	// IsAck is true if the AckID should be acked, false if it should be nacked.
+	IsAck bool
+}
+
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
 type Message struct {
@@ -48,9 +56,9 @@ type Message struct {
 	Metadata map[string]string
 
 	// AckID should be set to something identifying the message on the
-	// server. It may be passed to Subscription.SendAcks() to acknowledge
-	// the message. This field should only be set by methods implementing
-	// Subscription.ReceiveBatch.
+	// server. It may be passed to Subscription.SendAcks to acknowledge
+	// the message, or to Subscription.SendNacks. This field should only
+	// be set by methods implementing Subscription.ReceiveBatch.
 	AckID AckID
 
 	// AsFunc allows providers to expose provider-specific types;
@@ -131,6 +139,17 @@ type Subscription interface {
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
+
+	// SendNacks should notify the server that the messages with the given ackIDs
+	// are not being processed by this client, so that they will be received
+	// again later, potentially by another subscription.
+	// This method should return only after all the ackIDs are sent, an
+	// error occurs, or the context is done.
+	//
+	// If AckFunc returns a non-nil func, SendNacks will never be called.
+	//
+	// SendNacks may be called concurrently from multiple goroutines.
+	SendNacks(ctx context.Context, ackIDs []AckID) error
 
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.

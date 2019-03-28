@@ -626,7 +626,16 @@ func toMessage(d amqp.Delivery) *driver.Message {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks
+	return s.sendAcksOrNacks(ctx, ackIDs, true)
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
+	return s.sendAcksOrNacks(ctx, ackIDs, false)
+}
+
+func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
+	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks/Nacks
 	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -635,16 +644,21 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		return err
 	}
 
-	// The Ack call doesn't wait for a response, so this loop should execute relatively
+	// Ack/Nack calls don't wait for a response, so this loop should execute relatively
 	// quickly.
-	// It wouldn't help to make it concurrent, because Channel.Ack grabs a
+	// It wouldn't help to make it concurrent, because Channel.Ack/Nack grabs a
 	// channel-wide mutex. (We could consider using multiple channels if performance
 	// becomes an issue.)
 	for _, id := range ackIDs {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		err := s.ch.Ack(id.(uint64))
+		var err error
+		if ack {
+			err = s.ch.Ack(id.(uint64))
+		} else {
+			err = s.ch.Nack(id.(uint64))
+		}
 		if err != nil {
 			s.ch = nil // re-establish channel after an error
 			return err

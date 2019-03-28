@@ -79,7 +79,7 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *encoder) EncodeMap(n int) driver.Encoder {
+func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	m := make(map[string]*pb.Value, n)
 	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
 	return &mapEncoder{m: m}
