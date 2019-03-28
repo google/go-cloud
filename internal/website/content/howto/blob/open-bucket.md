@@ -61,6 +61,7 @@ import (
     "github.com/aws/aws-sdk-go/aws/session"
     "gocloud.dev/blob/s3blob"
 )
+
 // ...
 
 // Establish an AWS session.
@@ -180,6 +181,7 @@ defer bucket.Close()
 
 [GCP creds]: https://cloud.google.com/docs/authentication/production
 [`gcsblob.OpenBucket`]: https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket
+[`gocloud.dev/gcp`]: https://godoc.org/gocloud.dev/gcp
 
 ## Azure Storage
 
