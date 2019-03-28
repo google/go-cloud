@@ -19,7 +19,6 @@ package driver
 
 import (
 	"encoding"
-	"fmt"
 	"reflect"
 	"strconv"
 
@@ -432,11 +431,13 @@ func decode(v reflect.Value, d Decoder) error {
 		i, ok := d.AsInt()
 		if !ok {
 			// Accept a floating-point number with integral value.
-			if f, ok := d.AsFloat(); ok {
-				i = int64(f)
-				if float64(i) != f {
-					return fmt.Errorf("docstore: float %f does not fit into %s", f, v.Type())
-				}
+			f, ok := d.AsFloat()
+			if !ok {
+				return decodingError(v, d)
+			}
+			i = int64(f)
+			if float64(i) != f {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "float %f does not fit into %s", f, v.Type())
 			}
 		}
 		if v.OverflowInt(i) {
@@ -449,11 +450,13 @@ func decode(v reflect.Value, d Decoder) error {
 		u, ok := d.AsUint()
 		if !ok {
 			// Accept a floating-point number with integral value.
-			if f, ok := d.AsFloat(); ok {
-				u = uint64(f)
-				if float64(u) != f {
-					return fmt.Errorf("docstore: float %f does not fit into %s", f, v.Type())
-				}
+			f, ok := d.AsFloat()
+			if !ok {
+				return decodingError(v, d)
+			}
+			u = uint64(f)
+			if float64(u) != f {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "float %f does not fit into %s", f, v.Type())
 			}
 		}
 		if v.OverflowUint(u) {
