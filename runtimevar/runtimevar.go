@@ -138,7 +138,7 @@ type Variable struct {
 	// supposed to be called from multiple goroutines.
 	lastWatch <-chan struct{}
 
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
 	last     Snapshot
 	lastErr  error
@@ -280,8 +280,8 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	case <-ctx.Done():
 		// We don't return ctx.Err().
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if haveGood && c.lastErr != ErrClosed {
 		return c.lastGood, nil
 	}
@@ -297,8 +297,8 @@ func (c *Variable) CheckHealth() error {
 		haveGood = true
 	default:
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if haveGood && c.lastErr != ErrClosed {
 		return nil
 	}
