@@ -75,6 +75,24 @@ func TestEncodeValue(t *testing.T) {
 	}
 }
 
+func TestDecodeErrorOnUnsupported(t *testing.T) {
+	av := func() *dyn.AttributeValue { return &dyn.AttributeValue{} }
+	sptr := func(s string) *string { return &s }
+	for _, tc := range []struct {
+		in  *dyn.AttributeValue
+		out interface{}
+	}{
+		{av().SetSS([]*string{sptr("foo"), sptr("bar")}), []string{}},
+		{av().SetNS([]*string{sptr("1.1"), sptr("-2.2"), sptr("3.3")}), []float64{}},
+		{av().SetBS([][]byte{{4}, {5}, {6}}), [][]byte{}},
+	} {
+		d := decoder{av: tc.in}
+		if err := driver.Decode(reflect.ValueOf(tc.out), &d); err == nil {
+			t.Error("got nil error, want unsupported error")
+		}
+	}
+}
+
 type codecTester struct{}
 
 func (ct *codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
