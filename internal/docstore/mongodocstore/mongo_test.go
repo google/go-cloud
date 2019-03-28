@@ -74,8 +74,7 @@ func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error)
 
 func (h *harness) Close() {}
 
-type codecTester struct {
-}
+type codecTester struct{}
 
 func (codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
 	return []drivertest.UnsupportedType{

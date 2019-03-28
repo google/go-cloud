@@ -461,7 +461,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 		T:  milliTime,
 	}
 	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
-	//	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
+	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
 
 	// Test various other types, unless they are unsupported.
 	unsupported := map[UnsupportedType]bool{}
@@ -504,7 +504,7 @@ func testCodec(t *testing.T, ct CodecTester) {
 	}
 	nt := &NT{nanoTime}
 	if unsupported[NanosecondTimes] {
-		// Expect rounding (or truncation) to the nearest millisecond.
+		// Expect rounding to the nearest millisecond.
 		check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
 			enc, err := encode(nt)
 			if err != nil {
