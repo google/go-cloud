@@ -192,7 +192,11 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 			return fmt.Errorf("pubsub.Send: Message.Metadata values must be valid UTF-8 strings: %q", v)
 		}
 	}
-	return t.batcher.Add(ctx, m)
+	dm := &driver.Message{
+		Body:     m.Body,
+		Metadata: m.Metadata,
+	}
+	return t.batcher.Add(ctx, dm)
 }
 
 // Shutdown flushes pending message sends and disconnects the Topic.
@@ -240,16 +244,8 @@ var NewTopic = newTopic
 func defaultBatcher(ctx context.Context, t *Topic, dt driver.Topic) driver.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
-		ms := items.([]*Message)
-		var dms []*driver.Message
-		for _, m := range ms {
-			dm := &driver.Message{
-				Body:     m.Body,
-				Metadata: m.Metadata,
-			}
-			dms = append(dms, dm)
-		}
-		err := retry.Call(ctx, gax.Backoff{}, t.driver.IsRetryable, func() (err error) {
+		dms := items.([]*driver.Message)
+		err := retry.Call(ctx, gax.Backoff{}, dt.IsRetryable, func() (err error) {
 			ctx2 := t.tracer.Start(ctx, "driver.Topic.SendBatch")
 			defer func() { t.tracer.End(ctx2, err) }()
 			return dt.SendBatch(ctx2, dms)
@@ -259,10 +255,15 @@ func defaultBatcher(ctx context.Context, t *Topic, dt driver.Topic) driver.Batch
 		}
 		return nil
 	}
-	return batcher.New(reflect.TypeOf(&Message{}), maxHandlers, handler)
+	return batcher.New(reflect.TypeOf(&driver.Message{}), maxHandlers, handler)
 }
 
 // newTopic makes a pubsub.Topic from a driver.Topic.
+//
+// If newBatcher is nil, a default batcher implementation will be used.
+// If non-nil, the driver.Batcher returned by newBatcher should batch
+// *driver.Message, and call the SendBatch func of the driver.Topic in its
+// handler. See defaultBatcher for a sample implementation.
 func newTopic(d driver.Topic, newBatcher func(context.Context, *Topic, driver.Topic) driver.Batcher) *Topic {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
@@ -609,11 +610,15 @@ func (s *Subscription) ErrorAs(err error, i interface{}) bool {
 // NewSubscription is for use by provider implementations.
 var NewSubscription = newSubscription
 
-// newSubscription creates a Subscription from a driver.Subscription
-// and a function to make a batcher that sends batches of acks to the provider.
-// If newAckBatcher is nil, a default batcher implementation will be used.
-// fixedBatchSize should be 0 except in tests, where stability is necessary for
+// newSubscription creates a Subscription from a driver.Subscription.
+//
+// fixedBatchSize should be 0 except in tests where stability is necessary for
 // record/replay.
+//
+// If newAckBatcher is nil, a default batcher implementation will be used.
+// If non-nil, the driver.Batcher returned by newAckBatcher should batch
+// driver.AckID, and call the SendAcks func of the driver.Topic in its
+// handler. See defaultAckBatcher for a sample implementation.
 func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
@@ -638,7 +643,7 @@ func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscript
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		ids := items.([]driver.AckID)
-		err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() (err error) {
+		err := retry.Call(ctx, gax.Backoff{}, ds.IsRetryable, func() (err error) {
 			ctx2 := s.tracer.Start(ctx, "driver.Subscription.SendAcks")
 			defer func() { s.tracer.End(ctx2, err) }()
 			return ds.SendAcks(ctx2, ids)

@@ -192,7 +192,11 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 		t.Fatalf("creating a local topic that doesn't exist on the server: %v", err)
 	}
 	top := pubsub.NewTopic(dt, nil)
-	defer top.Shutdown(ctx)
+	defer func() {
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	m := &pubsub.Message{}
 	err = top.Send(ctx, m)
@@ -215,7 +219,11 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
 	sub := pubsub.NewSubscription(ds, 1, nil)
-	defer sub.Shutdown(ctx)
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	_, err = sub.Receive(ctx)
 	if err == nil {
@@ -231,7 +239,7 @@ func testSendReceive(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	top, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +271,11 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer cleanup()
 	top := pubsub.NewTopic(dt, nil)
-	defer top.Shutdown(ctx)
+	defer func() {
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
 
 	var ss []*pubsub.Subscription
 	for i := 0; i < 2; i++ {
@@ -273,7 +285,11 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		}
 		defer cleanup()
 		s := pubsub.NewSubscription(ds, 1, nil)
-		defer s.Shutdown(ctx)
+		defer func() {
+			if err := s.Shutdown(ctx); err != nil {
+				t.Error(err)
+			}
+		}()
 		ss = append(ss, s)
 	}
 	want := publishN(ctx, t, top, 3)
@@ -329,13 +345,15 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, _, cleanup, err := makePair(ctx, h, t.Name())
+	top, _, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
 
-	top.Shutdown(ctx)
+	if err := top.Shutdown(ctx); err != nil {
+		t.Error(err)
+	}
 
 	// Check that sending to the closed topic fails.
 	m := &pubsub.Message{}
@@ -351,30 +369,33 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 		t.Fatal(err)
 	}
 	defer h.Close()
-	_, sub, cleanup, err := makePair(ctx, h, t.Name())
+	_, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	sub.Shutdown(ctx)
+	if err := sub.Shutdown(ctx); err != nil {
+		t.Error(err)
+	}
 	if _, err = sub.Receive(ctx); err == nil {
 		t.Error("sub.Receive returned nil, want error")
 	}
 }
 
 func testCancelSendReceive(t *testing.T, newHarness HarnessMaker) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	top, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
 
+	ctx, cancel := context.WithCancel(ctx)
 	cancel()
 
 	m := &pubsub.Message{}
@@ -406,7 +427,7 @@ func testMetadata(t *testing.T, newHarness HarnessMaker) {
 		weirdMetadata[k] = k
 	}
 
-	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	top, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +474,7 @@ func testNonUTF8MessageBody(t *testing.T, newHarness HarnessMaker) {
 	}
 	defer h.Close()
 
-	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	top, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -498,25 +519,29 @@ func isCanceled(err error) bool {
 	return gcerrors.Code(err) == gcerrors.Canceled
 }
 
-func makePair(ctx context.Context, h Harness, testName string) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
-	dt, topicCleanup, err := h.CreateTopic(ctx, testName)
+func makePair(ctx context.Context, t *testing.T, h Harness) (*pubsub.Topic, *pubsub.Subscription, func(), error) {
+	dt, topicCleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ds, subCleanup, err := h.CreateSubscription(ctx, dt, testName)
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt, t.Name())
 	if err != nil {
 		topicCleanup()
 		return nil, nil, nil, err
 	}
-	t := pubsub.NewTopic(dt, nil)
-	s := pubsub.NewSubscription(ds, 1, nil)
+	top := pubsub.NewTopic(dt, nil)
+	sub := pubsub.NewSubscription(ds, 1, nil)
 	cleanup := func() {
 		topicCleanup()
 		subCleanup()
-		t.Shutdown(ctx)
-		s.Shutdown(ctx)
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
 	}
-	return t, s, cleanup, nil
+	return top, sub, cleanup, nil
 }
 
 // testAs tests the various As functions, using AsTest.
@@ -527,7 +552,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	top, sub, cleanup, err := makePair(ctx, h, t.Name())
+	top, sub, cleanup, err := makePair(ctx, t, h)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -554,7 +579,11 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	top = pubsub.NewTopic(dt, nil)
-	defer top.Shutdown(ctx)
+	defer func() {
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
 	topicErr := top.Send(ctx, &pubsub.Message{})
 	if topicErr == nil {
 		t.Error("got nil expected error sending to nonexistent topic")
@@ -567,7 +596,11 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Fatal(err)
 	}
 	sub = pubsub.NewSubscription(ds, 1, nil)
-	defer sub.Shutdown(ctx)
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
 	_, subErr := sub.Receive(ctx)
 	if subErr == nil {
 		t.Error("got nil expected error sending to nonexistent subscription")
