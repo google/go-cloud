@@ -189,8 +189,6 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	fake := &fakeSub{msgs: msgs, profile: receiveProfile, start: time.Now()}
 	sub := newSubscription(fake, 0, nil)
 
-	// Configure our output in a hook called whenever ReceiveBatch returns.
-
 	// Header row.
 	fmt.Printf("%s\tmsgs/sec\tRPCs/sec\tbatchsize\n", description)
 

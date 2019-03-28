@@ -35,7 +35,7 @@ func TestSequential(t *testing.T) {
 	ctx := context.Background()
 	var got []int
 	e := errors.New("e")
-	b := batcher.New(reflect.TypeOf(int(0)), 1, func(items interface{}) error {
+	b := batcher.New(reflect.TypeOf(int(0)), nil, func(items interface{}) error {
 		got = items.([]int)
 		return e
 	})
@@ -61,7 +61,7 @@ func TestSaturation(t *testing.T) {
 		maxBatch         int             // size of largest batch
 		count            = map[int]int{} // how many of each item the handlers observe
 	)
-	b := batcher.New(reflect.TypeOf(int(0)), maxHandlers, func(x interface{}) error {
+	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: maxHandlers}, func(x interface{}) error {
 		items := x.([]int)
 		mu.Lock()
 		outstanding++
@@ -117,7 +117,7 @@ func TestShutdown(t *testing.T) {
 	ctx := context.Background()
 	var nHandlers int64 // atomic
 	c := make(chan int, 10)
-	b := batcher.New(reflect.TypeOf(int(0)), cap(c), func(x interface{}) error {
+	b := batcher.New(reflect.TypeOf(int(0)), &batcher.Options{MaxHandlers: cap(c)}, func(x interface{}) error {
 		for range x.([]int) {
 			c <- 0
 		}
@@ -151,7 +151,7 @@ func TestShutdown(t *testing.T) {
 func TestItemCanBeInterface(t *testing.T) {
 	readerType := reflect.TypeOf([]io.Reader{}).Elem()
 	called := false
-	b := batcher.New(readerType, 1, func(items interface{}) error {
+	b := batcher.New(readerType, nil, func(items interface{}) error {
 		called = true
 		_, ok := items.([]io.Reader)
 		if !ok {
