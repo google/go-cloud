@@ -74,7 +74,7 @@ func TestReceivePerformance(t *testing.T) {
 
 	const defaultNumGoRoutines = 100
 	defaultReceiveProfile := func(_ bool, maxMessages int) (int, time.Duration) { return maxMessages, 0 }
-	defaultProcessProfile := func(_ bool) time.Duration { return 0 }
+	defaultProcessProfile := func(bool) time.Duration { return 0 }
 
 	tests := []struct {
 		description string
@@ -105,25 +105,25 @@ func TestReceivePerformance(t *testing.T) {
 		},
 		{
 			description:    "process 100ms",
-			processProfile: func(_ bool) time.Duration { return 100 * time.Millisecond },
+			processProfile: func(bool) time.Duration { return 100 * time.Millisecond },
 		},
 		{
 			description:    "process 1s",
-			processProfile: func(_ bool) time.Duration { return 1 * time.Second },
+			processProfile: func(bool) time.Duration { return 1 * time.Second },
 		},
 		{
 			description: "receive 1s process 70ms",
 			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
 				return maxMessages, 1 * time.Second
 			},
-			processProfile: func(_ bool) time.Duration { return 70 * time.Millisecond },
+			processProfile: func(bool) time.Duration { return 70 * time.Millisecond },
 		},
 		{
 			description: "receive 250ms+stddev 150ms, process 10ms + stddev 5ms",
 			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
 				return maxMessages, time.Duration(rand.NormFloat64()*150+250) * time.Millisecond
 			},
-			processProfile: func(_ bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+			processProfile: func(bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
 		},
 		{
 			description: "bursty message arrival",
@@ -147,7 +147,7 @@ func TestReceivePerformance(t *testing.T) {
 				}
 				return maxMessages, d
 			},
-			processProfile: func(_ bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+			processProfile: func(bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
 		},
 		{
 			description: "bursty process time",
