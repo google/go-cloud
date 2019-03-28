@@ -342,6 +342,8 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	want := publishN(ctx, t, top, nMessages)
 
 	// Get the messages, but nack them.
+	// Make sure to nack after receiving all of them; otherwise, we could
+	// receive one of the messages twice instead of receiving all nMessages.
 	var got []*pubsub.Message
 	for i := 0; i < nMessages; i++ {
 		m, err := sub.Receive(ctx)
@@ -349,6 +351,8 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		got = append(got, m)
+	}
+	for _, m := range got {
 		m.Nack()
 	}
 	// Check that the received messages match the sent ones.
