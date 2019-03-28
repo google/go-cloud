@@ -442,6 +442,8 @@ func testCodec(t *testing.T, ct CodecTester) {
 		M  map[string]bool
 		P  *string
 		T  time.Time
+		LF []float64
+		LS []string
 	}
 	nm := &NativeMinimal{
 		N:  nil,
@@ -454,6 +456,8 @@ func testCodec(t *testing.T, ct CodecTester) {
 		By: []byte{6, 7, 8},
 		P:  &s,
 		T:  time.Now(),
+		LF: []float64{18.8, -19.9, 20},
+		LS: []string{"foo", "bar"},
 	}
 	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
 	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
