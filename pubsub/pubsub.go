@@ -319,8 +319,7 @@ type Subscription struct {
 	throughputCount  int           // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
-	preReceiveBatchHook  func(maxMessages int)
-	postReceiveBatchHook func(numMessages int)
+	preReceiveBatchHook func(maxMessages int)
 }
 
 const (
@@ -478,6 +477,11 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			return nil, s.err // s.err wrapped when set
 		}
 
+		// Short circuit if ctx is Done.
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		if s.waitc == nil && float64(len(s.q)) <= s.runningBatchSize*prefetchRatio {
 			// We think we're going to run out of messages in expectedReceiveBatchDuration,
 			// and there's no outstanding ReceiveBatch call, so initiate one in the
@@ -492,9 +496,6 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					s.preReceiveBatchHook(batchSize)
 				}
 				msgs, err := s.getNextBatch(batchSize)
-				if s.postReceiveBatchHook != nil {
-					s.postReceiveBatchHook(len(msgs))
-				}
 				s.mu.Lock()
 				defer s.mu.Unlock()
 				if err != nil {

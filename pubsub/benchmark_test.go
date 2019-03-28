@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub/driver"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/xerrors"
@@ -46,12 +45,13 @@ const (
 
 type fakeSub struct {
 	driver.Subscription
-	profile func(int) (int, time.Duration)
+	start   time.Time
+	profile func(bool, int) (int, time.Duration)
 	msgs    []*driver.Message
 }
 
 func (s *fakeSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	n, delay := s.profile(maxMessages)
+	n, delay := s.profile(s.inMiddleThird(), maxMessages)
 	if delay > 0 {
 		time.Sleep(delay)
 	}
@@ -60,21 +60,28 @@ func (s *fakeSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 
 func (s *fakeSub) AckFunc() func() { return func() {} }
 
+// inMiddleThird returns true if this test is in the middle third of the running
+// time; used for burstiness tests.
+func (s *fakeSub) inMiddleThird() bool {
+	elapsed := time.Since(s.start)
+	return elapsed > runFor/3 && elapsed < runFor*2/3
+}
+
 // TestReceivePerformance enables characterization of Receive under various
 // situations, characterized in "tests" below.
 func TestReceivePerformance(t *testing.T) {
 	t.Skip("Skipped by default")
 
 	const defaultNumGoRoutines = 100
-	defaultReceiveProfile := func(maxMessages int) (int, time.Duration) { return maxMessages, 0 }
-	defaultProcessProfile := func() time.Duration { return 0 }
+	defaultReceiveProfile := func(_ bool, maxMessages int) (int, time.Duration) { return maxMessages, 0 }
+	defaultProcessProfile := func(_ bool) time.Duration { return 0 }
 
 	tests := []struct {
 		description string
 		// See the defaults above.
 		numGoRoutines  int
-		receiveProfile func(int) (int, time.Duration)
-		processProfile func() time.Duration
+		receiveProfile func(bool, int) (int, time.Duration)
+		processProfile func(bool) time.Duration
 		noAck          bool
 	}{
 		{
@@ -90,33 +97,70 @@ func TestReceivePerformance(t *testing.T) {
 		},
 		{
 			description:    "receive 100ms",
-			receiveProfile: func(maxMessages int) (int, time.Duration) { return maxMessages, 100 * time.Millisecond },
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) { return maxMessages, 100 * time.Millisecond },
 		},
 		{
 			description:    "receive 1s",
-			receiveProfile: func(maxMessages int) (int, time.Duration) { return maxMessages, 1 * time.Second },
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) { return maxMessages, 1 * time.Second },
 		},
 		{
 			description:    "process 100ms",
-			processProfile: func() time.Duration { return 100 * time.Millisecond },
+			processProfile: func(_ bool) time.Duration { return 100 * time.Millisecond },
 		},
 		{
 			description:    "process 1s",
-			processProfile: func() time.Duration { return 1 * time.Second },
+			processProfile: func(_ bool) time.Duration { return 1 * time.Second },
 		},
 		{
 			description: "receive 1s process 70ms",
-			receiveProfile: func(maxMessages int) (int, time.Duration) {
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
 				return maxMessages, 1 * time.Second
 			},
-			processProfile: func() time.Duration { return 70 * time.Millisecond },
+			processProfile: func(_ bool) time.Duration { return 70 * time.Millisecond },
 		},
 		{
 			description: "receive 250ms+stddev 150ms, process 10ms + stddev 5ms",
-			receiveProfile: func(maxMessages int) (int, time.Duration) {
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
 				return maxMessages, time.Duration(rand.NormFloat64()*150+250) * time.Millisecond
 			},
-			processProfile: func() time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+			processProfile: func(_ bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+		},
+		{
+			description: "bursty message arrival",
+			receiveProfile: func(inMiddleThird bool, maxMessages int) (int, time.Duration) {
+				// When in the middle third of the running time, return 0 messages.
+				n := maxMessages
+				if inMiddleThird {
+					n = 0
+				}
+				return n, time.Duration(rand.NormFloat64()*25+100) * time.Millisecond
+			},
+			processProfile: func(bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+		},
+		{
+			description: "bursty receive time",
+			receiveProfile: func(inMiddleThird bool, maxMessages int) (int, time.Duration) {
+				// When in the middle third of the running time, 10x the RPC time.
+				d := time.Duration(rand.NormFloat64()*25+100) * time.Millisecond
+				if inMiddleThird {
+					d *= 10
+				}
+				return maxMessages, d
+			},
+			processProfile: func(_ bool) time.Duration { return time.Duration(rand.NormFloat64()*5+10) * time.Millisecond },
+		},
+		{
+			description: "bursty process time",
+			receiveProfile: func(_ bool, maxMessages int) (int, time.Duration) {
+				return maxMessages, time.Duration(rand.NormFloat64()*25+100) * time.Millisecond
+			},
+			processProfile: func(inMiddleThird bool) time.Duration {
+				d := time.Duration(rand.NormFloat64()*5+10) * time.Millisecond
+				if inMiddleThird {
+					d *= 100
+				}
+				return d
+			},
 		},
 	}
 
@@ -136,13 +180,13 @@ func TestReceivePerformance(t *testing.T) {
 	}
 }
 
-func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(int) (int, time.Duration), processProfile func() time.Duration, noAck bool) {
+func runBenchmark(t *testing.T, description string, numGoRoutines int, receiveProfile func(bool, int) (int, time.Duration), processProfile func(bool) time.Duration, noAck bool) {
 	msgs := make([]*driver.Message, maxBatchSize)
 	for i := range msgs {
 		msgs[i] = &driver.Message{}
 	}
 
-	fake := &fakeSub{msgs: msgs, profile: receiveProfile}
+	fake := &fakeSub{msgs: msgs, profile: receiveProfile, start: time.Now()}
 	sub := newSubscription(fake, 0, nil)
 
 	// Configure our output in a hook called whenever ReceiveBatch returns.
@@ -171,6 +215,9 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 		runningMsgsPerSec += msgsPerSec
 		if len(prevMsgsPerSec) > smoothing {
 			runningMsgsPerSec -= prevMsgsPerSec[0]
+			if runningMsgsPerSec < 0 {
+				runningMsgsPerSec = 0
+			}
 			prevMsgsPerSec = prevMsgsPerSec[1:]
 		}
 
@@ -180,6 +227,9 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 		runningRPCsPerSec += rpcsPerSec
 		if len(prevRPCsPerSec) > smoothing {
 			runningRPCsPerSec -= prevRPCsPerSec[0]
+			if runningRPCsPerSec < 0 {
+				runningRPCsPerSec = 0
+			}
 			prevRPCsPerSec = prevRPCsPerSec[1:]
 		}
 
@@ -200,14 +250,9 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 			reportLine(time.Now())
 		}
 	}
-	sub.postReceiveBatchHook = func(numMessages int) {
-		mu.Lock()
-		defer mu.Unlock()
-		numMsgs += numMessages
-	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	time.AfterFunc(runFor, cancel)
+	ctx, cancel := context.WithTimeout(context.Background(), runFor)
+	defer cancel()
 	done := make(chan struct{})
 	go func() {
 		period := reportPeriodWarmup
@@ -233,18 +278,16 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 			// Each goroutine loops until ctx is canceled.
 			for {
 				m, err := sub.Receive(ctx)
-				if xerrors.Is(err, context.Canceled) {
-					return nil
-				}
-				// TODO(rvangent): This is annoying. Maybe retry should return
-				// context.Canceled instead of wrapping if it never retried?
-				if cerr, ok := err.(*retry.ContextError); ok && cerr.CtxErr == context.Canceled {
+				if xerrors.Is(err, context.DeadlineExceeded) {
 					return nil
 				}
 				if err != nil {
 					return err
 				}
-				delay := processProfile()
+				mu.Lock()
+				numMsgs++
+				mu.Unlock()
+				delay := processProfile(fake.inMiddleThird())
 				if delay > 0 {
 					time.Sleep(delay)
 				}
