@@ -150,14 +150,15 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                                  testSendReceive,
-		"TestSendReceiveTwo":                               testSendReceiveTwo,
-		"TestNack":                                         testNack,
-		"TestBatching":                                     testBatching,
-		"TestErrorOnSendToClosedTopic":                     testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":         testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                            testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend": testNonExistentTopicSucceedsOnOpenButFailsOnSend,
+		"TestSendReceive":              testSendReceive,
+		"TestSendReceiveTwo":           testSendReceiveTwo,
+		"TestNack":                     testNack,
+		"TestBatching":                 testBatching,
+		"TestDoubleAck":                testDoubleAck,
+		"TestErrorOnSendToClosedTopic": testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription":                   testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                                      testCancelSendReceive,
+		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":           testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive": testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive,
 		"TestMetadata":           testMetadata,
 		"TestNonUTF8MessageBody": testNonUTF8MessageBody,
@@ -461,6 +462,88 @@ func testBatching(t *testing.T, newHarness HarnessMaker) {
 	}
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
+	}
+}
+
+func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	dt, topicCleanup, err := h.CreateTopic(ctx, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer topicCleanup()
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCleanup()
+	if ds.AckFunc() != nil {
+		t.Skip("Ack not supported")
+	}
+
+	// Publish 3 messages.
+	for i := 0; i < 3; i++ {
+		err := dt.SendBatch(ctx, []*driver.Message{{Body: []byte(strconv.Itoa(i))}})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Retrieve the messages.
+	var dms []*driver.Message
+	for len(dms) != 3 {
+		curdms, err := ds.ReceiveBatch(ctx, 3)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dms = append(dms, curdms...)
+	}
+
+	// Ack the first two messages.
+	err = ds.SendAcks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Ack them again; this should succeed even though we've acked them before.
+	// If providers return an error for this, drivers should drop them.
+	err = ds.SendAcks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Nack all 3 messages. This should also succeed, and the nack of the third
+	// message should take effect, so we should be able to fetch it again.
+	// Some providers may also re-send the first message.
+	err = ds.SendNacks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID, dms[2].AckID})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The test will hang here if the message isn't redelivered, so give it a
+	// shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// We're looking to re-receive dms[2].
+Loop:
+	for {
+		curdms, err := ds.ReceiveBatch(ctx2, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, curdm := range curdms {
+			if bytes.Equal(curdm.Body, dms[2].Body) {
+				// Found it!
+				break Loop
+			}
+		}
 	}
 }
 

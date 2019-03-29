@@ -525,6 +525,8 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if err != nil {
 		return err
 	}
+	// Note: DeleteMessageBatch doesn't return failures when you try
+	// to Delete an id that isn't found.
 	if numFailed := len(resp.Failed); numFailed > 0 {
 		first := resp.Failed[0]
 		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
@@ -546,9 +548,21 @@ func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error 
 	if err != nil {
 		return err
 	}
-	if numFailed := len(resp.Failed); numFailed > 0 {
-		first := resp.Failed[0]
-		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+	// Note: ChangeMessageVisibilityBatch returns failures when you try to
+	// modify an id that isn't found; drop those.
+	var firstFail *sqs.BatchResultErrorEntry
+	numFailed := 0
+	for _, fail := range resp.Failed {
+		if aws.StringValue(fail.Code) == sqs.ErrCodeReceiptHandleIsInvalid {
+			continue
+		}
+		if numFailed == 0 {
+			firstFail = fail
+		}
+		numFailed++
+	}
+	if numFailed > 0 {
+		return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
 	}
 	return nil
 }
