@@ -48,6 +48,10 @@ you can start multiple goroutines:
 
 ```go
 func main() {
+    // Create context. If you want to implement graceful shutdown, cancel the
+    // context (perhaps after an operating system signal).
+    ctx := context.Background()
+
     // Parse configuration and open subscription (shutdown deferred).
     // ...
 
@@ -65,8 +69,9 @@ recvLoop:
             break
         }
 
-        // Wait if there are too many active handle goroutines and
-        // acquire the semaphore.
+        // Wait if there are too many active handle goroutines and acquire the
+        // semaphore. If the context is canceled, stop waiting and start
+        // shutting down.
         select {
         case sem <- struct{}{}:
         case <-ctx.Done():
@@ -75,6 +80,7 @@ recvLoop:
 
         // Handle the message in a new goroutine.
         go func() {
+            defer func() { <-sem }()
             // TODO(light): Is this reasonable ack behavior, @jba?
             if err := handle(ctx, msg); err != nil {
                 log.Printf("Handling message: %v", err)
@@ -482,8 +488,9 @@ defer subscription.Shutdown(ctx)
 
 To create a subscription to an in-memory Pub/Sub topic, pass the [topic you
 created][publish-mem-ctor] into the [`mempubsub.NewSubscription` function][].
-You will also need to pass an acknowledgement deadline. **TODO(light):
-Reference doesn't make clear how this gets used.**
+You will also need to pass an acknowledgement deadline: once a message is
+received, if it is not acknowledged after the deadline elapses, then it will be
+redelivered.
 
 ```go
 import (
