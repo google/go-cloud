@@ -260,7 +260,7 @@ func (t *Topic) ErrorAs(err error, i interface{}) bool {
 var NewTopic = newTopic
 
 // newSendBatcher creates a batcher for topics, for use with NewTopic.
-func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, batcherOpts *batcher.Options) *batcher.Batcher {
+func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batcher.Options) *batcher.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		dms := items.([]*driver.Message)
@@ -274,20 +274,20 @@ func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, batcherOpts 
 		}
 		return nil
 	}
-	return batcher.New(reflect.TypeOf(&driver.Message{}), batcherOpts, handler)
+	return batcher.New(reflect.TypeOf(&driver.Message{}), opts, handler)
 }
 
 // newTopic makes a pubsub.Topic from a driver.Topic.
 //
-// batcherOpts may be nil to accept defaults.
-func newTopic(d driver.Topic, batcherOpts *batcher.Options) *Topic {
+// opts may be nil to accept defaults.
+func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
 		driver: d,
 		tracer: newTracer(d),
 		cancel: cancel,
 	}
-	t.batcher = newSendBatcher(ctx, t, d, batcherOpts)
+	t.batcher = newSendBatcher(ctx, t, d, opts)
 	return t
 }
 
