@@ -243,6 +243,8 @@ type TopicOptions struct {
 // OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=1 and MaxHandlers=maxPublishConcurrency.
+	// Then SendBatch can be simplified.
 	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), nil)
 }
 
@@ -417,6 +419,8 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=10 and MaxHandlers=maxAckConcurrency.
+	// Then SendAcks/SendNacks can be simplified.
 	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, nil)
 }
 

@@ -28,6 +28,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/retry"
 	"gocloud.dev/pubsub"
@@ -92,6 +93,9 @@ type AsTest interface {
 	MessageCheck(m *pubsub.Message) error
 }
 
+// Many tests set the maximum batch size to 1 to make record/replay stable.
+var batchSizeOne = &batcher.Options{MaxBatchSize: 1}
+
 type verifyAsFailsOnNil struct{}
 
 func (verifyAsFailsOnNil) Name() string {
@@ -142,16 +146,17 @@ func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 // RunConformanceTests runs conformance tests for provider implementations of pubsub.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest) {
 	tests := map[string]func(t *testing.T, newHarness HarnessMaker){
-		"TestSendReceive":                                            testSendReceive,
-		"TestSendReceiveTwo":                                         testSendReceiveTwo,
-		"TestNack":                                                   testNack,
-		"TestErrorOnSendToClosedTopic":                               testErrorOnSendToClosedTopic,
-		"TestErrorOnReceiveFromClosedSubscription":                   testErrorOnReceiveFromClosedSubscription,
-		"TestCancelSendReceive":                                      testCancelSendReceive,
-		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend":           testNonExistentTopicSucceedsOnOpenButFailsOnSend,
+		"TestSendReceive":                                  testSendReceive,
+		"TestSendReceiveTwo":                               testSendReceiveTwo,
+		"TestNack":                                         testNack,
+		"TestBatching":                                     testBatching,
+		"TestErrorOnSendToClosedTopic":                     testErrorOnSendToClosedTopic,
+		"TestErrorOnReceiveFromClosedSubscription":         testErrorOnReceiveFromClosedSubscription,
+		"TestCancelSendReceive":                            testCancelSendReceive,
+		"TestNonExistentTopicSucceedsOnOpenButFailsOnSend": testNonExistentTopicSucceedsOnOpenButFailsOnSend,
 		"TestNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive": testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive,
-		"TestMetadata":                                               testMetadata,
-		"TestNonUTF8MessageBody":                                     testNonUTF8MessageBody,
+		"TestMetadata":           testMetadata,
+		"TestNonUTF8MessageBody": testNonUTF8MessageBody,
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) { test(t, newHarness) })
@@ -220,7 +225,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 	if err != nil {
 		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
-	sub := pubsub.NewSubscription(ds, 1, nil)
+	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -272,7 +277,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer cleanup()
-	top := pubsub.NewTopic(dt, nil)
+	top := pubsub.NewTopic(dt, batchSizeOne)
 	defer func() {
 		if err := top.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -286,7 +291,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		s := pubsub.NewSubscription(ds, 1, nil)
+		s := pubsub.NewSubscription(ds, 1, batchSizeOne)
 		defer func() {
 			if err := s.Shutdown(ctx); err != nil {
 				t.Error(err)
@@ -326,13 +331,13 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	if ds.AckFunc() != nil {
 		t.Skip("Nack not supported")
 	}
-	top := pubsub.NewTopic(dt, nil)
+	top := pubsub.NewTopic(dt, batchSizeOne)
 	defer func() {
 		if err := top.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
 	}()
-	sub := pubsub.NewSubscription(ds, 1, nil)
+	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -366,6 +371,72 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	got = nil
 	for i := 0; i < nMessages; i++ {
 		m, err := sub.Receive(ctx2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got = append(got, m)
+		m.Ack()
+	}
+	if diff := diffMessageSets(got, want); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func testBatching(t *testing.T, newHarness HarnessMaker) {
+	const nMessages = 22 // must be divisible by 2
+	const batchSize = nMessages / 2
+
+	// Set up.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	dt, topicCleanup, err := h.CreateTopic(ctx, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer topicCleanup()
+	ds, subCleanup, err := h.CreateSubscription(ctx, dt, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer subCleanup()
+	batchOpts := &batcher.Options{MinBatchSize: batchSize, MaxBatchSize: batchSize}
+	top := pubsub.NewTopic(dt, batchOpts)
+	defer func() {
+		if err := top.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+	sub := pubsub.NewSubscription(ds, 1, batchOpts)
+	defer func() {
+		if err := sub.Shutdown(ctx); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	// Publish nMessages. We have to do them asynchronously because topic.Send
+	// blocks until the message is sent, and these messages won't be sent until
+	// all batchSize are queued.
+	// Note: this test uses the same Body for each message, because the order
+	// that they appear in the SendBatch is not stable.
+	gr, grctx := errgroup.WithContext(ctx)
+	var want []*pubsub.Message
+	for i := 0; i < nMessages; i++ {
+		m := &pubsub.Message{Body: []byte("hello world")}
+		want = append(want, m)
+		gr.Go(func() error { return top.Send(grctx, m) })
+	}
+	if err := gr.Wait(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Get the messages.
+	var got []*pubsub.Message
+	for i := 0; i < nMessages; i++ {
+		m, err := sub.Receive(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -605,8 +676,8 @@ func makePair(ctx context.Context, t *testing.T, h Harness) (*pubsub.Topic, *pub
 		topicCleanup()
 		return nil, nil, nil, err
 	}
-	top := pubsub.NewTopic(dt, nil)
-	sub := pubsub.NewSubscription(ds, 1, nil)
+	top := pubsub.NewTopic(dt, batchSizeOne)
+	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
 	cleanup := func() {
 		topicCleanup()
 		subCleanup()
@@ -654,7 +725,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Error(err)
 	}
 
-	top = pubsub.NewTopic(dt, nil)
+	top = pubsub.NewTopic(dt, batchSizeOne)
 	defer func() {
 		if err := top.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -671,7 +742,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, 1, nil)
+	sub = pubsub.NewSubscription(ds, 1, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
