@@ -138,7 +138,7 @@ func (b *Batcher) nextBatch() []waiter {
 		b.pending = nil
 		return batch
 	}
-	batch := b.pending[0:b.opts.MaxBatchSize]
+	batch := b.pending[:b.opts.MaxBatchSize]
 	b.pending = b.pending[b.opts.MaxBatchSize:]
 	return batch
 }
