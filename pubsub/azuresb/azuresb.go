@@ -53,6 +53,7 @@ import (
 	servicebus "github.com/Azure/azure-service-bus-go"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -68,6 +69,11 @@ const (
 	rpcTries        = 5
 	rpcRetryDelay   = 1 * time.Second
 )
+
+var sendBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,   // SendBatch only supports one message at a time
+	MaxHandlers:  100, // max concurrency for sends
+}
 
 func init() {
 	o := new(defaultOpener)
@@ -231,7 +237,7 @@ func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOption
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewTopic(t, nil), nil
+	return pubsub.NewTopic(t, sendBatcherOpts), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -245,16 +251,15 @@ func openTopic(ctx context.Context, sbTopic *servicebus.Topic, _ *TopicOptions) 
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	for _, dm := range dms {
-		sbms := servicebus.NewMessage(dm.Body)
-		for k, v := range dm.Metadata {
-			sbms.Set(k, v)
-		}
-		if err := t.sbTopic.Send(ctx, sbms); err != nil {
-			return err
-		}
+	if len(dms) != 1 {
+		panic("azuresb.SendBatch should only get one message at a time")
 	}
-	return nil
+	dm := dms[0]
+	sbms := servicebus.NewMessage(dm.Body)
+	for k, v := range dm.Metadata {
+		sbms.Set(k, v)
+	}
+	return t.sbTopic.Send(ctx, sbms)
 }
 
 func (t *topic) IsRetryable(err error) bool {
