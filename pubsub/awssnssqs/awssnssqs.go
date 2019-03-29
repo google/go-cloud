@@ -153,10 +153,11 @@ const Scheme = "awssnssqs"
 // URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
 // topics or "awssnssqs://sqs-queue-url" for subscriptions.
 //
-// For topics, the URL's host+path is used as the topic ARN.
+// For topics, the URL's host+path is used as the topic Amazon Resource Name
+// (ARN).
 //
 // For subscriptions, the URL's host+path is prefixed with "https://" to create
-//    the queue URL.
+// the queue URL.
 //
 // See gocloud.dev/aws/ConfigFromURLParams for supported query parameters
 // that affect the default AWS session.
@@ -239,8 +240,11 @@ type TopicOptions struct {
 	BodyBase64Encoding BodyBase64Encoding
 }
 
-// OpenTopic opens the topic on AWS SNS for the given SNS client and topic ARN.
+// OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
+// Resource Name (ARN).
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=1 and MaxHandlers=maxPublishConcurrency.
+	// Then SendBatch can be simplified.
 	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), nil)
 }
 
@@ -415,6 +419,8 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=10 and MaxHandlers=maxAckConcurrency.
+	// Then SendAcks/SendNacks can be simplified.
 	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, nil)
 }
 

@@ -80,7 +80,6 @@ var Set = wire.NewSet(
 )
 
 // lazyCredsOpener obtains Application Default Credentials on the first call
-// lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenTopicURL/OpenSubscriptionURL.
 type lazyCredsOpener struct {
 	init   sync.Once
@@ -207,6 +206,8 @@ type TopicOptions struct{}
 // example.
 func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
 	dt := openTopic(client, proj, topicName)
+	// TODO(rvangent): Consider setting batcher.Options{MaxBatchSize: 1000}, then
+	// SendBatch can be simplified.
 	return pubsub.NewTopic(dt, nil)
 }
 
@@ -297,6 +298,8 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
+	// TODO(rvangent): Consider setting batcher.Options{MaxBatchSize: 1000}, then
+	// SendAcks/SendNacks can be simplified.
 	return pubsub.NewSubscription(ds, 0, nil)
 }
 

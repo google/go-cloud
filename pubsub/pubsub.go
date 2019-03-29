@@ -172,7 +172,7 @@ func (m *Message) As(i interface{}) bool {
 // Topic publishes messages to all its subscribers.
 type Topic struct {
 	driver  driver.Topic
-	batcher driver.Batcher
+	batcher *batcher.Batcher
 	tracer  *oc.Tracer
 	mu      sync.Mutex
 	err     error
@@ -259,8 +259,8 @@ func (t *Topic) ErrorAs(err error, i interface{}) bool {
 // NewTopic is for use by provider implementations.
 var NewTopic = newTopic
 
-// defaultBatcher creates a batcher for topics, for use with NewTopic.
-func defaultBatcher(ctx context.Context, t *Topic, dt driver.Topic) driver.Batcher {
+// newSendBatcher creates a batcher for topics, for use with NewTopic.
+func newSendBatcher(ctx context.Context, t *Topic, dt driver.Topic, opts *batcher.Options) *batcher.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		dms := items.([]*driver.Message)
@@ -274,26 +274,20 @@ func defaultBatcher(ctx context.Context, t *Topic, dt driver.Topic) driver.Batch
 		}
 		return nil
 	}
-	return batcher.New(reflect.TypeOf(&driver.Message{}), maxHandlers, handler)
+	return batcher.New(reflect.TypeOf(&driver.Message{}), opts, handler)
 }
 
 // newTopic makes a pubsub.Topic from a driver.Topic.
 //
-// If newBatcher is nil, a default batcher implementation will be used.
-// If non-nil, the driver.Batcher returned by newBatcher should batch
-// *driver.Message, and call the SendBatch func of the driver.Topic in its
-// handler. See defaultBatcher for a sample implementation.
-func newTopic(d driver.Topic, newBatcher func(context.Context, *Topic, driver.Topic) driver.Batcher) *Topic {
+// opts may be nil to accept defaults.
+func newTopic(d driver.Topic, opts *batcher.Options) *Topic {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Topic{
 		driver: d,
 		tracer: newTracer(d),
 		cancel: cancel,
 	}
-	if newBatcher == nil {
-		newBatcher = defaultBatcher
-	}
-	t.batcher = newBatcher(ctx, t, d)
+	t.batcher = newSendBatcher(ctx, t, d, opts)
 	return t
 }
 
@@ -321,12 +315,12 @@ type Subscription struct {
 	driver driver.Subscription
 	tracer *oc.Tracer
 	// ackBatcher makes batches of acks and nacks and sends them to the server.
-	ackBatcher    driver.Batcher
+	ackBatcher    *batcher.Batcher
 	ackFunc       func()          // if non-nil, used for Ack
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
 
-	fixedBatchSize int // if 0, batch size is computed dynamically via updateBatchSize
+	fixedReceiveSize int // if 0, batch size is computed dynamically via updateBatchSize
 
 	mu               sync.Mutex    // protects everything below
 	q                []*Message    // local queue of messages downloaded from server
@@ -408,8 +402,8 @@ const (
 //
 // s.mu must be held.
 func (s *Subscription) updateBatchSize() int {
-	if s.fixedBatchSize != 0 {
-		return s.fixedBatchSize
+	if s.fixedReceiveSize != 0 {
+		return s.fixedReceiveSize
 	}
 	now := time.Now()
 	if s.throughputStart.IsZero() {
@@ -647,36 +641,31 @@ var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.
 //
-// fixedBatchSize should be 0 except in tests where stability is necessary for
-// record/replay.
+// fixedReceiveSize should be 0 except in tests where stability is necessary for
+// record/replay. If non-zero, the maxMessages passed to driver.ReceiveBatch
+// will always be fixedReceiveSize. If 0, maxMessages is determined
+// dynamically based on message throughput.
 //
-// If newAckBatcher is nil, a default batcher implementation will be used.
-// If non-nil, the driver.Batcher returned by newAckBatcher should batch
-// driver.AckID, and call the SendAcks func of the driver.Topic in its
-// handler. See defaultAckBatcher for a sample implementation.
-func newSubscription(ds driver.Subscription, fixedBatchSize int, newAckBatcher func(context.Context, *Subscription, driver.Subscription) driver.Batcher) *Subscription {
+// ackBatcherOpts sets options for ack+nack batching. May be nil to accept
+// defaults.
+func newSubscription(ds driver.Subscription, fixedReceiveSize int, ackBatcherOpts *batcher.Options) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
 		tracer:           newTracer(ds),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
-		fixedBatchSize:   fixedBatchSize,
+		fixedReceiveSize: fixedReceiveSize,
 		runningBatchSize: initialBatchSize,
-	}
-	if newAckBatcher == nil {
-		newAckBatcher = defaultAckBatcher
 	}
 	s.ackFunc = ds.AckFunc()
 	if s.ackFunc == nil {
-		s.ackBatcher = newAckBatcher(ctx, s, ds)
+		s.ackBatcher = newAckBatcher(ctx, s, ds, ackBatcherOpts)
 	}
 	return s
 }
 
-// defaultAckBatcher creates a batcher for acknowledgements, for use with
-// NewSubscription.
-func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription) driver.Batcher {
+func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription, opts *batcher.Options) *batcher.Batcher {
 	const maxHandlers = 1
 	handler := func(items interface{}) error {
 		var acks, nacks []driver.AckID
@@ -717,7 +706,7 @@ func defaultAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscript
 		}
 		return err
 	}
-	return batcher.New(reflect.TypeOf([]*driver.AckInfo{}).Elem(), maxHandlers, handler)
+	return batcher.New(reflect.TypeOf([]*driver.AckInfo{}).Elem(), opts, handler)
 }
 
 type errorCoder interface {
