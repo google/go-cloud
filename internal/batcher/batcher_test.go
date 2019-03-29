@@ -29,6 +29,40 @@ import (
 	"gocloud.dev/internal/batcher"
 )
 
+func TestSplit(t *testing.T) {
+	tests := []struct {
+		n    int
+		opts *batcher.Options
+		want []int
+	}{
+		// Defaults.
+		{0, nil, nil},
+		{1, nil, []int{1}},
+		{10, nil, []int{10}},
+		// MinBatchSize.
+		{4, &batcher.Options{MinBatchSize: 5}, nil},
+		// <= MaxBatchSize.
+		{5, &batcher.Options{MaxBatchSize: 5}, []int{5}},
+		{9, &batcher.Options{MaxBatchSize: 10}, []int{9}},
+		// > MaxBatchSize with MaxHandlers = 1.
+		{5, &batcher.Options{MaxBatchSize: 4}, []int{4}},
+		{999, &batcher.Options{MaxBatchSize: 10}, []int{10}},
+		// MaxBatchSize with MaxHandlers > 1.
+		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 2}, []int{4, 4}},
+		{10, &batcher.Options{MaxBatchSize: 5, MaxHandlers: 2}, []int{5, 5}},
+		{10, &batcher.Options{MaxBatchSize: 9, MaxHandlers: 2}, []int{5, 5}},
+		{9, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{3, 3, 3}},
+		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{4, 4, 2}},
+	}
+
+	for _, test := range tests {
+		got := batcher.Split(test.n, test.opts)
+		if diff := cmp.Diff(got, test.want); diff != "" {
+			t.Errorf("%d/%#v: got %v want %v diff %s", test.n, test.opts, got, test.want, diff)
+		}
+	}
+}
+
 func TestSequential(t *testing.T) {
 	// Verify that sequential non-concurrent Adds to a batcher produce single-item batches.
 	// Since there is no concurrent work, the Batcher will always produce the items one at a time.

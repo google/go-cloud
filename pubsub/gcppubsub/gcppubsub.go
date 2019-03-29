@@ -53,7 +53,6 @@ import (
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/pubsub/v1"
 	"google.golang.org/grpc"
@@ -67,6 +66,12 @@ const endPoint = "pubsub.googleapis.com:443"
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
 	MaxHandlers:  2,
+}
+
+var recvBatcherOpts = &batcher.Options{
+	// GCP Pub/Sub returns at most 1000 messages per RPC.
+	MaxBatchSize: 1000,
+	MaxHandlers:  10,
 }
 
 var ackBatcherOpts = &batcher.Options{
@@ -292,7 +297,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, 0, ackBatcherOpts)
+	return pubsub.NewSubscription(ds, nil, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
@@ -303,51 +308,13 @@ func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// GCP Pub/Sub returns at most 1000 messages per RPC.
-	// If maxMessages is larger than 1000, we make up to maxReceiveConcurrency RPCs
-	// in parallel to try to get more.
-	const maxMessagesPerRPC = 1000
-	const maxReceiveConcurrency = 10
-
-	var mu sync.Mutex
-	var ms []*driver.Message
-
 	// Whether to ask Pull to return immediately, or wait for some messages to
 	// arrive. If we're making multiple RPCs, we don't want any of them to wait;
 	// we might have gotten messages from one of the other RPCs.
 	// maxMessages will only be high enough to set this to true in high-throughput
 	// situations, so the likelihood of getting 0 messages is small anyway.
-	returnImmediately := maxMessages >= maxMessagesPerRPC
+	returnImmediately := maxMessages == recvBatcherOpts.MaxBatchSize
 
-	g, ctx := errgroup.WithContext(ctx)
-	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
-		maxThisRPC := maxMessages
-		if maxThisRPC > maxMessagesPerRPC {
-			maxThisRPC = maxMessagesPerRPC
-		}
-		maxMessages -= maxThisRPC
-		g.Go(func() error {
-			msgs, err := s.pull(ctx, maxThisRPC, returnImmediately)
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			defer mu.Unlock()
-			ms = append(ms, msgs...)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	// If we did happen to get 0 messages, wait a bit to avoid spinning.
-	if len(ms) == 0 && returnImmediately {
-		time.Sleep(100 * time.Millisecond)
-	}
-	return ms, nil
-}
-
-func (s *subscription) pull(ctx context.Context, maxMessages int, returnImmediately bool) ([]*driver.Message, error) {
 	req := &pb.PullRequest{
 		Subscription:      s.path,
 		ReturnImmediately: returnImmediately,
@@ -367,6 +334,13 @@ func (s *subscription) pull(ctx context.Context, maxMessages int, returnImmediat
 			AsFunc:   messageAsFunc(rmm),
 		}
 		ms = append(ms, m)
+	}
+	if err != nil {
+		return nil, err
+	}
+	// If we did happen to get 0 messages, wait a bit to avoid spinning.
+	if len(ms) == 0 && returnImmediately {
+		time.Sleep(100 * time.Millisecond)
 	}
 	return ms, nil
 }

@@ -70,7 +70,7 @@ func (s *fakeSub) inMiddleThird() bool {
 // TestReceivePerformance enables characterization of Receive under various
 // situations, characterized in "tests" below.
 func TestReceivePerformance(t *testing.T) {
-	t.Skip("Skipped by default")
+	// t.Skip("Skipped by default")
 
 	const defaultNumGoRoutines = 100
 	defaultReceiveProfile := func(_ bool, maxMessages int) (int, time.Duration) { return maxMessages, 0 }
@@ -187,7 +187,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 	}
 
 	fake := &fakeSub{msgs: msgs, profile: receiveProfile, start: time.Now()}
-	sub := newSubscription(fake, 0, nil)
+	sub := newSubscription(fake, nil, nil)
 
 	// Header row.
 	fmt.Printf("%s\tmsgs/sec\tRPCs/sec\tbatchsize\n", description)

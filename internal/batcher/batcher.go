@@ -25,6 +25,52 @@ import (
 	"sync"
 )
 
+// Split splits n into similarly-sized batches based on opts. opts may be nil
+// to accept defaults.
+//
+// Split return nil (e.g., if n is less than o.MinBatchSize).
+//
+// The sum of returned batches may be less than n (e.g., if n is 10x larger
+// than o.MaxBatchSize, but o.MaxHandlers is less than 10).
+func Split(n int, opts *Options) []int {
+	o := newOptionsWithDefaults(opts)
+	if n < o.MinBatchSize {
+		// No batch yet.
+		return nil
+	}
+	if o.MaxBatchSize == 0 || n <= o.MaxBatchSize {
+		// One batch is fine.
+		return []int{n}
+	}
+	// Compute how many batches we need, including remainder.
+	nBatches := n / o.MaxBatchSize
+	if n%o.MaxBatchSize != 0 {
+		nBatches++
+	}
+	// Given nBatches, see how big each batch should be. Note that we want
+	// nBatches * nBatches to be >= n; if it's > n, the last batch will end up
+	// being a bit smaller.
+	batchSize := n / nBatches
+	if n%nBatches != 0 {
+		batchSize++
+	}
+	// Cap the number of batches based on concurrency. If we reduce the number
+	// of batches, then we'll make them all as big as we can.
+	if nBatches > o.MaxHandlers {
+		nBatches = o.MaxHandlers
+		batchSize = o.MaxBatchSize
+	}
+	var batches []int
+	for i := 0; i < nBatches; i++ {
+		if n < batchSize {
+			batchSize = n
+		}
+		batches = append(batches, batchSize)
+		n -= batchSize
+	}
+	return batches
+}
+
 // A Batcher batches items.
 type Batcher struct {
 	opts          Options
@@ -53,16 +99,9 @@ type Options struct {
 	MaxBatchSize int
 }
 
-// New creates a new Batcher.
-//
-// itemType is type that will be batched. For example, if you
-// want to create batches of *Entry, pass reflect.TypeOf(&Entry{}) for itemType.
-//
-// opts can be nil to accept defaults.
-//
-// handler is a function that will be called on each bundle. If itemExample is
-// of type T, the argument to handler is of type []T.
-func New(itemType reflect.Type, opts *Options, handler func(interface{}) error) *Batcher {
+// newOptionsWithDefaults returns Options with defaults applied to opts.
+// opts may be nil to accept all defaults.
+func newOptionsWithDefaults(opts *Options) Options {
 	var o Options
 	if opts != nil {
 		o = *opts
@@ -73,8 +112,21 @@ func New(itemType reflect.Type, opts *Options, handler func(interface{}) error) 
 	if o.MinBatchSize == 0 {
 		o.MinBatchSize = 1
 	}
+	return o
+}
+
+// New creates a new Batcher.
+//
+// itemType is type that will be batched. For example, if you
+// want to create batches of *Entry, pass reflect.TypeOf(&Entry{}) for itemType.
+//
+// opts can be nil to accept defaults.
+//
+// handler is a function that will be called on each bundle. If itemExample is
+// of type T, the argument to handler is of type []T.
+func New(itemType reflect.Type, opts *Options, handler func(interface{}) error) *Batcher {
 	return &Batcher{
-		opts:          o,
+		opts:          newOptionsWithDefaults(opts),
 		handler:       handler,
 		itemSliceZero: reflect.Zero(reflect.SliceOf(itemType)),
 	}

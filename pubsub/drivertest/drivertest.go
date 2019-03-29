@@ -98,7 +98,7 @@ type AsTest interface {
 }
 
 // Many tests set the maximum batch size to 1 to make record/replay stable.
-var batchSizeOne = &batcher.Options{MaxBatchSize: 1}
+var batchSizeOne = &batcher.Options{MaxBatchSize: 1, MaxHandlers: 1}
 
 type verifyAsFailsOnNil struct{}
 
@@ -229,7 +229,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 	if err != nil {
 		t.Fatalf("failed to make non-existent subscription: %v", err)
 	}
-	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
+	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -295,7 +295,7 @@ func testSendReceiveTwo(t *testing.T, newHarness HarnessMaker) {
 			t.Fatal(err)
 		}
 		defer cleanup()
-		s := pubsub.NewSubscription(ds, 1, batchSizeOne)
+		s := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 		defer func() {
 			if err := s.Shutdown(ctx); err != nil {
 				t.Error(err)
@@ -341,7 +341,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 			t.Error(err)
 		}
 	}()
-	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
+	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -426,7 +426,7 @@ func testBatching(t *testing.T, newHarness HarnessMaker) {
 	if maxAckBatch != 0 && batchSize > maxAckBatch {
 		ackBatchOpts = batchSizeOne
 	}
-	sub := pubsub.NewSubscription(ds, 1, ackBatchOpts)
+	sub := pubsub.NewSubscription(ds, batchSizeOne, ackBatchOpts)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)
@@ -693,7 +693,7 @@ func makePair(ctx context.Context, t *testing.T, h Harness) (*pubsub.Topic, *pub
 		return nil, nil, nil, err
 	}
 	top := pubsub.NewTopic(dt, batchSizeOne)
-	sub := pubsub.NewSubscription(ds, 1, batchSizeOne)
+	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	cleanup := func() {
 		topicCleanup()
 		subCleanup()
@@ -758,7 +758,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, 1, batchSizeOne)
+	sub = pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	defer func() {
 		if err := sub.Shutdown(ctx); err != nil {
 			t.Error(err)

@@ -76,15 +76,12 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
 	// base64EncodedKey is the Message Attribute key used to flag that the
 	// message body is base64 encoded.
 	base64EncodedKey = "base64encoded"
-	// maxReceiveConcurrency limits the number of Receive RPCs to SQS in flight.
-	maxReceiveConcurrency = 100
 	// How long ReceiveBatch should wait if no messages are available; controls
 	// the poll interval of requests to SQS.
 	noMessagesPollDuration = 250 * time.Millisecond
@@ -93,6 +90,13 @@ const (
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1,   // SendBatch only supports one message at a time
 	MaxHandlers:  100, // max concurrency for sends
+}
+
+var recvBatcherOpts = &batcher.Options{
+	// SQS supports receiving at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
+	MaxBatchSize: 10,
+	MaxHandlers:  100, // max concurrency for receives
 }
 
 var ackBatcherOpts = &batcher.Options{
@@ -402,7 +406,7 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, ackBatcherOpts)
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), recvBatcherOpts, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
@@ -412,49 +416,9 @@ func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// SQS supports receiving at most 10 messages at a time:
-	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
-	// If maxMessages is larger than 10, we make up to maxReceiveConcurrency RPCs
-	// in parallel to try to get more.
-	const maxMessagesPerRPC = 10
-
-	var mu sync.Mutex
-	var ms []*driver.Message
-
-	g, ctx := errgroup.WithContext(ctx)
-	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
-		maxThisRPC := maxMessages
-		if maxThisRPC > maxMessagesPerRPC {
-			maxThisRPC = maxMessagesPerRPC
-		}
-		maxMessages -= maxThisRPC
-		g.Go(func() error {
-			msgs, err := s.receiveMessages(ctx, int64(maxThisRPC))
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			defer mu.Unlock()
-			ms = append(ms, msgs...)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	if len(ms) == 0 {
-		// When we return no messages and no error, the portable type will call
-		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
-		// with RPCs.
-		time.Sleep(noMessagesPollDuration)
-	}
-	return ms, nil
-}
-
-func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*driver.Message, error) {
 	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(s.qURL),
-		MaxNumberOfMessages: aws.Int64(max),
+		MaxNumberOfMessages: aws.Int64(int64(maxMessages)),
 	})
 	if err != nil {
 		return nil, err
@@ -508,6 +472,12 @@ func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*drive
 			},
 		}
 		ms = append(ms, m2)
+	}
+	if len(ms) == 0 {
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
+		// with RPCs.
+		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
 }
