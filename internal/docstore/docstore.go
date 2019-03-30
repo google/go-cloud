@@ -132,11 +132,12 @@ func (l *ActionList) Delete(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Delete, doc: doc})
 }
 
-// Get adds an action that retrieves a document.
-// Only the key fields of doc are used.
-// If fps is omitted, all the fields of doc are set to those of the
-// retrieved document. If fps is present, only the given field paths are
-// set. In both cases, other fields of doc are not touched.
+// Get adds an action that retrieves a document. Only the key fields of doc are used.
+// If fps is omitted, doc will contain all the fields of the retrieved document. If
+// fps is present, only the given field paths are retrieved, in addition to the
+// revision field. It is undefined whether other fields of doc at the time of the
+// call are removed, unchanged, or zeroed, so for portable behavior doc should
+// contain only the key fields.
 func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 	return l.add(&Action{
 		kind:       driver.Get,

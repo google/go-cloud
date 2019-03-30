@@ -19,6 +19,7 @@ package driver
 
 import (
 	"encoding"
+	"fmt"
 	"reflect"
 	"strconv"
 
@@ -369,6 +370,9 @@ func Decode(v reflect.Value, d Decoder) error {
 }
 
 func decode(v reflect.Value, d Decoder) error {
+	if !v.CanSet() {
+		panic(fmt.Sprintf("cannot set %+v", v))
+	}
 	// A Null value sets anything nullable to nil.
 	// If the value isn't nullable, we keep going.
 	// TODO(jba): should we treat decoding a null into a non-nullable as an error, or

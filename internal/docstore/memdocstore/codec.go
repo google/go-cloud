@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
 
@@ -76,8 +77,25 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document) error {
-	return ddoc.Decode(decoder{m})
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string) error {
+	var m2 map[string]interface{}
+	if fps == nil {
+		m2 = m
+	} else {
+		// Make a document to decode from that has only the field paths and the revision field.
+		// (We don't need the key field because ddoc must already have it.)
+		m2 = map[string]interface{}{docstore.RevisionField: m[docstore.RevisionField]}
+		for _, fp := range fps {
+			val, err := getAtFieldPath(m, fp)
+			if err != nil {
+				return err
+			}
+			if err := setAtFieldPath(m2, fp, val); err != nil {
+				return err
+			}
+		}
+	}
+	return ddoc.Decode(decoder{m2})
 }
 
 type decoder struct {
