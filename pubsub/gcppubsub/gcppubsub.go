@@ -48,6 +48,7 @@ import (
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
@@ -62,6 +63,18 @@ import (
 )
 
 const endPoint = "pubsub.googleapis.com:443"
+
+var sendBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
+	MaxHandlers:  2,
+}
+
+var ackBatcherOpts = &batcher.Options{
+	// The PubSub service limits the size of Acknowledge/ModifyAckDeadline RPCs.
+	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
+	MaxBatchSize: 1000,
+	MaxHandlers:  2,
+}
 
 func init() {
 	o := new(lazyCredsOpener)
@@ -205,10 +218,7 @@ type TopicOptions struct{}
 // topicName in the given projectID. See the package documentation for an
 // example.
 func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
-	dt := openTopic(client, proj, topicName)
-	// TODO(rvangent): Consider setting batcher.Options{MaxBatchSize: 1000}, then
-	// SendBatch can be simplified.
-	return pubsub.NewTopic(dt, nil)
+	return pubsub.NewTopic(openTopic(client, proj, topicName), sendBatcherOpts)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -220,29 +230,13 @@ func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	// The PubSub service limits the number of messages in a single Publish RPC.
-	const maxPublishCount = 1000
-	for len(dms) > 0 {
-		n := len(dms)
-		if n > maxPublishCount {
-			n = maxPublishCount
-		}
-		batch := dms[:n]
-		dms = dms[n:]
-		var ms []*pb.PubsubMessage
-		for _, dm := range batch {
-			ms = append(ms, &pb.PubsubMessage{
-				Data:       dm.Body,
-				Attributes: dm.Metadata,
-			})
-		}
-		req := &pb.PublishRequest{
-			Topic:    t.path,
-			Messages: ms,
-		}
-		if _, err := t.client.Publish(ctx, req); err != nil {
-			return err
-		}
+	var ms []*pb.PubsubMessage
+	for _, dm := range dms {
+		ms = append(ms, &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata})
+	}
+	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
+	if _, err := t.client.Publish(ctx, req); err != nil {
+		return err
 	}
 	return nil
 }
@@ -298,9 +292,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	// TODO(rvangent): Consider setting batcher.Options{MaxBatchSize: 1000}, then
-	// SendAcks/SendNacks can be simplified.
-	return pubsub.NewSubscription(ds, 0, nil)
+	return pubsub.NewSubscription(ds, 0, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
@@ -392,46 +384,24 @@ func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	return s.handleAcksInBatches(ids, func(ids []string) error {
-		return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
-			Subscription: s.path,
-			AckIds:       ids,
-		})
-	})
+	ids2 := make([]string, 0, len(ids))
+	for _, id := range ids {
+		ids2 = append(ids2, id.(string))
+	}
+	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{Subscription: s.path, AckIds: ids2})
 }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
-	return s.handleAcksInBatches(ids, func(ids []string) error {
-		return s.client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
-			Subscription:       s.path,
-			AckIds:             ids,
-			AckDeadlineSeconds: 0,
-		})
-	})
-}
-
-func (s *subscription) handleAcksInBatches(ids []driver.AckID, fn func(ids []string) error) error {
-	// The PubSub service limits the size of Acknowledge RPCs.
-	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
-	const maxAckCount = 1000
-
-	for len(ids) > 0 {
-		n := len(ids)
-		if n > maxAckCount {
-			n = maxAckCount
-		}
-		batch := ids[:n]
-		ids = ids[n:]
-		ids2 := make([]string, 0, len(batch))
-		for _, id := range batch {
-			ids2 = append(ids2, id.(string))
-		}
-		if err := fn(ids2); err != nil {
-			return err
-		}
+	ids2 := make([]string, 0, len(ids))
+	for _, id := range ids {
+		ids2 = append(ids2, id.(string))
 	}
-	return nil
+	return s.client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
+		Subscription:       s.path,
+		AckIds:             ids2,
+		AckDeadlineSeconds: 0,
+	})
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.

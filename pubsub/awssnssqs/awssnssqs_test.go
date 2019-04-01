@@ -199,6 +199,10 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) MaxBatchSizes() (int, int) {
+	return sendBatcherOpts.MaxBatchSize, ackBatcherOpts.MaxBatchSize
+}
+
 // Tips on dealing with failures when in -record mode:
 // - There may be leftover messages in queues. Using the AWS CLI tool,
 //   purge the queues before running the test.
@@ -293,7 +297,7 @@ func BenchmarkAwsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup1()
-	topic := pubsub.NewTopic(dt, nil)
+	topic := pubsub.NewTopic(dt, sendBatcherOpts)
 	defer topic.Shutdown(ctx)
 	subName := fmt.Sprintf("%s-subscription", b.Name())
 	ds, cleanup2, err := createSubscription(ctx, dt, subName, sess)
@@ -301,7 +305,7 @@ func BenchmarkAwsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup2()
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, 0, ackBatcherOpts)
 	defer sub.Shutdown(ctx)
 	drivertest.RunBenchmarks(b, topic, sub)
 }

@@ -71,6 +71,7 @@ import (
 	"github.com/google/wire"
 	gcaws "gocloud.dev/aws"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
@@ -82,17 +83,25 @@ const (
 	// base64EncodedKey is the Message Attribute key used to flag that the
 	// message body is base64 encoded.
 	base64EncodedKey = "base64encoded"
-	// maxPublishConcurrency limits the number of Publish RPCs to SNS in flight
-	// at once, per Topic.
-	maxPublishConcurrency = 100
 	// maxReceiveConcurrency limits the number of Receive RPCs to SQS in flight.
 	maxReceiveConcurrency = 100
-	// maxAckConcurrency limits the number of DeleteMessageBatch RPCs (for Acks) to SQS in flight.
-	maxAckConcurrency = 100
 	// How long ReceiveBatch should wait if no messages are available; controls
 	// the poll interval of requests to SQS.
 	noMessagesPollDuration = 250 * time.Millisecond
 )
+
+var sendBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,   // SendBatch only supports one message at a time
+	MaxHandlers:  100, // max concurrency for sends
+}
+
+var ackBatcherOpts = &batcher.Options{
+	// SQS supports deleting/updating at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.DeleteMessageBatch
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ChangeMessageVisibilityBatch
+	MaxBatchSize: 10,
+	MaxHandlers:  100, // max concurrency for acks
+}
 
 func init() {
 	lazy := new(lazySessionOpener)
@@ -196,7 +205,6 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 type topic struct {
 	client *sns.SNS
 	arn    string
-	sem    chan struct{} // limits maximum in-flight Publish RPCs across SendBatch
 	opts   *TopicOptions
 }
 
@@ -243,9 +251,7 @@ type TopicOptions struct {
 // OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=1 and MaxHandlers=maxPublishConcurrency.
-	// Then SendBatch can be simplified.
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), nil)
+	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), sendBatcherOpts)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -257,7 +263,6 @@ func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *Topi
 	return &topic{
 		client: client,
 		arn:    topicARN,
-		sem:    make(chan struct{}, maxPublishConcurrency),
 		opts:   opts,
 	}
 }
@@ -266,31 +271,10 @@ var stringDataType = aws.String("String")
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	g, ctx := errgroup.WithContext(ctx)
-	var ctxErr error
-
-Loop:
-	for _, dm := range dms {
-		select {
-		case <-ctx.Done():
-			ctxErr = ctx.Err()
-			break Loop
-		case t.sem <- struct{}{}:
-			dm := dm
-			g.Go(func() error {
-				defer func() { <-t.sem }()
-				return t.sendMessage(ctx, dm)
-			})
-		}
+	if len(dms) != 1 {
+		panic("awssnssqs.SendBatch should only get one message at a time")
 	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	return ctxErr
-}
-
-// sendMessage sends a single message via RPC to SNS.
-func (t *topic) sendMessage(ctx context.Context, dm *driver.Message) error {
+	dm := dms[0]
 	attrs := map[string]*sns.MessageAttributeValue{}
 	for k, v := range dm.Metadata {
 		// See the package comments for more details on escaping of metadata
@@ -409,7 +393,6 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 type subscription struct {
 	client *sqs.SQS
 	qURL   string
-	acksem chan struct{} // limits maximum in-flight DeleteMessageBatch RPCs across SendAcks
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -419,18 +402,12 @@ type SubscriptionOptions struct{}
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
 func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	// TODO(rvangent): Consider setting batcher options to MaxBatchSize=10 and MaxHandlers=maxAckConcurrency.
-	// Then SendAcks/SendNacks can be simplified.
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, nil)
+	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
 func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
-	return &subscription{
-		client: client,
-		qURL:   qURL,
-		acksem: make(chan struct{}, maxAckConcurrency),
-	}
+	return &subscription{client: client, qURL: qURL}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
@@ -537,98 +514,57 @@ func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*drive
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	newReq := func() interface{} {
-		return &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
-	}
-	addToReq := func(reqi interface{}, id driver.AckID) {
-		req := reqi.(*sqs.DeleteMessageBatchInput)
+	req := &sqs.DeleteMessageBatchInput{QueueUrl: aws.String(s.qURL)}
+	for _, id := range ids {
 		req.Entries = append(req.Entries, &sqs.DeleteMessageBatchRequestEntry{
 			Id:            aws.String(strconv.Itoa(len(req.Entries))),
 			ReceiptHandle: id.(*string),
 		})
 	}
-	sendReq := func(ctx context.Context, reqi interface{}) error {
-		req := reqi.(*sqs.DeleteMessageBatchInput)
-		resp, err := s.client.DeleteMessageBatchWithContext(ctx, req)
-		if err != nil {
-			return err
-		}
-		if numFailed := len(resp.Failed); numFailed > 0 {
-			first := resp.Failed[0]
-			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
-		}
-		return nil
+	resp, err := s.client.DeleteMessageBatchWithContext(ctx, req)
+	if err != nil {
+		return err
 	}
-	return s.handleAcksInBatches(ctx, ids, newReq, addToReq, sendReq)
+	// Note: DeleteMessageBatch doesn't return failures when you try
+	// to Delete an id that isn't found.
+	if numFailed := len(resp.Failed); numFailed > 0 {
+		first := resp.Failed[0]
+		return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.DeleteMessageBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
+	}
+	return nil
 }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
-	newReq := func() interface{} {
-		return &sqs.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
-	}
-	addToReq := func(reqi interface{}, id driver.AckID) {
-		req := reqi.(*sqs.ChangeMessageVisibilityBatchInput)
+	req := &sqs.ChangeMessageVisibilityBatchInput{QueueUrl: aws.String(s.qURL)}
+	for _, id := range ids {
 		req.Entries = append(req.Entries, &sqs.ChangeMessageVisibilityBatchRequestEntry{
 			Id:                aws.String(strconv.Itoa(len(req.Entries))),
 			ReceiptHandle:     id.(*string),
 			VisibilityTimeout: aws.Int64(0),
 		})
 	}
-	sendReq := func(ctx context.Context, reqi interface{}) error {
-		req := reqi.(*sqs.ChangeMessageVisibilityBatchInput)
-		resp, err := s.client.ChangeMessageVisibilityBatchWithContext(ctx, req)
-		if err != nil {
-			return err
-		}
-		if numFailed := len(resp.Failed); numFailed > 0 {
-			first := resp.Failed[0]
-			return awserr.New(aws.StringValue(first.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(first.Message)), nil)
-		}
-		return nil
-	}
-	return s.handleAcksInBatches(ctx, ids, newReq, addToReq, sendReq)
-}
-
-func (s *subscription) handleAcksInBatches(ctx context.Context, ids []driver.AckID, newReq func() interface{}, addToReq func(req interface{}, id driver.AckID), sendReq func(ctx context.Context, req interface{}) error) error {
-	// SQS supports deleting/updating at most 10 messages at a time:
-	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.DeleteMessageBatch
-	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ChangeMessageVisibilityBatch
-	// If len(ids) is larger than 10, we make up to maxAckConcurrency RPCs
-	// (across calls to SendAcks/SendNacks) in parallel.
-	const maxPerRPC = 10
-
-	g, ctx := errgroup.WithContext(ctx)
-	var ctxErr error
-
-	req := newReq()
-	n := 0
-Loop:
-	for i, id := range ids {
-		addToReq(req, id)
-		n++
-		// Send if we've reached the limit, or if this is the last one.
-		if n == maxPerRPC || i == len(ids)-1 {
-			select {
-			case <-ctx.Done():
-				ctxErr = ctx.Err()
-				break Loop
-			case s.acksem <- struct{}{}:
-				req := req
-				g.Go(func() error {
-					defer func() { <-s.acksem }()
-					return sendReq(ctx, req)
-				})
-			}
-			// Start the next batch.
-			req = newReq()
-			n = 0
-		}
-	}
-	if err := g.Wait(); err != nil {
+	resp, err := s.client.ChangeMessageVisibilityBatchWithContext(ctx, req)
+	if err != nil {
 		return err
 	}
-	return ctxErr
+	// Note: ChangeMessageVisibilityBatch returns failures when you try to
+	// modify an id that isn't found; drop those.
+	var firstFail *sqs.BatchResultErrorEntry
+	numFailed := 0
+	for _, fail := range resp.Failed {
+		if aws.StringValue(fail.Code) == sqs.ErrCodeReceiptHandleIsInvalid {
+			continue
+		}
+		if numFailed == 0 {
+			firstFail = fail
+		}
+		numFailed++
+	}
+	if numFailed > 0 {
+		return awserr.New(aws.StringValue(firstFail.Code), fmt.Sprintf("sqs.ChangeMessageVisibilityBatch failed for %d message(s): %s", numFailed, aws.StringValue(firstFail.Message)), nil)
+	}
+	return nil
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
