@@ -286,7 +286,8 @@ func (ch *fakeChannel) Ack(tag uint64) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("couldn't find tag %d to ack", tag)
+	// No error if we couldn't find it to ack it.
+	return nil
 }
 
 // Nack moves the message from q.pendingAck back to q.messages
@@ -304,7 +305,8 @@ func (ch *fakeChannel) Nack(tag uint64) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("couldn't find tag %d to nack", tag)
+	// No error if we couldn't find it to nack it.
+	return nil
 }
 
 // Cancel stops the consumer's goroutine.
