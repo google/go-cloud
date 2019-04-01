@@ -21,6 +21,7 @@ package batcher // import "gocloud.dev/internal/batcher"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 )
@@ -47,19 +48,29 @@ func Split(n int, opts *Options) []int {
 	}
 
 	// Compute how many batches we need, and what size they are.
+	fmt.Printf("%d %#v\n", n, opts)
 	nBatches := n / o.MaxBatchSize
 	batchSize := n / nBatches
+	fmt.Printf("  n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
 
 	// If we're over the batch size limit, use the max and recompute nBatches.
 	if batchSize > o.MaxBatchSize {
 		batchSize = o.MaxBatchSize
 		nBatches = n / batchSize
+		fmt.Printf("  capped batchSize n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
 	}
 
 	// If it divided evenly, great; otherwise, add a batch to pick up the remainder.
 	if nBatches*batchSize < n {
 		nBatches++
 		batchSize = n / nBatches // can't have increased past o.MaxBatchSize since we've added a batch
+		fmt.Printf("  incremented n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
+	}
+
+	// If the remainder is too small, drop it.
+	if n%batchSize < o.MinBatchSize {
+		nBatches--
+		fmt.Printf("  dropped n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
 	}
 
 	// Cap the number of batches based on MaxHandlers. If we reduce the number
@@ -67,6 +78,7 @@ func Split(n int, opts *Options) []int {
 	if nBatches > o.MaxHandlers {
 		nBatches = o.MaxHandlers
 		batchSize = o.MaxBatchSize
+		fmt.Printf("  capped nBatches %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
 	}
 
 	var batches []int
