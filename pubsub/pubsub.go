@@ -661,7 +661,7 @@ var NewSubscription = newSubscription
 // newSubscription creates a Subscription from a driver.Subscription.
 //
 // recvBatchOpts sets options for Receive batching. May be nil to accept
-// defaults. The ideal size of messages to receive at a time is determined
+// defaults. The ideal number of messages to receive at a time is determined
 // dynamically, then split into multiple possibly concurrent calls to
 // driver.ReceiveBatch based on recvBatchOptions.
 //
