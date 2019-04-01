@@ -87,9 +87,11 @@ package pubsub // import "gocloud.dev/pubsub"
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -532,6 +534,20 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			m := s.q[0]
 			s.q = s.q[1:]
 			s.throughputCount++
+			if s.ackFunc == nil {
+				// Add a finalizer that complains if the Message we return isn't
+				// acked or nacked.
+				_, file, lineno, ok := runtime.Caller(1)
+				runtime.SetFinalizer(m, func(m *Message) {
+					if !m.isAcked {
+						var caller string
+						if ok {
+							caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+						}
+						log.Printf("A pubsub.Message was never Acked or Nacked%s", caller)
+					}
+				})
+			}
 			return m, nil
 		}
 		// No messages are available.
