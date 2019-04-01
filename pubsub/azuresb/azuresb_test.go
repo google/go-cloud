@@ -38,6 +38,11 @@ var (
 
 const (
 	nonexistentTopicName = "nonexistent-topic"
+
+	// Try to keep the entity name under Azure limits.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
+	// says 50, but there appears to be some additional overhead. 40 works.
+	maxNameLen = 40
 )
 
 type harness struct {
@@ -72,7 +77,7 @@ func newHarnessUsingAutodelete(ctx context.Context, t *testing.T) (drivertest.Ha
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+	topicName := sanitize(fmt.Sprintf("%s-top-%d", testName, atomic.AddUint32(&h.numTopics, 1)))
 
 	createTopic(ctx, topicName, h.ns, nil)
 
@@ -98,15 +103,9 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	// Keep the subscription entity name under 50 characters as per Azure limits.
-	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
-	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	if len(subName) > 50 {
-		subName = subName[:50]
-	}
+	subName := sanitize(fmt.Sprintf("%s-sub-%d", testName, atomic.AddUint32(&h.numSubs, 1)))
 
 	t := dt.(*topic)
-
 	err = createSubscription(ctx, t.sbTopic.Name, subName, h.ns, nil)
 	if err != nil {
 		return nil, nil, err
@@ -123,7 +122,7 @@ func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testN
 
 	sopts := SubscriptionOptions{}
 	if h.autodelete {
-		sopts.AckFuncForReceiveAndDelete = func() {}
+		sopts.AckFuncForReceiveAndDelete = func() { }
 	}
 	ds, err = openSubscription(ctx, h.ns, t.sbTopic, sbSub, &sopts)
 	if err != nil {
@@ -159,7 +158,6 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
 
-/* Disabled for now, as the tests do not pass.
 func TestConformanceWithAutodelete(t *testing.T) {
 	if !*setup.Record {
 		t.Skip("replaying is not yet supported for Azure pubsub")
@@ -167,7 +165,6 @@ func TestConformanceWithAutodelete(t *testing.T) {
 	asTests := []drivertest.AsTest{sbAsTest{}}
 	drivertest.RunConformanceTests(t, newHarnessUsingAutodelete, asTests)
 }
-*/
 
 type sbAsTest struct{}
 
@@ -225,8 +222,17 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func sanitize(testName string) string {
-	return strings.Replace(testName, "/", "_", -1)
+func sanitize(s string) string {
+	// First trim some not-so-useful strings that are part of all test names.
+	s = strings.Replace(s, "TestConformance/Test", "", 1)
+	s = strings.Replace(s, "TestConformanceWithAutodelete/Test", "", 1)
+	s = strings.Replace(s, "/", "_", -1)
+	if len(s) > maxNameLen {
+		// Drop prefix, not suffix, because suffix includes something to make
+		// entities unique within a test.
+		s = s[len(s)-maxNameLen:]
+	}
+	return s
 }
 
 // createTopic ensures the existence of a Service Bus Topic on a given Namespace.
