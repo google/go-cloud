@@ -72,7 +72,12 @@ func newHarnessUsingAutodelete(ctx context.Context, t *testing.T) (drivertest.Ha
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
+	// Keep the topic entity name under 50 characters as per Azure limits.
+	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
 	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
+	if len(topicName) > 50 {
+		topicName = topicName[:50]
+	}
 
 	createTopic(ctx, topicName, h.ns, nil)
 
@@ -100,9 +105,11 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	// Keep the subscription entity name under 50 characters as per Azure limits.
 	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
+	// There also appears to be some overhead to that when using AMQP; topic
+	// names of length 50 with a subscription of length 50 fail; 50+40 works.
 	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	if len(subName) > 50 {
-		subName = subName[:50]
+	if len(subName) > 40 {
+		subName = subName[:40]
 	}
 
 	t := dt.(*topic)
