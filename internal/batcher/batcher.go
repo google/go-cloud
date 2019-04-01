@@ -51,7 +51,7 @@ func Split(n int, opts *Options) []int {
 		nBatches++
 	}
 	// Given nBatches, see how big each batch should be. Note that we want
-	// nBatches * nBatches to be >= n; if it's > n, the last batch will end up
+	// batchSize * nBatches to be >= n; if it's > n, the last batch will end up
 	// being a bit smaller.
 	batchSize := n / nBatches
 	if n%nBatches != 0 {
