@@ -25,10 +25,13 @@ import (
 	"sync"
 )
 
-// Split splits n into similarly-sized batches based on opts. opts may be nil
-// to accept defaults.
+// Split determines how to best split n (representing n items) into
+// similarly-sized batches based on opts. It returns a slice of batch sizes.
 //
-// Split return nil (e.g., if n is less than o.MinBatchSize).
+// For example, Split(10) might return [10], [5, 5], or [2, 2, 2, 2, 2]
+// dependin on opts. opts may be nil to accept defaults.
+//
+// Split will return nil if n is less than o.MinBatchSize.
 //
 // The sum of returned batches may be less than n (e.g., if n is 10x larger
 // than o.MaxBatchSize, but o.MaxHandlers is less than 10).
