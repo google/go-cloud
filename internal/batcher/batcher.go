@@ -21,16 +21,15 @@ package batcher // import "gocloud.dev/internal/batcher"
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 )
 
-// Split determines how to best split n (representing n items) into
-// similarly-sized batches based on opts. It returns a slice of batch sizes.
+// Split determines how to split n (representing n items) into batches based on
+// opts. It returns a slice of batch sizes.
 //
 // For example, Split(10) might return [10], [5, 5], or [2, 2, 2, 2, 2]
-// dependin on opts. opts may be nil to accept defaults.
+// depending on opts. opts may be nil to accept defaults.
 //
 // Split will return nil if n is less than o.MinBatchSize.
 //
@@ -42,57 +41,22 @@ func Split(n int, opts *Options) []int {
 		// No batch yet.
 		return nil
 	}
-	if o.MaxBatchSize == 0 || n <= o.MaxBatchSize {
+	if o.MaxBatchSize == 0 {
 		// One batch is fine.
 		return []int{n}
 	}
 
-	// Compute how many batches we need, and what size they are.
-	fmt.Printf("%d %#v\n", n, opts)
-	nBatches := n / o.MaxBatchSize
-	batchSize := n / nBatches
-	fmt.Printf("  n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
-
-	// If we're over the batch size limit, use the max and recompute nBatches.
-	if batchSize > o.MaxBatchSize {
-		batchSize = o.MaxBatchSize
-		nBatches = n / batchSize
-		fmt.Printf("  capped batchSize n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
-	}
-
-	// If it divided evenly, great; otherwise, add a batch to pick up the remainder.
-	if nBatches*batchSize < n {
-		nBatches++
-		batchSize = n / nBatches // can't have increased past o.MaxBatchSize since we've added a batch
-		fmt.Printf("  incremented n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
-	}
-
-	// If the remainder is too small, drop it.
-	if n%batchSize < o.MinBatchSize {
-		nBatches--
-		fmt.Printf("  dropped n %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
-	}
-
-	// Cap the number of batches based on MaxHandlers. If we reduce the number
-	// of batches, then we'll make them all as big as we can.
-	if nBatches > o.MaxHandlers {
-		nBatches = o.MaxHandlers
-		batchSize = o.MaxBatchSize
-		fmt.Printf("  capped nBatches %d nBatches %d batchSize %d\n", n, nBatches, batchSize)
-	}
-
+	// TODO(rvangent): Consider trying to even out the batch sizes.
+	// For example, n=10 with MaxBatchSize 9 and MaxHandlers 2 will Split
+	// to [9, 1]; it could be [5, 5].
 	var batches []int
-	for i := 0; i < nBatches; i++ {
-		thisBatchSize := batchSize
-		// Pick up everything we can in the last batch.
-		if i == nBatches-1 {
-			thisBatchSize = n
-			if thisBatchSize > o.MaxBatchSize {
-				thisBatchSize = o.MaxBatchSize
-			}
+	for n >= o.MinBatchSize && len(batches) < o.MaxHandlers {
+		b := o.MaxBatchSize
+		if b > n {
+			b = n
 		}
-		batches = append(batches, thisBatchSize)
-		n -= thisBatchSize
+		batches = append(batches, b)
+		n -= b
 	}
 	return batches
 }

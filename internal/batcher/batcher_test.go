@@ -51,9 +51,10 @@ func TestSplit(t *testing.T) {
 		// MaxBatchSize with MaxHandlers > 1.
 		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 2}, []int{4, 4}},
 		{10, &batcher.Options{MaxBatchSize: 5, MaxHandlers: 2}, []int{5, 5}},
-		{10, &batcher.Options{MaxBatchSize: 9, MaxHandlers: 2}, []int{5, 5}},
-		{9, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{3, 3, 3}},
-		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{3, 3, 4}},
+		{10, &batcher.Options{MaxBatchSize: 9, MaxHandlers: 2}, []int{9, 1}},
+		{9, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{4, 4, 1}},
+		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{4, 4, 2}},
+		// All 3 options together.
 		{8, &batcher.Options{MinBatchSize: 5, MaxBatchSize: 7, MaxHandlers: 2}, []int{7}},
 	}
 
