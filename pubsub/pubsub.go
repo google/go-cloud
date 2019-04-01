@@ -537,8 +537,10 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			if s.ackFunc == nil {
 				// Add a finalizer that complains if the Message we return isn't
 				// acked or nacked.
-				_, file, lineno, ok := runtime.Caller(1)
+				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
 				runtime.SetFinalizer(m, func(m *Message) {
+					m.mu.Lock()
+					defer m.mu.Unlock()
 					if !m.isAcked {
 						var caller string
 						if ok {
