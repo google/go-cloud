@@ -324,7 +324,16 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 	if err != nil {
 		return nil, err
 	}
-	var ms []*driver.Message
+	if len(resp.ReceivedMessages) == 0 {
+		// If we did happen to get 0 messages, and we didn't ask the server to wait
+		// for messages, sleep a bit to avoid spinning.
+		if returnImmediately {
+			time.Sleep(100 * time.Millisecond)
+		}
+		return nil, nil
+	}
+
+	ms := make([]*driver.Message, 0, len(resp.ReceivedMessages))
 	for _, rm := range resp.ReceivedMessages {
 		rmm := rm.Message
 		m := &driver.Message{
@@ -334,13 +343,6 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			AsFunc:   messageAsFunc(rmm),
 		}
 		ms = append(ms, m)
-	}
-	if err != nil {
-		return nil, err
-	}
-	// If we did happen to get 0 messages, wait a bit to avoid spinning.
-	if len(ms) == 0 && returnImmediately {
-		time.Sleep(100 * time.Millisecond)
 	}
 	return ms, nil
 }
