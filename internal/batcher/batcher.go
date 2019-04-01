@@ -45,31 +45,42 @@ func Split(n int, opts *Options) []int {
 		// One batch is fine.
 		return []int{n}
 	}
-	// Compute how many batches we need, including remainder.
+
+	// Compute how many batches we need, and what size they are.
 	nBatches := n / o.MaxBatchSize
-	if n%o.MaxBatchSize != 0 {
-		nBatches++
-	}
-	// Given nBatches, see how big each batch should be. Note that we want
-	// batchSize * nBatches to be >= n; if it's > n, the last batch will end up
-	// being a bit smaller.
 	batchSize := n / nBatches
-	if n%nBatches != 0 {
-		batchSize++
+
+	// If we're over the batch size limit, use the max and recompute nBatches.
+	if batchSize > o.MaxBatchSize {
+		batchSize = o.MaxBatchSize
+		nBatches = n / batchSize
 	}
-	// Cap the number of batches based on concurrency. If we reduce the number
+
+	// If it divided evenly, great; otherwise, add a batch to pick up the remainder.
+	if nBatches*batchSize < n {
+		nBatches++
+		batchSize = n / nBatches // can't have increased past o.MaxBatchSize since we've added a batch
+	}
+
+	// Cap the number of batches based on MaxHandlers. If we reduce the number
 	// of batches, then we'll make them all as big as we can.
 	if nBatches > o.MaxHandlers {
 		nBatches = o.MaxHandlers
 		batchSize = o.MaxBatchSize
 	}
+
 	var batches []int
 	for i := 0; i < nBatches; i++ {
-		if n < batchSize {
-			batchSize = n
+		thisBatchSize := batchSize
+		// Pick up everything we can in the last batch.
+		if i == nBatches-1 {
+			thisBatchSize = n
+			if thisBatchSize > o.MaxBatchSize {
+				thisBatchSize = o.MaxBatchSize
+			}
 		}
-		batches = append(batches, batchSize)
-		n -= batchSize
+		batches = append(batches, thisBatchSize)
+		n -= thisBatchSize
 	}
 	return batches
 }

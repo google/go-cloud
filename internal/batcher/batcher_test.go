@@ -41,6 +41,7 @@ func TestSplit(t *testing.T) {
 		{10, nil, []int{10}},
 		// MinBatchSize.
 		{4, &batcher.Options{MinBatchSize: 5}, nil},
+		{8, &batcher.Options{MinBatchSize: 5, MaxBatchSize: 7}, []int{7}},
 		// <= MaxBatchSize.
 		{5, &batcher.Options{MaxBatchSize: 5}, []int{5}},
 		{9, &batcher.Options{MaxBatchSize: 10}, []int{9}},
@@ -52,7 +53,7 @@ func TestSplit(t *testing.T) {
 		{10, &batcher.Options{MaxBatchSize: 5, MaxHandlers: 2}, []int{5, 5}},
 		{10, &batcher.Options{MaxBatchSize: 9, MaxHandlers: 2}, []int{5, 5}},
 		{9, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{3, 3, 3}},
-		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{4, 4, 2}},
+		{10, &batcher.Options{MaxBatchSize: 4, MaxHandlers: 3}, []int{3, 3, 4}},
 	}
 
 	for _, test := range tests {
