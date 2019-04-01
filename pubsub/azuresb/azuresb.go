@@ -43,6 +43,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,8 +67,6 @@ const (
 	dispositionForNack = "abandoned"
 
 	listenerTimeout = 1 * time.Second
-	rpcTries        = 5
-	rpcRetryDelay   = 1 * time.Second
 )
 
 var sendBatcherOpts = &batcher.Options{
@@ -519,8 +518,38 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 	if err != nil {
 		return err
 	}
-	_, err = link.RetryableRPC(ctx, rpcTries, rpcRetryDelay, msg)
-	return err
+
+	// We're not actually making use of link.Retryable since we're passing 1
+	// here. The portable type will retry as needed.
+	//
+	// We could just use link.RPC, but it returns a result with a status code
+	// in addition to err, and we'd have to check both.
+	_, err = link.RetryableRPC(ctx, 1, 0, msg)
+	if err == nil {
+		return nil
+	}
+	if !isNotFoundErr(err) {
+		return err
+	}
+	// It's a "not found" error, probably due to the message already being
+	// deleted on the server. If we're just acking 1 message, we can just
+	// swallow the error, but otherwise we'll need to retry one by one.
+	if len(ids) == 1 {
+		return nil
+	}
+	for _, lockID := range lockIds {
+		value["lock-tokens"] = []amqp.UUID{lockID}
+		if _, err := link.RetryableRPC(ctx, 1, 0, msg); err != nil && !isNotFoundErr(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// isNotFoundErr returns true if the error is status code 410, Gone.
+// Azure returns this when trying to ack/nack a message that no longer exists.
+func isNotFoundErr(err error) bool {
+	return strings.Contains(err.Error(), "status code 410")
 }
 
 func errorCode(err error) gcerrors.ErrorCode {
