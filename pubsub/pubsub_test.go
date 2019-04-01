@@ -167,6 +167,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					}
 					return
 				}
+				m.Ack()
 				mu.Lock()
 				receivedMsgs[string(m.Body)] = true
 				mu.Unlock()
