@@ -549,7 +549,7 @@ func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error
 			want:  map[string]interface{}{"a": int64(1)},
 			want2: map[string]interface{}{"a": int32(1)},
 		},
-		{in: map[string][]byte{"a": []byte{1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
+		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
 	} {
 		enc, err := encode(S{test.in})
 		if err != nil {
