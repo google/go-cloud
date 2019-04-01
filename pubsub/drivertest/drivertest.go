@@ -370,7 +370,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 		t.Error(diff)
 	}
 	// We should be able to receive them again, fairly quickly.
-	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	got = nil
@@ -520,7 +520,9 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 
 	// Nack all 3 messages. This should also succeed, and the nack of the third
 	// message should take effect, so we should be able to fetch it again.
-	// Some providers may also re-send the first message.
+	// Note that the other messages *may* also be re-sent, because we're nacking
+	// them here (even though we acked them earlier); it depends on provider
+	// semantics and time-sensitivity.
 	err = ds.SendNacks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID, dms[2].AckID})
 	if err != nil {
 		t.Fatal(err)
@@ -528,7 +530,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 
 	// The test will hang here if the message isn't redelivered, so give it a
 	// shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	// We're looking to re-receive dms[2].
