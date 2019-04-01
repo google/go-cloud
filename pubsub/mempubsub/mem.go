@@ -192,7 +192,7 @@ func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subsc
 	if !top.As(&t) {
 		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
 	}
-	return pubsub.NewSubscription(newSubscription(t, ackDeadline), 0, nil)
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline), nil, nil)
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {

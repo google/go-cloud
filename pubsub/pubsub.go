@@ -320,7 +320,7 @@ type Subscription struct {
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
 
-	fixedReceiveSize int // if 0, batch size is computed dynamically via updateBatchSize
+	recvBatchOpts *batcher.Options
 
 	mu               sync.Mutex    // protects everything below
 	q                []*Message    // local queue of messages downloaded from server
@@ -402,8 +402,9 @@ const (
 //
 // s.mu must be held.
 func (s *Subscription) updateBatchSize() int {
-	if s.fixedReceiveSize != 0 {
-		return s.fixedReceiveSize
+	// If we're always only doing one at a time, there's no point in this.
+	if s.recvBatchOpts != nil && s.recvBatchOpts.MaxBatchSize == 1 && s.recvBatchOpts.MaxHandlers == 1 {
+		return 1
 	}
 	now := time.Now()
 	if s.throughputStart.IsZero() {
@@ -554,45 +555,63 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 
 // getNextBatch gets the next batch of messages from the server and returns it.
 func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
-	var msgs []*driver.Message
-	err := retry.Call(s.backgroundCtx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		ctx2 := s.tracer.Start(s.backgroundCtx, "driver.Subscription.ReceiveBatch")
-		defer func() { s.tracer.End(ctx2, err) }()
-		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
-		return err
-	})
-	if err != nil {
-		return nil, wrapError(s.driver, err)
-	}
+	var mu sync.Mutex
 	var q []*Message
-	for _, m := range msgs {
-		id := m.AckID
-		md := m.Metadata
-		if len(md) == 0 {
-			md = nil
-		}
-		m2 := &Message{
-			Body:     m.Body,
-			Metadata: md,
-			asFunc:   m.AsFunc,
-		}
-		if s.ackFunc == nil {
-			m2.ack = func(isAck bool) {
-				// Ignore the error channel. Errors are dealt with
-				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+
+	// Split nMessages into batches based on recvBatchOpts; we'll make a
+	// separate ReceiveBatch call for each batch, and aggregate the results in
+	// msgs.
+	batches := batcher.Split(nMessages, s.recvBatchOpts)
+
+	g, ctx := errgroup.WithContext(s.backgroundCtx)
+	for _, maxMessagesInBatch := range batches {
+		g.Go(func() error {
+			var msgs []*driver.Message
+			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+				var err error
+				ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(ctx2, err) }()
+				msgs, err = s.driver.ReceiveBatch(ctx2, maxMessagesInBatch)
+				return err
+			})
+			if err != nil {
+				return wrapError(s.driver, err)
 			}
-		} else {
-			m2.ack = func(isAck bool) {
-				if isAck {
-					s.ackFunc()
-					return
+			mu.Lock()
+			defer mu.Unlock()
+			for _, m := range msgs {
+				id := m.AckID
+				md := m.Metadata
+				if len(md) == 0 {
+					md = nil
 				}
-				panic("Message.Nack is not supported for this provider")
+				m2 := &Message{
+					Body:     m.Body,
+					Metadata: md,
+					asFunc:   m.AsFunc,
+				}
+				if s.ackFunc == nil {
+					m2.ack = func(isAck bool) {
+						// Ignore the error channel. Errors are dealt with
+						// in the ackBatcher handler.
+						_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+					}
+				} else {
+					m2.ack = func(isAck bool) {
+						if isAck {
+							s.ackFunc()
+							return
+						}
+						panic("Message.Nack is not supported for this provider")
+					}
+				}
+				q = append(q, m2)
 			}
-		}
-		q = append(q, m2)
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return q, nil
 }
@@ -641,21 +660,21 @@ var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.
 //
-// fixedReceiveSize should be 0 except in tests where stability is necessary for
-// record/replay. If non-zero, the maxMessages passed to driver.ReceiveBatch
-// will always be fixedReceiveSize. If 0, maxMessages is determined
-// dynamically based on message throughput.
+// recvBatchOpts sets options for Receive batching. May be nil to accept
+// defaults. The ideal number of messages to receive at a time is determined
+// dynamically, then split into multiple possibly concurrent calls to
+// driver.ReceiveBatch based on recvBatchOptions.
 //
 // ackBatcherOpts sets options for ack+nack batching. May be nil to accept
 // defaults.
-func newSubscription(ds driver.Subscription, fixedReceiveSize int, ackBatcherOpts *batcher.Options) *Subscription {
+func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batcher.Options) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
 		tracer:           newTracer(ds),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
-		fixedReceiveSize: fixedReceiveSize,
+		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
 	}
 	s.ackFunc = ds.AckFunc()
