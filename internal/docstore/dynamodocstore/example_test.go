@@ -31,6 +31,6 @@ func Example() {
 		return
 	}
 	coll := dynamodocstore.OpenCollection(dynamodb.New(sess), "docstore-test", "_id", "")
-	_, err = coll.Actions().Put(map[string]interface{}{"_id": "Alice", "score": 25}).Do(ctx)
-	fmt.Println(err)
+	errs := coll.Actions().Put(map[string]interface{}{"_id": "Alice", "score": 25}).Do(ctx)
+	fmt.Println(errs)
 }

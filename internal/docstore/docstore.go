@@ -67,12 +67,21 @@ func (c *Collection) Actions() *ActionList {
 	return &ActionList{coll: c}
 }
 
-// An ActionList is a sequence of actions that affect a single collection. The
-// actions are performed in order. If an action fails, the ones following it are not
-// executed.
+// An ActionList is a group of actions that affect a single collection.
+//
+// By default, the actions in the list are performed in order from the point of view
+// of the client. However, the actions may not be performed atomically, and there is
+// no guarantee that a Get following a write will see the value just written (for
+// example, if the provider is eventually consistent). Execution stops with the first
+// failed action.
+//
+// If the Unordered method is called on an ActionList, then the actions may be
+// executed in any order, perhaps concurrently. All actions will be executed, even if
+// some fail.
 type ActionList struct {
-	coll    *Collection
-	actions []*Action
+	coll      *Collection
+	actions   []*Action
+	unordered bool
 }
 
 // An Action is a read or write on a single document.
@@ -171,6 +180,13 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 	})
 }
 
+// After Unordered is called, Do may execute the actions in any order.
+// All actions will be executed, even if some fail.
+func (l *ActionList) Unordered() *ActionList {
+	l.unordered = true
+	return l
+}
+
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
 // - nil, to delete the field
@@ -179,21 +195,36 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
 
-// Do executes the action list. If all the actions executed successfully, Do returns
-// (number of actions, nil). If any failed, Do returns the number of successful
-// actions and an error. In general there is no way to know which actions succeeded,
-// but the error will contain as much information as possible about the failures.
-func (l *ActionList) Do(ctx context.Context) (int, error) {
+// An ActionListError is returned by ActionList.Do. It contains all the errors
+// encountered while executing the ActionList, and the positions of the corresponding
+// actions.
+type ActionListError = driver.ActionListError
+
+// Do executes the action list.
+// In ordered mode (when the Unordered method was not called on the list), execution
+// will stop after the first action that fails.
+// In unordered mode, all the actions will be executed. In either mode, as a special
+// case, none of the actions will be executed if any is invalid (for example, a Put
+// whose document is missing its key field).
+// If any action fails, the returned error will be an ActionListError that contains
+// the position in the ActionList of each failed action.
+func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
-	for _, a := range l.actions {
+	for i, a := range l.actions {
 		d, err := a.toDriverAction()
 		if err != nil {
-			return 0, wrapError(l.coll.driver, err)
+			return ActionListError{{i, wrapError(l.coll.driver, err)}}
 		}
 		das = append(das, d)
 	}
-	n, err := l.coll.driver.RunActions(ctx, das)
-	return n, wrapError(l.coll.driver, err)
+	alerr := l.coll.driver.RunActions(ctx, das, l.unordered)
+	if alerr != nil { // Explicit non-nil check is necessary because alerr is not of type error.
+		for i := range alerr {
+			alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
+		}
+		return alerr
+	}
+	return nil
 }
 
 func (a *Action) toDriverAction() (*driver.Action, error) {
@@ -239,43 +270,55 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 // Create is a convenience for building and running a single-element action list.
 // See ActionList.Create.
 func (c *Collection) Create(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Create(doc).Do(ctx)
-	return err
+	if err := c.Actions().Create(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Replace is a convenience for building and running a single-element action list.
 // See ActionList.Replace.
 func (c *Collection) Replace(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Replace(doc).Do(ctx)
-	return err
+	if err := c.Actions().Replace(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Put is a convenience for building and running a single-element action list.
 // See ActionList.Put.
 func (c *Collection) Put(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Put(doc).Do(ctx)
-	return err
+	if err := c.Actions().Put(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Delete is a convenience for building and running a single-element action list.
 // See ActionList.Delete.
 func (c *Collection) Delete(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Delete(doc).Do(ctx)
-	return err
+	if err := c.Actions().Delete(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Get is a convenience for building and running a single-element action list.
 // See ActionList.Get.
 func (c *Collection) Get(ctx context.Context, doc Document, fps ...FieldPath) error {
-	_, err := c.Actions().Get(doc, fps...).Do(ctx)
-	return err
+	if err := c.Actions().Get(doc, fps...).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Update is a convenience for building and running a single-element action list.
 // See ActionList.Update.
 func (c *Collection) Update(ctx context.Context, doc Document, mods Mods) error {
-	_, err := c.Actions().Update(doc, mods).Do(ctx)
-	return err
+	if err := c.Actions().Update(doc, mods).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 func parseFieldPath(fp FieldPath) ([]string, error) {

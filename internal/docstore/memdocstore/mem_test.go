@@ -50,8 +50,8 @@ func TestUpdateAtomic(t *testing.T) {
 	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
-	if _, err := coll.Actions().Put(doc).Update(doc, mods).Do(ctx); err == nil {
-		t.Fatal("got nil, want error")
+	if errs := coll.Actions().Put(doc).Update(doc, mods).Do(ctx); errs == nil {
+		t.Fatal("got nil, want errors")
 	}
 	got := docmap{drivertest.KeyField: doc[drivertest.KeyField]}
 	if err := coll.Get(ctx, got); err != nil {

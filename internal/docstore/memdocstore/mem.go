@@ -65,22 +65,25 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
-	// Stop immediately if the context is done.
-	if ctx.Err() != nil {
-		return 0, ctx.Err()
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
-		if err := c.runAction(a); err != nil {
-			return i, err
+		if err := c.runAction(ctx, a); err != nil {
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 // runAction executes a single action.
-func (c *collection) runAction(a *driver.Action) error {
+func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
+	// Stop if the context is done.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// Get the key from the doc so we can look it up in the map.
 	key, err := a.Doc.GetField(c.keyField)
 	// The only acceptable error case is NotFound during a Create.

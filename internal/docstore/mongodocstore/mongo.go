@@ -62,13 +62,16 @@ func newCollection(mcoll *mongo.Collection) *collection {
 const idField = "_id"
 
 // TODO(jba): use bulk RPCs.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	for i, a := range actions {
 		if err := c.runAction(ctx, a); err != nil {
-			return i, err
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 func (c *collection) runAction(ctx context.Context, action *driver.Action) error {
