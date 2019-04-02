@@ -88,9 +88,9 @@ type Query struct {
 
 // A Filter defines a filter expression used to filter the query result.
 type Filter struct {
-	Field string      // the field path to filter
-	Op    string      // the operation, supports =, >, >=, <, <=
-	Value interface{} // the value to filter
+	FieldPath []string    // the field path to filter
+	Op        string      // the operation, supports =, >, >=, <, <=
+	Value     interface{} // the value to compare using the operation
 }
 
 // A DocumentIterator is an iterator that can iterator through the results (for Get
