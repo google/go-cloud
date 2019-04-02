@@ -89,6 +89,8 @@ func (h *harness) Close() {
 	h.s.Shutdown()
 }
 
+func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
+
 type natsAsTest struct{}
 
 func (natsAsTest) Name() string {
@@ -320,7 +322,7 @@ func BenchmarkNatsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, 0, nil))
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil, nil))
 }
 
 func fakeConnectionStringInEnv() func() {

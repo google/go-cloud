@@ -57,10 +57,6 @@ func mustDialRabbit(t testing.TB) amqpConnection {
 	return &connection{conn}
 }
 
-func (h *harness) ShouldSkip(testName string) (bool, string) {
-	return false, ""
-}
-
 func TestConformance(t *testing.T) {
 	harnessMaker := func(_ context.Context, t *testing.T) (drivertest.Harness, error) {
 		return &harness{conn: mustDialRabbit(t)}, nil
@@ -94,7 +90,7 @@ func BenchmarkRabbit(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, 0, nil))
+	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil, nil))
 }
 
 type harness struct {
@@ -145,6 +141,8 @@ func (h *harness) MakeNonexistentSubscription(_ context.Context) (driver.Subscri
 func (h *harness) Close() {
 	h.conn.Close()
 }
+
+func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
 
 // This test is important for the RabbitMQ driver because the underlying client is
 // poorly designed with respect to concurrency, so we must make sure to exercise the

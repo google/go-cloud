@@ -19,11 +19,46 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 )
 
 type S struct {
 	I int
 	M map[string]interface{}
+}
+
+func TestNewDocument(t *testing.T) {
+	for _, test := range []struct {
+		in      interface{}
+		wantErr bool
+		wantMap bool
+	}{
+		{in: nil, wantErr: true},
+		{in: map[string]interface{}{}, wantMap: true},
+		{in: map[string]interface{}(nil), wantErr: true},
+		{in: S{}, wantErr: true},
+		{in: &S{}, wantMap: false},
+		{in: (*S)(nil), wantErr: true},
+		{in: map[string]bool{}, wantErr: true},
+	} {
+		got, err := NewDocument(test.in)
+		if err != nil {
+			if !test.wantErr {
+				t.Errorf("%#v: got %v, did not want error", test.in, err)
+			}
+			if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+				t.Errorf("%#v: got error code %s, want InvalidArgument", test.in, c)
+			}
+			continue
+		}
+		if test.wantErr {
+			t.Errorf("%#v: got nil, want error", test.in)
+			continue
+		}
+		if g := (got.m != nil); g != test.wantMap {
+			t.Errorf("%#v: got map: %t, want map: %t", test.in, g, test.wantMap)
+		}
+	}
 }
 
 func TestGet(t *testing.T) {

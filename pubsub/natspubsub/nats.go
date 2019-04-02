@@ -313,7 +313,7 @@ func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func(), 
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, 0, nil), nil
+	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
 func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
