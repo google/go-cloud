@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
+	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -41,6 +42,7 @@ import (
 // Injectors from inject_aws.go:
 
 func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	router := mux.NewRouter()
 	ncsaLogger := xrayserver.NewRequestLogger()
 	client := _wireClientValue
 	certFetcher := &rds.CertFetcher{
@@ -75,7 +77,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(serverOptions)
+	serverServer := server.New(router, serverOptions)
 	bucket, cleanup4, err := awsBucket(ctx, sessionSession, flags)
 	if err != nil {
 		cleanup3()
@@ -109,6 +111,7 @@ var (
 // Injectors from inject_azure.go:
 
 func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	router := mux.NewRouter()
 	logger := _wireLoggerValue
 	db, err := dialLocalSQL(flags)
 	if err != nil {
@@ -125,7 +128,7 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), err
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(router, options)
 	accountName, err := azureblob.DefaultAccountName()
 	if err != nil {
 		cleanup()
@@ -170,6 +173,7 @@ var (
 // Injectors from inject_gcp.go:
 
 func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	router := mux.NewRouter()
 	stackdriverLogger := sdserver.NewRequestLogger()
 	roundTripper := gcp.DefaultTransport()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -207,7 +211,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(router, options)
 	bucket, cleanup3, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup2()
@@ -242,6 +246,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 // Injectors from inject_local.go:
 
 func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+	router := mux.NewRouter()
 	logger := _wireRequestlogLoggerValue
 	db, err := dialLocalSQL(flags)
 	if err != nil {
@@ -258,7 +263,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(router, options)
 	bucket, err := localBucket(flags)
 	if err != nil {
 		cleanup()

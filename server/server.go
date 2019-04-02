@@ -44,7 +44,7 @@ var Set = wire.NewSet(
 // The zero value is a server with the default options.
 type Server struct {
 	reqlog        requestlog.Logger
-	handler       http.Handler
+	Handler       http.Handler
 	healthHandler health.Handler
 	te            trace.Exporter
 	sampler       trace.Sampler
@@ -76,7 +76,7 @@ type Options struct {
 // New creates a new server. New(nil) is the same as new(Server).
 func New(h http.Handler, opts *Options) *Server {
 	srv := new(Server)
-	srv.handler = h
+	srv.Handler = h
 	if opts != nil {
 		srv.reqlog = opts.RequestLogger
 		srv.te = opts.TraceExporter
@@ -120,7 +120,7 @@ func (srv *Server) ListenAndServe(addr string) error {
 
 	mux := http.NewServeMux()
 	mux.Handle(hr, hcMux)
-	h := http.Handler(handler{srv.handler})
+	h := http.Handler(handler{srv.Handler})
 	if srv.reqlog != nil {
 		h = requestlog.NewHandler(srv.reqlog, h)
 	}
