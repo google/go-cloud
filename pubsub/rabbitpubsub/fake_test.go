@@ -59,7 +59,8 @@ type exchange struct {
 
 // A queue holds a set of messages to be delivered.
 type queue struct {
-	messages []amqp.Delivery
+	messages   []amqp.Delivery
+	pendingAck map[uint64]amqp.Delivery
 }
 
 func newFakeConnection() *fakeConnection {
@@ -145,7 +146,7 @@ func (ch *fakeChannel) QueueDeclareAndBind(queueName, exchangeName string) error
 	if _, ok := ch.conn.queues[queueName]; ok {
 		return nil
 	}
-	q := &queue{}
+	q := &queue{pendingAck: map[uint64]amqp.Delivery{}}
 	ch.conn.queues[queueName] = q
 	ex.queues = append(ex.queues, q)
 	return nil
@@ -246,7 +247,7 @@ func (ch *fakeChannel) Consume(queueName, consumerName string) (<-chan amqp.Deli
 				}
 			}
 			select {
-			case <-time.After(100 * time.Millisecond):
+			case <-time.After(10 * time.Millisecond):
 			case <-ctx.Done():
 				// ignore error
 				return
@@ -268,14 +269,43 @@ func (ch *fakeChannel) takeOneMessage(q *queue) (amqp.Delivery, bool) {
 	}
 	m := q.messages[0]
 	q.messages = q.messages[1:]
+	q.pendingAck[m.DeliveryTag] = m
 	return m, true
 }
 
-// Ack is a no-op. (We don't test ack behavior.)
+// Ack removes the message from q.pendingAck.
 func (ch *fakeChannel) Ack(tag uint64) error {
 	if ch.isClosed() {
 		return amqp.ErrClosed
 	}
+	ch.conn.mu.Lock()
+	defer ch.conn.mu.Unlock()
+	for _, q := range ch.conn.queues {
+		if _, ok := q.pendingAck[tag]; ok {
+			delete(q.pendingAck, tag)
+			return nil
+		}
+	}
+	// No error if we couldn't find it to ack it.
+	return nil
+}
+
+// Nack moves the message from q.pendingAck back to q.messages
+// to be redelivered.
+func (ch *fakeChannel) Nack(tag uint64) error {
+	if ch.isClosed() {
+		return amqp.ErrClosed
+	}
+	ch.conn.mu.Lock()
+	defer ch.conn.mu.Unlock()
+	for _, q := range ch.conn.queues {
+		if m, ok := q.pendingAck[tag]; ok {
+			delete(q.pendingAck, tag)
+			q.messages = append(q.messages, m)
+			return nil
+		}
+	}
+	// No error if we couldn't find it to nack it.
 	return nil
 }
 

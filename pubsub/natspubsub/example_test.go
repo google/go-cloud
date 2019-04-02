@@ -79,7 +79,7 @@ func ExampleCreateSubscription() {
 	msg.Ack()
 }
 
-func Example_openfromURL() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
 	// OpenTopic creates a *pubsub.Topic from a URL.

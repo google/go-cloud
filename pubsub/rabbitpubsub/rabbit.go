@@ -389,7 +389,7 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 var errorCodes = map[int]gcerrors.ErrorCode{
 	amqp.NotFound:           gcerrors.NotFound,
 	amqp.PreconditionFailed: gcerrors.FailedPrecondition,
-	// These next indicate  a bug in our driver, not the user's code.
+	// These next indicate a bug in our driver, not the user's code.
 	amqp.SyntaxError:    gcerrors.Internal,
 	amqp.CommandInvalid: gcerrors.Internal,
 	amqp.InternalError:  gcerrors.Internal,
@@ -489,7 +489,7 @@ func errorAs(err error, i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), 0, nil)
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil, nil)
 }
 
 type subscription struct {
@@ -580,6 +580,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				}
 				// s.closec must be closed too. See if it has an error.
 				if err := closeErr(s.closec); err != nil {
+					// PreconditionFailed can happen if we send an Ack or Nack for a
+					// message that has already been acked/nacked. Ignore those errors.
+					if aerr, ok := err.(*amqp.Error); ok && aerr.Code == amqp.PreconditionFailed {
+						return nil, nil
+					}
 					return nil, err
 				}
 				// We shouldn't be here, but if we are, we still want to return an
@@ -592,11 +597,9 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			}
 
 		case <-maxTime:
-			// Timed out. Return whatever we have, or continue waiting if
-			// we haven't gotten anything yet.
-			if len(ms) > 0 {
-				return ms, nil
-			}
+			// Timed out. Return whatever we have. If we have nothing, we'll get
+			// called again soon, but returning allows us to give up the lock.
+			return ms, nil
 		}
 	}
 }
@@ -626,7 +629,16 @@ func toMessage(d amqp.Delivery) *driver.Message {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks
+	return s.sendAcksOrNacks(ctx, ackIDs, true)
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
+	return s.sendAcksOrNacks(ctx, ackIDs, false)
+}
+
+func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
+	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks/Nacks
 	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -635,16 +647,21 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		return err
 	}
 
-	// The Ack call doesn't wait for a response, so this loop should execute relatively
+	// Ack/Nack calls don't wait for a response, so this loop should execute relatively
 	// quickly.
-	// It wouldn't help to make it concurrent, because Channel.Ack grabs a
+	// It wouldn't help to make it concurrent, because Channel.Ack/Nack grabs a
 	// channel-wide mutex. (We could consider using multiple channels if performance
 	// becomes an issue.)
 	for _, id := range ackIDs {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		err := s.ch.Ack(id.(uint64))
+		var err error
+		if ack {
+			err = s.ch.Ack(id.(uint64))
+		} else {
+			err = s.ch.Nack(id.(uint64))
+		}
 		if err != nil {
 			s.ch = nil // re-establish channel after an error
 			return err

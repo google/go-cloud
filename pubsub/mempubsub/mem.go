@@ -185,12 +185,14 @@ type subscription struct {
 
 // NewSubscription creates a new subscription for the given topic.
 // It panics if the given topic did not come from mempubsub.
+// If a message is not acked within in the given ack deadline from when
+// it is received, then it will be redelivered.
 func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
 	if !top.As(&t) {
 		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
 	}
-	return pubsub.NewSubscription(newSubscription(t, ackDeadline), 0, nil)
+	return pubsub.NewSubscription(newSubscription(t, ackDeadline), nil, nil)
 }
 
 func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
@@ -291,6 +293,26 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		// It is OK if the message is not in the map; that just means it has been
 		// previously acked.
 		delete(s.msgs, id)
+	}
+	return nil
+}
+
+// SendNacks implements driver.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
+	if s.topic == nil {
+		return errNotExist
+	}
+	// Check for context done before doing any work.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	// Nack messages by setting their expiration to the zero time.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, id := range ackIDs {
+		if m := s.msgs[id]; m != nil {
+			m.expiration = time.Time{}
+		}
 	}
 	return nil
 }

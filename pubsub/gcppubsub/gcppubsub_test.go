@@ -114,6 +114,10 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) MaxBatchSizes() (int, int) {
+	return sendBatcherOpts.MaxBatchSize, ackBatcherOpts.MaxBatchSize
+}
+
 func TestConformance(t *testing.T) {
 	asTests := []drivertest.AsTest{gcpAsTest{}}
 	drivertest.RunConformanceTests(t, newHarness, asTests)
@@ -160,7 +164,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup2()
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
 	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)

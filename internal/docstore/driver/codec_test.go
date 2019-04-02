@@ -218,7 +218,7 @@ func (e *testEncoder) EncodeList(n int) Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *testEncoder) EncodeMap(n int) Encoder {
+func (e *testEncoder) EncodeMap(n int, _ bool) Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
 	return &mapEncoder{m: m}
@@ -387,12 +387,45 @@ func TestDecodeErrors(t *testing.T) {
 			new(MyStruct),
 			map[string]interface{}{"E4": "E4"},
 		},
+		{
+			"int overflow",
+			new(int8),
+			257,
+		},
+		{
+			"uint overflow",
+			new(uint8),
+			uint(257),
+		},
+		{
+			"non-integral float (int)",
+			new(int),
+			1.5,
+		},
+		{
+			"non-integral float (uint)",
+			new(uint),
+			1.5,
+		},
 	} {
 		dec := &testDecoder{test.val}
 		err := Decode(reflect.ValueOf(test.in).Elem(), dec)
 		if e, ok := err.(*gcerr.Error); !ok || err == nil || e.Code != gcerr.InvalidArgument {
 			t.Errorf("%s: got %v, want InvalidArgument Error", test.desc, err)
-			fmt.Printf("%+v\n", test.in)
+		}
+	}
+}
+
+func TestDecodeFail(t *testing.T) {
+	// Verify that failure to decode a value results in an error.
+	for _, in := range []interface{}{
+		new(interface{}), new(bool), new(string), new(int), new(uint), new(float32), new(complex64),
+		new([]byte), new([]int), new(map[string]interface{}),
+	} {
+		dec := &failDecoder{}
+		err := Decode(reflect.ValueOf(in).Elem(), dec)
+		if e, ok := err.(*gcerr.Error); !ok || err == nil || e.Code != gcerr.InvalidArgument {
+			t.Errorf("%T: got %v, want InvalidArgument Error", in, err)
 		}
 	}
 }
@@ -409,10 +442,31 @@ func (d testDecoder) AsNull() bool {
 	return d.val == nil
 }
 
-func (d testDecoder) AsBool() (bool, bool)          { x, ok := d.val.(bool); return x, ok }
-func (d testDecoder) AsString() (string, bool)      { x, ok := d.val.(string); return x, ok }
-func (d testDecoder) AsInt() (int64, bool)          { x, ok := d.val.(int64); return x, ok }
-func (d testDecoder) AsUint() (uint64, bool)        { x, ok := d.val.(uint64); return x, ok }
+func (d testDecoder) AsBool() (bool, bool)     { x, ok := d.val.(bool); return x, ok }
+func (d testDecoder) AsString() (string, bool) { x, ok := d.val.(string); return x, ok }
+
+func (d testDecoder) AsInt() (int64, bool) {
+	switch v := d.val.(type) {
+	case int64:
+		return v, true
+	case int:
+		return int64(v), true
+	default:
+		return 0, false
+	}
+}
+
+func (d testDecoder) AsUint() (uint64, bool) {
+	switch v := d.val.(type) {
+	case uint64:
+		return v, true
+	case uint:
+		return uint64(v), true
+	default:
+		return 0, false
+	}
+}
+
 func (d testDecoder) AsFloat() (float64, bool)      { x, ok := d.val.(float64); return x, ok }
 func (d testDecoder) AsComplex() (complex128, bool) { x, ok := d.val.(complex128); return x, ok }
 func (d testDecoder) AsBytes() ([]byte, bool)       { x, ok := d.val.([]byte); return x, ok }
@@ -456,3 +510,22 @@ func (d testDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 	}
 	return false, nil, nil
 }
+
+// All of failDecoder's methods return failure.
+type failDecoder struct{}
+
+func (failDecoder) String() string                                       { return "failDecoder" }
+func (failDecoder) AsNull() bool                                         { return false }
+func (failDecoder) AsBool() (bool, bool)                                 { return false, false }
+func (failDecoder) AsString() (string, bool)                             { return "", false }
+func (failDecoder) AsInt() (int64, bool)                                 { return 0, false }
+func (failDecoder) AsUint() (uint64, bool)                               { return 0, false }
+func (failDecoder) AsFloat() (float64, bool)                             { return 0, false }
+func (failDecoder) AsComplex() (complex128, bool)                        { return 0, false }
+func (failDecoder) AsBytes() ([]byte, bool)                              { return nil, false }
+func (failDecoder) ListLen() (int, bool)                                 { return 0, false }
+func (failDecoder) DecodeList(func(i int, vd Decoder) bool)              { panic("impossible") }
+func (failDecoder) MapLen() (int, bool)                                  { return 0, false }
+func (failDecoder) DecodeMap(func(key string, vd Decoder) bool)          { panic("impossible") }
+func (failDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) { return false, nil, nil }
+func (failDecoder) AsInterface() (interface{}, error)                    { return nil, errors.New("fail") }

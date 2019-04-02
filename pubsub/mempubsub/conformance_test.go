@@ -51,6 +51,8 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 
 func (h *harness) Close() {}
 
+func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
+
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }

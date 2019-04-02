@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"sync"
 	"testing"
@@ -55,10 +56,16 @@ type UnsupportedType int
 // corresponses to an unsupported type specific test which if the driver
 // actually supports.
 const (
-	Uint      UnsupportedType = iota // uint
-	Complex                          // complex
-	Arrays                           // Go arrays
-	BinarySet                        // [][]byte
+	// Native codec doesn't support any unsigned integer type
+	Uint UnsupportedType = iota
+	// Native codec doesn't support any complex type
+	Complex
+	// Native codec doesn't support arrays
+	Arrays
+	// Native codec doesn't support full time precision
+	NanosecondTimes
+	// Native codec doesn't support [][]byte
+	BinarySet
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -80,7 +87,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
-	t.Run("Codec", func(t *testing.T) { testCodec(t, ct) })
+	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
+	// t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 }
 
 const KeyField = "_id"
@@ -369,46 +377,36 @@ func testData(t *testing.T, coll *ds.Collection) {
 
 }
 
-func testCodec(t *testing.T, ct CodecTester) {
+var (
+	// A time with non-zero milliseconds, but zero nanoseconds.
+	milliTime = time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6, time.UTC)
+	// A time with non-zero nanoseconds.
+	nanoTime = time.Date(2019, time.March, 27, 0, 0, 0, 5*1e6+7, time.UTC)
+)
+
+// Test that encoding from a struct and then decoding into the same struct works properly.
+// The decoding is "type-driven" because the decoder knows the expected type of the value
+// it is decoding--it is the type of a struct field.
+func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 	if ct == nil {
 		t.Skip("no CodecTester")
 	}
-
 	check := func(in, dec interface{}, encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
 		t.Helper()
 		enc, err := encode(in)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%+v", err)
 		}
 		if err := decode(enc, dec); err != nil {
-			t.Fatal(err)
+			t.Fatalf("%+v", err)
 		}
 		if diff := cmp.Diff(in, dec); diff != "" {
 			t.Error(diff)
 		}
 	}
 
-	// A round trip with the docstore codec should work for all docstore-supported types,
-	// regardless of native driver support.
-	type DocstoreRoundTrip struct {
-		N  *int
-		I  int
-		U  uint
-		F  float64
-		C  complex128
-		St string
-		B  bool
-		By []byte
-		L  []int
-		A  [2]int
-		M  map[string]bool
-		P  *string
-		T  time.Time
-	}
-	// TODO(jba): add more fields: structs; embedding.
-
 	s := "bar"
-	dsrt := &DocstoreRoundTrip{
+	dsrt := &docstoreRoundTrip{
 		N:  nil,
 		I:  1,
 		U:  2,
@@ -421,31 +419,14 @@ func testCodec(t *testing.T, ct CodecTester) {
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
-		T:  time.Now(),
+		T:  milliTime,
 	}
 
-	check(dsrt, &DocstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
+	check(dsrt, &docstoreRoundTrip{}, ct.DocstoreEncode, ct.DocstoreDecode)
 
 	// Test native-to-docstore and docstore-to-native round trips with a smaller set
 	// of types.
-
-	// All native codecs should support these types. If one doesn't, remove it from this
-	// struct and make a new single-field struct for it.
-	type NativeMinimal struct {
-		N  *int
-		I  int
-		F  float64
-		St string
-		B  bool
-		By []byte
-		L  []int
-		M  map[string]bool
-		P  *string
-		T  time.Time
-		LF []float64
-		LS []string
-	}
-	nm := &NativeMinimal{
+	nm := &nativeMinimal{
 		N:  nil,
 		I:  1,
 		F:  2.5,
@@ -455,12 +436,12 @@ func testCodec(t *testing.T, ct CodecTester) {
 		M:  map[string]bool{"a": true, "b": false},
 		By: []byte{6, 7, 8},
 		P:  &s,
-		T:  time.Now(),
+		T:  milliTime,
 		LF: []float64{18.8, -19.9, 20},
 		LS: []string{"foo", "bar"},
 	}
-	check(nm, &NativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
-	check(nm, &NativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
+	check(nm, &nativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
+	check(nm, &nativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
 
 	// Test various other types, unless they are unsupported.
 	unsupported := map[UnsupportedType]bool{}
@@ -497,6 +478,35 @@ func testCodec(t *testing.T, ct CodecTester) {
 		check(a, &Arrays{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(a, &Arrays{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
+	// Nanosecond-precision time.
+	type NT struct {
+		T time.Time
+	}
+
+	nt := &NT{nanoTime}
+	if unsupported[NanosecondTimes] {
+		// Expect rounding to the nearest millisecond.
+		check := func(encode func(interface{}) (interface{}, error), decode func(interface{}, interface{}) error) {
+			enc, err := encode(nt)
+			if err != nil {
+				t.Fatalf("%+v", err)
+			}
+			var got NT
+			if err := decode(enc, &got); err != nil {
+				t.Fatalf("%+v", err)
+			}
+			want := nt.T.Round(time.Millisecond)
+			if !got.T.Equal(want) {
+				t.Errorf("got %v, want %v", got.T, want)
+			}
+		}
+		check(ct.DocstoreEncode, ct.NativeDecode)
+		check(ct.NativeEncode, ct.DocstoreDecode)
+	} else {
+		// Expect perfect round-tripping of nanosecond times.
+		check(nt, &NT{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(nt, &NT{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 
 	// Binary sets.
 	if !unsupported[BinarySet] {
@@ -507,6 +517,117 @@ func testCodec(t *testing.T, ct CodecTester) {
 		check(b, &BinarySet{}, ct.DocstoreEncode, ct.NativeDecode)
 		check(b, &BinarySet{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
+}
+
+// Test decoding into an interface{}, where the decoder doesn't know the type of the
+// result and must return some Go type that accurately represents the value.
+// This is implemented by the AsInterface method of driver.Decoder.
+// Since it's fine for different providers to return different types in this case,
+// each test case compares against a list of possible values.
+func testBlindDecode(t *testing.T, ct CodecTester) {
+	if ct == nil {
+		t.Skip("no CodecTester")
+	}
+	t.Run("DocstoreEncode", func(t *testing.T) { testBlindDecode1(t, ct.DocstoreEncode, ct.DocstoreDecode) })
+	t.Run("NativeEncode", func(t *testing.T) { testBlindDecode1(t, ct.NativeEncode, ct.DocstoreDecode) })
+}
+
+func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error), decode func(_, _ interface{}) error) {
+	// Encode and decode expect a document, so use this struct to hold the values.
+	type S struct{ X interface{} }
+
+	for _, test := range []struct {
+		in    interface{} // the value to be encoded
+		want  interface{} // one possibility
+		want2 interface{} // a second possibility
+	}{
+		{in: nil, want: nil},
+		{in: true, want: true},
+		{in: "foo", want: "foo"},
+		{in: 'c', want: 'c', want2: int64('c')},
+		{in: int(3), want: int32(3), want2: int64(3)},
+		{in: int8(3), want: int32(3), want2: int64(3)},
+		{in: int(-3), want: int32(-3), want2: int64(-3)},
+		{in: int64(math.MaxInt32 + 1), want: int64(math.MaxInt32 + 1)},
+		{in: float32(1.5), want: float64(1.5)},
+		{in: float64(1.5), want: float64(1.5)},
+		{in: []byte{1, 2}, want: []byte{1, 2}},
+		{in: []int{1, 2},
+			want:  []interface{}{int32(1), int32(2)},
+			want2: []interface{}{int64(1), int64(2)}},
+		{in: []float32{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
+		{in: []float64{1.5, 2.5}, want: []interface{}{float64(1.5), float64(2.5)}},
+		{in: milliTime, want: milliTime, want2: "2019-03-27T00:00:00.005Z"},
+		{in: []time.Time{milliTime},
+			want:  []interface{}{milliTime},
+			want2: []interface{}{"2019-03-27T00:00:00.005Z"},
+		},
+		{in: map[string]int{"a": 1},
+			want:  map[string]interface{}{"a": int64(1)},
+			want2: map[string]interface{}{"a": int32(1)},
+		},
+		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
+	} {
+		enc, err := encode(S{test.in})
+		if err != nil {
+			t.Fatalf("encoding %T: %v", test.in, err)
+		}
+		var got S
+		if err := decode(enc, &got); err != nil {
+			t.Fatalf("decoding %T: %v", test.in, err)
+		}
+		matched := false
+		wants := []interface{}{test.want}
+		if test.want2 != nil {
+			wants = append(wants, test.want2)
+		}
+		for _, w := range wants {
+			if cmp.Equal(got.X, w) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			t.Errorf("%T: got %#v (%T), not equal to %#v or %#v", test.in, got.X, got.X, test.want, test.want2)
+		}
+	}
+}
+
+// A round trip with the docstore codec should work for all docstore-supported types,
+// regardless of native driver support.
+type docstoreRoundTrip struct {
+	N  *int
+	I  int
+	U  uint
+	F  float64
+	C  complex128
+	St string
+	B  bool
+	By []byte
+	L  []int
+	A  [2]int
+	M  map[string]bool
+	P  *string
+	T  time.Time
+}
+
+// TODO(jba): add more fields: structs; embedding.
+
+// All native codecs should support these types. If one doesn't, remove it from this
+// struct and make a new single-field struct for it.
+type nativeMinimal struct {
+	N  *int
+	I  int
+	F  float64
+	St string
+	B  bool
+	By []byte
+	L  []int
+	M  map[string]bool
+	P  *string
+	T  time.Time
+	LF []float64
+	LS []string
 }
 
 // MakeUniqueStringDeterministicForTesting uses a specified seed value to

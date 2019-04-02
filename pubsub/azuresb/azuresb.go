@@ -43,6 +43,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -53,6 +54,7 @@ import (
 	servicebus "github.com/Azure/azure-service-bus-go"
 	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -60,11 +62,17 @@ import (
 )
 
 const (
-	completedStatus = "completed"
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-amqp-request-response#update-disposition-status
+	dispositionForAck  = "completed"
+	dispositionForNack = "abandoned"
+
 	listenerTimeout = 1 * time.Second
-	rpcTries        = 5
-	rpcRetryDelay   = 1 * time.Second
 )
+
+var sendBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1,   // SendBatch only supports one message at a time
+	MaxHandlers:  100, // max concurrency for sends
+}
 
 func init() {
 	o := new(defaultOpener)
@@ -228,7 +236,7 @@ func OpenTopic(ctx context.Context, sbTopic *servicebus.Topic, opts *TopicOption
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewTopic(t, nil), nil
+	return pubsub.NewTopic(t, sendBatcherOpts), nil
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -242,16 +250,15 @@ func openTopic(ctx context.Context, sbTopic *servicebus.Topic, _ *TopicOptions) 
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	for _, dm := range dms {
-		sbms := servicebus.NewMessage(dm.Body)
-		for k, v := range dm.Metadata {
-			sbms.Set(k, v)
-		}
-		if err := t.sbTopic.Send(ctx, sbms); err != nil {
-			return err
-		}
+	if len(dms) != 1 {
+		panic("azuresb.SendBatch should only get one message at a time")
 	}
-	return nil
+	dm := dms[0]
+	sbms := servicebus.NewMessage(dm.Body)
+	for k, v := range dm.Metadata {
+		sbms.Set(k, v)
+	}
+	return t.sbTopic.Send(ctx, sbms)
 }
 
 func (t *topic) IsRetryable(err error) bool {
@@ -318,7 +325,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, 0, nil), nil
+	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -450,12 +457,23 @@ func messageAsFunc(sbmsg *servicebus.Message) func(interface{}) bool {
 }
 
 // SendAcks implements driver.Subscription.SendAcks.
-// IMPORTANT: This is a workaround to issue 'completed' message dispositions in bulk which is not supported in the Service Bus SDK.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	return s.updateMessageDispositions(ctx, ids, dispositionForAck)
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	return s.updateMessageDispositions(ctx, ids, dispositionForNack)
+}
+
+// IMPORTANT: This is a workaround to issue message dispositions in bulk which is not supported in the Service Bus SDK.
+func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driver.AckID, disposition string) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
+	// TODO(rvangent): Can we cache this on the subscription instead of
+	// re-dialing every time?
 	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
 	client, err := amqp.Dial(host,
 		amqp.ConnSASLAnonymous(),
@@ -486,7 +504,7 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 
 	value := map[string]interface{}{
-		"disposition-status": completedStatus,
+		"disposition-status": disposition,
 		"lock-tokens":        lockIds,
 	}
 	msg := &amqp.Message{
@@ -500,8 +518,38 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	if err != nil {
 		return err
 	}
-	_, err = link.RetryableRPC(ctx, rpcTries, rpcRetryDelay, msg)
-	return err
+
+	// We're not actually making use of link.Retryable since we're passing 1
+	// here. The portable type will retry as needed.
+	//
+	// We could just use link.RPC, but it returns a result with a status code
+	// in addition to err, and we'd have to check both.
+	_, err = link.RetryableRPC(ctx, 1, 0, msg)
+	if err == nil {
+		return nil
+	}
+	if !isNotFoundErr(err) {
+		return err
+	}
+	// It's a "not found" error, probably due to the message already being
+	// deleted on the server. If we're just acking 1 message, we can just
+	// swallow the error, but otherwise we'll need to retry one by one.
+	if len(ids) == 1 {
+		return nil
+	}
+	for _, lockID := range lockIds {
+		value["lock-tokens"] = []amqp.UUID{lockID}
+		if _, err := link.RetryableRPC(ctx, 1, 0, msg); err != nil && !isNotFoundErr(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// isNotFoundErr returns true if the error is status code 410, Gone.
+// Azure returns this when trying to ack/nack a message that no longer exists.
+func isNotFoundErr(err error) bool {
+	return strings.Contains(err.Error(), "status code 410")
 }
 
 func errorCode(err error) gcerrors.ErrorCode {

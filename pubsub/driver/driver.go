@@ -22,21 +22,16 @@ import (
 	"gocloud.dev/gcerrors"
 )
 
-// Batcher should gather items into batches to be sent to the pubsub service.
-type Batcher interface {
-	// Add should add an item to the batcher.
-	Add(ctx context.Context, item interface{}) error
-
-	// AddNoWait should add an item to the batcher without blocking.
-	AddNoWait(item interface{}) <-chan error
-
-	// Shutdown should wait for all active calls to Add to finish, then
-	// return. After Shutdown is called, all calls to Add should fail.
-	Shutdown()
-}
-
 // AckID is the identifier of a message for purposes of acknowledgement.
 type AckID interface{}
+
+// AckInfo represents an action on an AckID.
+type AckInfo struct {
+	// AckID is the AckID the action is for.
+	AckID AckID
+	// IsAck is true if the AckID should be acked, false if it should be nacked.
+	IsAck bool
+}
 
 // Message is data to be published (sent) to a topic and later received from
 // subscriptions on that topic.
@@ -48,9 +43,9 @@ type Message struct {
 	Metadata map[string]string
 
 	// AckID should be set to something identifying the message on the
-	// server. It may be passed to Subscription.SendAcks() to acknowledge
-	// the message. This field should only be set by methods implementing
-	// Subscription.ReceiveBatch.
+	// server. It may be passed to Subscription.SendAcks to acknowledge
+	// the message, or to Subscription.SendNacks. This field should only
+	// be set by methods implementing Subscription.ReceiveBatch.
 	AckID AckID
 
 	// AsFunc allows providers to expose provider-specific types;
@@ -79,6 +74,10 @@ type Topic interface {
 	// SendBatch.
 	//
 	// SendBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the number of messages sent in a single batch
+	// and the concurrency of calls to SendBatch via a batcher.Options
+	// passed to pubsub.NewTopic.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// IsRetryable should report whether err can be retried.
@@ -114,6 +113,10 @@ type Subscription interface {
 	// service doesn't support waiting, then a time.Sleep can be used.
 	//
 	// ReceiveBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum value of maxMessages and the concurrency
+	// of calls to ReceiveBatch via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// For at-most-once systems, AckFunc should return a function to be called
@@ -130,7 +133,26 @@ type Subscription interface {
 	// If AckFunc returns a non-nil func, SendAcks will never be called.
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/SendNacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
+
+	// SendNacks should notify the server that the messages with the given ackIDs
+	// are not being processed by this client, so that they will be received
+	// again later, potentially by another subscription.
+	// This method should return only after all the ackIDs are sent, an
+	// error occurs, or the context is done.
+	//
+	// If AckFunc returns a non-nil func, SendNacks will never be called.
+	//
+	// SendNacks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/Nacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
+	SendNacks(ctx context.Context, ackIDs []AckID) error
 
 	// IsRetryable should report whether err can be retried.
 	// err will always be a non-nil error returned from ReceiveBatch or SendAcks.

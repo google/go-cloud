@@ -20,13 +20,13 @@ Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
 
 ## Supported Providers
 
-* [GCP](https://godoc.org/gocloud.dev/pubsub/gcppubsub)
-* [AWS](https://github.com/google/go-cloud/tree/master/pubsub/awspubsub)
-* [Azure](https://github.com/google/go-cloud/tree/master/pubsub/azurepubsub)
-* [In-memory local pubsub](https://godoc.org/gocloud.dev/pubsub/mempubsub) -
+* [Google Cloud Pub/Sub](https://godoc.org/gocloud.dev/pubsub/gcppubsub)
+* [Amazon SNS+SQS](https://godoc.org/gocloud.dev/pubsub/awssnssqs)
+* [Azure Service Bus](https://godoc.org/gocloud.dev/pubsub/azuresb)
+* [RabbitMQ](https://godoc.org/gocloud.dev/pubsub/rabbitpubsub)
+* [NATS](https://godoc.org/gocloud.dev/pubsub/natspubsub)
+* [In-memory local Pub/Sub](https://godoc.org/gocloud.dev/pubsub/mempubsub) -
   mainly useful for local testing
-* [RabbitMQ](https://godoc.org/gocloud.dev/pubsub/rabbitpubsub) - local
-  implementation using the [RabbitMQ](https://www.rabbitmq.com/) message broker
 
 ## Usage Samples
 

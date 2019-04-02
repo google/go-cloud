@@ -313,7 +313,7 @@ func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func(), 
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, 0, nil), nil
+	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
 func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
@@ -421,6 +421,12 @@ func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
 // SendAcks implements driver.Subscription.SendAcks. It should never be called
 // because we provide a non-nil AckFunc.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	panic("unreachable")
+}
+
+// SendNacks implements driver.Subscription.SendNacks. It should never be called
+// because we provide a non-nil AckFunc.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
 	panic("unreachable")
 }
 
