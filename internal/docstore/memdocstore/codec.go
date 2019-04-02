@@ -79,7 +79,7 @@ func (e *mapEncoder) MapKey(k string) { e.m[k] = e.val }
 // decodeDoc decodes m into ddoc.
 func decodeDoc(m map[string]interface{}, ddoc driver.Document, fps [][]string) error {
 	var m2 map[string]interface{}
-	if fps == nil {
+	if len(fps) == 0 {
 		m2 = m
 	} else {
 		// Make a document to decode from that has only the field paths and the revision field.

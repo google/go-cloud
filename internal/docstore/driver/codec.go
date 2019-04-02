@@ -371,7 +371,7 @@ func Decode(v reflect.Value, d Decoder) error {
 
 func decode(v reflect.Value, d Decoder) error {
 	if !v.CanSet() {
-		panic(fmt.Sprintf("cannot set %+v", v))
+		return fmt.Errorf("while decoding: cannot set %+v", v)
 	}
 	// A Null value sets anything nullable to nil.
 	// If the value isn't nullable, we keep going.
