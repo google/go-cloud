@@ -210,14 +210,22 @@ type ActionListError = driver.ActionListError
 // the position in the ActionList of each failed action.
 func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
+	var alerr ActionListError
 	for i, a := range l.actions {
 		d, err := a.toDriverAction()
 		if err != nil {
-			return ActionListError{{i, wrapError(l.coll.driver, err)}}
+			alerr = append(alerr, struct {
+				Index int
+				Err   error
+			}{i, wrapError(l.coll.driver, err)})
+		} else {
+			das = append(das, d)
 		}
-		das = append(das, d)
 	}
-	alerr := l.coll.driver.RunActions(ctx, das, l.unordered)
+	if len(alerr) > 0 {
+		return alerr
+	}
+	alerr = l.coll.driver.RunActions(ctx, das, l.unordered)
 	if alerr != nil { // Explicit non-nil check is necessary because alerr is not of type error.
 		for i := range alerr {
 			alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
