@@ -24,6 +24,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/genproto/googleapis/type/latlng"
@@ -142,7 +143,14 @@ func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_Doubl
 // decodeDoc decodes a Firestore document into a driver.Document.
 func decodeDoc(pdoc *pb.Document, ddoc driver.Document) error {
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
-	return ddoc.Decode(decoder{mv})
+	if err := ddoc.Decode(decoder{mv}); err != nil {
+		return err
+	}
+	// Set the revision field in the document, if it exists, to the update time.
+	if pdoc.UpdateTime != nil {
+		_ = ddoc.SetField(docstore.RevisionField, pdoc.UpdateTime)
+	}
+	return nil
 }
 
 type decoder struct {

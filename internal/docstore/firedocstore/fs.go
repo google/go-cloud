@@ -17,7 +17,6 @@ package firedocstore
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -36,7 +35,7 @@ import (
 type collection struct {
 	client    *vkit.Client
 	dbPath    string // e.g. "projects/P/databases/(default)"
-	collPath  string // e.g. "projects/P/databases/(default)/documents/MyCollection"
+	collPath  string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
 	nameField string
 }
 
@@ -152,8 +151,6 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 		if err := decodeDoc(pdoc, gets[i].Doc /*,  gets[i].FieldPaths */); err != nil {
 			return i, err
 		}
-		// Set the revision field in the document, if it exists, to the update time.
-		_ = gets[i].Doc.SetField(docstore.RevisionField, pdoc.UpdateTime)
 	}
 	return len(gets), nil
 }
@@ -496,10 +493,6 @@ func fpEqual(fp1, fp2 []string) bool {
 		}
 	}
 	return true
-}
-
-func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return nil, errors.New("unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

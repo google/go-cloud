@@ -61,7 +61,7 @@ func TestCodecSpecial(t *testing.T) {
 		t.Fatal(err)
 	}
 	gotdoc := mustdoc(&got)
-	// Test type-driven decoding (where the types of the struct fields are availableO).
+	// Test type-driven decoding (where the types of the struct fields are available).
 	if err := decodeDoc(enc, gotdoc); err != nil {
 		t.Fatal(err)
 	}
