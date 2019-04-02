@@ -31,7 +31,7 @@ import (
 //
 // A Document can be represented as a map[string]int or a pointer to a struct. For
 // structs, the exported fields are the document fields.
-type Document = interface{}
+type Document interface{}
 
 // A Collection is a set of documents.
 // TODO(jba): make the docstring look more like blob.Bucket.
