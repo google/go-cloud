@@ -97,6 +97,6 @@ type Filter struct {
 // action), and returns the next page that can be passed into a Query as a
 // starting point.
 type DocumentIterator interface {
-	Next(doc Document) error
+	Next(context.Context, Document) error
 	Stop()
 }
