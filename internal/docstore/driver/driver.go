@@ -79,7 +79,7 @@ type Mod struct {
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
-	FieldPaths []string         // the selected field paths
+	FieldPaths [][]string       // the selected field paths
 	Filters    []Filter         // a list of filter for the query
 	Limit      int              // the number of result in one query request
 	StartAt    interface{}      // define the starting point of the query
