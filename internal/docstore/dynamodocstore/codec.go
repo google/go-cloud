@@ -65,10 +65,7 @@ func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	return &mapEncoder{m: m}
 }
 
-var (
-	typeOfGoTime    = reflect.TypeOf(time.Time{})
-	typeOfBinarySet = reflect.TypeOf([][]byte{})
-)
+var typeOfGoTime = reflect.TypeOf(time.Time{})
 
 // EncodeSpecial encodes time.Time specially.
 func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
@@ -76,10 +73,6 @@ func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
 	case typeOfGoTime:
 		ts := v.Interface().(time.Time).Format(time.RFC3339Nano)
 		e.EncodeString(ts)
-	case typeOfBinarySet:
-		return true, errors.New(`unsupported type: [][]byte, the docstore driver
-		for DynamoDB does not encode to set types, if you want a list of []byte,
-		try to use a named type for []byte, e.g. Binary`)
 	default:
 		return false, nil
 	}
