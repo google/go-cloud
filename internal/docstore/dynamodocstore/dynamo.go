@@ -263,6 +263,10 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 	return &cb, nil
 }
 
+func (c *collection) RunQuery(ctx context.Context, q *driver.Query) error {
+	return errors.New("unimp")
+}
+
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
