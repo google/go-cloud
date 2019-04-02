@@ -39,7 +39,7 @@ func TestOpen(t *testing.T) {
 		t.Skipf("Could not obtain harness info: %v", err)
 	}
 
-	serverName, _ := tfOut["serverName"].Value.(string)
+	serverName, _ := tfOut["servername"].Value.(string)
 	username, _ := tfOut["username"].Value.(string)
 	password, _ := tfOut["password"].Value.(string)
 	databaseName, _ := tfOut["database"].Value.(string)
