@@ -83,7 +83,7 @@ type Query struct {
 	Filters    []Filter         // a list of filter for the query
 	Limit      int              // the number of result in one query request
 	StartAt    interface{}      // define the starting point of the query
-	Itr        DocumentIterator // the iterator for Get action
+	Iter       DocumentIterator // the iterator for Get action
 }
 
 // A Filter defines a filter expression used to filter the query result.
