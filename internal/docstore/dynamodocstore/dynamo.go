@@ -16,6 +16,7 @@ package dynamodocstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
