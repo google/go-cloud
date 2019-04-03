@@ -76,15 +76,12 @@ import (
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
-	"golang.org/x/sync/errgroup"
 )
 
 const (
 	// base64EncodedKey is the Message Attribute key used to flag that the
 	// message body is base64 encoded.
 	base64EncodedKey = "base64encoded"
-	// maxReceiveConcurrency limits the number of Receive RPCs to SQS in flight.
-	maxReceiveConcurrency = 100
 	// How long ReceiveBatch should wait if no messages are available; controls
 	// the poll interval of requests to SQS.
 	noMessagesPollDuration = 250 * time.Millisecond
@@ -93,6 +90,13 @@ const (
 var sendBatcherOpts = &batcher.Options{
 	MaxBatchSize: 1,   // SendBatch only supports one message at a time
 	MaxHandlers:  100, // max concurrency for sends
+}
+
+var recvBatcherOpts = &batcher.Options{
+	// SQS supports receiving at most 10 messages at a time:
+	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
+	MaxBatchSize: 10,
+	MaxHandlers:  100, // max concurrency for receives
 }
 
 var ackBatcherOpts = &batcher.Options{
@@ -114,8 +118,6 @@ var Set = wire.NewSet(
 	SubscriptionOptions{},
 	TopicOptions{},
 	URLOpener{},
-	sns.New,
-	sqs.New,
 )
 
 // lazySessionOpener obtains the AWS session from the environment on the first
@@ -182,24 +184,30 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: %v", u, err)
 	}
-	client := sns.New(o.ConfigProvider, overrideCfg)
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	topicARN := path.Join(u.Host, u.Path)
-	return OpenTopic(ctx, client, topicARN, &o.TopicOptions), nil
+	return OpenTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: %v", u, err)
 	}
-	client := sqs.New(o.ConfigProvider, overrideCfg)
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	qURL := "https://" + path.Join(u.Host, u.Path)
-	return OpenSubscription(ctx, client, qURL, &o.SubscriptionOptions), nil
+	return OpenSubscription(ctx, configProvider, qURL, &o.SubscriptionOptions), nil
 }
 
 type topic struct {
@@ -250,18 +258,19 @@ type TopicOptions struct {
 
 // OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
-func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), sendBatcherOpts)
+func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	return pubsub.NewTopic(openTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
+func openTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) driver.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
+
 	return &topic{
-		client: client,
+		client: sns.New(sess),
 		arn:    topicARN,
 		opts:   opts,
 	}
@@ -401,60 +410,20 @@ type SubscriptionOptions struct{}
 // OpenSubscription opens a on AWS SQS for the given SQS client and queue URL.
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
-func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), 0, ackBatcherOpts)
+func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL), recvBatcherOpts, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
-	return &subscription{client: client, qURL: qURL}
+func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL string) driver.Subscription {
+	return &subscription{client: sqs.New(sess), qURL: qURL}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// SQS supports receiving at most 10 messages at a time:
-	// https://godoc.org/github.com/aws/aws-sdk-go/service/sqs#SQS.ReceiveMessage
-	// If maxMessages is larger than 10, we make up to maxReceiveConcurrency RPCs
-	// in parallel to try to get more.
-	const maxMessagesPerRPC = 10
-
-	var mu sync.Mutex
-	var ms []*driver.Message
-
-	g, ctx := errgroup.WithContext(ctx)
-	for n := 0; n < maxReceiveConcurrency && maxMessages > 0; n++ {
-		maxThisRPC := maxMessages
-		if maxThisRPC > maxMessagesPerRPC {
-			maxThisRPC = maxMessagesPerRPC
-		}
-		maxMessages -= maxThisRPC
-		g.Go(func() error {
-			msgs, err := s.receiveMessages(ctx, int64(maxThisRPC))
-			if err != nil {
-				return err
-			}
-			mu.Lock()
-			defer mu.Unlock()
-			ms = append(ms, msgs...)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-	if len(ms) == 0 {
-		// When we return no messages and no error, the portable type will call
-		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
-		// with RPCs.
-		time.Sleep(noMessagesPollDuration)
-	}
-	return ms, nil
-}
-
-func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*driver.Message, error) {
 	output, err := s.client.ReceiveMessageWithContext(ctx, &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(s.qURL),
-		MaxNumberOfMessages: aws.Int64(max),
+		MaxNumberOfMessages: aws.Int64(int64(maxMessages)),
 	})
 	if err != nil {
 		return nil, err
@@ -508,6 +477,12 @@ func (s *subscription) receiveMessages(ctx context.Context, max int64) ([]*drive
 			},
 		}
 		ms = append(ms, m2)
+	}
+	if len(ms) == 0 {
+		// When we return no messages and no error, the portable type will call
+		// ReceiveBatch again immediately. Sleep for a bit to avoid hammering SQS
+		// with RPCs.
+		time.Sleep(noMessagesPollDuration)
 	}
 	return ms, nil
 }

@@ -41,9 +41,8 @@ func TestOpenTopic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := sns.New(sess, &aws.Config{})
 	fakeTopicARN := ""
-	topic := OpenTopic(ctx, client, fakeTopicARN, nil)
+	topic := OpenTopic(ctx, sess, fakeTopicARN, nil)
 	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("")}); err == nil {
 		t.Error("got nil, want error from send to nonexistent topic")
 	}
@@ -55,9 +54,8 @@ func TestOpenSubscription(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := sqs.New(sess, &aws.Config{})
 	fakeQURL := ""
-	sub := OpenSubscription(ctx, client, fakeQURL, nil)
+	sub := OpenSubscription(ctx, sess, fakeQURL, nil)
 	if _, err := sub.Receive(ctx); err == nil {
 		t.Error("got nil, want error from receive from nonexistent subscription")
 	}
@@ -95,7 +93,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating topic "%s": %v`, topicName, err)
 	}
-	dt = openTopic(ctx, client, *out.TopicArn, nil)
+	dt = openTopic(ctx, sess, *out.TopicArn, nil)
 	cleanup = func() {
 		client.DeleteTopic(&sns.DeleteTopicInput{TopicArn: out.TopicArn})
 	}
@@ -103,8 +101,7 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	client := sns.New(h.sess)
-	dt := openTopic(ctx, client, "nonexistent-topic", nil)
+	dt := openTopic(ctx, h.sess, "nonexistent-topic", nil)
 	return dt, nil
 }
 
@@ -119,7 +116,7 @@ func createSubscription(ctx context.Context, dt driver.Topic, subName string, se
 	if err != nil {
 		return nil, nil, fmt.Errorf(`creating subscription queue "%s": %v`, subName, err)
 	}
-	ds = openSubscription(ctx, sqsClient, *out.QueueUrl)
+	ds = openSubscription(ctx, sess, *out.QueueUrl)
 
 	snsClient := sns.New(sess, &aws.Config{})
 	cleanupSub, err := subscribeQueueToTopic(ctx, sqsClient, snsClient, out.QueueUrl, dt)
@@ -190,8 +187,7 @@ func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *s
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	client := sqs.New(h.sess)
-	ds := openSubscription(ctx, client, "nonexistent-subscription")
+	ds := openSubscription(ctx, h.sess, "nonexistent-subscription")
 	return ds, nil
 }
 
@@ -305,7 +301,7 @@ func BenchmarkAwsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup2()
-	sub := pubsub.NewSubscription(ds, 0, ackBatcherOpts)
+	sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
 	defer sub.Shutdown(ctx)
 	drivertest.RunBenchmarks(b, topic, sub)
 }

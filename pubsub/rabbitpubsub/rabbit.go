@@ -489,7 +489,7 @@ func errorAs(err error, i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), 0, nil)
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil, nil)
 }
 
 type subscription struct {
