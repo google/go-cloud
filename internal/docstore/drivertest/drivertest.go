@@ -88,7 +88,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
-	// t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 }
 
 const KeyField = "_id"
@@ -228,16 +228,29 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		"s":      "a string",
 		"i":      int64(95),
 		"f":      32.3,
+		"m":      map[string]interface{}{"a": "one", "b": "two"},
 	}
 	must(coll.Put(ctx, doc))
-	// If only the key fields are present, the full document is populated.
+	// If Get is called with no field paths, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
 	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
 		t.Error(diff)
 	}
-	// TODO(jba): test with field paths
+
+	// If Get is called with field paths, the resulting document has only those fields.
+	got = docmap{KeyField: doc[KeyField]}
+	must(coll.Get(ctx, got, "f", "m.b"))
+	want := docmap{
+		KeyField:         doc[KeyField],
+		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
+		"f":              32.3,
+		"m":              docmap{"b": "two"},
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error("Get with field paths:\n", diff)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -568,7 +581,7 @@ func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error
 		},
 		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
 	} {
-		enc, err := encode(S{test.in})
+		enc, err := encode(&S{test.in})
 		if err != nil {
 			t.Fatalf("encoding %T: %v", test.in, err)
 		}

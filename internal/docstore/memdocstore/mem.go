@@ -144,8 +144,7 @@ func (c *collection) runAction(a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		// TODO(jba): support field paths.
-		if err := decodeDoc(current, a.Doc); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -203,6 +202,16 @@ func checkRevision(arg driver.Document, current map[string]interface{}) error {
 		return gcerr.Newf(gcerr.FailedPrecondition, nil, "mismatched revisions: want %d, current %d", wantRev, curRev)
 	}
 	return nil
+}
+
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// (see getParentMap).
+func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
+	m2, err := getParentMap(m, fp, false)
+	if err != nil {
+		return nil, err
+	}
+	return m2[fp[len(fp)-1]], nil
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as

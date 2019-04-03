@@ -158,12 +158,26 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 	if err != nil {
 		return err
 	}
-	if len(fieldpaths) > 0 {
-		return errors.New("Get with field paths unimplemented")
-	}
+
 	in := &dyn.GetItemInput{
 		TableName: &c.table,
 		Key:       av.M,
+	}
+	if len(fieldpaths) > 0 {
+		// Construct a projection expression for the field paths.
+		// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html.
+		nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
+		for _, fp := range fieldpaths {
+			nbs = append(nbs, expression.Name(strings.Join(fp, ".")))
+		}
+		expr, err := expression.NewBuilder().
+			WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
+			Build()
+		if err != nil {
+			return err
+		}
+		in.ProjectionExpression = expr.Projection()
+		in.ExpressionAttributeNames = expr.Names()
 	}
 	out, err := c.db.GetItemWithContext(ctx, in)
 	if err != nil {
