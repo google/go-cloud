@@ -18,8 +18,6 @@ package driver // import "gocloud.dev/internal/docstore/driver"
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"gocloud.dev/internal/gcerr"
 )
@@ -35,17 +33,11 @@ type Collection interface {
 	// successfully, the driver can immediately perform a read on the same document,
 	// even though the provider's semantics does not guarantee that the read will see
 	// the write. RunActions should return immediately after the first action that fails.
+	// The returned slice should have a single element.
 	//
 	// If unordered is true, the actions can be executed in any order, perhaps
 	// concurrently. All of the actions should be executed, even if some fail.
-	//
-	// RunActions should return one error value per argument action, in the same
-	// order as the argument slice. If an action was never executed, the error should
-	// be docstore.ErrNotExecuted. If all actions succeed, RunActions may (but need
-	// not) return nil. As a convenience, RunActions may return a slice that is
-	// shorter than the number of actions, meaning that the unrepresented actions
-	// were not executed. In other words, RunActions need not pad the slice with
-	// ErrNotExecuted errors.
+	// The returned slice should have an element for each action that fails.
 	RunActions(ctx context.Context, actions []*Action, unordered bool) ActionListError
 
 	// RunQuery executes a Query.
@@ -93,24 +85,6 @@ type Mod struct {
 type ActionListError []struct {
 	Index int
 	Err   error
-}
-
-// TODO(jba): use xerrors formatting.
-func (e ActionListError) Error() string {
-	var s []string
-	for _, x := range e {
-		s = append(s, fmt.Sprintf("at %d: %v", x.Index, x.Err))
-	}
-	return strings.Join(s, "; ")
-}
-
-func (e ActionListError) Unwrap() error {
-	if len(e) == 1 {
-		return e[0].Err
-	}
-	// Return nil when e is nil, or has more than one error.
-	// When there are multiple errors, it doesn't make sense to return any of them.
-	return nil
 }
 
 // A Query defines a query operation to find documents within a collection based

@@ -252,9 +252,9 @@ func (l *ActionList) Do(ctx context.Context) error {
 		}
 	}
 	if len(alerr) > 0 {
-		return ActionListError(alerr)
+		return alerr
 	}
-	alerr = l.coll.driver.RunActions(ctx, das, l.unordered)
+	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, l.unordered))
 	if alerr != nil { // Explicit non-nil check is necessary because alerr is not of type error.
 		for i := range alerr {
 			alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)

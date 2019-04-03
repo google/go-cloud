@@ -34,6 +34,13 @@ import (
 // TODO(jba): Test RunActions with unordered=true. We can't actually test the ordering,
 // but we can check that all actions are executed even if some fail.
 
+// TODO(jba): test an ordered list of actions, with an expected error in the middle,
+// and check that we get the right error back and that the actions after the error
+// aren't executed.
+
+// TODO(jba): test that a malformed action is returned as an error and none of the
+// actions are executed.
+
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
