@@ -71,8 +71,8 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 		}
 		q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
 	}
-	_ = q.coll.driver.RunQuery(ctx, q.dq)
-	return &DocumentIterator{iter: q.dq.Iter}
+	it, err := q.coll.driver.RunGetQuery(ctx, q.dq)
+	return &DocumentIterator{iter: it, err: err}
 }
 
 // DocumentIterator iterates over documents.

@@ -494,7 +494,7 @@ func fpEqual(fp1, fp2 []string) bool {
 	return true
 }
 
-func (c *collection) RunQuery(ctx context.Context, q *driver.Query) error {
+func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
 	return errors.New("unimp")
 }
 

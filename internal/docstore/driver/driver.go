@@ -36,11 +36,11 @@ type Collection interface {
 	// If all actions succeed, RunActions returns (number of actions, nil).
 	RunActions(context.Context, []*Action) (int, error)
 
-	// RunQuery executes a Query.
+	// RunGetQuery executes a Query.
 	//
 	// Implementations can choose to execute the Query as one single request or
 	// multiple ones, depending on their service offerings.
-	RunQuery(context.Context, *Query) error
+	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -79,11 +79,10 @@ type Mod struct {
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
-	FieldPaths [][]string       // the selected field paths
-	Filters    []Filter         // a list of filter for the query
-	Limit      int              // the number of result in one query request
-	StartAt    interface{}      // define the starting point of the query
-	Iter       DocumentIterator // the iterator for Get action
+	FieldPaths [][]string  // the selected field paths
+	Filters    []Filter    // a list of filter for the query
+	Limit      int         // the number of result in one query request
+	StartAt    interface{} // define the starting point of the query
 }
 
 // A Filter defines a filter expression used to filter the query result.
