@@ -30,7 +30,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{}, nil
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
+func (h *harness) MakeCollection(context.Context, string) (driver.Collection, error) {
 	return newCollection(drivertest.KeyField), nil
 }
 

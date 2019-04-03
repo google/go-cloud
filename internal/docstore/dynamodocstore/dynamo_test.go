@@ -27,9 +27,8 @@ import (
 )
 
 const (
-	region         = "us-east-2"
-	collectionName = "docstore-test"
-	keyName        = "_id"
+	region  = "us-east-2"
+	keyName = "_id"
 )
 
 type harness struct {
@@ -46,33 +45,35 @@ func (h *harness) Close() {
 	h.closer()
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName, keyName, ""), nil
+func (h *harness) MakeCollection(_ context.Context, name string) (driver.Collection, error) {
+	if *setup.Record {
+		if err := clearTable(name); err != nil {
+			return nil, err
+		}
+	}
+	return newCollection(dyn.New(h.sess), name, keyName, ""), nil
 }
 
 func TestConformance(t *testing.T) {
-	if *setup.Record {
-		clearTable(t)
-	}
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{})
 }
 
-func clearTable(t *testing.T) {
+func clearTable(name string) error {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String(region)})
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	db := dyn.New(sess)
 	in := &dyn.ScanInput{
-		TableName:                aws.String(collectionName),
+		TableName:                aws.String(name),
 		ProjectionExpression:     aws.String("#pk"),
 		ExpressionAttributeNames: map[string]*string{"#pk": aws.String(keyName)},
 	}
 	for {
 		out, err := db.Scan(in)
 		if err != nil {
-			t.Fatal(err)
+			return err
 		}
 		if len(out.Items) > 0 {
 			bwin := &dyn.BatchWriteItemInput{
@@ -84,9 +85,9 @@ func clearTable(t *testing.T) {
 					DeleteRequest: &dyn.DeleteRequest{Key: item},
 				})
 			}
-			bwin.RequestItems[collectionName] = wrs
+			bwin.RequestItems[name] = wrs
 			if _, err := db.BatchWriteItem(bwin); err != nil {
-				t.Fatal(err)
+				return err
 			}
 		}
 		if out.LastEvaluatedKey == nil {
@@ -94,4 +95,5 @@ func clearTable(t *testing.T) {
 		}
 		in.ExclusiveStartKey = out.LastEvaluatedKey
 	}
+	return nil
 }

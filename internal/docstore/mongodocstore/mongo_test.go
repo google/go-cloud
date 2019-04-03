@@ -31,9 +31,8 @@ import (
 )
 
 const (
-	serverURI      = "mongodb://localhost"
-	dbName         = "docstore-test"
-	collectionName = "docstore-test"
+	serverURI = "mongodb://localhost"
+	dbName    = "docstore-test"
 )
 
 type harness struct {
@@ -60,8 +59,8 @@ func newClient(ctx context.Context, uri string) (*mongo.Client, error) {
 	return client, nil
 }
 
-func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName))
+func (h *harness) MakeCollection(ctx context.Context, name string) (driver.Collection, error) {
+	coll := newCollection(h.db.Collection(name))
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)

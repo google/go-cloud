@@ -28,10 +28,9 @@ import (
 
 const (
 	// projectID is the project ID that was used during the last test run using --record.
-	projectID      = "go-cloud-test-216917"
-	collectionName = "docstore-test"
-	keyName        = "_id"
-	endPoint       = "firestore.googleapis.com:443"
+	projectID = "go-cloud-test-216917"
+	keyName   = "_id"
+	endPoint  = "firestore.googleapis.com:443"
 )
 
 type harness struct {
@@ -49,8 +48,8 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 	return &harness{client, done}, nil
 }
 
-func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName, keyName), nil
+func (h *harness) MakeCollection(_ context.Context, name string) (driver.Collection, error) {
+	return newCollection(h.client, projectID, name, keyName), nil
 }
 
 func (h *harness) Close() {

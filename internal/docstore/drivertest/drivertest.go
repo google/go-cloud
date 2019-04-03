@@ -35,7 +35,7 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeCollection makes a driver.Collection for testing.
-	MakeCollection(context.Context) (driver.Collection, error)
+	MakeCollection(_ context.Context, name string) (driver.Collection, error)
 
 	// Close closes resources used by the harness.
 	Close()
@@ -78,22 +78,24 @@ type CodecTester interface {
 	DocstoreDecode(value, dest interface{}) error
 }
 
+const collectionName = "docstore-test"
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
-	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
-	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
-	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
-	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, testGet) })
-	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, testDelete) })
-	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
-	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
+	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, collectionName, testCreate) })
+	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, collectionName, testPut) })
+	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, collectionName, testReplace) })
+	t.Run("Get", func(t *testing.T) { withCollection(t, newHarness, collectionName, testGet) })
+	t.Run("Delete", func(t *testing.T) { withCollection(t, newHarness, collectionName, testDelete) })
+	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, collectionName, testUpdate) })
+	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, collectionName, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	// t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 }
 
 const KeyField = "_id"
 
-func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
+func withCollection(t *testing.T, newHarness HarnessMaker, name string, f func(*testing.T, *ds.Collection)) {
 	ctx := context.Background()
 	h, err := newHarness(ctx, t)
 	if err != nil {
@@ -101,7 +103,7 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 	}
 	defer h.Close()
 
-	dc, err := h.MakeCollection(ctx)
+	dc, err := h.MakeCollection(ctx, name)
 	if err != nil {
 		t.Fatal(err)
 	}
