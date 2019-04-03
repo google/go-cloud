@@ -74,6 +74,10 @@ type Topic interface {
 	// SendBatch.
 	//
 	// SendBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the number of messages sent in a single batch
+	// and the concurrency of calls to SendBatch via a batcher.Options
+	// passed to pubsub.NewTopic.
 	SendBatch(ctx context.Context, ms []*Message) error
 
 	// IsRetryable should report whether err can be retried.
@@ -109,6 +113,10 @@ type Subscription interface {
 	// service doesn't support waiting, then a time.Sleep can be used.
 	//
 	// ReceiveBatch may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum value of maxMessages and the concurrency
+	// of calls to ReceiveBatch via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	ReceiveBatch(ctx context.Context, maxMessages int) ([]*Message, error)
 
 	// For at-most-once systems, AckFunc should return a function to be called
@@ -125,6 +133,10 @@ type Subscription interface {
 	// If AckFunc returns a non-nil func, SendAcks will never be called.
 	//
 	// SendAcks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/SendNacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
 	// SendNacks should notify the server that the messages with the given ackIDs
@@ -136,6 +148,10 @@ type Subscription interface {
 	// If AckFunc returns a non-nil func, SendNacks will never be called.
 	//
 	// SendNacks may be called concurrently from multiple goroutines.
+	//
+	// Drivers can control the maximum size of ackIDs and the concurrency
+	// of calls to SendAcks/Nacks via a batcher.Options passed to
+	// pubsub.NewSubscription.
 	SendNacks(ctx context.Context, ackIDs []AckID) error
 
 	// IsRetryable should report whether err can be retried.

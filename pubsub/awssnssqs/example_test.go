@@ -20,8 +20,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/awssnssqs"
 )
@@ -36,13 +34,11 @@ func ExampleOpenTopic() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Establish an SNS client.
-	client := sns.New(session)
 
 	// Construct a *pubsub.Topic.
 	// https://docs.aws.amazon.com/gettingstarted/latest/deploy/creating-an-sns-topic.html
 	topicARN := "arn:aws:service:region:accountid:resourceType/resourcePath"
-	t := awssnssqs.OpenTopic(ctx, client, topicARN, nil)
+	t := awssnssqs.OpenTopic(ctx, session, topicARN, nil)
 	defer t.Shutdown(ctx)
 
 	// Now we can use t to send messages.
@@ -59,13 +55,11 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Establish an SQS client.
-	client := sqs.New(session)
 
 	// Construct a *pubsub.Subscription.
 	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
 	queueURL := "https://region-endpoint/queue/account-number/queue-name"
-	s := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)
+	s := awssnssqs.OpenSubscription(ctx, session, queueURL, nil)
 	defer s.Shutdown(ctx)
 
 	// Now we can use s to receive messages.
