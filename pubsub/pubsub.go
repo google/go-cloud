@@ -324,14 +324,14 @@ type Subscription struct {
 
 	recvBatchOpts *batcher.Options
 
-	mu               sync.Mutex    // protects everything below
-	q                []*Message    // local queue of messages downloaded from server
-	err              error         // permanent error
-	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
-	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time     // start time for throughput measurement, or the zero Time if queue is empty
-	throughputEnd    time.Time     // end time for throughput measurement, or the zero Time if queue is not empty
-	throughputCount  int           // number of msgs given out via Receive since throughputStart
+	mu               sync.Mutex        // protects everything below
+	q                []*driver.Message // local queue of messages downloaded from server
+	err              error             // permanent error
+	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	runningBatchSize float64           // running number of messages to request via ReceiveBatch
+	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
+	throughputEnd    time.Time         // end time for throughput measurement, or the zero Time if queue is not empty
+	throughputCount  int               // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
 	preReceiveBatchHook func(maxMessages int)
@@ -535,11 +535,38 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			m := s.q[0]
 			s.q = s.q[1:]
 			s.throughputCount++
+
+			// Convert driver.Message to Message.
+			id := m.AckID
+			md := m.Metadata
+			if len(md) == 0 {
+				md = nil
+			}
+			m2 := &Message{
+				Body:     m.Body,
+				Metadata: md,
+				asFunc:   m.AsFunc,
+			}
+			if s.ackFunc == nil {
+				m2.ack = func(isAck bool) {
+					// Ignore the error channel. Errors are dealt with
+					// in the ackBatcher handler.
+					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+				}
+			} else {
+				m2.ack = func(isAck bool) {
+					if isAck {
+						s.ackFunc()
+						return
+					}
+					panic("Message.Nack is not supported for this provider")
+				}
+			}
 			if s.ackFunc == nil {
 				// Add a finalizer that complains if the Message we return isn't
 				// acked or nacked.
 				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
-				runtime.SetFinalizer(m, func(m *Message) {
+				runtime.SetFinalizer(m2, func(m *Message) {
 					m.mu.Lock()
 					defer m.mu.Unlock()
 					if !m.isAcked {
@@ -551,7 +578,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					}
 				})
 			}
-			return m, nil
+			return m2, nil
 		}
 		// No messages are available.
 		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
@@ -572,9 +599,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
+func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
 	var mu sync.Mutex
-	var q []*Message
+	var q []*driver.Message
 
 	// Split nMessages into batches based on recvBatchOpts; we'll make a
 	// separate ReceiveBatch call for each batch, and aggregate the results in
@@ -597,34 +624,7 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			for _, m := range msgs {
-				id := m.AckID
-				md := m.Metadata
-				if len(md) == 0 {
-					md = nil
-				}
-				m2 := &Message{
-					Body:     m.Body,
-					Metadata: md,
-					asFunc:   m.AsFunc,
-				}
-				if s.ackFunc == nil {
-					m2.ack = func(isAck bool) {
-						// Ignore the error channel. Errors are dealt with
-						// in the ackBatcher handler.
-						_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
-					}
-				} else {
-					m2.ack = func(isAck bool) {
-						if isAck {
-							s.ackFunc()
-							return
-						}
-						panic("Message.Nack is not supported for this provider")
-					}
-				}
-				q = append(q, m2)
-			}
+			q = append(q, msgs...)
 			return nil
 		})
 	}
