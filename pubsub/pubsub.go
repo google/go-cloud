@@ -746,7 +746,6 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 		if err != nil {
 			err = wrapError(s.driver, err)
 			s.mu.Lock()
-			fmt.Printf("FAIL %v\n", err)
 			s.err = err
 			s.unreportedAckErr = err
 			s.mu.Unlock()
