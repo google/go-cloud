@@ -78,8 +78,9 @@ func newHarnessUsingAutodelete(ctx context.Context, t *testing.T) (drivertest.Ha
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
 	topicName := sanitize(fmt.Sprintf("%s-top-%d", testName, atomic.AddUint32(&h.numTopics, 1)))
-
-	createTopic(ctx, topicName, h.ns, nil)
+	if err := createTopic(ctx, topicName, h.ns, nil); err != nil {
+		return nil, nil, err
+	}
 
 	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	dt, err = openTopic(ctx, sbTopic, nil)
