@@ -105,7 +105,6 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
 	subName := sanitize(fmt.Sprintf("%s-sub-%d", testName, atomic.AddUint32(&h.numSubs, 1)))
-
 	t := dt.(*topic)
 	err = createSubscription(ctx, t.sbTopic.Name, subName, h.ns, nil)
 	if err != nil {
