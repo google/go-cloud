@@ -227,16 +227,17 @@ func (e ActionListError) Unwrap() error {
 	return nil
 }
 
-// Do executes the action list. If any action fails, the returned error will be an
-// ActionListError that contains the position in the ActionList of each failed
-// action.
+// Do executes the action list.
+//
+// If Do returns a non-nil error, it will be of type ActionListError. If any action
+// fails, the returned error will contain the position in the ActionList of each
+// failed action. As a special case, none of the actions will be executed if any is
+// invalid (for example, a Put whose document is missing its key field).
 //
 // In ordered mode (when the Unordered method was not called on the list), execution
 // will stop after the first action that fails.
 //
-// In unordered mode, all the actions will be executed. In either mode, as a special
-// case, none of the actions will be executed if any is invalid (for example, a Put
-// whose document is missing its key field).
+// In unordered mode, all the actions will be executed.
 func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
 	var alerr ActionListError
@@ -255,13 +256,13 @@ func (l *ActionList) Do(ctx context.Context) error {
 		return alerr
 	}
 	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, l.unordered))
-	if alerr != nil { // Explicit non-nil check is necessary because alerr is not of type error.
-		for i := range alerr {
-			alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
-		}
-		return alerr
+	if len(alerr) == 0 {
+		return nil // Explicitly return nil, because alerr is not of type error.
 	}
-	return nil
+	for i := range alerr {
+		alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
+	}
+	return alerr
 }
 
 func (a *Action) toDriverAction() (*driver.Action, error) {
