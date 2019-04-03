@@ -45,13 +45,16 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
-// Enum of types not supported by native codecs. We chose to describe this negatively
-// (types that aren't supported rather than types that are) to make the more
-// inclusive cases easier to write. A driver can return nil for
-// CodecTester.UnsupportedTypes, then add values from this enum one by one until all
-// tests pass.
+// UnsupportedType is an enum for types not supported by native codecs. We chose
+// to describe this negatively (types that aren't supported rather than types
+// that are) to make the more inclusive cases easier to write. A driver can
+// return nil for CodecTester.UnsupportedTypes, then add values from this enum
+// one by one until all tests pass.
 type UnsupportedType int
 
+// These are known unsupported types by one or more driver. Each of them
+// corresponses to an unsupported type specific test which if the driver
+// actually supports.
 const (
 	// Native codec doesn't support any unsigned integer type
 	Uint UnsupportedType = iota
@@ -61,6 +64,8 @@ const (
 	Arrays
 	// Native codec doesn't support full time precision
 	NanosecondTimes
+	// Native codec doesn't support [][]byte
+	BinarySet
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -83,7 +88,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
-	// t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 }
 
 const KeyField = "_id"
@@ -223,16 +228,29 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		"s":      "a string",
 		"i":      int64(95),
 		"f":      32.3,
+		"m":      map[string]interface{}{"a": "one", "b": "two"},
 	}
 	must(coll.Put(ctx, doc))
-	// If only the key fields are present, the full document is populated.
+	// If Get is called with no field paths, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
 	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
 		t.Error(diff)
 	}
-	// TODO(jba): test with field paths
+
+	// If Get is called with field paths, the resulting document has only those fields.
+	got = docmap{KeyField: doc[KeyField]}
+	must(coll.Get(ctx, got, "f", "m.b"))
+	want := docmap{
+		KeyField:         doc[KeyField],
+		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
+		"f":              32.3,
+		"m":              docmap{"b": "two"},
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error("Get with field paths:\n", diff)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
@@ -432,6 +450,8 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		By: []byte{6, 7, 8},
 		P:  &s,
 		T:  milliTime,
+		LF: []float64{18.8, -19.9, 20},
+		LS: []string{"foo", "bar"},
 	}
 	check(nm, &nativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
 	check(nm, &nativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
@@ -475,6 +495,7 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 	type NT struct {
 		T time.Time
 	}
+
 	nt := &NT{nanoTime}
 	if unsupported[NanosecondTimes] {
 		// Expect rounding to the nearest millisecond.
@@ -500,6 +521,15 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		check(nt, &NT{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
 
+	// Binary sets.
+	if !unsupported[BinarySet] {
+		type BinarySet struct {
+			B [][]byte
+		}
+		b := &BinarySet{[][]byte{{15}, {16}, {17}}}
+		check(b, &BinarySet{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(b, &BinarySet{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 }
 
 // Test decoding into an interface{}, where the decoder doesn't know the type of the
@@ -551,7 +581,7 @@ func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error
 		},
 		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
 	} {
-		enc, err := encode(S{test.in})
+		enc, err := encode(&S{test.in})
 		if err != nil {
 			t.Fatalf("encoding %T: %v", test.in, err)
 		}
@@ -609,10 +639,14 @@ type nativeMinimal struct {
 	M  map[string]bool
 	P  *string
 	T  time.Time
+	LF []float64
+	LS []string
 }
 
+// MakeUniqueStringDeterministicForTesting uses a specified seed value to
+// produce the same sequence of values in driver.UniqueString for testing.
+//
 // Call when running tests that will be replayed.
-// Each seed value will result in UniqueString producing the same sequence of values.
 func MakeUniqueStringDeterministicForTesting(seed int64) {
 	r := &randReader{r: rand.New(rand.NewSource(seed))}
 	uuid.SetRand(r)

@@ -825,6 +825,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err := st.MessageCheck(m); err != nil {
 		t.Error(err)
 	}
+	m.Ack()
 
 	top = pubsub.NewTopic(dt, batchSizeOne)
 	defer func() {

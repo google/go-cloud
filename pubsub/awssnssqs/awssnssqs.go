@@ -18,7 +18,7 @@
 // URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, awssnssqs registers
-// for the scheme "awssnssqs".
+// for the scheme's "awssns" and "awssqs" respectively.
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
@@ -109,8 +109,8 @@ var ackBatcherOpts = &batcher.Options{
 
 func init() {
 	lazy := new(lazySessionOpener)
-	pubsub.DefaultURLMux().RegisterTopic(Scheme, lazy)
-	pubsub.DefaultURLMux().RegisterSubscription(Scheme, lazy)
+	pubsub.DefaultURLMux().RegisterTopic(SNSScheme, lazy)
+	pubsub.DefaultURLMux().RegisterSubscription(SQSScheme, lazy)
 }
 
 // Set holds Wire providers for this package.
@@ -118,8 +118,6 @@ var Set = wire.NewSet(
 	SubscriptionOptions{},
 	TopicOptions{},
 	URLOpener{},
-	sns.New,
-	sqs.New,
 )
 
 // lazySessionOpener obtains the AWS session from the environment on the first
@@ -160,11 +158,14 @@ func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL)
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// Scheme is the URL scheme awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
-const Scheme = "awssnssqs"
+// SNSScheme is the URL scheme for pubsub.OpenTopic awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+const SNSScheme = "awssns"
 
-// URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
-// topics or "awssnssqs://sqs-queue-url" for subscriptions.
+// SQSScheme is the URL scheme for pubsub.OpenSubscription awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+const SQSScheme = "awssqs"
+
+// URLOpener opens AWS SNS/SQS URLs like "awssns://sns-topic-arn" for
+// topics or "awssqs://sqs-queue-url" for subscriptions.
 //
 // For topics, the URL's host+path is used as the topic Amazon Resource Name
 // (ARN).
@@ -186,24 +187,30 @@ type URLOpener struct {
 
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open topic %v: %v", u, err)
 	}
-	client := sns.New(o.ConfigProvider, overrideCfg)
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	topicARN := path.Join(u.Host, u.Path)
-	return OpenTopic(ctx, client, topicARN, &o.TopicOptions), nil
+	return OpenTopic(ctx, configProvider, topicARN, &o.TopicOptions), nil
 }
 
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
+	configProvider := &gcaws.ConfigOverrider{
+		Base: o.ConfigProvider,
+	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(u.Query())
 	if err != nil {
 		return nil, fmt.Errorf("open subscription %v: %v", u, err)
 	}
-	client := sqs.New(o.ConfigProvider, overrideCfg)
+	configProvider.Configs = append(configProvider.Configs, overrideCfg)
 	qURL := "https://" + path.Join(u.Host, u.Path)
-	return OpenSubscription(ctx, client, qURL, &o.SubscriptionOptions), nil
+	return OpenSubscription(ctx, configProvider, qURL, &o.SubscriptionOptions), nil
 }
 
 type topic struct {
@@ -254,18 +261,19 @@ type TopicOptions struct {
 
 // OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
-func OpenTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) *pubsub.Topic {
-	return pubsub.NewTopic(openTopic(ctx, client, topicARN, opts), sendBatcherOpts)
+func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
+	return pubsub.NewTopic(openTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func openTopic(ctx context.Context, client *sns.SNS, topicARN string, opts *TopicOptions) driver.Topic {
+func openTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) driver.Topic {
 	if opts == nil {
 		opts = &TopicOptions{}
 	}
+
 	return &topic{
-		client: client,
+		client: sns.New(sess),
 		arn:    topicARN,
 		opts:   opts,
 	}
@@ -405,13 +413,13 @@ type SubscriptionOptions struct{}
 // OpenSubscription opens a on AWS SQS for the given SQS client and queue URL.
 // The queue is assumed to be subscribed to some SNS topic, though there is no
 // check for this.
-func OpenSubscription(ctx context.Context, client *sqs.SQS, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(openSubscription(ctx, client, qURL), recvBatcherOpts, ackBatcherOpts)
+func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
+	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL), recvBatcherOpts, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
-func openSubscription(ctx context.Context, client *sqs.SQS, qURL string) driver.Subscription {
-	return &subscription{client: client, qURL: qURL}
+func openSubscription(ctx context.Context, sess client.ConfigProvider, qURL string) driver.Subscription {
+	return &subscription{client: sqs.New(sess), qURL: qURL}
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
