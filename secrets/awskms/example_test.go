@@ -26,13 +26,13 @@ import (
 func Example() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	session, err := session.NewSession(nil)
+	sess, err := session.NewSession(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Get a client to use with the KMS API.
-	client, err := awskms.Dial(session)
+	client, err := awskms.Dial(sess)
 	if err != nil {
 		log.Fatal(err)
 	}
