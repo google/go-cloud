@@ -133,6 +133,7 @@ func TestSendReceive(t *testing.T) {
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
+	m2.Ack()
 }
 
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
@@ -317,10 +318,11 @@ func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
 	sub := pubsub.NewSubscription(fs, nil, nil)
-	_, err := sub.Receive(context.Background())
+	m, err := sub.Receive(context.Background())
 	if err != nil {
-		t.Errorf("Receive: got %v, want nil", err)
+		t.Fatalf("Receive: got %v, want nil", err)
 	}
+	m.Ack()
 	if got, want := fs.calls, nRetryCalls+1; got != want {
 		t.Errorf("calls: got %d, want %d", got, want)
 	}
@@ -339,9 +341,9 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
 
-func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
-
-func (*failSub) AckFunc() func() { return nil }
+func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
+func (*failSub) AckFunc() func()                                           { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 
