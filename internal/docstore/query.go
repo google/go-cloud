@@ -103,6 +103,8 @@ func (it *DocumentIterator) Next(ctx context.Context, dst Document) error {
 
 // Stop stops the iterator, the state of the iterator will be lost and calling
 // Next will return io.EOF.
+//
+// Stop only needs to be called when you want to terminate the iterator early.
 func (it *DocumentIterator) Stop() {
 	it.err = io.EOF
 	it.iter.Stop()

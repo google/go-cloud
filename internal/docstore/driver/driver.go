@@ -97,6 +97,18 @@ type Filter struct {
 // action), and returns the next page that can be passed into a Query as a
 // starting point.
 type DocumentIterator interface {
+
+	// Next get the next item in the query result and calls decode to decode into
+	// Document.
+	//
+	// When it is called when the iterator is at the end of a page, it should go
+	// fetch another page if it is possible, though it does not need to guarantee
+	// to have a result.
+	//
+	// When there is no result to return, returns a io.EOF.
 	Next(context.Context, Document) error
+
+	// Stop cleans up resources of the iterator, if any. It is only expected to be
+	// called when user wants to terminate the iterator early.
 	Stop()
 }
