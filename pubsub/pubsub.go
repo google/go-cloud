@@ -327,7 +327,7 @@ type Subscription struct {
 	mu               sync.Mutex        // protects everything below
 	q                []*driver.Message // local queue of messages downloaded from server
 	err              error             // permanent error
-	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returnd to the user yet
+	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
 	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
 	runningBatchSize float64           // running number of messages to request via ReceiveBatch
 	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
