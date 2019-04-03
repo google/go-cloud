@@ -7,8 +7,10 @@ package main
 
 import (
 	"context"
-	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"database/sql"
+	"net/http"
+
+	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -35,8 +37,6 @@ import (
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
-	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
-	"net/http"
 )
 
 // Injectors from inject_aws.go:

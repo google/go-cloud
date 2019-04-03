@@ -107,8 +107,11 @@ func main() {
 	defer cleanup()
 
 	// Set up URL routes.
-	// r := app.srv.Handler
-	r := mux.NewRouter()
+	r := app.srv.Handler
+	// r := mux.NewRouter()
+
+	// these all error, saying http.Handler has no method
+	// so is the mux.NewRouter actually getting injected?
 	r.HandleFunc("/", app.index)
 	r.HandleFunc("/sign", app.sign)
 	r.HandleFunc("/blob/{key:.+}", app.serveBlob)
