@@ -327,6 +327,7 @@ type Subscription struct {
 	mu               sync.Mutex        // protects everything below
 	q                []*driver.Message // local queue of messages downloaded from server
 	err              error             // permanent error
+	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
 	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
 	runningBatchSize float64           // running number of messages to request via ReceiveBatch
 	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
@@ -490,6 +491,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
+			s.unreportedAckErr = nil
 			return nil, s.err // s.err wrapped when set
 		}
 
@@ -654,6 +656,12 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	s.cancel()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.unreportedAckErr; err != nil {
+		s.unreportedAckErr = nil
+		return err
+	}
 	return ctx.Err()
 }
 
@@ -739,6 +747,7 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 			err = wrapError(s.driver, err)
 			s.mu.Lock()
 			s.err = err
+			s.unreportedAckErr = err
 			s.mu.Unlock()
 		}
 		return err
