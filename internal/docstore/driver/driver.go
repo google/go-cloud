@@ -93,9 +93,8 @@ type Filter struct {
 	Value     interface{} // the value to compare using the operation
 }
 
-// A DocumentIterator is an iterator that can iterator through the results (for Get
-// action), and returns the next page that can be passed into a Query as a
-// starting point.
+// A DocumentIterator iterates through the results (for Get action), and returns
+// the next page that can be passed into a Query as a starting point.
 type DocumentIterator interface {
 
 	// Next get the next item in the query result and calls decode to decode into
