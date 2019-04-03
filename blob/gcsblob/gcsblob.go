@@ -249,6 +249,9 @@ func (r *reader) As(i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errUnimplemented {
+		return gcerrors.Unimplemented
+	}
 	if err == storage.ErrObjectNotExist {
 		return gcerrors.NotFound
 	}
@@ -449,6 +452,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		}
 	}
 	return w, nil
+}
+
+var errUnimplemented = errors.New("not implemented")
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.CopyOptions) error {
+	// TODO(rvangent): Implement this and delete errUnimplemented.
+	return errUnimplemented
 }
 
 // Delete implements driver.Delete.

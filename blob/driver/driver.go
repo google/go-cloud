@@ -83,6 +83,14 @@ type WriterOptions struct {
 	BeforeWrite func(asFunc func(interface{}) bool) error
 }
 
+// CopyOptions controls options for Copy.
+type CopyOptions struct {
+	// BeforeCopy is a callback that must be called before initiating the Copy.
+	// asFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	BeforeCopy func(asFunc func(interface{}) bool) error
+}
+
 // ReaderAttributes contains a subset of attributes about a blob that are
 // accessible from Reader.
 type ReaderAttributes struct {
@@ -254,6 +262,16 @@ type Bucket interface {
 	// Implementations should abort an ongoing write if ctx is later canceled,
 	// and do any necessary cleanup in Close. Close should then return ctx.Err().
 	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
+
+	// Copy copies the object associated with srcKey to dstKey.
+	//
+	// If the specified object does not exist, Copy must return an error for which
+	// ErrorCode returns gcerrors.NotFound.
+	//
+	// opts is guaranteed to be non-nil.
+	// TODO(rvangent): Determine and document semantics if there's already an
+	// existing blob at dstKey.
+	Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) error
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, Delete must return an error for which ErrorCode returns

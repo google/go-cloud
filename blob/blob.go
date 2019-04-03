@@ -60,6 +60,7 @@
 //
 // This API collects OpenCensus traces and metrics for the following methods:
 //  - Attributes
+//  - Copy
 //  - Delete
 //  - NewRangeReader, from creation until the call to Close. (NewReader and ReadAll
 //    are included because they call NewRangeReader.)
@@ -794,6 +795,37 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 	return w, nil
 }
 
+// Copy the blob stored at srcKey to dstKey.
+// A nil CopyOptions is treated the same as the zero value.
+//
+// If the source blob does not exist, Copy returns an error for which
+// gcerrors.Code will return gcerrors.NotFound.
+//
+// TODO(rvangent): Determine and document semantics if there's already an
+// existing blob at dstKey.
+func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) (err error) {
+	if !utf8.ValidString(srcKey) {
+		return fmt.Errorf("blob.Copy: srcKey must be a valid UTF-8 string: %q", srcKey)
+	}
+	if !utf8.ValidString(dstKey) {
+		return fmt.Errorf("blob.Copy: dstKey must be a valid UTF-8 string: %q", dstKey)
+	}
+	if opts == nil {
+		opts = &CopyOptions{}
+	}
+	dopts := &driver.CopyOptions{
+		BeforeCopy: opts.BeforeCopy,
+	}
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	if b.closed {
+		return errClosed
+	}
+	ctx = b.tracer.Start(ctx, "Copy")
+	defer func() { b.tracer.End(ctx, err) }()
+	return wrapError(b.b, b.b.Copy(ctx, srcKey, dstKey, dopts))
+}
+
 // Delete deletes the blob stored at key.
 //
 // If the blob does not exist, Delete returns an error for which
@@ -931,6 +963,16 @@ type WriterOptions struct {
 	// asFunc converts its argument to provider-specific types.
 	// See https://godoc.org/gocloud.dev#hdr-As for background information.
 	BeforeWrite func(asFunc func(interface{}) bool) error
+}
+
+// CopyOptions sets options for Copy.
+type CopyOptions struct {
+	// BeforeCopy is a callback that will be called before the copy is
+	// initiated.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeCopy func(asFunc func(interface{}) bool) error
 }
 
 // BucketURLOpener represents types that can open buckets based on a URL.

@@ -1,0 +1,95 @@
+---
+version: 1
+interactions:
+- request:
+    body: Hello World
+    form: {}
+    headers:
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e
+      X-Amz-Date:
+      - 20190404T163032Z
+      X-Amz-Meta-Foo:
+      - bar
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-src
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Thu, 04 Apr 2019 16:30:33 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Gd3CzFLX2rX7A8BLIE9nxKXcW0sB3y4L8zGDh/yQQXxp63+pyQUohHIRM/uBNAAB/PDs9fHYP3o=
+      X-Amz-Request-Id:
+      - EC318288C32E696D
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190404T163032Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-src
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain
+      Date:
+      - Thu, 04 Apr 2019 16:30:33 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Last-Modified:
+      - Thu, 04 Apr 2019 16:30:33 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - m7ieao+IKoTsRYL4zpre1XVs9Ir/bsOFUZfjWvv8oO0ubAoSrksOnUUOkyB6paprJ0auoqBKcdY=
+      X-Amz-Meta-Foo:
+      - bar
+      X-Amz-Request-Id:
+      - F3D6E7A9E6931522
+    status: 200 OK
+    code: 200
+    duration: ""

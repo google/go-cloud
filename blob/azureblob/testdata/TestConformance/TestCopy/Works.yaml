@@ -1,0 +1,117 @@
+---
+version: 1
+interactions:
+- request:
+    body: Hello World
+    form: {}
+    headers:
+      Content-Length:
+      - "11"
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Blob-Cache-Control:
+      - no-cache
+      X-Ms-Blob-Content-Disposition:
+      - inline
+      X-Ms-Blob-Content-Encoding:
+      - identity
+      X-Ms-Blob-Content-Language:
+      - en
+      X-Ms-Blob-Content-Type:
+      - text/plain
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Date:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+      Etag:
+      - '"0x8D6B91ABF32769A"'
+      Last-Modified:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Request-Id:
+      - d0dbe0e4-401e-0068-3803-ebcbe5000000
+      X-Ms-Request-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 201 Created
+    code: 201
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      Date:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+      Etag:
+      - '"0x8D6B91ABF32769A"'
+      Last-Modified:
+      - Thu, 04 Apr 2019 16:29:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Access-Tier:
+      - Hot
+      X-Ms-Access-Tier-Inferred:
+      - "true"
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Creation-Time:
+      - Thu, 04 Apr 2019 16:29:23 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Request-Id:
+      - d0dbe0f4-401e-0068-4403-ebcbe5000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
