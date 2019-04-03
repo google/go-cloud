@@ -304,11 +304,8 @@ type subscription struct {
 	sbSub *servicebus.Subscription
 	opts  *SubscriptionOptions
 
-	// The fields below are used for one-time initialization,
-	// lazily called in ReceiveBatch.
-	// The results of initLinkFn are saved in linkErr and amqpLink.
-	linkErr  error
-	amqpLink *rpc.Link
+	linkErr  error     // saved error for initializing amqpLink
+	amqpLink *rpc.Link // nil if linkErr != nil
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
