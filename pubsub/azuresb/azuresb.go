@@ -304,12 +304,11 @@ type subscription struct {
 	sbSub *servicebus.Subscription
 	opts  *SubscriptionOptions
 
-	// Used for one-time initialization of, lazily called in ReceiveBatch.
+	// The fields below are used for one-time initialization,
+	// lazily called in ReceiveBatch.
 	// The results of initLinkFn are saved in linkErr and amqpLink.
-	initOnce   sync.Once
-	initLinkFn func(context.Context) (*rpc.Link, error)
-	linkErr    error
-	amqpLink   *rpc.Link
+	linkErr  error
+	amqpLink *rpc.Link
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -345,39 +344,37 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 	if opts == nil {
 		opts = &SubscriptionOptions{}
 	}
-	// One-time initialization of Link to AMQP server, lazily initiated in
-	// ReceiveBatch so that we delay "invalid topic/subscription" errors until
-	// then.
-	initLinkFn := func(ctx context.Context) (*rpc.Link, error) {
-		host := fmt.Sprintf("amqps://%s.%s/", sbNs.Name, sbNs.Environment.ServiceBusEndpointSuffix)
-		amqpClient, err := amqp.Dial(host,
-			amqp.ConnSASLAnonymous(),
-			amqp.ConnProperty("product", "Go-Cloud Client"),
-			amqp.ConnProperty("version", servicebus.Version),
-			amqp.ConnProperty("platform", runtime.GOOS),
-			amqp.ConnProperty("framework", runtime.Version()),
-			amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to dial AMQP: %v", err)
-		}
-		entityPath := sbTop.Name + "/Subscriptions/" + sbSub.Name
-		audience := host + entityPath
-		err = cbs.NegotiateClaim(ctx, audience, amqpClient, sbNs.TokenProvider)
-		if err != nil {
-			return nil, fmt.Errorf("failed to negotiate claim with AMQP: %v", err)
-		}
-		link, err := rpc.NewLink(amqpClient, sbSub.ManagementPath())
-		if err != nil {
-			return nil, fmt.Errorf("failed to create link to AMQP %s: %v", sbSub.ManagementPath(), err)
-		}
-		return link, nil
+	sub := &subscription{sbSub: sbSub, opts: opts}
+
+	// Initialize a link to the AMQP server, but save any errors to be
+	// returned in ReceiveBatch instead of returning them here, because we
+	// want "subscription not found" to be a Receive time error.
+	host := fmt.Sprintf("amqps://%s.%s/", sbNs.Name, sbNs.Environment.ServiceBusEndpointSuffix)
+	amqpClient, err := amqp.Dial(host,
+		amqp.ConnSASLAnonymous(),
+		amqp.ConnProperty("product", "Go-Cloud Client"),
+		amqp.ConnProperty("version", servicebus.Version),
+		amqp.ConnProperty("platform", runtime.GOOS),
+		amqp.ConnProperty("framework", runtime.Version()),
+		amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
+	)
+	if err != nil {
+		sub.linkErr = fmt.Errorf("failed to dial AMQP: %v", err)
+		return sub, nil
 	}
-	return &subscription{
-		sbSub:      sbSub,
-		initLinkFn: initLinkFn,
-		opts:       opts,
-	}, nil
+	entityPath := sbTop.Name + "/Subscriptions/" + sbSub.Name
+	audience := host + entityPath
+	if err = cbs.NegotiateClaim(ctx, audience, amqpClient, sbNs.TokenProvider); err != nil {
+		sub.linkErr = fmt.Errorf("failed to negotiate claim with AMQP: %v", err)
+		return sub, nil
+	}
+	link, err := rpc.NewLink(amqpClient, sbSub.ManagementPath())
+	if err != nil {
+		sub.linkErr = fmt.Errorf("failed to create link to AMQP %s: %v", sbSub.ManagementPath(), err)
+		return sub, nil
+	}
+	sub.amqpLink = link
+	return sub, nil
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
@@ -415,13 +412,6 @@ func (s *subscription) AckFunc() func() {
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// Initialize the AMQP link that we use to send Acks/Nacks once, before
-	// receiving messages.
-	// This also verifies existence of the Service Bus Subscription, as initLinkFn
-	// will return an error if the subscription doesn't exist.
-	s.initOnce.Do(func() {
-		s.amqpLink, s.linkErr = s.initLinkFn(ctx)
-	})
 	if s.linkErr != nil {
 		return nil, s.linkErr
 	}
