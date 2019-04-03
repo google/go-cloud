@@ -123,7 +123,7 @@ func TestSendReceive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -132,6 +132,7 @@ func TestSendReceive(t *testing.T) {
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
+	m2.Ack()
 }
 
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
@@ -146,7 +147,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ds, 0, nil)
+	s := pubsub.NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
@@ -167,6 +168,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					}
 					return
 				}
+				m.Ack()
 				mu.Lock()
 				receivedMsgs[string(m.Body)] = true
 				mu.Unlock()
@@ -223,7 +225,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ds, 0, nil)
+	s := pubsub.NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
@@ -254,7 +256,7 @@ func TestCancelTwoReceives(t *testing.T) {
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
 	inReceiveBatch := make(chan int, 1)
-	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, 0, nil)
+	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
 	go func() {
 		s.Receive(context.Background())
 		t.Fatal("Receive should never return")
@@ -314,11 +316,12 @@ func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown 
 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
-	sub := pubsub.NewSubscription(fs, 0, nil)
-	_, err := sub.Receive(context.Background())
+	sub := pubsub.NewSubscription(fs, nil, nil)
+	m, err := sub.Receive(context.Background())
 	if err != nil {
-		t.Errorf("Receive: got %v, want nil", err)
+		t.Fatalf("Receive: got %v, want nil", err)
 	}
+	m.Ack()
 	if got, want := fs.calls, nRetryCalls+1; got != want {
 		t.Errorf("calls: got %d, want %d", got, want)
 	}
@@ -337,9 +340,9 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
 
-func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
-
-func (*failSub) AckFunc() func() { return nil }
+func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
+func (*failSub) AckFunc() func()                                           { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 
@@ -371,7 +374,7 @@ func (erroringSubscription) AckFunc() func()                                { re
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	top := pubsub.NewTopic(erroringTopic{}, nil)
-	sub := pubsub.NewSubscription(erroringSubscription{}, 0, nil)
+	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
 
 	verify := func(err error) {
 		t.Helper()

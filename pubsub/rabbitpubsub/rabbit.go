@@ -389,7 +389,7 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 var errorCodes = map[int]gcerrors.ErrorCode{
 	amqp.NotFound:           gcerrors.NotFound,
 	amqp.PreconditionFailed: gcerrors.FailedPrecondition,
-	// These next indicate  a bug in our driver, not the user's code.
+	// These next indicate a bug in our driver, not the user's code.
 	amqp.SyntaxError:    gcerrors.Internal,
 	amqp.CommandInvalid: gcerrors.Internal,
 	amqp.InternalError:  gcerrors.Internal,
@@ -489,7 +489,7 @@ func errorAs(err error, i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), 0, nil)
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil, nil)
 }
 
 type subscription struct {
@@ -580,6 +580,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				}
 				// s.closec must be closed too. See if it has an error.
 				if err := closeErr(s.closec); err != nil {
+					// PreconditionFailed can happen if we send an Ack or Nack for a
+					// message that has already been acked/nacked. Ignore those errors.
+					if aerr, ok := err.(*amqp.Error); ok && aerr.Code == amqp.PreconditionFailed {
+						return nil, nil
+					}
 					return nil, err
 				}
 				// We shouldn't be here, but if we are, we still want to return an

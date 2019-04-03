@@ -16,6 +16,7 @@ package docstore
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -141,11 +142,12 @@ func (l *ActionList) Delete(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Delete, doc: doc})
 }
 
-// Get adds an action that retrieves a document.
-// Only the key fields of doc are used.
-// If fps is omitted, all the fields of doc are set to those of the
-// retrieved document. If fps is present, only the given field paths are
-// set. In both cases, other fields of doc are not touched.
+// Get adds an action that retrieves a document. Only the key fields of doc are used.
+// If fps is omitted, doc will contain all the fields of the retrieved document. If
+// fps is present, only the given field paths are retrieved, in addition to the
+// revision field. It is undefined whether other fields of doc at the time of the
+// call are removed, unchanged, or zeroed, so for portable behavior doc should
+// contain only the key fields.
 func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 	return l.add(&Action{
 		kind:       driver.Get,
@@ -198,16 +200,43 @@ type Mods map[FieldPath]interface{}
 // An ActionListError is returned by ActionList.Do. It contains all the errors
 // encountered while executing the ActionList, and the positions of the corresponding
 // actions.
-type ActionListError = driver.ActionListError
+type ActionListError []struct {
+	Index int
+	Err   error
+}
 
-// Do executes the action list.
+// TODO(jba): use xerrors formatting.
+
+func (e ActionListError) Error() string {
+	var s []string
+	for _, x := range e {
+		s = append(s, fmt.Sprintf("at %d: %v", x.Index, x.Err))
+	}
+	return strings.Join(s, "; ")
+}
+
+// Unwrap returns the error in e, if there is exactly one. If there is more than one
+// error, Unwrap returns nil, since there is no way to determine which should be
+// returned.
+func (e ActionListError) Unwrap() error {
+	if len(e) == 1 {
+		return e[0].Err
+	}
+	// Return nil when e is nil, or has more than one error.
+	// When there are multiple errors, it doesn't make sense to return any of them.
+	return nil
+}
+
+// Do executes the action list. If any action fails, the returned error will be an
+// ActionListError that contains the position in the ActionList of each failed
+// action.
+//
 // In ordered mode (when the Unordered method was not called on the list), execution
 // will stop after the first action that fails.
+//
 // In unordered mode, all the actions will be executed. In either mode, as a special
 // case, none of the actions will be executed if any is invalid (for example, a Put
 // whose document is missing its key field).
-// If any action fails, the returned error will be an ActionListError that contains
-// the position in the ActionList of each failed action.
 func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
 	var alerr ActionListError
@@ -223,7 +252,7 @@ func (l *ActionList) Do(ctx context.Context) error {
 		}
 	}
 	if len(alerr) > 0 {
-		return alerr
+		return ActionListError(alerr)
 	}
 	alerr = l.coll.driver.RunActions(ctx, das, l.unordered)
 	if alerr != nil { // Explicit non-nil check is necessary because alerr is not of type error.

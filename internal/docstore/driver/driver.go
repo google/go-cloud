@@ -48,11 +48,15 @@ type Collection interface {
 	// ErrNotExecuted errors.
 	RunActions(ctx context.Context, actions []*Action, unordered bool) ActionListError
 
+	// RunQuery executes a Query.
+	//
+	// Implementations can choose to execute the Query as one single request or
+	// multiple ones, depending on their service offerings.
+	RunQuery(context.Context, *Query) error
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode
-
-	// TODO(jba): RunQuery
 }
 
 // ActionKind describes the type of an action.
@@ -107,4 +111,29 @@ func (e ActionListError) Unwrap() error {
 	// Return nil when e is nil, or has more than one error.
 	// When there are multiple errors, it doesn't make sense to return any of them.
 	return nil
+}
+
+// A Query defines a query operation to find documents within a collection based
+// on a set of requirements.
+type Query struct {
+	FieldPaths []string         // the selected field paths
+	Filters    []Filter         // a list of filter for the query
+	Limit      int              // the number of result in one query request
+	StartAt    interface{}      // define the starting point of the query
+	Iter       DocumentIterator // the iterator for Get action
+}
+
+// A Filter defines a filter expression used to filter the query result.
+type Filter struct {
+	Field string      // the field path to filter
+	Op    string      // the operation, supports =, >, >=, <, <=
+	Value interface{} // the value to filter
+}
+
+// A DocumentIterator is an iterator that can iterator through the results (for Get
+// action), and returns the next page that can be passed into a Query as a
+// starting point.
+type DocumentIterator interface {
+	Next(doc Document) error
+	Stop()
 }

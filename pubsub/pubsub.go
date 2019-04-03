@@ -87,9 +87,11 @@ package pubsub // import "gocloud.dev/pubsub"
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"net/url"
 	"reflect"
+	"runtime"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -320,16 +322,17 @@ type Subscription struct {
 	backgroundCtx context.Context // for background SendAcks and ReceiveBatch calls
 	cancel        func()          // for canceling backgroundCtx
 
-	fixedReceiveSize int // if 0, batch size is computed dynamically via updateBatchSize
+	recvBatchOpts *batcher.Options
 
-	mu               sync.Mutex    // protects everything below
-	q                []*Message    // local queue of messages downloaded from server
-	err              error         // permanent error
-	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
-	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time     // start time for throughput measurement, or the zero Time if queue is empty
-	throughputEnd    time.Time     // end time for throughput measurement, or the zero Time if queue is not empty
-	throughputCount  int           // number of msgs given out via Receive since throughputStart
+	mu               sync.Mutex        // protects everything below
+	q                []*driver.Message // local queue of messages downloaded from server
+	err              error             // permanent error
+	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
+	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	runningBatchSize float64           // running number of messages to request via ReceiveBatch
+	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
+	throughputEnd    time.Time         // end time for throughput measurement, or the zero Time if queue is not empty
+	throughputCount  int               // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
 	preReceiveBatchHook func(maxMessages int)
@@ -402,8 +405,9 @@ const (
 //
 // s.mu must be held.
 func (s *Subscription) updateBatchSize() int {
-	if s.fixedReceiveSize != 0 {
-		return s.fixedReceiveSize
+	// If we're always only doing one at a time, there's no point in this.
+	if s.recvBatchOpts != nil && s.recvBatchOpts.MaxBatchSize == 1 && s.recvBatchOpts.MaxHandlers == 1 {
+		return 1
 	}
 	now := time.Now()
 	if s.throughputStart.IsZero() {
@@ -487,6 +491,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
+			s.unreportedAckErr = nil
 			return nil, s.err // s.err wrapped when set
 		}
 
@@ -532,7 +537,50 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			m := s.q[0]
 			s.q = s.q[1:]
 			s.throughputCount++
-			return m, nil
+
+			// Convert driver.Message to Message.
+			id := m.AckID
+			md := m.Metadata
+			if len(md) == 0 {
+				md = nil
+			}
+			m2 := &Message{
+				Body:     m.Body,
+				Metadata: md,
+				asFunc:   m.AsFunc,
+			}
+			if s.ackFunc == nil {
+				m2.ack = func(isAck bool) {
+					// Ignore the error channel. Errors are dealt with
+					// in the ackBatcher handler.
+					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+				}
+			} else {
+				m2.ack = func(isAck bool) {
+					if isAck {
+						s.ackFunc()
+						return
+					}
+					panic("Message.Nack is not supported for this provider")
+				}
+			}
+			if s.ackFunc == nil {
+				// Add a finalizer that complains if the Message we return isn't
+				// acked or nacked.
+				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
+				runtime.SetFinalizer(m2, func(m *Message) {
+					m.mu.Lock()
+					defer m.mu.Unlock()
+					if !m.isAcked {
+						var caller string
+						if ok {
+							caller = fmt.Sprintf(" (%s:%d)", file, lineno)
+						}
+						log.Printf("A pubsub.Message was never Acked or Nacked%s", caller)
+					}
+				})
+			}
+			return m2, nil
 		}
 		// No messages are available.
 		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
@@ -553,46 +601,37 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
-	var msgs []*driver.Message
-	err := retry.Call(s.backgroundCtx, gax.Backoff{}, s.driver.IsRetryable, func() error {
-		var err error
-		ctx2 := s.tracer.Start(s.backgroundCtx, "driver.Subscription.ReceiveBatch")
-		defer func() { s.tracer.End(ctx2, err) }()
-		msgs, err = s.driver.ReceiveBatch(ctx2, nMessages)
-		return err
-	})
-	if err != nil {
-		return nil, wrapError(s.driver, err)
+func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
+	var mu sync.Mutex
+	var q []*driver.Message
+
+	// Split nMessages into batches based on recvBatchOpts; we'll make a
+	// separate ReceiveBatch call for each batch, and aggregate the results in
+	// msgs.
+	batches := batcher.Split(nMessages, s.recvBatchOpts)
+
+	g, ctx := errgroup.WithContext(s.backgroundCtx)
+	for _, maxMessagesInBatch := range batches {
+		g.Go(func() error {
+			var msgs []*driver.Message
+			err := retry.Call(ctx, gax.Backoff{}, s.driver.IsRetryable, func() error {
+				var err error
+				ctx2 := s.tracer.Start(ctx, "driver.Subscription.ReceiveBatch")
+				defer func() { s.tracer.End(ctx2, err) }()
+				msgs, err = s.driver.ReceiveBatch(ctx2, maxMessagesInBatch)
+				return err
+			})
+			if err != nil {
+				return wrapError(s.driver, err)
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			q = append(q, msgs...)
+			return nil
+		})
 	}
-	var q []*Message
-	for _, m := range msgs {
-		id := m.AckID
-		md := m.Metadata
-		if len(md) == 0 {
-			md = nil
-		}
-		m2 := &Message{
-			Body:     m.Body,
-			Metadata: md,
-			asFunc:   m.AsFunc,
-		}
-		if s.ackFunc == nil {
-			m2.ack = func(isAck bool) {
-				// Ignore the error channel. Errors are dealt with
-				// in the ackBatcher handler.
-				_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
-			}
-		} else {
-			m2.ack = func(isAck bool) {
-				if isAck {
-					s.ackFunc()
-					return
-				}
-				panic("Message.Nack is not supported for this provider")
-			}
-		}
-		q = append(q, m2)
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return q, nil
 }
@@ -617,6 +656,12 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	s.cancel()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.unreportedAckErr; err != nil {
+		s.unreportedAckErr = nil
+		return err
+	}
 	return ctx.Err()
 }
 
@@ -641,21 +686,21 @@ var NewSubscription = newSubscription
 
 // newSubscription creates a Subscription from a driver.Subscription.
 //
-// fixedReceiveSize should be 0 except in tests where stability is necessary for
-// record/replay. If non-zero, the maxMessages passed to driver.ReceiveBatch
-// will always be fixedReceiveSize. If 0, maxMessages is determined
-// dynamically based on message throughput.
+// recvBatchOpts sets options for Receive batching. May be nil to accept
+// defaults. The ideal number of messages to receive at a time is determined
+// dynamically, then split into multiple possibly concurrent calls to
+// driver.ReceiveBatch based on recvBatchOptions.
 //
 // ackBatcherOpts sets options for ack+nack batching. May be nil to accept
 // defaults.
-func newSubscription(ds driver.Subscription, fixedReceiveSize int, ackBatcherOpts *batcher.Options) *Subscription {
+func newSubscription(ds driver.Subscription, recvBatchOpts, ackBatcherOpts *batcher.Options) *Subscription {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &Subscription{
 		driver:           ds,
 		tracer:           newTracer(ds),
 		cancel:           cancel,
 		backgroundCtx:    ctx,
-		fixedReceiveSize: fixedReceiveSize,
+		recvBatchOpts:    recvBatchOpts,
 		runningBatchSize: initialBatchSize,
 	}
 	s.ackFunc = ds.AckFunc()
@@ -702,6 +747,7 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 			err = wrapError(s.driver, err)
 			s.mu.Lock()
 			s.err = err
+			s.unreportedAckErr = err
 			s.mu.Unlock()
 		}
 		return err

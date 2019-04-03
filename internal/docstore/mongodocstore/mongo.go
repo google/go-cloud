@@ -29,6 +29,7 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -99,12 +100,21 @@ func (c *collection) runAction(ctx context.Context, action *driver.Action) error
 }
 
 func (c *collection) get(ctx context.Context, a *driver.Action) error {
-	// TODO(jba): use Projection option to return only desired field paths.
 	id, err := a.Doc.GetField(idField)
 	if err != nil {
 		return err
 	}
-	res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+	opts := options.FindOne()
+	if len(a.FieldPaths) > 0 {
+		// Create a "projection document" that specifies the fields to retrieve.
+		// Always get the revision field.
+		proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
+		for _, fp := range a.FieldPaths {
+			proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
+		}
+		opts.Projection = proj
+	}
+	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -238,6 +248,10 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
 	}
 	return filter, id, rev, nil
+}
+
+func (c *collection) RunQuery(context.Context, *driver.Query) error {
+	return errors.New("unimp")
 }
 
 // Error code for a write error when no documents match a filter.

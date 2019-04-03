@@ -194,7 +194,38 @@ func (d decoder) AsBytes() ([]byte, bool) {
 }
 
 func (d decoder) AsInterface() (interface{}, error) {
-	return d.val, nil
+	return toGoValue(d.val)
+}
+
+func toGoValue(v interface{}) (interface{}, error) {
+	switch v := v.(type) {
+	case primitive.A:
+		r := make([]interface{}, len(v))
+		for i, e := range v {
+			d, err := toGoValue(e)
+			if err != nil {
+				return nil, err
+			}
+			r[i] = d
+		}
+		return r, nil
+	case primitive.Binary:
+		return v.Data, nil
+	case primitive.DateTime:
+		return bsonDateTimeToTime(v), nil
+	case map[string]interface{}:
+		r := map[string]interface{}{}
+		for k, e := range v {
+			d, err := toGoValue(e)
+			if err != nil {
+				return nil, err
+			}
+			r[k] = d
+		}
+		return r, nil
+	default:
+		return v, nil
+	}
 }
 
 func (d decoder) ListLen() (int, bool) {
@@ -233,8 +264,12 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 		return true, v.Data, nil
 	case primitive.DateTime:
 		// A DateTime represents milliseconds since the Unix epoch.
-		return true, time.Unix(int64(v)/1000, int64(v)%1000*1e6), nil
+		return true, bsonDateTimeToTime(v), nil
 	default:
 		return false, nil, nil
 	}
+}
+
+func bsonDateTimeToTime(dt primitive.DateTime) time.Time {
+	return time.Unix(int64(dt)/1000, int64(dt)%1000*1e6)
 }

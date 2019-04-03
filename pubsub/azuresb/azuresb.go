@@ -43,6 +43,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,8 +67,6 @@ const (
 	dispositionForNack = "abandoned"
 
 	listenerTimeout = 1 * time.Second
-	rpcTries        = 5
-	rpcRetryDelay   = 1 * time.Second
 )
 
 var sendBatcherOpts = &batcher.Options{
@@ -302,12 +301,11 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 type subscription struct {
-	sbSub           *servicebus.Subscription
-	opts            *SubscriptionOptions
-	topicName       string                // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
-	sbNs            *servicebus.Namespace // Used in driver.subscription.SendAcks to validate credentials before issuing the message complete bulk operation.
-	verifyExists    sync.Once
-	verifyExistsErr error
+	sbSub *servicebus.Subscription
+	opts  *SubscriptionOptions
+
+	linkErr  error     // saved error for initializing amqpLink
+	amqpLink *rpc.Link // nil if linkErr != nil
 }
 
 // SubscriptionOptions will contain configuration for subscriptions.
@@ -326,7 +324,7 @@ func OpenSubscription(ctx context.Context, parentNamespace *servicebus.Namespace
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, 0, nil), nil
+	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
 // openSubscription returns a driver.Subscription.
@@ -343,27 +341,37 @@ func openSubscription(ctx context.Context, sbNs *servicebus.Namespace, sbTop *se
 	if opts == nil {
 		opts = &SubscriptionOptions{}
 	}
-	return &subscription{
-		sbSub:     sbSub,
-		topicName: sbTop.Name,
-		sbNs:      sbNs,
-		opts:      opts,
-	}, nil
-}
+	sub := &subscription{sbSub: sbSub, opts: opts}
 
-// verifySBSubscriptionExists ensures the subscription exists before listening for incoming messages.
-func (s *subscription) verifySBSubscriptionExists(ctx context.Context) error {
-	sm, err := s.sbNs.NewSubscriptionManager(s.topicName)
+	// Initialize a link to the AMQP server, but save any errors to be
+	// returned in ReceiveBatch instead of returning them here, because we
+	// want "subscription not found" to be a Receive time error.
+	host := fmt.Sprintf("amqps://%s.%s/", sbNs.Name, sbNs.Environment.ServiceBusEndpointSuffix)
+	amqpClient, err := amqp.Dial(host,
+		amqp.ConnSASLAnonymous(),
+		amqp.ConnProperty("product", "Go-Cloud Client"),
+		amqp.ConnProperty("version", servicebus.Version),
+		amqp.ConnProperty("platform", runtime.GOOS),
+		amqp.ConnProperty("framework", runtime.Version()),
+		amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
+	)
 	if err != nil {
-		return err
+		sub.linkErr = fmt.Errorf("failed to dial AMQP: %v", err)
+		return sub, nil
 	}
-
-	// An empty SubscriptionEntity means no Service Bus Subscription exists for the given name.
-	se, _ := sm.Get(ctx, s.sbSub.Name)
-	if se == nil {
-		return fmt.Errorf("azuresb: no such subscription %q", s.sbSub.Name)
+	entityPath := sbTop.Name + "/Subscriptions/" + sbSub.Name
+	audience := host + entityPath
+	if err = cbs.NegotiateClaim(ctx, audience, amqpClient, sbNs.TokenProvider); err != nil {
+		sub.linkErr = fmt.Errorf("failed to negotiate claim with AMQP: %v", err)
+		return sub, nil
 	}
-	return nil
+	link, err := rpc.NewLink(amqpClient, sbSub.ManagementPath())
+	if err != nil {
+		sub.linkErr = fmt.Errorf("failed to create link to AMQP %s: %v", sbSub.ManagementPath(), err)
+		return sub, nil
+	}
+	sub.amqpLink = link
+	return sub, nil
 }
 
 // IsRetryable implements driver.Subscription.IsRetryable.
@@ -401,14 +409,8 @@ func (s *subscription) AckFunc() func() {
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	// Verify existence of the Service Bus Subscription before listening for
-	// messages; listening on a non-existent Service Bus Subscription does not
-	// fail. Only required once.
-	s.verifyExists.Do(func() {
-		s.verifyExistsErr = s.verifySBSubscriptionExists(ctx)
-	})
-	if s.verifyExistsErr != nil {
-		return nil, s.verifyExistsErr
+	if s.linkErr != nil {
+		return nil, s.linkErr
 	}
 
 	rctx, cancel := context.WithTimeout(ctx, listenerTimeout)
@@ -473,29 +475,6 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 		return nil
 	}
 
-	// TODO(rvangent): Can we cache this on the subscription instead of
-	// re-dialing every time?
-	host := fmt.Sprintf("amqps://%s.%s/", s.sbNs.Name, s.sbNs.Environment.ServiceBusEndpointSuffix)
-	client, err := amqp.Dial(host,
-		amqp.ConnSASLAnonymous(),
-		amqp.ConnProperty("product", "Go-Cloud Client"),
-		amqp.ConnProperty("version", servicebus.Version),
-		amqp.ConnProperty("platform", runtime.GOOS),
-		amqp.ConnProperty("framework", runtime.Version()),
-		amqp.ConnProperty("user-agent", useragent.AzureUserAgentPrefix("pubsub")),
-	)
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-
-	entityPath := s.topicName + "/Subscriptions/" + s.sbSub.Name
-	audience := host + entityPath
-	err = cbs.NegotiateClaim(ctx, audience, client, s.sbNs.TokenProvider)
-	if err != nil {
-		return nil
-	}
-
 	lockIds := []amqp.UUID{}
 	for _, mid := range ids {
 		if id, ok := mid.(*uuid.UUID); ok {
@@ -503,7 +482,6 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 			lockIds = append(lockIds, amqp.UUID(lockTokenBytes))
 		}
 	}
-
 	value := map[string]interface{}{
 		"disposition-status": disposition,
 		"lock-tokens":        lockIds,
@@ -515,12 +493,37 @@ func (s *subscription) updateMessageDispositions(ctx context.Context, ids []driv
 		Value: value,
 	}
 
-	link, err := rpc.NewLink(client, s.sbSub.ManagementPath())
-	if err != nil {
+	// We're not actually making use of link.Retryable since we're passing 1
+	// here. The portable type will retry as needed.
+	//
+	// We could just use link.RPC, but it returns a result with a status code
+	// in addition to err, and we'd have to check both.
+	_, err := s.amqpLink.RetryableRPC(ctx, 1, 0, msg)
+	if err == nil {
+		return nil
+	}
+	if !isNotFoundErr(err) {
 		return err
 	}
-	_, err = link.RetryableRPC(ctx, rpcTries, rpcRetryDelay, msg)
-	return err
+	// It's a "not found" error, probably due to the message already being
+	// deleted on the server. If we're just acking 1 message, we can just
+	// swallow the error, but otherwise we'll need to retry one by one.
+	if len(ids) == 1 {
+		return nil
+	}
+	for _, lockID := range lockIds {
+		value["lock-tokens"] = []amqp.UUID{lockID}
+		if _, err := s.amqpLink.RetryableRPC(ctx, 1, 0, msg); err != nil && !isNotFoundErr(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+// isNotFoundErr returns true if the error is status code 410, Gone.
+// Azure returns this when trying to ack/nack a message that no longer exists.
+func isNotFoundErr(err error) bool {
+	return strings.Contains(err.Error(), "status code 410")
 }
 
 func errorCode(err error) gcerrors.ErrorCode {

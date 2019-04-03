@@ -18,6 +18,7 @@ package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strings"
 
@@ -146,8 +147,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		// TODO(jba): support field paths.
-		if err := decodeDoc(current, a.Doc); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -207,6 +207,16 @@ func checkRevision(arg driver.Document, current map[string]interface{}) error {
 	return nil
 }
 
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// (see getParentMap).
+func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
+	m2, err := getParentMap(m, fp, false)
+	if err != nil {
+		return nil, err
+	}
+	return m2[fp[len(fp)-1]], nil
+}
+
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
 // needed. It returns an error if a non-final component of fp does not denote a map.
 func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) error {
@@ -246,4 +256,8 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 		}
 	}
 	return m, nil
+}
+
+func (*collection) RunQuery(context.Context, *driver.Query) error {
+	return errors.New("unimp")
 }
