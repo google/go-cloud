@@ -17,6 +17,7 @@ package firedocstore
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -491,6 +492,10 @@ func fpEqual(fp1, fp2 []string) bool {
 		}
 	}
 	return true
+}
+
+func (c *collection) RunQuery(ctx context.Context, q *driver.Query) error {
+	return errors.New("unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
