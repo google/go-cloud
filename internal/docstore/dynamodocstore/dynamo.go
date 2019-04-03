@@ -59,14 +59,17 @@ func (c *collection) KeyFields() []string {
 	return []string{c.partitionKey, c.sortKey}
 }
 
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	for i, a := range actions {
 		var pc *expression.ConditionBuilder
 		var err error
 		if a.Kind != driver.Create && a.Kind != driver.Get {
 			pc, err = revisionPrecondition(a.Doc)
 			if err != nil {
-				return i, err
+				return driver.ActionListError{{i, err}}
 			}
 		}
 		switch a.Kind {
@@ -95,10 +98,10 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 			panic("unimp")
 		}
 		if err != nil {
-			return i, err
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {

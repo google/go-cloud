@@ -31,6 +31,16 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 )
 
+// TODO(jba): Test RunActions with unordered=true. We can't actually test the ordering,
+// but we can check that all actions are executed even if some fail.
+
+// TODO(jba): test an ordered list of actions, with an expected error in the middle,
+// and check that we get the right error back and that the actions after the error
+// aren't executed.
+
+// TODO(jba): test that a malformed action is returned as an error and none of the
+// actions are executed.
+
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
 type Harness interface {
@@ -119,7 +129,7 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	unnamed := docmap{"b": false}
 	// Attempt to clean up
 	defer func() {
-		_, _ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
+		_ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
 	}()
 
 	createThenGet := func(doc docmap) {
@@ -256,8 +266,8 @@ func testGet(t *testing.T, coll *ds.Collection) {
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if n, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
-		t.Fatalf("after %d successful actions: %v", n, err)
+	if errs := coll.Actions().Put(doc).Delete(doc).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	// The document should no longer exist.
 	if err := coll.Get(ctx, doc); err == nil {
@@ -270,8 +280,8 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 	// Delete will fail if the revision field is mismatched.
 	got := docmap{KeyField: doc[KeyField]}
-	if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-		t.Fatal(err)
+	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	doc["x"] = "y"
 	if err := coll.Put(ctx, doc); err != nil {
@@ -290,13 +300,13 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	}
 
 	got := docmap{KeyField: doc[KeyField]}
-	_, err := coll.Actions().Update(doc, ds.Mods{
+	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
 		"c": "C",
 	}).Get(got).Do(ctx)
-	if err != nil {
-		t.Fatal(err)
+	if errs != nil {
+		t.Fatal(errs)
 	}
 	want := docmap{
 		KeyField:         doc[KeyField],
@@ -371,8 +381,8 @@ func testData(t *testing.T, coll *ds.Collection) {
 	} {
 		doc := docmap{KeyField: "testData", "val": test.in}
 		got := docmap{KeyField: doc[KeyField]}
-		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-			t.Fatal(err)
+		if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+			t.Fatal(errs)
 		}
 		want := docmap{
 			"val":            test.want,

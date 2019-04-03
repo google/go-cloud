@@ -24,17 +24,21 @@ import (
 
 // A Collection is a set of documents.
 type Collection interface {
-	// RunActions executes a sequence of actions.
-	// Implementations are free to execute the actions however they wish, but it must
-	// appear as if they were executed in order. The actions need not happen
-	// atomically.
+	// RunActions executes a slice of actions.
 	//
-	// RunActions should return immediately after the first action that fails.
-	// The first return value is the number of actions successfully
-	// executed, and the second is the error that caused the action to fail.
+	// If unordered is false, it must appear as if the actions were executed in the
+	// order they appear in the slice, from the client's point of view. The actions
+	// need not happen atomically, nor does eventual consistency in the provider
+	// system need to be taken into account. For example, after a write returns
+	// successfully, the driver can immediately perform a read on the same document,
+	// even though the provider's semantics does not guarantee that the read will see
+	// the write. RunActions should return immediately after the first action that fails.
+	// The returned slice should have a single element.
 	//
-	// If all actions succeed, RunActions returns (number of actions, nil).
-	RunActions(context.Context, []*Action) (int, error)
+	// If unordered is true, the actions can be executed in any order, perhaps
+	// concurrently. All of the actions should be executed, even if some fail.
+	// The returned slice should have an element for each action that fails.
+	RunActions(ctx context.Context, actions []*Action, unordered bool) ActionListError
 
 	// RunQuery executes a Query.
 	//
@@ -74,6 +78,13 @@ type Action struct {
 type Mod struct {
 	FieldPath []string
 	Value     interface{}
+}
+
+// An ActionListError contains all the errors encountered from a call to RunActions,
+// and the positions of the corresponding actions.
+type ActionListError []struct {
+	Index int
+	Err   error
 }
 
 // A Query defines a query operation to find documents within a collection based
