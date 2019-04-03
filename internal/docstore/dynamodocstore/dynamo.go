@@ -268,7 +268,7 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 }
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return errors.New("unimp")
+	return nil, errors.New("unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

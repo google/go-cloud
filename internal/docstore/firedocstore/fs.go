@@ -499,7 +499,7 @@ func fpEqual(fp1, fp2 []string) bool {
 }
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return errors.New("unimp")
+	return nil, errors.New("unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

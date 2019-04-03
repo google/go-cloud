@@ -259,5 +259,5 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 }
 
 func (*collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
-	return errors.New("unimp")
+	return nil, errors.New("unimp")
 }
