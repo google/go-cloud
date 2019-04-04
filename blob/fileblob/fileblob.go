@@ -529,7 +529,6 @@ func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.C
 		return err
 	}
 	defer f.Close()
-	r := io.Reader(f)
 
 	// We'll write the copy using Writer, to avoid re-implementing making of a
 	// temp file, cleaning up after partial failures, etc.
@@ -549,7 +548,7 @@ func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.C
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(w, r)
+	_, err = io.Copy(w, f)
 	if err != nil {
 		cancel() // cancel before Close cancels the write
 		w.Close()

@@ -1697,6 +1697,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		wantAttr.ModTime = time.Time{} // don't compare this field
 
 		// Copy it to the destination.
 		if err := b.Copy(ctx, srcKey, dstKey, nil); err != nil {
@@ -1717,8 +1718,9 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		// Verify attributes of the copy.
 		gotAttr, err := b.Attributes(ctx, dstKey)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
+		gotAttr.ModTime = time.Time{} // don't compare this field
 		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
 			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
 		}
