@@ -261,7 +261,7 @@ type Bucket interface {
 	//
 	// Implementations should abort an ongoing write if ctx is later canceled,
 	// and do any necessary cleanup in Close. Close should then return ctx.Err().
-	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
+	NewTypedWriter(ctx context.Context, key, contentType string, opts *WriterOptions) (Writer, error)
 
 	// Copy copies the object associated with srcKey to dstKey.
 	//

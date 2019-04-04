@@ -803,6 +803,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 //
 // TODO(rvangent): Determine and document semantics if there's already an
 // existing blob at dstKey.
+// TODO(rvangent): Look into cross-Bucket copies.
 func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) (err error) {
 	if !utf8.ValidString(srcKey) {
 		return fmt.Errorf("blob.Copy: srcKey must be a valid UTF-8 string: %q", srcKey)
