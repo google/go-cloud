@@ -79,16 +79,27 @@ func (m *SchemeMap) FromURL(typ string, u *url.URL) (interface{}, error) {
 	}
 	v, ok := m.m[scheme]
 	if !ok {
-		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q; available schemes: %v", m.api, typ, scheme, u, strings.Join(m.availableSchemes(), ", "))
+		return nil, fmt.Errorf("open %s.%s: no provider registered for %q for URL %q; available schemes: %v", m.api, typ, scheme, u, strings.Join(m.Schemes(), ", "))
 	}
 	return v, nil
 }
 
-func (m *SchemeMap) availableSchemes() []string {
+// Schemes returns a sorted slice of the registered schemes.
+func (m *SchemeMap) Schemes() []string {
 	var schemes []string
 	for s := range m.m {
 		schemes = append(schemes, s)
 	}
 	sort.Strings(schemes)
 	return schemes
+}
+
+// ValidScheme returns true iff scheme has been registered.
+func (m *SchemeMap) ValidScheme(scheme string) bool {
+	for s := range m.m {
+		if scheme == s {
+			return true
+		}
+	}
+	return false
 }

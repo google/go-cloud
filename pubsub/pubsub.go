@@ -795,6 +795,20 @@ type URLMux struct {
 	topicSchemes        openurl.SchemeMap
 }
 
+// TopicSchemes returns a sorted slice of the registered Topic schemes.
+func (mux *URLMux) TopicSchemes() []string { return mux.topicSchemes.Schemes() }
+
+// ValidTopicScheme returns true iff scheme has been registered for Topics.
+func (mux *URLMux) ValidTopicScheme(scheme string) bool { return mux.topicSchemes.ValidScheme(scheme) }
+
+// SubscriptionSchemes returns a sorted slice of the registered Subscription schemes.
+func (mux *URLMux) SubscriptionSchemes() []string { return mux.subscriptionSchemes.Schemes() }
+
+// ValidSubscriptionScheme returns true iff scheme has been registered for Subscriptions.
+func (mux *URLMux) ValidSubscriptionScheme(scheme string) bool {
+	return mux.subscriptionSchemes.ValidScheme(scheme)
+}
+
 // RegisterTopic registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterTopic panics.
 func (mux *URLMux) RegisterTopic(scheme string, opener TopicURLOpener) {

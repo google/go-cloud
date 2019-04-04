@@ -952,6 +952,12 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
+// BucketSchemes returns a sorted slice of the registered Bucket schemes.
+func (mux *URLMux) BucketSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidBucketScheme returns true iff scheme has been registered for Buckets.
+func (mux *URLMux) ValidBucketScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
 // RegisterBucket registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterBucket panics.
 func (mux *URLMux) RegisterBucket(scheme string, opener BucketURLOpener) {

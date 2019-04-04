@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -500,6 +501,26 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterTopic("err", fake)
 	mux.RegisterSubscription("foo", fake)
 	mux.RegisterSubscription("err", fake)
+
+	if diff := cmp.Diff(mux.TopicSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidTopicScheme("foo") || !mux.ValidTopicScheme("err") {
+		t.Errorf("ValidTopicScheme didn't return true for valid scheme")
+	}
+	if mux.ValidTopicScheme("foo2") || mux.ValidTopicScheme("http") {
+		t.Errorf("ValidTopicScheme didn't return false for invalid scheme")
+	}
+
+	if diff := cmp.Diff(mux.SubscriptionSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidSubscriptionScheme("foo") || !mux.ValidSubscriptionScheme("err") {
+		t.Errorf("ValidSubscriptionScheme didn't return true for valid scheme")
+	}
+	if mux.ValidSubscriptionScheme("foo2") || mux.ValidSubscriptionScheme("http") {
+		t.Errorf("ValidSubscriptionScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string

@@ -372,6 +372,12 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
+// VariableSchemes returns a sorted slice of the registered Variable schemes.
+func (mux *URLMux) VariableSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidVariableScheme returns true iff scheme has been registered for Variables.
+func (mux *URLMux) ValidVariableScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
 // RegisterVariable registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterVariable panics.
 func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
