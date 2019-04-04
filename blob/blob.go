@@ -804,10 +804,10 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // TODO(rvangent): Look into cross-Bucket copies.
 func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) (err error) {
 	if !utf8.ValidString(srcKey) {
-		return fmt.Errorf("blob.Copy: srcKey must be a valid UTF-8 string: %q", srcKey)
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy srcKey must be a valid UTF-8 string: %q", srcKey)
 	}
 	if !utf8.ValidString(dstKey) {
-		return fmt.Errorf("blob.Copy: dstKey must be a valid UTF-8 string: %q", dstKey)
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy dstKey must be a valid UTF-8 string: %q", dstKey)
 	}
 	if opts == nil {
 		opts = &CopyOptions{}
