@@ -90,10 +90,18 @@ type ActionListError []struct {
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
-	FieldPaths [][]string  // the selected field paths
-	Filters    []Filter    // a list of filter for the query
-	Limit      int         // the number of result in one query request
-	StartAt    interface{} // define the starting point of the query
+	// FieldPaths contain a list of field paths user selects to return in the query
+	// results. The returned documents should only have these fields populated.
+	FieldPaths [][]string
+
+	// Filters contain a list of filters for the query. If there are more than one
+	// filter, they should be combined with AND.
+	Filters []Filter
+
+	// Limit sets the maximum number of results returned by one query request. It
+	// is always non-negative. When it <= 0, the driver implementation should
+	// choose a reasonable default.
+	Limit int
 }
 
 // A Filter defines a filter expression used to filter the query result.
@@ -103,21 +111,21 @@ type Filter struct {
 	Value     interface{} // the value to compare using the operation
 }
 
-// A DocumentIterator iterates through the results (for Get action), and returns
-// the next page that can be passed into a Query as a starting point.
+// A DocumentIterator iterates through the results (for Get action).
 type DocumentIterator interface {
 
-	// Next get the next item in the query result and calls decode to decode into
-	// Document.
+	// Next tries to get the next item in the query result and decode into Document
+	// with the driver's codec.
 	//
-	// When it is called when the iterator is at the end of a page, it should go
-	// fetch another page if it is possible, though it does not need to guarantee
-	// to have a result.
+	// When the driver makes the query request for a page size smaller than the
+	// limit size, the user may keep asking for next when it reaches the end of a
+	// page, it may fetch another page if it is possible, though it does not need
+	// to guarantee to have a result.
 	//
-	// When there is no result to return, returns a io.EOF.
+	// When there are no more results, it should return io.EOF.
 	Next(context.Context, Document) error
 
-	// Stop cleans up resources of the iterator, if any. It is only expected to be
-	// called when user wants to terminate the iterator early.
+	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup
+	// needed.
 	Stop()
 }

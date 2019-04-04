@@ -76,7 +76,9 @@ func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 }
 
 // DocumentIterator iterates over documents.
-// Call Stop on the iterator when finished.
+//
+// Call Stop on the iterator when you want to finish the read before the
+// iterator returns io.EOF.
 type DocumentIterator struct {
 	iter driver.DocumentIterator
 	err  error
@@ -103,6 +105,9 @@ func (it *DocumentIterator) Next(ctx context.Context, dst Document) error {
 //
 // Stop only needs to be called when you want to terminate the iterator early.
 func (it *DocumentIterator) Stop() {
+	if it.err != nil {
+		return
+	}
 	it.err = io.EOF
 	it.iter.Stop()
 }
