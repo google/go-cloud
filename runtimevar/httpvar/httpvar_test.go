@@ -18,10 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/driver"
-	"gocloud.dev/runtimevar/drivertest"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -29,6 +25,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/runtimevar/drivertest"
 )
 
 type harness struct {
@@ -36,25 +38,25 @@ type harness struct {
 }
 
 func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtimevar.Decoder) (driver.Watcher, error) {
-	endpointUrl, err := url.Parse(h.mockServer.url)
+	endpointURL, err := url.Parse(h.mockServer.baseURL + "/" + name)
 	if err != nil {
 		return nil, err
 	}
-	return newWatcher(http.DefaultClient, endpointUrl, decoder, nil), nil
+	return newWatcher(http.DefaultClient, endpointURL, decoder, nil), nil
 }
 
 func (h *harness) CreateVariable(ctx context.Context, name string, val []byte) error {
-	h.mockServer.SetResponse(string(val))
+	h.mockServer.SetResponse(name, string(val))
 	return nil
 }
 
 func (h *harness) UpdateVariable(ctx context.Context, name string, val []byte) error {
-	h.mockServer.SetResponse(string(val))
+	h.mockServer.SetResponse(name, string(val))
 	return nil
 }
 
 func (h *harness) DeleteVariable(ctx context.Context, name string) error {
-	h.mockServer.DeleteResponse()
+	h.mockServer.DeleteResponse(name)
 	return nil
 }
 
@@ -173,12 +175,12 @@ func TestWatcher_ErrorCode(t *testing.T) {
 		{Err: newRequestError(&http.Response{StatusCode: http.StatusBadGateway}), GCErr: gcerr.Internal},
 	}
 
-	endpointUrl, err := url.Parse("http://example.com")
+	endpointURL, err := url.Parse("http://example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	watcher := newWatcher(http.DefaultClient, endpointUrl, runtimevar.StringDecoder, nil)
+	watcher := newWatcher(http.DefaultClient, endpointURL, runtimevar.StringDecoder, nil)
 	for _, test := range tests {
 		actualGCErr := watcher.ErrorCode(test.Err)
 		if test.GCErr != actualGCErr {
@@ -189,7 +191,7 @@ func TestWatcher_ErrorCode(t *testing.T) {
 
 func TestWatcher_WatchVariable(t *testing.T) {
 	t.Run("client returns an error", func(t *testing.T) {
-		endpointUrl, err := url.Parse("http://example.com")
+		endpointURL, err := url.Parse("http://example.com")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -199,7 +201,7 @@ func TestWatcher_WatchVariable(t *testing.T) {
 		httpClient := &http.Client{
 			Timeout: time.Duration(1 * time.Millisecond),
 		}
-		watcher := newWatcher(httpClient, endpointUrl, runtimevar.StringDecoder, nil)
+		watcher := newWatcher(httpClient, endpointURL, runtimevar.StringDecoder, nil)
 		state, _ := watcher.WatchVariable(context.Background(), &state{})
 
 		val, err := state.Value()
@@ -212,37 +214,89 @@ func TestWatcher_WatchVariable(t *testing.T) {
 	})
 }
 
-type mockServer struct {
-	url      string
-	close    func()
-	response interface{}
-}
+func TestOpenVariable(t *testing.T) {
+	h, err := newHarness(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseURL := h.(*harness).mockServer.baseURL
 
-func (m *mockServer) Init() (string, func()) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if m.response == nil {
-			w.WriteHeader(http.StatusNotFound)
-			return
+	ctx := context.Background()
+	if err := h.CreateVariable(ctx, "string-var", []byte("hello world")); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.CreateVariable(ctx, "json-var", []byte(`{"Foo": "Bar"}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantWatchErr bool
+		Want         interface{}
+	}{
+		// Nonexistentvar does not exist, so we get an error from Watch.
+		{baseURL + "/nonexistentvar", false, true, nil},
+		// Invalid decoder arg.
+		{baseURL + "/string-var?decoder=notadecoder", true, false, nil},
+		// Working example with string decoder.
+		{baseURL + "/string-var?decoder=string", false, false, "hello world"},
+		// Working example with default decoder.
+		{baseURL + "/string-var", false, false, []byte("hello world")},
+		// Working example with JSON decoder.
+		{baseURL + "/json-var?decoder=jsonmap", false, false, &map[string]interface{}{"Foo": "Bar"}},
+	}
+
+	for _, test := range tests {
+		v, err := runtimevar.OpenVariable(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		fmt.Fprint(w, m.response)
-	})
-	server := httptest.NewServer(mux)
-	return server.URL, server.Close
+		if err != nil {
+			continue
+		}
+		snapshot, err := v.Watch(ctx)
+		if (err != nil) != test.WantWatchErr {
+			t.Errorf("%s: got Watch error %v, want error %v", test.URL, err, test.WantWatchErr)
+		}
+		if err != nil {
+			continue
+		}
+		if !cmp.Equal(snapshot.Value, test.Want) {
+			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
+		}
+	}
 }
 
-func (m *mockServer) SetResponse(response interface{}) {
-	m.response = response
+type mockServer struct {
+	baseURL   string
+	close     func()
+	responses map[string]interface{}
 }
 
-func (m *mockServer) DeleteResponse() {
-	m.response = nil
+func (m *mockServer) SetResponse(name string, response interface{}) {
+	m.responses[name] = response
+}
+
+func (m *mockServer) DeleteResponse(name string) {
+	delete(m.responses, name)
 }
 
 func newMockServer() *mockServer {
-	mockServer := &mockServer{}
-	serverUrl, close := mockServer.Init()
-	mockServer.url = serverUrl
-	mockServer.close = close
-	return mockServer
+	mock := &mockServer{responses: map[string]interface{}{}}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		resp := mock.responses[strings.TrimPrefix(r.URL.String(), "/")]
+		if resp == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		fmt.Fprint(w, resp)
+	})
+
+	server := httptest.NewServer(mux)
+	mock.baseURL = server.URL
+	mock.close = server.Close
+	return mock
 }

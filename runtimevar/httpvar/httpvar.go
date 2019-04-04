@@ -13,7 +13,15 @@
 // limitations under the License.
 
 // Package httpvar provides a runtimevar implementation with variables
-// backed by http endpoint. Use New to construct a *runtimevar.Variable.
+// backed by http endpoint. Use NewVariable to construct a *runtimevar.Variable.
+//
+// URLs
+//
+// For runtimevar.OpenVariable, httpvar registers for the schemes "http" and
+// "https". The default URL opener will use http.DefaultClient.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
 // As
 //
@@ -36,6 +44,53 @@ import (
 	"time"
 )
 
+func init() {
+	o := &URLOpener{Client: http.DefaultClient}
+	for _, scheme := range Schemes {
+		runtimevar.DefaultURLMux().RegisterVariable(scheme, o)
+	}
+}
+
+// Schemes are the URL schemes httpvar registers its URLOpener under on runtimevar.DefaultMux.
+var Schemes = []string{"http", "https"}
+
+// URLOpener opens HTTP URLs like "http://myserver.com/foo.txt".
+//
+// The full URL, including scheme, is used as the endpoint, except that the
+// the following URL parameters are removed if present:
+//   - decoder: The decoder to use. Defaults to runtimevar.BytesDecoder.
+//       See runtimevar.DecoderByName for supported values.
+type URLOpener struct {
+	// The Client to use; required.
+	Client *http.Client
+
+	// Decoder specifies the decoder to use if one is not specified in the URL.
+	// Defaults to runtimevar.BytesDecoder.
+	Decoder *runtimevar.Decoder
+
+	// Options specifies the options to pass to NewVariable.
+	Options Options
+}
+
+// OpenVariableURL opens a httpvar Variable for u.
+func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
+	// Clone u because we may strip some query parameters.
+	u2 := *u
+	q := u2.Query()
+
+	decoderName := q.Get("decoder")
+	q.Del("decoder")
+	decoder, err := runtimevar.DecoderByName(ctx, decoderName, o.Decoder)
+	if err != nil {
+		return nil, fmt.Errorf("open variable %v: invalid decoder: %v", u, err)
+	}
+	// See if we changed the query parameters.
+	if rawq := q.Encode(); rawq != u.Query().Encode() {
+		u2.RawQuery = rawq
+	}
+	return NewVariable(o.Client, u2.String(), decoder, &o.Options)
+}
+
 // Options sets options.
 type Options struct {
 	// WaitDuration controls the rate at which the HTTP endpoint is called to check for changes.
@@ -56,12 +111,12 @@ func newRequestError(response *http.Response) *RequestError {
 	return &RequestError{Response: response}
 }
 
-// New constructs a *runtimevar.Variable that uses http.Client
-// to retrieve the variable contents from endpoint.
+// NewVariable constructs a *runtimevar.Variable that uses client
+// to retrieve the variable contents from the URL urlStr.
 func NewVariable(client *http.Client, urlStr string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	endpointURL, err := url.Parse(urlStr)
 	if err != nil {
-		return nil, fmt.Errorf("httpvar: fail to parse url: %v", err)
+		return nil, fmt.Errorf("httpvar: failed to parse url %q: %v", urlStr, err)
 	}
 
 	return runtimevar.New(newWatcher(client, endpointURL, decoder, opts)), nil

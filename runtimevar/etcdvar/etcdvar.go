@@ -101,8 +101,7 @@ type URLOpener struct {
 	Options Options
 }
 
-// OpenVariableURL opens the variable at the URL's path. See the package doc
-// for more details.
+// OpenVariableURL opens a etcdvar Variable for u.
 func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimevar.Variable, error) {
 	q := u.Query()
 
