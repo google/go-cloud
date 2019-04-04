@@ -86,7 +86,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -288,7 +287,7 @@ func (w *Writer) Close() (err error) {
 			if w.w != nil {
 				_ = w.w.Close()
 			}
-			return fmt.Errorf("blob: the ContentMD5 you specified (%X) did not match what was written (%X)", w.contentMD5, md5sum)
+			return gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: the WriterOptions.ContentMD5 you specified (%X) did not match what was written (%X)", w.contentMD5, md5sum)
 		}
 	}
 
@@ -565,7 +564,7 @@ func (b *Bucket) Exists(ctx context.Context, key string) (bool, error) {
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
 	if !utf8.ValidString(key) {
-		return Attributes{}, fmt.Errorf("blob.Attributes: key must be a valid UTF-8 string: %q", key)
+		return Attributes{}, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
 	}
 
 	b.mu.RLock()
@@ -631,10 +630,10 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 		return nil, errClosed
 	}
 	if offset < 0 {
-		return nil, errors.New("blob.NewRangeReader: offset must be non-negative")
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewRangeReader offset must be non-negative (%d)", offset)
 	}
 	if !utf8.ValidString(key) {
-		return nil, fmt.Errorf("blob.NewRangeReader: key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewRangeReader key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &ReaderOptions{}
@@ -696,9 +695,8 @@ func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *Write
 // The caller must call Close on the returned Writer, even if the write is
 // aborted.
 func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions) (_ *Writer, err error) {
-
 	if !utf8.ValidString(key) {
-		return nil, fmt.Errorf("blob.NewWriter: key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: NewWriter key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &WriterOptions{}
@@ -719,17 +717,17 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 		md := make(map[string]string, len(opts.Metadata))
 		for k, v := range opts.Metadata {
 			if k == "" {
-				return nil, errors.New("blob.NewWriter: WriterOptions.Metadata keys may not be empty strings")
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys may not be empty strings")
 			}
 			if !utf8.ValidString(k) {
-				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata keys must be valid UTF-8 strings: %q", k)
 			}
 			if !utf8.ValidString(v) {
-				return nil, fmt.Errorf("blob.NewWriter: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata values must be valid UTF-8 strings: %q", v)
 			}
 			lowerK := strings.ToLower(k)
 			if _, found := md[lowerK]; found {
-				return nil, fmt.Errorf("blob.NewWriter: duplicate case-insensitive metadata key %q", lowerK)
+				return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: WriterOptions.Metadata has a duplicate case-insensitive metadata key: %q", lowerK)
 			}
 			md[lowerK] = v
 		}
@@ -800,7 +798,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // gcerrors.Code will return gcerrors.NotFound.
 func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 	if !utf8.ValidString(key) {
-		return fmt.Errorf("blob.Delete: key must be a valid UTF-8 string: %q", key)
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Delete key must be a valid UTF-8 string: %q", key)
 	}
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -823,13 +821,13 @@ func (b *Bucket) Delete(ctx context.Context, key string) (err error) {
 // will return an error for which gcerrors.Code will return gcerrors.Unimplemented.
 func (b *Bucket) SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error) {
 	if !utf8.ValidString(key) {
-		return "", fmt.Errorf("blob.SignedURL: key must be a valid UTF-8 string: %q", key)
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURL key must be a valid UTF-8 string: %q", key)
 	}
 	if opts == nil {
 		opts = &SignedURLOptions{}
 	}
 	if opts.Expiry < 0 {
-		return "", errors.New("blob.SignedURL: SignedURLOptions.Expiry must be >= 0")
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "blob: SignedURLOptions.Expiry must be >= 0 (%v)", opts.Expiry)
 	}
 	if opts.Expiry == 0 {
 		opts.Expiry = DefaultSignedURLExpiry
@@ -1011,4 +1009,4 @@ func wrapError(b driver.Bucket, err error) error {
 	return gcerr.New(b.ErrorCode(err), err, 2, "blob")
 }
 
-var errClosed = errors.New("blob: operation on closed bucket")
+var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "blob: Bucket has been closed")

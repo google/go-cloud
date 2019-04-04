@@ -160,14 +160,14 @@ func newVar(w driver.Watcher) *Variable {
 		haveGood:         make(chan struct{}),
 		changed:          changed,
 		lastWatch:        changed,
-		lastErr:          errors.New("no value yet"),
+		lastErr:          gcerr.Newf(gcerr.FailedPrecondition, nil, "no value yet"),
 	}
 	go v.background(ctx)
 	return v
 }
 
 // ErrClosed is returned from Watch when the Variable has been Closed.
-var ErrClosed = errors.New("Variable has been closed")
+var ErrClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "Variable has been Closed")
 
 // Watch returns when there is a new Snapshot of the current value of the
 // variable.
