@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"io"
 	"math"
 	"math/rand"
 	"sync"
@@ -99,6 +100,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 }
 
 const KeyField = "_id"
@@ -671,4 +673,96 @@ func (r *randReader) Read(buf []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.r.Read(buf)
+}
+
+func testQuery(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+
+	// Query filters should have the same behavior when doing string and number
+	// comparison.
+	docs := []docmap{
+		{
+			KeyField: "testQuery1",
+			"n":      -4,
+			"s":      "foe",
+		},
+		{
+			KeyField: "testQuery2",
+			"n":      1,
+			"s":      "foo",
+		},
+		{
+			KeyField: "testQuery3",
+			"n":      2.5,
+			"s":      "fog",
+		},
+	}
+	for _, doc := range docs {
+		if err := coll.Put(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name string
+		q    *ds.Query
+		want []docmap
+	}{
+		{
+			name: "LessThan",
+			q:    coll.Query().Where("n", "<", 1).Where("s", "<", "foo"),
+			want: []docmap{{KeyField: "testQuery1"}},
+		},
+		{
+			name: "LessThanEqual",
+			q:    coll.Query().Where("n", "<=", 1).Where("s", "<=", "foo"),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+		{
+			name: "Equal",
+			q:    coll.Query().Where("n", "=", 1).Where("s", "=", "foo"),
+			want: []docmap{{KeyField: "testQuery2"}},
+		},
+		{
+			name: "GreaterThanEqual",
+			q:    coll.Query().Where("n", ">=", 1).Where("s", ">=", "foo"),
+			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThan",
+			q:    coll.Query().Where("n", ">", 1).Where("s", ">", "foo"),
+			want: []docmap{{KeyField: "testQuery3"}},
+		},
+		{
+			name: "Limit",
+			q:    coll.Query().Where("n", ">=", -4).Where("s", "<=", "fog").Limit(2),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			it := tc.q.Get(ctx, KeyField)
+			var got []docmap
+			for {
+				dst := make(docmap)
+				err := it.Next(ctx, dst)
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				got = append(got, dst)
+			}
+			if len(got) != len(tc.want) {
+				t.Errorf("got %d items, want %d", len(got), len(tc.want))
+			}
+			for i, w := range tc.want {
+				w[ds.RevisionField] = got[i][ds.RevisionField]
+				if diff := cmp.Diff(got[i], w); diff != "" {
+					t.Error("query result diff:", diff)
+				}
+			}
+		})
+	}
 }
