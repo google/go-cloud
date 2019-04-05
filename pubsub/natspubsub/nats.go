@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package natspubsub provides a pubsub implementation for NATS.io.
-// Use CreateTopic to construct a *pubsub.Topic, and/or CreateSubscription
+// Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
 // to construct a *pubsub.Subscription. This package uses msgPack and the
 // ugorji driver to encode and decode driver.Message to []byte.
 //
@@ -105,16 +105,17 @@ func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 // Scheme is the URL scheme natspubsub registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "nats"
 
-// URLOpener opens NATS URLs like "nats://mytopic".
+// URLOpener opens NATS URLs like "nats://mysubject".
 //
-// The URL host+path is used as the topic name.
+// The URL host+path is used as the subject.
 //
 // The following query parameters are supported:
 //   - ackfunc: One of "log", "noop", "panic"; defaults to "panic". Determines
 //       the behavior if pubsub.Subscription.Ack (which is a meaningless no-op
-//       for NATS) is called. "log" means a log.Printf warning will be emitted;
+//       for NATS) is called: "log" means a log.Printf warning will be emitted;
 //       "noop" means nothing will happen; and "panic" means the application
-//       will panic.
+//       will panic. See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+//       for more details.
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -130,8 +131,8 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open topic %v: invalid query parameter %s", u, param)
 	}
-	topicName := path.Join(u.Host, u.Path)
-	return CreateTopic(o.Connection, topicName, &o.TopicOptions)
+	subject := path.Join(u.Host, u.Path)
+	return OpenTopic(o.Connection, subject, &o.TopicOptions)
 }
 
 // AckWarning is a message that may be used in ackFuncs.
@@ -158,8 +159,8 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	for param := range q {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
 	}
-	topicName := path.Join(u.Host, u.Path)
-	return CreateSubscription(o.Connection, topicName, ackFunc, &o.SubscriptionOptions)
+	subject := path.Join(u.Host, u.Path)
+	return OpenSubscription(o.Connection, subject, ackFunc, &o.SubscriptionOptions)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
@@ -198,23 +199,24 @@ type encMsg struct {
 	Metadata map[string]string `codec:",omitempty"`
 }
 
-// CreateTopic returns a *pubsub.Topic for use with NATS.
-// For more info, see https://nats.io/documentation/writing_applications/subjects
-func CreateTopic(nc *nats.Conn, topicName string, _ *TopicOptions) (*pubsub.Topic, error) {
-	dt, err := createTopic(nc, topicName)
+// OpenTopic returns a *pubsub.Topic for use with NATS.
+// The subject is the NATS Subject; for more info, see
+// https://nats.io/documentation/writing_applications/subjects.
+func OpenTopic(nc *nats.Conn, subject string, _ *TopicOptions) (*pubsub.Topic, error) {
+	dt, err := openTopic(nc, subject)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewTopic(dt, nil), nil
 }
 
-// createTopic returns the driver for CreateTopic. This function exists so the test
+// openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func createTopic(nc *nats.Conn, topicName string) (driver.Topic, error) {
+func openTopic(nc *nats.Conn, subject string) (driver.Topic, error) {
 	if nc == nil {
 		return nil, errors.New("natspubsub: nats.Conn is required")
 	}
-	return &topic{nc, topicName}, nil
+	return &topic{nc, subject}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -300,7 +302,9 @@ type subscription struct {
 	ackFunc func()
 }
 
-// CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
+// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
+// The subject is the NATS Subject to subscribe to; for more info, see
+// https://nats.io/documentation/writing_applications/subjects.
 //
 // ackFunc will be called when the application calls pubsub.Topic.Ack on a
 // received message; Ack is a meaningless no-op for NATS. You can provide an
@@ -308,16 +312,16 @@ type subscription struct {
 // expect Ack to be called.
 //
 // TODO(dlc) - Options for queue groups?
-func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := createSubscription(nc, subscriptionName, ackFunc)
+func OpenSubscription(nc *nats.Conn, subject string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject, ackFunc)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
-func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
-	sub, err := nc.SubscribeSync(subscriptionName)
+func openSubscription(nc *nats.Conn, subject string, ackFunc func()) (driver.Subscription, error) {
+	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
 		return nil, err
 	}
