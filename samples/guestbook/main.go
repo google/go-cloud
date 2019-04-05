@@ -107,8 +107,14 @@ func main() {
 	defer cleanup()
 
 	// Set up URL routes.
-	r := app.srv.Handler
+	// r := app.srv.Handler
 	// r := mux.NewRouter()
+
+	var thing http.Handler
+	thing = mux.NewRouter()
+
+	var r mux.Router
+	r = app.srv.Handler.(mux.Router)
 
 	// these all error, saying http.Handler has no method
 	// so is the mux.NewRouter actually getting injected?
