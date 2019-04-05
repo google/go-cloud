@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
@@ -74,6 +75,7 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
+// TODO(rvangent): Add BeforeCopy.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
@@ -184,6 +186,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestMD5", func(t *testing.T) {
 		testMD5(t, newHarness)
+	})
+	t.Run("TestCopy", func(t *testing.T) {
+		testCopy(t, newHarness)
 	})
 	t.Run("TestDelete", func(t *testing.T) {
 		testDelete(t, newHarness)
@@ -1619,6 +1624,139 @@ func testMD5(t *testing.T, newHarness HarnessMaker) {
 	if obj.MD5 != nil && !bytes.Equal(obj.MD5, bMD5[:]) {
 		t.Errorf("got MD5\n%x\nwant\n%x", obj.MD5, bMD5)
 	}
+}
+
+// testCopy tests the functionality of Copy.
+func testCopy(t *testing.T, newHarness HarnessMaker) {
+	const (
+		srcKey             = "blob-for-copying-src"
+		dstKey             = "blob-for-copying-dest"
+		dstKeyExists       = "blob-for-copying-dest-exists"
+		contentType        = "text/plain"
+		cacheControl       = "no-cache"
+		contentDisposition = "inline"
+		contentEncoding    = "identity"
+		contentLanguage    = "en"
+	)
+	var contents = []byte("Hello World")
+
+	ctx := context.Background()
+	t.Run("NonExistentSourceFails", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+
+		err = b.Copy(ctx, dstKey, "does-not-exist", nil)
+		// TODO(rvangent): Remove when implemented for all providers.
+		if gcerrors.Code(err) == gcerrors.Unimplemented {
+			t.Skip("Copy not yet implemented")
+		}
+		if err == nil {
+			t.Errorf("got nil want error")
+		} else if gcerrors.Code(err) != gcerrors.NotFound {
+			t.Errorf("got %v want NotFound error", err)
+		}
+	})
+
+	t.Run("Works", func(t *testing.T) {
+		h, err := newHarness(ctx, t)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer h.Close()
+		drv, err := h.MakeDriver(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := blob.NewBucket(drv)
+		defer b.Close()
+
+		// Create the source blob.
+		wopts := &blob.WriterOptions{
+			ContentType:        contentType,
+			CacheControl:       cacheControl,
+			ContentDisposition: contentDisposition,
+			ContentEncoding:    contentEncoding,
+			ContentLanguage:    contentLanguage,
+			Metadata:           map[string]string{"foo": "bar"},
+		}
+		if err := b.WriteAll(ctx, srcKey, contents, wopts); err != nil {
+			t.Fatal(err)
+		}
+
+		// Grab its attributes to compare to the copy's attributes later.
+		wantAttr, err := b.Attributes(ctx, srcKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantAttr.ModTime = time.Time{} // don't compare this field
+
+		// Create another blob that we're going to overwrite.
+		if err := b.WriteAll(ctx, dstKeyExists, []byte("clobber me"), nil); err != nil {
+			t.Fatal(err)
+		}
+
+		// Copy the source to the destination.
+		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
+			// TODO(rvangent): Remove when implemented for all providers.
+			if gcerrors.Code(err) == gcerrors.Unimplemented {
+				t.Skip("Copy not yet implemented")
+			}
+			t.Errorf("got unexpected error copying blob: %v", err)
+		}
+		// Read the copy.
+		got, err := b.ReadAll(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cmp.Equal(got, contents) {
+			t.Errorf("got %q want %q", string(got), string(contents))
+		}
+		// Verify attributes of the copy.
+		gotAttr, err := b.Attributes(ctx, dstKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotAttr.ModTime = time.Time{} // don't compare this field
+		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
+			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
+		}
+
+		// Copy the source to the second destination, where there's an existing blob.
+		// It should be overwritten.
+		if err := b.Copy(ctx, dstKeyExists, srcKey, nil); err != nil {
+			// TODO(rvangent): Remove when implemented for all providers.
+			if gcerrors.Code(err) == gcerrors.Unimplemented {
+				t.Skip("Copy not yet implemented")
+			}
+			t.Errorf("got unexpected error copying blob: %v", err)
+		}
+		// Read the copy.
+		got, err = b.ReadAll(ctx, dstKeyExists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !cmp.Equal(got, contents) {
+			t.Errorf("got %q want %q", string(got), string(contents))
+		}
+		// Verify attributes of the copy.
+		gotAttr, err = b.Attributes(ctx, dstKeyExists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotAttr.ModTime = time.Time{} // don't compare this field
+		if diff := cmp.Diff(gotAttr, wantAttr, cmpopts.IgnoreUnexported(blob.Attributes{})); diff != "" {
+			t.Errorf("got %v want %v diff %s", gotAttr, wantAttr, diff)
+		}
+	})
 }
 
 // testDelete tests the functionality of Delete.
