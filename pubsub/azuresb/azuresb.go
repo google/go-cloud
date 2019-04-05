@@ -32,7 +32,8 @@
 // mode; applications must call Message.Ack after processing a message, or
 // it will be redelivered. However, it also supports a Receive-Delete mode,
 // which essentially auto-acks a message when it is delivered, resulting in
-// at-most-once semantics. See SubscriberOptions.AckFuncForReceiveAndDelete.
+// at-most-once semantics. Use SubscriberOptions.AckFuncForReceiveAndDelete
+// to choose between the two.
 // See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
 // for more background.
 //
