@@ -388,6 +388,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	panic("unreachable")
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return false }
+
 // SendNacks implements driver.Subscription.SendNacks. It should never be called
 // because we provide a non-nil AckFunc.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {

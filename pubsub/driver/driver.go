@@ -148,6 +148,12 @@ type Subscription interface {
 	// pubsub.NewSubscription.
 	SendAcks(ctx context.Context, ackIDs []AckID) error
 
+	// CanNack must return true iff the driver supports Nacking messages.
+	//
+	// If CanNack returns false, SendNacks will never be called, and Nack will
+	// panic if called.
+	CanNack() bool
+
 	// SendNacks should notify the server that the messages with the given ackIDs
 	// are not being processed by this client, so that they will be received
 	// again later, potentially by another subscription.

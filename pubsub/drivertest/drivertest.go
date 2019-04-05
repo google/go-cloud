@@ -336,7 +336,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer subCleanup()
-	if ds.AckFunc() != nil {
+	if !ds.CanNack() {
 		t.Skip("Nack not supported")
 	}
 	topic := pubsub.NewTopic(dt, batchSizeOne)
@@ -519,6 +519,10 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	err = ds.SendAcks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !ds.CanNack() {
+		return
 	}
 
 	// Nack all 3 messages. This should also succeed, and the nack of the third
