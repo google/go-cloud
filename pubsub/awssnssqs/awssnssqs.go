@@ -26,6 +26,13 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// AWS SNS and SQS combine to support at-least-once semantics; applications must
+// call Message.Ack/Nack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // Escaping
 //
 // Go CDK supports all UTF-8 strings; to make this work with providers lacking
