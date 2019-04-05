@@ -250,8 +250,8 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 	return filter, id, rev, nil
 }
 
-func (c *collection) RunQuery(context.Context, *driver.Query) error {
-	return errors.New("unimp")
+func (c *collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
+	return nil, errors.New("unimp")
 }
 
 // Error code for a write error when no documents match a filter.

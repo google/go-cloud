@@ -258,6 +258,6 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 	return m, nil
 }
 
-func (*collection) RunQuery(context.Context, *driver.Query) error {
-	return errors.New("unimp")
+func (*collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
+	return nil, errors.New("unimp")
 }

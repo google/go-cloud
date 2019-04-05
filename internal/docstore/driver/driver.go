@@ -40,11 +40,11 @@ type Collection interface {
 	// The returned slice should have an element for each action that fails.
 	RunActions(ctx context.Context, actions []*Action, unordered bool) ActionListError
 
-	// RunQuery executes a Query.
+	// RunGetQuery executes a Query.
 	//
 	// Implementations can choose to execute the Query as one single request or
 	// multiple ones, depending on their service offerings.
-	RunQuery(context.Context, *Query) error
+	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -90,24 +90,40 @@ type ActionListError []struct {
 // A Query defines a query operation to find documents within a collection based
 // on a set of requirements.
 type Query struct {
-	FieldPaths [][]string       // the selected field paths
-	Filters    []Filter         // a list of filter for the query
-	Limit      int              // the number of result in one query request
-	StartAt    interface{}      // define the starting point of the query
-	Iter       DocumentIterator // the iterator for Get action
+	// FieldPaths contain a list of field paths the user selects to return in the
+	// query results. The returned documents should only have these fields
+	// populated.
+	FieldPaths [][]string
+
+	// Filters contain a list of filters for the query. If there are more than one
+	// filter, they should be combined with AND.
+	Filters []Filter
+
+	// Limit sets the maximum number of results returned by running the query. When
+	// Limit <= 0, the driver implementation should return all possible results.
+	Limit int
 }
 
 // A Filter defines a filter expression used to filter the query result.
+// If the value is a number type, the filter uses numeric comparison.
+// If the value is a string type, the filter uses UTF-8 string comparison.
+// TODO(#1762): support comparison of other types.
 type Filter struct {
 	FieldPath []string    // the field path to filter
 	Op        string      // the operation, supports =, >, >=, <, <=
 	Value     interface{} // the value to compare using the operation
 }
 
-// A DocumentIterator is an iterator that can iterator through the results (for Get
-// action), and returns the next page that can be passed into a Query as a
-// starting point.
+// A DocumentIterator iterates through the results (for Get action).
 type DocumentIterator interface {
-	Next(doc Document) error
+
+	// Next tries to get the next item in the query result and decodes into Document
+	// with the driver's codec.
+	//
+	// When there are no more results, it should return io.EOF.
+	Next(context.Context, Document) error
+
+	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup
+	// needed.
 	Stop()
 }
