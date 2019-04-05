@@ -29,7 +29,7 @@
 // Message Delivery Semantics
 //
 // Azure ServiceBus supports at-least-once semantics in the default Peek-Lock
-// mode; applications must call Message.Ack/Nack after processing a message, or
+// mode; applications must call Message.Ack after processing a message, or
 // it will be redelivered. However, it also supports a Receive-Delete mode,
 // which essentially auto-acks a message when it is delivered, resulting in
 // at-most-once semantics. See SubscriberOptions.AckFuncForReceiveAndDelete.
