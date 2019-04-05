@@ -40,7 +40,7 @@ func TestFilterToProto(t *testing.T) {
 			}},
 		},
 		{
-			driver.Filter{[]string{"a"}, "==", nil},
+			driver.Filter{[]string{"a"}, driver.EqualOp, nil},
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
 				UnaryFilter: &pb.StructuredQuery_UnaryFilter{
 					OperandType: &pb.StructuredQuery_UnaryFilter_Field{
@@ -51,7 +51,7 @@ func TestFilterToProto(t *testing.T) {
 			}},
 		},
 		{
-			driver.Filter{[]string{"a"}, "==", math.NaN()},
+			driver.Filter{[]string{"a"}, driver.EqualOp, math.NaN()},
 			&pb.StructuredQuery_Filter{FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
 				UnaryFilter: &pb.StructuredQuery_UnaryFilter{
 					OperandType: &pb.StructuredQuery_UnaryFilter_Field{

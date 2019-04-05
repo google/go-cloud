@@ -117,10 +117,10 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, error) 
 }
 
 func filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
-	// "== nil" and "== NaN" are handled specially.
+	// "= nil" and "= NaN" are handled specially.
 	if uop, ok := unaryOpFor(f.Value); ok {
-		if f.Op != "==" {
-			return nil, fmt.Errorf("firestore: must use '==' when comparing %v", f.Value)
+		if f.Op != driver.EqualOp {
+			return nil, fmt.Errorf("firestore: must use '=' when comparing %v", f.Value)
 		}
 		return &pb.StructuredQuery_Filter{
 			FilterType: &pb.StructuredQuery_Filter_UnaryFilter{
@@ -143,7 +143,7 @@ func filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
 		op = pb.StructuredQuery_FieldFilter_GREATER_THAN
 	case ">=":
 		op = pb.StructuredQuery_FieldFilter_GREATER_THAN_OR_EQUAL
-	case "==":
+	case driver.EqualOp:
 		op = pb.StructuredQuery_FieldFilter_EQUAL
 	// TODO(jba): can we support array-contains portably?
 	// case "array-contains":
