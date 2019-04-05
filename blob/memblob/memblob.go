@@ -338,7 +338,7 @@ func (w *writer) Close() error {
 }
 
 // Copy implements driver.Copy.
-func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.CopyOptions) error {
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

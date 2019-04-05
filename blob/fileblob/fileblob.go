@@ -517,7 +517,7 @@ func (w *writer) Close() error {
 }
 
 // Copy implements driver.Copy.
-func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.CopyOptions) error {
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	// Note: we could use NewRangedReader here, but since we need to copy all of
 	// the metadata (from xa), it's more efficient to do it directly.
 	srcPath, _, xa, err := b.forKey(srcKey)

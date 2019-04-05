@@ -1654,7 +1654,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		b := blob.NewBucket(drv)
 		defer b.Close()
 
-		err = b.Copy(ctx, "does-not-exist", dstKey, nil)
+		err = b.Copy(ctx, dstKey, "does-not-exist", nil)
 		// TODO(rvangent): Remove when implemented for all providers.
 		if gcerrors.Code(err) == gcerrors.Unimplemented {
 			t.Skip("Copy not yet implemented")
@@ -1705,7 +1705,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		}
 
 		// Copy the source to the destination.
-		if err := b.Copy(ctx, srcKey, dstKey, nil); err != nil {
+		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
 			// TODO(rvangent): Remove when implemented for all providers.
 			if gcerrors.Code(err) == gcerrors.Unimplemented {
 				t.Skip("Copy not yet implemented")
@@ -1732,7 +1732,7 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 
 		// Copy the source to the second destination, where there's an existing blob.
 		// It should be overwritten.
-		if err := b.Copy(ctx, srcKey, dstKeyExists, nil); err != nil {
+		if err := b.Copy(ctx, dstKeyExists, srcKey, nil); err != nil {
 			// TODO(rvangent): Remove when implemented for all providers.
 			if gcerrors.Code(err) == gcerrors.Unimplemented {
 				t.Skip("Copy not yet implemented")

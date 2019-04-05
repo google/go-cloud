@@ -317,7 +317,7 @@ func (b *bucket) Close() error {
 var errUnimplemented = errors.New("not implemented")
 
 // Copy implements driver.Copy.
-func (b *bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *driver.CopyOptions) error {
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	// TODO(rvangent): Implement this and delete errUnimplemented.
 	return errUnimplemented
 }

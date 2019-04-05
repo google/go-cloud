@@ -800,7 +800,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // gcerrors.Code will return gcerrors.NotFound.
 //
 // If the destination blob already exists, it is overwritten.
-func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) (err error) {
+func (b *Bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) (err error) {
 	if !utf8.ValidString(srcKey) {
 		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy srcKey must be a valid UTF-8 string: %q", srcKey)
 	}
@@ -820,7 +820,7 @@ func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOpti
 	}
 	ctx = b.tracer.Start(ctx, "Copy")
 	defer func() { b.tracer.End(ctx, err) }()
-	return wrapError(b.b, b.b.Copy(ctx, srcKey, dstKey, dopts))
+	return wrapError(b.b, b.b.Copy(ctx, dstKey, srcKey, dopts))
 }
 
 // Delete deletes the blob stored at key.

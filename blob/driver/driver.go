@@ -271,7 +271,7 @@ type Bucket interface {
 	// If the destination object already exists, it should be overwritten.
 	//
 	// opts is guaranteed to be non-nil.
-	Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) error
+	Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) error
 
 	// Delete deletes the object associated with key. If the specified object does
 	// not exist, Delete must return an error for which ErrorCode returns
