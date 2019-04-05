@@ -100,7 +100,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
-	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
+	// t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 }
 
 const KeyField = "_id"
