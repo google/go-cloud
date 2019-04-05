@@ -76,6 +76,7 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
+// TODO(rvangent): Add BeforeCopy.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
