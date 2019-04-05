@@ -265,12 +265,12 @@ type Bucket interface {
 
 	// Copy copies the object associated with srcKey to dstKey.
 	//
-	// If the specified object does not exist, Copy must return an error for which
+	// If the source object does not exist, Copy must return an error for which
 	// ErrorCode returns gcerrors.NotFound.
 	//
+	// If the destination object already exists, it should be overwritten.
+	//
 	// opts is guaranteed to be non-nil.
-	// TODO(rvangent): Determine and document semantics if there's already an
-	// existing blob at dstKey.
 	Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) error
 
 	// Delete deletes the object associated with key. If the specified object does

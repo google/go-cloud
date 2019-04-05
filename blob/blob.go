@@ -799,9 +799,7 @@ func (b *Bucket) NewWriter(ctx context.Context, key string, opts *WriterOptions)
 // If the source blob does not exist, Copy returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
 //
-// TODO(rvangent): Determine and document semantics if there's already an
-// existing blob at dstKey.
-// TODO(rvangent): Look into cross-Bucket copies.
+// If the destination blob already exists, it is overwritten.
 func (b *Bucket) Copy(ctx context.Context, srcKey, dstKey string, opts *CopyOptions) (err error) {
 	if !utf8.ValidString(srcKey) {
 		return gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Copy srcKey must be a valid UTF-8 string: %q", srcKey)
