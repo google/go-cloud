@@ -71,6 +71,7 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // 6. Calls List using BeforeList as a ListOption, and calls ListObjectCheck
 //    on the single blob entry returned.
 // 7. Tries to read a non-existent blob, and calls ErrorCheck with the error.
+// 8. Makes a copy of the blob, using BeforeCopy as a CopyOption.
 //
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
@@ -86,6 +87,9 @@ type AsTest interface {
 	// BeforeWrite will be passed directly to WriterOptions as part of creating
 	// a test blob.
 	BeforeWrite(as func(interface{}) bool) error
+	// BeforeCopy will be passed directly to CopyOptions as part of copying
+	// the test blob.
+	BeforeCopy(as func(interface{}) bool) error
 	// BeforeList will be passed directly to ListOptions as part of listing the
 	// test blob.
 	BeforeList(as func(interface{}) bool) error
@@ -126,6 +130,13 @@ func (verifyAsFailsOnNil) ErrorCheck(b *blob.Bucket, err error) (ret error) {
 func (verifyAsFailsOnNil) BeforeWrite(as func(interface{}) bool) error {
 	if as(nil) {
 		return errors.New("want Writer.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeCopy(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Copy.As to return false when passed nil")
 	}
 	return nil
 }
@@ -1984,8 +1995,9 @@ func testSignedURL(t *testing.T, newHarness HarnessMaker) {
 // testAs tests the various As functions, using AsTest.
 func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	const (
-		dir = "mydir"
-		key = dir + "/as-test"
+		dir     = "mydir"
+		key     = dir + "/as-test"
+		copyKey = dir + "/as-test-copy"
 	)
 	var content = []byte("hello world")
 	ctx := context.Background()
@@ -2079,6 +2091,16 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	if err := st.ErrorCheck(b, gotErr); err != nil {
 		t.Error(err)
+	}
+
+	// Copy the blob, using the provided callback.
+	// TODO(rvangent): Clean up the unimplemented check once all drivers are implemented.
+	if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil {
+		if gcerrors.Code(err) != gcerrors.Unimplemented {
+			t.Error(err)
+		}
+	} else {
+		defer func() { _ = b.Delete(ctx, copyKey) }()
 	}
 }
 
