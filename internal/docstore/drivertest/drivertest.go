@@ -683,7 +683,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Delete existing documents.
-	err := forEach(ctx, coll.Query(), func(m docmap) error { return coll.Delete(ctx, m) })
+	err := forEach(ctx, coll.Query().Get(ctx), func(m docmap) error { return coll.Delete(ctx, m) })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -737,7 +737,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		{
 			name: "LessThanEqualString",
 			q:    coll.Query().Where("s", "<=", "fog"),
-			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery3"}},
 		},
 		{
 			name: "EqualNum",
@@ -757,7 +757,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		{
 			name: "GreaterThanEqualString",
 			q:    coll.Query().Where("s", ">=", "fog"),
-			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+			want: []docmap{{KeyField: "testQuery3"}, {KeyField: "testQuery2"}},
 		},
 		{
 			name: "GreaterThanNum",
@@ -765,9 +765,9 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 			want: []docmap{{KeyField: "testQuery3"}},
 		},
 		{
-			name: "GreaterThanStrung",
+			name: "GreaterThanString",
 			q:    coll.Query().Where("s", ">", "fog"),
-			want: []docmap{{KeyField: "testQuery3"}},
+			want: []docmap{{KeyField: "testQuery2"}},
 		},
 		{
 			name: "Limit",
@@ -777,7 +777,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := mustCollect(ctx, t, tc.q)
+			got := mustCollect(ctx, t, tc.q.Get(ctx, KeyField))
 			if len(got) != len(tc.want) {
 				t.Errorf("got %d items, want %d", len(got), len(tc.want))
 			}
@@ -791,8 +791,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 }
 
-func forEach(ctx context.Context, q *ds.Query, f func(docmap) error) error {
-	iter := q.Get(ctx)
+func forEach(ctx context.Context, iter *ds.DocumentIterator, f func(docmap) error) error {
 	for {
 		m := docmap{}
 		err := iter.Next(ctx, m)
@@ -809,10 +808,10 @@ func forEach(ctx context.Context, q *ds.Query, f func(docmap) error) error {
 	return nil
 }
 
-func mustCollect(ctx context.Context, t *testing.T, q *ds.Query) []docmap {
+func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []docmap {
 	var ms []docmap
 	collect := func(m docmap) error { ms = append(ms, m); return nil }
-	if err := forEach(ctx, q, collect); err != nil {
+	if err := forEach(ctx, iter, collect); err != nil {
 		t.Fatal(err)
 	}
 	return ms
