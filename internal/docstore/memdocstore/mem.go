@@ -18,7 +18,6 @@ package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strings"
 
@@ -259,5 +258,5 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 }
 
 func (*collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
-	return nil, errors.New("unimp")
+	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
