@@ -16,7 +16,6 @@ package dynamodocstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -268,7 +267,7 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 }
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return nil, errors.New("unimp")
+	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

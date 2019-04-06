@@ -29,7 +29,6 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -251,7 +250,7 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 }
 
 func (c *collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
-	return nil, errors.New("unimp")
+	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
 
 // Error code for a write error when no documents match a filter.
