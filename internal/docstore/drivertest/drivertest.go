@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
 	ds "gocloud.dev/internal/docstore"
@@ -778,14 +779,14 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			got := mustCollect(ctx, t, tc.q.Get(ctx, KeyField))
-			if len(got) != len(tc.want) {
-				t.Errorf("got %d items, want %d", len(got), len(tc.want))
+			for _, g := range got {
+				delete(g, ds.RevisionField)
 			}
-			for i, w := range tc.want {
-				w[ds.RevisionField] = got[i][ds.RevisionField]
-				if diff := cmp.Diff(got[i], w); diff != "" {
-					t.Error("query result diff:", diff)
-				}
+			diff := cmp.Diff(got, tc.want, cmpopts.SortSlices(func(d1, d2 docmap) bool {
+				return d1[KeyField].(string) < d2[KeyField].(string)
+			}))
+			if diff != "" {
+				t.Error(diff)
 			}
 		})
 	}

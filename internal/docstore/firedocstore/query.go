@@ -69,6 +69,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 		if res.Document != nil {
 			break
 		}
+
 		// No document => partial progress; keep receiving.
 	}
 	return decodeDoc(res.Document, doc)
@@ -111,7 +112,7 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, error) 
 			}},
 		}
 	}
-	// TODO(jba): ordering
+	// TODO(jba): order
 	// TODO(jba): cursors (start/end)
 	return p, nil
 }
