@@ -72,14 +72,14 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
-	var app *application
+	var srv *server.Server
 	var cleanup func()
 	var err error
 	switch envFlag {
 	case "gcp":
-		app, cleanup, err = setupGCP(ctx, cf)
+		srv, cleanup, err = setupGCP(ctx, cf)
 	case "aws":
-		app, cleanup, err = setupAWS(ctx, cf)
+		srv, cleanup, err = setupAWS(ctx, cf)
 	case "azure":
 		if cf.dbHost == "" {
 			cf.dbHost = "localhost"
@@ -87,7 +87,7 @@ func main() {
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
-		app, cleanup, err = setupAzure(ctx, cf)
+		srv, cleanup, err = setupAzure(ctx, cf)
 	case "local":
 		// The default MySQL instance is running on localhost
 		// with this root password.
@@ -97,7 +97,7 @@ func main() {
 		if cf.dbPassword == "" {
 			cf.dbPassword = "xyzzy"
 		}
-		app, cleanup, err = setupLocal(ctx, cf)
+		srv, cleanup, err = setupLocal(ctx, cf)
 	default:
 		log.Fatalf("unknown -env=%s", envFlag)
 	}
@@ -106,25 +106,9 @@ func main() {
 	}
 	defer cleanup()
 
-	// Set up URL routes.
-	// r := app.srv.Handler
-	// r := mux.NewRouter()
-
-	var thing http.Handler
-	thing = mux.NewRouter()
-
-	var r mux.Router
-	r = app.srv.Handler.(mux.Router)
-
-	// these all error, saying http.Handler has no method
-	// so is the mux.NewRouter actually getting injected?
-	r.HandleFunc("/", app.index)
-	r.HandleFunc("/sign", app.sign)
-	r.HandleFunc("/blob/{key:.+}", app.serveBlob)
-
 	// Listen and serve HTTP.
 	log.Printf("Running, connected to %q cloud", envFlag)
-	log.Fatal(app.srv.ListenAndServe(*addr))
+	log.Fatal(srv.ListenAndServe(*addr))
 }
 
 // applicationSet is the Wire provider set for the Guestbook application that
@@ -133,14 +117,21 @@ var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
 	trace.AlwaysSample,
-	mux.NewRouter,
+	NewRouter,
 	wire.Bind((*http.Handler)(nil), (*mux.Router)(nil)),
 )
+
+func NewRouter(app *application) *mux.Router {
+	r := mux.NewRouter()
+	r.HandleFunc("/", app.index)
+	r.HandleFunc("/sign", app.sign)
+	r.HandleFunc("/blob/{key:.+}", app.serveBlob)
+	return r
+}
 
 // application is the main server struct for Guestbook. It contains the state of
 // the most recently read message of the day.
 type application struct {
-	srv     *server.Server
 	db      *sql.DB
 	bucket  *blob.Bucket
 	motdVar *runtimevar.Variable
@@ -148,9 +139,8 @@ type application struct {
 
 // newApplication creates a new application struct based on the backends and the message
 // of the day variable.
-func newApplication(srv *server.Server, db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
+func newApplication(db *sql.DB, bucket *blob.Bucket, motdVar *runtimevar.Variable) *application {
 	return &application{
-		srv:     srv,
 		db:      db,
 		bucket:  bucket,
 		motdVar: motdVar,

@@ -27,6 +27,7 @@ import (
 	"gocloud.dev/mysql/rdsmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/awsparamstore"
+	"gocloud.dev/server"
 )
 
 // This file wires the generic interfaces up to Amazon Web Services (AWS). It
@@ -35,7 +36,7 @@ import (
 // into wire_gen.go when Wire is run.
 
 // setupAWS is a Wire injector function that sets up the application using AWS.
-func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(

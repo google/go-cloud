@@ -7,16 +7,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"net/http"
-
 	"contrib.go.opencensus.io/exporter/stackdriver/monitoredresource"
+	"database/sql"
 	"github.com/Azure/azure-pipeline-go/pipeline"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-sql-driver/mysql"
-	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 	"gocloud.dev/aws/rds"
 	"gocloud.dev/blob"
@@ -37,13 +34,13 @@ import (
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 	"gocloud.dev/server/xrayserver"
+	"google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
+	"net/http"
 )
 
 // Injectors from inject_aws.go:
 
-func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	router := mux.NewRouter()
-	ncsaLogger := xrayserver.NewRequestLogger()
+func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	client := _wireClientValue
 	certFetcher := &rds.CertFetcher{
 		Client: client,
@@ -53,17 +50,31 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 	if err != nil {
 		return nil, nil, err
 	}
-	v, cleanup2 := appHealthChecks(db)
 	options := _wireOptionsValue
 	sessionSession, err := session.NewSessionWithOptions(options)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	bucket, cleanup2, err := awsBucket(ctx, sessionSession, flags)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	variable, err := awsMOTDVar(ctx, sessionSession, flags)
 	if err != nil {
 		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
+	mainApplication := newApplication(db, bucket, variable)
+	router := NewRouter(mainApplication)
+	ncsaLogger := xrayserver.NewRequestLogger()
+	v, cleanup3 := appHealthChecks(db)
 	xRay := xrayserver.NewXRayClient(sessionSession)
-	exporter, cleanup3, err := xrayserver.NewExporter(xRay)
+	exporter, cleanup4, err := xrayserver.NewExporter(xRay)
 	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -78,23 +89,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(router, serverOptions)
-	bucket, cleanup4, err := awsBucket(ctx, sessionSession, flags)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	variable, err := awsMOTDVar(ctx, sessionSession, flags)
-	if err != nil {
-		cleanup4()
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	mainApplication := newApplication(serverServer, db, bucket, variable)
-	return mainApplication, func() {
+	return serverServer, func() {
 		cleanup4()
 		cleanup3()
 		cleanup2()
@@ -110,14 +105,38 @@ var (
 
 // Injectors from inject_azure.go:
 
-func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	router := mux.NewRouter()
-	logger := _wireLoggerValue
+func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
-	v, cleanup := appHealthChecks(db)
+	accountName, err := azureblob.DefaultAccountName()
+	if err != nil {
+		return nil, nil, err
+	}
+	accountKey, err := azureblob.DefaultAccountKey()
+	if err != nil {
+		return nil, nil, err
+	}
+	sharedKeyCredential, err := azureblob.NewCredential(accountName, accountKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	pipelineOptions := _wirePipelineOptionsValue
+	pipeline := azureblob.NewPipeline(sharedKeyCredential, pipelineOptions)
+	bucket, cleanup, err := azureBucket(ctx, pipeline, accountName, flags)
+	if err != nil {
+		return nil, nil, err
+	}
+	variable, err := azureMOTDVar(ctx, bucket, flags)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	mainApplication := newApplication(db, bucket, variable)
+	router := NewRouter(mainApplication)
+	logger := _wireLoggerValue
+	v, cleanup2 := appHealthChecks(db)
 	exporter := _wireExporterValue
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
@@ -129,52 +148,21 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), err
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(router, options)
-	accountName, err := azureblob.DefaultAccountName()
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	accountKey, err := azureblob.DefaultAccountKey()
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	sharedKeyCredential, err := azureblob.NewCredential(accountName, accountKey)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	pipelineOptions := _wirePipelineOptionsValue
-	pipeline := azureblob.NewPipeline(sharedKeyCredential, pipelineOptions)
-	bucket, cleanup2, err := azureBucket(ctx, pipeline, accountName, flags)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	variable, err := azureMOTDVar(ctx, bucket, flags)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	mainApplication := newApplication(serverServer, db, bucket, variable)
-	return mainApplication, func() {
+	return serverServer, func() {
 		cleanup2()
 		cleanup()
 	}, nil
 }
 
 var (
+	_wirePipelineOptionsValue = azblob.PipelineOptions{}
 	_wireLoggerValue          = requestlog.Logger(nil)
 	_wireExporterValue        = trace.Exporter(nil)
-	_wirePipelineOptionsValue = azblob.PipelineOptions{}
 )
 
 // Injectors from inject_gcp.go:
 
-func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	router := mux.NewRouter()
-	stackdriverLogger := sdserver.NewRequestLogger()
+func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	roundTripper := gcp.DefaultTransport()
 	credentials, err := gcp.DefaultCredentials(ctx)
 	if err != nil {
@@ -195,10 +183,31 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 	if err != nil {
 		return nil, nil, err
 	}
-	v, cleanup := appHealthChecks(db)
-	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, cleanup2, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	bucket, cleanup, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
+		return nil, nil, err
+	}
+	runtimeConfigManagerClient, cleanup2, err := gcpruntimeconfig.Dial(ctx, tokenSource)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	variable, cleanup3, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	mainApplication := newApplication(db, bucket, variable)
+	router := NewRouter(mainApplication)
+	stackdriverLogger := sdserver.NewRequestLogger()
+	v, cleanup4 := appHealthChecks(db)
+	monitoredresourceInterface := monitoredresource.Autodetect()
+	exporter, cleanup5, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	if err != nil {
+		cleanup4()
+		cleanup3()
+		cleanup2()
 		cleanup()
 		return nil, nil, err
 	}
@@ -212,29 +221,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(router, options)
-	bucket, cleanup3, err := gcpBucket(ctx, flags, httpClient)
-	if err != nil {
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	runtimeConfigManagerClient, cleanup4, err := gcpruntimeconfig.Dial(ctx, tokenSource)
-	if err != nil {
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	variable, cleanup5, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
-	if err != nil {
-		cleanup4()
-		cleanup3()
-		cleanup2()
-		cleanup()
-		return nil, nil, err
-	}
-	mainApplication := newApplication(serverServer, db, bucket, variable)
-	return mainApplication, func() {
+	return serverServer, func() {
 		cleanup5()
 		cleanup4()
 		cleanup3()
@@ -245,14 +232,23 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error
 
 // Injectors from inject_local.go:
 
-func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
-	router := mux.NewRouter()
-	logger := _wireRequestlogLoggerValue
+func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	db, err := dialLocalSQL(flags)
 	if err != nil {
 		return nil, nil, err
 	}
-	v, cleanup := appHealthChecks(db)
+	bucket, err := localBucket(flags)
+	if err != nil {
+		return nil, nil, err
+	}
+	variable, cleanup, err := localRuntimeVar(flags)
+	if err != nil {
+		return nil, nil, err
+	}
+	mainApplication := newApplication(db, bucket, variable)
+	router := NewRouter(mainApplication)
+	logger := _wireRequestlogLoggerValue
+	v, cleanup2 := appHealthChecks(db)
 	exporter := _wireTraceExporterValue
 	sampler := trace.AlwaysSample()
 	defaultDriver := _wireDefaultDriverValue
@@ -264,18 +260,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), err
 		Driver:                defaultDriver,
 	}
 	serverServer := server.New(router, options)
-	bucket, err := localBucket(flags)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	variable, cleanup2, err := localRuntimeVar(flags)
-	if err != nil {
-		cleanup()
-		return nil, nil, err
-	}
-	mainApplication := newApplication(serverServer, db, bucket, variable)
-	return mainApplication, func() {
+	return serverServer, func() {
 		cleanup2()
 		cleanup()
 	}, nil

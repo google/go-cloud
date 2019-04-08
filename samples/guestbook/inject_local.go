@@ -38,7 +38,7 @@ import (
 
 // setupLocal is a Wire injector function that sets up the application using
 // local implementations.
-func setupLocal(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(
