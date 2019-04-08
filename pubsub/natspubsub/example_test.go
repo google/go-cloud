@@ -29,7 +29,7 @@ func ExampleOpenTopic() {
 	// Create a connection to NATS.
 	natsConn, err := nats.Connect("nats://demo.nats.io")
 	// To use NGS with credentials (https://synadia.com/ngs):
-	// natsConn, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
+	// natsConn, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file"))
 	if err != nil {
 		log.Fatal(err)
 	}
