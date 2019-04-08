@@ -54,7 +54,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (driver.Topic, func(), error) {
 	cleanup := func() {}
-	dt, err := createTopic(h.nc, testName)
+	dt, err := openTopic(h.nc, testName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,7 +67,7 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (driver.Subscription, func(), error) {
-	ds, err := createSubscription(h.nc, testName, func() {})
+	ds, err := openSubscription(h.nc, testName, func() {})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -170,7 +170,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	body := []byte("hello")
 
 	// Send a message using Go CDK and receive it using NATS directly.
-	pt, err := CreateTopic(conn, topic, nil)
+	pt, err := OpenTopic(conn, topic, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestInteropWithDirectNATS(t *testing.T) {
 	}
 
 	// Send a message using NATS directly and receive it using Go CDK.
-	ps, err := CreateSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
+	ps, err := OpenSubscription(conn, topic, func() { t.Fatal("ack called unexpectedly") }, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestErrorCode(t *testing.T) {
 	h := dh.(*harness)
 
 	// Topics
-	dt, err := createTopic(h.nc, "bar")
+	dt, err := openTopic(h.nc, "bar")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestErrorCode(t *testing.T) {
 	}
 
 	// Subscriptions
-	ds, err := createSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
+	ds, err := openSubscription(h.nc, "bar", func() { t.Fatal("ack called unexpectedly") })
 	if err != nil {
 		t.Fatal(err)
 	}
