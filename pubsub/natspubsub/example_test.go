@@ -23,37 +23,38 @@ import (
 	"gocloud.dev/pubsub/natspubsub"
 )
 
-func ExampleCreateTopic() {
+func ExampleOpenTopic() {
 	ctx := context.Background()
 
-	// Create a connection to NATS
-	// For use with NGS and credentials.
-	// nc, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
-	nc, err := nats.Connect("nats://demo.nats.io")
+	// Create a connection to NATS.
+	natsConn, err := nats.Connect("nats://demo.nats.io")
+	// To use NGS with credentials (https://synadia.com/ngs):
+	// natsConn, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
+	defer natsConn.Close()
 
-	pt, err := natspubsub.CreateTopic(nc, "go-cloud.example.send", nil)
+	// Open a pubsub.Topic that publishes message with subject "go-cloud.example.send".
+	topic, err := natspubsub.OpenTopic(natsConn, "go-cloud.example.send", nil)
 	if err != nil {
 		// Handle error....
 	}
 
-	err = pt.Send(ctx, &pubsub.Message{Body: []byte("example message")})
+	err = topic.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
 
-func ExampleCreateSubscription() {
+func ExampleOpenSubscription() {
 	ctx := context.Background()
 
-	// Create a connection to NATS
-	// For use with NGS and credentials.
-	// nc, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
-	nc, err := nats.Connect("nats://demo.nats.io")
+	// Create a connection to NATS.
+	natsConn, err := nats.Connect("nats://demo.nats.io")
+	// To use NGS with credentials (https://synadia.com/ngs):
+	// natsConn, err := nats.Connect("connect.ngs/global", nats.UserCredentials("path_to_creds_file")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer nc.Close()
+	defer natsConn.Close()
 
 	ackFunc := func() {
 		// This function will be called when the application calls "Ack" on a
@@ -61,8 +62,11 @@ func ExampleCreateSubscription() {
 		// Since Ack is a meaningless no-op for NATS, you can provide an empty
 		// function to do nothing, or panic/log a warning if your application
 		// is built for at-most-once semantics and should never call Ack.
+		// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+		// for more details.
 	}
-	sub, err := natspubsub.CreateSubscription(nc, "go-cloud.example.receive", ackFunc, nil)
+	// Open a pubsub.Subscription that receives messages with subject "go-cloud.example.receive".
+	sub, err := natspubsub.OpenSubscription(natsConn, "go-cloud.example.receive", ackFunc, nil)
 	if err != nil {
 		// Handle error....
 	}
@@ -70,9 +74,9 @@ func ExampleCreateSubscription() {
 	// Now we can use sub to receive messages.
 	msg, err := sub.Receive(ctx)
 	if err != nil {
-		// Handle error....
+		// Handle the error....
 	}
-	// Handle Message
+	// Handle the message....
 
 	// Ack will call ackFunc above. If you're only going to use at-most-once
 	// providers, you can omit it.
@@ -85,7 +89,10 @@ func Example_openFromURL() {
 	// OpenTopic creates a *pubsub.Topic from a URL.
 	// This URL will Dial the NATS server at the URL in the environment
 	// variable NATS_SERVER_URL and send messages with subject "mytopic".
-	t, err := pubsub.OpenTopic(ctx, "nats://mytopic")
+	topic, err := pubsub.OpenTopic(ctx, "nats://mytopic")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
 	// This URL will use the same connection and receive messages with subject
@@ -93,6 +100,9 @@ func Example_openFromURL() {
 	// Note that by default, s.Ack will result in a panic, as Ack is a meaningless
 	// no-op for NATS. You can disable the panic using "?ackfunc=log" or
 	// "?ackfunc=noop".
-	s, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
-	_, _, _ = t, s, err
+	sub, err := pubsub.OpenSubscription(ctx, "nats://mytopic")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, _ = topic, sub
 }
