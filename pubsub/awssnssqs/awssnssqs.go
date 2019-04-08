@@ -18,7 +18,7 @@
 // URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, awssnssqs registers
-// for the scheme's "awssns" and "awssqs" respectively.
+// for the schemes "awssns" and "awssqs" respectively.
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
@@ -266,7 +266,7 @@ type TopicOptions struct {
 	BodyBase64Encoding BodyBase64Encoding
 }
 
-// OpenTopic opens the a topic that sends to the SNS topic with the given Amazon
+// OpenTopic opens a topic that sends to the SNS topic with the given Amazon
 // Resource Name (ARN).
 func OpenTopic(ctx context.Context, sess client.ConfigProvider, topicARN string, opts *TopicOptions) *pubsub.Topic {
 	return pubsub.NewTopic(openTopic(ctx, sess, topicARN, opts), sendBatcherOpts)
@@ -417,9 +417,9 @@ type subscription struct {
 // SubscriptionOptions will contain configuration for subscriptions.
 type SubscriptionOptions struct{}
 
-// OpenSubscription opens a on AWS SQS for the given SQS client and queue URL.
-// The queue is assumed to be subscribed to some SNS topic, though there is no
-// check for this.
+// OpenSubscription opens a subscription based on AWS SQS for the given SQS
+// queue URL. The queue is assumed to be subscribed to some SNS topic, though
+// there is no check for this.
 func OpenSubscription(ctx context.Context, sess client.ConfigProvider, qURL string, opts *SubscriptionOptions) *pubsub.Subscription {
 	return pubsub.NewSubscription(openSubscription(ctx, sess, qURL), recvBatcherOpts, ackBatcherOpts)
 }
