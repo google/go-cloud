@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package natspubsub provides a pubsub implementation for NATS.io.
-// Use OpenTopic to construct a *pubsub.Topic, and/or OpenSubscription
-// to construct a *pubsub.Subscription. This package uses msgPack and the
-// ugorji driver to encode and decode driver.Message to []byte.
+// Package natspubsub provides a pubsub implementation for NATS.io. Use OpenTopic to
+// construct a *pubsub.Topic, and/or OpenSubscription to construct a
+// *pubsub.Subscription. This package uses gob to encode and decode driver.Message to
+// []byte.
 //
 // URLs
 //
@@ -36,18 +36,18 @@
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"path"
-	"reflect"
 	"sync"
 
 	"github.com/nats-io/go-nats"
-	"github.com/ugorji/go/codec"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -175,28 +175,11 @@ type topic struct {
 	subj string
 }
 
-// For encoding we use msgpack from github.com/ugorji/go.
-// It was already imported in go-cloud and is reasonably performant.
-// However the more recent version has better resource handling with
-// the addition of the following:
-// 	mh.ExplicitRelease = true
-// 	defer enc.Release()
-// However this is not compatible with etcd at the moment.
-// https://github.com/etcd-io/etcd/pull/10337
-var mh codec.MsgpackHandle
-
-func init() {
-	// driver.Message.Metadata type
-	dm := driver.Message{}
-	mh.MapType = reflect.TypeOf(dm.Metadata)
-}
-
 // We define our own version of message here for encoding that
-// only encodes Body and Metadata. Otherwise we would have to
-// add codec decorations to driver.Message.
+// only encodes Body and Metadata.
 type encMsg struct {
-	Body     []byte            `codec:",omitempty"`
-	Metadata map[string]string `codec:",omitempty"`
+	Body     []byte
+	Metadata map[string]string
 }
 
 // OpenTopic returns a *pubsub.Topic for use with NATS.
@@ -225,27 +208,15 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		return errNotInitialized
 	}
 
-	// Reuse if possible.
-	var em encMsg
-	var raw [1024]byte
-	b := raw[:0]
-	enc := codec.NewEncoderBytes(&b, &mh)
-
 	for _, m := range msgs {
-		var payload []byte
-
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if len(m.Metadata) == 0 {
-			payload = m.Body
-		} else {
-			enc.ResetBytes(&b)
-			em.Body, em.Metadata = m.Body, m.Metadata
-			if err := enc.Encode(em); err != nil {
-				return err
-			}
-			payload = b
+		// TODO(jba): benchmark message encoding to see if it's
+		// worth reusing a buffer.
+		payload, err := encodeMessage(m)
+		if err != nil {
+			return err
 		}
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
@@ -399,12 +370,8 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 		return nil, nats.ErrInvalidMsg
 	}
 	var dm driver.Message
-	// Everything is in the msg.Data
-	dec := codec.NewDecoderBytes(msg.Data, &mh)
-	err := dec.Decode(&dm)
-	if err != nil {
-		// This may indicate a normal NATS message, so just treat as the body.
-		dm.Body = msg.Data
+	if err := decodeMessage(msg.Data, &dm); err != nil {
+		return nil, err
 	}
 	dm.AckID = -1 // Not applicable to NATS
 	dm.AsFunc = messageAsFunc(msg)
@@ -469,4 +436,31 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.DeadlineExceeded
 	}
 	return gcerrors.Unknown
+}
+
+func encodeMessage(dm *driver.Message) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if len(dm.Metadata) == 0 {
+		return dm.Body, nil
+	}
+	if err := enc.Encode(dm.Metadata); err != nil {
+		return nil, err
+	}
+	if err := enc.Encode(dm.Body); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func decodeMessage(data []byte, dm *driver.Message) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&dm.Metadata); err != nil {
+		// This may indicate a normal NATS message, so just treat as the body.
+		dm.Metadata = nil
+		dm.Body = data
+		return nil
+	}
+	return dec.Decode(&dm.Body)
 }
