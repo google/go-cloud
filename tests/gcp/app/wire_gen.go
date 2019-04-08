@@ -18,6 +18,7 @@ import (
 // Injectors from inject.go:
 
 func initialize(ctx context.Context) (*server.Server, func(), error) {
+	serveMux := NewRouter()
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v := _wireValue
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -43,7 +44,7 @@ func initialize(ctx context.Context) (*server.Server, func(), error) {
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(serveMux, options)
 	return serverServer, func() {
 		cleanup()
 	}, nil
