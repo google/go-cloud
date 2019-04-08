@@ -80,7 +80,11 @@ func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encodeDoc(doc)
+	var e encoder
+	if err := doc.Encode(&e); err != nil {
+		return nil, err
+	}
+	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
 }
 
 func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
@@ -88,7 +92,8 @@ func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err != nil {
 		return err
 	}
-	return decodeDoc(value.(*pb.Document), doc)
+	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: value.(*pb.Document).Fields}}}
+	return doc.Decode(decoder{mv})
 }
 
 func TestConformance(t *testing.T) {
