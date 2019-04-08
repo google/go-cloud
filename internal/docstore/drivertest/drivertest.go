@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"io"
 	"math"
 	"math/rand"
 	"sync"
@@ -99,6 +100,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 }
 
 const KeyField = "_id"
@@ -671,4 +673,147 @@ func (r *randReader) Read(buf []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.r.Read(buf)
+}
+
+func testQuery(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	// (Temporary) skip if the driver does not implement queries.
+	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Skip("queries not yet implemented")
+	}
+
+	// Delete existing documents.
+	err := forEach(ctx, coll.Query(), func(m docmap) error { return coll.Delete(ctx, m) })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a few documents.
+	docs := []docmap{
+		{
+			KeyField: "testQuery1",
+			"n":      -4,
+			"s":      "foe",
+		},
+		{
+			KeyField: "testQuery2",
+			"n":      1,
+			"s":      "foo",
+		},
+		{
+			KeyField: "testQuery3",
+			"n":      2.5,
+			"s":      "fog",
+		},
+	}
+	for _, doc := range docs {
+		if err := coll.Put(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Query filters should have the same behavior when doing string and number
+	// comparison.
+	tests := []struct {
+		name string
+		q    *ds.Query
+		want []docmap
+	}{
+		{
+			name: "LessThanNum",
+			q:    coll.Query().Where("n", "<", 1),
+			want: []docmap{{KeyField: "testQuery1"}},
+		},
+		{
+			name: "LessThanString",
+			q:    coll.Query().Where("s", "<", "fog"),
+			want: []docmap{{KeyField: "testQuery1"}},
+		},
+		{
+			name: "LessThanEqualNum",
+			q:    coll.Query().Where("n", "<=", 1),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+		{
+			name: "LessThanEqualString",
+			q:    coll.Query().Where("s", "<=", "fog"),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+		{
+			name: "EqualNum",
+			q:    coll.Query().Where("n", "=", 1),
+			want: []docmap{{KeyField: "testQuery2"}},
+		},
+		{
+			name: "EqualString",
+			q:    coll.Query().Where("s", "=", "foo"),
+			want: []docmap{{KeyField: "testQuery2"}},
+		},
+		{
+			name: "GreaterThanEqualNum",
+			q:    coll.Query().Where("n", ">=", 1),
+			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanEqualString",
+			q:    coll.Query().Where("s", ">=", "fog"),
+			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanNum",
+			q:    coll.Query().Where("n", ">", 1),
+			want: []docmap{{KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanStrung",
+			q:    coll.Query().Where("s", ">", "fog"),
+			want: []docmap{{KeyField: "testQuery3"}},
+		},
+		{
+			name: "Limit",
+			q:    coll.Query().Where("n", ">=", -4).Limit(2),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mustCollect(ctx, t, tc.q)
+			if len(got) != len(tc.want) {
+				t.Errorf("got %d items, want %d", len(got), len(tc.want))
+			}
+			for i, w := range tc.want {
+				w[ds.RevisionField] = got[i][ds.RevisionField]
+				if diff := cmp.Diff(got[i], w); diff != "" {
+					t.Error("query result diff:", diff)
+				}
+			}
+		})
+	}
+}
+
+func forEach(ctx context.Context, q *ds.Query, f func(docmap) error) error {
+	iter := q.Get(ctx)
+	for {
+		m := docmap{}
+		err := iter.Next(ctx, m)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := f(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func mustCollect(ctx context.Context, t *testing.T, q *ds.Query) []docmap {
+	var ms []docmap
+	collect := func(m docmap) error { ms = append(ms, m); return nil }
+	if err := forEach(ctx, q, collect); err != nil {
+		t.Fatal(err)
+	}
+	return ms
 }
