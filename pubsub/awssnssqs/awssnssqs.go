@@ -18,7 +18,7 @@
 // URLs
 //
 // For pubsub.OpenTopic and pubsub.OpenSubscription, awssnssqs registers
-// for the scheme "awssnssqs".
+// for the scheme's "awssns" and "awssqs" respectively.
 // The default URL opener will use an AWS session with the default credentials
 // and configuration; see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 // for more details.
@@ -109,8 +109,8 @@ var ackBatcherOpts = &batcher.Options{
 
 func init() {
 	lazy := new(lazySessionOpener)
-	pubsub.DefaultURLMux().RegisterTopic(Scheme, lazy)
-	pubsub.DefaultURLMux().RegisterSubscription(Scheme, lazy)
+	pubsub.DefaultURLMux().RegisterTopic(SNSScheme, lazy)
+	pubsub.DefaultURLMux().RegisterSubscription(SQSScheme, lazy)
 }
 
 // Set holds Wire providers for this package.
@@ -158,11 +158,14 @@ func (o *lazySessionOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL)
 	return opener.OpenSubscriptionURL(ctx, u)
 }
 
-// Scheme is the URL scheme awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
-const Scheme = "awssnssqs"
+// SNSScheme is the URL scheme for pubsub.OpenTopic awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+const SNSScheme = "awssns"
 
-// URLOpener opens AWS SNS/SQS URLs like "awssnssqs://sns-topic-arn" for
-// topics or "awssnssqs://sqs-queue-url" for subscriptions.
+// SQSScheme is the URL scheme for pubsub.OpenSubscription awssnssqs registers its URLOpeners under on pubsub.DefaultMux.
+const SQSScheme = "awssqs"
+
+// URLOpener opens AWS SNS/SQS URLs like "awssns://sns-topic-arn" for
+// topics or "awssqs://sqs-queue-url" for subscriptions.
 //
 // For topics, the URL's host+path is used as the topic Amazon Resource Name
 // (ARN).

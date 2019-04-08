@@ -427,6 +427,16 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterVariable("foo", fake)
 	mux.RegisterVariable("err", fake)
 
+	if diff := cmp.Diff(mux.VariableSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidVariableScheme("foo") || !mux.ValidVariableScheme("err") {
+		t.Errorf("ValidVariableScheme didn't return true for valid scheme")
+	}
+	if mux.ValidVariableScheme("foo2") || mux.ValidVariableScheme("http") {
+		t.Errorf("ValidVariableScheme didn't return false for invalid scheme")
+	}
+
 	for _, tc := range []struct {
 		name    string
 		url     string

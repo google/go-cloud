@@ -309,8 +309,17 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
+// Close implements driver.Close.
 func (b *bucket) Close() error {
 	return nil
+}
+
+var errUnimplemented = errors.New("not implemented")
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	// TODO(rvangent): Implement this and delete errUnimplemented.
+	return errUnimplemented
 }
 
 // Delete implements driver.Delete.
@@ -418,6 +427,9 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errUnimplemented {
+		return gcerrors.Unimplemented
+	}
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:

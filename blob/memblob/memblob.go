@@ -337,6 +337,22 @@ func (w *writer) Close() error {
 	return nil
 }
 
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if opts.BeforeCopy != nil {
+		return opts.BeforeCopy(func(interface{}) bool { return false })
+	}
+	v := b.blobs[srcKey]
+	if v == nil {
+		return errNotFound
+	}
+	b.blobs[dstKey] = v
+	return nil
+}
+
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	b.mu.Lock()

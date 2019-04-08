@@ -162,6 +162,12 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
+// KeeperSchemes returns a sorted slice of the registered Keeper schemes.
+func (mux *URLMux) KeeperSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidKeeperScheme returns true iff scheme has been registered for Keepers.
+func (mux *URLMux) ValidKeeperScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
 // RegisterKeeper registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterKeeper panics.
 func (mux *URLMux) RegisterKeeper(scheme string, opener KeeperURLOpener) {

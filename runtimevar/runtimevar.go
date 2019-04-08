@@ -160,14 +160,14 @@ func newVar(w driver.Watcher) *Variable {
 		haveGood:         make(chan struct{}),
 		changed:          changed,
 		lastWatch:        changed,
-		lastErr:          errors.New("no value yet"),
+		lastErr:          gcerr.Newf(gcerr.FailedPrecondition, nil, "no value yet"),
 	}
 	go v.background(ctx)
 	return v
 }
 
 // ErrClosed is returned from Watch when the Variable has been Closed.
-var ErrClosed = errors.New("Variable has been closed")
+var ErrClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "Variable has been Closed")
 
 // Watch returns when there is a new Snapshot of the current value of the
 // variable.
@@ -371,6 +371,12 @@ type VariableURLOpener interface {
 type URLMux struct {
 	schemes openurl.SchemeMap
 }
+
+// VariableSchemes returns a sorted slice of the registered Variable schemes.
+func (mux *URLMux) VariableSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidVariableScheme returns true iff scheme has been registered for Variables.
+func (mux *URLMux) ValidVariableScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
 
 // RegisterVariable registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterVariable panics.

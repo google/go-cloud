@@ -312,11 +312,11 @@ func TestOpenTopicFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath", false},
+		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath", false},
 		// OK, setting region.
-		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
+		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath?region=us-east-2", false},
 		// Invalid parameter.
-		{"awssnssqs://arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
+		{"awssns://arn:aws:service:region:accountid:resourceType/resourcePath?param=value", true},
 	}
 
 	ctx := context.Background()
@@ -334,11 +334,11 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription", false},
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription", false},
 		// OK, setting region.
-		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?region=us-east-2", false},
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?region=us-east-2", false},
 		// Invalid parameter.
-		{"awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?param=value", true},
+		{"awssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription?param=value", true},
 	}
 
 	ctx := context.Background()

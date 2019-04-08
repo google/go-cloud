@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -132,6 +133,7 @@ func TestSendReceive(t *testing.T) {
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
+	m2.Ack()
 }
 
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
@@ -316,10 +318,11 @@ func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown 
 func TestRetryReceive(t *testing.T) {
 	fs := &failSub{}
 	sub := pubsub.NewSubscription(fs, nil, nil)
-	_, err := sub.Receive(context.Background())
+	m, err := sub.Receive(context.Background())
 	if err != nil {
-		t.Errorf("Receive: got %v, want nil", err)
+		t.Fatalf("Receive: got %v, want nil", err)
 	}
+	m.Ack()
 	if got, want := fs.calls, nRetryCalls+1; got != want {
 		t.Errorf("calls: got %d, want %d", got, want)
 	}
@@ -338,9 +341,9 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
 
-func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
-
-func (*failSub) AckFunc() func() { return nil }
+func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
+func (*failSub) AckFunc() func()                                           { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 
@@ -498,6 +501,26 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterTopic("err", fake)
 	mux.RegisterSubscription("foo", fake)
 	mux.RegisterSubscription("err", fake)
+
+	if diff := cmp.Diff(mux.TopicSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidTopicScheme("foo") || !mux.ValidTopicScheme("err") {
+		t.Errorf("ValidTopicScheme didn't return true for valid scheme")
+	}
+	if mux.ValidTopicScheme("foo2") || mux.ValidTopicScheme("http") {
+		t.Errorf("ValidTopicScheme didn't return false for invalid scheme")
+	}
+
+	if diff := cmp.Diff(mux.SubscriptionSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidSubscriptionScheme("foo") || !mux.ValidSubscriptionScheme("err") {
+		t.Errorf("ValidSubscriptionScheme didn't return true for valid scheme")
+	}
+	if mux.ValidSubscriptionScheme("foo2") || mux.ValidSubscriptionScheme("http") {
+		t.Errorf("ValidSubscriptionScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string

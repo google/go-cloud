@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"io"
 	"math"
 	"math/rand"
 	"sync"
@@ -30,6 +31,16 @@ import (
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
+
+// TODO(jba): Test RunActions with unordered=true. We can't actually test the ordering,
+// but we can check that all actions are executed even if some fail.
+
+// TODO(jba): test an ordered list of actions, with an expected error in the middle,
+// and check that we get the right error back and that the actions after the error
+// aren't executed.
+
+// TODO(jba): test that a malformed action is returned as an error and none of the
+// actions are executed.
 
 // Harness descibes the functionality test harnesses must provide to run
 // conformance tests.
@@ -45,13 +56,16 @@ type Harness interface {
 // It is called exactly once per test; Harness.Close() will be called when the test is complete.
 type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 
-// Enum of types not supported by native codecs. We chose to describe this negatively
-// (types that aren't supported rather than types that are) to make the more
-// inclusive cases easier to write. A driver can return nil for
-// CodecTester.UnsupportedTypes, then add values from this enum one by one until all
-// tests pass.
+// UnsupportedType is an enum for types not supported by native codecs. We chose
+// to describe this negatively (types that aren't supported rather than types
+// that are) to make the more inclusive cases easier to write. A driver can
+// return nil for CodecTester.UnsupportedTypes, then add values from this enum
+// one by one until all tests pass.
 type UnsupportedType int
 
+// These are known unsupported types by one or more driver. Each of them
+// corresponses to an unsupported type specific test which if the driver
+// actually supports.
 const (
 	// Native codec doesn't support any unsigned integer type
 	Uint UnsupportedType = iota
@@ -61,6 +75,8 @@ const (
 	Arrays
 	// Native codec doesn't support full time precision
 	NanosecondTimes
+	// Native codec doesn't support [][]byte
+	BinarySet
 )
 
 // CodecTester describes functions that encode and decode values using both the
@@ -83,7 +99,8 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Update", func(t *testing.T) { withCollection(t, newHarness, testUpdate) })
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
-	// t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
+	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 }
 
 const KeyField = "_id"
@@ -114,7 +131,7 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 	unnamed := docmap{"b": false}
 	// Attempt to clean up
 	defer func() {
-		_, _ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
+		_ = coll.Actions().Delete(named).Delete(unnamed).Do(ctx)
 	}()
 
 	createThenGet := func(doc docmap) {
@@ -223,23 +240,36 @@ func testGet(t *testing.T, coll *ds.Collection) {
 		"s":      "a string",
 		"i":      int64(95),
 		"f":      32.3,
+		"m":      map[string]interface{}{"a": "one", "b": "two"},
 	}
 	must(coll.Put(ctx, doc))
-	// If only the key fields are present, the full document is populated.
+	// If Get is called with no field paths, the full document is populated.
 	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
 	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
 		t.Error(diff)
 	}
-	// TODO(jba): test with field paths
+
+	// If Get is called with field paths, the resulting document has only those fields.
+	got = docmap{KeyField: doc[KeyField]}
+	must(coll.Get(ctx, got, "f", "m.b"))
+	want := docmap{
+		KeyField:         doc[KeyField],
+		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
+		"f":              32.3,
+		"m":              docmap{"b": "two"},
+	}
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Error("Get with field paths:\n", diff)
+	}
 }
 
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	doc := docmap{KeyField: "testDelete"}
-	if n, err := coll.Actions().Put(doc).Delete(doc).Do(ctx); err != nil {
-		t.Fatalf("after %d successful actions: %v", n, err)
+	if errs := coll.Actions().Put(doc).Delete(doc).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	// The document should no longer exist.
 	if err := coll.Get(ctx, doc); err == nil {
@@ -252,8 +282,8 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 	// Delete will fail if the revision field is mismatched.
 	got := docmap{KeyField: doc[KeyField]}
-	if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-		t.Fatal(err)
+	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+		t.Fatal(errs)
 	}
 	doc["x"] = "y"
 	if err := coll.Put(ctx, doc); err != nil {
@@ -272,13 +302,13 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 	}
 
 	got := docmap{KeyField: doc[KeyField]}
-	_, err := coll.Actions().Update(doc, ds.Mods{
+	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
 		"c": "C",
 	}).Get(got).Do(ctx)
-	if err != nil {
-		t.Fatal(err)
+	if errs != nil {
+		t.Fatal(errs)
 	}
 	want := docmap{
 		KeyField:         doc[KeyField],
@@ -353,8 +383,8 @@ func testData(t *testing.T, coll *ds.Collection) {
 	} {
 		doc := docmap{KeyField: "testData", "val": test.in}
 		got := docmap{KeyField: doc[KeyField]}
-		if _, err := coll.Actions().Put(doc).Get(got).Do(ctx); err != nil {
-			t.Fatal(err)
+		if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
+			t.Fatal(errs)
 		}
 		want := docmap{
 			"val":            test.want,
@@ -432,6 +462,8 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		By: []byte{6, 7, 8},
 		P:  &s,
 		T:  milliTime,
+		LF: []float64{18.8, -19.9, 20},
+		LS: []string{"foo", "bar"},
 	}
 	check(nm, &nativeMinimal{}, ct.DocstoreEncode, ct.NativeDecode)
 	check(nm, &nativeMinimal{}, ct.NativeEncode, ct.DocstoreDecode)
@@ -475,6 +507,7 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 	type NT struct {
 		T time.Time
 	}
+
 	nt := &NT{nanoTime}
 	if unsupported[NanosecondTimes] {
 		// Expect rounding to the nearest millisecond.
@@ -500,6 +533,15 @@ func testTypeDrivenDecode(t *testing.T, ct CodecTester) {
 		check(nt, &NT{}, ct.NativeEncode, ct.DocstoreDecode)
 	}
 
+	// Binary sets.
+	if !unsupported[BinarySet] {
+		type BinarySet struct {
+			B [][]byte
+		}
+		b := &BinarySet{[][]byte{{15}, {16}, {17}}}
+		check(b, &BinarySet{}, ct.DocstoreEncode, ct.NativeDecode)
+		check(b, &BinarySet{}, ct.NativeEncode, ct.DocstoreDecode)
+	}
 }
 
 // Test decoding into an interface{}, where the decoder doesn't know the type of the
@@ -551,7 +593,7 @@ func testBlindDecode1(t *testing.T, encode func(interface{}) (interface{}, error
 		},
 		{in: map[string][]byte{"a": {1, 2}}, want: map[string]interface{}{"a": []byte{1, 2}}},
 	} {
-		enc, err := encode(S{test.in})
+		enc, err := encode(&S{test.in})
 		if err != nil {
 			t.Fatalf("encoding %T: %v", test.in, err)
 		}
@@ -609,10 +651,14 @@ type nativeMinimal struct {
 	M  map[string]bool
 	P  *string
 	T  time.Time
+	LF []float64
+	LS []string
 }
 
+// MakeUniqueStringDeterministicForTesting uses a specified seed value to
+// produce the same sequence of values in driver.UniqueString for testing.
+//
 // Call when running tests that will be replayed.
-// Each seed value will result in UniqueString producing the same sequence of values.
 func MakeUniqueStringDeterministicForTesting(seed int64) {
 	r := &randReader{r: rand.New(rand.NewSource(seed))}
 	uuid.SetRand(r)
@@ -627,4 +673,147 @@ func (r *randReader) Read(buf []byte) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.r.Read(buf)
+}
+
+func testQuery(t *testing.T, coll *ds.Collection) {
+	ctx := context.Background()
+	// (Temporary) skip if the driver does not implement queries.
+	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
+		t.Skip("queries not yet implemented")
+	}
+
+	// Delete existing documents.
+	err := forEach(ctx, coll.Query(), func(m docmap) error { return coll.Delete(ctx, m) })
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add a few documents.
+	docs := []docmap{
+		{
+			KeyField: "testQuery1",
+			"n":      -4,
+			"s":      "foe",
+		},
+		{
+			KeyField: "testQuery2",
+			"n":      1,
+			"s":      "foo",
+		},
+		{
+			KeyField: "testQuery3",
+			"n":      2.5,
+			"s":      "fog",
+		},
+	}
+	for _, doc := range docs {
+		if err := coll.Put(ctx, doc); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Query filters should have the same behavior when doing string and number
+	// comparison.
+	tests := []struct {
+		name string
+		q    *ds.Query
+		want []docmap
+	}{
+		{
+			name: "LessThanNum",
+			q:    coll.Query().Where("n", "<", 1),
+			want: []docmap{{KeyField: "testQuery1"}},
+		},
+		{
+			name: "LessThanString",
+			q:    coll.Query().Where("s", "<", "fog"),
+			want: []docmap{{KeyField: "testQuery1"}},
+		},
+		{
+			name: "LessThanEqualNum",
+			q:    coll.Query().Where("n", "<=", 1),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+		{
+			name: "LessThanEqualString",
+			q:    coll.Query().Where("s", "<=", "fog"),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+		{
+			name: "EqualNum",
+			q:    coll.Query().Where("n", "=", 1),
+			want: []docmap{{KeyField: "testQuery2"}},
+		},
+		{
+			name: "EqualString",
+			q:    coll.Query().Where("s", "=", "foo"),
+			want: []docmap{{KeyField: "testQuery2"}},
+		},
+		{
+			name: "GreaterThanEqualNum",
+			q:    coll.Query().Where("n", ">=", 1),
+			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanEqualString",
+			q:    coll.Query().Where("s", ">=", "fog"),
+			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanNum",
+			q:    coll.Query().Where("n", ">", 1),
+			want: []docmap{{KeyField: "testQuery3"}},
+		},
+		{
+			name: "GreaterThanStrung",
+			q:    coll.Query().Where("s", ">", "fog"),
+			want: []docmap{{KeyField: "testQuery3"}},
+		},
+		{
+			name: "Limit",
+			q:    coll.Query().Where("n", ">=", -4).Limit(2),
+			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mustCollect(ctx, t, tc.q)
+			if len(got) != len(tc.want) {
+				t.Errorf("got %d items, want %d", len(got), len(tc.want))
+			}
+			for i, w := range tc.want {
+				w[ds.RevisionField] = got[i][ds.RevisionField]
+				if diff := cmp.Diff(got[i], w); diff != "" {
+					t.Error("query result diff:", diff)
+				}
+			}
+		})
+	}
+}
+
+func forEach(ctx context.Context, q *ds.Query, f func(docmap) error) error {
+	iter := q.Get(ctx)
+	for {
+		m := docmap{}
+		err := iter.Next(ctx, m)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := f(m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func mustCollect(ctx context.Context, t *testing.T, q *ds.Query) []docmap {
+	var ms []docmap
+	collect := func(m docmap) error { ms = append(ms, m); return nil }
+	if err := forEach(ctx, q, collect); err != nil {
+		t.Fatal(err)
+	}
+	return ms
 }

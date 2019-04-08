@@ -332,6 +332,11 @@ func toGoValue(av *dyn.AttributeValue) (interface{}, error) {
 }
 
 func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	unsupportedTypes := `unsupported type, the docstore driver for DynamoDB does
+	not decode DynamoDB set types, such as string set, number set and binary set`
+	if d.av.SS != nil || d.av.NS != nil || d.av.BS != nil {
+		return true, nil, errors.New(unsupportedTypes)
+	}
 	switch v.Type() {
 	case typeOfGoTime:
 		if d.av.S == nil {
@@ -339,7 +344,6 @@ func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
 		}
 		t, err := time.Parse(time.RFC3339Nano, *d.av.S)
 		return true, t, err
-	default:
-		return false, nil, nil
 	}
+	return false, nil, nil
 }

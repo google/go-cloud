@@ -29,7 +29,6 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -63,13 +62,16 @@ func newCollection(mcoll *mongo.Collection) *collection {
 const idField = "_id"
 
 // TODO(jba): use bulk RPCs.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	for i, a := range actions {
 		if err := c.runAction(ctx, a); err != nil {
-			return i, err
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 func (c *collection) runAction(ctx context.Context, action *driver.Action) error {
@@ -97,12 +99,21 @@ func (c *collection) runAction(ctx context.Context, action *driver.Action) error
 }
 
 func (c *collection) get(ctx context.Context, a *driver.Action) error {
-	// TODO(jba): use Projection option to return only desired field paths.
 	id, err := a.Doc.GetField(idField)
 	if err != nil {
 		return err
 	}
-	res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+	opts := options.FindOne()
+	if len(a.FieldPaths) > 0 {
+		// Create a "projection document" that specifies the fields to retrieve.
+		// Always get the revision field.
+		proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
+		for _, fp := range a.FieldPaths {
+			proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
+		}
+		opts.Projection = proj
+	}
+	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -238,8 +249,8 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 	return filter, id, rev, nil
 }
 
-func (c *collection) RunQuery(context.Context, *driver.Query) error {
-	return errors.New("unimp")
+func (c *collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
+	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
 
 // Error code for a write error when no documents match a filter.

@@ -207,10 +207,10 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	}
 	for k, v := range m.Metadata {
 		if !utf8.ValidString(k) {
-			return fmt.Errorf("pubsub.Send: Message.Metadata keys must be valid UTF-8 strings: %q", k)
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.Metadata keys must be valid UTF-8 strings: %q", k)
 		}
 		if !utf8.ValidString(v) {
-			return fmt.Errorf("pubsub.Send: Message.Metadata values must be valid UTF-8 strings: %q", v)
+			return gcerr.Newf(gcerr.InvalidArgument, nil, "pubsub: Message.Metadata values must be valid UTF-8 strings: %q", v)
 		}
 	}
 	dm := &driver.Message{
@@ -227,7 +227,7 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
-	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic closed")
+	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic has been Shutdown")
 	t.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -324,14 +324,15 @@ type Subscription struct {
 
 	recvBatchOpts *batcher.Options
 
-	mu               sync.Mutex    // protects everything below
-	q                []*Message    // local queue of messages downloaded from server
-	err              error         // permanent error
-	waitc            chan struct{} // for goroutines waiting on ReceiveBatch
-	runningBatchSize float64       // running number of messages to request via ReceiveBatch
-	throughputStart  time.Time     // start time for throughput measurement, or the zero Time if queue is empty
-	throughputEnd    time.Time     // end time for throughput measurement, or the zero Time if queue is not empty
-	throughputCount  int           // number of msgs given out via Receive since throughputStart
+	mu               sync.Mutex        // protects everything below
+	q                []*driver.Message // local queue of messages downloaded from server
+	err              error             // permanent error
+	unreportedAckErr error             // permanent error from background SendAcks that hasn't been returned to the user yet
+	waitc            chan struct{}     // for goroutines waiting on ReceiveBatch
+	runningBatchSize float64           // running number of messages to request via ReceiveBatch
+	throughputStart  time.Time         // start time for throughput measurement, or the zero Time if queue is empty
+	throughputEnd    time.Time         // end time for throughput measurement, or the zero Time if queue is not empty
+	throughputCount  int               // number of msgs given out via Receive since throughputStart
 
 	// Used in tests.
 	preReceiveBatchHook func(maxMessages int)
@@ -490,6 +491,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 		// The lock is always held here, at the top of the loop.
 		if s.err != nil {
 			// The Subscription is in a permanent error state. Return the error.
+			s.unreportedAckErr = nil
 			return nil, s.err // s.err wrapped when set
 		}
 
@@ -535,11 +537,38 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 			m := s.q[0]
 			s.q = s.q[1:]
 			s.throughputCount++
+
+			// Convert driver.Message to Message.
+			id := m.AckID
+			md := m.Metadata
+			if len(md) == 0 {
+				md = nil
+			}
+			m2 := &Message{
+				Body:     m.Body,
+				Metadata: md,
+				asFunc:   m.AsFunc,
+			}
+			if s.ackFunc == nil {
+				m2.ack = func(isAck bool) {
+					// Ignore the error channel. Errors are dealt with
+					// in the ackBatcher handler.
+					_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
+				}
+			} else {
+				m2.ack = func(isAck bool) {
+					if isAck {
+						s.ackFunc()
+						return
+					}
+					panic("Message.Nack is not supported for this provider")
+				}
+			}
 			if s.ackFunc == nil {
 				// Add a finalizer that complains if the Message we return isn't
 				// acked or nacked.
 				_, file, lineno, ok := runtime.Caller(1) // the caller of Receive
-				runtime.SetFinalizer(m, func(m *Message) {
+				runtime.SetFinalizer(m2, func(m *Message) {
 					m.mu.Lock()
 					defer m.mu.Unlock()
 					if !m.isAcked {
@@ -551,7 +580,7 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 					}
 				})
 			}
-			return m, nil
+			return m2, nil
 		}
 		// No messages are available.
 		if s.throughputEnd.IsZero() && !s.throughputStart.IsZero() {
@@ -572,9 +601,9 @@ func (s *Subscription) Receive(ctx context.Context) (_ *Message, err error) {
 }
 
 // getNextBatch gets the next batch of messages from the server and returns it.
-func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
+func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
 	var mu sync.Mutex
-	var q []*Message
+	var q []*driver.Message
 
 	// Split nMessages into batches based on recvBatchOpts; we'll make a
 	// separate ReceiveBatch call for each batch, and aggregate the results in
@@ -597,34 +626,7 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*Message, error) {
 			}
 			mu.Lock()
 			defer mu.Unlock()
-			for _, m := range msgs {
-				id := m.AckID
-				md := m.Metadata
-				if len(md) == 0 {
-					md = nil
-				}
-				m2 := &Message{
-					Body:     m.Body,
-					Metadata: md,
-					asFunc:   m.AsFunc,
-				}
-				if s.ackFunc == nil {
-					m2.ack = func(isAck bool) {
-						// Ignore the error channel. Errors are dealt with
-						// in the ackBatcher handler.
-						_ = s.ackBatcher.AddNoWait(&driver.AckInfo{AckID: id, IsAck: isAck})
-					}
-				} else {
-					m2.ack = func(isAck bool) {
-						if isAck {
-							s.ackFunc()
-							return
-						}
-						panic("Message.Nack is not supported for this provider")
-					}
-				}
-				q = append(q, m2)
-			}
+			q = append(q, msgs...)
 			return nil
 		})
 	}
@@ -640,7 +642,7 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
-	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription closed")
+	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription has been Shutdown")
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -654,6 +656,12 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	s.cancel()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.unreportedAckErr; err != nil {
+		s.unreportedAckErr = nil
+		return err
+	}
 	return ctx.Err()
 }
 
@@ -739,6 +747,7 @@ func newAckBatcher(ctx context.Context, s *Subscription, ds driver.Subscription,
 			err = wrapError(s.driver, err)
 			s.mu.Lock()
 			s.err = err
+			s.unreportedAckErr = err
 			s.mu.Unlock()
 		}
 		return err
@@ -784,6 +793,20 @@ type SubscriptionURLOpener interface {
 type URLMux struct {
 	subscriptionSchemes openurl.SchemeMap
 	topicSchemes        openurl.SchemeMap
+}
+
+// TopicSchemes returns a sorted slice of the registered Topic schemes.
+func (mux *URLMux) TopicSchemes() []string { return mux.topicSchemes.Schemes() }
+
+// ValidTopicScheme returns true iff scheme has been registered for Topics.
+func (mux *URLMux) ValidTopicScheme(scheme string) bool { return mux.topicSchemes.ValidScheme(scheme) }
+
+// SubscriptionSchemes returns a sorted slice of the registered Subscription schemes.
+func (mux *URLMux) SubscriptionSchemes() []string { return mux.subscriptionSchemes.Schemes() }
+
+// ValidSubscriptionScheme returns true iff scheme has been registered for Subscriptions.
+func (mux *URLMux) ValidSubscriptionScheme(scheme string) bool {
+	return mux.subscriptionSchemes.ValidScheme(scheme)
 }
 
 // RegisterTopic registers the opener with the given scheme. If an opener

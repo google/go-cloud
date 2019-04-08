@@ -18,7 +18,6 @@ package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strings"
 
@@ -66,22 +65,25 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
-	// Stop immediately if the context is done.
-	if ctx.Err() != nil {
-		return 0, ctx.Err()
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
-		if err := c.runAction(a); err != nil {
-			return i, err
+		if err := c.runAction(ctx, a); err != nil {
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 // runAction executes a single action.
-func (c *collection) runAction(a *driver.Action) error {
+func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
+	// Stop if the context is done.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// Get the key from the doc so we can look it up in the map.
 	key, err := a.Doc.GetField(c.keyField)
 	// The only acceptable error case is NotFound during a Create.
@@ -144,8 +146,7 @@ func (c *collection) runAction(a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		// TODO(jba): support field paths.
-		if err := decodeDoc(current, a.Doc); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -205,6 +206,16 @@ func checkRevision(arg driver.Document, current map[string]interface{}) error {
 	return nil
 }
 
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// (see getParentMap).
+func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
+	m2, err := getParentMap(m, fp, false)
+	if err != nil {
+		return nil, err
+	}
+	return m2[fp[len(fp)-1]], nil
+}
+
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as
 // needed. It returns an error if a non-final component of fp does not denote a map.
 func setAtFieldPath(m map[string]interface{}, fp []string, val interface{}) error {
@@ -246,6 +257,6 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 	return m, nil
 }
 
-func (*collection) RunQuery(context.Context, *driver.Query) error {
-	return errors.New("unimp")
+func (*collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
+	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }

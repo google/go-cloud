@@ -16,10 +16,11 @@ package httpvar_test
 
 import (
 	"context"
-	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/httpvar"
 	"log"
 	"net/http"
+
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/httpvar"
 )
 
 // MyConfig is a sample configuration struct.
@@ -46,4 +47,18 @@ func Example() {
 	}
 	cfg := snapshot.Value.(MyConfig)
 	_ = cfg
+}
+
+func Example_openVariable() {
+	// OpenVariable creates a *runtimevar.Variable from a URL.
+	// The "decoder" query parameter is optional, and is removed before fetching
+	// the URL.
+	ctx := context.Background()
+	v, err := runtimevar.OpenVariable(ctx, "http://myserver.com/foo.txt?decoder=string")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	snapshot, err := v.Latest(ctx)
+	_, _ = snapshot, err
 }
