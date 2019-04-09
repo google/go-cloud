@@ -48,4 +48,46 @@
 // If a struct doesn't have a DocstoreRevision field, then the logic described above
 // won't apply to documents read and written with that struct. All writes with the
 // struct will succeed even if the document was changed since the last Get.
+//
+//
+// Queries
+//
+// Docstore supports querying within a collection. Call the Query method on
+// Collection to obtain a Query value, then build your query by calling Query methods
+// like Where, Limit and so on. Finally, call the Get method on the query to execute it.
+// The result is an iterator, whose use is described below.
+//
+//     iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
+//
+// The Where methods defines a filter condition, much like a WHERE clause in SQL. Conditions
+// are of the form "field op value", where field is any document field path (including dot-separated
+// paths), op is one of "=", ">", "<", ">=" or "<=", and value can be a string or number.
+//
+// You can make multiple Where calls. In some cases, parts of a Where clause may be
+// processed on the client rather than natively by the provider, which may have
+// performance implications for large result sets. See the provider-specific package
+// doc for details.
+//
+// The Limit method specifies the maximum number of results to return.
+//
+// Docstore provides no guarantees about the ordering of results. There is no way to
+// ask for a particular ordering.
+//
+// Use the DocumentIterator returned from Query.Get by repeatedly calling its Next
+// method until it returns io.EOF. Always call Stop when you are finished with an
+// iterator.
+//
+//     iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
+//     defer iter.Stop()
+//     for {
+//         m := map[string]interface{}{}
+//         err := iter.Next(ctx, m)
+//         if err == io.EOF {
+//             break
+//         }
+//         if err != nil {
+//             return err
+//         }
+//         fmt.Println(m)
+//    }
 package docstore // import "gocloud.dev/internal/docstore"
