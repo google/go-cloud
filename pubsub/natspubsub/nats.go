@@ -27,6 +27,13 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// NATS supports at-most-semantics; applications need not call Message.Ack,
+// and must not call Message.Nack.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // As
 //
 // natspubsub exposes the following types for As:
@@ -115,7 +122,7 @@ const Scheme = "nats"
 //       for NATS) is called: "log" means a log.Printf warning will be emitted;
 //       "noop" means nothing will happen; and "panic" means the application
 //       will panic. See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
-//       for more details.
+//       for more background.
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -310,6 +317,8 @@ type subscription struct {
 // received message; Ack is a meaningless no-op for NATS. You can provide an
 // empty function to leave it a no-op, or panic/log a warning if you don't
 // expect Ack to be called.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
 //
 // TODO(dlc) - Options for queue groups?
 func OpenSubscription(nc *nats.Conn, subject string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
