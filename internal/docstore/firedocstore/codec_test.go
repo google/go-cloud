@@ -65,7 +65,7 @@ func TestCodecSpecial(t *testing.T) {
 	}
 	enc.Name = "collPath/" + in.Name
 	gotdoc := mustdoc(&got)
-	// Test type-driven decoding (where the types of the struct fields are availableO).
+	// Test type-driven decoding (where the types of the struct fields are available).
 	if err := decodeDoc(enc, gotdoc, nameField); err != nil {
 		t.Fatal(err)
 	}
