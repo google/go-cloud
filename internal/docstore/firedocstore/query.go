@@ -26,6 +26,7 @@ import (
 	"math/big"
 	"path"
 	"reflect"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"gocloud.dev/internal/docstore/driver"
@@ -128,7 +129,7 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 		if rhs.Kind() != reflect.String {
 			return false
 		}
-		return compareStrings(lhs.String(), f.Op, rhs.String())
+		return applyComparison(f.Op, strings.Compare(lhs.String(), rhs.String()))
 	}
 	// Compare numbers by using big.Float. This is expensive
 	// but simpler to code and more clearly correct. In particular,
@@ -139,21 +140,27 @@ func evaluateFilter(f driver.Filter, doc driver.Document) bool {
 	// TODO(jba): handle complex
 	lf := toBigFloat(lhs)
 	rf := toBigFloat(rhs)
-	return compareBigFloats(lf, f.Op, rf)
+	// If either one is not a number, return false.
+	if lf == nil || rf == nil {
+		return false
+	}
+	return applyComparison(f.Op, lf.Cmp(rf))
 }
 
-func compareStrings(lhs, op, rhs string) bool {
+// op is one of the five permitted docstore operators ("=", "<", etc.)
+// c is the result of strings.Compare or the like.
+func applyComparison(op string, c int) bool {
 	switch op {
 	case driver.EqualOp:
-		return lhs == rhs
+		return c == 0
 	case ">":
-		return lhs > rhs
+		return c > 0
 	case "<":
-		return lhs < rhs
+		return c < 0
 	case ">=":
-		return lhs >= rhs
+		return c >= 0
 	case "<=":
-		return lhs <= rhs
+		return c <= 0
 	default:
 		panic("bad op")
 	}
@@ -172,28 +179,6 @@ func toBigFloat(x reflect.Value) *big.Float {
 		return nil
 	}
 	return &f
-}
-
-func compareBigFloats(lf *big.Float, op string, rf *big.Float) bool {
-	// If either one is not a number, return false.
-	if lf == nil || rf == nil {
-		return false
-	}
-	c := lf.Cmp(rf)
-	switch op {
-	case driver.EqualOp:
-		return c == 0
-	case ">":
-		return c > 0
-	case "<":
-		return c < 0
-	case ">=":
-		return c >= 0
-	case "<=":
-		return c <= 0
-	default:
-		panic("bad op")
-	}
 }
 
 func (it *docIterator) Stop() { it.cancel() }
