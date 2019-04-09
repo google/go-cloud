@@ -509,9 +509,6 @@ func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
-// It is intended to be used by VariableURLOpeners in driver packages.
-var DecoderByName = decoderByName
-
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
 //       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
@@ -525,7 +522,7 @@ var DecoderByName = decoderByName
 // open a keeper by the URL string stored in a envrionment variable
 // "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
 // for more details.
-func decoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
+func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
 	// Open a *secrets.Keeper if the decoderName contains "decrypt".
 	k, decoderName, err := decryptByName(ctx, decoderName)
 	if err != nil {
