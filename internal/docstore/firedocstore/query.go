@@ -12,13 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO(jba): figure out how to get filters with complex values to work (since they
+// are represented as arrays of floats). Also, uints: since they are represented as
+// int64s, the sign is wrong. Since you can only compare complex numbers for
+// equality, maybe it could work if Firestore arrays can be compared for equality.
+
 package firedocstore
 
 import (
 	"context"
 	"fmt"
 	"math"
+	"math/big"
 	"path"
+	"reflect"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"gocloud.dev/internal/docstore/driver"
@@ -30,7 +37,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 }
 
 func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docIterator, error) {
-	sq, err := c.queryToProto(q)
+	sq, localFilters, err := c.queryToProto(q)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +50,12 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	if err != nil {
 		return nil, err
 	}
-	return &docIterator{streamClient: sc, nameField: c.nameField, cancel: cancel}, nil
+	return &docIterator{
+		streamClient: sc,
+		nameField:    c.nameField,
+		localFilters: localFilters,
+		cancel:       cancel,
+	}, nil
 }
 
 ////////////////////////////////////////////////////////////////
@@ -52,6 +64,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 type docIterator struct {
 	streamClient pb.Firestore_RunQueryClient
 	nameField    string
+	localFilters []driver.Filter
 	// We call cancel to make sure the stream client doesn't leak resources.
 	// We don't need to call it if Recv() returns a non-nil error.
 	// See https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
@@ -66,18 +79,128 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 		if err != nil {
 			return err
 		}
-		if res.Document != nil {
+		// No document => partial progress; keep receiving.
+		if res.Document == nil {
+			continue
+		}
+		match, err := it.evaluateLocalFilters(res.Document)
+		if err != nil {
+			return err
+		}
+		if match {
 			break
 		}
-
-		// No document => partial progress; keep receiving.
 	}
 	return decodeDoc(res.Document, doc, it.nameField)
 }
 
+// Report whether the filters are true of the document.
+func (it *docIterator) evaluateLocalFilters(pdoc *pb.Document) (bool, error) {
+	if len(it.localFilters) == 0 {
+		return true, nil
+	}
+	// TODO(jba): optimization: evaluate the filter directly on the proto document, without decoding.
+	m := map[string]interface{}{}
+	doc, err := driver.NewDocument(m)
+	if err != nil {
+		return false, err
+	}
+	if err := decodeDoc(pdoc, doc, it.nameField); err != nil {
+		return false, err
+	}
+	for _, f := range it.localFilters {
+		if !evaluateFilter(f, doc) {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func evaluateFilter(f driver.Filter, doc driver.Document) bool {
+	val, err := doc.Get(f.FieldPath)
+	if err != nil {
+		// Treat a missing field as false.
+		return false
+	}
+	lhs := reflect.ValueOf(val)
+	rhs := reflect.ValueOf(f.Value)
+	if lhs.Kind() == reflect.String {
+		if rhs.Kind() != reflect.String {
+			return false
+		}
+		return compareStrings(lhs.String(), f.Op, rhs.String())
+	}
+	// Compare numbers by using big.Float. This is expensive
+	// but simpler to code and more clearly correct. In particular,
+	// it will get the right answer for some mixed-type comparisons
+	// that are hard to do otherwise. For example, comparing the max int64
+	// with a float64: float64(math.MaxInt64) == float64(math.MaxInt64-1)
+	// is true in Go.
+	// TODO(jba): handle complex
+	lf := toBigFloat(lhs)
+	rf := toBigFloat(rhs)
+	return compareBigFloats(lf, f.Op, rf)
+}
+
+func compareStrings(lhs, op, rhs string) bool {
+	switch op {
+	case driver.EqualOp:
+		return lhs == rhs
+	case ">":
+		return lhs > rhs
+	case "<":
+		return lhs < rhs
+	case ">=":
+		return lhs >= rhs
+	case "<=":
+		return lhs <= rhs
+	default:
+		panic("bad op")
+	}
+}
+
+func toBigFloat(x reflect.Value) *big.Float {
+	var f big.Float
+	switch x.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		f.SetInt64(x.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		f.SetUint64(x.Uint())
+	case reflect.Float32, reflect.Float64:
+		f.SetFloat64(x.Float())
+	default:
+		return nil
+	}
+	return &f
+}
+
+func compareBigFloats(lf *big.Float, op string, rf *big.Float) bool {
+	// If either one is not a number, return false.
+	if lf == nil || rf == nil {
+		return false
+	}
+	c := lf.Cmp(rf)
+	switch op {
+	case driver.EqualOp:
+		return c == 0
+	case ">":
+		return c > 0
+	case "<":
+		return c < 0
+	case ">=":
+		return c >= 0
+	case "<=":
+		return c <= 0
+	default:
+		panic("bad op")
+	}
+}
+
 func (it *docIterator) Stop() { it.cancel() }
 
-func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, error) {
+// Converts the query to a Firestore proto. Also returns filters that need to be
+// evaluated on the client.
+func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, []driver.Filter, error) {
 	// The collection ID is the last component of the collection path.
 	collID := path.Base(c.collPath)
 	p := &pb.StructuredQuery{
@@ -92,13 +215,15 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, error) 
 	if q.Limit > 0 {
 		p.Limit = &wrappers.Int32Value{Value: int32(q.Limit)}
 	}
+
+	sendFilters, localFilters := splitFilters(q.Filters)
 	// If there is only one filter, use it directly. Otherwise, construct
 	// a CompositeFilter.
 	var pfs []*pb.StructuredQuery_Filter
-	for _, f := range q.Filters {
+	for _, f := range sendFilters {
 		pf, err := filterToProto(f)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		pfs = append(pfs, pf)
 	}
@@ -114,7 +239,28 @@ func (c *collection) queryToProto(q *driver.Query) (*pb.StructuredQuery, error) 
 	}
 	// TODO(jba): order
 	// TODO(jba): cursors (start/end)
-	return p, nil
+	return p, localFilters, nil
+}
+
+// splitFilters separates the list of query filters into those we can send to the Firestore service,
+// and those we must evaluate here on the client.
+func splitFilters(fs []driver.Filter) (sendToFirestore, evaluateLocally []driver.Filter) {
+	// Enforce that only one field can have an inequality.
+	var rangeFP []string
+	for _, f := range fs {
+		if f.Op == driver.EqualOp {
+			sendToFirestore = append(sendToFirestore, f)
+		} else {
+			if rangeFP == nil || fpEqual(rangeFP, f.FieldPath) {
+				// Multiple inequality filters on the same field are OK.
+				rangeFP = f.FieldPath
+				sendToFirestore = append(sendToFirestore, f)
+			} else {
+				evaluateLocally = append(evaluateLocally, f)
+			}
+		}
+	}
+	return sendToFirestore, evaluateLocally
 }
 
 func filterToProto(f driver.Filter) (*pb.StructuredQuery_Filter, error) {
