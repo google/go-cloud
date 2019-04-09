@@ -43,7 +43,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	if err != nil {
 		return nil, err
 	}
-	return &docIterator{streamClient: sc, cancel: cancel}, nil
+	return &docIterator{streamClient: sc, nameField: c.nameField, cancel: cancel}, nil
 }
 
 ////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 
 type docIterator struct {
 	streamClient pb.Firestore_RunQueryClient
-
+	nameField    string
 	// We call cancel to make sure the stream client doesn't leak resources.
 	// We don't need to call it if Recv() returns a non-nil error.
 	// See https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
@@ -72,7 +72,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 
 		// No document => partial progress; keep receiving.
 	}
-	return decodeDoc(res.Document, doc)
+	return decodeDoc(res.Document, doc, it.nameField)
 }
 
 func (it *docIterator) Stop() { it.cancel() }

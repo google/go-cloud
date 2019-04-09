@@ -148,7 +148,7 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 		}
 		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
 		// TODO(jba): support field paths in decoding.
-		if err := decodeDoc(pdoc, gets[i].Doc /*,  gets[i].FieldPaths */); err != nil {
+		if err := decodeDoc(pdoc, gets[i].Doc, c.nameField); err != nil {
 			return i, err
 		}
 	}
@@ -273,7 +273,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 }
 
 func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precondition) (*pb.Write, error) {
-	pdoc, err := encodeDoc(doc)
+	pdoc, err := encodeDoc(doc, c.nameField)
 	if err != nil {
 		return nil, err
 	}

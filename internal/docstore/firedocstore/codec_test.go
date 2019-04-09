@@ -28,6 +28,7 @@ import (
 // Test that special types round-trip.
 // These aren't tested in the docstore-wide conformance tests.
 func TestCodecSpecial(t *testing.T) {
+	const nameField = "Name"
 	mustdoc := func(x interface{}) driver.Document {
 		t.Helper()
 		doc, err := driver.NewDocument(x)
@@ -38,6 +39,7 @@ func TestCodecSpecial(t *testing.T) {
 	}
 
 	type S struct {
+		Name    string
 		T       time.Time
 		TS, TSn *ts.Timestamp
 		LL, LLn *latlng.LatLng
@@ -48,21 +50,23 @@ func TestCodecSpecial(t *testing.T) {
 		t.Fatal(err)
 	}
 	in := &S{
-		T:   tm,
-		TS:  ts,
-		TSn: nil,
-		LL:  &latlng.LatLng{Latitude: 3, Longitude: 4},
-		LLn: nil,
+		Name: "name",
+		T:    tm,
+		TS:   ts,
+		TSn:  nil,
+		LL:   &latlng.LatLng{Latitude: 3, Longitude: 4},
+		LLn:  nil,
 	}
 	var got S
 
-	enc, err := encodeDoc(mustdoc(in))
+	enc, err := encodeDoc(mustdoc(in), nameField)
 	if err != nil {
 		t.Fatal(err)
 	}
+	enc.Name = "collPath/" + in.Name
 	gotdoc := mustdoc(&got)
 	// Test type-driven decoding (where the types of the struct fields are available).
-	if err := decodeDoc(enc, gotdoc); err != nil {
+	if err := decodeDoc(enc, gotdoc, nameField); err != nil {
 		t.Fatal(err)
 	}
 	if diff := cmp.Diff(&got, in); diff != "" {
@@ -72,15 +76,16 @@ func TestCodecSpecial(t *testing.T) {
 	// Test type-blind decoding.
 	gotmap := map[string]interface{}{}
 	gotmapdoc := mustdoc(gotmap)
-	if err := decodeDoc(enc, gotmapdoc); err != nil {
+	if err := decodeDoc(enc, gotmapdoc, nameField); err != nil {
 		t.Fatal(err)
 	}
 	wantmap := map[string]interface{}{
-		"T":   in.T,
-		"TS":  in.T, // timestamps always decode as time.Time
-		"TSn": nil,
-		"LL":  in.LL,
-		"LLn": nil,
+		"Name": "name",
+		"T":    in.T,
+		"TS":   in.T, // timestamps always decode as time.Time
+		"TSn":  nil,
+		"LL":   in.LL,
+		"LLn":  nil,
 	}
 	if diff := cmp.Diff(gotmap, wantmap); diff != "" {
 		t.Error(diff)
