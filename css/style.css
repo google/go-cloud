@@ -39,7 +39,10 @@ body {
     'hd hd'
     'sd main'
     'ft ft';
+  margin: 0;
   min-height: 100vh;
+  padding: 0;
+  width: 100vw;
 }
 @media (max-width: 768px) {
   .PageLayout {
@@ -67,6 +70,7 @@ body {
   box-sizing: border-box;
   grid-area: main;
   margin: 0;
+  overflow-x: hidden;  /* creates a new block formatting context for children overflows */
   padding: 2rem 2rem 3rem;
 }
 .MainContent-bounds {
@@ -240,12 +244,10 @@ body {
   display: block;
   font: 0.8rem/1.4 'Source Code Pro', monospace;
   margin: 0 0 1rem;
-  overflow: auto;
+  overflow-x: auto;
   padding: 1rem;
   white-space: pre;
   width: 100%;
-  word-break: break-all;
-  word-wrap: break-word;
 }
 .MainContent pre code {
   font-size: 100%;
