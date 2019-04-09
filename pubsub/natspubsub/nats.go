@@ -182,13 +182,6 @@ type topic struct {
 	subj string
 }
 
-// We define our own version of message here for encoding that
-// only encodes Body and Metadata.
-type encMsg struct {
-	Body     []byte
-	Metadata map[string]string
-}
-
 // OpenTopic returns a *pubsub.Topic for use with NATS.
 // The subject is the NATS Subject; for more info, see
 // https://nats.io/documentation/writing_applications/subjects.
