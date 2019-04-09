@@ -43,7 +43,7 @@ func (q *Query) Where(fieldpath, op string, value interface{}) *Query {
 		q.err = err
 	}
 	if !validOp[op] {
-		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter operator: %q", op)
+		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter operator: %q. Use one of: =, >, <, >=, <=", op)
 	}
 	if !validFilterValue(value) {
 		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter value: %v", value)
