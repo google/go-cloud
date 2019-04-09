@@ -127,3 +127,7 @@ type DocumentIterator interface {
 	// needed.
 	Stop()
 }
+
+// EqualOp is the name of the equality operator.
+// It is defined here to avoid confusion between "=" and "==".
+const EqualOp = "="
