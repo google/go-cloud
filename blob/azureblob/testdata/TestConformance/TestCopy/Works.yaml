@@ -26,7 +26,7 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
     method: PUT
   response:
@@ -37,15 +37,15 @@ interactions:
       Content-Md5:
       - sQqNsWTgdUEFt6mb5y4/5Q==
       Date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Etag:
-      - '"0x8D6B9E8A7AB75E1"'
+      - '"0x8D6BA2D1D3A4BF3"'
       Last-Modified:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 9b4fcb5e-001e-0106-72d1-eb2499000000
+      - dee33b4d-201e-011a-0915-ecfc8e000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -62,7 +62,7 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
     method: HEAD
   response:
@@ -85,11 +85,11 @@ interactions:
       Content-Type:
       - text/plain
       Date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Etag:
-      - '"0x8D6B9E8A7AB75E1"'
+      - '"0x8D6BA2D1D3A4BF3"'
       Last-Modified:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Access-Tier:
@@ -107,7 +107,7 @@ interactions:
       X-Ms-Meta-Foo:
       - bar
       X-Ms-Request-Id:
-      - 9b4fcb72-001e-0106-03d1-eb2499000000
+      - dee33b4f-201e-011a-0b15-ecfc8e000000
       X-Ms-Server-Encrypted:
       - "true"
       X-Ms-Version:
@@ -138,7 +138,7 @@ interactions:
       X-Ms-Version:
       - "2018-03-28"
       x-ms-date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
     url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists
     method: PUT
   response:
@@ -149,19 +149,375 @@ interactions:
       Content-Md5:
       - oPqafXJA1cXuvXCJlDDFlw==
       Date:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Etag:
-      - '"0x8D6B9E8A7C0FF0E"'
+      - '"0x8D6BA2D1D4C78EF"'
       Last-Modified:
-      - Fri, 05 Apr 2019 17:03:41 GMT
+      - Sat, 06 Apr 2019 01:13:44 GMT
       Server:
       - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
       X-Ms-Request-Id:
-      - 9b4fcb89-001e-0106-17d1-eb2499000000
+      - dee33b55-201e-011a-0f15-ecfc8e000000
       X-Ms-Request-Server-Encrypted:
       - "true"
       X-Ms-Version:
       - "2018-03-28"
     status: 201 Created
     code: 201
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D56183D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Copy-Id:
+      - ef904385-66b5-46f6-87c0-0553174be641
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Request-Id:
+      - dee33b63-201e-011a-1815-ecfc8e000000
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 202 Accepted
+    code: 202
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest
+    method: GET
+  response:
+    body: Hello World
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D56183D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Copy-Completion-Time:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      X-Ms-Copy-Id:
+      - ef904385-66b5-46f6-87c0-0553174be641
+      X-Ms-Copy-Progress:
+      - 11/11
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Creation-Time:
+      - Fri, 05 Apr 2019 16:36:07 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Request-Id:
+      - dee33b71-201e-011a-2415-ecfc8e000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D56183D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Access-Tier:
+      - Hot
+      X-Ms-Access-Tier-Inferred:
+      - "true"
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Copy-Completion-Time:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      X-Ms-Copy-Id:
+      - ef904385-66b5-46f6-87c0-0553174be641
+      X-Ms-Copy-Progress:
+      - 11/11
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Creation-Time:
+      - Fri, 05 Apr 2019 16:36:07 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Request-Id:
+      - dee33b83-201e-011a-3115-ecfc8e000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists
+    method: PUT
+  response:
+    body: ""
+    headers:
+      Content-Length:
+      - "0"
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D700F4D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Copy-Id:
+      - f8efe773-694b-4895-92c8-35637c7c1441
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Request-Id:
+      - dee33b96-201e-011a-4115-ecfc8e000000
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 202 Accepted
+    code: 202
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:45 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists
+    method: GET
+  response:
+    body: Hello World
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D700F4D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Copy-Completion-Time:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      X-Ms-Copy-Id:
+      - f8efe773-694b-4895-92c8-35637c7c1441
+      X-Ms-Copy-Progress:
+      - 11/11
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Creation-Time:
+      - Fri, 05 Apr 2019 17:03:41 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Request-Id:
+      - dee33b9b-201e-011a-4415-ecfc8e000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - go-cloud/blob/0.1.0 Azure-Storage/0.4 (go1.12; linux)
+      X-Ms-Version:
+      - "2018-03-28"
+      x-ms-date:
+      - Sat, 06 Apr 2019 01:13:45 GMT
+    url: https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-dest-exists
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Md5:
+      - sQqNsWTgdUEFt6mb5y4/5Q==
+      Content-Type:
+      - text/plain
+      Date:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Etag:
+      - '"0x8D6BA2D1D700F4D"'
+      Last-Modified:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      Server:
+      - Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0
+      X-Ms-Access-Tier:
+      - Hot
+      X-Ms-Access-Tier-Inferred:
+      - "true"
+      X-Ms-Blob-Type:
+      - BlockBlob
+      X-Ms-Copy-Completion-Time:
+      - Sat, 06 Apr 2019 01:13:44 GMT
+      X-Ms-Copy-Id:
+      - f8efe773-694b-4895-92c8-35637c7c1441
+      X-Ms-Copy-Progress:
+      - 11/11
+      X-Ms-Copy-Source:
+      - https://gocloudblobtests.blob.core.windows.net/go-cloud-bucket/blob-for-copying-src
+      X-Ms-Copy-Status:
+      - success
+      X-Ms-Creation-Time:
+      - Fri, 05 Apr 2019 17:03:41 GMT
+      X-Ms-Lease-State:
+      - available
+      X-Ms-Lease-Status:
+      - unlocked
+      X-Ms-Meta-Foo:
+      - bar
+      X-Ms-Request-Id:
+      - dee33b9d-201e-011a-4615-ecfc8e000000
+      X-Ms-Server-Encrypted:
+      - "true"
+      X-Ms-Version:
+      - "2018-03-28"
+    status: 200 OK
+    code: 200
     duration: ""
