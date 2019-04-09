@@ -18,7 +18,7 @@ import (
 // Injectors from inject.go:
 
 func initialize(ctx context.Context) (*server.Server, func(), error) {
-	serveMux := NewRouter()
+	serveMux := newRouter()
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v := _wireValue
 	credentials, err := gcp.DefaultCredentials(ctx)

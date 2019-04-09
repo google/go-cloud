@@ -21,7 +21,7 @@ import (
 // Injectors from inject.go:
 
 func initialize(ctx context.Context, cfg *appConfig) (*server.Server, func(), error) {
-	serveMux := NewRouter()
+	serveMux := newRouter()
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v := _wireValue
 	options := awsOptions(cfg)

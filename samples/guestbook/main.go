@@ -117,11 +117,11 @@ var applicationSet = wire.NewSet(
 	newApplication,
 	appHealthChecks,
 	trace.AlwaysSample,
-	NewRouter,
+	newRouter,
 	wire.Bind((*http.Handler)(nil), (*mux.Router)(nil)),
 )
 
-func NewRouter(app *application) *mux.Router {
+func newRouter(app *application) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", app.index)
 	r.HandleFunc("/sign", app.sign)

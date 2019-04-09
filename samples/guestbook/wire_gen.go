@@ -68,7 +68,7 @@ func setupAWS(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	mainApplication := newApplication(db, bucket, variable)
-	router := NewRouter(mainApplication)
+	router := newRouter(mainApplication)
 	ncsaLogger := xrayserver.NewRequestLogger()
 	v, cleanup3 := appHealthChecks(db)
 	xRay := xrayserver.NewXRayClient(sessionSession)
@@ -134,7 +134,7 @@ func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		return nil, nil, err
 	}
 	mainApplication := newApplication(db, bucket, variable)
-	router := NewRouter(mainApplication)
+	router := newRouter(mainApplication)
 	logger := _wireLoggerValue
 	v, cleanup2 := appHealthChecks(db)
 	exporter := _wireExporterValue
@@ -199,7 +199,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	mainApplication := newApplication(db, bucket, variable)
-	router := NewRouter(mainApplication)
+	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
 	v, cleanup4 := appHealthChecks(db)
 	monitoredresourceInterface := monitoredresource.Autodetect()
@@ -246,7 +246,7 @@ func setupLocal(ctx context.Context, flags *cliFlags) (*server.Server, func(), e
 		return nil, nil, err
 	}
 	mainApplication := newApplication(db, bucket, variable)
-	router := NewRouter(mainApplication)
+	router := newRouter(mainApplication)
 	logger := _wireRequestlogLoggerValue
 	v, cleanup2 := appHealthChecks(db)
 	exporter := _wireTraceExporterValue

@@ -33,11 +33,11 @@ import (
 var appSet = wire.NewSet(
 	wire.Value([]health.Checker{connection}),
 	trace.AlwaysSample,
-	NewRouter,
+	newRouter,
 	wire.Bind((*http.Handler)(nil), (*http.ServeMux)(nil)),
 )
 
-func NewRouter() *http.ServeMux {
+func newRouter() *http.ServeMux {
 	m := http.NewServeMux()
 	m.HandleFunc("/", handleMain)
 	m.HandleFunc("/connect", handleConnect)
