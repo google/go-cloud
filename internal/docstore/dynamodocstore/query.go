@@ -40,7 +40,7 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 	if err != nil {
 		return nil, err
 	}
-	in := &dynamodb.QueryInput{
+	out, err := c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
 		TableName:                 &c.table,
 		ExpressionAttributeNames:  ce.Names(),
 		ExpressionAttributeValues: ce.Values(),
@@ -48,8 +48,7 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		FilterExpression:          ce.Filter(),
 		ProjectionExpression:      ce.Projection(),
 		ExclusiveStartKey:         startAfter,
-	}
-	out, err := c.db.QueryWithContext(ctx, in)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +57,7 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		q:     q,
 		items: out.Items,
 		count: *out.Count,
-		limit: q.Limit,
+		limit: q.Limit, // manually count limit since dynamodb uses "limit" as scan limit before filtering
 		last:  out.LastEvaluatedKey,
 	}, nil
 }
