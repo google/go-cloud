@@ -451,9 +451,9 @@ func NewDecoder(obj interface{}, fn Decode) *Decoder {
 }
 
 // Decode decodes b into a new instance of the target type.
-func (d *Decoder) Decode(b []byte) (interface{}, error) {
+func (d *Decoder) Decode(ctx context.Context, b []byte) (interface{}, error) {
 	nv := reflect.New(d.typ).Interface()
-	if err := d.fn(context.Background(), b, nv); err != nil {
+	if err := d.fn(ctx, b, nv); err != nil {
 		return nil, err
 	}
 	ptr := reflect.ValueOf(nv)
