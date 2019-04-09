@@ -17,8 +17,10 @@ package docstore
 import (
 	"context"
 	"io"
+	"reflect"
 
 	"gocloud.dev/internal/docstore/driver"
+	"gocloud.dev/internal/gcerr"
 )
 
 // Query represents a query over a collection.
@@ -39,6 +41,14 @@ func (q *Query) Where(fieldpath, op string, value interface{}) *Query {
 	fp, err := parseFieldPath(FieldPath(fieldpath))
 	if err != nil {
 		q.err = err
+	}
+	if !validOp[op] {
+		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter operator: %q", op)
+	}
+	if !validFilterValue(value) {
+		q.err = gcerr.Newf(gcerr.InvalidArgument, nil, "invalid filter value: %v", value)
+	}
+	if q.err != nil {
 		return q
 	}
 	q.dq.Filters = append(q.dq.Filters, driver.Filter{
@@ -47,6 +57,32 @@ func (q *Query) Where(fieldpath, op string, value interface{}) *Query {
 		Value:     value,
 	})
 	return q
+}
+
+var validOp = map[string]bool{
+	"=":  true,
+	">":  true,
+	"<":  true,
+	">=": true,
+	"<=": true,
+}
+
+func validFilterValue(v interface{}) bool {
+	if v == nil {
+		return false
+	}
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.String:
+		return true
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	case reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
+	}
 }
 
 // Limit will limit the results to at most n documents.
