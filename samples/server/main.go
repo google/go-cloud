@@ -21,6 +21,14 @@ func (g GlobalMonitoredResource) MonitoredResource() (string, map[string]string)
 	return "global", map[string]string{"project_id": g.projectId}
 }
 
+func helloHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "Hello\n")
+}
+
+func mainHandler(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "Welcome to the home page!\n")
+}
+
 func main() {
 	addr := flag.String("listen", ":8080", "HTTP port to listen on")
 
@@ -41,12 +49,8 @@ func main() {
 	exporter, _, err := sdserver.NewExporter(projectId, tokenSource, mr)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/hello", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "Hello\n")
-	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		fmt.Fprintf(w, "Welcome to the home page!\n")
-	})
+	mux.HandleFunc("/hello", helloHandler)
+	mux.HandleFunc("/", mainHandler)
 
 	options := &server.Options{
 		RequestLogger:         sdserver.NewRequestLogger(),
