@@ -19,7 +19,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/internal/docstore"
@@ -48,7 +47,6 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		KeyConditionExpression:    ce.KeyCondition(),
 		FilterExpression:          ce.Filter(),
 		ProjectionExpression:      ce.Projection(),
-		Limit:                     aws.Int64(1),
 		ExclusiveStartKey:         startAfter,
 	}
 	out, err := c.db.QueryWithContext(ctx, in)
