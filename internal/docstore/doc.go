@@ -53,9 +53,9 @@
 // Queries
 //
 // Docstore supports querying within a collection. Call the Query method on
-// Collection to obtain a Query value, Then build your query by calling Query methods
+// Collection to obtain a Query value, then build your query by calling Query methods
 // like Where, Limit and so on. Finally, call the Get method on the query to execute it.
-// The result in an iterator, whose use is described below.
+// The result is an iterator, whose use is described below.
 //
 //     iter := coll.Query().Where("size", ">", 10).Limit(5).Get(ctx)
 //
@@ -63,8 +63,10 @@
 // are of the form "field op value", where field is any document field path (including dot-separated
 // paths), op is one of "=", ">", "<", ">=" or "<=", and value can be a string or number.
 //
-// Although you can make multiple Where calls, not all provider systems can handle them.
-// For some providers, Where clauses may be processed on the client.
+// You can make multiple Where calls. In some cases, parts of a Where clause may be
+// processed on the client rather than natively by the provider, which may have
+// performance implications for large result sets. See the provider-specific package
+// doc for details.
 //
 // The Limit method specifies the maximum number of results to return.
 //
