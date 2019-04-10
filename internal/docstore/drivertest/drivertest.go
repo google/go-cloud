@@ -686,7 +686,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	// Delete existing documents.
 	err := forEach(ctx, coll.Query().Get(ctx), func(m docmap) error { return coll.Delete(ctx, m) })
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%+v", err)
 	}
 
 	// Add a few documents.
