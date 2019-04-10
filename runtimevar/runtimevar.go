@@ -425,7 +425,7 @@ func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 // an arbitrary type. Decode functions are used when creating a Decoder via
 // NewDecoder. This package provides common Decode functions including
 // GobDecode and JSONDecode.
-type Decode func([]byte, interface{}) error
+type Decode func(context.Context, []byte, interface{}) error
 
 // Decoder decodes a slice of bytes into a particular Go object.
 //
@@ -451,9 +451,9 @@ func NewDecoder(obj interface{}, fn Decode) *Decoder {
 }
 
 // Decode decodes b into a new instance of the target type.
-func (d *Decoder) Decode(b []byte) (interface{}, error) {
+func (d *Decoder) Decode(ctx context.Context, b []byte) (interface{}, error) {
 	nv := reflect.New(d.typ).Interface()
-	if err := d.fn(b, nv); err != nil {
+	if err := d.fn(ctx, b, nv); err != nil {
 		return nil, err
 	}
 	ptr := reflect.ValueOf(nv)
@@ -466,25 +466,27 @@ var (
 
 	// BytesDecoder copies the slice of bytes.
 	BytesDecoder = NewDecoder([]byte{}, BytesDecode)
-
-	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
-	JSONDecode = json.Unmarshal
 )
 
+// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
+func JSONDecode(ctx context.Context, data []byte, obj interface{}) error {
+	return json.Unmarshal(data, obj)
+}
+
 // GobDecode can be passed to NewDecoder when decoding gobs (https://golang.org/pkg/encoding/gob/).
-func GobDecode(data []byte, obj interface{}) error {
+func GobDecode(ctx context.Context, data []byte, obj interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
 
 // StringDecode decodes raw bytes b into a string.
-func StringDecode(b []byte, obj interface{}) error {
+func StringDecode(ctx context.Context, b []byte, obj interface{}) error {
 	v := obj.(*string)
 	*v = string(b)
 	return nil
 }
 
 // BytesDecode copies the slice of bytes b into obj.
-func BytesDecode(b []byte, obj interface{}) error {
+func BytesDecode(ctx context.Context, b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
@@ -495,23 +497,23 @@ func BytesDecode(b []byte, obj interface{}) error {
 //
 // post defaults to BytesDecode. An optional decoder can be passed in to do
 // further decode operation based on the decrypted message.
-func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
-	return func(b []byte, obj interface{}) error {
+func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
+	return func(ctx context.Context, b []byte, obj interface{}) error {
 		decrypted, err := k.Decrypt(ctx, b)
 		if err != nil {
 			return err
 		}
 		if post == nil {
-			return BytesDecode(decrypted, obj)
+			return BytesDecode(ctx, decrypted, obj)
 		}
-		return post(decrypted, obj)
+		return post(ctx, decrypted, obj)
 	}
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
-// It is intended to be used by VariableURLOpeners in driver packages.
-var DecoderByName = decoderByName
-
+//
+// It is intended to be used by URL openers in driver packages.
+//
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
 //       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
@@ -525,7 +527,7 @@ var DecoderByName = decoderByName
 // open a keeper by the URL string stored in a envrionment variable
 // "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
 // for more details.
-func decoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
+func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
 	// Open a *secrets.Keeper if the decoderName contains "decrypt".
 	k, decoderName, err := decryptByName(ctx, decoderName)
 	if err != nil {
@@ -578,5 +580,5 @@ func maybeDecrypt(ctx context.Context, k *secrets.Keeper, dec *Decoder) *Decoder
 	if k == nil {
 		return dec
 	}
-	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(ctx, k, dec.fn))
+	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(k, dec.fn))
 }

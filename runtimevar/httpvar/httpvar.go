@@ -34,14 +34,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gocloud.dev/gcerrors"
-	"gocloud.dev/internal/gcerr"
-	"gocloud.dev/runtimevar"
-	"gocloud.dev/runtimevar/driver"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
+
+	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/runtimevar"
+	"gocloud.dev/runtimevar/driver"
 )
 
 func init() {
@@ -220,7 +221,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 		return nil, w.wait
 	}
 
-	val, err := w.decoder.Decode(respBodyBytes)
+	val, err := w.decoder.Decode(ctx, respBodyBytes)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

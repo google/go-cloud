@@ -105,13 +105,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 	}
 	opts := options.FindOne()
 	if len(a.FieldPaths) > 0 {
-		// Create a "projection document" that specifies the fields to retrieve.
-		// Always get the revision field.
-		proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
-		for _, fp := range a.FieldPaths {
-			proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
-		}
-		opts.Projection = proj
+		opts.Projection = projectionDoc(a.FieldPaths)
 	}
 	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
@@ -123,6 +117,16 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 		return err
 	}
 	return decodeDoc(m, a.Doc)
+}
+
+// Construct a mongo "projection document" from field paths.
+// Always include the revision field.
+func projectionDoc(fps [][]string) bson.D {
+	proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
+	for _, fp := range fps {
+		proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
+	}
+	return proj
 }
 
 func (c *collection) create(ctx context.Context, a *driver.Action) error {
@@ -247,10 +251,6 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
 	}
 	return filter, id, rev, nil
-}
-
-func (c *collection) RunGetQuery(context.Context, *driver.Query) (driver.DocumentIterator, error) {
-	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
 
 // Error code for a write error when no documents match a filter.

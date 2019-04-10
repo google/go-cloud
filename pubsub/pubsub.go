@@ -41,23 +41,43 @@
 //
 // Some PubSub systems guarantee that messages received by subscribers but not
 // acknowledged are delivered again. These at-least-once systems require that
-// subscribers call an ack function to indicate that they have fully processed a
+// subscribers call an Ack function to indicate that they have fully processed a
 // message.
 //
-// In other PubSub systems, a message will be delivered only once, if it is delivered
-// at all. These at-most-once systems do not need an Ack method.
+// In other PubSub systems, a message will be delivered only once, if it is
+// delivered at all. These at-most-once systems do not need subscribers to Ack;
+// the message is essentially auto-acked when it is delivered.
 //
-// This package accommodates both kinds of systems. If your application uses
-// at-least-once providers, it should always call Message.Ack. If your application
-// only uses at-most-once providers, it may call Message.Ack, but does not need to.
-// The constructor for at-most-once-providers will require you to supply a function
-// to be called whenever the application calls Message.Ack. Common implementations
-// are: do nothing, on the grounds that you may want to test your at-least-once
-// system with an at-most-once provider; or panic, so that a system that assumes
-// at-least-once delivery isn't accidentally paired with an at-most-once provider.
-// Providers that support both at-most-once and at-least-once semantics will include
-// an optional ack function in their Options struct.
+// This package accommodates both kinds of systems. See the provider-specific
+// package documentation to see whether it is at-most-once or at-least-once.
+// Some providers support both modes.
 //
+// Application developers should think carefully about which kind of semantics
+// the application needs. Even though the application code may look similar, the
+// system-level characteristics are quite different.
+//
+// After receiving a Message via Subscription.Receive:
+//  - If your application ever uses an at-least-once provider, it should always
+//    call Message.Ack/Nack after processing a message.
+//  - If your application only uses at-most-once providers, you can omit the
+//    call to Message.Ack. It should never call Message.Nack, as that operation
+//    doesn't make sense for an at-most-once system.
+//
+// The Subscription constructor for at-most-once-providers will require a
+// function that will be called whenever the application calls Message.Ack.
+// This forces the application developer to be explicit about what happens when
+// Ack is called, since the provider has no meaningful implementation. Common
+// function to supply are:
+//  - func() {}: Do nothing. Use this if your application does call Message.Ack;
+//    it makes explicit that Ack for the provider is a no-op.
+//  - func() { panic("ack called!") }: panic. This is appropriate if your
+//    application only uses at-most-once providers and you don't expect it to
+//    ever call Message.Ack.
+//  - func() { log.Info("ack called!") }: log. Softer than panicking.
+//
+// Since Message.Nack never makes sense for at-most-once providers (the provider
+// can't redeliver the message), Nack will always panic if called for at-most-once
+// providers.
 //
 // OpenCensus Integration
 //

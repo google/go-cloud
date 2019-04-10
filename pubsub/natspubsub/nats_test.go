@@ -26,6 +26,7 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/nats-io/gnatsd/server"
 	gnatsd "github.com/nats-io/gnatsd/test"
 	"github.com/nats-io/go-nats"
@@ -395,6 +396,32 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 		_, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
+
+func TestCodec(t *testing.T) {
+	for _, dm := range []*driver.Message{
+		{Metadata: nil, Body: nil},
+		{Metadata: map[string]string{"a": "1"}, Body: nil},
+		{Metadata: nil, Body: []byte("hello")},
+		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello")},
+		{Metadata: map[string]string{"a": "1"}, Body: []byte("hello"),
+			AckID: "foo", AsFunc: func(interface{}) bool { return true }},
+	} {
+		bytes, err := encodeMessage(dm)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got driver.Message
+		if err := decodeMessage(bytes, &got); err != nil {
+			t.Fatal(err)
+		}
+		want := *dm
+		want.AckID = nil
+		want.AsFunc = nil
+		if diff := cmp.Diff(got, want); diff != "" {
+			t.Errorf("%+v:\n%s", want, diff)
 		}
 	}
 }

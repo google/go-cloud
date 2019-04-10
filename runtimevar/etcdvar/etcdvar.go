@@ -272,7 +272,7 @@ func (w *watcher) watch(ctx context.Context, cli *clientv3.Client, name string, 
 		} else {
 			kv := resp.Kvs[0]
 			if cur == nil || cur.err != nil || kv.Version != cur.version {
-				val, err := decoder.Decode(kv.Value)
+				val, err := decoder.Decode(ctx, kv.Value)
 				if err != nil {
 					cur = w.updateState(&state{err: err}, cur)
 				} else {
