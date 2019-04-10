@@ -509,6 +509,9 @@ func DecryptDecode(ctx context.Context, k *secrets.Keeper, post Decode) Decode {
 }
 
 // DecoderByName returns a *Decoder based on decoderName.
+//
+// It is intended to be used by URL openers in driver packages.
+//
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
 //       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
