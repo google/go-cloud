@@ -16,6 +16,7 @@ package dynamodocstore
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"strings"
 
@@ -108,7 +109,7 @@ func toKeyCondition(f driver.Filter, pkey, skey string) (expression.KeyCondition
 		case ">":
 			return expression.KeyGreaterThan(key, val), true
 		default:
-			panic("invalid filter operation")
+			panic(fmt.Sprint("invalid filter operation:", f.Op))
 		}
 	}
 	return expression.KeyConditionBuilder{}, false
@@ -129,7 +130,7 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 	case ">":
 		return expression.GreaterThan(name, val)
 	default:
-		panic("invalid filter operation")
+		panic(fmt.Sprint("invalid filter operation:", f.Op))
 	}
 }
 
