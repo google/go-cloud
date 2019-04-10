@@ -65,9 +65,9 @@
 //
 // The Subscription constructor for at-most-once-providers will require a
 // function that will be called whenever the application calls Message.Ack.
-// This forces the application developer to be explicit about happens if Ack is
-// called, since the provider has no meaningful implementation. Common function
-// to supply are:
+// This forces the application developer to be explicit about what happens when
+// Ack is called, since the provider has no meaningful implementation. Common
+// function to supply are:
 //  - func() {}: Do nothing. Use this if your application does call Message.Ack;
 //    it makes explicit that Ack for the provider is a no-op.
 //  - func() { panic("ack called!") }: panic. This is appropriate if your

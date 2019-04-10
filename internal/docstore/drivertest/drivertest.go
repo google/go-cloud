@@ -786,11 +786,6 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 			q:    coll.Query().Where("s", ">", "fog"),
 			want: []docmap{{KeyField: "testQuery2"}},
 		},
-		{
-			name: "Limit",
-			q:    coll.Query().Where("n", ">=", -4).Limit(2),
-			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -805,6 +800,13 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 				t.Error(diff)
 			}
 		})
+	}
+
+	// For limit, we can't be sure which documents will be returned, only their count.
+	limitQ := coll.Query().Where("n", ">=", -4).Limit(2)
+	got := mustCollect(ctx, t, limitQ.Get(ctx, KeyField))
+	if len(got) != 2 {
+		t.Errorf("got %v, wanted two documents", got)
 	}
 }
 
