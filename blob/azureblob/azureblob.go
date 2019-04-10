@@ -314,8 +314,6 @@ func (b *bucket) Close() error {
 	return nil
 }
 
-var errUnimplemented = errors.New("not implemented")
-
 // Copy implements driver.Copy.
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
 	dstKey = escapeKey(dstKey, false)
@@ -453,9 +451,6 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if err == errUnimplemented {
-		return gcerrors.Unimplemented
-	}
 	serr, ok := err.(azblob.StorageError)
 	switch {
 	case !ok:
