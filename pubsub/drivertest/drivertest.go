@@ -237,6 +237,7 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 		}
 	}()
 
+	// The test will hang here if the message isn't available, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	_, err = sub.Receive(ctx2)
@@ -371,7 +372,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
 	}
-	// We should be able to receive them again, fairly quickly.
+	// The test will hang here if the messages aren't redelivered, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -530,15 +531,14 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 
-	// The test will hang here if the message isn't redelivered, so give it a
-	// shorter timeout.
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	// The test will hang here if the message isn't redelivered, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	// We're looking to re-receive dms[2].
 Loop:
 	for {
-		curdms, err := ds.ReceiveBatch(ctx, 1)
+		curdms, err := ds.ReceiveBatch(ctx2, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -569,9 +569,12 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 
 // Receive and ack n messages from sub.
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
+	// The test will hang here if the message(s) aren't available, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
-		m, err := sub.Receive(ctx)
+		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -852,8 +855,8 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 			t.Error(err)
 		}
 	}()
-	// The test will hang here if the message isn't available, so give it a
-	// shorter timeout.
+
+	// The test will hang here if the message isn't available, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	_, err = nonExistentSub.Receive(ctx2)
