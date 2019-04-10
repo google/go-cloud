@@ -28,12 +28,17 @@
 //
 // Queries
 //
-// Firestore allows only one field in a query to be compared with an inequality operator (one other than "=").
-// This driver passes the first Where clause with an inequality to Firestore and handles the rest locally.
+// Firestore allows only one field in a query to be compared with an inequality
+// operator (one other than "="). This driver selects the first field in a Where
+// clause with an inequality to pass to Firestore and handles the rest locally. For
+// example, if the query specifies the three clauses A > 1, B > 2 and A < 3, then
+// A > 1 and A < 3 will be sent to Firestore, and the results will be filtered by
+// B > 2 in this driver.
 //
-// Firestore requires a composite index if a query contains both an equality and an inequality comparison.
-// This driver returns an error if the necessary index does not exist. You must create the index manually.
-// See https://cloud.google.com/firestore/docs/query-data/indexing for details.
+// Firestore requires a composite index if a query contains both an equality and an
+// inequality comparison. This driver returns an error if the necessary index does
+// not exist. You must create the index manually. See
+// https://cloud.google.com/firestore/docs/query-data/indexing for details.
 //
 // See https://cloud.google.com/firestore/docs/query-data/queries for more information on Firestore queries.
 package firedocstore // import "gocloud.dev/internal/docstore/firedocstore"
