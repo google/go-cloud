@@ -281,7 +281,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	descP := descResp.Parameters[0]
 
 	// New value (or at least, new version). Decode it.
-	val, err := w.decoder.Decode([]byte(*getP.Value))
+	val, err := w.decoder.Decode(ctx, []byte(*getP.Value))
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

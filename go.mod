@@ -122,7 +122,7 @@ require (
 	github.com/streadway/amqp v0.0.0-20181205114330-a314942b2fd9
 	github.com/tidwall/pretty v0.0.0-20180105212114-65a9db5fad51 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5 // indirect
-	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516
+	github.com/ugorji/go/codec v0.0.0-20181012064053-8333dd449516 // indirect
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c // indirect
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
@@ -134,7 +134,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 	golang.org/x/sys v0.0.0-20190402142545-baf5eb976a8c // indirect
-	golang.org/x/tools v0.0.0-20190402200628-202502a5a924 // indirect
 	golang.org/x/xerrors v0.0.0-20190129162528-20feca13ea86
 	google.golang.org/api v0.2.0
 	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19
