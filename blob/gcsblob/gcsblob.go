@@ -249,10 +249,10 @@ func (r *reader) As(i interface{}) bool {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if err == errUnimplemented {
-		return gcerrors.Unimplemented
-	}
 	if err == storage.ErrObjectNotExist {
+		return gcerrors.NotFound
+	}
+	if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
 		return gcerrors.NotFound
 	}
 	return gcerrors.Unknown
@@ -454,12 +454,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	return w, nil
 }
 
-var errUnimplemented = errors.New("not implemented")
-
 // Copy implements driver.Copy.
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
-	// TODO(rvangent): Implement this and delete errUnimplemented.
-	return errUnimplemented
+	dstKey = escapeKey(dstKey)
+	srcKey = escapeKey(srcKey)
+	bkt := b.client.Bucket(b.name)
+	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+	_, err := copier.Run(ctx)
+	return err
 }
 
 // Delete implements driver.Delete.

@@ -29,7 +29,8 @@ import (
 const (
 	region         = "us-east-2"
 	collectionName = "docstore-test"
-	keyName        = "_id"
+	partKey        = "_kind"
+	sortKey        = "_id"
 )
 
 type harness struct {
@@ -47,7 +48,7 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName, keyName, ""), nil
+	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey), nil
 }
 
 func TestConformance(t *testing.T) {
@@ -65,9 +66,12 @@ func clearTable(t *testing.T) {
 	}
 	db := dyn.New(sess)
 	in := &dyn.ScanInput{
-		TableName:                aws.String(collectionName),
-		ProjectionExpression:     aws.String("#pk"),
-		ExpressionAttributeNames: map[string]*string{"#pk": aws.String(keyName)},
+		TableName:            aws.String(collectionName),
+		ProjectionExpression: aws.String("#pk, #sk"),
+		ExpressionAttributeNames: map[string]*string{
+			"#pk": aws.String(partKey),
+			"#sk": aws.String(sortKey),
+		},
 	}
 	for {
 		out, err := db.Scan(in)
