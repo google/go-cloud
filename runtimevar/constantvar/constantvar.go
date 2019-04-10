@@ -103,7 +103,7 @@ func New(value interface{}) *runtimevar.Variable {
 // a *runtimevar.Variable holding the decoded value. If the decode fails, it
 // constructs a runtimevar.Variable that always fails with the error.
 func NewBytes(b []byte, decoder *runtimevar.Decoder) *runtimevar.Variable {
-	value, err := decoder.Decode(b)
+	value, err := decoder.Decode(context.Background(), b)
 	if err != nil {
 		return NewError(err)
 	}

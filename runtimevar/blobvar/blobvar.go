@@ -215,7 +215,7 @@ func (w *watcher) WatchVariable(ctx context.Context, prev driver.State) (driver.
 	}
 
 	// Decode the value.
-	val, err := w.decoder.Decode(b)
+	val, err := w.decoder.Decode(ctx, b)
 	if err != nil {
 		return errorState(err, prev), w.wait
 	}

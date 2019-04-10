@@ -48,7 +48,6 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *c
 		sortKey:      sortKey,
 	}
 	return c
-
 }
 
 func (c *collection) KeyFields() []string {
@@ -264,10 +263,6 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 	// Value encodes rev to an attribute value.
 	cb := expression.Name(docstore.RevisionField).Equal(expression.Value(rev))
 	return &cb, nil
-}
-
-func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return nil, gcerr.Newf(gcerr.Unimplemented, nil, "unimp")
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

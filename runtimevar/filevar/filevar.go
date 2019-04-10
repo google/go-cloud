@@ -277,7 +277,7 @@ func (w *watcher) watch(ctx context.Context, notifier *fsnotify.Watcher, file st
 
 		// If it's a new value, decode and return it.
 		if cur == nil || cur.err != nil || !bytes.Equal(cur.raw, b) {
-			if val, err := decoder.Decode(b); err != nil {
+			if val, err := decoder.Decode(ctx, b); err != nil {
 				cur = w.updateState(&state{err: err}, cur)
 			} else {
 				cur = w.updateState(&state{val: val, updateTime: time.Now(), raw: b}, cur)
