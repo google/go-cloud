@@ -1,13 +1,12 @@
-
 terraform {
   required_version = "~>0.11"
 }
 
-provider "azurerm" {  
+# See documentation for more info: https://www.terraform.io/docs/providers/azurerm/auth/azure_cli.html
+provider "azurerm" {
   version = "~> 1.22"
-  # See documentation for more info: https://www.terraform.io/docs/providers/azurerm/auth/azure_cli.html
-  subscription_id = "00000000-0000-0000-0000-000000000000"
 }
+
 provider "random" {
   version = "~> 2.1"
 }
@@ -16,12 +15,10 @@ provider "random" {
 variable "location" {
   description = "The Azure Region in which all resources in this example should be created."
 }
+
 # See documentation for more info: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview
 variable "resourcegroup" {
   description = "The Azure Resource Group Name within your Subscription in which this resource will be created."
-}
-variable "servername" {
-  description = "The MySql Server Name, must be unique."
 }
 
 resource "random_string" "db_password" {
@@ -32,12 +29,22 @@ resource "random_string" "db_password" {
   special = false
   length  = 20
 }
+
+resource "random_id" "serverid" {
+  keepers = {
+    region = "${var.location}"
+  }
+
+  byte_length = 2
+}
+
 resource "azurerm_resource_group" "mysqlrg" {
   name     = "${var.resourcegroup}"
   location = "${var.location}"
 }
+
 resource "azurerm_mysql_server" "mysqlserver" {
-  name                = "${var.servername}"
+  name                = "${format("go-cdk-test-%v", random_id.serverid.dec)}"
   location            = "${azurerm_resource_group.mysqlrg.location}"
   resource_group_name = "${azurerm_resource_group.mysqlrg.name}"
 
@@ -59,6 +66,7 @@ resource "azurerm_mysql_server" "mysqlserver" {
   version                      = "5.7"
   ssl_enforcement              = "Enabled"
 }
+
 # See documentation for more info: https://www.terraform.io/docs/providers/azurerm/r/sql_firewall_rule.html
 resource "azurerm_mysql_firewall_rule" "addrule" {
   name                = "ClientIPAddress"
@@ -67,6 +75,7 @@ resource "azurerm_mysql_firewall_rule" "addrule" {
   start_ip_address    = "0.0.0.0"
   end_ip_address      = "0.0.0.0"
 }
+
 resource "azurerm_mysql_database" "mysqldb" {
   name                = "testdb"
   resource_group_name = "${azurerm_resource_group.mysqlrg.name}"
@@ -79,15 +88,18 @@ output "username" {
   value       = "gocloudadmin"
   description = "The MySQL username to connect with."
 }
+
 output "password" {
   value       = "${random_string.db_password.result}"
   sensitive   = true
   description = "The MySQL instance password for the user."
 }
+
 output "servername" {
   value       = "${azurerm_mysql_server.mysqlserver.name}"
   description = "The servername of the Azure Database for MySQL instance."
 }
+
 output "database" {
   value       = "testdb"
   description = "The databasename of the Azure Database for MySQL instance."
