@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
+package mongodocstore
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 		opts.Projection = projectionDoc(q.FieldPaths)
 	}
 	if q.Limit > 0 {
-		var lim int64 = int64(q.Limit)
+		lim := int64(q.Limit)
 		opts.Limit = &lim
 	}
 	filter := bson.D{} // must be a zero-length slice, not nil
