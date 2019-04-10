@@ -26,29 +26,7 @@ import (
 )
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	return c.runGetQuery(ctx, q, nil)
-}
-
-func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfter map[string]*dynamodb.AttributeValue) (*documentIterator, error) {
-	pb := expression.NamesList(expression.Name(docstore.RevisionField))
-	for _, fp := range q.FieldPaths {
-		pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
-	}
-	cb := expression.NewBuilder().WithProjection(pb)
-	cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
-	ce, err := cb.Build()
-	if err != nil {
-		return nil, err
-	}
-	out, err := c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
-		TableName:                 &c.table,
-		ExpressionAttributeNames:  ce.Names(),
-		ExpressionAttributeValues: ce.Values(),
-		KeyConditionExpression:    ce.KeyCondition(),
-		FilterExpression:          ce.Filter(),
-		ProjectionExpression:      ce.Projection(),
-		ExclusiveStartKey:         startAfter,
-	})
+	out, err := c.runGetQuery(ctx, q, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +38,28 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		limit: q.Limit, // manually count limit since dynamodb uses "limit" as scan limit before filtering
 		last:  out.LastEvaluatedKey,
 	}, nil
+}
+
+func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfter map[string]*dynamodb.AttributeValue) (*dynamodb.QueryOutput, error) {
+	pb := expression.NamesList(expression.Name(docstore.RevisionField))
+	for _, fp := range q.FieldPaths {
+		pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
+	}
+	cb := expression.NewBuilder().WithProjection(pb)
+	cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
+	ce, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
+		TableName:                 &c.table,
+		ExpressionAttributeNames:  ce.Names(),
+		ExpressionAttributeValues: ce.Values(),
+		KeyConditionExpression:    ce.KeyCondition(),
+		FilterExpression:          ce.Filter(),
+		ProjectionExpression:      ce.Projection(),
+		ExclusiveStartKey:         startAfter,
+	})
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
@@ -150,14 +150,14 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 	}
 	if it.curr >= len(it.items) && it.last != nil {
 		// Make a new query request at the end of this page.
-		i, err := it.c.runGetQuery(ctx, it.q, it.last)
+		out, err := it.c.runGetQuery(ctx, it.q, it.last)
 		if err != nil {
 			return err
 		}
-		it.limit -= len(it.items)
-		it.items = i.items
+		it.limit -= len(out.Items)
+		it.items = out.Items
 		it.curr = 0
-		it.last = i.last
+		it.last = out.LastEvaluatedKey
 		return it.Next(ctx, doc)
 	}
 	if err := decodeDoc(&dynamodb.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
