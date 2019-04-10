@@ -76,8 +76,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := openTopic(h.pubClient, projectID, "nonexistent-topic")
-	return dt, nil
+	return openTopic(h.pubClient, projectID, "nonexistent-topic"), nil
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
@@ -103,9 +102,7 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	ds := openSubscription(h.subClient, projectID, "nonexistent-subscription")
-	return ds, nil
-
+	return openSubscription(h.subClient, projectID, "nonexistent-subscription"), nil
 }
 
 func (h *harness) Close() {
