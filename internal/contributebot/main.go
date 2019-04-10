@@ -297,7 +297,6 @@ func (w *worker) CheckHealth() error {
 }
 
 // frontPage serves a page explaining that this port is only open for health checks.
-//func (w *worker) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 func frontPage(resp http.ResponseWriter, req *http.Request) {
 	if req.URL.Path != "/" {
 		http.NotFound(resp, req)
