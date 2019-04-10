@@ -35,7 +35,7 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
 	}
 	cb := expression.NewBuilder().WithProjection(pb)
-	cb = processFilter(cb, q.Filters, c.partitionKey, c.sortKey)
+	cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
 	ce, err := cb.Build()
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 	}, nil
 }
 
-func processFilter(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
+func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
 	// TODO(shantuo): process the partition key and remove the hard-coded key
 	// condition after we fix the API.
 	kbs := []expression.KeyConditionBuilder{expression.KeyEqual(expression.Key(pkey), expression.Value("query"))}
@@ -101,12 +101,14 @@ func toKeyCondition(f driver.Filter, pkey, skey string) (expression.KeyCondition
 			return expression.KeyLessThan(key, val), true
 		case "<=":
 			return expression.KeyLessThanEqual(key, val), true
-		case "=":
+		case driver.EqualOp:
 			return expression.KeyEqual(key, val), true
 		case ">=":
 			return expression.KeyGreaterThanEqual(key, val), true
 		case ">":
 			return expression.KeyGreaterThan(key, val), true
+		default:
+			panic("invalid filter operation")
 		}
 	}
 	return expression.KeyConditionBuilder{}, false
@@ -120,14 +122,15 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 		return expression.LessThan(name, val)
 	case "<=":
 		return expression.LessThanEqual(name, val)
-	case "=":
+	case driver.EqualOp:
 		return expression.Equal(name, val)
 	case ">=":
 		return expression.GreaterThanEqual(name, val)
 	case ">":
 		return expression.GreaterThan(name, val)
+	default:
+		panic("invalid filter operation")
 	}
-	return expression.ConditionBuilder{}
 }
 
 type documentIterator struct {
