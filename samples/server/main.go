@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/server"
@@ -31,6 +32,7 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	addr := flag.String("listen", ":8080", "HTTP port to listen on")
+	doTrace := flag.Bool("trace", true, "Export traces to StackDriver")
 
 	ctx := context.Background()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -39,14 +41,20 @@ func main() {
 		log.Fatal(err)
 	}
 	tokenSource := gcp.CredentialsTokenSource(credentials)
-
 	projectId, err := gcp.DefaultProjectID(credentials)
-	fmt.Printf("projectId = %s\n", projectId)
 	if err != nil {
 		log.Fatal(err)
 	}
-	mr := GlobalMonitoredResource{projectId: string(projectId)}
-	exporter, _, err := sdserver.NewExporter(projectId, tokenSource, mr)
+
+	var exporter *stackdriver.Exporter = nil
+	if *doTrace {
+		fmt.Println("Exporting traces to StackDriver")
+		mr := GlobalMonitoredResource{projectId: string(projectId)}
+		exporter, _, err = sdserver.NewExporter(projectId, tokenSource, mr)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/hello", helloHandler)
