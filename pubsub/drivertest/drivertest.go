@@ -212,8 +212,8 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 
 	m := &pubsub.Message{}
 	err = top.Send(ctx, m)
-	if err == nil {
-		t.Errorf("got no error for send to non-existent topic")
+	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v for send to non-existent topic, want code=NotFound", err)
 	}
 }
 
@@ -237,9 +237,11 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 		}
 	}()
 
-	_, err = sub.Receive(ctx)
-	if err == nil {
-		t.Errorf("got no error for send to non-existent topic")
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	_, err = sub.Receive(ctx2)
+	if err == nil || ctx2.Err() != nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v for receive from non-existent subscription, want code=NotFound", err)
 	}
 }
 
@@ -530,13 +532,13 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 
 	// The test will hang here if the message isn't redelivered, so give it a
 	// shorter timeout.
-	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	// We're looking to re-receive dms[2].
 Loop:
 	for {
-		curdms, err := ds.ReceiveBatch(ctx2, 1)
+		curdms, err := ds.ReceiveBatch(ctx, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -844,16 +846,20 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
+	nonExistentSub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	defer func() {
-		if err := sub.Shutdown(ctx); err != nil {
+		if err := nonExistentSub.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
 	}()
-	_, subErr := sub.Receive(ctx)
-	if subErr == nil {
-		t.Error("got nil expected error sending to nonexistent subscription")
-	} else if err := st.SubscriptionErrorCheck(sub, subErr); err != nil {
+	// The test will hang here if the message isn't available, so give it a
+	// shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	_, err = nonExistentSub.Receive(ctx2)
+	if err == nil || ctx2.Err() != nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v receiving from nonexistent subscription, want Code=NotFound", err)
+	} else if err := st.SubscriptionErrorCheck(nonExistentSub, err); err != nil {
 		t.Error(err)
 	}
 }

@@ -181,7 +181,12 @@ func (*topic) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Topic.ErrorCode
-func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
 
 type subscription struct {
 	mu          sync.Mutex
@@ -336,7 +341,12 @@ func (*subscription) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode
-func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
