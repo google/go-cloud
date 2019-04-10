@@ -107,7 +107,7 @@ const Scheme = "gcpkms"
 // "gcpkms://projects/[PROJECT_ID]/locations/[LOCATION]/keyRings/[KEY_RING]/cryptoKeys/[KEY]".
 //
 // The URL host+path are used as the key resource ID; see
-// https://cloud.gogle.com/kms/docs/object-hierarchy#key for more details.
+// https://cloud.google.com/kms/docs/object-hierarchy#key for more details.
 //
 // No query parameters are supported.
 type URLOpener struct {
