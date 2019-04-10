@@ -41,7 +41,7 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 		// The variable isn't set. Create a Variable that always returns an error.
 		return &watcher{err: errNotExist}, nil
 	}
-	val, err := decoder.Decode(rawVal)
+	val, err := decoder.Decode(ctx, rawVal)
 	if err != nil {
 		// The variable didn't decode.
 		return &watcher{err: err}, nil

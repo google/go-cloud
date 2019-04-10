@@ -70,7 +70,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 }
 
 func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAuth, func(), error) {
-	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(p []byte, val interface{}) error {
+	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(ctx context.Context, p []byte, val interface{}) error {
 		key, err := jwt.ParseRSAPrivateKeyFromPEM(p)
 		if err != nil {
 			return err
