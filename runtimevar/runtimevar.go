@@ -497,7 +497,7 @@ func BytesDecode(ctx context.Context, b []byte, obj interface{}) error {
 //
 // post defaults to BytesDecode. An optional decoder can be passed in to do
 // further decode operation based on the decrypted message.
-func DecryptDecode(unusedCtx context.Context, k *secrets.Keeper, post Decode) Decode {
+func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
 	return func(ctx context.Context, b []byte, obj interface{}) error {
 		decrypted, err := k.Decrypt(ctx, b)
 		if err != nil {
@@ -580,5 +580,5 @@ func maybeDecrypt(ctx context.Context, k *secrets.Keeper, dec *Decoder) *Decoder
 	if k == nil {
 		return dec
 	}
-	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(ctx, k, dec.fn))
+	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(k, dec.fn))
 }

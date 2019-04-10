@@ -671,7 +671,7 @@ func TestDecryptDecoder(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			decoder := NewDecoder(tc.in, DecryptDecode(ctx, keeper, tc.postDecFn))
+			decoder := NewDecoder(tc.in, DecryptDecode(keeper, tc.postDecFn))
 
 			b, err := tc.encodeFn(tc.in)
 			if err != nil {
