@@ -17,11 +17,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 
 	"golang.org/x/xerrors"
 )
@@ -33,9 +33,15 @@ func main() {
 		os.Exit(1)
 
 	}
-	err = run(context.Background(), pctx, os.Args[1:])
+	debug := false
+	err = run(context.Background(), pctx, os.Args[1:], &debug)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		if debug {
+			fmt.Fprintf(os.Stderr, "%+v\n", err)
+		} else {
+			// TODO(light): format error message parts one per line?
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
 		if xerrors.As(err, new(usageError)) {
 			os.Exit(64)
 		}
@@ -43,79 +49,38 @@ func main() {
 	}
 }
 
-func run(ctx context.Context, pctx *processContext, args []string) error {
-	if len(args) == 0 {
-		return usageError("usage: gocdk COMMAND ...")
+func run(ctx context.Context, pctx *processContext, args []string, debug *bool) error {
+	globalFlags := newFlagSet(pctx, "gocdk")
+	globalFlags.BoolVar(debug, "debug", false, "show verbose error messages")
+	if err := globalFlags.Parse(args); xerrors.Is(err, flag.ErrHelp) {
+		return nil
+	} else if err != nil {
+		return usagef("gocdk: %w", err)
 	}
-	switch args[0] {
+	if globalFlags.NArg() == 0 {
+		return usagef("gocdk COMMAND ...")
+	}
+
+	cmdArgs := globalFlags.Args()[1:]
+	switch cmdName := globalFlags.Arg(0); cmdName {
 	case "init":
-		return init_(ctx, pctx, args[1:])
+		return init_(ctx, pctx, cmdArgs)
 	case "serve":
-		return serve(ctx, pctx, args[1:])
+		return serve(ctx, pctx, cmdArgs)
 	case "add":
-		return add(ctx, pctx, args[1:])
+		return add(ctx, pctx, cmdArgs)
 	case "deploy":
-		return deploy(ctx, pctx, args[1:])
+		return deploy(ctx, pctx, cmdArgs)
 	case "build":
-		return build(ctx, pctx, args[1:])
+		return build(ctx, pctx, cmdArgs)
 	case "apply":
-		return apply(ctx, pctx, args[1:])
+		return apply(ctx, pctx, cmdArgs)
 	case "launch":
-		return launch(ctx, pctx, args[1:])
+		return launch(ctx, pctx, cmdArgs)
 	default:
 		// TODO(light): We should do spell-checking/fuzzy-matching.
-		return usagef("unknown gocdk command %s", args[0])
+		return usagef("unknown gocdk command %s", cmdName)
 	}
-}
-
-// usageError indicates an invalid invocation of gocdk.
-type usageError struct {
-	msg   string
-	frame xerrors.Frame
-	cause error
-}
-
-// usagef formats an error message string and returns a value of type
-// usageError. The error message will always have "usage: " prepended to it.
-func usagef(format string, args ...interface{}) error {
-	var cause error
-	const wrapSuffix = ": %w"
-	if strings.HasSuffix(format, wrapSuffix) && len(args) > 0 {
-		var ok bool
-		if cause, ok = args[len(args)-1].(error); ok {
-			// Remove everything after colon from format and arguments.
-			format = format[:len(format)-len(wrapSuffix)]
-			args = args[:len(args)-1]
-		}
-	}
-	return usageError{
-		msg:   fmt.Sprintf(format, args...),
-		frame: xerrors.Caller(1),
-		cause: cause,
-	}
-}
-
-func (ue usageError) Error() string {
-	if ue.cause != nil {
-		return "usage: " + ue.msg + " " + ue.cause.Error()
-	}
-	return "usage: " + ue.msg
-}
-
-func (ue usageError) Unwrap() error {
-	return ue.cause
-}
-
-func (ue usageError) FormatError(p xerrors.Printer) error {
-	p.Printf("usage: %s", ue.msg)
-	if p.Detail() {
-		ue.frame.Format(p)
-	}
-	return ue.cause
-}
-
-func (ue usageError) Format(f fmt.State, c rune) {
-	xerrors.FormatError(ue, f, c)
 }
 
 // processContext is the state that gocdk uses to run. It is collected in
