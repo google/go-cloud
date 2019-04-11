@@ -257,7 +257,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.OK
 	case context.Canceled:
 		return gcerrors.Canceled
-	case errNotInitialized, nats.ErrBadSubject:
+	case errNotInitialized:
+		return gcerrors.NotFound
+	case nats.ErrBadSubject:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
 		return gcerrors.PermissionDenied
@@ -428,7 +430,9 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.OK
 	case context.Canceled:
 		return gcerrors.Canceled
-	case errNotInitialized, nats.ErrBadSubject, nats.ErrBadSubscription, nats.ErrTypeSubscription:
+	case errNotInitialized, nats.ErrBadSubscription:
+		return gcerrors.NotFound
+	case nats.ErrBadSubject, nats.ErrTypeSubscription:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
 		return gcerrors.PermissionDenied

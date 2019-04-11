@@ -249,8 +249,8 @@ func TestErrorCode(t *testing.T) {
 	if gce := ds.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
 	}
-	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.FailedPrecondition {
-		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.NotFound {
+		t.Fatalf("Expected %v, got %v", gcerrors.NotFound, gce)
 	}
 	if gce := ds.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)

@@ -212,8 +212,8 @@ func testNonExistentTopicSucceedsOnOpenButFailsOnSend(t *testing.T, newHarness H
 
 	m := &pubsub.Message{}
 	err = top.Send(ctx, m)
-	if err == nil {
-		t.Errorf("got no error for send to non-existent topic")
+	if err == nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v for send to non-existent topic, want code=NotFound", err)
 	}
 }
 
@@ -237,9 +237,12 @@ func testNonExistentSubscriptionSucceedsOnOpenButFailsOnReceive(t *testing.T, ne
 		}
 	}()
 
-	_, err = sub.Receive(ctx)
-	if err == nil {
-		t.Errorf("got no error for send to non-existent topic")
+	// The test will hang here if the message isn't available, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	_, err = sub.Receive(ctx2)
+	if err == nil || ctx2.Err() != nil || gcerrors.Code(err) != gcerrors.NotFound {
+		t.Errorf("got error %v for receive from non-existent subscription, want code=NotFound", err)
 	}
 }
 
@@ -369,7 +372,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 	if diff := diffMessageSets(got, want); diff != "" {
 		t.Error(diff)
 	}
-	// We should be able to receive them again, fairly quickly.
+	// The test will hang here if the messages aren't redelivered, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -528,8 +531,7 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 
-	// The test will hang here if the message isn't redelivered, so give it a
-	// shorter timeout.
+	// The test will hang here if the message isn't redelivered, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -567,9 +569,12 @@ func publishN(ctx context.Context, t *testing.T, top *pubsub.Topic, n int) []*pu
 
 // Receive and ack n messages from sub.
 func receiveN(ctx context.Context, t *testing.T, sub *pubsub.Subscription, n int) []*pubsub.Message {
+	// The test will hang here if the message(s) aren't available, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
 	var ms []*pubsub.Message
 	for i := 0; i < n; i++ {
-		m, err := sub.Receive(ctx)
+		m, err := sub.Receive(ctx2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -834,8 +839,8 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		}
 	}()
 	topicErr := top.Send(ctx, &pubsub.Message{})
-	if topicErr == nil {
-		t.Error("got nil expected error sending to nonexistent topic")
+	if topicErr == nil || gcerrors.Code(topicErr) != gcerrors.NotFound {
+		t.Errorf("got error %v sending to nonexistent topic, want Code=NotFound", topicErr)
 	} else if err := st.TopicErrorCheck(top, topicErr); err != nil {
 		t.Error(err)
 	}
@@ -844,16 +849,20 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub = pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
+	nonExistentSub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	defer func() {
-		if err := sub.Shutdown(ctx); err != nil {
+		if err := nonExistentSub.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
 	}()
-	_, subErr := sub.Receive(ctx)
-	if subErr == nil {
-		t.Error("got nil expected error sending to nonexistent subscription")
-	} else if err := st.SubscriptionErrorCheck(sub, subErr); err != nil {
+
+	// The test will hang here if the message isn't available, so use a shorter timeout.
+	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	_, subErr := nonExistentSub.Receive(ctx2)
+	if subErr == nil || ctx2.Err() != nil || gcerrors.Code(subErr) != gcerrors.NotFound {
+		t.Errorf("got error %v receiving from nonexistent subscription, want Code=NotFound", subErr)
+	} else if err := st.SubscriptionErrorCheck(nonExistentSub, subErr); err != nil {
 		t.Error(err)
 	}
 }
