@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/xerrors"
 )
@@ -102,6 +103,11 @@ func osProcessContext() (*processContext, error) {
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
 	}, nil
+}
+
+// findBiomeDir returns the path to the named biome.
+func findBiomeDir(moduleRoot, name string) string {
+	return filepath.Join(moduleRoot, "biomes", name)
 }
 
 // findModuleRoot searches the given directory and those above it for the Go

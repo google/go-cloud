@@ -40,8 +40,7 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	if err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
-	// TODO(cla): extract into helper method
-	biomePath := filepath.Join(moduleRoot, "biomes", biome)
+	biomePath := findBiomeDir(moduleRoot, biome)
 
 	if err := ensureTerraformInit(ctx, pctx, biomePath); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)

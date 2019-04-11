@@ -24,16 +24,12 @@ import (
 
 func TestFindModuleRoot(t *testing.T) {
 	t.Run("SameDirAsModule", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "gocdk-test")
+		dir, cleanup, err := newTestModule()
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup()
 		dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = ioutil.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com\n"), 0666)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,11 +56,11 @@ func TestFindModuleRoot(t *testing.T) {
 		}
 	})
 	t.Run("ParentDirectory", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "gocdk-test")
+		dir, cleanup, err := newTestModule()
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.RemoveAll(dir)
+		defer cleanup()
 		dir, err = filepath.EvalSymlinks(dir) // in case TMPDIR has a symlink like on darwin
 		if err != nil {
 			t.Fatal(err)
@@ -73,14 +69,28 @@ func TestFindModuleRoot(t *testing.T) {
 		if err := os.Mkdir(subdir, 0777); err != nil {
 			t.Fatal(err)
 		}
-		err = ioutil.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com\n"), 0666)
-		if err != nil {
-			t.Fatal(err)
-		}
 
 		got, err := findModuleRoot(context.Background(), subdir)
 		if got != dir || err != nil {
 			t.Errorf("findModuleRoot(ctx, %q) = %q, %v; want %q, <nil>", dir, got, err, dir)
 		}
 	})
+}
+
+func newTestModule() (dir string, cleanup func(), _ error) {
+	dir, err := ioutil.TempDir("", "gocdk-test")
+	if err != nil {
+		return "", nil, err
+	}
+	cleanup = func() {
+		os.RemoveAll(dir)
+	}
+
+	err = ioutil.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com\n"), 0666)
+	if err != nil {
+		cleanup()
+		return "", nil, err
+	}
+
+	return dir, cleanup, nil
 }
