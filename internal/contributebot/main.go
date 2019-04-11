@@ -61,7 +61,7 @@ func main() {
 	}
 	defer cleanup()
 	log.Printf("Serving health checks at %s", *addr)
-	go server.ListenAndServe(*addr, w)
+	go server.ListenAndServe(*addr)
 	log.Fatal(w.receive(ctx))
 }
 
@@ -292,8 +292,12 @@ func (w *worker) ghClient(installID int64) *github.Client {
 	return c
 }
 
-// ServeHTTP serves a page explaining that this port is only open for health checks.
-func (w *worker) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+func (w *worker) CheckHealth() error {
+	return w.auth.CheckHealth()
+}
+
+// frontPage serves a page explaining that this port is only open for health checks.
+func frontPage(resp http.ResponseWriter, req *http.Request) {
 	if req.URL.Path != "/" {
 		http.NotFound(resp, req)
 		return
@@ -305,8 +309,4 @@ func (w *worker) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Content-Length", fmt.Sprint(len(responseData)))
 	resp.Header().Set("Content-Type", "text/html; charset=utf-8")
 	io.WriteString(resp, responseData)
-}
-
-func (w *worker) CheckHealth() error {
-	return w.auth.CheckHealth()
 }
