@@ -188,6 +188,7 @@ func runBenchmark(t *testing.T, description string, numGoRoutines int, receivePr
 
 	fake := &fakeSub{msgs: msgs, profile: receiveProfile, start: time.Now()}
 	sub := newSubscription(fake, nil, nil)
+	defer sub.Shutdown(context.Background())
 
 	// Header row.
 	fmt.Printf("%s\tmsgs/sec\tRPCs/sec\tbatchsize\n", description)

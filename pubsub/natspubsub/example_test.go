@@ -40,6 +40,7 @@ func ExampleOpenTopic() {
 	if err != nil {
 		// Handle error....
 	}
+	defer topic.Shutdown(ctx)
 
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("example message")})
 }
@@ -70,6 +71,7 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		// Handle error....
 	}
+	defer sub.Shutdown(ctx)
 
 	// Now we can use sub to receive messages.
 	msg, err := sub.Receive(ctx)

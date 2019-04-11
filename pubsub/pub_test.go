@@ -41,11 +41,11 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	top := pubsub.NewTopic(dt, nil)
+	topic := pubsub.NewTopic(dt, nil)
 
 	go func() {
 		m := &pubsub.Message{}
-		if err := top.Send(context.Background(), m); err == nil {
+		if err := topic.Send(context.Background(), m); err == nil {
 			t.Fatal("nil err from Send, expected context cancellation error")
 		}
 	}()
@@ -54,14 +54,14 @@ func TestTopicShutdownCanBeCanceledEvenWithHangingSend(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 	go func() {
-		top.Shutdown(ctx)
+		topic.Shutdown(ctx)
 		close(done)
 	}()
 
-	// Now cancel the context being used by top.Shutdown.
+	// Now cancel the context being used by topic.Shutdown.
 	cancel()
 
-	// It shouldn't take too long before top.Shutdown stops.
+	// It shouldn't take too long before topic.Shutdown stops.
 	tooLong := 5 * time.Second
 	select {
 	case <-done:

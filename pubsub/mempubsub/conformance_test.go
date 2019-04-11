@@ -58,7 +58,11 @@ func TestConformance(t *testing.T) {
 }
 
 func BenchmarkMemPubSub(b *testing.B) {
+	ctx := context.Background()
 	topic := NewTopic()
+	defer topic.Shutdown(ctx)
 	sub := NewSubscription(topic, time.Second)
+	defer sub.Shutdown(ctx)
+
 	drivertest.RunBenchmarks(b, topic, sub)
 }
