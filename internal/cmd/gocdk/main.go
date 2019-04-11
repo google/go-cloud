@@ -1,3 +1,17 @@
+// Copyright 2019 The Go Cloud Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -7,6 +21,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
@@ -49,19 +64,58 @@ func run(ctx context.Context, pctx *processContext, args []string) error {
 		return launch(ctx, pctx, args[1:])
 	default:
 		// TODO(light): We should do spell-checking/fuzzy-matching.
-		return usagef("unknown command %s", args[0])
+		return usagef("unknown gocdk command %s", args[0])
 	}
 }
 
 // usageError indicates an invalid invocation of gocdk.
-type usageError string
+type usageError struct {
+	msg   string
+	frame xerrors.Frame
+	cause error
+}
 
+// usagef formats an error message string and returns a value of type
+// usageError. The error message will always have "usage: " prepended to it.
 func usagef(format string, args ...interface{}) error {
-	return usageError(fmt.Sprintf(format, args...))
+	var cause error
+	const wrapSuffix = ": %w"
+	if strings.HasSuffix(format, wrapSuffix) && len(args) > 0 {
+		var ok bool
+		if cause, ok = args[len(args)-1].(error); ok {
+			// Remove everything after colon from format and arguments.
+			format = format[:len(format)-len(wrapSuffix)]
+			args = args[:len(args)-1]
+		}
+	}
+	return usageError{
+		msg:   fmt.Sprintf(format, args...),
+		frame: xerrors.Caller(1),
+		cause: cause,
+	}
 }
 
 func (ue usageError) Error() string {
-	return string(ue)
+	if ue.cause != nil {
+		return "usage: " + ue.msg + " " + ue.cause.Error()
+	}
+	return "usage: " + ue.msg
+}
+
+func (ue usageError) Unwrap() error {
+	return ue.cause
+}
+
+func (ue usageError) FormatError(p xerrors.Printer) error {
+	p.Printf("usage: %s", ue.msg)
+	if p.Detail() {
+		ue.frame.Format(p)
+	}
+	return ue.cause
+}
+
+func (ue usageError) Format(f fmt.State, c rune) {
+	xerrors.FormatError(ue, f, c)
 }
 
 // processContext is the state that gocdk uses to run. It is collected in
@@ -88,14 +142,15 @@ func osProcessContext() (*processContext, error) {
 // findModuleRoot searches the given directory and those above it for the Go
 // module root.
 func findModuleRoot(ctx context.Context, dir string) (string, error) {
-	// TODO(light): Write some tests for this.
-
 	c := exec.CommandContext(ctx, "go", "list", "-m", "-f", "{{.Dir}}")
 	c.Dir = dir
 	output, err := c.Output()
 	if err != nil {
-		return "", xerrors.Errorf("find module root: %w", err)
+		return "", xerrors.Errorf("find module root for %s: %w", dir, err)
 	}
 	output = bytes.TrimSuffix(output, []byte("\n"))
+	if len(output) == 0 {
+		return "", xerrors.Errorf("find module root for %s: no module found", dir, err)
+	}
 	return string(output), nil
 }
