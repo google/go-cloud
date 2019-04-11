@@ -300,15 +300,12 @@ func (b *bucket) Close() error {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
-	if err == errUnimplemented {
-		return gcerrors.Unimplemented
-	}
 	e, ok := err.(awserr.Error)
 	if !ok {
 		return gcerrors.Unknown
 	}
 	switch {
-	case e.Code() == "NoSuchKey" || e.Code() == "NotFound":
+	case e.Code() == "NoSuchKey" || e.Code() == "NotFound" || e.Code() == s3.ErrCodeObjectNotInActiveTierError:
 		return gcerrors.NotFound
 	default:
 		return gcerrors.Unknown
@@ -670,12 +667,17 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}, nil
 }
 
-var errUnimplemented = errors.New("not implemented")
-
 // Copy implements driver.Copy.
 func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
-	// TODO(rvangent): Implement this and delete errUnimplemented.
-	return errUnimplemented
+	dstKey = escapeKey(dstKey)
+	srcKey = escapeKey(srcKey)
+	input := &s3.CopyObjectInput{
+		Bucket:     aws.String(b.name),
+		CopySource: aws.String(b.name + "/" + srcKey),
+		Key:        aws.String(dstKey),
+	}
+	_, err := b.client.CopyObjectWithContext(ctx, input)
+	return err
 }
 
 // Delete implements driver.Delete.
