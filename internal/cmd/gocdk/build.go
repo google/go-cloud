@@ -27,7 +27,7 @@ import (
 )
 
 func build(ctx context.Context, pctx *processContext, args []string) error {
-	f := flag.NewFlagSet("build", flag.ContinueOnError)
+	f := newFlagSet(pctx, "build")
 	list := f.Bool("list", false, "display Docker images of this project")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil

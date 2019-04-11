@@ -22,7 +22,7 @@ import (
 )
 
 func deploy(ctx context.Context, pctx *processContext, args []string) error {
-	f := flag.NewFlagSet("deploy", flag.ContinueOnError)
+	f := newFlagSet(pctx, "deploy")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
