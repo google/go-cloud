@@ -172,13 +172,13 @@ func (sbAsTest) Name() string {
 	return "azure"
 }
 
-func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
+func (sbAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var t2 servicebus.Topic
-	if top.As(&t2) {
+	if topic.As(&t2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &t2)
 	}
 	var t3 *servicebus.Topic
-	if !top.As(&t3) {
+	if !topic.As(&t3) {
 		return fmt.Errorf("cast failed for %T", &t3)
 	}
 	return nil
@@ -356,12 +356,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		top, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		if top != nil {
-			top.Shutdown(ctx)
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }

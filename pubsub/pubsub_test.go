@@ -285,9 +285,9 @@ func TestRetryTopic(t *testing.T) {
 	// Test that Send is retried if the driver returns a retryable error.
 	ctx := context.Background()
 	ft := &failTopic{}
-	top := pubsub.NewTopic(ft, nil)
-	defer top.Shutdown(ctx)
-	err := top.Send(ctx, &pubsub.Message{})
+	topic := pubsub.NewTopic(ft, nil)
+	defer topic.Shutdown(ctx)
+	err := topic.Send(ctx, &pubsub.Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
 	}
@@ -382,8 +382,8 @@ func (erroringSubscription) AckFunc() func()                                { re
 // wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	top := pubsub.NewTopic(erroringTopic{}, nil)
-	defer top.Shutdown(ctx)
+	topic := pubsub.NewTopic(erroringTopic{}, nil)
+	defer topic.Shutdown(ctx)
 	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
 	defer sub.Shutdown(ctx)
 
@@ -403,7 +403,7 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 	}
 
-	verify(top.Send(ctx, &pubsub.Message{}))
+	verify(topic.Send(ctx, &pubsub.Message{}))
 	_, err := sub.Receive(ctx)
 	verify(err)
 }
@@ -413,14 +413,14 @@ func TestOpenCensus(t *testing.T) {
 	te := octest.NewTestExporter(pubsub.OpenCensusViews)
 	defer te.Unregister()
 
-	top := mempubsub.NewTopic()
-	defer top.Shutdown(ctx)
-	sub := mempubsub.NewSubscription(top, time.Second)
+	topic := mempubsub.NewTopic()
+	defer topic.Shutdown(ctx)
+	sub := mempubsub.NewSubscription(topic, time.Second)
 	defer sub.Shutdown(ctx)
-	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
 		t.Fatal(err)
 	}
-	if err := top.Shutdown(ctx); err != nil {
+	if err := topic.Shutdown(ctx); err != nil {
 		t.Fatal(err)
 	}
 	msg, err := sub.Receive(ctx)
@@ -451,15 +451,15 @@ func TestOpenCensus(t *testing.T) {
 func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ng0 := runtime.NumGoroutine()
-	top := mempubsub.NewTopic()
-	sub := mempubsub.NewSubscription(top, time.Second)
+	topic := mempubsub.NewTopic()
+	sub := mempubsub.NewSubscription(topic, time.Second)
 
 	// Send a bunch of messages at roughly the same time to make the batcher's work more difficult.
 	var eg errgroup.Group
 	n := 1000
 	for i := 0; i < n; i++ {
 		eg.Go(func() error {
-			return top.Send(ctx, &pubsub.Message{})
+			return topic.Send(ctx, &pubsub.Message{})
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -485,7 +485,7 @@ func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 	// The Shutdown methods each spawn a goroutine so we want to make sure those don't
 	// keep running indefinitely after the Shutdowns return.
 	cancel()
-	top.Shutdown(ctx)
+	topic.Shutdown(ctx)
 	sub.Shutdown(ctx)
 
 	// Wait for number of goroutines to return to normal.

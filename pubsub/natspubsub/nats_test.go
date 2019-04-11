@@ -98,13 +98,13 @@ func (natsAsTest) Name() string {
 	return "nats test"
 }
 
-func (natsAsTest) TopicCheck(top *pubsub.Topic) error {
+func (natsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var c2 nats.Conn
-	if top.As(&c2) {
+	if topic.As(&c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
 	var c3 *nats.Conn
-	if !top.As(&c3) {
+	if !topic.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
@@ -362,12 +362,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		top, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		if top != nil {
-			top.Shutdown(ctx)
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }

@@ -170,7 +170,7 @@ func TestPublishConcurrently(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	top := newTopic(conn, "t")
+	topic := newTopic(conn, "t")
 	errc := make(chan error, 100)
 	for g := 0; g < cap(errc); g++ {
 		g := g
@@ -182,7 +182,7 @@ func TestPublishConcurrently(t *testing.T) {
 					Body:     []byte(fmt.Sprintf("msg-%d-%d", g, i)),
 				})
 			}
-			errc <- top.SendBatch(ctx, msgs)
+			errc <- topic.SendBatch(ctx, msgs)
 		}()
 	}
 	for i := 0; i < cap(errc); i++ {
@@ -202,12 +202,12 @@ func TestUnroutable(t *testing.T) {
 	if err := declareExchange(conn, "u"); err != nil {
 		t.Fatal(err)
 	}
-	top := newTopic(conn, "u")
+	topic := newTopic(conn, "u")
 	msgs := []*driver.Message{
 		{Body: []byte("")},
 		{Body: []byte("")},
 	}
-	err := top.SendBatch(ctx, msgs)
+	err := topic.SendBatch(ctx, msgs)
 	merr, ok := err.(MultiError)
 	if !ok {
 		t.Fatalf("got error of type %T, want MultiError", err)
@@ -271,14 +271,14 @@ func TestCancelSendAndReceive(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	top := newTopic(conn, "t")
-	top.sendBatchHook = cancel
+	topic := newTopic(conn, "t")
+	topic.sendBatchHook = cancel
 	msgs := []*driver.Message{
 		{Body: []byte("")},
 	}
 	var err error
 	for err == nil {
-		err = top.SendBatch(ctx, msgs)
+		err = topic.SendBatch(ctx, msgs)
 	}
 	ec := errorCodeForTest(err)
 	// Error might either be from context being canceled, or channel subsequently being closed.
@@ -288,7 +288,7 @@ func TestCancelSendAndReceive(t *testing.T) {
 
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
-	if err := top.SendBatch(ctx, msgs); err != nil {
+	if err := topic.SendBatch(ctx, msgs); err != nil {
 		t.Fatal(err)
 	}
 	sub := newSubscription(conn, "s")
@@ -377,14 +377,14 @@ func (rabbitAsTest) Name() string {
 	return "rabbit test"
 }
 
-func (r rabbitAsTest) TopicCheck(top *pubsub.Topic) error {
+func (r rabbitAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var conn2 amqp.Connection
-	if top.As(&conn2) {
+	if topic.As(&conn2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &conn2)
 	}
 	if !r.usingFake {
 		var conn3 *amqp.Connection
-		if !top.As(&conn3) {
+		if !topic.As(&conn3) {
 			return fmt.Errorf("cast failed for %T", &conn3)
 		}
 	}
@@ -485,12 +485,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		top, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		if top != nil {
-			top.Shutdown(ctx)
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }

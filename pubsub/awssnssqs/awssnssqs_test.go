@@ -196,9 +196,9 @@ func (awsAsTest) Name() string {
 	return "aws test"
 }
 
-func (awsAsTest) TopicCheck(top *pubsub.Topic) error {
+func (awsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var s *sns.SNS
-	if !top.As(&s) {
+	if !topic.As(&s) {
 		return fmt.Errorf("cast failed for %T", s)
 	}
 	return nil
@@ -297,12 +297,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		top, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
-		if top != nil {
-			top.Shutdown(ctx)
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
