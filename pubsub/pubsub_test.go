@@ -237,51 +237,57 @@ func TestCancelReceive(t *testing.T) {
 
 type blockingDriverSub struct {
 	driver.Subscription
-	inReceiveBatch chan int
+	inReceiveBatch chan struct{}
 }
 
 func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	b.inReceiveBatch <- 0
+	b.inReceiveBatch <- struct{}{}
 	<-ctx.Done()
 	return nil, ctx.Err()
 }
-
-func (blockingDriverSub) AckFunc() func() { return nil }
+func (blockingDriverSub) AckFunc() func()        { return nil }
+func (blockingDriverSub) IsRetryable(error) bool { return false }
 
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
 	// 1. Goroutine 1 calls Receive, obtains the lock (Subscription.mu),
-	//    and calls driver.ReceiveBatch, which hangs forever.
+	//    then releases the lock and calls driver.ReceiveBatch, which hangs.
 	// 2. Goroutine 2 calls Receive.
 	// 3. The context passed to the Goroutine 2 call is canceled.
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
-	inReceiveBatch := make(chan int, 1)
+	inReceiveBatch := make(chan struct{})
 	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
+	defer s.Shutdown(context.Background())
 	go func() {
-		s.Receive(context.Background())
-		t.Fatal("Receive should never return")
+		_, err := s.Receive(context.Background())
+		// This should happen at the very end of the test, during Shutdown.
+		if err != context.Canceled {
+			t.Errorf("got %v, want context.Canceled", err)
+		}
 	}()
 	<-inReceiveBatch
-	ctx, cancel := context.WithCancel(context.Background())
+	// Give the Receive call time to block on the mutex before timing out.
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
 	errc := make(chan error)
 	go func() {
 		_, err := s.Receive(ctx)
 		errc <- err
 	}()
-	// Give the Receive call time to block on the mutex before canceling.
-	time.AfterFunc(100*time.Millisecond, cancel)
 	err := <-errc
-	if err != context.Canceled {
-		t.Errorf("got %v, want context.Canceled", err)
+	if err != context.DeadlineExceeded {
+		t.Errorf("got %v, want context.DeadlineExceeded", err)
 	}
 }
 
 func TestRetryTopic(t *testing.T) {
 	// Test that Send is retried if the driver returns a retryable error.
+	ctx := context.Background()
 	ft := &failTopic{}
 	top := pubsub.NewTopic(ft, nil)
-	err := top.Send(context.Background(), &pubsub.Message{})
+	defer top.Shutdown(ctx)
+	err := top.Send(ctx, &pubsub.Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
 	}
@@ -316,9 +322,11 @@ func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
 func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
 func TestRetryReceive(t *testing.T) {
+	ctx := context.Background()
 	fs := &failSub{}
 	sub := pubsub.NewSubscription(fs, nil, nil)
-	m, err := sub.Receive(context.Background())
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatalf("Receive: got %v, want nil", err)
 	}
@@ -375,7 +383,9 @@ func (erroringSubscription) AckFunc() func()                                { re
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	top := pubsub.NewTopic(erroringTopic{}, nil)
+	defer top.Shutdown(ctx)
 	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
+	defer sub.Shutdown(ctx)
 
 	verify := func(err error) {
 		t.Helper()
@@ -404,7 +414,9 @@ func TestOpenCensus(t *testing.T) {
 	defer te.Unregister()
 
 	top := mempubsub.NewTopic()
+	defer top.Shutdown(ctx)
 	sub := mempubsub.NewSubscription(top, time.Second)
+	defer sub.Shutdown(ctx)
 	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
 		t.Fatal(err)
 	}
