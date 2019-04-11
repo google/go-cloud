@@ -16,10 +16,41 @@ package main
 
 import (
 	"context"
+	"flag"
+	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/xerrors"
 )
 
 func apply(ctx context.Context, pctx *processContext, args []string) error {
-	return xerrors.New("not implemented")
+	f := newFlagSet(pctx, "apply")
+	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
+		return nil
+	} else if err != nil {
+		return usagef("gocdk apply: %w", err)
+	}
+
+	if f.NArg() != 1 {
+		return usagef("gocdk apply BIOME")
+	}
+	biome := f.Arg(0)
+	moduleRoot, err := findModuleRoot(ctx, pctx.workdir)
+	if err != nil {
+		return xerrors.Errorf("apply %s: %w", biome, err)
+	}
+	// TODO(cla): extract into helper method
+	biomePath := filepath.Join(moduleRoot, "biomes", biome)
+
+	// TODO(cla): take over steps (plan, confirm, apply) so we can
+	// dictate the messaging and errors. We should visually differentiate
+	// when we insert verbiage on top of terraform.
+	c := exec.CommandContext(ctx, "terraform", "apply")
+	c.Dir = biomePath
+	c.Stdout = pctx.stdout
+	c.Stderr = pctx.stderr
+	if err := c.Run(); err != nil {
+		return xerrors.Errorf("apply %s: %w", biome, err)
+	}
+	return nil
 }
