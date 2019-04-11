@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -42,6 +43,10 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	// TODO(cla): extract into helper method
 	biomePath := filepath.Join(moduleRoot, "biomes", biome)
 
+	if err := ensureTerraformInit(ctx, pctx, biomePath); err != nil {
+		return xerrors.Errorf("apply %s: %w", biome, err)
+	}
+
 	// TODO(cla): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
@@ -51,6 +56,29 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	c.Stderr = pctx.stderr
 	if err := c.Run(); err != nil {
 		return xerrors.Errorf("apply %s: %w", biome, err)
+	}
+	return nil
+}
+
+// ensureTerraformInit checks for a .terraform directory at the biome root.
+// If one doesn't exist, ensureTerraformInit runs terraform init.
+func ensureTerraformInit(ctx context.Context, pctx *processContext, biomePath string) error {
+	_, err := os.Stat(filepath.Join(biomePath, ".terraform"))
+	if err == nil {
+		// .terraform exists, no op.
+		return nil
+	}
+	if !os.IsNotExist(err) {
+		// Some other error occurred.
+		return xerrors.Errorf("ensure terraform init: %w", err)
+	}
+	// Run terraform init.
+	c := exec.CommandContext(ctx, "terraform", "init")
+	c.Dir = biomePath
+	c.Stdout = pctx.stdout
+	c.Stderr = pctx.stderr
+	if err := c.Run(); err != nil {
+		return xerrors.Errorf("ensure terraform init: %w", err)
 	}
 	return nil
 }
