@@ -90,7 +90,13 @@ func BenchmarkRabbit(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil, nil))
+
+	topic := pubsub.NewTopic(dt, nil)
+	defer topic.Shutdown(ctx)
+	sub := pubsub.NewSubscription(ds, nil, nil)
+	defer sub.Shutdown(ctx)
+
+	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 type harness struct {
@@ -239,11 +245,16 @@ func TestErrorCode(t *testing.T) {
 }
 
 func TestOpens(t *testing.T) {
+	ctx := context.Background()
 	if got := OpenTopic(nil, "t", nil); got == nil {
 		t.Error("got nil, want non-nil")
+	} else {
+		got.Shutdown(ctx)
 	}
 	if got := OpenSubscription(nil, "s", nil); got == nil {
 		t.Error("got nil, want non-nil")
+	} else {
+		got.Shutdown(ctx)
 	}
 }
 
@@ -474,9 +485,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		top, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if top != nil {
+			top.Shutdown(ctx)
 		}
 	}
 }
@@ -497,9 +511,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

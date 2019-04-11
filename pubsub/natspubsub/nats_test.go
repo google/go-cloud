@@ -323,7 +323,13 @@ func BenchmarkNatsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil, nil))
+
+	topic := pubsub.NewTopic(dt, nil)
+	defer topic.Shutdown(ctx)
+	sub := pubsub.NewSubscription(ds, nil, nil)
+	defer sub.Shutdown(ctx)
+
+	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 func fakeConnectionStringInEnv() func() {
@@ -356,9 +362,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		top, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if top != nil {
+			top.Shutdown(ctx)
 		}
 	}
 }
@@ -393,9 +402,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

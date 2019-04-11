@@ -113,6 +113,7 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer s.Shutdown(ctx)
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)
@@ -194,6 +195,7 @@ func Example_ackFuncForReceiveAndDelete() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer s.Shutdown(ctx)
 
 	// Construct a *pubsub.Topic.
 	t, err := azuresb.OpenTopic(ctx, sbTopic, nil)
