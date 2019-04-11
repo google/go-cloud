@@ -32,7 +32,7 @@ func deploy(ctx context.Context, pctx *processContext, args []string) error {
 	if f.NArg() != 1 {
 		return usagef("gocdk deploy BIOME")
 	}
-	biome := args[0]
+	biome := f.Arg(0)
 	if err := build(ctx, pctx, nil); err != nil {
 		return err
 	}
