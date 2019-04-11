@@ -11,7 +11,7 @@ require (
 	go.opencensus.io v0.19.2
 	gocloud.dev v0.12.0
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
-	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+	golang.org/x/sys v0.0.0-20190402142545-baf5eb976a8c
 	google.golang.org/api v0.2.0
 	google.golang.org/appengine v1.4.0
 )
