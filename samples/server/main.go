@@ -87,7 +87,7 @@ func main() {
 
 	var exporter trace.Exporter
 	if *doTrace {
-		fmt.Println("Exporting traces to StackDriver")
+		fmt.Println("Exporting traces to Stackdriver")
 		mr := GlobalMonitoredResource{projectId: string(projectId)}
 		exporter, _, err = sdserver.NewExporter(projectId, tokenSource, mr)
 		if err != nil {
