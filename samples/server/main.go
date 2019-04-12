@@ -68,7 +68,7 @@ func main() {
 		Driver:                &server.DefaultDriver{},
 	}
 
-	s := server.New(options)
+	s := server.New(mux, options)
 	fmt.Printf("Listening on %s\n", *addr)
-	s.ListenAndServe(*addr, mux)
+	s.ListenAndServe(*addr)
 }
