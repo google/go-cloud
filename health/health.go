@@ -90,10 +90,12 @@ type Checker interface {
 	CheckHealth() error
 }
 
-// CheckerFunc implements Checker by calling a function.
+// CheckerFunc is an adapter type to allow the use of ordinary functions as
+// health checks. If f is a function with the appropriate signature,
+// CheckerFunc(f) is a Checker that calls f.
 type CheckerFunc func() error
 
-// CheckHealth calls the function.
+// CheckHealth calls f().
 func (f CheckerFunc) CheckHealth() error {
 	return f()
 }
