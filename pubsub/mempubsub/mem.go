@@ -181,7 +181,12 @@ func (*topic) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Topic.ErrorCode
-func (*topic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
 
 type subscription struct {
 	mu          sync.Mutex
@@ -194,24 +199,24 @@ type subscription struct {
 // It panics if the given topic did not come from mempubsub.
 // If a message is not acked within in the given ack deadline from when
 // it is received, then it will be redelivered.
-func NewSubscription(top *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
+func NewSubscription(pstopic *pubsub.Topic, ackDeadline time.Duration) *pubsub.Subscription {
 	var t *topic
-	if !top.As(&t) {
+	if !pstopic.As(&t) {
 		panic("mempubsub: NewSubscription passed a Topic not from mempubsub")
 	}
 	return pubsub.NewSubscription(newSubscription(t, ackDeadline), nil, nil)
 }
 
-func newSubscription(t *topic, ackDeadline time.Duration) *subscription {
+func newSubscription(topic *topic, ackDeadline time.Duration) *subscription {
 	s := &subscription{
-		topic:       t,
+		topic:       topic,
 		ackDeadline: ackDeadline,
 		msgs:        map[driver.AckID]*message{},
 	}
-	if t != nil {
-		t.mu.Lock()
-		defer t.mu.Unlock()
-		t.subs = append(t.subs, s)
+	if topic != nil {
+		topic.mu.Lock()
+		defer topic.mu.Unlock()
+		topic.subs = append(topic.subs, s)
 	}
 	return s
 }
@@ -336,7 +341,12 @@ func (*subscription) ErrorAs(error, interface{}) bool {
 }
 
 // ErrorCode implements driver.Subscription.ErrorCode
-func (*subscription) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errNotExist {
+		return gcerrors.NotFound
+	}
+	return gcerrors.Unknown
+}
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }

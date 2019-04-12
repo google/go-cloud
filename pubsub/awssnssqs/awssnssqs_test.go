@@ -33,33 +33,10 @@ import (
 	"gocloud.dev/pubsub/drivertest"
 )
 
-const region = "us-east-2"
-
-func TestOpenTopic(t *testing.T) {
-	ctx := context.Background()
-	sess, err := newSession()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fakeTopicARN := ""
-	topic := OpenTopic(ctx, sess, fakeTopicARN, nil)
-	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("")}); err == nil {
-		t.Error("got nil, want error from send to nonexistent topic")
-	}
-}
-
-func TestOpenSubscription(t *testing.T) {
-	ctx := context.Background()
-	sess, err := newSession()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fakeQURL := ""
-	sub := OpenSubscription(ctx, sess, fakeQURL, nil)
-	if _, err := sub.Receive(ctx); err == nil {
-		t.Error("got nil, want error from receive from nonexistent subscription")
-	}
-}
+const (
+	region        = "us-east-2"
+	accountNumber = "462380225722"
+)
 
 func newSession() (*session.Session, error) {
 	return session.NewSession(&aws.Config{
@@ -101,7 +78,8 @@ func createTopic(ctx context.Context, topicName string, sess *session.Session) (
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := openTopic(ctx, h.sess, "nonexistent-topic", nil)
+	const fakeTopicARN = "arn:aws:sns:" + region + ":" + accountNumber + ":nonexistenttopic"
+	dt := openTopic(ctx, h.sess, fakeTopicARN, nil)
 	return dt, nil
 }
 
@@ -187,8 +165,8 @@ func subscribeQueueToTopic(ctx context.Context, sqsClient *sqs.SQS, snsClient *s
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	ds := openSubscription(ctx, h.sess, "nonexistent-subscription")
-	return ds, nil
+	const fakeSubscriptionQueueURL = "https://" + region + ".amazonaws.com/" + accountNumber + "/nonexistent-subscription"
+	return openSubscription(ctx, h.sess, fakeSubscriptionQueueURL), nil
 }
 
 func (h *harness) Close() {
@@ -218,9 +196,9 @@ func (awsAsTest) Name() string {
 	return "aws test"
 }
 
-func (awsAsTest) TopicCheck(top *pubsub.Topic) error {
+func (awsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var s *sns.SNS
-	if !top.As(&s) {
+	if !topic.As(&s) {
 		return fmt.Errorf("cast failed for %T", s)
 	}
 	return nil
@@ -239,8 +217,7 @@ func (awsAsTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
 	if !t.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
-	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
-	if got, want := ae.Code(), sns.ErrCodeInvalidParameterException; got != want {
+	if got, want := ae.Code(), sns.ErrCodeNotFoundException; got != want {
 		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil
@@ -251,8 +228,7 @@ func (awsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error
 	if !s.ErrorAs(err, &ae) {
 		return fmt.Errorf("failed to convert %v (%T) to an awserr.Error", err, err)
 	}
-	// It seems like it should be ErrCodeNotFoundException but that's not what AWS gives back.
-	if got, want := ae.Code(), "InvalidAddress"; got != want {
+	if got, want := ae.Code(), sqs.ErrCodeQueueDoesNotExist; got != want {
 		return fmt.Errorf("got %q, want %q", got, want)
 	}
 	return nil
@@ -321,9 +297,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -343,9 +322,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

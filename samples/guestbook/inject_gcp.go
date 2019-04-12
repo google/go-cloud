@@ -27,6 +27,7 @@ import (
 	"gocloud.dev/mysql/cloudmysql"
 	"gocloud.dev/runtimevar"
 	"gocloud.dev/runtimevar/gcpruntimeconfig"
+	"gocloud.dev/server"
 	pb "google.golang.org/genproto/googleapis/cloud/runtimeconfig/v1beta1"
 )
 
@@ -36,7 +37,7 @@ import (
 // into wire_gen.go when Wire is run.
 
 // setupGCP is a Wire injector function that sets up the application using GCP.
-func setupGCP(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(

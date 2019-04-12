@@ -17,6 +17,7 @@ package firedocstore
 import (
 	"math"
 	"testing"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
@@ -68,6 +69,127 @@ func TestFilterToProto(t *testing.T) {
 		}
 		if diff := cmp.Diff(got, test.want, cmp.Comparer(proto.Equal)); diff != "" {
 			t.Errorf("%+v: %s", test.in, diff)
+		}
+	}
+}
+
+func TestSplitFilters(t *testing.T) {
+	aEqual := driver.Filter{[]string{"a"}, "=", 1}
+	aLess := driver.Filter{[]string{"a"}, "<", 1}
+	aGreater := driver.Filter{[]string{"a"}, ">", 1}
+	bEqual := driver.Filter{[]string{"b"}, "=", 1}
+	bLess := driver.Filter{[]string{"b"}, "<", 1}
+
+	for _, test := range []struct {
+		in                  []driver.Filter
+		wantSend, wantLocal []driver.Filter
+	}{
+		{
+			in:        nil,
+			wantSend:  nil,
+			wantLocal: nil,
+		},
+		{
+			in:        []driver.Filter{aEqual},
+			wantSend:  []driver.Filter{aEqual},
+			wantLocal: nil,
+		},
+		{
+			in:        []driver.Filter{aLess},
+			wantSend:  []driver.Filter{aLess},
+			wantLocal: nil,
+		},
+		{
+			in:        []driver.Filter{aLess, aGreater},
+			wantSend:  []driver.Filter{aLess, aGreater},
+			wantLocal: nil,
+		},
+		{
+			in:        []driver.Filter{aLess, bEqual, aGreater},
+			wantSend:  []driver.Filter{aLess, bEqual, aGreater},
+			wantLocal: nil,
+		},
+		{
+			in:        []driver.Filter{aLess, bLess, aGreater},
+			wantSend:  []driver.Filter{aLess, aGreater},
+			wantLocal: []driver.Filter{bLess},
+		},
+		{
+			in:        []driver.Filter{aEqual, aLess, bLess, aGreater, bEqual},
+			wantSend:  []driver.Filter{aEqual, aLess, aGreater, bEqual},
+			wantLocal: []driver.Filter{bLess},
+		},
+	} {
+		gotSend, gotLocal := splitFilters(test.in)
+		if diff := cmp.Diff(gotSend, test.wantSend); diff != "" {
+			t.Errorf("%v, send:\n%s", test.in, diff)
+		}
+		if diff := cmp.Diff(gotLocal, test.wantLocal); diff != "" {
+			t.Errorf("%v, local:\n%s", test.in, diff)
+		}
+	}
+}
+
+func TestEvaluateFilter(t *testing.T) {
+	m := map[string]interface{}{
+		"i":  32,
+		"f":  5.5,
+		"f2": 5.0,
+		"s":  "32",
+		"t":  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		"b":  true,
+		"mi": math.MaxInt64,
+	}
+	doc, err := driver.NewDocument(m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		field, op string
+		value     interface{}
+		want      bool
+	}{
+		// Firestore compares numbers to each other ignoring type (int vs. float).
+		{"i", "=", 32, true},
+		{"i", ">", 32, false},
+		{"i", "<", 32, false},
+		{"i", "=", 32.0, true},
+		{"i", ">", 32.0, false},
+		{"i", "<", 32.0, false},
+		{"i", "=", uint(32), true},
+		{"f", "=", 5.5, true},
+		{"f", ">", 5.5, false},
+		{"f", "<", 5.5, false},
+		{"f2", "=", 5, true},
+		{"f2", ">", 5, false},
+		{"f2", "<", 5, false},
+		{"mi", "=", math.MaxInt64, true},
+		{"mi", "=", math.MaxInt64 - 1, false},
+		{"mi", ">", math.MaxInt64 - 1, true},
+		{"mi", "=", float64(math.MaxInt64 - 1), false},
+		// Firestore compares strings to each other, but not to numbers.
+		{"s", "=", "32", true},
+		{"s", ">", "32", false},
+		{"s", "<", "32", false},
+		{"s", ">", "3", true},
+		{"i", "=", "32", false},
+		{"i", ">", "32", false},
+		{"i", "<", "32", false},
+		{"f", "=", "5.5", false},
+		{"f", ">", "5.5", false},
+		{"f", "<", "5.5", false},
+		// Comparisons with other types fail.
+		{"b", "=", "true", false},
+		{"b", ">", "true", false},
+		{"b", "<", "true", false},
+		{"t", "=", 0, false},
+		{"t", ">", 0, false},
+		{"t", "<", 0, false},
+	} {
+		f := driver.Filter{FieldPath: []string{test.field}, Op: test.op, Value: test.value}
+		got := evaluateFilter(f, doc)
+		if got != test.want {
+			t.Errorf("%s %s %v: got %t, want %t", test.field, test.op, test.value, got, test.want)
 		}
 	}
 }

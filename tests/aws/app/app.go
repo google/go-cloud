@@ -36,7 +36,16 @@ type appConfig struct {
 var appSet = wire.NewSet(
 	wire.Value([]health.Checker{connection}),
 	trace.AlwaysSample,
+	newRouter,
+	wire.Bind((*http.Handler)(nil), (*http.ServeMux)(nil)),
 )
+
+func newRouter() *http.ServeMux {
+	m := http.NewServeMux()
+	m.HandleFunc("/", handleMain)
+	m.HandleFunc("/disconnect", handleDisconnect)
+	return m
+}
 
 var connection = &connectionChecker{connected: true}
 
@@ -48,11 +57,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer cleanup()
-
-	m := http.NewServeMux()
-	m.HandleFunc("/", handleMain)
-	m.HandleFunc("/disconnect", handleDisconnect)
-	log.Fatal(srv.ListenAndServe(":8080", m))
+	log.Fatal(srv.ListenAndServe(":8080"))
 }
 
 func handleMain(w http.ResponseWriter, r *http.Request) {

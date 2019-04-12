@@ -98,13 +98,13 @@ func (natsAsTest) Name() string {
 	return "nats test"
 }
 
-func (natsAsTest) TopicCheck(top *pubsub.Topic) error {
+func (natsAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var c2 nats.Conn
-	if top.As(&c2) {
+	if topic.As(&c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
 	var c3 *nats.Conn
-	if !top.As(&c3) {
+	if !topic.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
@@ -249,8 +249,8 @@ func TestErrorCode(t *testing.T) {
 	if gce := ds.ErrorCode(nats.ErrBadSubject); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
 	}
-	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.FailedPrecondition {
-		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
+	if gce := ds.ErrorCode(nats.ErrBadSubscription); gce != gcerrors.NotFound {
+		t.Fatalf("Expected %v, got %v", gcerrors.NotFound, gce)
 	}
 	if gce := ds.ErrorCode(nats.ErrTypeSubscription); gce != gcerrors.FailedPrecondition {
 		t.Fatalf("Expected %v, got %v", gcerrors.FailedPrecondition, gce)
@@ -323,7 +323,13 @@ func BenchmarkNatsPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup()
-	drivertest.RunBenchmarks(b, pubsub.NewTopic(dt, nil), pubsub.NewSubscription(ds, nil, nil))
+
+	topic := pubsub.NewTopic(dt, nil)
+	defer topic.Shutdown(ctx)
+	sub := pubsub.NewSubscription(ds, nil, nil)
+	defer sub.Shutdown(ctx)
+
+	drivertest.RunBenchmarks(b, topic, sub)
 }
 
 func fakeConnectionStringInEnv() func() {
@@ -356,9 +362,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -393,9 +402,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }
