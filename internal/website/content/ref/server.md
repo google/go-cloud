@@ -18,5 +18,6 @@ Top-level package documentation: https://godoc.org/gocloud.dev/server
 
 ## Usage Samples
 
+* [Minimal server sample](https://github.com/google/go-cloud/tree/master/samples/server)
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
