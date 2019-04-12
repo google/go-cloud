@@ -27,7 +27,7 @@ import (
 )
 
 func TestApply(t *testing.T) {
-	// TODO(cla): test cases
+	// TODO(#1809): test cases
 	// didn't supply biome name to command
 	// named biome doesn't exist
 	// no terraform file
@@ -57,10 +57,17 @@ func TestApply(t *testing.T) {
 		}
 		ctx := context.Background()
 
+		// Call the main package run function as if 'apply' and biomeName were passed
+		// on the command line. As part of this, ensureTerraformInit is called to check
+		// that terraform has been properly initialized before running 'terraform apply'.
 		if err := run(ctx, pctx, []string{"apply", biomeName}, new(bool)); err != nil {
 			t.Errorf("run error: %+v", err)
 		}
 
+		// After a successful terraform apply, 'terraform output' should return the greeting
+		// we configured. Tgit sterraform output fails if 'terraform init' was not called.
+		// It also fails if 'terraform apply' has never been run, as there will be no
+		// terraform state file (terraform.tfstate).
 		outputs, err := tfReadOutput(findBiomeDir(dir, biomeName))
 		if err != nil {
 			t.Fatal(err)
@@ -81,6 +88,7 @@ func newTestBiome(dir, name, tfGreeting string) error {
 }
 provider "random" {
 }`
+
 	err := ioutil.WriteFile(filepath.Join(biomeDir, "main.tf"), []byte(terraformSource), 0666)
 	if err != nil {
 		return err

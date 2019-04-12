@@ -46,7 +46,7 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("apply %s: %w", biome, err)
 	}
 
-	// TODO(cla): take over steps (plan, confirm, apply) so we can
+	// TODO(#1821): take over steps (plan, confirm, apply) so we can
 	// dictate the messaging and errors. We should visually differentiate
 	// when we insert verbiage on top of terraform.
 	c := exec.CommandContext(ctx, "terraform", "apply")
