@@ -55,6 +55,8 @@ type Message struct {
 }
 
 // Topic publishes messages.
+// Drivers may optionally also implement io.Closer; Close will be called
+// when the pubsub.Topic is Shutdown.
 type Topic interface {
 	// SendBatch should publish all the messages in ms. It should
 	// return only after all the messages are sent, an error occurs, or the
@@ -98,6 +100,8 @@ type Topic interface {
 }
 
 // Subscription receives published messages.
+// Drivers may optionally also implement io.Closer; Close will be called
+// when the pubsub.Subscription is Shutdown.
 type Subscription interface {
 	// ReceiveBatch should return a batch of messages that have queued up
 	// for the subscription on the server, up to maxMessages.
