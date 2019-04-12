@@ -46,7 +46,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var exporter *stackdriver.Exporter = nil
+	var exporter trace.Exporter
 	if *doTrace {
 		fmt.Println("Exporting traces to StackDriver")
 		mr := GlobalMonitoredResource{projectId: string(projectId)}
