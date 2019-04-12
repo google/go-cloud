@@ -78,14 +78,14 @@ func TestFindModuleRoot(t *testing.T) {
 }
 
 // newTestModule creates a temporary directory with a go.mod at the root,
-// and returns the path as dir. The returned cleanup function removes the
+// and returns the path. The returned cleanup function removes the
 // temporary directory and its contents.
-func newTestModule() (_ string, cleanup func(), _ error) {
+func newTestModule() (string, func(), error) {
 	dir, err := ioutil.TempDir("", "gocdk-test")
 	if err != nil {
 		return "", nil, err
 	}
-	cleanup = func() {
+	cleanup := func() {
 		os.RemoveAll(dir)
 	}
 
