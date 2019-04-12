@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
+	"time"
 
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
+	"gocloud.dev/health"
 	"gocloud.dev/server"
 	"gocloud.dev/server/sdserver"
 )
@@ -28,6 +32,20 @@ func helloHandler(w http.ResponseWriter, req *http.Request) {
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Welcome to the home page!\n")
+}
+
+type customHealthCheck struct {
+	mu      sync.RWMutex
+	healthy bool
+}
+
+func (h *customHealthCheck) CheckHealth() error {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if !h.healthy {
+		return errors.New("not ready yet!")
+	}
+	return nil
 }
 
 func main() {
@@ -60,9 +78,16 @@ func main() {
 	mux.HandleFunc("/hello", helloHandler)
 	mux.HandleFunc("/", mainHandler)
 
+	myCheck := new(customHealthCheck)
+	time.AfterFunc(10*time.Second, func() {
+		myCheck.mu.Lock()
+		defer myCheck.mu.Unlock()
+		myCheck.healthy = true
+	})
+
 	options := &server.Options{
 		RequestLogger:         sdserver.NewRequestLogger(),
-		HealthChecks:          nil,
+		HealthChecks:          []health.Checker{myCheck},
 		TraceExporter:         exporter,
 		DefaultSamplingPolicy: trace.AlwaysSample(),
 		Driver:                &server.DefaultDriver{},
