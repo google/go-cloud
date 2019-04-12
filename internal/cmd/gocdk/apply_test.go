@@ -65,7 +65,7 @@ func TestApply(t *testing.T) {
 		}
 
 		// After a successful terraform apply, 'terraform output' should return the greeting
-		// we configured. Tgit sterraform output fails if 'terraform init' was not called.
+		// we configured. Terraform output fails if 'terraform init' was not called.
 		// It also fails if 'terraform apply' has never been run, as there will be no
 		// terraform state file (terraform.tfstate).
 		outputs, err := tfReadOutput(findBiomeDir(dir, biomeName))
