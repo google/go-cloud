@@ -50,7 +50,7 @@ func (h *customHealthCheck) CheckHealth() error {
 
 func main() {
 	addr := flag.String("listen", ":8080", "HTTP port to listen on")
-	doTrace := flag.Bool("trace", true, "Export traces to StackDriver")
+	doTrace := flag.Bool("trace", true, "Export traces to Stackdriver")
 
 	ctx := context.Background()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -64,7 +64,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var exporter *stackdriver.Exporter = nil
+	var exporter trace.Exporter
 	if *doTrace {
 		fmt.Println("Exporting traces to StackDriver")
 		mr := GlobalMonitoredResource{projectId: string(projectId)}
