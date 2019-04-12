@@ -59,7 +59,7 @@ func writeUnhealthy(w http.ResponseWriter) {
 	io.WriteString(w, status)
 }
 
-// HandleLive is an http.HandleFunc that handles liveness checks by
+// HandleLive is an http.HandlerFunc that handles liveness checks by
 // immediately responding with an HTTP 200 status.
 func HandleLive(w http.ResponseWriter, _ *http.Request) {
 	writeHealthy(w)
@@ -83,4 +83,14 @@ func writeHealthy(w http.ResponseWriter) {
 // call from multiple goroutines.
 type Checker interface {
 	CheckHealth() error
+}
+
+// CheckerFunc is an adapter type to allow the use of ordinary functions as
+// health checks. If f is a function with the appropriate signature,
+// CheckerFunc(f) is a Checker that calls f.
+type CheckerFunc func() error
+
+// CheckHealth calls f().
+func (f CheckerFunc) CheckHealth() error {
+	return f()
 }
