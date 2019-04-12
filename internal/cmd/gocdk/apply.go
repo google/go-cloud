@@ -51,6 +51,7 @@ func apply(ctx context.Context, pctx *processContext, args []string) error {
 	// when we insert verbiage on top of terraform.
 	c := exec.CommandContext(ctx, "terraform", "apply")
 	c.Dir = biomePath
+	c.Stdin = pctx.stdin
 	c.Stdout = pctx.stdout
 	c.Stderr = pctx.stderr
 	if err := c.Run(); err != nil {

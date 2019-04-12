@@ -88,6 +88,7 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 // this struct to avoid obtaining this from globals for simpler testing.
 type processContext struct {
 	workdir string
+	stdin   io.Reader
 	stdout  io.Writer
 	stderr  io.Writer
 }
@@ -100,6 +101,7 @@ func osProcessContext() (*processContext, error) {
 	}
 	return &processContext{
 		workdir: workdir,
+		stdin:   os.Stdin,
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
 	}, nil
