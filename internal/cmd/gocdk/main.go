@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"golang.org/x/xerrors"
 )
@@ -87,6 +88,7 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 // this struct to avoid obtaining this from globals for simpler testing.
 type processContext struct {
 	workdir string
+	stdin   io.Reader
 	stdout  io.Writer
 	stderr  io.Writer
 }
@@ -99,9 +101,15 @@ func osProcessContext() (*processContext, error) {
 	}
 	return &processContext{
 		workdir: workdir,
+		stdin:   os.Stdin,
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
 	}, nil
+}
+
+// findBiomeDir returns the path to the named biome.
+func findBiomeDir(moduleRoot, name string) string {
+	return filepath.Join(moduleRoot, "biomes", name)
 }
 
 // findModuleRoot searches the given directory and those above it for the Go
