@@ -110,9 +110,13 @@ func main() {
 	})
 
 	options := &server.Options{
-		RequestLogger:         sdserver.NewRequestLogger(),
-		HealthChecks:          []health.Checker{healthCheck},
-		TraceExporter:         exporter,
+		RequestLogger: sdserver.NewRequestLogger(),
+		HealthChecks:  []health.Checker{healthCheck},
+		TraceExporter: exporter,
+
+		// In production you will likely want to use trace.ProbabilitySampler
+		// instead, since AlwaysSample will start and export a trace for every
+		// request - this may be prohibitively slow with significant traffic.
 		DefaultSamplingPolicy: trace.AlwaysSample(),
 		Driver:                &server.DefaultDriver{},
 	}
