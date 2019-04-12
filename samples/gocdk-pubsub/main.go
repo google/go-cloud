@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// gcmsg is a sample application that publishes messages from stdin to an
-// existing topic or receives messages from an existing subscription and
-// sends them to stdout. The name gcmsg is short for Go CDK Messages.
+// gocdk-pubsub demonstrates the use of the Go CDK pubsub package in a
+// simple command-line application.
 package main
 
 import (
@@ -22,12 +21,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 
 	"github.com/google/subcommands"
 	"gocloud.dev/pubsub"
+
+	// Import the pubsub driver packages we want to be able to open.
 	_ "gocloud.dev/pubsub/awssnssqs"
 	_ "gocloud.dev/pubsub/azuresb"
 	_ "gocloud.dev/pubsub/gcppubsub"
@@ -35,13 +35,27 @@ import (
 	_ "gocloud.dev/pubsub/rabbitpubsub"
 )
 
+func main() {
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(&pubCmd{}, "")
+	subcommands.Register(&subCmd{}, "")
+	log.SetFlags(0)
+	log.SetPrefix("gocdk-pubsub: ")
+	flag.Parse()
+	os.Exit(int(subcommands.Execute(context.Background())))
+}
+
 type pubCmd struct{}
 
 func (*pubCmd) Name() string     { return "pub" }
 func (*pubCmd) Synopsis() string { return "Publish a message to a topic" }
 func (*pubCmd) Usage() string {
-	return `pub <topic URL>:
+	return `pub <topic URL>
+
   Read messages from stdin, one per line and send them to <topic URL>.
+
+  Example:
+    gocdk-pubsub sub gcppubsub://myproject/mysubscription
 
   See https://godoc.org/gocloud.dev#hdr-URLs for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/pubsub
@@ -50,8 +64,7 @@ func (*pubCmd) Usage() string {
 `
 }
 
-func (p *pubCmd) SetFlags(f *flag.FlagSet) {
-}
+func (p *pubCmd) SetFlags(f *flag.FlagSet) {}
 
 func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 1 {
@@ -59,45 +72,50 @@ func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitUsageError
 	}
 	topicURL := f.Arg(0)
-	if err := p.pub(ctx, topicURL, os.Stdin); err != nil {
+
+	// Open a *pubsub.Topic using the URL.
+	topic, err := pubsub.OpenTopic(ctx, topicURL)
+	if err != nil {
+		log.Print(err)
+		return subcommands.ExitFailure
+	}
+	defer topic.Shutdown(ctx)
+
+	// Read lines from stdin and send them as messages to the topic.
+	fmt.Fprintf(os.Stderr, "Enter messages, one per line, to be published to %q.\n", topicURL)
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			log.Print("Skipping empty message.")
+			continue
+		}
+		m := &pubsub.Message{Body: []byte(line)}
+		if err := topic.Send(ctx, m); err != nil {
+			log.Print(err)
+			return subcommands.ExitFailure
+		}
+	}
+	if err := scanner.Err(); err != nil {
 		log.Print(err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
 }
 
-func (p *pubCmd) pub(ctx context.Context, topicURL string, r io.Reader) error {
-	t, err := pubsub.OpenTopic(ctx, topicURL)
-	if err != nil {
-		return err
-	}
-
-	// Get lines from r and send them as messages to the topic.
-	fmt.Fprintf(os.Stderr, "Enter messages, one per line to be published to %q.\n", topicURL)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			log.Printf("skipping empty message")
-			continue
-		}
-		m := &pubsub.Message{Body: []byte(line)}
-		if err := t.Send(ctx, m); err != nil {
-			return err
-		}
-	}
-	return scanner.Err()
-}
-
 type subCmd struct {
-	n int
+	n int // number of messages to receive, or 0 for infinite
 }
 
 func (*subCmd) Name() string     { return "sub" }
 func (*subCmd) Synopsis() string { return "Receive messages from a subscription" }
 func (*subCmd) Usage() string {
-	return `sub [-n N] <subscription URL>:
-  Receive messages from <subscription> and send them to stdout, one per line.
+	return `sub [-n N] <subscription URL>
+
+  Receive messages from <subscription URL> and send them to stdout, one per line.
+
+  Example:
+    gocdk-pubsub sub gcppubsub://myproject/mytopic
 
   See https://godoc.org/gocloud.dev#hdr-URLs for more background on
   Go CDK URLs, and sub-packages under gocloud.dev/pubsub
@@ -116,41 +134,25 @@ func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 		return subcommands.ExitUsageError
 	}
 	subURL := f.Arg(0)
-	if err := s.sub(ctx, subURL, os.Stdout); err != nil {
-		log.Println(err)
-		return subcommands.ExitFailure
-	}
-	return subcommands.ExitSuccess
-}
 
-func (s *subCmd) sub(ctx context.Context, subURL string, w io.Writer) error {
+	// Open a *pubsub.Subscription using the URL.
 	sub, err := pubsub.OpenSubscription(ctx, subURL)
 	if err != nil {
-		return err
+		log.Print(err)
+		return subcommands.ExitFailure
 	}
-	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
+	defer sub.Shutdown(ctx)
 
-	// Receive messages and send them to w.
+	// Receive messages from the subscription and print them to stdout.
+	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
 	for i := 0; s.n == 0 || i < s.n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
-			return err
+			log.Print(err)
+			return subcommands.ExitFailure
 		}
-		fmt.Fprintf(w, "%s\n", m.Body)
+		fmt.Fprintf(os.Stdout, "%s\n", m.Body)
 		m.Ack()
 	}
-	return nil
-}
-
-func main() {
-	subcommands.Register(subcommands.HelpCommand(), "")
-	subcommands.Register(subcommands.FlagsCommand(), "")
-	subcommands.Register(subcommands.CommandsCommand(), "")
-	subcommands.Register(&pubCmd{}, "")
-	subcommands.Register(&subCmd{}, "")
-	log.SetFlags(0)
-	log.SetPrefix("gcmsg: ")
-	flag.Parse()
-	ctx := context.Background()
-	os.Exit(int(subcommands.Execute(ctx)))
+	return subcommands.ExitSuccess
 }
