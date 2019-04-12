@@ -52,7 +52,7 @@ func mainHandler(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Welcome to the home page!\n")
 }
 
-// customHealthCheck implements the health.Checker interface and reports the
+// customHealthCheck is an example health check. It implements the health.Checker interface and reports the
 // server is healthy when the healthy field is set to true.
 type customHealthCheck struct {
 	mu      sync.RWMutex
