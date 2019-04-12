@@ -95,5 +95,9 @@ func main() {
 
 	s := server.New(mux, options)
 	fmt.Printf("Listening on %s\n", *addr)
-	s.ListenAndServe(*addr)
+
+	err := s.ListenAndServe(*addr)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
