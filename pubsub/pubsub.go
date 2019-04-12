@@ -241,6 +241,8 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 	return t.batcher.Add(ctx, dm)
 }
 
+var errTopicShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic has been Shutdown")
+
 // Shutdown flushes pending message sends and disconnects the Topic.
 // It only returns after all pending messages have been sent.
 func (t *Topic) Shutdown(ctx context.Context) (err error) {
@@ -248,7 +250,11 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	defer func() { t.tracer.End(ctx, err) }()
 
 	t.mu.Lock()
-	t.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Topic has been Shutdown")
+	if t.err == errTopicShutdown {
+		t.mu.Unlock()
+		return t.err
+	}
+	t.err = errTopicShutdown
 	t.mu.Unlock()
 	c := make(chan struct{})
 	go func() {
@@ -662,13 +668,20 @@ func (s *Subscription) getNextBatch(nMessages int) ([]*driver.Message, error) {
 	return q, nil
 }
 
+var errSubscriptionShutdown = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription has been Shutdown")
+
 // Shutdown flushes pending ack sends and disconnects the Subscription.
 func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	ctx = s.tracer.Start(ctx, "Subscription.Shutdown")
 	defer func() { s.tracer.End(ctx, err) }()
 
 	s.mu.Lock()
-	s.err = gcerr.Newf(gcerr.FailedPrecondition, nil, "pubsub: Subscription has been Shutdown")
+	if s.err == errSubscriptionShutdown {
+		// Already Shutdown.
+		s.mu.Unlock()
+		return s.err
+	}
+	s.err = errSubscriptionShutdown
 	s.mu.Unlock()
 	c := make(chan struct{})
 	go func() {

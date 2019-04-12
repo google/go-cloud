@@ -598,12 +598,14 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer h.Close()
-	topic, _, cleanup, err := makePair(ctx, t, h)
+
+	dt, cleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
 
+	topic := pubsub.NewTopic(dt, batchSizeOne)
 	if err := topic.Shutdown(ctx); err != nil {
 		t.Error(err)
 	}
@@ -612,6 +614,9 @@ func testErrorOnSendToClosedTopic(t *testing.T, newHarness HarnessMaker) {
 	m := &pubsub.Message{}
 	if err := topic.Send(ctx, m); err == nil {
 		t.Error("topic.Send returned nil, want error")
+	}
+	if err := topic.Shutdown(ctx); err == nil {
+		t.Error("wanted error on double Shutdown")
 	}
 }
 
@@ -622,16 +627,25 @@ func testErrorOnReceiveFromClosedSubscription(t *testing.T, newHarness HarnessMa
 		t.Fatal(err)
 	}
 	defer h.Close()
-	_, sub, cleanup, err := makePair(ctx, t, h)
+
+	dt, cleanup, err := h.CreateTopic(ctx, t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
+	ds, cleanup, err := h.CreateSubscription(ctx, dt, t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := pubsub.NewSubscription(ds, batchSizeOne, batchSizeOne)
 	if err := sub.Shutdown(ctx); err != nil {
 		t.Error(err)
 	}
 	if _, err = sub.Receive(ctx); err == nil {
 		t.Error("sub.Receive returned nil, want error")
+	}
+	if err := sub.Shutdown(ctx); err == nil {
+		t.Error("wanted error on double Shutdown")
 	}
 }
 
