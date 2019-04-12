@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command server runs a simple HTTP server with integrated StackDriver tracing
+// Command server runs a simple HTTP server with integrated Stackdriver tracing
 // and health checks.
 package main
 
