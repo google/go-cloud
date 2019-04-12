@@ -31,11 +31,6 @@ func (h *Handler) Add(c Checker) {
 	h.checkers = append(h.checkers, c)
 }
 
-// AddFunc adds a new check function to the handler.
-func (h *Handler) AddFunc(f CheckerFunc) {
-	h.Add(f)
-}
-
 // ServeHTTP returns 200 if it is healthy, 500 otherwise.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	for _, c := range h.checkers {
