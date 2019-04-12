@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"contrib.go.opencensus.io/exporter/stackdriver"
 	"go.opencensus.io/trace"
 	"gocloud.dev/gcp"
 	"gocloud.dev/health"
@@ -51,6 +50,7 @@ func (h *customHealthCheck) CheckHealth() error {
 func main() {
 	addr := flag.String("listen", ":8080", "HTTP port to listen on")
 	doTrace := flag.Bool("trace", true, "Export traces to Stackdriver")
+	flag.Parse()
 
 	ctx := context.Background()
 	credentials, err := gcp.DefaultCredentials(ctx)
@@ -96,7 +96,7 @@ func main() {
 	s := server.New(mux, options)
 	fmt.Printf("Listening on %s\n", *addr)
 
-	err := s.ListenAndServe(*addr)
+	err = s.ListenAndServe(*addr)
 	if err != nil {
 		log.Fatal(err)
 	}
