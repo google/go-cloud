@@ -16,6 +16,7 @@ package dynamodocstore
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -47,7 +48,11 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 		pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
 	}
 	cb := expression.NewBuilder().WithProjection(pb)
-	cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
+	var err error
+	cb, err = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
+	if err != nil {
+		return nil, err
+	}
 	ce, err := cb.Build()
 	if err != nil {
 		return nil, err
@@ -63,18 +68,24 @@ func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfte
 	})
 }
 
-func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
-	// TODO(shantuo): process the partition key and remove the hard-coded key
-	// condition after we fix the API.
-	kbs := []expression.KeyConditionBuilder{expression.KeyEqual(expression.Key(pkey), expression.Value("query"))}
+func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) (expression.Builder, error) {
+	var kbs []expression.KeyConditionBuilder
 	var cbs []expression.ConditionBuilder
+	var hasP bool
 
 	for _, f := range fs {
-		if kb, ok := toKeyCondition(f, pkey, skey); ok {
-			kbs = append(kbs, kb)
-			continue
+		switch strings.Join(f.FieldPath, ".") {
+		case pkey:
+			kbs = append(kbs, toKeyCondition(f, true))
+			hasP = true
+		case skey:
+			kbs = append(kbs, toKeyCondition(f, false))
+		default:
+			cbs = append(cbs, toFilter(f))
 		}
-		cbs = append(cbs, toFilter(f))
+	}
+	if !hasP {
+		return expression.Builder{}, errors.New("no partition key found in query")
 	}
 	keyBuilder := kbs[0]
 	for i := 1; i < len(kbs); i++ {
@@ -89,30 +100,33 @@ func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string
 		}
 		cb = cb.WithFilter(condBuilder)
 	}
-	return cb
+	return cb, nil
 }
 
-func toKeyCondition(f driver.Filter, pkey, skey string) (expression.KeyConditionBuilder, bool) {
+func toKeyCondition(f driver.Filter, partition bool) expression.KeyConditionBuilder {
 	kp := strings.Join(f.FieldPath, ".")
-	if kp == skey {
-		key := expression.Key(kp)
-		val := expression.Value(f.Value)
-		switch f.Op {
-		case "<":
-			return expression.KeyLessThan(key, val), true
-		case "<=":
-			return expression.KeyLessThanEqual(key, val), true
-		case driver.EqualOp:
-			return expression.KeyEqual(key, val), true
-		case ">=":
-			return expression.KeyGreaterThanEqual(key, val), true
-		case ">":
-			return expression.KeyGreaterThan(key, val), true
-		default:
-			panic(fmt.Sprint("invalid filter operation:", f.Op))
+	key := expression.Key(kp)
+	val := expression.Value(f.Value)
+	if partition {
+		if f.Op != driver.EqualOp {
+			panic(fmt.Sprintf("invalid filter operation for the partition key: %v, only \"=\" is allowed", f.Op))
 		}
+		return expression.KeyEqual(key, val)
 	}
-	return expression.KeyConditionBuilder{}, false
+	switch f.Op {
+	case "<":
+		return expression.KeyLessThan(key, val)
+	case "<=":
+		return expression.KeyLessThanEqual(key, val)
+	case driver.EqualOp:
+		return expression.KeyEqual(key, val)
+	case ">=":
+		return expression.KeyGreaterThanEqual(key, val)
+	case ">":
+		return expression.KeyGreaterThan(key, val)
+	default:
+		panic(fmt.Sprint("invalid filter operation:", f.Op))
+	}
 }
 
 func toFilter(f driver.Filter) expression.ConditionBuilder {

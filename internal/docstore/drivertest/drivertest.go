@@ -697,7 +697,8 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Delete existing documents.
-	err := forEach(ctx, coll.Query().Get(ctx), func(m docmap) error { return coll.Delete(ctx, m) })
+	err := forEach(ctx, coll.Query().Where(KindField, "=", "query").Get(ctx),
+		func(m docmap) error { return coll.Delete(ctx, m) })
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
@@ -738,52 +739,52 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}{
 		{
 			name: "LessThanNum",
-			q:    coll.Query().Where("n", "<", 1),
+			q:    coll.Query().Where(KindField, "=", "query").Where("n", "<", 1),
 			want: []docmap{{KeyField: "testQuery1"}},
 		},
 		{
 			name: "LessThanString",
-			q:    coll.Query().Where("s", "<", "fog"),
+			q:    coll.Query().Where(KindField, "=", "query").Where("s", "<", "fog"),
 			want: []docmap{{KeyField: "testQuery1"}},
 		},
 		{
 			name: "LessThanEqualNum",
-			q:    coll.Query().Where("n", "<=", 1),
+			q:    coll.Query().Where(KindField, "=", "query").Where("n", "<=", 1),
 			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
 		},
 		{
 			name: "LessThanEqualString",
-			q:    coll.Query().Where("s", "<=", "fog"),
+			q:    coll.Query().Where(KindField, "=", "query").Where("s", "<=", "fog"),
 			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery3"}},
 		},
 		{
 			name: "EqualNum",
-			q:    coll.Query().Where("n", "=", 1),
+			q:    coll.Query().Where(KindField, "=", "query").Where("n", "=", 1),
 			want: []docmap{{KeyField: "testQuery2"}},
 		},
 		{
 			name: "EqualString",
-			q:    coll.Query().Where("s", "=", "foo"),
+			q:    coll.Query().Where(KindField, "=", "query").Where("s", "=", "foo"),
 			want: []docmap{{KeyField: "testQuery2"}},
 		},
 		{
 			name: "GreaterThanEqualNum",
-			q:    coll.Query().Where("n", ">=", 1),
+			q:    coll.Query().Where(KindField, "=", "query").Where("n", ">=", 1),
 			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
 		},
 		{
 			name: "GreaterThanEqualString",
-			q:    coll.Query().Where("s", ">=", "fog"),
+			q:    coll.Query().Where(KindField, "=", "query").Where("s", ">=", "fog"),
 			want: []docmap{{KeyField: "testQuery3"}, {KeyField: "testQuery2"}},
 		},
 		{
 			name: "GreaterThanNum",
-			q:    coll.Query().Where("n", ">", 1),
+			q:    coll.Query().Where(KindField, "=", "query").Where("n", ">", 1),
 			want: []docmap{{KeyField: "testQuery3"}},
 		},
 		{
 			name: "GreaterThanString",
-			q:    coll.Query().Where("s", ">", "fog"),
+			q:    coll.Query().Where(KindField, "=", "query").Where("s", ">", "fog"),
 			want: []docmap{{KeyField: "testQuery2"}},
 		},
 	}
@@ -803,7 +804,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 
 	// For limit, we can't be sure which documents will be returned, only their count.
-	limitQ := coll.Query().Where("n", ">=", -4).Limit(2)
+	limitQ := coll.Query().Where(KindField, "=", "query").Where("n", ">=", -4).Limit(2)
 	got := mustCollect(ctx, t, limitQ.Get(ctx, KeyField))
 	if len(got) != 2 {
 		t.Errorf("got %v, wanted two documents", got)
