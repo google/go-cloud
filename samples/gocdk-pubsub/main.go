@@ -35,6 +35,14 @@ import (
 	_ "gocloud.dev/pubsub/rabbitpubsub"
 )
 
+const helpSuffix = `
+
+  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
+  Go CDK URLs, and sub-packages under gocloud.dev/pubsub
+  (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
+  for details on the topic/subscription URL format.
+`
+
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
 	subcommands.Register(&pubCmd{}, "")
@@ -55,13 +63,7 @@ func (*pubCmd) Usage() string {
   Read messages from stdin, one per line and send them to <topic URL>.
 
   Example:
-    gocdk-pubsub sub gcppubsub://myproject/mysubscription
-
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
-  Go CDK URLs, and sub-packages under gocloud.dev/pubsub
-  (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
-  for details on the topic URL format.
-`
+    gocdk-pubsub sub gcppubsub://myproject/mysubscription` + helpSuffix
 }
 
 func (*pubCmd) SetFlags(_ *flag.FlagSet) {}
@@ -115,13 +117,7 @@ func (*subCmd) Usage() string {
   Receive messages from <subscription URL> and send them to stdout, one per line.
 
   Example:
-    gocdk-pubsub sub gcppubsub://myproject/mytopic
-
-  See https://godoc.org/gocloud.dev#hdr-URLs for more background on
-  Go CDK URLs, and sub-packages under gocloud.dev/pubsub
-  (https://godoc.org/gocloud.dev/pubsub#pkg-subdirectories)
-  for details on the subscription URL format.
-`
+    gocdk-pubsub sub gcppubsub://myproject/mytopic` + helpSuffix
 }
 
 func (cmd *subCmd) SetFlags(f *flag.FlagSet) {
