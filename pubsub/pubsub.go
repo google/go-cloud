@@ -107,7 +107,6 @@ package pubsub // import "gocloud.dev/pubsub"
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"math"
 	"net/url"
@@ -266,10 +265,8 @@ func (t *Topic) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	t.cancel()
-	if closer, ok := t.driver.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			return wrapError(t.driver, err)
-		}
+	if err := t.driver.Close(); err != nil {
+		return wrapError(t.driver, err)
 	}
 	return ctx.Err()
 }
@@ -695,10 +692,8 @@ func (s *Subscription) Shutdown(ctx context.Context) (err error) {
 	case <-c:
 	}
 	s.cancel()
-	if closer, ok := s.driver.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			return wrapError(s.driver, err)
-		}
+	if err := s.driver.Close(); err != nil {
+		return wrapError(s.driver, err)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

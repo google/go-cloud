@@ -311,6 +311,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 type subscription struct {
 	sbSub *servicebus.Subscription
 	opts  *SubscriptionOptions
@@ -568,3 +571,6 @@ func errorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.Unknown
 	}
 }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

@@ -52,9 +52,9 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 	return nil
 }
 
-func (s *driverTopic) IsRetryable(error) bool { return false }
-
-func (s *driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*driverTopic) IsRetryable(error) bool             { return false }
+func (*driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*driverTopic) Close() error                       { return nil }
 
 type driverSub struct {
 	driver.Subscription
@@ -105,11 +105,10 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
 
-func (s *driverSub) IsRetryable(error) bool { return false }
-
+func (*driverSub) IsRetryable(error) bool             { return false }
 func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (*driverSub) AckFunc() func() { return nil }
+func (*driverSub) AckFunc() func()                    { return nil }
+func (*driverSub) Close() error                       { return nil }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -247,6 +246,7 @@ func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([
 }
 func (blockingDriverSub) AckFunc() func()        { return nil }
 func (blockingDriverSub) IsRetryable(error) bool { return false }
+func (blockingDriverSub) Close() error           { return nil }
 
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
@@ -317,9 +317,9 @@ func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return nil
 }
 
-func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
-
+func (*failTopic) IsRetryable(err error) bool         { return isRetryable(err) }
 func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*failTopic) Close() error                       { return nil }
 
 func TestRetryReceive(t *testing.T) {
 	ctx := context.Background()
@@ -352,6 +352,7 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
 func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
 func (*failSub) AckFunc() func()                                           { return nil }
+func (*failSub) Close() error                                              { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 

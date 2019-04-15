@@ -50,11 +50,10 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 	return s.sendAcks(ctx, ackIDs)
 }
 
-func (s *ackingDriverSub) IsRetryable(error) bool { return false }
-
-func (s *ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (s *ackingDriverSub) AckFunc() func() { return nil }
+func (*ackingDriverSub) IsRetryable(error) bool             { return false }
+func (*ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+func (*ackingDriverSub) AckFunc() func()                    { return nil }
+func (*ackingDriverSub) Close() error                       { return nil }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
@@ -364,11 +363,10 @@ func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) e
 	return s.sendAcks(ctx, acks)
 }
 
-func (s *callbackDriverSub) IsRetryable(error) bool { return false }
-
-func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (s *callbackDriverSub) AckFunc() func() { return nil }
+func (*callbackDriverSub) IsRetryable(error) bool             { return false }
+func (*callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+func (*callbackDriverSub) AckFunc() func()                    { return nil }
+func (*callbackDriverSub) Close() error                       { return nil }
 
 // This test detects the root cause of
 // https://github.com/google/go-cloud/issues/1238.

@@ -97,6 +97,11 @@ type Topic interface {
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
+
+	// Close cleans up any resources used by the Topic. Once Close is called,
+	// there will be no method calls to the Topic other than As, ErrorAs, and
+	// ErrorCode.
+	Close() error
 }
 
 // Subscription receives published messages.
@@ -173,4 +178,9 @@ type Subscription interface {
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerrors.ErrorCode
+
+	// Close cleans up any resources used by the Topic. Once Close is called,
+	// there will be no method calls to the Topic other than As, ErrorAs, and
+	// ErrorCode.
+	Close() error
 }
