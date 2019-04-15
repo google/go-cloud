@@ -296,10 +296,12 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	if err != nil {
 		return nil, err
 	}
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	if opts.SASToken != "" {
-		blobURL.RawQuery = string(opts.SASToken)
+		// The Azure portal includes a leading "?" for the SASToken, which we
+		// don't want here.
+		blobURL.RawQuery = strings.TrimPrefix(string(opts.SASToken), "?")
 	}
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
