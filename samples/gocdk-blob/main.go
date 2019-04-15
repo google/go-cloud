@@ -61,9 +61,9 @@ func (*downloadCmd) Usage() string {
 `
 }
 
-func (s *downloadCmd) SetFlags(f *flag.FlagSet) {}
+func (*downloadCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (s *downloadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*downloadCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 3 {
 		f.Usage()
 		return subcommands.ExitUsageError

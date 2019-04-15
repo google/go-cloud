@@ -64,9 +64,9 @@ func (*pubCmd) Usage() string {
 `
 }
 
-func (p *pubCmd) SetFlags(f *flag.FlagSet) {}
+func (*pubCmd) SetFlags(_ *flag.FlagSet) {}
 
-func (p *pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*pubCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -124,11 +124,11 @@ func (*subCmd) Usage() string {
 `
 }
 
-func (s *subCmd) SetFlags(f *flag.FlagSet) {
-	f.IntVar(&s.n, "n", 0, "number of messages to receive, or 0 for unlimited")
+func (cmd *subCmd) SetFlags(f *flag.FlagSet) {
+	f.IntVar(&cmd.n, "n", 0, "number of messages to receive, or 0 for unlimited")
 }
 
-func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (cmd *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if f.NArg() != 1 {
 		f.Usage()
 		return subcommands.ExitUsageError
@@ -145,7 +145,7 @@ func (s *subCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 
 	// Receive messages from the subscription and print them to stdout.
 	fmt.Fprintf(os.Stderr, "Receiving messages from %q...\n", subURL)
-	for i := 0; s.n == 0 || i < s.n; i++ {
+	for i := 0; cmd.n == 0 || i < cmd.n; i++ {
 		m, err := sub.Receive(ctx)
 		if err != nil {
 			log.Print(err)
