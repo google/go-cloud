@@ -35,7 +35,7 @@ import (
 type collection struct {
 	client    *vkit.Client
 	dbPath    string // e.g. "projects/P/databases/(default)"
-	collPath  string // e.g. "projects/P/databases/(default)/documents/MyCollection"
+	collPath  string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
 	nameField string
 }
 
@@ -63,7 +63,10 @@ func newCollection(client *vkit.Client, projectID, collPath, nameField string) *
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	// Split the actions into groups, each of which can be done with a single RPC.
 	// - Consecutive writes are grouped together.
 	// - Consecutive gets with the same field paths are grouped together.
@@ -85,10 +88,10 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 			}
 		}
 		if err != nil {
-			return nRun, err
+			return driver.ActionListError{{nRun, err}}
 		}
 	}
-	return nRun, nil
+	return nil
 }
 
 // Reports whether two consecutive actions in a list should be split into different groups.
@@ -104,6 +107,7 @@ func shouldSplit(cur, new *driver.Action) bool {
 }
 
 // Run a sequence of Get actions by calling the BatchGetDocuments RPC.
+// It returns the number of successful gets, as well as an error.
 func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, error) {
 	req, err := c.newGetRequest(gets)
 	if err != nil {
@@ -144,11 +148,9 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 		}
 		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
 		// TODO(jba): support field paths in decoding.
-		if err := decodeDoc(pdoc, gets[i].Doc /*,  gets[i].FieldPaths */); err != nil {
+		if err := decodeDoc(pdoc, gets[i].Doc, c.nameField); err != nil {
 			return i, err
 		}
-		// Set the revision field in the document, if it exists, to the update time.
-		_ = gets[i].Doc.SetField(docstore.RevisionField, pdoc.UpdateTime)
 	}
 	return len(gets), nil
 }
@@ -271,7 +273,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 }
 
 func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precondition) (*pb.Write, error) {
-	pdoc, err := encodeDoc(doc)
+	pdoc, err := encodeDoc(doc, c.nameField)
 	if err != nil {
 		return nil, err
 	}

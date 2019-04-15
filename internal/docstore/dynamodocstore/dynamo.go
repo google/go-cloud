@@ -16,7 +16,6 @@ package dynamodocstore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -49,7 +48,6 @@ func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *c
 		sortKey:      sortKey,
 	}
 	return c
-
 }
 
 func (c *collection) KeyFields() []string {
@@ -59,14 +57,17 @@ func (c *collection) KeyFields() []string {
 	return []string{c.partitionKey, c.sortKey}
 }
 
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	for i, a := range actions {
 		var pc *expression.ConditionBuilder
 		var err error
 		if a.Kind != driver.Create && a.Kind != driver.Get {
 			pc, err = revisionPrecondition(a.Doc)
 			if err != nil {
-				return i, err
+				return driver.ActionListError{{i, err}}
 			}
 		}
 		switch a.Kind {
@@ -95,10 +96,10 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (
 			panic("unimp")
 		}
 		if err != nil {
-			return i, err
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
@@ -158,12 +159,26 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 	if err != nil {
 		return err
 	}
-	if len(fieldpaths) > 0 {
-		return errors.New("Get with field paths unimplemented")
-	}
+
 	in := &dyn.GetItemInput{
 		TableName: &c.table,
 		Key:       av.M,
+	}
+	if len(fieldpaths) > 0 {
+		// Construct a projection expression for the field paths.
+		// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ProjectionExpressions.html.
+		nbs := []expression.NameBuilder{expression.Name(docstore.RevisionField)}
+		for _, fp := range fieldpaths {
+			nbs = append(nbs, expression.Name(strings.Join(fp, ".")))
+		}
+		expr, err := expression.NewBuilder().
+			WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
+			Build()
+		if err != nil {
+			return err
+		}
+		in.ProjectionExpression = expr.Projection()
+		in.ExpressionAttributeNames = expr.Names()
 	}
 	out, err := c.db.GetItemWithContext(ctx, in)
 	if err != nil {

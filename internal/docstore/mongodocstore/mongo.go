@@ -62,13 +62,16 @@ func newCollection(mcoll *mongo.Collection) *collection {
 const idField = "_id"
 
 // TODO(jba): use bulk RPCs.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
+	}
 	for i, a := range actions {
 		if err := c.runAction(ctx, a); err != nil {
-			return i, err
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 func (c *collection) runAction(ctx context.Context, action *driver.Action) error {
@@ -96,12 +99,15 @@ func (c *collection) runAction(ctx context.Context, action *driver.Action) error
 }
 
 func (c *collection) get(ctx context.Context, a *driver.Action) error {
-	// TODO(jba): use Projection option to return only desired field paths.
 	id, err := a.Doc.GetField(idField)
 	if err != nil {
 		return err
 	}
-	res := c.coll.FindOne(ctx, bson.D{{"_id", id}})
+	opts := options.FindOne()
+	if len(a.FieldPaths) > 0 {
+		opts.Projection = projectionDoc(a.FieldPaths)
+	}
+	res := c.coll.FindOne(ctx, bson.D{{"_id", id}}, opts)
 	if res.Err() != nil {
 		return res.Err()
 	}
@@ -111,6 +117,16 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 		return err
 	}
 	return decodeDoc(m, a.Doc)
+}
+
+// Construct a mongo "projection document" from field paths.
+// Always include the revision field.
+func projectionDoc(fps [][]string) bson.D {
+	proj := bson.D{{Key: docstore.RevisionField, Value: 1}}
+	for _, fp := range fps {
+		proj = append(proj, bson.E{Key: strings.Join(fp, "."), Value: 1})
+	}
+	return proj
 }
 
 func (c *collection) create(ctx context.Context, a *driver.Action) error {

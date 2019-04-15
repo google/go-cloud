@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package natspubsub provides a pubsub implementation for NATS.io.
-// Use CreateTopic to construct a *pubsub.Topic, and/or CreateSubscription
-// to construct a *pubsub.Subscription. This package uses msgPack and the
-// ugorji driver to encode and decode driver.Message to []byte.
+// Package natspubsub provides a pubsub implementation for NATS.io. Use OpenTopic to
+// construct a *pubsub.Topic, and/or OpenSubscription to construct a
+// *pubsub.Subscription. This package uses gob to encode and decode driver.Message to
+// []byte.
 //
 // URLs
 //
@@ -27,6 +27,13 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// Message Delivery Semantics
+//
+// NATS supports at-most-semantics; applications need not call Message.Ack,
+// and must not call Message.Nack.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
+//
 // As
 //
 // natspubsub exposes the following types for As:
@@ -36,18 +43,18 @@
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"path"
-	"reflect"
 	"sync"
 
 	"github.com/nats-io/go-nats"
-	"github.com/ugorji/go/codec"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/pubsub"
 	"gocloud.dev/pubsub/driver"
@@ -105,16 +112,17 @@ func (o *defaultDialer) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*p
 // Scheme is the URL scheme natspubsub registers its URLOpeners under on pubsub.DefaultMux.
 const Scheme = "nats"
 
-// URLOpener opens NATS URLs like "nats://mytopic".
+// URLOpener opens NATS URLs like "nats://mysubject".
 //
-// The URL host+path is used as the topic name.
+// The URL host+path is used as the subject.
 //
 // The following query parameters are supported:
 //   - ackfunc: One of "log", "noop", "panic"; defaults to "panic". Determines
 //       the behavior if pubsub.Subscription.Ack (which is a meaningless no-op
-//       for NATS) is called. "log" means a log.Printf warning will be emitted;
+//       for NATS) is called: "log" means a log.Printf warning will be emitted;
 //       "noop" means nothing will happen; and "panic" means the application
-//       will panic.
+//       will panic. See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+//       for more background.
 // No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
@@ -130,8 +138,8 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open topic %v: invalid query parameter %s", u, param)
 	}
-	topicName := path.Join(u.Host, u.Path)
-	return CreateTopic(o.Connection, topicName, &o.TopicOptions)
+	subject := path.Join(u.Host, u.Path)
+	return OpenTopic(o.Connection, subject, &o.TopicOptions)
 }
 
 // AckWarning is a message that may be used in ackFuncs.
@@ -158,8 +166,8 @@ func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsu
 	for param := range q {
 		return nil, fmt.Errorf("open subscription %v: invalid query parameter %s", u, param)
 	}
-	topicName := path.Join(u.Host, u.Path)
-	return CreateSubscription(o.Connection, topicName, ackFunc, &o.SubscriptionOptions)
+	subject := path.Join(u.Host, u.Path)
+	return OpenSubscription(o.Connection, subject, ackFunc, &o.SubscriptionOptions)
 }
 
 // TopicOptions sets options for constructing a *pubsub.Topic backed by NATS.
@@ -174,47 +182,24 @@ type topic struct {
 	subj string
 }
 
-// For encoding we use msgpack from github.com/ugorji/go.
-// It was already imported in go-cloud and is reasonably performant.
-// However the more recent version has better resource handling with
-// the addition of the following:
-// 	mh.ExplicitRelease = true
-// 	defer enc.Release()
-// However this is not compatible with etcd at the moment.
-// https://github.com/etcd-io/etcd/pull/10337
-var mh codec.MsgpackHandle
-
-func init() {
-	// driver.Message.Metadata type
-	dm := driver.Message{}
-	mh.MapType = reflect.TypeOf(dm.Metadata)
-}
-
-// We define our own version of message here for encoding that
-// only encodes Body and Metadata. Otherwise we would have to
-// add codec decorations to driver.Message.
-type encMsg struct {
-	Body     []byte            `codec:",omitempty"`
-	Metadata map[string]string `codec:",omitempty"`
-}
-
-// CreateTopic returns a *pubsub.Topic for use with NATS.
-// For more info, see https://nats.io/documentation/writing_applications/subjects
-func CreateTopic(nc *nats.Conn, topicName string, _ *TopicOptions) (*pubsub.Topic, error) {
-	dt, err := createTopic(nc, topicName)
+// OpenTopic returns a *pubsub.Topic for use with NATS.
+// The subject is the NATS Subject; for more info, see
+// https://nats.io/documentation/writing_applications/subjects.
+func OpenTopic(nc *nats.Conn, subject string, _ *TopicOptions) (*pubsub.Topic, error) {
+	dt, err := openTopic(nc, subject)
 	if err != nil {
 		return nil, err
 	}
 	return pubsub.NewTopic(dt, nil), nil
 }
 
-// createTopic returns the driver for CreateTopic. This function exists so the test
+// openTopic returns the driver for OpenTopic. This function exists so the test
 // harness can get the driver interface implementation if it needs to.
-func createTopic(nc *nats.Conn, topicName string) (driver.Topic, error) {
+func openTopic(nc *nats.Conn, subject string) (driver.Topic, error) {
 	if nc == nil {
 		return nil, errors.New("natspubsub: nats.Conn is required")
 	}
-	return &topic{nc, topicName}, nil
+	return &topic{nc, subject}, nil
 }
 
 // SendBatch implements driver.Topic.SendBatch.
@@ -223,27 +208,15 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		return errNotInitialized
 	}
 
-	// Reuse if possible.
-	var em encMsg
-	var raw [1024]byte
-	b := raw[:0]
-	enc := codec.NewEncoderBytes(&b, &mh)
-
 	for _, m := range msgs {
-		var payload []byte
-
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		if len(m.Metadata) == 0 {
-			payload = m.Body
-		} else {
-			enc.ResetBytes(&b)
-			em.Body, em.Metadata = m.Body, m.Metadata
-			if err := enc.Encode(em); err != nil {
-				return err
-			}
-			payload = b
+		// TODO(jba): benchmark message encoding to see if it's
+		// worth reusing a buffer.
+		payload, err := encodeMessage(m)
+		if err != nil {
+			return err
 		}
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
@@ -284,7 +257,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.OK
 	case context.Canceled:
 		return gcerrors.Canceled
-	case errNotInitialized, nats.ErrBadSubject:
+	case errNotInitialized:
+		return gcerrors.NotFound
+	case nats.ErrBadSubject:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
 		return gcerrors.PermissionDenied
@@ -300,24 +275,28 @@ type subscription struct {
 	ackFunc func()
 }
 
-// CreateSubscription returns a *pubsub.Subscription representing a NATS subscription.
+// OpenSubscription returns a *pubsub.Subscription representing a NATS subscription.
+// The subject is the NATS Subject to subscribe to; for more info, see
+// https://nats.io/documentation/writing_applications/subjects.
 //
 // ackFunc will be called when the application calls pubsub.Topic.Ack on a
 // received message; Ack is a meaningless no-op for NATS. You can provide an
 // empty function to leave it a no-op, or panic/log a warning if you don't
 // expect Ack to be called.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
 //
 // TODO(dlc) - Options for queue groups?
-func CreateSubscription(nc *nats.Conn, subscriptionName string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
-	ds, err := createSubscription(nc, subscriptionName, ackFunc)
+func OpenSubscription(nc *nats.Conn, subject string, ackFunc func(), _ *SubscriptionOptions) (*pubsub.Subscription, error) {
+	ds, err := openSubscription(nc, subject, ackFunc)
 	if err != nil {
 		return nil, err
 	}
-	return pubsub.NewSubscription(ds, 0, nil), nil
+	return pubsub.NewSubscription(ds, nil, nil), nil
 }
 
-func createSubscription(nc *nats.Conn, subscriptionName string, ackFunc func()) (driver.Subscription, error) {
-	sub, err := nc.SubscribeSync(subscriptionName)
+func openSubscription(nc *nats.Conn, subject string, ackFunc func()) (driver.Subscription, error) {
+	sub, err := nc.SubscribeSync(subject)
 	if err != nil {
 		return nil, err
 	}
@@ -395,12 +374,8 @@ func decode(msg *nats.Msg) (*driver.Message, error) {
 		return nil, nats.ErrInvalidMsg
 	}
 	var dm driver.Message
-	// Everything is in the msg.Data
-	dec := codec.NewDecoderBytes(msg.Data, &mh)
-	err := dec.Decode(&dm)
-	if err != nil {
-		// This may indicate a normal NATS message, so just treat as the body.
-		dm.Body = msg.Data
+	if err := decodeMessage(msg.Data, &dm); err != nil {
+		return nil, err
 	}
 	dm.AckID = -1 // Not applicable to NATS
 	dm.AsFunc = messageAsFunc(msg)
@@ -421,6 +396,12 @@ func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
 // SendAcks implements driver.Subscription.SendAcks. It should never be called
 // because we provide a non-nil AckFunc.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
+	panic("unreachable")
+}
+
+// SendNacks implements driver.Subscription.SendNacks. It should never be called
+// because we provide a non-nil AckFunc.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
 	panic("unreachable")
 }
 
@@ -449,7 +430,9 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.OK
 	case context.Canceled:
 		return gcerrors.Canceled
-	case errNotInitialized, nats.ErrBadSubject, nats.ErrBadSubscription, nats.ErrTypeSubscription:
+	case errNotInitialized, nats.ErrBadSubscription:
+		return gcerrors.NotFound
+	case nats.ErrBadSubject, nats.ErrTypeSubscription:
 		return gcerrors.FailedPrecondition
 	case nats.ErrAuthorization:
 		return gcerrors.PermissionDenied
@@ -459,4 +442,31 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 		return gcerrors.DeadlineExceeded
 	}
 	return gcerrors.Unknown
+}
+
+func encodeMessage(dm *driver.Message) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	if len(dm.Metadata) == 0 {
+		return dm.Body, nil
+	}
+	if err := enc.Encode(dm.Metadata); err != nil {
+		return nil, err
+	}
+	if err := enc.Encode(dm.Body); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func decodeMessage(data []byte, dm *driver.Message) error {
+	buf := bytes.NewBuffer(data)
+	dec := gob.NewDecoder(buf)
+	if err := dec.Decode(&dm.Metadata); err != nil {
+		// This may indicate a normal NATS message, so just treat as the body.
+		dm.Metadata = nil
+		dm.Body = data
+		return nil
+	}
+	return dec.Decode(&dm.Body)
 }

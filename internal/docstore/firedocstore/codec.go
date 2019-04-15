@@ -19,11 +19,13 @@ package firedocstore
 import (
 	"errors"
 	"fmt"
+	"path"
 	"reflect"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/genproto/googleapis/type/latlng"
@@ -31,12 +33,15 @@ import (
 
 // encodeDoc encodes a driver.Document into Firestore's representation.
 // A Firestore document (*pb.Document) is just a Go map from strings to *pb.Values.
-func encodeDoc(doc driver.Document) (*pb.Document, error) {
+func encodeDoc(doc driver.Document, nameField string) (*pb.Document, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
+	fields := e.pv.GetMapValue().Fields
+	// Do not put the name field in the document itself.
+	delete(fields, nameField)
+	return &pb.Document{Fields: fields}, nil
 }
 
 // encodeValue encodes a Go value as a Firestore Value.
@@ -79,7 +84,7 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *encoder) EncodeMap(n int) driver.Encoder {
+func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	m := make(map[string]*pb.Value, n)
 	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
 	return &mapEncoder{m: m}
@@ -140,9 +145,20 @@ func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_Doubl
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes a Firestore document into a driver.Document.
-func decodeDoc(pdoc *pb.Document, ddoc driver.Document) error {
+func decodeDoc(pdoc *pb.Document, ddoc driver.Document, nameField string) error {
+	if pdoc.Fields == nil {
+		pdoc.Fields = map[string]*pb.Value{}
+	}
+	pdoc.Fields[nameField] = &pb.Value{ValueType: &pb.Value_StringValue{StringValue: path.Base(pdoc.Name)}}
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
-	return ddoc.Decode(decoder{mv})
+	if err := ddoc.Decode(decoder{mv}); err != nil {
+		return err
+	}
+	// Set the revision field in the document, if it exists, to the update time.
+	if pdoc.UpdateTime != nil {
+		_ = ddoc.SetField(docstore.RevisionField, pdoc.UpdateTime)
+	}
+	return nil
 }
 
 type decoder struct {

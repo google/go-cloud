@@ -26,8 +26,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
-	"github.com/Azure/azure-amqp-common-go"
-	"github.com/Azure/azure-service-bus-go"
+	common "github.com/Azure/azure-amqp-common-go"
+	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
 var (
@@ -38,6 +38,11 @@ var (
 
 const (
 	nonexistentTopicName = "nonexistent-topic"
+
+	// Try to keep the entity name under Azure limits.
+	// https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
+	// says 50, but there appears to be some additional overhead. 40 works.
+	maxNameLen = 40
 )
 
 type harness struct {
@@ -72,9 +77,10 @@ func newHarnessUsingAutodelete(ctx context.Context, t *testing.T) (drivertest.Ha
 }
 
 func (h *harness) CreateTopic(ctx context.Context, testName string) (dt driver.Topic, cleanup func(), err error) {
-	topicName := fmt.Sprintf("%s-topic-%d", sanitize(testName), atomic.AddUint32(&h.numTopics, 1))
-
-	createTopic(ctx, topicName, h.ns, nil)
+	topicName := sanitize(fmt.Sprintf("%s-top-%d", testName, atomic.AddUint32(&h.numTopics, 1)))
+	if err := createTopic(ctx, topicName, h.ns, nil); err != nil {
+		return nil, nil, err
+	}
 
 	sbTopic, err := NewTopic(h.ns, topicName, nil)
 	dt, err = openTopic(ctx, sbTopic, nil)
@@ -98,15 +104,8 @@ func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
-	// Keep the subscription entity name under 50 characters as per Azure limits.
-	// See https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-quotas
-	subName := fmt.Sprintf("%s-sub-%d", sanitize(testName), atomic.AddUint32(&h.numSubs, 1))
-	if len(subName) > 50 {
-		subName = subName[:50]
-	}
-
+	subName := sanitize(fmt.Sprintf("%s-sub-%d", testName, atomic.AddUint32(&h.numSubs, 1)))
 	t := dt.(*topic)
-
 	err = createSubscription(ctx, t.sbTopic.Name, subName, h.ns, nil)
 	if err != nil {
 		return nil, nil, err
@@ -147,6 +146,8 @@ func (h *harness) Close() {
 	h.closer()
 }
 
+func (h *harness) MaxBatchSizes() (int, int) { return sendBatcherOpts.MaxBatchSize, 0 }
+
 // Please run the TestConformance with an extended timeout since each test needs to perform CRUD for ServiceBus Topics and Subscriptions.
 // Example: C:\Go\bin\go.exe test -timeout 60s gocloud.dev/pubsub/azuresb -run ^TestConformance$
 func TestConformance(t *testing.T) {
@@ -157,7 +158,6 @@ func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, asTests)
 }
 
-/* Disabled for now, as the tests do not pass.
 func TestConformanceWithAutodelete(t *testing.T) {
 	if !*setup.Record {
 		t.Skip("replaying is not yet supported for Azure pubsub")
@@ -165,7 +165,6 @@ func TestConformanceWithAutodelete(t *testing.T) {
 	asTests := []drivertest.AsTest{sbAsTest{}}
 	drivertest.RunConformanceTests(t, newHarnessUsingAutodelete, asTests)
 }
-*/
 
 type sbAsTest struct{}
 
@@ -173,13 +172,13 @@ func (sbAsTest) Name() string {
 	return "azure"
 }
 
-func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
+func (sbAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var t2 servicebus.Topic
-	if top.As(&t2) {
+	if topic.As(&t2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &t2)
 	}
 	var t3 *servicebus.Topic
-	if !top.As(&t3) {
+	if !topic.As(&t3) {
 		return fmt.Errorf("cast failed for %T", &t3)
 	}
 	return nil
@@ -223,8 +222,17 @@ func (sbAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
-func sanitize(testName string) string {
-	return strings.Replace(testName, "/", "_", -1)
+func sanitize(s string) string {
+	// First trim some not-so-useful strings that are part of all test names.
+	s = strings.Replace(s, "TestConformance/Test", "", 1)
+	s = strings.Replace(s, "TestConformanceWithAutodelete/Test", "", 1)
+	s = strings.Replace(s, "/", "_", -1)
+	if len(s) > maxNameLen {
+		// Drop prefix, not suffix, because suffix includes something to make
+		// entities unique within a test.
+		s = s[len(s)-maxNameLen:]
+	}
+	return s
 }
 
 // createTopic ensures the existence of a Service Bus Topic on a given Namespace.
@@ -291,7 +299,9 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	}
 
 	// Make topic.
-	createTopic(ctx, benchmarkTopicName, ns, nil)
+	if err := createTopic(ctx, benchmarkTopicName, ns, nil); err != nil {
+		b.Fatal(err)
+	}
 	defer deleteTopic(ctx, benchmarkTopicName, ns)
 
 	sbTopic, err := NewTopic(ns, benchmarkTopicName, nil)
@@ -303,6 +313,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer topic.Shutdown(ctx)
 
 	// Make subscription.
 	if err := createSubscription(ctx, benchmarkTopicName, benchmarkSubscriptionName, ns, nil); err != nil {
@@ -316,6 +327,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
 }
@@ -344,9 +356,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -369,9 +384,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

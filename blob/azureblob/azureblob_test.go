@@ -157,6 +157,12 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+	// TODO(rvangent): Implement this along with Copy, and document the
+	// As type in the package doc.
+	return nil
+}
+
 func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	var azOpts *azblob.ListBlobsSegmentOptions
 	if !as(&azOpts) {

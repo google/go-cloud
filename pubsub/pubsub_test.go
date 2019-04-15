@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -123,7 +124,7 @@ func TestSendReceive(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -132,6 +133,7 @@ func TestSendReceive(t *testing.T) {
 	if string(m2.Body) != string(m.Body) {
 		t.Fatalf("received message has body %q, want %q", m2.Body, m.Body)
 	}
+	m2.Ack()
 }
 
 func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
@@ -146,7 +148,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 	// Make a subscription.
 	ds := NewDriverSub()
 	dt.subs = append(dt.subs, ds)
-	s := pubsub.NewSubscription(ds, 0, nil)
+	s := pubsub.NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 
 	// Start 10 goroutines to receive from it.
@@ -167,6 +169,7 @@ func TestConcurrentReceivesGetAllTheMessages(t *testing.T) {
 					}
 					return
 				}
+				m.Ack()
 				mu.Lock()
 				receivedMsgs[string(m.Body)] = true
 				mu.Unlock()
@@ -223,7 +226,7 @@ func TestCancelSend(t *testing.T) {
 func TestCancelReceive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ds := NewDriverSub()
-	s := pubsub.NewSubscription(ds, 0, nil)
+	s := pubsub.NewSubscription(ds, nil, nil)
 	defer s.Shutdown(ctx)
 	cancel()
 	// Without cancellation, this Receive would hang.
@@ -234,51 +237,57 @@ func TestCancelReceive(t *testing.T) {
 
 type blockingDriverSub struct {
 	driver.Subscription
-	inReceiveBatch chan int
+	inReceiveBatch chan struct{}
 }
 
 func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
-	b.inReceiveBatch <- 0
+	b.inReceiveBatch <- struct{}{}
 	<-ctx.Done()
 	return nil, ctx.Err()
 }
-
-func (blockingDriverSub) AckFunc() func() { return nil }
+func (blockingDriverSub) AckFunc() func()        { return nil }
+func (blockingDriverSub) IsRetryable(error) bool { return false }
 
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
 	// 1. Goroutine 1 calls Receive, obtains the lock (Subscription.mu),
-	//    and calls driver.ReceiveBatch, which hangs forever.
+	//    then releases the lock and calls driver.ReceiveBatch, which hangs.
 	// 2. Goroutine 2 calls Receive.
 	// 3. The context passed to the Goroutine 2 call is canceled.
 	// We expect Goroutine 2's Receive to exit immediately. That won't
 	// happen if Receive holds the lock during the call to ReceiveBatch.
-	inReceiveBatch := make(chan int, 1)
-	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, 0, nil)
+	inReceiveBatch := make(chan struct{})
+	s := pubsub.NewSubscription(blockingDriverSub{inReceiveBatch: inReceiveBatch}, nil, nil)
+	defer s.Shutdown(context.Background())
 	go func() {
-		s.Receive(context.Background())
-		t.Fatal("Receive should never return")
+		_, err := s.Receive(context.Background())
+		// This should happen at the very end of the test, during Shutdown.
+		if err != context.Canceled {
+			t.Errorf("got %v, want context.Canceled", err)
+		}
 	}()
 	<-inReceiveBatch
-	ctx, cancel := context.WithCancel(context.Background())
+	// Give the Receive call time to block on the mutex before timing out.
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
 	errc := make(chan error)
 	go func() {
 		_, err := s.Receive(ctx)
 		errc <- err
 	}()
-	// Give the Receive call time to block on the mutex before canceling.
-	time.AfterFunc(100*time.Millisecond, cancel)
 	err := <-errc
-	if err != context.Canceled {
-		t.Errorf("got %v, want context.Canceled", err)
+	if err != context.DeadlineExceeded {
+		t.Errorf("got %v, want context.DeadlineExceeded", err)
 	}
 }
 
 func TestRetryTopic(t *testing.T) {
 	// Test that Send is retried if the driver returns a retryable error.
+	ctx := context.Background()
 	ft := &failTopic{}
-	top := pubsub.NewTopic(ft, nil)
-	err := top.Send(context.Background(), &pubsub.Message{})
+	topic := pubsub.NewTopic(ft, nil)
+	defer topic.Shutdown(ctx)
+	err := topic.Send(ctx, &pubsub.Message{})
 	if err != nil {
 		t.Errorf("Send: got %v, want nil", err)
 	}
@@ -313,12 +322,15 @@ func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
 func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
 
 func TestRetryReceive(t *testing.T) {
+	ctx := context.Background()
 	fs := &failSub{}
-	sub := pubsub.NewSubscription(fs, 0, nil)
-	_, err := sub.Receive(context.Background())
+	sub := pubsub.NewSubscription(fs, nil, nil)
+	defer sub.Shutdown(ctx)
+	m, err := sub.Receive(ctx)
 	if err != nil {
-		t.Errorf("Receive: got %v, want nil", err)
+		t.Fatalf("Receive: got %v, want nil", err)
 	}
+	m.Ack()
 	if got, want := fs.calls, nRetryCalls+1; got != want {
 		t.Errorf("calls: got %d, want %d", got, want)
 	}
@@ -337,9 +349,9 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 	return []*driver.Message{{Body: []byte("")}}, nil
 }
 
-func (t *failSub) IsRetryable(err error) bool { return isRetryable(err) }
-
-func (*failSub) AckFunc() func() { return nil }
+func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
+func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
+func (*failSub) AckFunc() func()                                           { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 
@@ -370,8 +382,10 @@ func (erroringSubscription) AckFunc() func()                                { re
 // wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	top := pubsub.NewTopic(erroringTopic{}, nil)
-	sub := pubsub.NewSubscription(erroringSubscription{}, 0, nil)
+	topic := pubsub.NewTopic(erroringTopic{}, nil)
+	defer topic.Shutdown(ctx)
+	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
+	defer sub.Shutdown(ctx)
 
 	verify := func(err error) {
 		t.Helper()
@@ -389,7 +403,7 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 	}
 
-	verify(top.Send(ctx, &pubsub.Message{}))
+	verify(topic.Send(ctx, &pubsub.Message{}))
 	_, err := sub.Receive(ctx)
 	verify(err)
 }
@@ -399,12 +413,14 @@ func TestOpenCensus(t *testing.T) {
 	te := octest.NewTestExporter(pubsub.OpenCensusViews)
 	defer te.Unregister()
 
-	top := mempubsub.NewTopic()
-	sub := mempubsub.NewSubscription(top, time.Second)
-	if err := top.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+	topic := mempubsub.NewTopic()
+	defer topic.Shutdown(ctx)
+	sub := mempubsub.NewSubscription(topic, time.Second)
+	defer sub.Shutdown(ctx)
+	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
 		t.Fatal(err)
 	}
-	if err := top.Shutdown(ctx); err != nil {
+	if err := topic.Shutdown(ctx); err != nil {
 		t.Fatal(err)
 	}
 	msg, err := sub.Receive(ctx)
@@ -435,15 +451,15 @@ func TestOpenCensus(t *testing.T) {
 func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	ng0 := runtime.NumGoroutine()
-	top := mempubsub.NewTopic()
-	sub := mempubsub.NewSubscription(top, time.Second)
+	topic := mempubsub.NewTopic()
+	sub := mempubsub.NewSubscription(topic, time.Second)
 
 	// Send a bunch of messages at roughly the same time to make the batcher's work more difficult.
 	var eg errgroup.Group
 	n := 1000
 	for i := 0; i < n; i++ {
 		eg.Go(func() error {
-			return top.Send(ctx, &pubsub.Message{})
+			return topic.Send(ctx, &pubsub.Message{})
 		})
 	}
 	if err := eg.Wait(); err != nil {
@@ -469,7 +485,7 @@ func TestShutdownsDoNotLeakGoroutines(t *testing.T) {
 	// The Shutdown methods each spawn a goroutine so we want to make sure those don't
 	// keep running indefinitely after the Shutdowns return.
 	cancel()
-	top.Shutdown(ctx)
+	topic.Shutdown(ctx)
 	sub.Shutdown(ctx)
 
 	// Wait for number of goroutines to return to normal.
@@ -497,6 +513,26 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterTopic("err", fake)
 	mux.RegisterSubscription("foo", fake)
 	mux.RegisterSubscription("err", fake)
+
+	if diff := cmp.Diff(mux.TopicSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidTopicScheme("foo") || !mux.ValidTopicScheme("err") {
+		t.Errorf("ValidTopicScheme didn't return true for valid scheme")
+	}
+	if mux.ValidTopicScheme("foo2") || mux.ValidTopicScheme("http") {
+		t.Errorf("ValidTopicScheme didn't return false for invalid scheme")
+	}
+
+	if diff := cmp.Diff(mux.SubscriptionSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidSubscriptionScheme("foo") || !mux.ValidSubscriptionScheme("err") {
+		t.Errorf("ValidSubscriptionScheme didn't return true for valid scheme")
+	}
+	if mux.ValidSubscriptionScheme("foo2") || mux.ValidSubscriptionScheme("http") {
+		t.Errorf("ValidSubscriptionScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string

@@ -309,7 +309,40 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
+// Close implements driver.Close.
 func (b *bucket) Close() error {
+	return nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey, false)
+	dstBlobURL := b.containerURL.NewBlobURL(dstKey)
+	srcKey = escapeKey(srcKey, false)
+	srcURL := b.containerURL.NewBlobURL(srcKey).URL()
+	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, nil /* metadata */, azblob.ModifiedAccessConditions{}, azblob.BlobAccessConditions{})
+	if err != nil {
+		return err
+	}
+	copyStatus := resp.CopyStatus()
+	nErrors := 0
+	for copyStatus == azblob.CopyStatusPending {
+		// Poll until the copy is complete.
+		time.Sleep(500 * time.Millisecond)
+		propertiesResp, err := dstBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+		if err != nil {
+			// A GetProperties failure may be transient, so allow a couple
+			// of them before giving up.
+			nErrors++
+			if ctx.Err() != nil || nErrors == 3 {
+				return err
+			}
+		}
+		copyStatus = propertiesResp.CopyStatus()
+	}
+	if copyStatus != azblob.CopyStatusSuccess {
+		return fmt.Errorf("Copy failed with status: %s", copyStatus)
+	}
 	return nil
 }
 

@@ -300,6 +300,9 @@ func (b *bucket) Close() error {
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
+	if err == errUnimplemented {
+		return gcerrors.Unimplemented
+	}
 	e, ok := err.(awserr.Error)
 	if !ok {
 		return gcerrors.Unknown
@@ -331,7 +334,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	if opts.Delimiter != "" {
 		in.Delimiter = aws.String(escapeKey(opts.Delimiter))
 	}
-	resp, err := b.listObjects(in, opts)
+	resp, err := b.listObjects(ctx, in, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +384,7 @@ func (b *bucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driv
 	return &page, nil
 }
 
-func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions) (*s3.ListObjectsV2Output, error) {
+func (b *bucket) listObjects(ctx context.Context, in *s3.ListObjectsV2Input, opts *driver.ListOptions) (*s3.ListObjectsV2Output, error) {
 	if !b.useLegacyList {
 		if opts.BeforeList != nil {
 			asFunc := func(i interface{}) bool {
@@ -396,11 +399,7 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions
 				return nil, err
 			}
 		}
-		req, resp := b.client.ListObjectsV2Request(in)
-		if err := req.Send(); err != nil {
-			return nil, err
-		}
-		return resp, nil
+		return b.client.ListObjectsV2WithContext(ctx, in)
 	}
 
 	// Use the legacy ListObjects request.
@@ -426,8 +425,8 @@ func (b *bucket) listObjects(in *s3.ListObjectsV2Input, opts *driver.ListOptions
 			return nil, err
 		}
 	}
-	req, legacyResp := b.client.ListObjectsRequest(legacyIn)
-	if err := req.Send(); err != nil {
+	legacyResp, err := b.client.ListObjectsWithContext(ctx, legacyIn)
+	if err != nil {
 		return nil, err
 	}
 
@@ -473,8 +472,8 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	req, resp := b.client.HeadObjectRequest(in)
-	if err := req.Send(); err != nil {
+	resp, err := b.client.HeadObjectWithContext(ctx, in)
+	if err != nil {
 		return driver.Attributes{}, err
 	}
 
@@ -521,8 +520,8 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
 	}
-	req, resp := b.client.GetObjectRequest(in)
-	if err := req.Send(); err != nil {
+	resp, err := b.client.GetObjectWithContext(ctx, in)
+	if err != nil {
 		return nil, err
 	}
 	body := resp.Body
@@ -667,6 +666,14 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	}, nil
 }
 
+var errUnimplemented = errors.New("not implemented")
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	// TODO(rvangent): Implement this and delete errUnimplemented.
+	return errUnimplemented
+}
+
 // Delete implements driver.Delete.
 func (b *bucket) Delete(ctx context.Context, key string) error {
 	if _, err := b.Attributes(ctx, key); err != nil {
@@ -677,8 +684,8 @@ func (b *bucket) Delete(ctx context.Context, key string) error {
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
 	}
-	req, _ := b.client.DeleteObjectRequest(input)
-	return req.Send()
+	_, err := b.client.DeleteObjectWithContext(ctx, input)
+	return err
 }
 
 func (b *bucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {

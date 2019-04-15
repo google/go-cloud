@@ -19,6 +19,8 @@ Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
   Configurator](https://godoc.org/gocloud.dev/runtimevar/gcpruntimeconfig)
 * [blobvar](https://godoc.org/gocloud.dev/runtimevar/blobvar) - a blob-backed
   implementation supported by any provider that has [blob support]({{< relref "blob.md#supported-providers">}})
+* [httpvar](https://godoc.org/gocloud.dev/runtimevar/httpvar) - an
+  implementation that fetches an arbitrary HTTP endpoint
 * [Local read-only constant
   vars](https://godoc.org/gocloud.dev/runtimevar/constantvar) - an in-memory
   local implementation, mainly useful for testing

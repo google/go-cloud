@@ -113,6 +113,7 @@ func ExampleOpenSubscription() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer s.Shutdown(ctx)
 
 	// Receive a message from the *pubsub.Subscription backed by Service Bus.
 	msg, err := s.Receive(ctx)
@@ -124,7 +125,7 @@ func ExampleOpenSubscription() {
 	// See https://godoc.org/github.com/Azure/azure-service-bus-go#Message.Complete.
 	msg.Ack()
 }
-func Example_openfromURL() {
+func Example_openFromURL() {
 	ctx := context.Background()
 
 	// OpenTopic creates a *pubsub.Topic from a URL.
@@ -194,6 +195,7 @@ func Example_ackFuncForReceiveAndDelete() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer s.Shutdown(ctx)
 
 	// Construct a *pubsub.Topic.
 	t, err := azuresb.OpenTopic(ctx, sbTopic, nil)
