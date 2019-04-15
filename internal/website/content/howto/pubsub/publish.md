@@ -16,9 +16,12 @@ like this:
 
 ```go
 err := topic.Send(ctx, &pubsub.Message{
-    Body: []byte("Hello, World!\n")
+    Body:     []byte("Hello, World!\n")
     Metadata: map[string]string{
-        "Foo": "Bar",
+        // These are examples of metadata.
+        // There is nothing special about the key names.
+        "language":   "en",
+        "importance": "high",
     },
 })
 if err != nil {
@@ -38,10 +41,12 @@ provider or you need fine-grained control over the connection settings, you
 should call the constructor function in the driver package directly (like
 `gcppubsub.OpenTopic`). However, if you want to change providers based on
 configuration, you can use `pubsub.OpenTopic`, making sure you ["blank
-import"][] the driver package to link it in. This guide will show how to use
+import"][] the driver package to link it in. See the
+[documentation on URLs][] for more details. This guide will show how to use
 both forms for each pub/sub provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
 
 ## Amazon Simple Notification Service {#sns}
 
@@ -330,9 +335,10 @@ if err != nil {
 defer topic.Shutdown(ctx)
 ```
 
-**TODO(light): Something about msgpack and ugorji driver? I don't understand
-*from reference.**
+Because NATS does not natively support metadata, messages sent to NATS will
+be encoded with [gob][].
 
+[gob]: https://golang.org/pkg/encoding/gob/
 [NATS]: https://nats.io/
 
 ### NATS Constructor {#nats-ctor}

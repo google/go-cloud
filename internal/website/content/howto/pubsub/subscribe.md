@@ -5,12 +5,15 @@ draft: true
 weight: 2
 ---
 
-Subscribing to messages on a topic with the Go CDK takes two steps:
+Subscribing to messages on a topic with the Go CDK takes three steps:
 
 1. Open the subscription with the Pub/Sub provider of your choice (once per subscription).
 2. Receive messages from the topic.
+3. For each message, acknowledge its receipt using the `Ack` method
+   after completing any work related to the message. This will prevent the
+   message from being redelivered.
 
-The second step is the same across all providers because the first step
+The last two steps are the same across all providers because the first step
 creates a value of the portable [`*pubsub.Subscription`][] type. A simple
 subscriber that operates on messages serially looks like this:
 
@@ -27,19 +30,14 @@ func main() {
             log.Printf("Receiving message: %v", err)
             break
         }
-        // TODO(light): Is this reasonable ack behavior, @jba?
-        if err := handle(ctx, msg); err != nil {
-            log.Printf("Handling message: %v", err)
-        } else {
-            msg.Ack()
-        }
+        handle(ctx, msg.Data)
+        msg.Ack()
     }
 }
 
-func handle(ctx context.Context, msg *pubsub.Message) error {
+func handle(ctx context.Context, data []byte) {
     // Do work based on the message.
-    fmt.Printf("Got message: %q\n", msg.Data)
-    return nil
+    fmt.Printf("Got message: %q\n", data)
 }
 ```
 
@@ -80,15 +78,9 @@ recvLoop:
 
         // Handle the message in a new goroutine.
         go func() {
-            defer func() { <-sem }()
-            // TODO(light): Is this reasonable ack behavior, @jba?
-            if err := handle(ctx, msg); err != nil {
-                log.Printf("Handling message: %v", err)
-            } else {
-                msg.Ack()
-            }
-            // Release the semaphore.
-            <-sem
+            defer func() { <-sem }() // Release the semaphore.
+            handle(ctx, msg.Data)
+            msg.Ack()
         }()
     }
 
@@ -99,10 +91,9 @@ recvLoop:
     }
 }
 
-func handle(ctx context.Context, msg *pubsub.Message) error {
+func handle(ctx context.Context, data []byte) {
     // Do work based on the message.
-    fmt.Printf("Got message: %q\n", msg.Data)
-    return nil
+    fmt.Printf("Got message: %q\n", data)
 }
 ```
 
@@ -118,10 +109,12 @@ provider or you need fine-grained control over the connection settings, you
 should call the constructor function in the driver package directly (like
 `gcppubsub.OpenSubscription`). However, if you want to change providers based
 on configuration, you can use `pubsub.OpenSubscription`, making sure you
-["blank import"][] the driver package to link it in. This guide will show how
-to use both forms for each pub/sub provider.
+["blank import"][] the driver package to link it in. See the
+[documentation on URLs][] for more details. This guide will show how to use
+both forms for each pub/sub provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
 
 ## Amazon Simple Queueing Service {#sqs}
 
@@ -401,7 +394,11 @@ The Go CDK can publish to a [NATS][] subject. A NATS URL only includes the
 subject name. The NATS server is discovered from the `NATS_SERVER_URL`
 environment variable (which is something like `nats://nats.example.com`).
 
-**TODO(light): Something about the `ackfunc` query parameter? Unsure when to use.**
+NATS guarantees at-most-once delivery, so there is no equivalent of `Ack`.
+If your application only uses NATS and no other implementations (including
+in-memory), you can skip calling `Ack` and add `?ackfunc=panic` to the end of
+the URL you use to open a subscription. Otherwise, you should add
+`?ackfunc=noop` to the end of your URL.
 
 ```go
 import (
@@ -411,17 +408,22 @@ import (
 
 // ...
 
-subscription, err := pubsub.OpenSubscription(ctx, "nats://example.mysubject")
+subscription, err := pubsub.OpenSubscription(ctx,
+    "nats://example.mysubject?ackfunc=panic")
 if err != nil {
     return err
 }
 defer subscription.Shutdown(ctx)
 ```
 
-**TODO(light): Something about msgpack and ugorji driver? I don't understand
-*from reference.**
+To parse messages [published via the Go CDK][publish#nats], the NATS driver
+will first attempt to decode the payload using [gob][]. Failing that, it will
+return the message payload as the `Data` with no metadata to accomodate
+subscribing to messages coming from a source not using the Go CDK.
 
+[gob]: https://golang.org/pkg/encoding/gob/
 [NATS]: https://nats.io/
+[publish#nats]: {{< ref "./publish.md#nats" >}}
 
 ### NATS Constructor {#nats-ctor}
 
@@ -443,7 +445,10 @@ if err != nil {
 defer natsConn.Close()
 
 subscription, err := natspubsub.CreateSubscription(
-    natsConn, "example.mysubject", func() {}, nil)
+    natsConn,
+    "example.mysubject",
+    func() { panic("nats does not have ack") },
+    nil)
 if err != nil {
     return err
 }
