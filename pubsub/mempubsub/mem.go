@@ -188,6 +188,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 type subscription struct {
 	mu          sync.Mutex
 	topic       *topic
@@ -350,3 +353,6 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

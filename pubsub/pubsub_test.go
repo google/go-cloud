@@ -52,9 +52,9 @@ func (t *driverTopic) SendBatch(ctx context.Context, ms []*driver.Message) error
 	return nil
 }
 
-func (s *driverTopic) IsRetryable(error) bool { return false }
-
-func (s *driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*driverTopic) IsRetryable(error) bool             { return false }
+func (*driverTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*driverTopic) Close() error                       { return nil }
 
 type driverSub struct {
 	driver.Subscription
@@ -105,11 +105,10 @@ func (s *driverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return nil
 }
 
-func (s *driverSub) IsRetryable(error) bool { return false }
-
+func (*driverSub) IsRetryable(error) bool             { return false }
 func (*driverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (*driverSub) AckFunc() func() { return nil }
+func (*driverSub) AckFunc() func()                    { return nil }
+func (*driverSub) Close() error                       { return nil }
 
 func TestSendReceive(t *testing.T) {
 	ctx := context.Background()
@@ -247,6 +246,7 @@ func (b blockingDriverSub) ReceiveBatch(ctx context.Context, maxMessages int) ([
 }
 func (blockingDriverSub) AckFunc() func()        { return nil }
 func (blockingDriverSub) IsRetryable(error) bool { return false }
+func (blockingDriverSub) Close() error           { return nil }
 
 func TestCancelTwoReceives(t *testing.T) {
 	// We want to create the following situation:
@@ -317,9 +317,9 @@ func (t *failTopic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	return nil
 }
 
-func (t *failTopic) IsRetryable(err error) bool { return isRetryable(err) }
-
+func (*failTopic) IsRetryable(err error) bool         { return isRetryable(err) }
 func (*failTopic) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Unknown }
+func (*failTopic) Close() error                       { return nil }
 
 func TestRetryReceive(t *testing.T) {
 	ctx := context.Background()
@@ -352,6 +352,7 @@ func (t *failSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.
 func (*failSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error { return nil }
 func (*failSub) IsRetryable(err error) bool                                { return isRetryable(err) }
 func (*failSub) AckFunc() func()                                           { return nil }
+func (*failSub) Close() error                                              { return nil }
 
 // TODO(jba): add a test for retry of SendAcks.
 
@@ -364,6 +365,7 @@ type erroringTopic struct {
 func (erroringTopic) SendBatch(context.Context, []*driver.Message) error { return errDriver }
 func (erroringTopic) IsRetryable(err error) bool                         { return isRetryable(err) }
 func (erroringTopic) ErrorCode(error) gcerrors.ErrorCode                 { return gcerrors.AlreadyExists }
+func (erroringTopic) Close() error                                       { return errDriver }
 
 type erroringSubscription struct {
 	driver.Subscription
@@ -377,15 +379,12 @@ func (erroringSubscription) SendAcks(context.Context, []driver.AckID) error { re
 func (erroringSubscription) IsRetryable(err error) bool                     { return isRetryable(err) }
 func (erroringSubscription) ErrorCode(error) gcerrors.ErrorCode             { return gcerrors.AlreadyExists }
 func (erroringSubscription) AckFunc() func()                                { return nil }
+func (erroringSubscription) Close() error                                   { return errDriver }
 
 // TestErrorsAreWrapped tests that all errors returned from the driver are
 // wrapped exactly once by the portable type.
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
-	topic := pubsub.NewTopic(erroringTopic{}, nil)
-	defer topic.Shutdown(ctx)
-	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
-	defer sub.Shutdown(ctx)
 
 	verify := func(err error) {
 		t.Helper()
@@ -403,8 +402,15 @@ func TestErrorsAreWrapped(t *testing.T) {
 		}
 	}
 
+	topic := pubsub.NewTopic(erroringTopic{}, nil)
 	verify(topic.Send(ctx, &pubsub.Message{}))
-	_, err := sub.Receive(ctx)
+	err := topic.Shutdown(ctx)
+	verify(err)
+
+	sub := pubsub.NewSubscription(erroringSubscription{}, nil, nil)
+	_, err = sub.Receive(ctx)
+	verify(err)
+	err = sub.Shutdown(ctx)
 	verify(err)
 }
 
