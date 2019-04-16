@@ -17,12 +17,14 @@ package docstore
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/openurl"
 )
 
 // A Document is a set of field-value pairs. One or more fields, called the key
@@ -373,6 +375,73 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 		}
 	}
 	return parts, nil
+}
+
+// CollectionURLOpener opens a collection of documents based on a URL.
+// The opener must not modify the URL argument. It must be safe to call from
+// multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type CollectionURLOpener interface {
+	OpenCollectionURL(ctx context.Context, u *url.URL) (*Collection, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs against
+// a set of registered schemes and calls the opener that matches the URL's
+// scheme. See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+//
+// The zero value is a multiplexer with no registered scheme.
+type URLMux struct {
+	schemes openurl.SchemeMap
+}
+
+// CollectionSchemes returns a sorted slice of the registered Collection schemes.
+func (mux *URLMux) CollectionSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidCollectionScheme returns true iff scheme has been registered for Collections.
+func (mux *URLMux) ValidCollectionScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
+// RegisterCollection registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterCollection panics.
+func (mux *URLMux) RegisterCollection(scheme string, opener CollectionURLOpener) {
+	mux.schemes.Register("docstore", "Collection", scheme, opener)
+}
+
+// OpenCollection calls OpenCollectionURL with the URL parsed from urlstr.
+// OpenCollection is safe to call from multiple goroutines.
+func (mux *URLMux) OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
+	opener, u, err := mux.schemes.FromString("Collection", urlstr)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(CollectionURLOpener).OpenCollectionURL(ctx, u)
+}
+
+// OpenCollectionURL dispatches the URL to the opener that is registered with
+// the URL's scheme. OpenCollectionURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenCollectionURL(ctx context.Context, u *url.URL) (*Collection, error) {
+	opener, err := mux.schemes.FromURL("Collection", u)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(CollectionURLOpener).OpenCollectionURL(ctx, u)
+}
+
+var defaultURLMux = new(URLMux)
+
+// DefaultURLMux returns the URLMux used by OpenCollection.
+//
+// Driver packages can use this to register their BucketURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenCollection opens the bucket identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for details
+// on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs for more
+// information.
+func OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
+	return defaultURLMux.OpenCollection(ctx, urlstr)
 }
 
 func wrapError(c driver.Collection, err error) error {
