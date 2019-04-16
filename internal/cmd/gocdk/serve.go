@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -32,6 +33,7 @@ import (
 
 func serve(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "serve")
+	address := f.String("address", "localhost:8080", "address to serve on")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
@@ -50,15 +52,19 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 	if err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
+
+	// TODO(light): Verify that biome configuration permits serving.
+	// https://github.com/google/go-cloud/issues/1833
+
 	// Start main serve loop.
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	if err := serveLoop(ctx, pctx, logger, moduleRoot, biome); err != nil {
+	if err := serveLoop(ctx, pctx, logger, *address, moduleRoot, biome); err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 	return nil
 }
 
-func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, moduleRoot, biome string) error {
+func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, address string, moduleRoot, biome string) error {
 	// Log biome that is being used.
 	logger.Printf("Preparing to serve %s...", biome)
 
@@ -79,9 +85,19 @@ func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, mo
 	}
 
 	// Build and run the server.
+	// TODO(light): Bind host is ignored for now because eventually this
+	// subprocess will be reverse proxied. The proxy should respect the host.
+	_, portString, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	port, err := net.LookupPort("tcp", portString)
+	if err != nil {
+		return xerrors.Errorf("resolve port for %q: %w", address, err)
+	}
 	alloc := &serverAlloc{
 		exePath: filepath.Join(buildDir, "server"),
-		port:    9090,
+		port:    port,
 	}
 	logger.Println("Building server...")
 	if err := buildForServe(ctx, pctx, moduleRoot, alloc.exePath); err != nil {
@@ -164,6 +180,7 @@ func (alloc *serverAlloc) start(ctx context.Context, pctx *processContext, logge
 	}
 
 	// Server must report alive within 30 seconds.
+	// TODO(light): Also wait on process to see if it exits early.
 	aliveCtx, aliveCancel := context.WithTimeout(ctx, 30*time.Second)
 	err := waitForHealthy(aliveCtx, alloc.url("/healthz/liveness"))
 	aliveCancel()
