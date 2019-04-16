@@ -431,12 +431,12 @@ var defaultURLMux = new(URLMux)
 
 // DefaultURLMux returns the URLMux used by OpenCollection.
 //
-// Driver packages can use this to register their BucketURLOpener on the mux.
+// Driver packages can use this to register their CollectionURLOpener on the mux.
 func DefaultURLMux() *URLMux {
 	return defaultURLMux
 }
 
-// OpenCollection opens the bucket identified by the URL given.
+// OpenCollection opens the collection identified by the URL given.
 // See the URLOpener documentation in provider-specific subpackages for details
 // on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs for more
 // information.
