@@ -34,17 +34,14 @@ import (
 func serve(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "serve")
 	address := f.String("address", "localhost:8080", "address to serve on")
+	biome := f.String("biome", "dev", "biome to apply and use configuration from")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
 		return nil
 	} else if err != nil {
 		return usagef("gocdk serve: %w", err)
 	}
-	if f.NArg() > 1 {
-		return usagef("gocdk serve [BIOME]")
-	}
-	biome := f.Arg(0)
-	if biome == "" {
-		biome = "dev"
+	if f.NArg() != 0 {
+		return usagef("gocdk serve [options]")
 	}
 
 	// Check first that we're in a Go module.
@@ -58,7 +55,7 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 
 	// Start main serve loop.
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
-	if err := serveLoop(ctx, pctx, logger, *address, moduleRoot, biome); err != nil {
+	if err := serveLoop(ctx, pctx, logger, *address, moduleRoot, *biome); err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 	return nil
@@ -107,7 +104,7 @@ func serveLoop(ctx context.Context, pctx *processContext, logger *log.Logger, ad
 	if err != nil {
 		return err
 	}
-	logger.Printf("Serving at %s", alloc.url(""))
+	logger.Printf("Serving at %s\nUse Ctrl-C to stop", alloc.url(""))
 	// TODO(light): Loop on filesystem change.
 	<-ctx.Done()
 	logger.Println("Shutting down...")
