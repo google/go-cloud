@@ -26,75 +26,126 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 )
 
+// TODO: support parallel scans (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
+
+type avmap = map[string]*dynamodb.AttributeValue
+
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	out, err := c.runGetQuery(ctx, q, nil)
+	items, last, err := c.runQueryOrScan(ctx, q, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &documentIterator{
 		c:     c,
 		q:     q,
-		items: out.Items,
-		count: *out.Count,
+		items: items,
 		limit: q.Limit, // manually count limit since dynamodb uses "limit" as scan limit before filtering
-		last:  out.LastEvaluatedKey,
+		last:  last,
 	}, nil
 }
 
-func (c *collection) runGetQuery(ctx context.Context, q *driver.Query, startAfter map[string]*dynamodb.AttributeValue) (*dynamodb.QueryOutput, error) {
-	pb := expression.NamesList(expression.Name(docstore.RevisionField))
-	for _, fp := range q.FieldPaths {
-		pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
+func (c *collection) runQueryOrScan(ctx context.Context, q *driver.Query, startAfter avmap) (items []avmap, last avmap, err error) {
+	var cb expression.Builder
+	cbUsed := false // It's an error to build an empty Builder.
+	if len(q.FieldPaths) > 0 {
+		pb := expression.NamesList(expression.Name(docstore.RevisionField))
+		for _, fp := range q.FieldPaths {
+			pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
+		}
+		cb = cb.WithProjection(pb)
+		cbUsed = true
 	}
-	cb := expression.NewBuilder().WithProjection(pb)
-	cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
-	ce, err := cb.Build()
-	if err != nil {
-		return nil, err
+	// If there is an equality filter on the partition key, do a query.
+	// Otherwise, do a scan.
+	doQuery := false
+	for _, f := range q.Filters {
+		if len(f.FieldPath) == 1 && f.FieldPath[0] == c.partitionKey && f.Op == driver.EqualOp {
+			doQuery = true
+			break
+		}
 	}
-	return c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
-		TableName:                 &c.table,
-		ExpressionAttributeNames:  ce.Names(),
-		ExpressionAttributeValues: ce.Values(),
-		KeyConditionExpression:    ce.KeyCondition(),
-		FilterExpression:          ce.Filter(),
-		ProjectionExpression:      ce.Projection(),
-		ExclusiveStartKey:         startAfter,
-	})
+	if doQuery {
+		cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
+		ce, err := cb.Build()
+		if err != nil {
+			return nil, nil, err
+		}
+		out, err := c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
+			TableName:                 &c.table,
+			ExpressionAttributeNames:  ce.Names(),
+			ExpressionAttributeValues: ce.Values(),
+			KeyConditionExpression:    ce.KeyCondition(),
+			FilterExpression:          ce.Filter(),
+			ProjectionExpression:      ce.Projection(),
+			ExclusiveStartKey:         startAfter,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return out.Items, out.LastEvaluatedKey, nil
+	} else {
+		if len(q.Filters) > 0 {
+			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
+			cbUsed = true
+		}
+		in := &dynamodb.ScanInput{
+			TableName:         &c.table,
+			ExclusiveStartKey: startAfter,
+		}
+		if cbUsed {
+			ce, err := cb.Build()
+			if err != nil {
+				return nil, nil, err
+			}
+			in.ExpressionAttributeNames = ce.Names()
+			in.ExpressionAttributeValues = ce.Values()
+			in.FilterExpression = ce.Filter()
+			in.ProjectionExpression = ce.Projection()
+		}
+		out, err := c.db.ScanWithContext(ctx, in)
+		if err != nil {
+			return nil, nil, err
+		}
+		return out.Items, out.LastEvaluatedKey, nil
+	}
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
-	// TODO(shantuo): process the partition key and remove the hard-coded key
-	// condition after we fix the API.
-	kbs := []expression.KeyConditionBuilder{expression.KeyEqual(expression.Key(pkey), expression.Value("query"))}
-	var cbs []expression.ConditionBuilder
-
+	var kbs []expression.KeyConditionBuilder
+	var cfs []driver.Filter
 	for _, f := range fs {
 		if kb, ok := toKeyCondition(f, pkey, skey); ok {
 			kbs = append(kbs, kb)
 			continue
 		}
-		cbs = append(cbs, toFilter(f))
+		cfs = append(cfs, f)
 	}
 	keyBuilder := kbs[0]
 	for i := 1; i < len(kbs); i++ {
 		keyBuilder.And(kbs[i])
 	}
 	cb = cb.WithKeyCondition(keyBuilder)
-	var condBuilder expression.ConditionBuilder
-	if len(cbs) > 0 {
-		condBuilder = cbs[0]
-		for i := 1; i < len(cbs); i++ {
-			condBuilder.And(cbs[i])
-		}
-		cb = cb.WithFilter(condBuilder)
+	if len(cfs) > 0 {
+		cb = cb.WithFilter(filtersToConditionBuilder(cfs))
+	}
+	return cb
+}
+
+func filtersToConditionBuilder(fs []driver.Filter) expression.ConditionBuilder {
+	var cb expression.ConditionBuilder
+	if len(fs) == 0 {
+		return cb
+	}
+	cb = toFilter(fs[0])
+	for _, f := range fs[1:] {
+		cb = cb.And(toFilter(f))
 	}
 	return cb
 }
 
 func toKeyCondition(f driver.Filter, pkey, skey string) (expression.KeyConditionBuilder, bool) {
 	kp := strings.Join(f.FieldPath, ".")
-	if kp == skey {
+	if kp == pkey || kp == skey {
 		key := expression.Key(kp)
 		val := expression.Value(f.Value)
 		switch f.Op {
@@ -138,7 +189,6 @@ type documentIterator struct {
 	c     *collection
 	q     *driver.Query
 	items []map[string]*dynamodb.AttributeValue
-	count int64
 	curr  int
 	limit int
 	last  map[string]*dynamodb.AttributeValue
@@ -151,14 +201,14 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 	}
 	if it.curr >= len(it.items) && it.last != nil {
 		// Make a new query request at the end of this page.
-		out, err := it.c.runGetQuery(ctx, it.q, it.last)
+		items, last, err := it.c.runQueryOrScan(ctx, it.q, it.last)
 		if err != nil {
 			return err
 		}
-		it.limit -= len(out.Items)
-		it.items = out.Items
+		it.limit -= len(items)
+		it.items = items
 		it.curr = 0
-		it.last = out.LastEvaluatedKey
+		it.last = last
 		return it.Next(ctx, doc)
 	}
 	if err := decodeDoc(&dynamodb.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
