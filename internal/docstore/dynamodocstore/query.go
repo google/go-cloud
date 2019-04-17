@@ -83,31 +83,30 @@ func (c *collection) runQueryOrScan(ctx context.Context, q *driver.Query, startA
 			return nil, nil, err
 		}
 		return out.Items, out.LastEvaluatedKey, nil
-	} else {
-		if len(q.Filters) > 0 {
-			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
-			cbUsed = true
-		}
-		in := &dynamodb.ScanInput{
-			TableName:         &c.table,
-			ExclusiveStartKey: startAfter,
-		}
-		if cbUsed {
-			ce, err := cb.Build()
-			if err != nil {
-				return nil, nil, err
-			}
-			in.ExpressionAttributeNames = ce.Names()
-			in.ExpressionAttributeValues = ce.Values()
-			in.FilterExpression = ce.Filter()
-			in.ProjectionExpression = ce.Projection()
-		}
-		out, err := c.db.ScanWithContext(ctx, in)
+	}
+	if len(q.Filters) > 0 {
+		cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
+		cbUsed = true
+	}
+	in := &dynamodb.ScanInput{
+		TableName:         &c.table,
+		ExclusiveStartKey: startAfter,
+	}
+	if cbUsed {
+		ce, err := cb.Build()
 		if err != nil {
 			return nil, nil, err
 		}
-		return out.Items, out.LastEvaluatedKey, nil
+		in.ExpressionAttributeNames = ce.Names()
+		in.ExpressionAttributeValues = ce.Values()
+		in.FilterExpression = ce.Filter()
+		in.ProjectionExpression = ce.Projection()
 	}
+	out, err := c.db.ScanWithContext(ctx, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	return out.Items, out.LastEvaluatedKey, nil
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
@@ -132,10 +131,10 @@ func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string
 }
 
 func filtersToConditionBuilder(fs []driver.Filter) expression.ConditionBuilder {
-	var cb expression.ConditionBuilder
 	if len(fs) == 0 {
-		return cb
+		panic("no filters")
 	}
+	var cb expression.ConditionBuilder
 	cb = toFilter(fs[0])
 	for _, f := range fs[1:] {
 		cb = cb.And(toFilter(f))
