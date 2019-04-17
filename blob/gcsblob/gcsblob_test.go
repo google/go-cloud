@@ -152,8 +152,10 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 }
 
 func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
-	// TODO(rvangent): Implement this along with Copy, and document the
-	// As type in the package doc.
+	var copier *storage.Copier
+	if !as(&copier) {
+		return errors.New("BeforeCopy.As failed")
+	}
 	return nil
 }
 
