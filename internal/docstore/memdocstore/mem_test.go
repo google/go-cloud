@@ -67,3 +67,23 @@ func TestUpdateAtomic(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestOpenCollectionFromURL(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"mem://", false},
+		// Invalid parameter.
+		{"mem://?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
+}
