@@ -26,8 +26,8 @@ import (
 	"gocloud.dev/pubsub/driver"
 	"gocloud.dev/pubsub/drivertest"
 
-	"github.com/Azure/azure-amqp-common-go"
-	"github.com/Azure/azure-service-bus-go"
+	common "github.com/Azure/azure-amqp-common-go"
+	servicebus "github.com/Azure/azure-service-bus-go"
 )
 
 var (
@@ -172,13 +172,13 @@ func (sbAsTest) Name() string {
 	return "azure"
 }
 
-func (sbAsTest) TopicCheck(top *pubsub.Topic) error {
+func (sbAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var t2 servicebus.Topic
-	if top.As(&t2) {
+	if topic.As(&t2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &t2)
 	}
 	var t3 *servicebus.Topic
-	if !top.As(&t3) {
+	if !topic.As(&t3) {
 		return fmt.Errorf("cast failed for %T", &t3)
 	}
 	return nil
@@ -313,6 +313,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer topic.Shutdown(ctx)
 
 	// Make subscription.
 	if err := createSubscription(ctx, benchmarkTopicName, benchmarkSubscriptionName, ns, nil); err != nil {
@@ -326,6 +327,7 @@ func BenchmarkAzureServiceBusPubSub(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
 }
@@ -354,9 +356,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -379,9 +384,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

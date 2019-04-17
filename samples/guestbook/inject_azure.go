@@ -37,7 +37,7 @@ import (
 
 // setupAzure is a Wire injector function that sets up the application using
 // Azure.
-func setupAzure(ctx context.Context, flags *cliFlags) (*application, func(), error) {
+func setupAzure(ctx context.Context, flags *cliFlags) (*server.Server, func(), error) {
 	// This will be filled in by Wire with providers from the provider sets in
 	// wire.Build.
 	wire.Build(

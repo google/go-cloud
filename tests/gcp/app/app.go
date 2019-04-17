@@ -33,7 +33,16 @@ import (
 var appSet = wire.NewSet(
 	wire.Value([]health.Checker{connection}),
 	trace.AlwaysSample,
+	newRouter,
+	wire.Bind((*http.Handler)(nil), (*http.ServeMux)(nil)),
 )
+
+func newRouter() *http.ServeMux {
+	m := http.NewServeMux()
+	m.HandleFunc("/", handleMain)
+	m.HandleFunc("/connect", handleConnect)
+	return m
+}
 
 var connection = new(connectionChecker)
 
@@ -47,11 +56,7 @@ func main() {
 		log.Fatalf("unable to initialize server: %v", err)
 	}
 	defer cleanup()
-
-	m := http.NewServeMux()
-	m.HandleFunc("/", handleMain)
-	m.HandleFunc("/connect", handleConnect)
-	log.Fatal(srv.ListenAndServe(":8080", m))
+	log.Fatal(srv.ListenAndServe(":8080"))
 }
 
 func handleMain(w http.ResponseWriter, r *http.Request) {

@@ -269,6 +269,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerrors.Unknown
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 type subscription struct {
 	nc      *nats.Conn
 	nsub    *nats.Subscription
@@ -443,6 +446,9 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 	}
 	return gcerrors.Unknown
 }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }
 
 func encodeMessage(dm *driver.Message) ([]byte, error) {
 	var buf bytes.Buffer
