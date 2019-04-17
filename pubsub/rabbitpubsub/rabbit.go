@@ -475,6 +475,9 @@ func errorAs(err error, i interface{}) bool {
 	return false
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
 // See the package documentation for an example.
 //
@@ -700,3 +703,6 @@ func (*subscription) ErrorAs(err error, i interface{}) bool {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

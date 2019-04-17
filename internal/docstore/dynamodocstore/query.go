@@ -222,7 +222,6 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 			return err
 		}
 		it.curr = 0
-
 	}
 	if err := decodeDoc(&dynamodb.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
 		return err

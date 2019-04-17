@@ -359,6 +359,9 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return errorCode(err)
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 func errorCode(err error) gcerrors.ErrorCode {
 	ae, ok := err.(awserr.Error)
 	if !ok {
@@ -593,3 +596,6 @@ func errorAs(err error, i interface{}) bool {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

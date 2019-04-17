@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
@@ -35,7 +36,9 @@ func main() {
 
 	}
 	debug := false
-	err = run(context.Background(), pctx, os.Args[1:], &debug)
+	ctx, done := withInterrupt(context.Background())
+	err = run(ctx, pctx, os.Args[1:], &debug)
+	done()
 	if err != nil {
 		if debug {
 			fmt.Fprintf(os.Stderr, "%+v\n", err)
@@ -88,6 +91,7 @@ func run(ctx context.Context, pctx *processContext, args []string, debug *bool) 
 // this struct to avoid obtaining this from globals for simpler testing.
 type processContext struct {
 	workdir string
+	env     []string
 	stdin   io.Reader
 	stdout  io.Writer
 	stderr  io.Writer
@@ -101,6 +105,7 @@ func osProcessContext() (*processContext, error) {
 	}
 	return &processContext{
 		workdir: workdir,
+		env:     os.Environ(),
 		stdin:   os.Stdin,
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
@@ -126,4 +131,30 @@ func findModuleRoot(ctx context.Context, dir string) (string, error) {
 		return "", xerrors.Errorf("find module root for %s: no module found", dir, err)
 	}
 	return string(output), nil
+}
+
+// withInterrupt returns a copy of parent with a new Done channel. The returned
+// context's Done channel will be closed when the process receives an interrupt
+// signal, the parent context's Done channel is closed, or the stop function is
+// called, whichever comes first.
+//
+// The stop function releases resources and stops listening for signals, so code
+// should call it as soon as the operation using the context completes.
+func withInterrupt(parent context.Context) (_ context.Context, stop func()) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, interruptSignals()...)
+	ctx, cancel := context.WithCancel(parent)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-sig:
+			cancel()
+		case <-done:
+		}
+	}()
+	return ctx, func() {
+		cancel()
+		signal.Stop(sig)
+		close(done)
+	}
 }

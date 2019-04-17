@@ -204,8 +204,8 @@ providers.
     for details. You then need to set the `AWS_REGION` environment variable to
     the region your bucket is in.
 *   For Azure, you will need to add your storage account name and key as
-    environment variables (`AZURE_STORAGE_ACCOUNT_NAME` and
-    `AZURE_STORAGE_ACCOUNT_KEY`, respectively). See
+    environment variables (`AZURE_STORAGE_ACCOUNT` and
+    `AZURE_STORAGE_KEY`, respectively). See
     [here](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-portal)
     for details.
 
