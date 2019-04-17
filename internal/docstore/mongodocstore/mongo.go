@@ -14,6 +14,16 @@
 
 // Package mongodocstore provides an implementation of the docstore API for MongoDB.
 //
+// URLs
+//
+// For docstore.OpenCollection, mongodocstore registers for the schemes
+// "mongodocstore".
+// The default URL opener will dial a Mongo server using the environment
+// variable "MONGO_SERVER_URL".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
 // Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
 // TODO(jba): write
 //
@@ -29,7 +39,12 @@ package mongodocstore // import "gocloud.dev/internal/docstore/mongodocstore"
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/url"
+	"os"
 	"strings"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -39,6 +54,89 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 )
+
+func init() {
+	docstore.DefaultURLMux().RegisterCollection(Scheme, new(defaultDialer))
+}
+
+// defaultDialer dials a default Mongo server based on the environment variable
+// MONGO_SERVER_URL.
+type defaultDialer struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *defaultDialer) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	o.init.Do(func() {
+		serverURL := os.Getenv("MONGO_SERVER_URL")
+		if serverURL == "" {
+			o.err = errors.New("MONGO_SERVER_URL environment variable is not set")
+			return
+		}
+		client, err := Dial(ctx, serverURL)
+		if err != nil {
+			o.err = fmt.Errorf("failed to dial default Mongo server at %q: %v", serverURL, err)
+			return
+		}
+		o.opener = &URLOpener{Client: client}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+	}
+	return o.opener.OpenCollectionURL(ctx, u)
+}
+
+// Dial returns a new mongoDB client that is connected to the server URI.
+func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
+	opts := options.Client().ApplyURI(uri)
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
+	client, err := mongo.NewClient(opts)
+	if err != nil {
+		return nil, err
+	}
+	if err := client.Connect(ctx); err != nil {
+		return nil, err
+	}
+	// Connect doesn't seem to actually make a connection, so do an RPC.
+	if err := client.Ping(ctx, nil); err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+// Scheme is the URL scheme mongodocstore registers its URLOpener under on
+// docstore.DefaultMux.
+const Scheme = "mongodocstore"
+
+// URLOpener opens URLs like "mongodocstore://mydb/mycollection".
+//
+// The URL Host is used as the database name.
+// The URL Path is used as the colleciton name.
+//
+// No query parameters are supported.
+type URLOpener struct {
+	Client *mongo.Client
+}
+
+// OpenCollectionURL opens the Collection URL.
+func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
+	}
+
+	dbName := u.Host
+	if dbName == "" {
+		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Host (database name)", u)
+	}
+	collName := strings.TrimPrefix(u.Path, "/")
+	if collName == "" {
+		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
+	}
+	return OpenCollection(o.Client.Database(dbName).Collection(collName), nil), nil
+}
 
 type collection struct {
 	coll *mongo.Collection
