@@ -24,7 +24,7 @@ interactions:
       X-Amz-Content-Sha256:
       - a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e
       X-Amz-Date:
-      - 20190405T170351Z
+      - 20190417T031815Z
       X-Amz-Meta-Foo:
       - bar
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-src
@@ -35,15 +35,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 05 Apr 2019 17:03:52 GMT
+      - Wed, 17 Apr 2019 03:18:16 GMT
       Etag:
       - '"b10a8db164e0754105b7a99be72e3fe5"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - aOYb9fMGxbHKDZxD5R84GGbcgW1qzEuBZAwNm0yWz2ZMdzYFZNzMarkbdv+A07HZONSwzyDpIYE=
+      - y3HU1Rv3MsXb/U+dHm1eDXIFsH6ZkV5Kj+1w/aCfQPCQa0eMf1ZTLpgRkZfA4qg325aDqwF3Tog=
       X-Amz-Request-Id:
-      - 5286F03794773132
+      - AED7482010DB9761
     status: 200 OK
     code: 200
     duration: ""
@@ -56,7 +56,7 @@ interactions:
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190405T170351Z
+      - 20190417T031815Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-src
     method: HEAD
   response:
@@ -77,19 +77,19 @@ interactions:
       Content-Type:
       - text/plain
       Date:
-      - Fri, 05 Apr 2019 17:03:52 GMT
+      - Wed, 17 Apr 2019 03:18:16 GMT
       Etag:
       - '"b10a8db164e0754105b7a99be72e3fe5"'
       Last-Modified:
-      - Fri, 05 Apr 2019 17:03:52 GMT
+      - Wed, 17 Apr 2019 03:18:16 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - E1mqzKiISnXIee16zLcAQ3lK6NQ0XYEPeWUecNLd8WDJH2yhmMGx5lXi3J4YtpXhNMpitItIZp8=
+      - qI1S6V5IXht6fSkaYC+VqGYDVzQWfeDImIDe0Ez5BisZKTxmApNFNvOEQW4rDui2eriwO3DhFtg=
       X-Amz-Meta-Foo:
       - bar
       X-Amz-Request-Id:
-      - 411CDD36325B36D7
+      - C49F98CEA5FAE9B8
     status: 200 OK
     code: 200
     duration: ""
@@ -108,7 +108,7 @@ interactions:
       X-Amz-Content-Sha256:
       - cbaa060c695ffea336ebacf821fd121c12e6cddc83d19baae739412dc80c42d5
       X-Amz-Date:
-      - 20190405T170351Z
+      - 20190417T031815Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest-exists
     method: PUT
   response:
@@ -117,15 +117,267 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Fri, 05 Apr 2019 17:03:52 GMT
+      - Wed, 17 Apr 2019 03:18:16 GMT
       Etag:
       - '"a0fa9a7d7240d5c5eebd70899430c597"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - Cylks6c+5Cu/wN+nIi8e4g8a5DtLDEawosU7aKLwKfx+C4OmlIb51h/ve7V7EeJdK4ZxD6P3wjU=
+      - RU1MpcrNSiw8O/0TJL/ULoCGbGChWdrcEf06/SfQopIoHI+0EP8plIoeQMqGXD2kvJV9shCqOcY=
       X-Amz-Request-Id:
-      - F41220974A8DA4B8
+      - A3E9A6422E9C5873
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Copy-Source:
+      - go-cloud-testing/blob-for-copying-src
+      X-Amz-Date:
+      - 20190417T031815Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <CopyObjectResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LastModified>2019-04-17T03:18:16.000Z</LastModified><ETag>&quot;b10a8db164e0754105b7a99be72e3fe5&quot;</ETag></CopyObjectResult>
+    headers:
+      Content-Length:
+      - "234"
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 17 Apr 2019 03:18:16 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - DuPSt1w0WC4f7UedzP8XPX3GASeJunx9459lWGmj2hZEPejTFTr4/uwLim6xj3TQj5MQB8nlMEY=
+      X-Amz-Request-Id:
+      - 2C6C01C2EF183878
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190417T031816Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest
+    method: GET
+  response:
+    body: Hello World
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain
+      Date:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Last-Modified:
+      - Wed, 17 Apr 2019 03:18:16 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - L9sQxWG6EySEo/wdxv9esdscHDOGHw6jCuLJRZ9gdALUfVzX3qCfQlGW2xCwgtV/O0yNHZvCqrI=
+      X-Amz-Meta-Foo:
+      - bar
+      X-Amz-Request-Id:
+      - B9E5448BB4A57C37
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190417T031816Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain
+      Date:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Last-Modified:
+      - Wed, 17 Apr 2019 03:18:16 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - cAw9f9hjmDD9jcCGaaf0NfK+N9b0x5CvX8Yyr3wYjQU/j60ZBPwhIOmif/XUqj151Z50hCHBQ44=
+      X-Amz-Meta-Foo:
+      - bar
+      X-Amz-Request-Id:
+      - 6D75F446250B1B78
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Copy-Source:
+      - go-cloud-testing/blob-for-copying-src
+      X-Amz-Date:
+      - 20190417T031816Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest-exists
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <CopyObjectResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><LastModified>2019-04-17T03:18:17.000Z</LastModified><ETag>&quot;b10a8db164e0754105b7a99be72e3fe5&quot;</ETag></CopyObjectResult>
+    headers:
+      Content-Length:
+      - "234"
+      Content-Type:
+      - application/xml
+      Date:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 5LlV6TPC+llnY3AJXZPn5nnhBEg9/3SYM16oDHphJiApO2WMQ35Xwo5m0zn374JlMYWPkQd3x4E=
+      X-Amz-Request-Id:
+      - 37AE0DBB552D6E24
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190417T031816Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest-exists
+    method: GET
+  response:
+    body: Hello World
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain
+      Date:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Last-Modified:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - wKNu41B7BrJdirsc1CsvzXbqGaZUVXomMq1ZlBvVCD647HxSHR73k//Y1zZ3m1qz1iCpB6eFS8w=
+      X-Amz-Meta-Foo:
+      - bar
+      X-Amz-Request-Id:
+      - 5D56C982248DCAC0
+    status: 200 OK
+    code: 200
+    duration: ""
+- request:
+    body: ""
+    form: {}
+    headers:
+      User-Agent:
+      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      X-Amz-Content-Sha256:
+      - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+      X-Amz-Date:
+      - 20190417T031816Z
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-copying-dest-exists
+    method: HEAD
+  response:
+    body: ""
+    headers:
+      Accept-Ranges:
+      - bytes
+      Cache-Control:
+      - no-cache
+      Content-Disposition:
+      - inline
+      Content-Encoding:
+      - identity
+      Content-Language:
+      - en
+      Content-Length:
+      - "11"
+      Content-Type:
+      - text/plain
+      Date:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Etag:
+      - '"b10a8db164e0754105b7a99be72e3fe5"'
+      Last-Modified:
+      - Wed, 17 Apr 2019 03:18:17 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - 3bD1GmQo2fYP//XsTm6KXOHk97oQHVrP8DAf73iQINmtfCUVE9fOabNFA+DE0l0Ow2tGfGL9nFs=
+      X-Amz-Meta-Foo:
+      - bar
+      X-Amz-Request-Id:
+      - F4934DF2822C8E6F
     status: 200 OK
     code: 200
     duration: ""
