@@ -124,6 +124,7 @@ func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap
 		return nil, nil, err
 	}
 	return out.Items, out.LastEvaluatedKey, nil
+
 }
 
 func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string) expression.Builder {
