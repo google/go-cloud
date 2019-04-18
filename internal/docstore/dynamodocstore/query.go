@@ -111,14 +111,14 @@ type queryRunner struct {
 
 func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, err error) {
 	if qr.scanIn != nil {
-		qr.scanIn.ExclusiveStartKey = last
+		qr.scanIn.ExclusiveStartKey = startAfter
 		out, err := qr.c.db.ScanWithContext(ctx, qr.scanIn)
 		if err != nil {
 			return nil, nil, err
 		}
 		return out.Items, out.LastEvaluatedKey, nil
 	}
-	qr.queryIn.ExclusiveStartKey = last
+	qr.queryIn.ExclusiveStartKey = startAfter
 	out, err := qr.c.db.QueryWithContext(ctx, qr.queryIn)
 	if err != nil {
 		return nil, nil, err
