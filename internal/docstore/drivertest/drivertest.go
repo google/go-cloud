@@ -102,6 +102,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
+	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 }
 
 // Field paths used in test documents.
@@ -834,4 +835,38 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 		t.Fatal(err)
 	}
 	return ms
+}
+
+func testMultipleActions(t *testing.T, coll *ds.Collection) {
+	actions := coll.Actions()
+	for i := 0; i < 3; i++ {
+		actions.Create(docmap{
+			KindField: "multiple_actions",
+			KeyField:  "testMultipleActions" + string(i+'1'),
+			"n":       i,
+		})
+	}
+	for i := 0; i < 5; i++ {
+		actions.Put(docmap{
+			KindField: "multiple_actions",
+			KeyField:  "testMultipleActions" + string(i+'1'),
+			"n":       i,
+		})
+	}
+	for i := 0; i < 5; i++ {
+		actions.Get(docmap{
+			KindField: "multiple_actions",
+			KeyField:  "testMultipleActions" + string(i+'1'),
+		})
+	}
+	for i := 0; i < 5; i++ {
+		actions.Delete(docmap{
+			KindField: "multiple_actions",
+			KeyField:  "testMultipleActions" + string(i+'1'),
+		})
+	}
+	// We cannot verify the items unless all the providers support it.
+	if err := actions.Do(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 }

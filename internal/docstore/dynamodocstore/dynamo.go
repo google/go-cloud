@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
@@ -61,45 +62,159 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, u
 	if unordered {
 		panic("unordered unimplemented")
 	}
+	groups := c.splitActions(actions)
+	nRun := 0 // number of actions successfully run
+	var err error
+	for _, g := range groups {
+		if g[0].Kind == driver.Get {
+			err = c.runGets(ctx, g)
+		} else {
+			err = c.runWrites(ctx, g)
+		}
+		if err != nil {
+			return driver.ActionListError{{nRun, err}}
+		}
+		nRun += len(g)
+	}
+	return nil
+}
+
+// splitActions divides the actions slice into sub-slices, each of which can be
+// passed to run a dynamo transaction operation.
+// splitActions doesn't change the order of the input slice.
+func (c *collection) splitActions(actions []*driver.Action) [][]*driver.Action {
+	var (
+		groups [][]*driver.Action      // the actions, split; the return value
+		cur    []*driver.Action        // the group currently being constructed
+		wm     = make(map[string]bool) // writes group cannot contain duplicate items
+	)
+	collect := func() { // called when the current group is known to be finished
+		if len(cur) > 0 {
+			groups = append(groups, cur)
+			cur = nil
+			wm = make(map[string]bool)
+		}
+	}
+	for _, a := range actions {
+		if len(cur) > 0 && c.shouldSplit(cur[len(cur)-1], a, wm) ||
+			len(cur) >= 10 { // each transaction can run up to 10 operations.
+			collect()
+		}
+		cur = append(cur, a)
+		if a.Kind != driver.Get {
+			wm[c.primaryKey(a)] = true
+		}
+	}
+	collect()
+	return groups
+}
+
+func (c *collection) shouldSplit(curr, next *driver.Action, wm map[string]bool) bool {
+	if (curr.Kind == driver.Get) != (next.Kind == driver.Get) { // different kind
+		return true
+	}
+	if curr.Kind == driver.Get { // both are Get's
+		return false
+	}
+	_, ok := wm[c.primaryKey(next)]
+	return ok // different Write's in one transaction cannot target the same item
+}
+
+// primaryKey tries to get the primary key from the doc, which is the partition
+// key if there is no sort key, or the combination of both keys. If there is not
+// a key for Create action, it generates a partition key of the doc. It returns
+// the composite key to be guaranteed unique.
+func (c *collection) primaryKey(a *driver.Action) string {
+	pkey, err := a.Doc.GetField(c.partitionKey)
+	if err != nil {
+		if c.ErrorCode(err) == gcerr.NotFound && a.Kind == driver.Create {
+			newPartitionKey := driver.UniqueString()
+			a.Doc.SetField(c.partitionKey, newPartitionKey)
+			return newPartitionKey
+		}
+		panic(err) // shouldn't happen
+	}
+	if c.sortKey != "" {
+		skey, err := a.Doc.GetField(c.sortKey)
+		if err != nil {
+			panic(err) // shouldn't happen
+		}
+		return fmt.Sprintf("%s, %s", pkey, skey)
+	}
+	return pkey.(string)
+}
+
+func (c *collection) runGets(ctx context.Context, actions []*driver.Action) error {
+	// Assume all actions Kinds are Get's.
+	tgs := make([]*dyn.TransactGetItem, len(actions))
+	for i, a := range actions {
+		tg, err := c.toTransactGet(a.Doc, a.FieldPaths)
+		if err != nil {
+			return err
+		}
+		tgs[i] = tg
+	}
+
+	out, err := c.db.TransactGetItemsWithContext(ctx, &dyn.TransactGetItemsInput{TransactItems: tgs})
+	if err != nil {
+		return err
+	}
+
+	for i, res := range out.Responses {
+		if err := decodeDoc(&dyn.AttributeValue{M: res.Item}, actions[i].Doc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) error {
+	tws := make([]*dyn.TransactWriteItem, len(actions))
 	for i, a := range actions {
 		var pc *expression.ConditionBuilder
 		var err error
-		if a.Kind != driver.Create && a.Kind != driver.Get {
+		if a.Kind != driver.Create {
 			pc, err = revisionPrecondition(a.Doc)
 			if err != nil {
-				return driver.ActionListError{{i, err}}
+				return err
 			}
 		}
+
+		var tw *dyn.TransactWriteItem
 		switch a.Kind {
 		case driver.Create:
 			cb := expression.AttributeNotExists(expression.Name(c.partitionKey))
-			err = c.put(ctx, a.Kind, a.Doc, &cb)
+			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, &cb)
 		case driver.Replace:
 			if pc == nil {
 				c := expression.AttributeExists(expression.Name(c.partitionKey))
 				pc = &c
 			}
-			err = c.put(ctx, a.Kind, a.Doc, pc)
+			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, pc)
 		case driver.Put:
-			err = c.put(ctx, a.Kind, a.Doc, pc)
+			tw, err = c.toTransactPut(ctx, a.Kind, a.Doc, pc)
 		case driver.Delete:
-			err = c.delete(ctx, a.Doc, pc)
-		case driver.Get:
-			err = c.get(ctx, a.Doc, a.FieldPaths)
+			tw, err = c.toTransactDelete(ctx, a.Doc, pc)
 		case driver.Update:
 			cb := expression.AttributeExists(expression.Name(c.partitionKey))
 			if pc != nil {
 				cb = cb.And(*pc)
 			}
-			err = c.update(ctx, a.Doc, a.Mods, &cb)
+			tw, err = c.toTransactUpdate(ctx, a.Doc, a.Mods, &cb)
 		default:
-			panic("unimp")
+			panic("wrong action passed in; writes should be of kind Create, Replace, Put, Delete or Update")
 		}
 		if err != nil {
-			return driver.ActionListError{{i, err}}
+			return err
 		}
+		tws[i] = tw
 	}
-	return nil
+
+	_, err := c.db.TransactWriteItemsWithContext(ctx, &dyn.TransactWriteItemsInput{
+		ClientRequestToken: aws.String(driver.UniqueString()),
+		TransactItems:      tws,
+	})
+	return err
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
@@ -112,55 +227,38 @@ func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
 	return ""
 }
 
-func (c *collection) put(ctx context.Context, k driver.ActionKind, doc driver.Document, condition *expression.ConditionBuilder) error {
+func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc driver.Document, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
 	av, err := encodeDoc(doc)
 	if err != nil {
-		return err
-	}
-	mf := c.missingKeyField(av.M)
-	if k != driver.Create && mf != "" {
-		return fmt.Errorf("missing key field %q", mf)
-	}
-	var newPartitionKey string
-	if mf == c.partitionKey {
-		newPartitionKey = driver.UniqueString()
-		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(newPartitionKey)
-	}
-	if c.sortKey != "" && mf == c.sortKey {
-		// It doesn't make sense to generate a random sort key.
-		return fmt.Errorf("missing sort key %q", c.sortKey)
+		return nil, err
 	}
 
 	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
-		return err
+		return nil, err
 	}
-	in := &dyn.PutItemInput{
+	put := &dyn.Put{
 		TableName: &c.table,
 		Item:      av.M,
 	}
 	if condition != nil {
 		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		in.ExpressionAttributeNames = ce.Names()
-		in.ExpressionAttributeValues = ce.Values()
-		in.ConditionExpression = ce.Condition()
+		put.ExpressionAttributeNames = ce.Names()
+		put.ExpressionAttributeValues = ce.Values()
+		put.ConditionExpression = ce.Condition()
 	}
-	_, err = c.db.PutItemWithContext(ctx, in)
-	if err == nil && newPartitionKey != "" {
-		doc.SetField(c.partitionKey, newPartitionKey)
-	}
-	return err
+	return &dyn.TransactWriteItem{Put: put}, err
 }
 
-func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths [][]string) error {
+func (c *collection) toTransactGet(doc driver.Document, fieldpaths [][]string) (*dyn.TransactGetItem, error) {
 	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	in := &dyn.GetItemInput{
+	get := &dyn.Get{
 		TableName: &c.table,
 		Key:       av.M,
 	}
@@ -175,48 +273,43 @@ func (c *collection) get(ctx context.Context, doc driver.Document, fieldpaths []
 			WithProjection(expression.AddNames(expression.ProjectionBuilder{}, nbs...)).
 			Build()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		in.ProjectionExpression = expr.Projection()
-		in.ExpressionAttributeNames = expr.Names()
+		get.ProjectionExpression = expr.Projection()
+		get.ExpressionAttributeNames = expr.Names()
 	}
-	out, err := c.db.GetItemWithContext(ctx, in)
-	if err != nil {
-		return err
-	}
-	return decodeDoc(&dyn.AttributeValue{M: out.Item}, doc)
+	return &dyn.TransactGetItem{Get: get}, nil
 }
 
-func (c *collection) delete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) error {
+func (c *collection) toTransactDelete(ctx context.Context, doc driver.Document, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
 	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	in := &dyn.DeleteItemInput{
+	del := &dyn.Delete{
 		TableName: &c.table,
 		Key:       av.M,
 	}
 	if condition != nil {
 		ce, err := expression.NewBuilder().WithCondition(*condition).Build()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		in.ExpressionAttributeNames = ce.Names()
-		in.ExpressionAttributeValues = ce.Values()
-		in.ConditionExpression = ce.Condition()
+		del.ExpressionAttributeNames = ce.Names()
+		del.ExpressionAttributeValues = ce.Values()
+		del.ConditionExpression = ce.Condition()
 	}
-	_, err = c.db.DeleteItemWithContext(ctx, in)
-	return err
+	return &dyn.TransactWriteItem{Delete: del}, nil
 }
 
-func (c *collection) update(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) error {
+func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, mods []driver.Mod, condition *expression.ConditionBuilder) (*dyn.TransactWriteItem, error) {
 	if len(mods) == 0 {
-		return nil
+		return nil, nil
 	}
 	av, err := encodeDocKeyFields(doc, c.partitionKey, c.sortKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var ub expression.UpdateBuilder
 	for _, m := range mods {
@@ -231,17 +324,18 @@ func (c *collection) update(ctx context.Context, doc driver.Document, mods []dri
 	ub = ub.Set(expression.Name(docstore.RevisionField), expression.Value(driver.UniqueString()))
 	ce, err := expression.NewBuilder().WithCondition(*condition).WithUpdate(ub).Build()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = c.db.UpdateItemWithContext(ctx, &dyn.UpdateItemInput{
-		TableName:                 &c.table,
-		Key:                       av.M,
-		ConditionExpression:       ce.Condition(),
-		UpdateExpression:          ce.Update(),
-		ExpressionAttributeNames:  ce.Names(),
-		ExpressionAttributeValues: ce.Values(),
-	})
-	return err
+	return &dyn.TransactWriteItem{
+		Update: &dyn.Update{
+			TableName:                 &c.table,
+			Key:                       av.M,
+			ConditionExpression:       ce.Condition(),
+			UpdateExpression:          ce.Update(),
+			ExpressionAttributeNames:  ce.Names(),
+			ExpressionAttributeValues: ce.Values(),
+		},
+	}, nil
 }
 
 // revisionPrecondition returns a DynamoDB expression that asserts that the
@@ -285,4 +379,7 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	dyn.ErrCodeTransactionConflictException:             gcerr.Internal,
 	dyn.ErrCodeRequestLimitExceeded:                     gcerr.ResourceExhausted,
 	dyn.ErrCodeInternalServerError:                      gcerr.Internal,
+	dyn.ErrCodeTransactionCanceledException:             gcerr.FailedPrecondition,
+	dyn.ErrCodeTransactionInProgressException:           gcerr.InvalidArgument,
+	dyn.ErrCodeIdempotentParameterMismatchException:     gcerr.InvalidArgument,
 }
