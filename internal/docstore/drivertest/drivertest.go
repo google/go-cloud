@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/docstore"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -839,34 +840,51 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	actions := coll.Actions()
-	for i := 0; i < 3; i++ {
-		actions.Create(docmap{
-			KindField: "multiple_actions",
-			KeyField:  "testMultipleActions" + string(i+'1'),
-			"n":       i,
-		})
+	docs := []docmap{
+		{KindField: "multiple_actions", KeyField: "testMultipleActions1", "s": "a"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions2", "s": "b"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions3", "s": "c"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions4", "s": "d"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions5", "s": "e"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions6", "s": "f"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions7", "s": "g"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions8", "s": "h"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions9", "s": "i"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions10", "s": "j"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions11", "s": "k"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions12", "s": "l"},
 	}
-	for i := 0; i < 5; i++ {
-		actions.Put(docmap{
-			KindField: "multiple_actions",
-			KeyField:  "testMultipleActions" + string(i+'1'),
-			"n":       i,
-		})
+	// Writes
+	for i := 0; i < 6; i++ {
+		actions.Create(docs[i])
 	}
-	for i := 0; i < 5; i++ {
-		actions.Get(docmap{
-			KindField: "multiple_actions",
-			KeyField:  "testMultipleActions" + string(i+'1'),
-		})
+	for i := 6; i < len(docs); i++ {
+		actions.Put(docs[i])
 	}
-	for i := 0; i < 5; i++ {
-		actions.Delete(docmap{
-			KindField: "multiple_actions",
-			KeyField:  "testMultipleActions" + string(i+'1'),
-		})
+
+	// Reads
+	gots := make([]docmap, len(docs))
+	for i, doc := range docs {
+		gots[i] = docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+		actions.Get(gots[i], docstore.FieldPath("s"))
 	}
-	// We cannot verify the items unless all the providers support it.
-	if err := actions.Do(context.Background()); err != nil {
+	ctx := context.Background()
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for i, got := range gots {
+		docs[i][docstore.RevisionField] = got[docstore.RevisionField] // copy the revision
+		if diff := cmp.Diff(got, docs[i]); diff != "" {
+			t.Error(diff)
+		}
+	}
+
+	// Deletes
+	dels := coll.Actions()
+	for _, got := range gots {
+		dels.Delete(docmap{KindField: got[KindField], KeyField: got[KeyField]})
+	}
+	if err := dels.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
 }
