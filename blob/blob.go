@@ -669,7 +669,15 @@ func (b *Bucket) newRangeReader(ctx context.Context, key string, offset, length 
 
 // WriteAll is a shortcut for creating a Writer via NewWriter and writing p.
 func (b *Bucket) WriteAll(ctx context.Context, key string, p []byte, opts *WriterOptions) (err error) {
-	w, err := b.NewWriter(ctx, key, opts)
+	realOpts := new(WriterOptions)
+	if opts != nil {
+		*realOpts = *opts
+	}
+	if len(realOpts.ContentMD5) == 0 {
+		sum := md5.Sum(p)
+		realOpts.ContentMD5 = sum[:]
+	}
+	w, err := b.NewWriter(ctx, key, realOpts)
 	if err != nil {
 		return err
 	}
