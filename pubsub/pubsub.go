@@ -164,8 +164,14 @@ func (m *Message) Ack() {
 }
 
 // Nack tells the server that this Message was not processed and should be
-// redelivered. It returns immediately, but the actual nack is sent in the
-// background, and is not guaranteed to succeed.
+// redelivered (negative acknowledgement). It returns immediately, but the
+// actual nack is sent in the background, and is not guaranteed to succeed.
+//
+// Nack is a performance optimization for retrying transient failures: it
+// must not be used for message parse errors or other messages that the
+// application will never be able to process: calling Nack will cause them to
+// be redelivered and overload the server. Instead, an application should call
+// Ack and log the failure in some monitored way.
 //
 // Nack panics for at-most-once providers, as Nack is meaningless when
 // messages can't be redelivered.
