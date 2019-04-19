@@ -78,7 +78,7 @@ func newCollection(mcoll *mongo.Collection, opts Options) *collection {
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
 // reserved for use as a primary key; its value must be unique in the collection, is
 // immutable, and may be of any type other than an array."
-const mongoIDField = "_id"
+const mongoIDField = "_id "
 
 // TODO(jba): use bulk RPCs.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
