@@ -60,8 +60,13 @@ func newClient(ctx context.Context, uri string) (*mongo.Client, error) {
 	return client, nil
 }
 
+func extractID(doc interface{}) interface{} {
+	m := doc.(map[string]interface{})
+	return m[idField]
+}
+
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName))
+	coll := newCollection(h.db.Collection(collectionName), extractID)
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)

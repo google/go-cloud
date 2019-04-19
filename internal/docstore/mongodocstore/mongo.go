@@ -41,19 +41,26 @@ import (
 )
 
 type collection struct {
-	coll *mongo.Collection
+	coll   *mongo.Collection
+	idFunc func(interface{}) interface{}
 }
 
 type Options struct {
 }
 
+// TODO(shantuo): figure out how to handle this for for URLs. Suggestion: a query parameter
+// or path element that names a single field. That would at least handle the common case
+// where one document field is the primary key.
+
 // OpenCollection opens a MongoDB collection for use with Docstore.
-func OpenCollection(mcoll *mongo.Collection, _ *Options) *docstore.Collection {
-	return docstore.NewCollection(newCollection(mcoll))
+// idFunc is a function that accepts a document and returns the value to be used for
+// its _id field, or nil if there is none (which is valid for a Create action).
+func OpenCollection(mcoll *mongo.Collection, idFunc func(doc interface{}) interface{}, _ *Options) *docstore.Collection {
+	return docstore.NewCollection(newCollection(mcoll, idFunc))
 }
 
-func newCollection(mcoll *mongo.Collection) *collection {
-	return &collection{coll: mcoll}
+func newCollection(mcoll *mongo.Collection, idFunc func(interface{}) interface{}) *collection {
+	return &collection{coll: mcoll, idFunc: idFunc}
 }
 
 // From https://docs.mongodb.com/manual/core/document: "The field name _id is
@@ -99,7 +106,7 @@ func (c *collection) runAction(ctx context.Context, action *driver.Action) error
 }
 
 func (c *collection) get(ctx context.Context, a *driver.Action) error {
-	id, err := a.Doc.GetField(idField)
+	id, err := c.needID(a.Doc)
 	if err != nil {
 		return err
 	}
@@ -135,6 +142,10 @@ func (c *collection) create(ctx context.Context, a *driver.Action) error {
 	if err != nil {
 		return err
 	}
+	id := c.idFunc(a.Doc.Origin)
+	if id != nil {
+		mdoc[idField] = id
+	}
 	mdoc[docstore.RevisionField] = driver.UniqueString()
 	result, err := c.coll.InsertOne(ctx, mdoc)
 	if err != nil {
@@ -152,12 +163,17 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 	if err != nil {
 		return err
 	}
+	id, err := c.needID(a.Doc)
+	if err != nil {
+		return err
+	}
+	doc[idField] = id
 	doc[docstore.RevisionField] = driver.UniqueString()
 	opts := options.Replace()
 	if upsert {
 		opts.SetUpsert(true) // Document will be created if it doesn't exist.
 	}
-	filter, id, _, err := makeFilter(a.Doc)
+	filter, id, _, err := c.makeFilter(a.Doc)
 	if err != nil {
 		return err
 	}
@@ -172,7 +188,7 @@ func (c *collection) replace(ctx context.Context, a *driver.Action, upsert bool)
 }
 
 func (c *collection) delete(ctx context.Context, a *driver.Action) error {
-	filter, id, rev, err := makeFilter(a.Doc)
+	filter, id, rev, err := c.makeFilter(a.Doc)
 	if err != nil {
 		return err
 	}
@@ -221,7 +237,7 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	if len(unsets) > 0 {
 		updateDoc["$unset"] = unsets
 	}
-	filter, id, _, err := makeFilter(a.Doc)
+	filter, id, _, err := c.makeFilter(a.Doc)
 	if err != nil {
 		return err
 	}
@@ -235,8 +251,8 @@ func (c *collection) update(ctx context.Context, a *driver.Action) error {
 	return nil
 }
 
-func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err error) {
-	id, err = doc.GetField(idField)
+func (c *collection) makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err error) {
+	id, err = c.needID(doc)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -251,6 +267,14 @@ func makeFilter(doc driver.Document) (filter bson.D, id, rev interface{}, err er
 		filter = append(filter, bson.E{Key: docstore.RevisionField, Value: rev})
 	}
 	return filter, id, rev, nil
+}
+
+func (c *collection) needID(doc driver.Document) (interface{}, error) {
+	id := c.idFunc(doc.Origin)
+	if id == nil {
+		return nil, gcerr.New(gcerr.InvalidArgument, nil, 2, "missing ID")
+	}
+	return id, nil
 }
 
 // Error code for a write error when no documents match a filter.
