@@ -99,23 +99,35 @@ func init() {
 
 // OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
-	gcpInstance, err := GetGCPInstanceFromUrl(u)
+	params, err := paramsFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("cloudpostgres: open url: %s", err.Error())
+		return nil, fmt.Errorf("cloudpostgres: open url: %v", err)
 	}
-	projectId, region, instanceId, dbName := gcpInstance[0], gcpInstance[1], gcpInstance[2], gcpInstance[3]
-	password, _ := u.User.Password()
-	params := &Params{
-		User:      u.User.Username(),
-		ProjectID: projectId,
-		Region:    region,
-		Instance:  instanceId,
-		Password:  password,
-		Database:  dbName,
-		Values:    u.Query(),
-		TraceOpts: uo.TraceOpts,
-	}
+	params.TraceOpts = uo.TraceOpts
 	return Open(ctx, uo.CertSource, params)
+}
+
+func paramsFromURL(u *url.URL) (*Params, error) {
+	path := u.Host + u.Path // everything after scheme but before query or fragment
+	parts := strings.SplitN(path, "/", 4)
+	if len(parts) < 4 {
+		return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+	}
+	for _, part := range parts {
+		if part == "" {
+			return nil, fmt.Errorf("%s is not in the form project/region/instance/dbname", path)
+		}
+	}
+	password, _ := u.User.Password()
+	return &Params{
+		ProjectID: parts[0],
+		Region:    parts[1],
+		Instance:  parts[2],
+		Database:  parts[3],
+		User:      u.User.Username(),
+		Password:  password,
+		Values:    u.Query(),
+	}, nil
 }
 
 // Open opens a Cloud SQL database.
@@ -201,13 +213,4 @@ func (d dialer) Dial(network, address string) (net.Conn, error) {
 
 func (d dialer) DialTimeout(network, address string, timeout time.Duration) (net.Conn, error) {
 	return nil, errors.New("cloudpostgres: DialTimeout not supported")
-}
-
-func GetGCPInstanceFromUrl(u *url.URL) ([]string, error) {
-	gcpInstance := strings.Split(u.Host+u.Path, "/")
-	if len(gcpInstance) != 4 {
-		return nil, fmt.Errorf("cloudpostgres: open url: %s is not in the form project/region/instance/dbname", u.Host+u.Path)
-	}
-
-	return gcpInstance, nil
 }

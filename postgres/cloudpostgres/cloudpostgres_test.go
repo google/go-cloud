@@ -16,12 +16,13 @@ package cloudpostgres
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/internal/testing/terraform"
@@ -136,24 +137,93 @@ func TestOpenBadValue(t *testing.T) {
 	}
 }
 
-func TestGetGCPInstanceFromUrl(t *testing.T) {
-	project := "my-project-id"
-	region := "us-central1"
-	instance := "my-instance-id"
-	username := "username"
-	password := "password"
-	db := "my-db"
-
-	urlString := fmt.Sprintf("cloudpostgres://%s:%s@%s/%s/%s/%s", username, password, project, region, instance, db)
-	urlStruct, _ := url.Parse(urlString)
-	instanceSplited, err := GetGCPInstanceFromUrl(urlStruct)
-	if err != nil {
-		t.Fatal(err)
+func TestParamsFromURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		urlString string
+		want      *Params
+		wantErr   bool
+	}{
+		{
+			name:      "AllValuesSpecified",
+			urlString: "cloudpostgres://username:password@my-project-id/us-central1/my-instance-id/my-db?foo=bar&baz=quux",
+			want: &Params{
+				ProjectID: "my-project-id",
+				Region:    "us-central1",
+				Instance:  "my-instance-id",
+				Database:  "my-db",
+				User:      "username",
+				Password:  "password",
+				Values: url.Values{
+					"foo": {"bar"},
+					"baz": {"quux"},
+				},
+			},
+		},
+		{
+			name:      "OptionalValuesOmitted",
+			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/my-db",
+			want: &Params{
+				ProjectID: "my-project-id",
+				Region:    "us-central1",
+				Instance:  "my-instance-id",
+				Database:  "my-db",
+			},
+		},
+		{
+			name:      "DatabaseNameEmpty",
+			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/",
+			wantErr:   true,
+		},
+		{
+			name:      "InstanceEmpty",
+			urlString: "cloudpostgres://my-project-id/us-central1//my-db",
+			wantErr:   true,
+		},
+		{
+			name:      "RegionEmpty",
+			urlString: "cloudpostgres://my-project-id//my-instance-id/my-db",
+			wantErr:   true,
+		},
+		{
+			name:      "ProjectEmpty",
+			urlString: "cloudpostgres:///us-central1/my-instance-id/my-db",
+			wantErr:   true,
+		},
+		{
+			name:      "DatabaseNameWithSlashes",
+			urlString: "cloudpostgres://my-project-id/us-central1/my-instance-id/foo/bar/baz",
+			want: &Params{
+				ProjectID: "my-project-id",
+				Region:    "us-central1",
+				Instance:  "my-instance-id",
+				Database:  "foo/bar/baz",
+			},
+		},
 	}
-	if instanceSplited[0] != project {
-		t.Errorf("Expected that projectId = %s got %s:", project, instanceSplited[0])
-	}
-	if instanceSplited[2] != instance {
-		t.Errorf("Expected that instanceId = %s got %s:", instance, instanceSplited[2])
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			u, err := url.Parse(test.urlString)
+			if err != nil {
+				t.Fatalf("failed to parse URL %q: %v", test.urlString, err)
+			}
+			got, err := paramsFromURL(u)
+			if err != nil {
+				t.Logf("paramsFromURL(url.Parse(%q)): %v", u, err)
+				if !test.wantErr {
+					t.Fail()
+				}
+				return
+			}
+			if test.wantErr {
+				t.Fatalf("paramsFromURL(url.Parse(%q)) = %#v; want error", test.urlString, got)
+			}
+			diff := cmp.Diff(test.want, got,
+				cmpopts.IgnoreFields(Params{}, "TraceOpts"),
+				cmpopts.EquateEmpty())
+			if diff != "" {
+				t.Errorf("paramsFromURL(url.Parse(%q)) (-want +got):\n%s", test.urlString, diff)
+			}
+		})
 	}
 }
