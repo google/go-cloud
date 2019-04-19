@@ -14,30 +14,17 @@
 
 // Package cloudpostgres provides connections to managed PostgreSQL Cloud SQL instances.
 // See https://cloud.google.com/sql/docs/postgres/ for more information.
-
+//
 // URLs
 //
-// For postgres.Open, gcpostgres registers for the scheme "cloudpostgres".
-// The default URL opener will creating a connection using use default
+// For postgres.Open, cloudpostgres registers for the scheme "cloudpostgres".
+// The default URL opener will create a connection using the default
 // credentials from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
+//
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
-//
-// Escaping
-//
-// Go CDK supports all UTF-8 strings; to make this work with providers lacking
-// full UTF-8 support, strings must be escaped (during writes) and unescaped
-// (during reads). The following escapes are performed for gcsblob:
-//  - Blob keys: ASCII characters 10 and 13 are escaped to "__0x<hex>__".
-//    Additionally, the "/" in "../" is escaped in the same way.
-//
-// As
-//
-// gcpostgres exposes the following types for As:
-//  - DB: *sql.DB
-//  - Error: *googleapi.Error
 package cloudpostgres // import "gocloud.dev/postgres/cloudpostgres"
 
 import (
