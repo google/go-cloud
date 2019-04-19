@@ -16,10 +16,46 @@ package main
 
 import (
 	"context"
+	"flag"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
+	"gocloud.dev/internal/cmd/gocdk/internal/templates"
 	"golang.org/x/xerrors"
 )
 
 func init_(ctx context.Context, pctx *processContext, args []string) error {
-	return xerrors.New("not implemented")
+	f := newFlagSet(pctx, "init")
+	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
+		return nil
+	} else if err != nil {
+		return usagef("gocdk init: %w", err)
+	}
+
+	if f.NArg() != 1 {
+		return usagef("gocdk init PATH")
+	}
+	// TODO(light): allow an existing empty directory, for some definition of empty
+	path := f.Arg(0)
+	if _, err := os.Stat(path); err == nil {
+		return xerrors.Errorf("gocdk init: %s already exists", path)
+	} else if !os.IsNotExist(err) {
+		return xerrors.Errorf("gocdk init: %w", err)
+	}
+
+	if err := os.MkdirAll(path, 0777); err != nil {
+		return xerrors.Errorf("gocdk init: %w", err)
+	}
+
+	for name, content := range templates.InitTemplates {
+		fullPath := filepath.Join(path, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0777); err != nil {
+			return xerrors.Errorf("gocdk init: %w", err)
+		}
+		if err := ioutil.WriteFile(fullPath, []byte(content), 0666); err != nil {
+			return xerrors.Errorf("gocdk init: %w", err)
+		}
+	}
+	return nil
 }
