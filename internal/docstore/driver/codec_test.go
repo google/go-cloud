@@ -214,7 +214,7 @@ func TestEncodeErrors(t *testing.T) {
 		{"bad type in map", map[string]interface{}{"a": func() {}}},
 		{"bad type in struct", &struct{ C chan int }{}},
 		{"bad map key type", map[float32]int{1: 1}},
-		{"MarshalText for map key fails", map[badTextMarshaler]int{badTextMarshaler{}: 1}},
+		{"MarshalText for map key fails", map[badTextMarshaler]int{{}: 1}},
 	} {
 		enc := &testEncoder{}
 		if err := Encode(reflect.ValueOf(test.val), enc); err == nil {
