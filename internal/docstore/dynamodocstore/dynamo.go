@@ -84,15 +84,15 @@ func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, u
 // splitActions doesn't change the order of the input slice.
 func (c *collection) splitActions(actions []*driver.Action) [][]*driver.Action {
 	var (
-		groups [][]*driver.Action      // the actions, split; the return value
-		cur    []*driver.Action        // the group currently being constructed
-		wm     = make(map[string]bool) // writes group cannot contain duplicate items
+		groups [][]*driver.Action              // the actions, split; the return value
+		cur    []*driver.Action                // the group currently being constructed
+		wm     = make(map[[2]interface{}]bool) // writes group cannot contain duplicate items
 	)
 	collect := func() { // called when the current group is known to be finished
 		if len(cur) > 0 {
 			groups = append(groups, cur)
 			cur = nil
-			wm = make(map[string]bool)
+			wm = make(map[[2]interface{}]bool)
 		}
 	}
 	for _, a := range actions {
@@ -102,46 +102,44 @@ func (c *collection) splitActions(actions []*driver.Action) [][]*driver.Action {
 		}
 		cur = append(cur, a)
 		if a.Kind != driver.Get {
-			wm[c.primaryKey(a)] = true
+			if keys := c.primaryKey(a); keys[0] != nil {
+				wm[keys] = true
+			}
 		}
 	}
 	collect()
 	return groups
 }
 
-func (c *collection) shouldSplit(curr, next *driver.Action, wm map[string]bool) bool {
+func (c *collection) shouldSplit(curr, next *driver.Action, wm map[[2]interface{}]bool) bool {
 	if (curr.Kind == driver.Get) != (next.Kind == driver.Get) { // different kind
 		return true
 	}
 	if curr.Kind == driver.Get { // both are Get's
 		return false
 	}
-	_, ok := wm[c.primaryKey(next)]
+	keys := c.primaryKey(next)
+	if keys[0] == nil {
+		return false
+	}
+	_, ok := wm[keys]
 	return ok // different Write's in one transaction cannot target the same item
 }
 
 // primaryKey tries to get the primary key from the doc, which is the partition
 // key if there is no sort key, or the combination of both keys. If there is not
-// a key for Create action, it generates a partition key of the doc. It returns
-// the composite key to be guaranteed unique.
-func (c *collection) primaryKey(a *driver.Action) string {
-	pkey, err := a.Doc.GetField(c.partitionKey)
+// a key, it returns an array with two nil's.
+func (c *collection) primaryKey(a *driver.Action) [2]interface{} {
+	var keys [2]interface{}
+	var err error
+	keys[0], err = a.Doc.GetField(c.partitionKey)
 	if err != nil {
-		if c.ErrorCode(err) == gcerr.NotFound && a.Kind == driver.Create {
-			newPartitionKey := driver.UniqueString()
-			a.Doc.SetField(c.partitionKey, newPartitionKey)
-			return newPartitionKey
-		}
-		panic(err) // shouldn't happen
+		return keys
 	}
 	if c.sortKey != "" {
-		skey, err := a.Doc.GetField(c.sortKey)
-		if err != nil {
-			panic(err) // shouldn't happen
-		}
-		return fmt.Sprintf("%s, %s", pkey, skey)
+		keys[1], _ = a.Doc.GetField(c.sortKey) // ignore error since keys[1] would be nil in that case
 	}
-	return pkey.(string)
+	return keys
 }
 
 func (c *collection) runGets(ctx context.Context, actions []*driver.Action) error {
@@ -214,7 +212,17 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 		ClientRequestToken: aws.String(driver.UniqueString()),
 		TransactItems:      tws,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+	for i, a := range actions {
+		if a.Kind == driver.Create {
+			if _, err := a.Doc.GetField(c.partitionKey); err != nil && gcerrors.Code(err) == gcerrors.NotFound {
+				actions[i].Doc.SetField(c.partitionKey, tws[i].Put.Item[c.partitionKey])
+			}
+		}
+	}
+	return nil
 }
 
 func (c *collection) missingKeyField(m map[string]*dyn.AttributeValue) string {
@@ -231,6 +239,17 @@ func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc
 	av, err := encodeDoc(doc)
 	if err != nil {
 		return nil, err
+	}
+	mf := c.missingKeyField(av.M)
+	if k != driver.Create && mf != "" {
+		return nil, fmt.Errorf("missing key field %q", mf)
+	}
+	if mf == c.partitionKey {
+		av.M[c.partitionKey] = new(dyn.AttributeValue).SetS(driver.UniqueString())
+	}
+	if c.sortKey != "" && mf == c.sortKey {
+		// It doesn't make sense to generate a random sort key.
+		return nil, fmt.Errorf("missing sort key %q", c.sortKey)
 	}
 
 	if av.M[docstore.RevisionField], err = encodeValue(driver.UniqueString()); err != nil {
@@ -249,7 +268,7 @@ func (c *collection) toTransactPut(ctx context.Context, k driver.ActionKind, doc
 		put.ExpressionAttributeValues = ce.Values()
 		put.ConditionExpression = ce.Condition()
 	}
-	return &dyn.TransactWriteItem{Put: put}, err
+	return &dyn.TransactWriteItem{Put: put}, nil
 }
 
 func (c *collection) toTransactGet(doc driver.Document, fieldpaths [][]string) (*dyn.TransactGetItem, error) {
