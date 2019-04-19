@@ -36,45 +36,16 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"contrib.go.opencensus.io/integrations/ocsql"
 	"github.com/GoogleCloudPlatform/cloudsql-proxy/proxy/proxy"
 	"github.com/lib/pq"
+	"gocloud.dev/gcp"
+	"gocloud.dev/gcp/cloudsql"
 	"gocloud.dev/postgres"
 )
-
-// Params specifies how to connect to a Cloud SQL database.
-type Params struct {
-	// ProjectID is the project the instance is located in.
-	ProjectID string
-	// Region is the region the instance is located in.
-	Region string
-	// Instance is the name of the instance.
-	Instance string
-
-	// User is the database user to connect as.
-	User string
-	// Password is the database user password to use.
-	Password string
-	// Database is the PostgreSQL database name to connect to.
-	Database string
-
-	// Values sets additional parameters, as documented in
-	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
-	Values url.Values
-
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts []ocsql.TraceOption
-}
-
-// URLOpener opens GCP PostgreSQL URLs
-// like "cloudpostgres://user:password@myproject/us-central1/instanceId/mydb".
-type URLOpener struct {
-	// TraceOpts contains options for OpenCensus.
-	TraceOpts  []ocsql.TraceOption
-	CertSource proxy.CertSource
-}
 
 // Scheme is the URL scheme cloudpostgres registers its URLOpener under on
 // postgres.DefaultMux.
@@ -84,11 +55,54 @@ func init() {
 	postgres.DefaultURLMux().RegisterPostgres(Scheme, &URLOpener{})
 }
 
+// lazyCredsOpener obtains Application Default Credentials on the first call
+// to OpenPostgresURL.
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, err := gcp.NewHTTPClient(gcp.DefaultTransport(), creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		certSource := cloudsql.NewCertSource(client)
+		o.opener = &URLOpener{CertSource: certSource}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("cloudpostgres open %v: %v", u, o.err)
+	}
+	return o.opener.OpenPostgresURL(ctx, u)
+}
+
+// URLOpener opens GCP PostgreSQL URLs
+// like "cloudpostgres://user:password@myproject/us-central1/instanceId/mydb".
+type URLOpener struct {
+	// CertSource specifies how the opener will obtain authentication information.
+	// CertSource must not be nil.
+	CertSource proxy.CertSource
+
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
+}
+
 // OpenPostgresURL opens a new GCP database connection wrapped with OpenCensus instrumentation.
 func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, error) {
+	if uo.CertSource == nil {
+		return nil, fmt.Errorf("cloudpostgres: URLOpener CertSource is nil")
+	}
 	params, err := paramsFromURL(u)
 	if err != nil {
-		return nil, fmt.Errorf("cloudpostgres: open url: %v", err)
+		return nil, fmt.Errorf("cloudpostgres: open %v: %v", u, err)
 	}
 	params.TraceOpts = uo.TraceOpts
 	return Open(ctx, uo.CertSource, params)
@@ -115,6 +129,30 @@ func paramsFromURL(u *url.URL) (*Params, error) {
 		Password:  password,
 		Values:    u.Query(),
 	}, nil
+}
+
+// Params specifies how to connect to a Cloud SQL database.
+type Params struct {
+	// ProjectID is the project the instance is located in.
+	ProjectID string
+	// Region is the region the instance is located in.
+	Region string
+	// Instance is the name of the instance.
+	Instance string
+
+	// User is the database user to connect as.
+	User string
+	// Password is the database user password to use.
+	Password string
+	// Database is the PostgreSQL database name to connect to.
+	Database string
+
+	// Values sets additional parameters, as documented in
+	// https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS.
+	Values url.Values
+
+	// TraceOpts contains options for OpenCensus.
+	TraceOpts []ocsql.TraceOption
 }
 
 // Open opens a Cloud SQL database.
