@@ -31,7 +31,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(drivertest.KeyField), nil
+	return newCollection(Options{KeyField: drivertest.KeyField})
 }
 
 func (h *harness) Close() {}
@@ -46,7 +46,11 @@ type docmap = map[string]interface{}
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
-	coll := docstore.NewCollection(newCollection(drivertest.KeyField))
+	dc, err := newCollection(Options{KeyField: drivertest.KeyField})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
 	doc := docmap{drivertest.KeyField: "testUpdateAtomic", "a": "A", "b": "B"}
 
 	mods := docstore.Mods{"a": "Y", "b.c": "Z"} // "b" is not a map, so "b.c" is an error
@@ -74,9 +78,11 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"memdocstore://", false},
+		{"memdocstore://key", false},
+		// Missing host (key).
+		{"memdocstore:/", true},
 		// Invalid parameter.
-		{"memdocstore://?param=value", true},
+		{"memdocstore://key/?param=value", true},
 	}
 
 	ctx := context.Background()

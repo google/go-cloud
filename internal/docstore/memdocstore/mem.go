@@ -45,7 +45,7 @@ func init() {
 // docstore.DefaultMux.
 const Scheme = "memdocstore"
 
-// URLOpener opens URLs like "memdocstore://".
+// URLOpener opens URLs like "memdocstore://keyField".
 type URLOpener struct{}
 
 // OpenCollectionURL opens a docstore.Collection based on u.
@@ -53,34 +53,53 @@ func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}
-	return OpenCollection(u.Host, nil), nil
+	return OpenCollection(Options{KeyField: u.Host})
 }
 
 // TODO(jba): make this package thread-safe.
 
 // Options sets options for constructing a *docstore.Collection backed by memory.
-type Options struct{}
+type Options struct {
+	// The name of the document field to use for the document key.
+	// One of KeyField or KeyFunc must be set.
+	KeyField string
 
-// OpenCollection creates a *docstore.Collection backed by memory.
-// memdocstore requires that a single field be designated the primary
-// key. Its values must be unique over all documents in the collection,
-// and the primary key must be provided to retrieve a document.
-// The values need not be strings; they may be any comparable Go value.
-// keyField is the name of the primary key field.
-func OpenCollection(keyField string, opts *Options) *docstore.Collection {
-	return docstore.NewCollection(newCollection(keyField))
+	// A function that accepts a document and returns the value to be used for the
+	// document key. KeyFunc should return nil if the document is missing the
+	// information to construct a key. This will cause all actions, even Create, to
+	// fail.
+	KeyFunc func(docstore.Document) interface{}
 }
 
-func newCollection(keyField string) driver.Collection {
+// OpenCollection creates a *docstore.Collection backed by memory. keyFunc takes a
+// document and returns the document's primary key, or nil if there is none (legal
+// for Create actions). The primary key values must be unique over all documents in
+// the collection, and the primary key must be provided to retrieve a document. The
+// values need not be strings; they may be any comparable Go value.
+func OpenCollection(opts Options) (*docstore.Collection, error) {
+	c, err := newCollection(opts)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
+}
+
+func newCollection(opts Options) (driver.Collection, error) {
+	if opts.KeyField == "" && opts.KeyFunc == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must set either KeyField or KeyFunc in Options")
+	}
+	if opts.KeyField != "" && opts.KeyFunc != nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must set exactly one ofa KeyField or KeyFunc in Options")
+	}
 	return &collection{
-		keyField:     keyField,
+		opts:         opts,
 		docs:         map[interface{}]map[string]interface{}{},
 		nextRevision: 1,
-	}
+	}, nil
 }
 
 type collection struct {
-	keyField string
+	opts Options
 	// map from keys to documents. Documents are represented as map[string]interface{},
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
@@ -114,17 +133,16 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		return ctx.Err()
 	}
 	// Get the key from the doc so we can look it up in the map.
-	key, err := a.Doc.GetField(c.keyField)
-	// The only acceptable error case is NotFound during a Create.
-	if err != nil && !(gcerrors.Code(err) == gcerr.NotFound && a.Kind == driver.Create) {
-		return err
+	key := c.key(a.Doc)
+	if key == nil && a.Kind != driver.Create {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "missing key field")
 	}
-	// If there is a key, get the current document.
+	// If there is a key, get the current document with that key.
 	var (
 		current map[string]interface{}
 		exists  bool
 	)
-	if err == nil {
+	if key != nil {
 		current, exists = c.docs[key]
 	}
 	// Check for a NotFound error.
@@ -138,11 +156,11 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			return gcerr.Newf(gcerr.AlreadyExists, nil, "Create: document with key %v exists", key)
 		}
 		// If the user didn't supply a value for the key field, create a new one.
-		if key == nil {
+		if key == nil && c.opts.KeyField != "" {
 			key = driver.UniqueString()
 			// Set the new key in the document.
-			if err := a.Doc.SetField(c.keyField, key); err != nil {
-				return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set key field %q", c.keyField)
+			if err := a.Doc.SetField(c.opts.KeyField, key); err != nil {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "cannot set key field %q", c.opts.KeyField)
 			}
 		}
 		fallthrough
@@ -209,6 +227,14 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 		c.changeRevision(doc)
 	}
 	return nil
+}
+
+func (c *collection) key(doc driver.Document) interface{} {
+	if c.opts.KeyField != "" {
+		key, _ := doc.GetField(c.opts.KeyField) // ignore error because key will be nil
+		return key
+	}
+	return c.opts.KeyFunc(doc.Origin)
 }
 
 func (c *collection) changeRevision(doc map[string]interface{}) {
