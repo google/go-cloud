@@ -106,5 +106,4 @@ func TestOpenBadValues(t *testing.T) {
 			}
 		})
 	}
-
 }
