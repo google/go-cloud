@@ -42,7 +42,7 @@ import (
 
 type collection struct {
 	coll   *mongo.Collection
-	idFunc func(interface{}) interface{}
+	idFunc func(docstore.Document) interface{}
 }
 
 type Options struct {
@@ -55,11 +55,11 @@ type Options struct {
 // OpenCollection opens a MongoDB collection for use with Docstore.
 // idFunc is a function that accepts a document and returns the value to be used for
 // its _id field, or nil if there is none (which is valid for a Create action).
-func OpenCollection(mcoll *mongo.Collection, idFunc func(doc interface{}) interface{}, _ *Options) *docstore.Collection {
+func OpenCollection(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, _ *Options) *docstore.Collection {
 	return docstore.NewCollection(newCollection(mcoll, idFunc))
 }
 
-func newCollection(mcoll *mongo.Collection, idFunc func(interface{}) interface{}) *collection {
+func newCollection(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}) *collection {
 	return &collection{coll: mcoll, idFunc: idFunc}
 }
 
