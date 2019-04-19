@@ -218,7 +218,7 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 	for i, a := range actions {
 		if a.Kind == driver.Create {
 			if _, err := a.Doc.GetField(c.partitionKey); err != nil && gcerrors.Code(err) == gcerrors.NotFound {
-				actions[i].Doc.SetField(c.partitionKey, tws[i].Put.Item[c.partitionKey])
+				actions[i].Doc.SetField(c.partitionKey, *tws[i].Put.Item[c.partitionKey].S)
 			}
 		}
 	}
