@@ -47,6 +47,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		return workerAndServer{}, nil, err
 	}
 	mainWorker := newWorker(subscription, mainGitHubAppAuth)
+	handler := _wireHandlerFuncValue
 	logger := _wireLoggerValue
 	v := healthChecks(mainWorker)
 	exporter := _wireExporterValue
@@ -59,7 +60,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		DefaultSamplingPolicy: sampler,
 		Driver:                defaultDriver,
 	}
-	serverServer := server.New(options)
+	serverServer := server.New(handler, options)
 	mainWorkerAndServer := workerAndServer{
 		worker: mainWorker,
 		server: serverServer,
@@ -72,6 +73,7 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 
 var (
 	_wireRoundTripperValue  = http.DefaultTransport
+	_wireHandlerFuncValue   = http.HandlerFunc(frontPage)
 	_wireLoggerValue        = (requestlog.Logger)(nil)
 	_wireExporterValue      = (trace.Exporter)(nil)
 	_wireDefaultDriverValue = &server.DefaultDriver{}
@@ -93,7 +95,7 @@ type workerAndServer struct {
 }
 
 func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAuth, func(), error) {
-	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(p []byte, val interface{}) error {
+	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(ctx context.Context, p []byte, val interface{}) error {
 		key, err := jwt.ParseRSAPrivateKeyFromPEM(p)
 		if err != nil {
 			return err

@@ -65,12 +65,13 @@ func inject(ctx context.Context, cfg flagConfig) (workerAndServer, func(), error
 		wire.InterfaceValue(new(trace.Exporter), (trace.Exporter)(nil)),
 		workerAndServer{},
 		newWorker,
+		wire.InterfaceValue(new(http.Handler), http.HandlerFunc(frontPage)),
 	)
 	return workerAndServer{}, nil, errors.New("will be replaced by Wire")
 }
 
 func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAuth, func(), error) {
-	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(p []byte, val interface{}) error {
+	d := runtimevar.NewDecoder(new(rsa.PrivateKey), func(ctx context.Context, p []byte, val interface{}) error {
 		key, err := jwt.ParseRSAPrivateKeyFromPEM(p)
 		if err != nil {
 			return err

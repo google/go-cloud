@@ -14,13 +14,22 @@
 # limitations under the License.
 
 # This script checks to see if there are any incompatible API changes on the
-# current branch relative to master@HEAD.
+# current branch relative to the upstream branch.
 # It fails if it finds any, unless there is a commit with BREAKING_CHANGE_OK
 # in the first line of the commit message.
 
+# This script expects:
+# a) to be run at the root of the repository
+# b) HEAD is pointing to a commit that merges between the pull request and the
+#    upstream branch (TRAVIS_BRANCH). This is what Travis does (see
+#    https://docs.travis-ci.com/user/pull-requests/ for details), but if you
+#    are testing this script manually, you may need to manually create a merge
+#    commit.
+
 set -euo pipefail
 
-echo "Checking for incompatible API changes relative to master@HEAD..."
+UPSTREAM_BRANCH="${TRAVIS_BRANCH:-master}"
+echo "Checking for incompatible API changes relative to ${UPSTREAM_BRANCH}..."
 echo
 
 go install -mod=readonly golang.org/x/exp/cmd/apidiff
@@ -30,43 +39,39 @@ PKGINFO_BRANCH=$(mktemp)
 PKGINFO_MASTER=$(mktemp)
 
 function cleanup() {
-  rm -rf ${MASTER_CLONE_DIR}
-  rm -f ${PKGINFO_BRANCH}
-  rm -f ${PKGINFO_MASTER}
+  rm -rf "$MASTER_CLONE_DIR"
+  rm -f "$PKGINFO_BRANCH"
+  rm -f "$PKGINFO_MASTER"
 }
 trap cleanup EXIT
 
-# We compare against master@HEAD. This is unfortunate in some cases: if you're
-# working on an out-of-date branch, and master gets some new feature (that has
-# nothing to do with your work on your branch), you'll get an error message.
-# Thankfully the fix is quite simple: rebase your branch.
-git clone https://github.com/google/go-cloud ${MASTER_CLONE_DIR}
+git clone -b "$UPSTREAM_BRANCH" . "$MASTER_CLONE_DIR"
 echo
 
 incompatible_change_pkgs=()
-PKGS=$(cd ${MASTER_CLONE_DIR}; go list ./... | grep -v internal | grep -v test | grep -v samples)
-for pkg in ${PKGS}; do
+PKGS=$(cd "$MASTER_CLONE_DIR"; go list ./... | grep -v internal | grep -v test | grep -v samples)
+for pkg in $PKGS; do
   echo "Testing ${pkg}..."
 
   # Compute export data for the current branch.
   package_deleted=0
-  apidiff -w ${PKGINFO_BRANCH} ${pkg} || package_deleted=1
-  if [ ${package_deleted} -eq 1 ]; then
+  apidiff -w "$PKGINFO_BRANCH" "$pkg" || package_deleted=1
+  if [[ $package_deleted -eq 1 ]]; then
     echo "  Package ${pkg} was deleted! Recording as an incompatible change.";
     incompatible_change_pkgs+=(${pkg});
     continue;
   fi
 
   # Compute export data for master@HEAD.
-  (cd ${MASTER_CLONE_DIR}; apidiff -w ${PKGINFO_MASTER} ${pkg})
+  (cd "$MASTER_CLONE_DIR"; apidiff -w "$PKGINFO_MASTER" "$pkg")
 
   # Print all changes for posterity.
-  apidiff ${PKGINFO_MASTER} ${PKGINFO_BRANCH}
+  apidiff "$PKGINFO_MASTER" "$PKGINFO_BRANCH"
 
   # Note if there's an incompatible change.
-  ic=$(apidiff -incompatible ${PKGINFO_MASTER} ${PKGINFO_BRANCH})
-  if [ ! -z "${ic}" ]; then
-    incompatible_change_pkgs+=(${pkg});
+  ic=$(apidiff -incompatible "$PKGINFO_MASTER" "$PKGINFO_BRANCH")
+  if [ ! -z "$ic" ]; then
+    incompatible_change_pkgs+=("$pkg");
   fi
 done
 echo
@@ -76,7 +81,7 @@ if [ ${#incompatible_change_pkgs[@]} -eq 0 ]; then
   echo "OK: No incompatible changes found."
   exit 0;
 fi
-echo "Found breaking API change(s) in: ${incompatible_change_pkgs[@]}."
+echo "Found breaking API change(s) in: ${incompatible_change_pkgs[*]}."
 
 # Found incompatible changes; see if they were declared as OK via a commit.
 if git cherry -v master | grep -q "BREAKING_CHANGE_OK"; then

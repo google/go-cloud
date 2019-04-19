@@ -50,11 +50,10 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 	return s.sendAcks(ctx, ackIDs)
 }
 
-func (s *ackingDriverSub) IsRetryable(error) bool { return false }
-
-func (s *ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (s *ackingDriverSub) AckFunc() func() { return nil }
+func (*ackingDriverSub) IsRetryable(error) bool             { return false }
+func (*ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+func (*ackingDriverSub) AckFunc() func()                    { return nil }
+func (*ackingDriverSub) Close() error                       { return nil }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 	ctx := context.Background()
@@ -73,7 +72,7 @@ func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m2, err := sub.Receive(ctx)
 	if err != nil {
@@ -107,7 +106,7 @@ func TestMultipleAcksCanGoIntoASingleBatch(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -159,7 +158,7 @@ func TestTooManyAcksForASingleBatchGoIntoMultipleBatches(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 
 	// Receive and ack the messages concurrently.
@@ -191,7 +190,7 @@ func TestAckDoesNotBlock(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	defer cancel()
 	mr, err := sub.Receive(ctx)
@@ -214,7 +213,7 @@ func TestDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -241,7 +240,7 @@ func TestConcurrentDoubleAckCausesPanic(t *testing.T) {
 			return nil
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
@@ -284,7 +283,7 @@ func TestSubShutdownCanBeCanceledEvenWithHangingSendAcks(t *testing.T) {
 			return ctx.Err()
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	mr, err := sub.Receive(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -323,7 +322,7 @@ func TestReceiveReturnsErrorFromSendAcks(t *testing.T) {
 			return serr
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m, err := sub.Receive(ctx)
 	if err != nil {
@@ -364,11 +363,10 @@ func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) e
 	return s.sendAcks(ctx, acks)
 }
 
-func (s *callbackDriverSub) IsRetryable(error) bool { return false }
-
-func (s *callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
-
-func (s *callbackDriverSub) AckFunc() func() { return nil }
+func (*callbackDriverSub) IsRetryable(error) bool             { return false }
+func (*callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
+func (*callbackDriverSub) AckFunc() func()                    { return nil }
+func (*callbackDriverSub) Close() error                       { return nil }
 
 // This test detects the root cause of
 // https://github.com/google/go-cloud/issues/1238.
@@ -394,7 +392,7 @@ func TestReceiveReturnsAckErrorOnNoMoreMessages(t *testing.T) {
 			return serr
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
 	m, err := sub.Receive(ctx)
 	if err != nil {

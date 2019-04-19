@@ -49,6 +49,7 @@
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
 //  - Attributes: azblob.BlobGetPropertiesResponse
+//  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
 //  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
 package azureblob
 
@@ -296,10 +297,12 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	if err != nil {
 		return nil, err
 	}
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	if opts.SASToken != "" {
-		blobURL.RawQuery = string(opts.SASToken)
+		// The Azure portal includes a leading "?" for the SASToken, which we
+		// don't want here.
+		blobURL.RawQuery = strings.TrimPrefix(string(opts.SASToken), "?")
 	}
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
@@ -309,7 +312,62 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
+// Close implements driver.Close.
 func (b *bucket) Close() error {
+	return nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey, false)
+	dstBlobURL := b.containerURL.NewBlobURL(dstKey)
+	srcKey = escapeKey(srcKey, false)
+	srcURL := b.containerURL.NewBlobURL(srcKey).URL()
+	md := azblob.Metadata{}
+	mac := azblob.ModifiedAccessConditions{}
+	bac := azblob.BlobAccessConditions{}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case *azblob.Metadata:
+				*v = md
+				return true
+			case **azblob.ModifiedAccessConditions:
+				*v = &mac
+				return true
+			case **azblob.BlobAccessConditions:
+				*v = &bac
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac)
+	if err != nil {
+		return err
+	}
+	copyStatus := resp.CopyStatus()
+	nErrors := 0
+	for copyStatus == azblob.CopyStatusPending {
+		// Poll until the copy is complete.
+		time.Sleep(500 * time.Millisecond)
+		propertiesResp, err := dstBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+		if err != nil {
+			// A GetProperties failure may be transient, so allow a couple
+			// of them before giving up.
+			nErrors++
+			if ctx.Err() != nil || nErrors == 3 {
+				return err
+			}
+		}
+		copyStatus = propertiesResp.CopyStatus()
+	}
+	if copyStatus != azblob.CopyStatusSuccess {
+		return fmt.Errorf("Copy failed with status: %s", copyStatus)
+	}
 	return nil
 }
 

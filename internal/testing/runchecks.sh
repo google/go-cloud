@@ -37,6 +37,10 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   trap cleanup EXIT
 
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
+  if [[ -z $mergebase ]]; then
+    echo "merge-base empty. Please ensure that the PR is mergeable."
+    exit 1
+  fi
   git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
 
   # Find out if the diff has any files that are neither:
@@ -109,7 +113,7 @@ wire check ./... || result=1
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
-for path in "./internal/contributebot" "./samples/appengine"; do
+for path in "./internal/cmd/gocdk" "./internal/contributebot" "./samples/appengine"; do
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)

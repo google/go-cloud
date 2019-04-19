@@ -14,10 +14,20 @@
 
 // Package memdocstore provides an in-memory implementation of the docstore
 // API. It is suitable for local development and testing.
+//
+// URLs
+//
+// For docstore.OpenCollection, memdocstore registers for the schemes
+// "memdocstore".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -26,6 +36,25 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 )
+
+func init() {
+	docstore.DefaultURLMux().RegisterCollection(Scheme, &URLOpener{})
+}
+
+// Scheme is the URL scheme memdocstore registers its URLOpener under on
+// docstore.DefaultMux.
+const Scheme = "memdocstore"
+
+// URLOpener opens URLs like "memdocstore://".
+type URLOpener struct{}
+
+// OpenCollectionURL opens a docstore.Collection based on u.
+func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
+	}
+	return OpenCollection(u.Host, nil), nil
+}
 
 // TODO(jba): make this package thread-safe.
 
@@ -65,22 +94,25 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 }
 
 // RunActions implements driver.RunActions.
-func (c *collection) RunActions(ctx context.Context, actions []*driver.Action) (int, error) {
-	// Stop immediately if the context is done.
-	if ctx.Err() != nil {
-		return 0, ctx.Err()
+func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
+	if unordered {
+		panic("unordered unimplemented")
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
-		if err := c.runAction(a); err != nil {
-			return i, err
+		if err := c.runAction(ctx, a); err != nil {
+			return driver.ActionListError{{i, err}}
 		}
 	}
-	return len(actions), nil
+	return nil
 }
 
 // runAction executes a single action.
-func (c *collection) runAction(a *driver.Action) error {
+func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
+	// Stop if the context is done.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	// Get the key from the doc so we can look it up in the map.
 	key, err := a.Doc.GetField(c.keyField)
 	// The only acceptable error case is NotFound during a Create.
@@ -143,8 +175,7 @@ func (c *collection) runAction(a *driver.Action) error {
 	case driver.Get:
 		// We've already retrieved the document into current, above.
 		// Now we copy its fields into the user-provided document.
-		// TODO(jba): support field paths.
-		if err := decodeDoc(current, a.Doc); err != nil {
+		if err := decodeDoc(current, a.Doc, a.FieldPaths); err != nil {
 			return err
 		}
 	default:
@@ -202,6 +233,16 @@ func checkRevision(arg driver.Document, current map[string]interface{}) error {
 		return gcerr.Newf(gcerr.FailedPrecondition, nil, "mismatched revisions: want %d, current %d", wantRev, curRev)
 	}
 	return nil
+}
+
+// getAtFieldPath gets the value of m at fp. It returns an error if fp is invalid
+// (see getParentMap).
+func getAtFieldPath(m map[string]interface{}, fp []string) (interface{}, error) {
+	m2, err := getParentMap(m, fp, false)
+	if err != nil {
+		return nil, err
+	}
+	return m2[fp[len(fp)-1]], nil
 }
 
 // setAtFieldPath sets m's value at fp to val. It creates intermediate maps as

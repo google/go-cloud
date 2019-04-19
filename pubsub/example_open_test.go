@@ -38,12 +38,14 @@ func ExampleOpenTopic() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer topic.Shutdown(ctx)
 	// Similarly, we can open a subscription using a URL.
 	// Prefixes "pubsub+" or "pubsub+subscription+" work as well.
 	sub, err := pubsub.OpenSubscription(ctx, "mem://mytopic")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer sub.Shutdown(ctx)
 
 	// Now we can use topic to send messages.
 	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("Hello, world!")}); err != nil {

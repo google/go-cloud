@@ -157,6 +157,24 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+	var md azblob.Metadata
+	if !as(&md) {
+		return errors.New("BeforeCopy.As failed for Metadata")
+	}
+
+	var mac *azblob.ModifiedAccessConditions
+	if !as(&mac) {
+		return errors.New("BeforeCopy.As failed for ModifiedAccessConditions")
+	}
+
+	var bac *azblob.BlobAccessConditions
+	if !as(&bac) {
+		return errors.New("BeforeCopy.As failed for BlobAccessConditions")
+	}
+	return nil
+}
+
 func (verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	var azOpts *azblob.ListBlobsSegmentOptions
 	if !as(&azOpts) {

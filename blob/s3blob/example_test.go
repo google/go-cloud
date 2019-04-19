@@ -28,14 +28,14 @@ func Example() {
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 	// The region must match the region for "my_bucket".
-	session, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
+	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a *blob.Bucket.
 	ctx := context.Background()
-	b, err := s3blob.OpenBucket(ctx, session, "my-bucket", nil)
+	b, err := s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
 	if err != nil {
 		log.Fatal(err)
 	}

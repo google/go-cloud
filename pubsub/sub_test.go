@@ -31,6 +31,9 @@ type scriptedSub struct {
 
 	// calls counts how many times ReceiveBatch has been called.
 	calls int
+
+	// closed records if Close was called.
+	closed bool
 }
 
 func (s *scriptedSub) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
@@ -44,6 +47,10 @@ func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error
 }
 
 func (*scriptedSub) AckFunc() func() { return nil }
+func (s *scriptedSub) Close() error {
+	s.closed = true
+	return nil
+}
 
 func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 	ctx := context.Background()
@@ -55,10 +62,21 @@ func TestReceiveWithEmptyBatchReturnedFromDriver(t *testing.T) {
 			{&driver.Message{}},
 		},
 	}
-	sub := pubsub.NewSubscription(ds, 0, nil)
+	sub := pubsub.NewSubscription(ds, nil, nil)
 	defer sub.Shutdown(ctx)
-	_, err := sub.Receive(ctx)
+	m, err := sub.Receive(ctx)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
+	}
+	m.Ack()
+}
+
+func TestSubscriptionCloseIsCalled(t *testing.T) {
+	ctx := context.Background()
+	ds := &scriptedSub{}
+	sub := pubsub.NewSubscription(ds, nil, nil)
+	sub.Shutdown(ctx)
+	if !ds.closed {
+		t.Error("want Subscription.Close to have been called")
 	}
 }

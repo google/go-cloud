@@ -117,6 +117,13 @@ resource "github_issue_label" "code_health" {
   description = "Code health task, either refactoring or testing"
 }
 
+resource "github_issue_label" "documentation" {
+  repository  = "${github_repository.repo.name}"
+  name        = "documentation"
+  color       = "edd782"
+  description = "Documentation change"
+}
+
 resource "github_issue_label" "duplicate" {
   repository  = "${github_repository.repo.name}"
   name        = "duplicate"

@@ -32,26 +32,31 @@ type Document struct {
 	fields fields.List            // for structs
 }
 
-// Create a new document from doc, which must be a map[string]interface{} or a struct pointer.
+// Create a new document from doc, which must be a non-nil map[string]interface{} or struct pointer.
 func NewDocument(doc interface{}) (Document, error) {
-	// TODO: handle a nil *struct?
+	if doc == nil {
+		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document cannot be nil")
+	}
 	if m, ok := doc.(map[string]interface{}); ok {
+		if m == nil {
+			return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document map cannot be nil")
+		}
 		return Document{m: m}, nil
 	}
 	v := reflect.ValueOf(doc)
 	t := v.Type()
-	if t.Kind() == reflect.Ptr {
-		v = v.Elem()
-		t = t.Elem()
+	if t.Kind() != reflect.Ptr || t.Elem().Kind() != reflect.Struct {
+		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting *struct or map[string]interface{}, got %s", t)
 	}
-	if t.Kind() != reflect.Struct {
-		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "expecting struct, *struct or map[string]interface{}, got %s", t)
+	t = t.Elem()
+	if v.IsNil() {
+		return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document struct pointer cannot be nil")
 	}
 	fields, err := fieldCache.Fields(t)
 	if err != nil {
 		return Document{}, err
 	}
-	return Document{s: v, fields: fields}, nil
+	return Document{s: v.Elem(), fields: fields}, nil
 }
 
 // GetField returns the value of the named document field.
@@ -157,7 +162,7 @@ func (d Document) Encode(e Encoder) error {
 // Decode decodes the document using the given Decoder.
 func (d Document) Decode(dec Decoder) error {
 	if d.m != nil {
-		return Decode(reflect.ValueOf(d.m), dec)
+		return decodeMap(reflect.ValueOf(d.m), dec)
 	}
-	return Decode(d.s, dec)
+	return decodeStruct(d.s, dec)
 }

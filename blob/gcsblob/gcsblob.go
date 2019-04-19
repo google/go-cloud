@@ -42,6 +42,7 @@
 //  - ListOptions.BeforeList: *storage.Query
 //  - Reader: storage.Reader
 //  - Attributes: storage.ObjectAttrs
+//  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
@@ -252,6 +253,9 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if err == storage.ErrObjectNotExist {
 		return gcerrors.NotFound
 	}
+	if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
+		return gcerrors.NotFound
+	}
 	return gcerrors.Unknown
 }
 
@@ -449,6 +453,29 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		}
 	}
 	return w, nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey)
+	srcKey = escapeKey(srcKey)
+	bkt := b.client.Bucket(b.name)
+	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **storage.Copier:
+				*v = copier
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := copier.Run(ctx)
+	return err
 }
 
 // Delete implements driver.Delete.

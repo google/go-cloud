@@ -296,6 +296,16 @@ func TestURLMux(t *testing.T) {
 	mux.RegisterBucket("foo", fake)
 	mux.RegisterBucket("err", fake)
 
+	if diff := cmp.Diff(mux.BucketSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidBucketScheme("foo") || !mux.ValidBucketScheme("err") {
+		t.Errorf("ValidBucketScheme didn't return true for valid scheme")
+	}
+	if mux.ValidBucketScheme("foo2") || mux.ValidBucketScheme("http") {
+		t.Errorf("ValidBucketScheme didn't return false for invalid scheme")
+	}
+
 	for _, tc := range []struct {
 		name    string
 		url     string
