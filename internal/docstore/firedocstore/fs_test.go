@@ -148,17 +148,17 @@ func TestOpenCollection(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"firedocstore://myproject/mycoll?name_field=_id", false},
+		{"firestore://myproject/mycoll?name_field=_id", false},
 		// OK, hierarchical collection.
-		{"firedocstore://myproject/mycoll/mydoc/subcoll?name_field=_id", false},
+		{"firestore://myproject/mycoll/mydoc/subcoll?name_field=_id", false},
 		// Missing project ID.
-		{"firedocstore:///mycoll?name_field=_id", true},
+		{"firestore:///mycoll?name_field=_id", true},
 		// Empty collection.
-		{"firedocstore://myproject/", true},
+		{"firestore://myproject/", true},
 		// Missing name field.
-		{"firedocstore://myproject/mycoll", true},
+		{"firestore://myproject/mycoll", true},
 		// Invalid param.
-		{"firedocstore://myproject/mycoll?name_field=_id&param=value", true},
+		{"firestore://myproject/mycoll?name_field=_id&param=value", true},
 	}
 
 	ctx := context.Background()
