@@ -34,7 +34,7 @@ func Example() {
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := httpvar.NewVariable(httpClient, "http://example.com", decoder, nil)
+	v, err := httpvar.OpenVariable(httpClient, "http://example.com", decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

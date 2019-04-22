@@ -121,7 +121,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 
 // httpvar-specific tests.
 
-func TestNewVariable(t *testing.T) {
+func TestOpenVariable(t *testing.T) {
 	tests := []struct {
 		URL     string
 		WantErr bool
@@ -131,7 +131,7 @@ func TestNewVariable(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := NewVariable(http.DefaultClient, test.URL, runtimevar.StringDecoder, nil)
+		_, err := OpenVariable(http.DefaultClient, test.URL, runtimevar.StringDecoder, nil)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
@@ -214,7 +214,7 @@ func TestWatcher_WatchVariable(t *testing.T) {
 	})
 }
 
-func TestOpenVariable(t *testing.T) {
+func TestOpenVariableURL(t *testing.T) {
 	h, err := newHarness(t)
 	if err != nil {
 		t.Fatal(err)

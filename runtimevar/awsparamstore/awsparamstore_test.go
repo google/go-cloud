@@ -148,7 +148,7 @@ func TestNoConnectionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	v, err := NewVariable(sess, "variable-name", nil, nil)
+	v, err := OpenVariable(sess, "variable-name", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
