@@ -50,9 +50,7 @@ func TestGather(t *testing.T) {
 func Example() {}`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "",
-			},
+			want: map[string]string{},
 		},
 		{
 			name: "EmptyExampleFoo",
@@ -63,6 +61,38 @@ func Example() {}`,
 					"example_test.go": `package foo_test
 
 func ExampleFoo() {
+}`,
+				},
+			},
+			want: map[string]string{},
+		},
+		{
+			name: "EmptyExampleWithComment",
+			module: packagestest.Module{
+				Name: "example.com/foo",
+				Files: map[string]interface{}{
+					"foo.go": "package foo\n",
+					"example_test.go": `package foo_test
+
+func Example() {
+	// This example is used in http://www.example.com/docs
+}`,
+				},
+			},
+			want: map[string]string{
+				"example.com/foo.Example": "",
+			},
+		},
+		{
+			name: "EmptyExampleFooWithComment",
+			module: packagestest.Module{
+				Name: "example.com/foo",
+				Files: map[string]interface{}{
+					"foo.go": "package foo\n",
+					"example_test.go": `package foo_test
+
+func ExampleFoo() {
+	// This example is used in http://www.example.com/docs
 }`,
 				},
 			},
@@ -79,6 +109,8 @@ func ExampleFoo() {
 					"example_test.go": `package foo_test
 
 func Example() {
+	// This example is used in http://www.example.com/docs
+
 	// Unattached comment.
 
 	// Outside inner block comment.
@@ -109,6 +141,7 @@ func Example() {
 import "fmt"
 
 func Example() {
+	// This example is used in http://www.example.com/docs
 	fmt.Println(42)
 }`,
 				},
@@ -129,6 +162,7 @@ import "fmt"
 import "math"
 
 func Example() {
+	// This example is used in http://www.example.com/docs
 	fmt.Println(math.Pi)
 }`,
 				},
@@ -149,6 +183,7 @@ func Example() {
 import "log"
 
 func Example() {
+	// This example is used in http://www.example.com/docs
 	var err error
 	if err != nil {
 		log.Fatal(err)
@@ -173,12 +208,14 @@ func Example() {
 import "context"
 
 func Example() {
+	// This example is used in http://www.example.com/docs
+
 	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// do something
 
-	// Ignore unused variables for example:
+	// Ignore unused variables in example:
 	_ = ctx
 }`,
 				},

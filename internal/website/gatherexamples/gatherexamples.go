@@ -12,8 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command gatherexamples extracts all examples in a Go module into a JSON
+// Command gatherexamples extracts examples in a Go module into a JSON-formatted
 // object. This is used as input for building the Go CDK Hugo website.
+// Examples must include a comment that starts with "// This example is used in"
+// somewhere in the function body in order to be included in this tool's output.
+//
+// gatherexamples does some minimal rewriting of the example source code for
+// presentation:
+//
+//   - Any imports the example uses will be prepended to the code.
+//   - log.Fatal(err) -> return err
+//   - A comment line "// Variables set up elsewhere:" will remove any code up
+//     to the next blank line. This is intended for compiler-mandated setup
+//     like `ctx := context.Background()`.
+//   - A comment line "// Ignore unused variables in example:" will remove any
+//     code until the end of the function. This is intended for
+//     compiler-mandated assignments like `_ = bucket`.
+//
+// The key of each JSON object entry will be the import path of the package,
+// followed by a dot ("."), followed by the name of the example function.
 package main
 
 import (
@@ -39,7 +56,7 @@ func main() {
 		flag.PrintDefaults()
 	}
 	outputPath := flag.String("o", "", "path to output file (default to stdout)")
-	pattern := flag.String("pattern", "./...", "pattern to use at each directory")
+	pattern := flag.String("pattern", "./...", "Go package pattern to use at each directory argument")
 	flag.Parse()
 	if flag.NArg() == 0 {
 		flag.Usage()
@@ -100,6 +117,12 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 	packages.NeedSyntax |
 	packages.NeedTypesInfo
 
+// signifierCommentPrefix is the start of the comment used to signify whether
+// the example should be included in the output.
+const signifierCommentPrefix = "// This example is used in"
+
+// gather extracts the code from the example functions in the given packages
+// and returns a map like the one described in the package documentation.
 func gather(pkgs []*packages.Package) map[string]string {
 	examples := make(map[string]string)
 	for _, pkg := range pkgs {
@@ -142,7 +165,12 @@ func gather(pkgs []*packages.Package) map[string]string {
 				if err != nil {
 					panic(err) // will only occur for bad invocations of Fprint
 				}
-				exampleCode := rewriteBlock(sb.String())
+				original := sb.String()
+				if !strings.Contains(original, "\n\t"+signifierCommentPrefix) {
+					// Does not contain the signifier comment. Skip it.
+					continue
+				}
+				exampleCode := rewriteBlock(original)
 				if len(usedPackages) > 0 {
 					exampleCode = formatImports(usedPackages) + "\n\n" + exampleCode
 				}
@@ -174,7 +202,7 @@ rewrite:
 		// this can produce incorrect rewrites.
 		line = strings.TrimPrefix(line, "\t")
 
-		// Check if this is a special line.
+		// Check if this is line that needs rewriting.
 		start := strings.IndexFunc(line, func(r rune) bool { return r != ' ' && r != '\t' })
 		if start == -1 {
 			// Blank.
@@ -193,7 +221,7 @@ rewrite:
 					break
 				}
 			}
-		case "// Ignore unused variables for example:":
+		case "// Ignore unused variables in example:":
 			// Ignore remaining lines.
 			break rewrite
 		case "log.Fatal(err)":
@@ -201,9 +229,11 @@ rewrite:
 			sb.WriteString("return err")
 			sb.WriteByte('\n')
 		default:
-			// Ordinary line.
-			sb.WriteString(line)
-			sb.WriteByte('\n')
+			if !strings.HasPrefix(line[start:], signifierCommentPrefix) {
+				// Ordinary line.
+				sb.WriteString(line)
+				sb.WriteByte('\n')
+			}
 		}
 	}
 	return strings.TrimSpace(sb.String())
