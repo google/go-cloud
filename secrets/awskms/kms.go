@@ -173,6 +173,9 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	return result.CiphertextBlob, nil
 }
 
+// Close implements driver.Keeper.Close.
+func (k *keeper) Close() error { return nil }
+
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {
 	e, ok := err.(awserr.Error)
