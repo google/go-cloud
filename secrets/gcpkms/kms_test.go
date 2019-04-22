@@ -101,7 +101,7 @@ func TestNoConnectionError(t *testing.T) {
 	}
 	defer done()
 
-	keeper := NewKeeper(client, "", nil)
+	keeper := OpenKeeper(client, "", nil)
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want rpc error")
 	}
