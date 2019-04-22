@@ -14,7 +14,7 @@
 
 // Package azurekeyvault provides a secrets implementation backed by Azure KeyVault.
 // See https://docs.microsoft.com/en-us/azure/key-vault/key-vault-whatis for more information.
-// Use NewKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
@@ -116,7 +116,7 @@ type URLOpener struct {
 	// Client must be set to a non-nil value.
 	Client *keyvault.BaseClient
 
-	// Options specifies the options to pass to NewKeeper.
+	// Options specifies the options to pass to OpenKeeper.
 	Options KeeperOptions
 }
 
@@ -139,7 +139,7 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, fmt.Errorf("open keeper %v: %v", u, err)
 	}
-	return NewKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options)
+	return OpenKeeper(o.Client, vaultName, keyName, keyVersion, &o.Options)
 }
 
 func keyInfoFromURL(u *url.URL) (vaultName, keyName, keyVersion string, err error) {
@@ -187,14 +187,14 @@ func Dial() (*keyvault.BaseClient, error) {
 	return &client, nil
 }
 
-// NewKeeper returns a *secrets.Keeper that uses Azure keyVault.
+// OpenKeeper returns a *secrets.Keeper that uses Azure keyVault.
 // List of Parameters:
 // - client: *keyvault.BaseClient instance, see https://godoc.org/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault#BaseClient
 // - keyVaultName: string representing the KeyVault name, see https://docs.microsoft.com/en-us/azure/key-vault/common-parameters-and-headers
 // - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 // - keyVersion: string representing the keyVersion, or ""; see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 // - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
-func NewKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) (*secrets.Keeper, error) {
+func OpenKeeper(client *keyvault.BaseClient, keyVaultName, keyName, keyVersion string, opts *KeeperOptions) (*secrets.Keeper, error) {
 	if opts == nil {
 		opts = &KeeperOptions{}
 	}

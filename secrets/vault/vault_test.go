@@ -124,7 +124,7 @@ func TestNoConnectionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	keeper := NewKeeper(client, "my-key", nil)
+	keeper := OpenKeeper(client, "my-key", nil)
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want connection refused")
 	}
