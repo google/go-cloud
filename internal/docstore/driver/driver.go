@@ -119,8 +119,8 @@ type DocumentIterator interface {
 
 	// Next tries to get the next item in the query result and decodes into Document
 	// with the driver's codec.
-	//
 	// When there are no more results, it should return io.EOF.
+	// Once Next returns a non-nil error, it will never be called again.
 	Next(context.Context, Document) error
 
 	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup

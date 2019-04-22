@@ -135,7 +135,7 @@ var nonexistentDoc = docmap{KindField: "doesNotExist", KeyField: "doesNotExist"}
 func testCreate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	named := docmap{KindField: "create", KeyField: "testCreate1", "b": true}
-	// TODO(shantuo): dynamodb requires the sort key field when it is defined. We
+	// TODO(#1857): dynamodb requires the sort key field when it is defined. We
 	// don't generate random sort key so we need to skip the unnamed test and
 	// figure out what to do in this situation.
 	// unnamed := docmap{"b": false}
