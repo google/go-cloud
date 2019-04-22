@@ -40,7 +40,9 @@ func encodeDoc(doc driver.Document, nameField string) (*pb.Document, error) {
 	}
 	fields := e.pv.GetMapValue().Fields
 	// Do not put the name field in the document itself.
-	delete(fields, nameField)
+	if nameField != "" {
+		delete(fields, nameField)
+	}
 	return &pb.Document{Fields: fields}, nil
 }
 
@@ -149,7 +151,9 @@ func decodeDoc(pdoc *pb.Document, ddoc driver.Document, nameField string) error 
 	if pdoc.Fields == nil {
 		pdoc.Fields = map[string]*pb.Value{}
 	}
-	pdoc.Fields[nameField] = &pb.Value{ValueType: &pb.Value_StringValue{StringValue: path.Base(pdoc.Name)}}
+	if nameField != "" {
+		pdoc.Fields[nameField] = &pb.Value{ValueType: &pb.Value_StringValue{StringValue: path.Base(pdoc.Name)}}
+	}
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
 	if err := ddoc.Decode(decoder{mv}); err != nil {
 		return err

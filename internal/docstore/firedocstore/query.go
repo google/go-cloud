@@ -53,7 +53,7 @@ func (c *collection) newDocIterator(ctx context.Context, q *driver.Query) (*docI
 	}
 	return &docIterator{
 		streamClient: sc,
-		nameField:    c.nameField,
+		nameField:    c.opts.NameField,
 		localFilters: localFilters,
 		cancel:       cancel,
 	}, nil

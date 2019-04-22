@@ -33,10 +33,25 @@ import (
 )
 
 type collection struct {
-	client    *vkit.Client
-	dbPath    string // e.g. "projects/P/databases/(default)"
-	collPath  string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
-	nameField string
+	opts     Options
+	client   *vkit.Client
+	dbPath   string // e.g. "projects/P/databases/(default)"
+	collPath string // e.g. "projects/P/databases/(default)/documents/States/Wisconsin/cities"
+
+}
+
+// Options sets options for constructing a *docstore.Collection backed by Google Firestore.
+type Options struct {
+	// The document field to use for the document name.
+	// Exactly one of NameField or NameFunc must be set.
+	NameField string
+
+	// A function that accepts a document and returns the value to be used for the
+	// document name. NameFunc should return the empty string if the document is
+	// missing the information to construct a name. This will cause all actions, even
+	// Create, to fail.
+	// Exactly one of NameField or NameFunc must be set.
+	NameFunc func(docstore.Document) string
 }
 
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
@@ -48,18 +63,28 @@ type collection struct {
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
-func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) *docstore.Collection {
-	return docstore.NewCollection(newCollection(client, projectID, collPath, nameField))
+func OpenCollection(client *vkit.Client, projectID, collPath string, opts Options) (*docstore.Collection, error) {
+	c, err := newCollection(client, projectID, collPath, opts)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
 }
 
-func newCollection(client *vkit.Client, projectID, collPath, nameField string) *collection {
+func newCollection(client *vkit.Client, projectID, collPath string, opts Options) (*collection, error) {
+	if opts.NameField == "" && opts.NameFunc == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must set either NameField or NameFunc in Options")
+	}
+	if opts.NameField != "" && opts.NameFunc != nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must set exactly one of NameField or NameFunc in Options")
+	}
 	dbPath := fmt.Sprintf("projects/%s/databases/(default)", projectID)
 	return &collection{
-		client:    client,
-		dbPath:    dbPath,
-		collPath:  fmt.Sprintf("%s/documents/%s", dbPath, collPath),
-		nameField: nameField,
-	}
+		client:   client,
+		opts:     opts,
+		dbPath:   dbPath,
+		collPath: fmt.Sprintf("%s/documents/%s", dbPath, collPath),
+	}, nil
 }
 
 // RunActions implements driver.RunActions.
@@ -148,7 +173,7 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 		}
 		pdoc := resp.Result.(*pb.BatchGetDocumentsResponse_Found).Found
 		// TODO(jba): support field paths in decoding.
-		if err := decodeDoc(pdoc, gets[i].Doc, c.nameField); err != nil {
+		if err := decodeDoc(pdoc, gets[i].Doc, c.opts.NameField); err != nil {
 			return i, err
 		}
 	}
@@ -158,7 +183,7 @@ func (c *collection) runGets(ctx context.Context, gets []*driver.Action) (int, e
 func (c *collection) newGetRequest(gets []*driver.Action) (*pb.BatchGetDocumentsRequest, error) {
 	req := &pb.BatchGetDocumentsRequest{Database: c.dbPath}
 	for _, a := range gets {
-		docName, err := c.docName(a.Doc)
+		docName, _, err := c.docName(a.Doc)
 		if err != nil {
 			return nil, err
 		}
@@ -200,7 +225,7 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 	// that weren't given a name by the caller.
 	for i, nn := range newNames {
 		if nn != "" {
-			_ = actions[i].Doc.SetField(c.nameField, nn)
+			_ = actions[i].Doc.SetField(c.opts.NameField, nn)
 		}
 	}
 	// TODO(jba): should we set the revision fields of all docs to the returned update times?
@@ -217,8 +242,9 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 
 // Convert an action to one or more Firestore Write protos.
 func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, error) {
-	docName, err := c.docName(a.Doc)
-	if err != nil {
+	docName, missingField, err := c.docName(a.Doc)
+	// Return the error unless the field is missing and this is a Create action.
+	if err != nil && !(missingField && a.Kind == driver.Create) {
 		return nil, "", err
 	}
 	var (
@@ -229,7 +255,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 	switch a.Kind {
 	case driver.Create:
 		// Make a name for this document if it doesn't have one.
-		if docName == "" {
+		if missingField {
 			docName = driver.UniqueString()
 			newName = docName
 		}
@@ -273,7 +299,7 @@ func (c *collection) actionToWrites(a *driver.Action) ([]*pb.Write, string, erro
 }
 
 func (c *collection) putWrite(doc driver.Document, docName string, pc *pb.Precondition) (*pb.Write, error) {
-	pdoc, err := encodeDoc(doc, c.nameField)
+	pdoc, err := encodeDoc(doc, c.opts.NameField)
 	if err != nil {
 		return nil, err
 	}
@@ -448,24 +474,34 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write) ([]*pb.WriteRes
 	return res.WriteResults, nil
 }
 
-// docName returns the name of the document. This is the value of
-// the field called c.nameField, and it must be a string.
-// If the field doesn't exist, docName returns the empty string, rather
-// than an error. This is to support the Create action, which can
-// create new document names.
-func (c *collection) docName(doc driver.Document) (string, error) {
-	n, err := doc.GetField(c.nameField)
-	if err != nil {
-		// Return missing field as empty string.
-		return "", nil
+// docName returns the name of the document. This is either the value of the field
+// called c.opts.NameField, or the result of calling c.opts.NameFunc. It must be a
+// string.
+// docName returns an error if NameField isn't present, or NameFunc returns "".
+// The second return value reports whether c.opts.NameField is set and the field is
+// missing. This is to support the Create action, which can create new document
+// names.
+
+func (c *collection) docName(doc driver.Document) (string, bool, error) {
+	if c.opts.NameField != "" {
+		name, err := doc.GetField(c.opts.NameField)
+		if err != nil {
+			return "", true, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name field %s", c.opts.NameField)
+		}
+		// Check that the reflect kind is String so we can support any type whose underlying type
+		// is string. E.g. "type DocName string".
+		vn := reflect.ValueOf(name)
+		if vn.Kind() != reflect.String {
+			return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "key field %q with value %v is not a string",
+				c.opts.NameField, name)
+		}
+		return vn.String(), false, nil
 	}
-	// Check that the reflect kind is String so we can support any type whose underlying type
-	// is string. E.g. "type DocName string".
-	vn := reflect.ValueOf(n)
-	if vn.Kind() != reflect.String {
-		return "", fmt.Errorf("key field %q with value %v is not a string", c.nameField, n)
+	name := c.opts.NameFunc(doc.Origin)
+	if name == "" {
+		return "", false, gcerr.Newf(gcerr.InvalidArgument, nil, "missing name")
 	}
-	return vn.String(), nil
+	return name, false, nil
 }
 
 // Report whether two lists of field paths are equal.
