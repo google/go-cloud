@@ -20,7 +20,7 @@ You will need to install the following software for this tutorial:
 -   [Go](https://golang.org/doc/install)
 -   [Wire](https://github.com/google/wire/blob/master/README.md#installing)
 -   [Docker Desktop](https://docs.docker.com/install/) (for running locally)
--   [Terraform](https://www.terraform.io/intro/getting-started/install.html)
+-   [Terraform](https://www.terraform.io/docs/providers/google/getting_started.html)
 -   [gcloud CLI](https://cloud.google.com/sdk/downloads)
 
 {{< snippet "/tutorials/deploy/local.md" >}}
