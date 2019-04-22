@@ -36,6 +36,9 @@ type Keeper interface {
 	// Encrypt encrypts the plaintext using the key, and returns the ciphertext.
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 
+	// Close releases any resources used for the Keeper.
+	Close() error
+
 	// ErrorAs allows providers to expose provider-specific types for returned
 	// errors.
 	//

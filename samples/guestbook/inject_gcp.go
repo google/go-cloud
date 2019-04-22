@@ -83,7 +83,7 @@ func gcpMOTDVar(ctx context.Context, client pb.RuntimeConfigManagerClient, proje
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := gcpruntimeconfig.NewVariable(client, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
+	v, err := gcpruntimeconfig.OpenVariable(client, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
