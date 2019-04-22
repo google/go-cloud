@@ -438,7 +438,8 @@ type Bucket struct {
 	tracer *oc.Tracer
 
 	// mu protects the closed variable.
-	// Read locks are kept to prevent closing until a call finishes.
+	// Read locks are kept to allow holding a read lock for long-running calls,
+	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
 	closed bool
 }

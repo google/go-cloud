@@ -238,6 +238,9 @@ func (k *keeper) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error)
 	return base64.StdEncoding.DecodeString(*keyOpsResult.Result)
 }
 
+// Close implements driver.Keeper.Close.
+func (k *keeper) Close() error { return nil }
+
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {
 	e, ok := err.(autorest.DetailedError)

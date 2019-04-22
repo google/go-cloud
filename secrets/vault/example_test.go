@@ -39,6 +39,7 @@ func Example_encrypt() {
 
 	// Construct a *secrets.Keeper.
 	keeper := vault.NewKeeper(client, "my-key", nil)
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")
@@ -59,9 +60,9 @@ func Example_openKeeper() {
 	// OpenKeeper creates a *secrets.Keeper from a URL.
 	// The default opener dials a default Vault server based on the environment
 	// variables VAULT_SERVER_URL and VAULT_SERVER_TOKEN.
-	k, err := secrets.OpenKeeper(ctx, "vault://mykey")
+	keeper, err := secrets.OpenKeeper(ctx, "vault://mykey")
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = k
+	defer keeper.Close()
 }

@@ -102,6 +102,7 @@ func TestNoConnectionError(t *testing.T) {
 	defer done()
 
 	keeper := NewKeeper(client, "", nil)
+	defer keeper.Close()
 	if _, err := keeper.Encrypt(ctx, []byte("test")); err == nil {
 		t.Error("got nil, want rpc error")
 	}
@@ -123,9 +124,14 @@ func TestOpenKeeper(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := secrets.OpenKeeper(ctx, test.URL)
+		keeper, err := secrets.OpenKeeper(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err == nil {
+			if err = keeper.Close(); err != nil {
+				t.Errorf("%s: got error during close: %v", test.URL, err)
+			}
 		}
 	}
 }

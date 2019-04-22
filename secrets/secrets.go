@@ -61,6 +61,7 @@ package secrets // import "gocloud.dev/secrets"
 import (
 	"context"
 	"net/url"
+	"sync"
 
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/oc"
@@ -73,6 +74,11 @@ import (
 type Keeper struct {
 	k      driver.Keeper
 	tracer *oc.Tracer
+	// mu protects the closed variable.
+	// Read locks are kept to allow holding a read lock for long-running calls,
+	// and thereby prevent closing until a call finishes.
+	mu     sync.RWMutex
+	closed bool
 }
 
 // NewKeeper is intended for use by provider implementations.
@@ -106,6 +112,12 @@ func (k *Keeper) Encrypt(ctx context.Context, plaintext []byte) (ciphertext []by
 	ctx = k.tracer.Start(ctx, "Encrypt")
 	defer func() { k.tracer.End(ctx, err) }()
 
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	if k.closed {
+		return nil, errClosed
+	}
+
 	b, err := k.k.Encrypt(ctx, plaintext)
 	if err != nil {
 		return nil, wrapError(k, err)
@@ -118,11 +130,31 @@ func (k *Keeper) Decrypt(ctx context.Context, ciphertext []byte) (plaintext []by
 	ctx = k.tracer.Start(ctx, "Decrypt")
 	defer func() { k.tracer.End(ctx, err) }()
 
+	k.mu.RLock()
+	defer k.mu.RUnlock()
+	if k.closed {
+		return nil, errClosed
+	}
+
 	b, err := k.k.Decrypt(ctx, ciphertext)
 	if err != nil {
 		return nil, wrapError(k, err)
 	}
 	return b, nil
+}
+
+var errClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "secrets: Keeper has been closed")
+
+// Close releases any resources used for the Keeper.
+func (k *Keeper) Close() error {
+	k.mu.Lock()
+	prev := k.closed
+	k.closed = true
+	k.mu.Unlock()
+	if prev {
+		return errClosed
+	}
+	return k.k.Close()
 }
 
 // ErrorAs converts i to provider-specific types. See
