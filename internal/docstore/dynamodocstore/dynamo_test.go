@@ -110,17 +110,17 @@ func TestOpenKeeper(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"dynamodocstore://mytable?partition_key=_kind", false},
+		{"dynamodb://mytable?partition_key=_kind", false},
 		// OK.
-		{"dynamodocstore://mytable?partition_key=_kind&sort_key=_id", false},
+		{"dynamodb://mytable?partition_key=_kind&sort_key=_id", false},
 		// OK, overriding region.
-		{"dynamodocstore://mytable?partition_key=_kind&region=us-west1", false},
+		{"dynamodb://mytable?partition_key=_kind&region=us-west1", false},
 		// Unknown parameter.
-		{"dynamodocstore://mytable?partition_key=_kind&param=value", true},
+		{"dynamodb://mytable?partition_key=_kind&param=value", true},
 		// With path.
-		{"dynamodocstore://mytable/subcoll?partition_key=_kind", true},
+		{"dynamodb://mytable/subcoll?partition_key=_kind", true},
 		// Missing partition_key.
-		{"dynamodocstore://mytable?sort_key=_id", true},
+		{"dynamodb://mytable?sort_key=_id", true},
 	}
 
 	ctx := context.Background()

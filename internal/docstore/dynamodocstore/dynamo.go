@@ -19,8 +19,8 @@
 // URLs
 //
 // For docstore.OpenCollection, dynamodocstore registers for the scheme
-// "dynamodocstore". The default URL opener will use an AWS session with the
-// default credentials and configuration; see
+// "dynamodb". The default URL opener will use an AWS session with the default
+// credentials and configuration; see
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more details.
 // To customize the URL opener, or for more details on the URL format, see
 // URLOpener.
@@ -74,12 +74,12 @@ func (o *lazySessionOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (
 	return o.opener.OpenCollectionURL(ctx, u)
 }
 
-// Scheme is the URL scheme dynamodocstore registers its URLOpener under on
+// Scheme is the URL scheme dynamodb registers its URLOpener under on
 // docstore.DefaultMux.
-const Scheme = "dynamodocstore"
+const Scheme = "dynamodb"
 
-// URLOpener opens dynamodocstore URLs like
-// "dynamodocstore://mytable?partition_key=partkey&sort_key=sortkey".
+// URLOpener opens dynamodb URLs like
+// "dynamodb://mytable?partition_key=partkey&sort_key=sortkey".
 //
 // The URL Host is used as the table name. See
 // https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html
