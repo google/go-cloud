@@ -7,10 +7,35 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Copyright © 2018–2019 The Go Cloud Development Kit Authors</copyright>
-    <lastBuildDate>Tue, 19 Mar 2019 18:45:53 -0700</lastBuildDate>
+    <lastBuildDate>Tue, 26 Mar 2019 09:44:15 -0700</lastBuildDate>
     
 	<atom:link href="https://gocloud.dev/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Publish Messages to a Topic</title>
+      <link>https://gocloud.dev/howto/pubsub/publish/</link>
+      <pubDate>Tue, 26 Mar 2019 09:44:15 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/pubsub/publish/</guid>
+      <description>&lt;p&gt;Publishing a message to a topic with the Go CDK takes two steps:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Open the topic with the Pub/Sub provider of your choice (once per topic).&lt;/li&gt;
+&lt;li&gt;Send messages on the topic.&lt;/li&gt;
+&lt;/ol&gt;</description>
+    </item>
+    
+    <item>
+      <title>Open a Bucket</title>
+      <link>https://gocloud.dev/howto/blob/open-bucket/</link>
+      <pubDate>Wed, 20 Mar 2019 14:51:29 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/blob/open-bucket/</guid>
+      <description>&lt;p&gt;The first step in interacting with unstructured storage is connecting to your
+storage provider. Every storage provider is a little different, but the Go CDK
+lets you interact with all of them using the &lt;a href=&#34;https://godoc.org/gocloud.dev/blob#Bucket&#34;&gt;&lt;code&gt;*blob.Bucket&lt;/code&gt; type&lt;/a&gt;.&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>Tutorial: Command-Line Uploader</title>
@@ -22,6 +47,33 @@
 uploads files to blob storage on both AWS and GCP. Blob storage stores binary
 data under a string key, and is one of the most frequently used cloud
 services.&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>Subscribe to a Topic&#39;s Messages</title>
+      <link>https://gocloud.dev/howto/pubsub/subscribe/</link>
+      <pubDate>Tue, 26 Mar 2019 09:44:33 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/pubsub/subscribe/</guid>
+      <description>&lt;p&gt;Subscribing to messages on a topic with the Go CDK takes three steps:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Open the subscription with the Pub/Sub provider of your choice (once per subscription).&lt;/li&gt;
+&lt;li&gt;Receive messages from the topic.&lt;/li&gt;
+&lt;li&gt;For each message, acknowledge its receipt using the &lt;code&gt;Ack&lt;/code&gt; method
+after completing any work related to the message. This will prevent the
+message from being redelivered.&lt;/li&gt;
+&lt;/ol&gt;</description>
+    </item>
+    
+    <item>
+      <title>Store and Access Unstructured Data</title>
+      <link>https://gocloud.dev/howto/blob/data/</link>
+      <pubDate>Thu, 21 Mar 2019 08:42:51 -0700</pubDate>
+      
+      <guid>https://gocloud.dev/howto/blob/data/</guid>
+      <description>&lt;p&gt;Once you have &lt;a href=&#34;https://gocloud.dev/howto/blob/open-bucket/&#34;&gt;opened a bucket&lt;/a&gt; for the storage provider you want, you can
+store and access data from it using the standard Go I/O patterns.&lt;/p&gt;</description>
     </item>
     
     <item>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.54.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Store and Access Unstructured Data &middot; Go CDK</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700|Source+Code+Pro|Work+Sans:400,700">
+  <link type="text/css" rel="stylesheet" href="/css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="/css/style.css">
+  <link rel="shortcut icon" href="/favicon-32x32.png">
+</head>
+<body>
+  <div class="PageLayout">
+    <header class="PageHeader">
+      <a href="https://gocloud.dev/"><h1 class="PageLogo"><img class="PageLogo-image" src="/go-cdk-logo-white.png" alt="Go CDK"></h1></a>
+    </header>
+    <main class="MainContent">
+      <div class="MainContent-bounds"><h1>Store and Access Unstructured Data</h1>
+<p>Once you have <a href="https://gocloud.dev/howto/blob/open-bucket/">opened a bucket</a> for the storage provider you want, you can
+store and access data from it using the standard Go I/O patterns.</p>
+
+<h2 id="writing-data-to-a-bucket">Writing data to a bucket</h2>
+
+<p>To write data to a bucket, you create a writer, write data to it, and then
+close the writer. Closing the writer commits the write to the provider,
+flushing any buffers, and releases any resources used while writing, so you
+must always check the error of <code>Close</code>.</p>
+
+<p>The writer implements <a href="https://golang.org/pkg/io/#Writer"><code>io.Writer</code></a>, so you can use any functions that take
+an <code>io.Writer</code> like <code>io.Copy</code> or <code>fmt.Fprintln</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
+</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">w</span>
+<span class="p">}</span>
+<span class="nx">_</span><span class="p">,</span> <span class="nx">writeErr</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
+<span class="c1">// Always check the return value of Close when writing.
+</span><span class="c1"></span><span class="nx">closeErr</span> <span class="o">:=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="k">if</span> <span class="nx">writeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">writeErr</span>
+<span class="p">}</span>
+<span class="k">if</span> <span class="nx">closeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">closeErr</span>
+<span class="p">}</span></code></pre></div>
+<p>In some cases, you may want to cancel an in-progress write to avoid the blob
+being created or overwritten. A typical reason for wanting to cancel a write
+is encountering an error in the stream your program is copying from. To abort
+a write, you cancel the <code>Context</code> you pass to the writer. Again, you must
+always <code>Close</code> the writer to release the resources, but in this case you can
+ignore the error because the write&rsquo;s failure is expected.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Create a cancelable context from the existing context.
+</span><span class="c1"></span><span class="nx">writeCtx</span><span class="p">,</span> <span class="nx">cancelWrite</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nf">cancelWrite</span><span class="p">()</span>
+
+<span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
+</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+
+<span class="c1">// Assume some writes happened and we encountered an error.
+</span><span class="c1">// Now we want to abort the write.
+</span><span class="c1"></span>
+<span class="c1">// First cancel the context.
+</span><span class="c1"></span><span class="nf">cancelWrite</span><span class="p">()</span>
+<span class="c1">// You must still close the writer to avoid leaking resources.
+</span><span class="c1"></span><span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<h2 id="reading-data-from-a-bucket">Reading data from a bucket</h2>
+
+<p>Once you have written data to a bucket, you can read it back by creating a
+reader. The reader implements <a href="https://golang.org/pkg/io/#Reader"><code>io.Reader</code></a>, so you can use any functions
+that take an <code>io.Reader</code> like <code>io.Copy</code> or <code>io/ioutil.ReadAll</code>. You must
+always close a reader after using it to avoid leaking resources.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading with the default options.
+</span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// Readers also have a limited view of the blob&#39;s metadata.
+</span><span class="c1"></span><span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="s">&#34;Content-Type:&#34;</span><span class="p">,</span> <span class="nx">r</span><span class="p">.</span><span class="nf">ContentType</span><span class="p">())</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
+<span class="c1">// Copy from the reader to stdout.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span></code></pre></div>
+<p>Many storage providers provide efficient random-access to data in buckets. To
+start reading from an arbitrary offset in the blob, use <code>NewRangeReader</code>.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading at offset 1024 and read up to 4096 bytes.
+</span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewRangeReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="c1">// Copy from the read range to stdout.
+</span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span></code></pre></div>
+<h2 id="deleting-blobs">Deleting blobs</h2>
+
+<p>You can delete blobs using the <code>Bucket.Delete</code> method.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span></code></pre></div>
+<h2 id="wrapping-up">Wrapping up</h2>
+
+<p>These are the most common operations you will need to use with a bucket.
+Other operations like listing and reading metadata are documented in the
+<a href="https://godoc.org/gocloud.dev/blob"><code>blob</code> package documentation</a>.</p></div>
+    </main>
+    <nav class="Sidenav">
+      <ul class="Sidenav-list">
+        <li class="Sidenav-section">
+          <a href="/" class="Sidenav-sectionLink">Home</a>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/tutorials/" class="Sidenav-sectionLink">Tutorials</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/tutorials/cli-uploader/" class="Sidenav-pageLink">Command-Line Uploader</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-aws/" class="Sidenav-pageLink">Deploy to AWS</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-gcp/" class="Sidenav-pageLink">Deploy to GCP</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/tutorials/deploy-azure/" class="Sidenav-pageLink">Connect to Azure</a>
+              </li>
+              
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/howto/" class="Sidenav-sectionLink">How-To Guides</a>
+            <ul class="Sidenav-pageList">
+              
+              <li class="Sidenav-page">
+                <a href="/howto/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/howto/pubsub/" class="Sidenav-pageLink">Pub/Sub</a>
+              </li>
+            </ul>
+        </li>
+        <li class="Sidenav-section">
+          <a href="/ref/" class="Sidenav-sectionLink">Reference</a>
+            <ul class="Sidenav-pageList">
+              <li class="Sidenav-page">
+                <a href="/ref/blob/" class="Sidenav-pageLink">Blob</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/sql/" class="Sidenav-pageLink">MySQL/Postgres</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/pubsub/" class="Sidenav-pageLink">Pubsub</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/runtimevar/" class="Sidenav-pageLink">Runtimevar</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/secrets/" class="Sidenav-pageLink">Secrets</a>
+              </li>
+              <li class="Sidenav-page">
+                <a href="/ref/server/" class="Sidenav-pageLink">Server</a>
+              </li>
+              
+            </ul>
+        </li>
+      </ul>
+    </nav>
+    <footer class="PageFooter">
+      <nav>
+        <ul class="FooterLinks">
+          <li class="FooterLinks-item"><a href="https://github.com/google/go-cloud/" class="FooterLinks-link">GitHub</a></li>
+          <li class="FooterLinks-item"><a href="https://groups.google.com/forum/#!forum/go-cloud" class="FooterLinks-link">Google Groups</a></li>
+          <li class="FooterLinks-item"><a href="mailto:go-cdk-feedback@google.com" class="FooterLinks-link">Contact Team</a></li>
+        </ul>
+      </nav>
+
+      <p class="PageFooter-paragraph">
+        Copyright © 2018–2019 The Go Cloud Development Kit Authors.
+        All content released under an <a href="https://github.com/google/go-cloud/blob/master/LICENSE" target="_blank" class="PageFooter-link">Apache 2.0 License</a>.
+      </p>
+      <p class="PageFooter-paragraph"><a href="https://github.com/google/go-cloud/edit/master/internal/website/content/howto/blob/data.md" class="PageFooter-link">Improve this page</a> on GitHub.</p>
+    </footer>
+  </div>
+</body>
+</html>
