@@ -131,13 +131,13 @@ func TestOpenCollection(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"mongodocstore://mydb/mycollection", false},
+		{"mongo://mydb/mycollection", false},
 		// Missing database name.
-		{"mongodocstore:///mycollection", true},
+		{"mongo:///mycollection", true},
 		// Missing collection name.
-		{"mongodocstore://mydb/", true},
+		{"mongo://mydb/", true},
 		// Invalid parameter.
-		{"mongodocstore://mydb/mycollection?param=value", true},
+		{"mongo://mydb/mycollection?param=value", true},
 	}
 
 	ctx := context.Background()

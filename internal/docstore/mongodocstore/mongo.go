@@ -16,8 +16,7 @@
 //
 // URLs
 //
-// For docstore.OpenCollection, mongodocstore registers for the schemes
-// "mongodocstore".
+// For docstore.OpenCollection, mongodocstore registers for the scheme "mongo".
 // The default URL opener will dial a Mongo server using the environment
 // variable "MONGO_SERVER_URL".
 // To customize the URL opener, or for more details on the URL format,
@@ -100,25 +99,28 @@ func Dial(ctx context.Context, uri string) (*mongo.Client, error) {
 	if err := client.Connect(ctx); err != nil {
 		return nil, err
 	}
-	// Connect doesn't seem to actually make a connection, so do an RPC.
-	if err := client.Ping(ctx, nil); err != nil {
-		return nil, err
-	}
 	return client, nil
 }
 
 // Scheme is the URL scheme mongodocstore registers its URLOpener under on
 // docstore.DefaultMux.
-const Scheme = "mongodocstore"
+const Scheme = "mongo"
 
-// URLOpener opens URLs like "mongodocstore://mydb/mycollection".
+// URLOpener opens URLs like "mongo://mydb/mycollection".
+// See https://docs.mongodb.com/manual/reference/limits/#naming-restrictions for
+// naming restrictions.
 //
 // The URL Host is used as the database name.
-// The URL Path is used as the colleciton name.
+// The URL Path is used as the collection name.
 //
 // No query parameters are supported.
 type URLOpener struct {
+	// A Client is a MongoDB client that performs operations on the db, must be
+	// non-nil.
 	Client *mongo.Client
+
+	// Options specifies the options to pass to OpenCollection.
+	Options Options
 }
 
 // OpenCollectionURL opens the Collection URL.
@@ -135,15 +137,16 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if collName == "" {
 		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
 	}
-	return OpenCollection(o.Client.Database(dbName).Collection(collName), nil), nil
+	return OpenCollection(o.Client.Database(dbName).Collection(collName), &o.Options), nil
 }
 
 type collection struct {
 	coll *mongo.Collection
 }
 
-type Options struct {
-}
+// Options controls collection behaviors.
+// It is provided for future extensibility.
+type Options struct{}
 
 // OpenCollection opens a MongoDB collection for use with Docstore.
 func OpenCollection(mcoll *mongo.Collection, _ *Options) *docstore.Collection {
