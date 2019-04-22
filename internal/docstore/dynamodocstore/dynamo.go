@@ -82,7 +82,7 @@ const Scheme = "dynamodb"
 // "dynamodb://mytable?partition_key=partkey&sort_key=sortkey".
 //
 // The URL Host is used as the table name. See
-// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html
+// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/HowItWorks.NamingRulesDataTypes.html
 // for more details.
 //
 // The following query parameters are supported:
