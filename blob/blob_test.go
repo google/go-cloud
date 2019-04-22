@@ -84,8 +84,11 @@ type fakeAttributes struct {
 	attributesErr error
 }
 
-func (b *fakeAttributes) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	return driver.Attributes{}, b.attributesErr
+func (b *fakeAttributes) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
+	if b.attributesErr != nil {
+		return nil, b.attributesErr
+	}
+	return &driver.Attributes{}, nil
 }
 
 func (b *fakeAttributes) ErrorCode(err error) gcerrors.ErrorCode {
@@ -178,8 +181,8 @@ func (r *erroringWriter) Close() error {
 	return errFake
 }
 
-func (b *erroringBucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
-	return driver.Attributes{}, errFake
+func (b *erroringBucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
+	return nil, errFake
 }
 
 func (b *erroringBucket) ListPaged(ctx context.Context, opts *driver.ListOptions) (*driver.ListPage, error) {
