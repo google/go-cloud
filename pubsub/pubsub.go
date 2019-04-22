@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package pubsub provides an easy and portable way to interact with publish/
-// subscribe systems.
+// subscribe systems. See https://gocloud.dev/howto/pubsub/ for getting started
+// guides.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
 // including Cloud and on-prem solutions. For example, "gcppubsub" supports
@@ -35,7 +36,6 @@
 // Alternatively, you can construct a *Topic/*Subscription via a URL and
 // OpenTopic/OpenSubscription.
 // See https://godoc.org/gocloud.dev#hdr-URLs for more information.
-//
 //
 // At-most-once and At-least-once Delivery
 //

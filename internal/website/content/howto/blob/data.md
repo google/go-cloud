@@ -1,7 +1,6 @@
 ---
 title: "Store and Access Unstructured Data"
 date: 2019-03-21T08:42:51-07:00
-draft: true
 weight: 2
 ---
 
@@ -9,6 +8,8 @@ Once you have [opened a bucket][] for the storage provider you want, you can
 store and access data from it using the standard Go I/O patterns.
 
 [opened a bucket]: {{< ref "./open-bucket.md" >}}
+
+<!--more-->
 
 ## Writing data to a bucket
 
