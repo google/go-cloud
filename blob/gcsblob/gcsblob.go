@@ -42,6 +42,7 @@
 //  - ListOptions.BeforeList: *storage.Query
 //  - Reader: storage.Reader
 //  - Attributes: storage.ObjectAttrs
+//  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
@@ -460,6 +461,19 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	srcKey = escapeKey(srcKey)
 	bkt := b.client.Bucket(b.name)
 	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **storage.Copier:
+				*v = copier
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
 	_, err := copier.Run(ctx)
 	return err
 }

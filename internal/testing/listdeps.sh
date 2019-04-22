@@ -24,7 +24,7 @@ set -euo pipefail
 # (see .travis.yml) when updating the alldeps file.
 tmpfile=$(mktemp)
 
-for path in "." "./internal/contributebot" "./samples/appengine"; do
+for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./samples/appengine"; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
 done
 
