@@ -799,6 +799,15 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 			if diff != "" {
 				t.Error(diff)
 			}
+			// We can't assume anything about the query plan. Just verify that Plan returns
+			// successfully and the plan is non-nil.
+			qp, err := tc.q.Plan(KeyField)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if qp == nil {
+				t.Error("got nil QueryPlan, wanted non-nil")
+			}
 		})
 	}
 

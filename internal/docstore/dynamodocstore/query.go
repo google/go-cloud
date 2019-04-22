@@ -385,3 +385,26 @@ func (it *documentIterator) Stop() {
 	it.items = nil
 	it.last = nil
 }
+
+func (c *collection) QueryPlan(q *driver.Query) (*driver.QueryPlan, error) {
+	if c.description == nil {
+		out, err := c.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &c.table})
+		if err != nil {
+			return nil, err
+		}
+		c.description = out.Table
+	}
+	qr, err := c.planQuery(q)
+	if err != nil {
+		return nil, err
+	}
+	return qr.queryPlan(), nil
+}
+
+func (qr *queryRunner) queryPlan() *driver.QueryPlan {
+	qp := &driver.QueryPlan{Scan: qr.scanIn != nil}
+	if !qp.Scan && qr.queryIn.IndexName != nil {
+		qp.Index = *qr.queryIn.IndexName
+	}
+	return qp
+}
