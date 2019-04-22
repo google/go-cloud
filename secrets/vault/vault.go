@@ -14,7 +14,7 @@
 
 // Package vault provides a secrets implementation using the Transit Secrets
 // Engine of Vault by Hashicorp.
-// Use NewKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
@@ -116,7 +116,7 @@ type URLOpener struct {
 	// Client must be non-nil.
 	Client *api.Client
 
-	// Options specifies the options to pass to NewKeeper.
+	// Options specifies the options to pass to OpenKeeper.
 	Options KeeperOptions
 }
 
@@ -125,13 +125,13 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open keeper %v: invalid query parameter %q", u, param)
 	}
-	return NewKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
+	return OpenKeeper(o.Client, path.Join(u.Host, u.Path), &o.Options), nil
 }
 
-// NewKeeper returns a *secrets.Keeper that uses the Transit Secrets Engine of
+// OpenKeeper returns a *secrets.Keeper that uses the Transit Secrets Engine of
 // Vault by Hashicorp.
 // See the package documentation for an example.
-func NewKeeper(client *api.Client, keyID string, opts *KeeperOptions) *secrets.Keeper {
+func OpenKeeper(client *api.Client, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  keyID,
 		client: client,

@@ -38,7 +38,7 @@ func Example_encrypt() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := vault.NewKeeper(client, "my-key", nil)
+	keeper := vault.OpenKeeper(client, "my-key", nil)
 
 	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")

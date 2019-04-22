@@ -1,7 +1,6 @@
 ---
 title: "Open a Bucket"
 date: 2019-03-20T14:51:29-07:00
-draft: true
 weight: 1
 ---
 
@@ -10,6 +9,8 @@ storage provider. Every storage provider is a little different, but the Go CDK
 lets you interact with all of them using the [`*blob.Bucket` type][].
 
 [`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
+
+<!--more-->
 
 ## Constructors versus URL openers
 
@@ -285,7 +286,7 @@ bucket1, err := blob.OpenBucket(ctx, "mem://")
 if err != nil {
     return err
 }
-defer b1.Close()
+defer bucket1.Close()
 
 bucket2, err := blob.OpenBucket(ctx, "file:///path/to/dir")
 if err != nil {
