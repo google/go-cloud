@@ -39,7 +39,7 @@ func Example() {
 	// - keyName: string representing the keyName, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 	// - keyVersion: string representing the keyVersion, see https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#uri-parameters
 	// - opts: *KeeperOptions with the desired Algorithm to use for operations. See this link for more info: https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt#jsonwebkeyencryptionalgorithm
-	keeper, err := akv.NewKeeper(
+	keeper, err := akv.OpenKeeper(
 		client,
 		"replace with keyVaultName",
 		"replace with keyName",
@@ -51,6 +51,7 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	ctx := context.Background()
@@ -76,6 +77,9 @@ func Example_openKeeper() {
 	// The "algorithm" query parameter (required) holds the algorithm.
 	// See https://docs.microsoft.com/en-us/rest/api/keyvault/encrypt/encrypt
 	// for more information.
-	k, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
-	_, _ = k, err
+	keeper, err := secrets.OpenKeeper(ctx, "azurekeyvault://mykeyvaultname/mykeyname?algorithm=RSA-OAEP-256")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }

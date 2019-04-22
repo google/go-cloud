@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package blob provides an easy and portable way to interact with blobs
-// within a storage location, hereafter called a "bucket".
+// within a storage location, hereafter called a "bucket". See
+// https://gocloud.dev/howto/blob/ for how-to guides.
 //
 // It supports operations like reading and writing blobs (using standard
 // interfaces from the io package), deleting blobs, and listing blobs in a
@@ -438,7 +439,8 @@ type Bucket struct {
 	tracer *oc.Tracer
 
 	// mu protects the closed variable.
-	// Read locks are kept to prevent closing until a call finishes.
+	// Read locks are kept to allow holding a read lock for long-running calls,
+	// and thereby prevent closing until a call finishes.
 	mu     sync.RWMutex
 	closed bool
 }
@@ -563,22 +565,22 @@ func (b *Bucket) Exists(ctx context.Context, key string) (bool, error) {
 //
 // If the blob does not exist, Attributes returns an error for which
 // gcerrors.Code will return gcerrors.NotFound.
-func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err error) {
+func (b *Bucket) Attributes(ctx context.Context, key string) (_ *Attributes, err error) {
 	if !utf8.ValidString(key) {
-		return Attributes{}, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "blob: Attributes key must be a valid UTF-8 string: %q", key)
 	}
 
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	if b.closed {
-		return Attributes{}, errClosed
+		return nil, errClosed
 	}
 	ctx = b.tracer.Start(ctx, "Attributes")
 	defer func() { b.tracer.End(ctx, err) }()
 
 	a, err := b.b.Attributes(ctx, key)
 	if err != nil {
-		return Attributes{}, wrapError(b.b, err)
+		return nil, wrapError(b.b, err)
 	}
 	var md map[string]string
 	if len(a.Metadata) > 0 {
@@ -590,7 +592,7 @@ func (b *Bucket) Attributes(ctx context.Context, key string) (_ Attributes, err 
 			md[strings.ToLower(k)] = v
 		}
 	}
-	return Attributes{
+	return &Attributes{
 		CacheControl:       a.CacheControl,
 		ContentDisposition: a.ContentDisposition,
 		ContentEncoding:    a.ContentEncoding,

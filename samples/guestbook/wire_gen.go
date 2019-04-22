@@ -298,7 +298,7 @@ func awsSQLParams(flags *cliFlags) *rdsmysql.Params {
 // awsMOTDVar is a Wire provider function that returns the Message of the Day
 // variable from SSM Parameter Store.
 func awsMOTDVar(ctx context.Context, sess client.ConfigProvider, flags *cliFlags) (*runtimevar.Variable, error) {
-	return awsparamstore.NewVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
+	return awsparamstore.OpenVariable(sess, flags.motdVar, runtimevar.StringDecoder, &awsparamstore.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -318,7 +318,7 @@ func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob
 // azureMOTDVar is a Wire provider function that returns the Message of the Day
 // variable read from a blob stored in Azure.
 func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtimevar.Variable, error) {
-	return blobvar.NewVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
+	return blobvar.OpenVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }
@@ -357,7 +357,7 @@ func gcpMOTDVar(ctx context.Context, client2 runtimeconfig.RuntimeConfigManagerC
 		Config:    flags.runtimeConfigName,
 		Variable:  flags.motdVar,
 	}
-	v, err := gcpruntimeconfig.NewVariable(client2, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
+	v, err := gcpruntimeconfig.OpenVariable(client2, name, runtimevar.StringDecoder, &gcpruntimeconfig.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {
@@ -391,7 +391,7 @@ func dialLocalSQL(flags *cliFlags) (*sql.DB, error) {
 // localRuntimeVar is a Wire provider function that returns the Message of the
 // Day variable based on a local file.
 func localRuntimeVar(flags *cliFlags) (*runtimevar.Variable, func(), error) {
-	v, err := filevar.New(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
+	v, err := filevar.OpenVariable(flags.motdVar, runtimevar.StringDecoder, &filevar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 	if err != nil {

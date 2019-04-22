@@ -33,7 +33,8 @@ type Reader interface {
 	io.ReadCloser
 
 	// Attributes returns a subset of attributes about the blob.
-	Attributes() ReaderAttributes
+	// The portable type will not modify the returned ReaderAttributes.
+	Attributes() *ReaderAttributes
 
 	// As allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
@@ -228,7 +229,8 @@ type Bucket interface {
 	// Attributes returns attributes for the blob. If the specified object does
 	// not exist, Attributes must return an error for which ErrorCode returns
 	// gcerrors.NotFound.
-	Attributes(ctx context.Context, key string) (Attributes, error)
+	// The portable type will not modify the returned Attributes.
+	Attributes(ctx context.Context, key string) (*Attributes, error)
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
 	// UTF-8-encoded key, returning pages of objects at a time.
