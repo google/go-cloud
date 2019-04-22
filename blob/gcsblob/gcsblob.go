@@ -40,7 +40,7 @@
 //  - Error: *googleapi.Error
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
-//  - Reader: storage.Reader
+//  - Reader: *storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
@@ -241,11 +241,11 @@ func (r *reader) Attributes() driver.ReaderAttributes {
 }
 
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*storage.Reader)
+	p, ok := i.(**storage.Reader)
 	if !ok {
 		return false
 	}
-	*p = *r.raw
+	*p = r.raw
 	return true
 }
 
