@@ -211,8 +211,8 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -464,7 +464,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
@@ -472,7 +472,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	resp, err := b.client.HeadObjectWithContext(ctx, in)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	md := make(map[string]string, len(resp.Metadata))
@@ -481,7 +481,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
 		ContentDisposition: aws.StringValue(resp.ContentDisposition),
 		ContentEncoding:    aws.StringValue(resp.ContentEncoding),

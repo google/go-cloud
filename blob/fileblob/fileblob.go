@@ -352,12 +352,12 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	_, info, xa, err := b.forKey(key)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       xa.CacheControl,
 		ContentDisposition: xa.ContentDisposition,
 		ContentEncoding:    xa.ContentEncoding,
@@ -420,8 +420,8 @@ func (r *reader) Close() error {
 	return r.c.Close()
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool { return false }
