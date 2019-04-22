@@ -19,9 +19,9 @@
 // URLs
 //
 // For docstore.OpenCollection, firedocstore registers for the scheme
-// "firedocstore".
-// The default URL opener will create a connection using use default
-// credentials from the environment, as described in
+// "firestore".
+// The default URL opener will create a connection using default credentials
+// from the environment, as described in
 // https://cloud.google.com/docs/authentication/production.
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
@@ -124,36 +124,22 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	for param := range q {
 		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
 	}
-	cn, err := collectionNameFromURL(u)
+	project, collPath, err := collectionNameFromURL(u)
 	if err != nil {
 		return nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
-	return OpenCollection(o.Client, cn.ProjectID, cn.CollPath, nameField), nil
+	return OpenCollection(o.Client, project, collPath, nameField), nil
 }
 
-// CollectionName identifies a collection name.
-type CollectionName struct {
-	ProjectID string
-	CollPath  string
-}
-
-func collectionNameFromURL(u *url.URL) (CollectionName, error) {
-	var cn CollectionName
-	if cn.ProjectID = u.Host; cn.ProjectID == "" {
-		return CollectionName{}, errors.New("URL must have a non-empty Host (the project ID)")
+func collectionNameFromURL(u *url.URL) (string, string, error) {
+	var project, collPath string
+	if project = u.Host; project == "" {
+		return "", "", errors.New("URL must have a non-empty Host (the project ID)")
 	}
-	if cn.CollPath = strings.TrimPrefix(u.Path, "/"); cn.CollPath == "" {
-		return CollectionName{}, errors.New("URL must have a non-empty Path (the collection path)")
+	if collPath = strings.TrimPrefix(u.Path, "/"); collPath == "" {
+		return "", "", errors.New("URL must have a non-empty Path (the collection path)")
 	}
-	return cn, nil
-}
-
-func (cn CollectionName) dbPath() string {
-	return fmt.Sprintf("projects/%s/databases/(default)", cn.ProjectID)
-}
-
-func (cn CollectionName) String() string {
-	return fmt.Sprintf("%s/documents/%s", cn.dbPath(), cn.CollPath)
+	return project, collPath, nil
 }
 
 type collection struct {
@@ -177,11 +163,10 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) 
 }
 
 func newCollection(client *vkit.Client, projectID, collPath, nameField string) *collection {
-	cn := CollectionName{ProjectID: projectID, CollPath: collPath}
 	return &collection{
 		client:    client,
-		dbPath:    cn.dbPath(),
-		collPath:  cn.String(),
+		dbPath:    fmt.Sprintf("projects/%s/databases/(default)", projectID),
+		collPath:  fmt.Sprintf("projects/%s/databases/(default)/documents/%s", projectID, collPath),
 		nameField: nameField,
 	}
 }

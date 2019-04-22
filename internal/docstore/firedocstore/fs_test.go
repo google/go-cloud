@@ -113,26 +113,28 @@ func TestConformance(t *testing.T) {
 
 func TestCollectionNameFromURL(t *testing.T) {
 	tests := []struct {
-		URL     string
-		WantErr bool
-		Want    CollectionName
+		URL          string
+		WantErr      bool
+		WantProject  string
+		WantCollPath string
 	}{
-		{"firedocstore://proj/coll", false, CollectionName{"proj", "coll"}},
-		{"firedocstore://proj/coll/doc/subcoll", false, CollectionName{"proj", "coll/doc/subcoll"}},
-		{"firedocstore://proj/", true, CollectionName{}},
-		{"firedocstore:///coll", true, CollectionName{}},
+		{"firedocstore://proj/coll", false, "proj", "coll"},
+		{"firedocstore://proj/coll/doc/subcoll", false, "proj", "coll/doc/subcoll"},
+		{"firedocstore://proj/", true, "", ""},
+		{"firedocstore:///coll", true, "", ""},
 	}
 	for _, test := range tests {
 		u, err := url.Parse(test.URL)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, gotErr := collectionNameFromURL(u)
+		gotProj, gotCollPath, gotErr := collectionNameFromURL(u)
 		if (gotErr != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
 		}
-		if got != test.Want {
-			t.Errorf("%s: got %v want %v", test.URL, got, test.Want)
+		if gotProj != test.WantProject || gotCollPath != test.WantCollPath {
+			t.Errorf("%s: got project ID %s, collection path %s want project ID %s, collection path %s",
+				test.URL, gotProj, gotCollPath, test.WantProject, test.WantCollPath)
 		}
 	}
 }
