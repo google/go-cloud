@@ -107,7 +107,7 @@ func TestNoConnectionError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keeper := NewKeeper(client, keyID1, nil)
+	keeper := OpenKeeper(client, keyID1, nil)
 
 	if _, err := keeper.Encrypt(context.Background(), []byte("test")); err == nil {
 		t.Error("got nil, want UnrecognizedClientException")
