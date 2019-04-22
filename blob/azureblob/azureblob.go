@@ -49,6 +49,7 @@
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
 //  - Attributes: azblob.BlobGetPropertiesResponse
+//  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
 //  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
 package azureblob
 
@@ -322,7 +323,29 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	dstBlobURL := b.containerURL.NewBlobURL(dstKey)
 	srcKey = escapeKey(srcKey, false)
 	srcURL := b.containerURL.NewBlobURL(srcKey).URL()
-	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, nil /* metadata */, azblob.ModifiedAccessConditions{}, azblob.BlobAccessConditions{})
+	md := azblob.Metadata{}
+	mac := azblob.ModifiedAccessConditions{}
+	bac := azblob.BlobAccessConditions{}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case *azblob.Metadata:
+				*v = md
+				return true
+			case **azblob.ModifiedAccessConditions:
+				*v = &mac
+				return true
+			case **azblob.BlobAccessConditions:
+				*v = &bac
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac)
 	if err != nil {
 		return err
 	}

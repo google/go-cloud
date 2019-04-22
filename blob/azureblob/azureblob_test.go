@@ -158,8 +158,20 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 }
 
 func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
-	// TODO(rvangent): Implement this along with Copy, and document the
-	// As type in the package doc.
+	var md azblob.Metadata
+	if !as(&md) {
+		return errors.New("BeforeCopy.As failed for Metadata")
+	}
+
+	var mac *azblob.ModifiedAccessConditions
+	if !as(&mac) {
+		return errors.New("BeforeCopy.As failed for ModifiedAccessConditions")
+	}
+
+	var bac *azblob.BlobAccessConditions
+	if !as(&bac) {
+		return errors.New("BeforeCopy.As failed for BlobAccessConditions")
+	}
 	return nil
 }
 

@@ -48,6 +48,7 @@
 //      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
+//  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob // import "gocloud.dev/blob/s3blob"
 
@@ -671,6 +672,19 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		Bucket:     aws.String(b.name),
 		CopySource: aws.String(b.name + "/" + srcKey),
 		Key:        aws.String(dstKey),
+	}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **s3.CopyObjectInput:
+				*v = input
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
 	}
 	_, err := b.client.CopyObjectWithContext(ctx, input)
 	return err

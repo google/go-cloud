@@ -18,10 +18,12 @@ keeper provider or you need fine-grained control over the connection
 settings, you should call the constructor function in the driver package
 directly (like `awskms.NewKeeper`). However, if you want to change providers
 based on configuration, you can use `secrets.OpenKeeper`, making sure you
-["blank import"][] the driver package to link it in. This guide will show how
-to use both forms for each secret keeper provider.
+["blank import"][] the driver package to link it in. See the
+[documentation on URLs][] for more details. This guide will show how to use
+both forms for each secret keeper provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
 
 ## AWS Key Management Service
 

@@ -14,10 +14,20 @@
 
 // Package memdocstore provides an in-memory implementation of the docstore
 // API. It is suitable for local development and testing.
+//
+// URLs
+//
+// For docstore.OpenCollection, memdocstore registers for the schemes
+// "memdocstore".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package memdocstore // import "gocloud.dev/internal/docstore/memdocstore"
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -26,6 +36,25 @@ import (
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
 )
+
+func init() {
+	docstore.DefaultURLMux().RegisterCollection(Scheme, &URLOpener{})
+}
+
+// Scheme is the URL scheme memdocstore registers its URLOpener under on
+// docstore.DefaultMux.
+const Scheme = "memdocstore"
+
+// URLOpener opens URLs like "memdocstore://".
+type URLOpener struct{}
+
+// OpenCollectionURL opens a docstore.Collection based on u.
+func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	for param := range u.Query() {
+		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
+	}
+	return OpenCollection(u.Host, nil), nil
+}
 
 // TODO(jba): make this package thread-safe.
 
