@@ -89,12 +89,12 @@ func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error)
 	return c, func() { c.Close() }, err
 }
 
-// Scheme is the URL scheme firedocstore registers its URLOpener under on
+// Scheme is the URL scheme firestore registers its URLOpener under on
 // docstore.DefaultMux.
-const Scheme = "firedocstore"
+const Scheme = "firestore"
 
-// URLOpener opens firedocstore URLs like
-// "firedocstore://myproject/mycollection?name_field=myID".
+// URLOpener opens firestore URLs like
+// "firestore://myproject/mycollection?name_field=myID".
 //
 //   - The URL's host holds the GCP projectID.
 //   - The only element of the URL's path holds the path to a Firestore collection.

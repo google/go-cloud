@@ -118,10 +118,10 @@ func TestCollectionNameFromURL(t *testing.T) {
 		WantProject  string
 		WantCollPath string
 	}{
-		{"firedocstore://proj/coll", false, "proj", "coll"},
-		{"firedocstore://proj/coll/doc/subcoll", false, "proj", "coll/doc/subcoll"},
-		{"firedocstore://proj/", true, "", ""},
-		{"firedocstore:///coll", true, "", ""},
+		{"firestore://proj/coll", false, "proj", "coll"},
+		{"firestore://proj/coll/doc/subcoll", false, "proj", "coll/doc/subcoll"},
+		{"firestore://proj/", true, "", ""},
+		{"firestore:///coll", true, "", ""},
 	}
 	for _, test := range tests {
 		u, err := url.Parse(test.URL)
