@@ -13,8 +13,7 @@
 // limitations under the License.
 
 // Package pubsub provides an easy and portable way to interact with publish/
-// subscribe systems. See https://gocloud.dev/howto/pubsub/ for getting started
-// guides.
+// subscribe systems. See https://gocloud.dev/howto/pubsub/ for how-to guides.
 //
 // Subpackages contain distinct implementations of pubsub for various providers,
 // including Cloud and on-prem solutions. For example, "gcppubsub" supports
