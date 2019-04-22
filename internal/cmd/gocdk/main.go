@@ -112,6 +112,15 @@ func osProcessContext() (*processContext, error) {
 	}, nil
 }
 
+// resolve joins path with pctx.workdir if path is relative. Otherwise,
+// it returns path.
+func (pctx *processContext) resolve(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(pctx.workdir, path)
+}
+
 // findBiomeDir returns the path to the named biome.
 func findBiomeDir(moduleRoot, name string) string {
 	return filepath.Join(moduleRoot, "biomes", name)

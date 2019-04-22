@@ -37,7 +37,7 @@ func init_(ctx context.Context, pctx *processContext, args []string) error {
 		return usagef("gocdk init PATH")
 	}
 	// TODO(light): allow an existing empty directory, for some definition of empty
-	path := f.Arg(0)
+	path := pctx.resolve(f.Arg(0))
 	if _, err := os.Stat(path); err == nil {
 		return xerrors.Errorf("gocdk init: %s already exists", path)
 	} else if !os.IsNotExist(err) {
