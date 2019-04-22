@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
 
@@ -199,6 +200,7 @@ func TestPlanQuery(t *testing.T) {
 			// The equality filter on the table's partition key allows us to query
 			// the table, but there is a better choice: a global index with the same
 			// partition key and a sort key that is mentioned in the query.
+			// (In these tests, the global index has all the fields of the table by default.)
 			globalIndexPartitionKey: "tableP",
 			globalIndexSortKey:      "globalS",
 			query: &driver.Query{Filters: []driver.Filter{
@@ -215,6 +217,9 @@ func TestPlanQuery(t *testing.T) {
 			desc: "equality filter on table partition, filter on global index sort, bad projection",
 			// Although there is a global index that matches the filters best, it doesn't
 			// have the necessary fields. So we query against the table.
+			// The query does not specify FilterPaths, so it retrieves the entire document.
+			// globalIndexFields explicitly lists the fields that the global index has.
+			// Since the global index does not have all the document fields, it can't be used.
 			globalIndexPartitionKey: "tableP",
 			globalIndexSortKey:      "globalS",
 			globalIndexFields:       []string{"other"},
@@ -227,6 +232,49 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("#1 = :1"),
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("globalS", "tableP"),
+			},
+		},
+		{
+			desc: "equality filter on table partition, filter on global index sort, bad projection 2",
+			// As above. Here the global index is missing the implicit DocstoreRevision field
+			// we add to all queries.
+			globalIndexPartitionKey: "tableP",
+			globalIndexSortKey:      "globalS",
+			globalIndexFields:       []string{"other"},
+			query: &driver.Query{
+				FieldPaths: [][]string{{"other"}},
+				Filters: []driver.Filter{
+					{[]string{"tableP"}, "=", 1},
+					{[]string{"globalS"}, "<=", 1},
+				}},
+			want: &dynamodb.QueryInput{
+				IndexName:                 nil,
+				KeyConditionExpression:    aws.String("#1 = :1"),
+				FilterExpression:          aws.String("#0 <= :0"),
+				ExpressionAttributeNames:  eans("globalS", "tableP", "other", "DocstoreRevision"),
+				ExpressionAttributeValues: eavs(2),
+				ProjectionExpression:      aws.String("#2, #3"),
+			},
+		},
+		{
+			desc: "equality filter on table partition, filter on global index sort, good projection",
+			// The global index matches the filters best and has the necessary
+			// fields. So we query against it.
+			globalIndexPartitionKey: "tableP",
+			globalIndexSortKey:      "globalS",
+			globalIndexFields:       []string{"other", docstore.RevisionField},
+			query: &driver.Query{
+				FieldPaths: [][]string{{"other"}},
+				Filters: []driver.Filter{
+					{[]string{"tableP"}, "=", 1},
+					{[]string{"globalS"}, "<=", 1},
+				}},
+			want: &dynamodb.QueryInput{
+				IndexName:                 aws.String("global"),
+				KeyConditionExpression:    aws.String("(#0 = :0) AND (#1 <= :1)"),
+				ProjectionExpression:      aws.String("#2, #3"),
+				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "DocstoreRevision"),
+				ExpressionAttributeValues: eavs(2),
 			},
 		},
 	} {
@@ -270,11 +318,15 @@ func TestPlanQuery(t *testing.T) {
 			case *dynamodb.ScanInput:
 				got = gotRunner.scanIn
 				tw.TableName = &c.table
-				tw.ExpressionAttributeValues = eavs(len(tw.ExpressionAttributeNames))
+				if tw.ExpressionAttributeValues == nil {
+					tw.ExpressionAttributeValues = eavs(len(tw.ExpressionAttributeNames))
+				}
 			case *dynamodb.QueryInput:
 				got = gotRunner.queryIn
 				tw.TableName = &c.table
-				tw.ExpressionAttributeValues = eavs(len(tw.ExpressionAttributeNames))
+				if tw.ExpressionAttributeValues == nil {
+					tw.ExpressionAttributeValues = eavs(len(tw.ExpressionAttributeNames))
+				}
 			default:
 				t.Fatalf("bad type for test.want: %T", test.want)
 			}
