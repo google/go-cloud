@@ -392,8 +392,8 @@ func (r *reader) Read(p []byte) (int, error) {
 func (r *reader) Close() error {
 	return r.body.Close()
 }
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 func (r *reader) As(i interface{}) bool {
 	p, ok := i.(*azblob.DownloadResponse)
@@ -489,12 +489,12 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	azureMD := blobPropertiesResponse.NewMetadata()
@@ -504,7 +504,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
 		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
 		ContentEncoding:    blobPropertiesResponse.ContentEncoding(),

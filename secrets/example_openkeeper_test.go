@@ -39,6 +39,7 @@ func Example_openKeeper() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer k.Close()
 
 	// Now we can use k to encrypt/decrypt.
 	plaintext := []byte("Go CDK Secrets")

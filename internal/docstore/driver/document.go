@@ -27,6 +27,7 @@ var fieldCache = fields.NewCache(nil, nil, nil)
 // A Document is a lightweight wrapper around either a map[string]interface{} or a
 // struct pointer. It provides operations to get and set fields and field paths.
 type Document struct {
+	Origin interface{}            // the argument to NewDocument
 	m      map[string]interface{} // nil if it's a *struct
 	s      reflect.Value          // the struct reflected
 	fields fields.List            // for structs
@@ -41,7 +42,7 @@ func NewDocument(doc interface{}) (Document, error) {
 		if m == nil {
 			return Document{}, gcerr.Newf(gcerr.InvalidArgument, nil, "document map cannot be nil")
 		}
-		return Document{m: m}, nil
+		return Document{Origin: doc, m: m}, nil
 	}
 	v := reflect.ValueOf(doc)
 	t := v.Type()
@@ -56,7 +57,7 @@ func NewDocument(doc interface{}) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
-	return Document{s: v.Elem(), fields: fields}, nil
+	return Document{Origin: doc, s: v.Elem(), fields: fields}, nil
 }
 
 // GetField returns the value of the named document field.

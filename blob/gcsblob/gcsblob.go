@@ -40,7 +40,7 @@
 //  - Error: *googleapi.Error
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
-//  - Reader: storage.Reader
+//  - Reader: *storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
@@ -236,16 +236,16 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*storage.Reader)
+	p, ok := i.(**storage.Reader)
 	if !ok {
 		return false
 	}
-	*p = *r.raw
+	*p = r.raw
 	return true
 }
 
@@ -355,15 +355,15 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       attrs.CacheControl,
 		ContentDisposition: attrs.ContentDisposition,
 		ContentEncoding:    attrs.ContentEncoding,

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package awskms provides a secrets implementation backed by AWS KMS.
-// Use NewKeeper to construct a *secrets.Keeper.
+// Use OpenKeeper to construct a *secrets.Keeper.
 //
 // URLs
 //
@@ -111,7 +111,7 @@ type URLOpener struct {
 	// ConfigProvider must be set to a non-nil value.
 	ConfigProvider client.ConfigProvider
 
-	// Options specifies the options to pass to NewKeeper.
+	// Options specifies the options to pass to OpenKeeper.
 	Options KeeperOptions
 }
 
@@ -129,16 +129,16 @@ func (o *URLOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*secrets.Kee
 	if err != nil {
 		return nil, err
 	}
-	return NewKeeper(client, path.Join(u.Host, u.Path), &o.Options), nil
+	return OpenKeeper(client, path.Join(u.Host, u.Path), &o.Options), nil
 }
 
-// NewKeeper returns a *secrets.Keeper that uses AWS KMS.
+// OpenKeeper returns a *secrets.Keeper that uses AWS KMS.
 // The key ID can be in the form of an Amazon Resource Name (ARN), alias
 // name, or alias ARN. See
 // https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 // for more details.
 // See the package documentation for an example.
-func NewKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
+func OpenKeeper(client *kms.KMS, keyID string, opts *KeeperOptions) *secrets.Keeper {
 	return secrets.NewKeeper(&keeper{
 		keyID:  keyID,
 		client: client,
@@ -172,6 +172,9 @@ func (k *keeper) Encrypt(ctx context.Context, plaintext []byte) ([]byte, error) 
 	}
 	return result.CiphertextBlob, nil
 }
+
+// Close implements driver.Keeper.Close.
+func (k *keeper) Close() error { return nil }
 
 // ErrorAs implements driver.Keeper.ErrorAs.
 func (k *keeper) ErrorAs(err error, i interface{}) bool {
