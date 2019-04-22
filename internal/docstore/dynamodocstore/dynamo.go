@@ -33,6 +33,7 @@ type collection struct {
 	table        string // DynamoDB table name
 	partitionKey string
 	sortKey      string
+	description  *dyn.TableDescription
 }
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
