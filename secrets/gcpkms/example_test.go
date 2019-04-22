@@ -34,7 +34,7 @@ func Example() {
 	defer done()
 
 	// Construct a *secrets.Keeper.
-	keeper := gcpkms.NewKeeper(
+	keeper := gcpkms.OpenKeeper(
 		client,
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more

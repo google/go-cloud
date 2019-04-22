@@ -15,7 +15,8 @@ listing blobs in a bucket.
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/blob
+[Top-level package documentation](https://godoc.org/gocloud.dev/blob)<br>
+[How-to guides]({{< ref "/howto/blob/_index.md" >}})
 
 ## Supported Providers
 

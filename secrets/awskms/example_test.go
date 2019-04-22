@@ -38,7 +38,7 @@ func Example() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := awskms.NewKeeper(
+	keeper := awskms.OpenKeeper(
 		client,
 		// Get the key ID. Here is an example of using an alias. See
 		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
