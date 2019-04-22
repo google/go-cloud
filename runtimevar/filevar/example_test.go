@@ -44,7 +44,7 @@ func Example() {
 	decoder := runtimevar.NewDecoder(MyConfig{}, runtimevar.JSONDecode)
 
 	// Construct a *runtimevar.Variable pointing at f.
-	v, err := filevar.New(f.Name(), decoder, nil)
+	v, err := filevar.OpenVariable(f.Name(), decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

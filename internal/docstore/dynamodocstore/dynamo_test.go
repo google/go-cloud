@@ -18,6 +18,8 @@ import (
 	"context"
 	"testing"
 
+	"gocloud.dev/internal/docstore"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
@@ -97,5 +99,35 @@ func clearTable(t *testing.T) {
 			break
 		}
 		in.ExclusiveStartKey = out.LastEvaluatedKey
+	}
+}
+
+// Dynamodocstore-specific tests.
+
+func TestOpenKeeper(t *testing.T) {
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"dynamodb://docstore-test?partition_key=_kind", false},
+		// OK.
+		{"dynamodb://docstore-test?partition_key=_kind&sort_key=_id", false},
+		// OK, overriding region.
+		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
+		// Unknown parameter.
+		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
+		// With path.
+		{"dynamodb://docstore-test/subcoll?partition_key=_kind", true},
+		// Missing partition_key.
+		{"dynamodb://docstore-test?sort_key=_id", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
 	}
 }

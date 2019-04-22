@@ -1,7 +1,6 @@
 ---
 title: "Pub/Sub"
 date: 2019-03-26T09:44:06-07:00
-draft: true
 showInSidenav: true
 ---
 
@@ -15,3 +14,4 @@ messages.
 
 [publish/subscribe model]: https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern
 
+<!--more-->
