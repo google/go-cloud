@@ -101,6 +101,5 @@ func (it *docIterator) Stop() {
 }
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
-	// We don't know how MongoDB executes the query, so we return an empty string.
-	return "", nil
+	return "unknown", nil
 }

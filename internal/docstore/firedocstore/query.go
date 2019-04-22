@@ -325,6 +325,5 @@ func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 }
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
-	// We don't know how Firestore executes the query, so we return an empty string.
-	return "", nil
+	return "unknown", nil
 }
