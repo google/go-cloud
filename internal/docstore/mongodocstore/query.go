@@ -100,7 +100,7 @@ func (it *docIterator) Stop() {
 	_ = it.cursor.Close(it.ctx)
 }
 
-func (c *collection) QueryPlan(q *driver.Query) (*driver.QueryPlan, error) {
-	// We don't know how MongoDB executes the query, so we return an empty struct.
-	return &driver.QueryPlan{}, nil
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	// We don't know how MongoDB executes the query, so we return an empty string.
+	return "", nil
 }
