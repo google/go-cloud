@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package etcdvar provides a runtimevar implementation with variables
-// backed by etcd. Use New to construct a *runtimevar.Variable.
+// backed by etcd. Use OpenVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
@@ -97,7 +97,7 @@ type URLOpener struct {
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
 
-	// Options specifies the options to pass to New.
+	// Options specifies the options to pass to OpenVariable.
 	Options Options
 }
 
@@ -115,7 +115,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	for param := range q {
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
-	return New(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
+	return OpenVariable(o.Client, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -125,12 +125,12 @@ type Options struct {
 	Timeout time.Duration
 }
 
-// New constructs a *runtimevar.Variable that uses client to watch the variable
+// OpenVariable constructs a *runtimevar.Variable that uses client to watch the variable
 // name on an etcd server.
 // etcd returns raw bytes; provide a decoder to decode the raw bytes into the
 // appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func New(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(cli *clientv3.Client, name string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(cli, name, decoder, opts)), nil
 }
 
