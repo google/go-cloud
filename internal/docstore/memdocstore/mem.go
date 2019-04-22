@@ -45,7 +45,7 @@ func init() {
 // docstore.DefaultMux.
 const Scheme = "mem"
 
-// URLOpener opens URLs like "mem://".
+// URLOpener opens URLs like "mem://_id".
 //
 // The URL's host is used as the keyField.
 // The URL's path is ignored.

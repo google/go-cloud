@@ -74,8 +74,7 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"mem://", false},
-		// OK, non-empty keyField.
+		{"mem://_id", false},
 		{"mem://foo.bar", false},
 		// Invalid parameter.
 		{"mem://?param=value", true},
