@@ -67,14 +67,14 @@ func TestPlanQuery(t *testing.T) {
 		globalIndexFields       []string // the fields projected into the global index
 		query                   *driver.Query
 		want                    interface{} // either a ScanInput or a QueryInput
-		wantPlan                driver.QueryPlan
+		wantPlan                string
 	}{
 		{
 			desc: "empty query",
 			// A query with no filters requires a scan.
 			query:    &driver.Query{},
 			want:     &dynamodb.ScanInput{TableName: &c.table},
-			wantPlan: driver.QueryPlan{Scan: true},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "equality filter on table partition field",
@@ -108,7 +108,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("other"),
 				ExpressionAttributeValues: eavs(1),
 			},
-			wantPlan: driver.QueryPlan{Scan: true},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "non-equality filter on table partition field",
@@ -121,7 +121,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
-			wantPlan: driver.QueryPlan{Scan: true},
+			wantPlan: "Scan",
 		},
 		{
 			desc: "equality filter on partition, filter on other",
@@ -169,7 +169,7 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "localS"),
 			},
-			wantPlan: driver.QueryPlan{Index: "local"},
+			wantPlan: `Index: "local"`,
 		},
 		{
 			desc: "equality filter on table partition, filters on local index and table sort",
@@ -199,7 +199,7 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("#0 = :0"),
 				ExpressionAttributeNames: eans("other"),
 			},
-			wantPlan: driver.QueryPlan{Index: "global"},
+			wantPlan: `Index: "global"`,
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort",
@@ -218,7 +218,7 @@ func TestPlanQuery(t *testing.T) {
 				KeyConditionExpression:   aws.String("(#0 = :0) AND (#1 <= :1)"),
 				ExpressionAttributeNames: eans("tableP", "globalS"),
 			},
-			wantPlan: driver.QueryPlan{Index: "global"},
+			wantPlan: `Index: "global"`,
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, bad projection",
@@ -283,7 +283,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP", "globalS", "other", "DocstoreRevision"),
 				ExpressionAttributeValues: eavs(2),
 			},
-			wantPlan: driver.QueryPlan{Index: "global"},
+			wantPlan: `Index: "global"`,
 		},
 	} {
 		t.Run(test.desc, func(t *testing.T) {
@@ -342,7 +342,7 @@ func TestPlanQuery(t *testing.T) {
 				t.Error("input:\n", diff)
 			}
 			gotPlan := gotRunner.queryPlan()
-			if diff := cmp.Diff(gotPlan, &test.wantPlan); diff != "" {
+			if diff := cmp.Diff(gotPlan, test.wantPlan); diff != "" {
 				t.Error("plan:\n", diff)
 			}
 		})

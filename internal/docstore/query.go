@@ -154,25 +154,12 @@ func (it *DocumentIterator) Stop() {
 	it.iter.Stop()
 }
 
-// A QueryPlan describes how a query will be executed.
-type QueryPlan struct {
-	Index string // the name of the index used, if known
-	Scan  bool   // whether the query will perform a table scan
-	// TODO(jba): add ScanReason to explain why a scan was done
-	// TODO(jba): add SortField to name the field used for sorting
-}
-
 // Plan describes how the query would be executed if its Get method were called with
 // the given field paths. Plan uses only information available to the client, so it
-// cannot know whether whether a service uses indexes or scans internally. In the
-// absence of information, Plan leaves QueryPlan fields set to their zero values.
-func (q *Query) Plan(fps ...FieldPath) (*QueryPlan, error) {
+// cannot know whether whether a service uses indexes or scans internally.
+func (q *Query) Plan(fps ...FieldPath) (string, error) {
 	if err := q.init(fps); err != nil {
-		return nil, err
+		return "", err
 	}
-	dqp, err := q.coll.driver.QueryPlan(q.dq)
-	if err != nil {
-		return nil, err
-	}
-	return (*QueryPlan)(dqp), nil
+	return q.coll.driver.QueryPlan(q.dq)
 }

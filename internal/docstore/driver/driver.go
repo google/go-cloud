@@ -47,9 +47,7 @@ type Collection interface {
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
 	// QueryPlan returns the plan for the query.
-	// In the absence of information, QueryPlan should leave fields at their zero values.
-	// QueryPlan should never return nil as its first return value.
-	QueryPlan(*Query) (*QueryPlan, error)
+	QueryPlan(*Query) (string, error)
 
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
@@ -136,13 +134,3 @@ type DocumentIterator interface {
 // EqualOp is the name of the equality operator.
 // It is defined here to avoid confusion between "=" and "==".
 const EqualOp = "="
-
-// Keep this QueryPlan struct in sync with the one in docstore.
-
-// A QueryPlan describes how a query will be executed.
-type QueryPlan struct {
-	Index string // the name of the index used, if known
-	Scan  bool   // whether the query will perform a table scan
-	// TODO(jba): add ScanReason to explain why a scan was done
-	// TODO(jba): add SortField to name the field used for sorting
-}

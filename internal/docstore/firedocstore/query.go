@@ -324,7 +324,7 @@ func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 	return &pb.StructuredQuery_FieldReference{FieldPath: toServiceFieldPath(fp)}
 }
 
-func (c *collection) QueryPlan(q *driver.Query) (*driver.QueryPlan, error) {
-	// We don't know how Firestore executes the query, so we return an empty struct.
-	return &driver.QueryPlan{}, nil
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	// We don't know how Firestore executes the query, so we return an empty string.
+	return "", nil
 }

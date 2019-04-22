@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"gocloud.dev/gcerrors"
@@ -37,18 +38,26 @@ type collection struct {
 }
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
-func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *docstore.Collection {
-	return docstore.NewCollection(newCollection(db, tableName, partitionKey, sortKey))
+func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*docstore.Collection, error) {
+	c, err := newCollection(db, tableName, partitionKey, sortKey)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
 }
 
-func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *collection {
-	c := &collection{
+func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*collection, error) {
+	out, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &tableName})
+	if err != nil {
+		return nil, err
+	}
+	return &collection{
 		db:           db,
 		table:        tableName,
 		partitionKey: partitionKey,
 		sortKey:      sortKey,
-	}
-	return c
+		description:  out.Table,
+	}, nil
 }
 
 func (c *collection) KeyFields() []string {

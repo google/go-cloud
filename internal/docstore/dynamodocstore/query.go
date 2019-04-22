@@ -35,13 +35,6 @@ import (
 type avmap = map[string]*dynamodb.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	if c.description == nil {
-		out, err := c.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &c.table})
-		if err != nil {
-			return nil, err
-		}
-		c.description = out.Table
-	}
 	qr, err := c.planQuery(q)
 	if err != nil {
 		return nil, err
@@ -386,25 +379,20 @@ func (it *documentIterator) Stop() {
 	it.last = nil
 }
 
-func (c *collection) QueryPlan(q *driver.Query) (*driver.QueryPlan, error) {
-	if c.description == nil {
-		out, err := c.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &c.table})
-		if err != nil {
-			return nil, err
-		}
-		c.description = out.Table
-	}
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	qr, err := c.planQuery(q)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	return qr.queryPlan(), nil
 }
 
-func (qr *queryRunner) queryPlan() *driver.QueryPlan {
-	qp := &driver.QueryPlan{Scan: qr.scanIn != nil}
-	if !qp.Scan && qr.queryIn.IndexName != nil {
-		qp.Index = *qr.queryIn.IndexName
+func (qr *queryRunner) queryPlan() string {
+	if qr.scanIn != nil {
+		return "Scan"
 	}
-	return qp
+	if qr.queryIn.IndexName != nil {
+		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
+	}
+	return ""
 }

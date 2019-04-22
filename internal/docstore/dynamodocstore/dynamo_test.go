@@ -48,7 +48,7 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey), nil
+	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey)
 }
 
 func TestConformance(t *testing.T) {
