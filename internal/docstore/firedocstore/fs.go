@@ -12,25 +12,135 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package firedocstore provides a docstore implementation backed by GCP
+// Firestore.
+// Use OpenCollection to construct a *docstore.Collection.
+//
+// URLs
+//
+// For docstore.OpenCollection, firedocstore registers for the scheme
+// "firestore".
+// The default URL opener will create a connection using default credentials
+// from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 package firedocstore
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
 	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"gocloud.dev/gcp"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/useragent"
+	"google.golang.org/api/option"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
 	"google.golang.org/grpc/metadata"
 )
+
+func init() {
+	docstore.DefaultURLMux().RegisterCollection(Scheme, &lazyCredsOpener{})
+}
+
+type lazyCredsOpener struct {
+	init   sync.Once
+	opener *URLOpener
+	err    error
+}
+
+func (o *lazyCredsOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	o.init.Do(func() {
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			o.err = err
+			return
+		}
+		client, _, err := Dial(ctx, creds.TokenSource)
+		if err != nil {
+			o.err = err
+			return
+		}
+		o.opener = &URLOpener{Client: client}
+	})
+	if o.err != nil {
+		return nil, fmt.Errorf("open collection %s: %v", u, o.err)
+	}
+	return o.opener.OpenCollectionURL(ctx, u)
+}
+
+// Dial returns a client to use with Firestore and a clean-up function to close
+// the client after used.
+func Dial(ctx context.Context, ts gcp.TokenSource) (*vkit.Client, func(), error) {
+	c, err := vkit.NewClient(ctx, option.WithTokenSource(ts), useragent.ClientOption("docstore"))
+	return c, func() { c.Close() }, err
+}
+
+// Scheme is the URL scheme firestore registers its URLOpener under on
+// docstore.DefaultMux.
+const Scheme = "firestore"
+
+// URLOpener opens firestore URLs like
+// "firestore://myproject/mycollection?name_field=myID".
+//
+//   - The URL's host holds the GCP projectID.
+//   - The only element of the URL's path holds the path to a Firestore collection.
+// See https://firebase.google.com/docs/firestore/data-model for more details.
+//
+// The following query parameters are supported:
+//
+//   - name_field (required): firedocstore requires that a single string field,
+// name_field, be designated the primary key. Its values must be unique over all
+// documents in the collection, and the primary key must be provided to retrieve
+// a document.
+type URLOpener struct {
+	// Client must be set to a non-nil client authenticated with Cloud Firestore
+	// scope or equivalent.
+	Client *vkit.Client
+}
+
+// OpenCollectionURL opens a docstore.Collection based on u.
+func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+	q := u.Query()
+
+	nameField := q.Get("name_field")
+	if nameField == "" {
+		return nil, errors.New("open collection %s: name_field is required to open a collection")
+	}
+	q.Del("name_field")
+	for param := range q {
+		return nil, fmt.Errorf("open collection %s: invalid query parameter %q", u, param)
+	}
+	project, collPath, err := collectionNameFromURL(u)
+	if err != nil {
+		return nil, fmt.Errorf("open collection %s: %v", u, err)
+	}
+	return OpenCollection(o.Client, project, collPath, nameField), nil
+}
+
+func collectionNameFromURL(u *url.URL) (string, string, error) {
+	var project, collPath string
+	if project = u.Host; project == "" {
+		return "", "", errors.New("URL must have a non-empty Host (the project ID)")
+	}
+	if collPath = strings.TrimPrefix(u.Path, "/"); collPath == "" {
+		return "", "", errors.New("URL must have a non-empty Path (the collection path)")
+	}
+	return project, collPath, nil
+}
 
 type collection struct {
 	client    *vkit.Client
@@ -53,11 +163,10 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) 
 }
 
 func newCollection(client *vkit.Client, projectID, collPath, nameField string) *collection {
-	dbPath := fmt.Sprintf("projects/%s/databases/(default)", projectID)
 	return &collection{
 		client:    client,
-		dbPath:    dbPath,
-		collPath:  fmt.Sprintf("%s/documents/%s", dbPath, collPath),
+		dbPath:    fmt.Sprintf("projects/%s/databases/(default)", projectID),
+		collPath:  fmt.Sprintf("projects/%s/databases/(default)/documents/%s", projectID, collPath),
 		nameField: nameField,
 	}
 }
