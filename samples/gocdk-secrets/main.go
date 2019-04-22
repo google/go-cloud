@@ -98,6 +98,7 @@ func (cmd *decryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interf
 		log.Printf("Failed to open keeper: %v\n", err)
 		return subcommands.ExitFailure
 	}
+	defer keeper.Close()
 
 	plain, err := keeper.Decrypt(ctx, cipher)
 	if err != nil {
@@ -159,6 +160,7 @@ func (cmd *encryptCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interf
 		log.Printf("Failed to open keeper: %v\n", err)
 		return subcommands.ExitFailure
 	}
+	defer keeper.Close()
 
 	cipher, err := keeper.Encrypt(ctx, plain)
 	if err != nil {
