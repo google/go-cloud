@@ -1,7 +1,6 @@
 ---
 title: "Subscribe to a Topic's Messages"
 date: 2019-03-26T09:44:33-07:00
-draft: true
 weight: 2
 ---
 
@@ -12,6 +11,8 @@ Subscribing to messages on a topic with the Go CDK takes three steps:
 3. For each message, acknowledge its receipt using the `Ack` method
    after completing any work related to the message. This will prevent the
    message from being redelivered.
+
+<!--more-->
 
 The last two steps are the same across all providers because the first step
 creates a value of the portable [`*pubsub.Subscription`][] type. A simple

@@ -16,7 +16,8 @@ delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overvi
 
 <!--more-->
 
-Top-level package documentation: https://godoc.org/gocloud.dev/pubsub
+[Top-level package documentation](https://godoc.org/gocloud.dev/pubsub)<br>
+[How-to guides]({{< ref "/howto/pubsub/_index.md" >}})
 
 ## Supported Providers
 

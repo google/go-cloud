@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package blob provides an easy and portable way to interact with blobs
-// within a storage location, hereafter called a "bucket".
+// within a storage location, hereafter called a "bucket". See
+// https://gocloud.dev/howto/blob/ for how-to guides.
 //
 // It supports operations like reading and writing blobs (using standard
 // interfaces from the io package), deleting blobs, and listing blobs in a
