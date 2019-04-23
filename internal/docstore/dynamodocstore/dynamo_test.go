@@ -16,9 +16,8 @@ package dynamodocstore
 
 import (
 	"context"
+	"net/url"
 	"testing"
-
-	"gocloud.dev/internal/docstore"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -104,7 +103,7 @@ func clearTable(t *testing.T) {
 
 // Dynamodocstore-specific tests.
 
-func TestOpenKeeper(t *testing.T) {
+func TestProcessURL(t *testing.T) {
 	tests := []struct {
 		URL     string
 		WantErr bool
@@ -123,9 +122,17 @@ func TestOpenKeeper(t *testing.T) {
 		{"dynamodb://docstore-test?sort_key=_id", true},
 	}
 
-	ctx := context.Background()
+	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := &URLOpener{ConfigProvider: sess}
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, _, _, err = o.processURL(u)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
