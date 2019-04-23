@@ -91,3 +91,15 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		}
 	}
 }
+
+func TestMissingKeyCreateFailsWithKeyFunc(t *testing.T) {
+	dc, err := newCollection("", func(docstore.Document) interface{} { return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := docstore.NewCollection(dc)
+	err = c.Create(context.Background(), map[string]interface{}{})
+	if err == nil {
+		t.Error("got nil, want error")
+	}
+}

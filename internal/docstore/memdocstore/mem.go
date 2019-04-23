@@ -137,7 +137,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	}
 	// Get the key from the doc so we can look it up in the map.
 	key := c.key(a.Doc)
-	if key == nil && a.Kind != driver.Create {
+	if key == nil && (a.Kind != driver.Create || c.keyField == "") {
 		return gcerr.Newf(gcerr.InvalidArgument, nil, "missing key field")
 	}
 	// If there is a key, get the current document with that key.
