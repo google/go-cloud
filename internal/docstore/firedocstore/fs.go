@@ -128,7 +128,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if err != nil {
 		return nil, fmt.Errorf("open collection %s: %v", u, err)
 	}
-	return OpenCollection(o.Client, project, collPath, nameField)
+	return OpenCollection(o.Client, project, collPath, nameField, nil)
 }
 
 func collectionNameFromURL(u *url.URL) (string, string, error) {
@@ -151,6 +151,9 @@ type collection struct {
 
 }
 
+// Options contains optional arguments to the OpenCollection functions.
+type Options struct{}
+
 // OpenCollection creates a *docstore.Collection representing a Firestore collection.
 //
 // collPath is the path to the collection, starting from a root collection. It may
@@ -160,7 +163,7 @@ type collection struct {
 // firedocstore requires that a single string field, nameField, be designated the
 // primary key. Its values must be unique over all documents in the collection, and
 // the primary key must be provided to retrieve a document.
-func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) (*docstore.Collection, error) {
+func OpenCollection(client *vkit.Client, projectID, collPath, nameField string, _ *Options) (*docstore.Collection, error) {
 	c, err := newCollection(client, projectID, collPath, nameField, nil)
 	if err != nil {
 		return nil, err
@@ -168,7 +171,7 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) 
 	return docstore.NewCollection(c), nil
 }
 
-// OpenCollectionFunc creates a *docstore.Collection representing a Firestore collection.
+// OpenCollectionWithNameFunc creates a *docstore.Collection representing a Firestore collection.
 //
 // collPath is the path to the collection, starting from a root collection. It may
 // refer to a top-level collection, like "States", or it may be a path to a nested
@@ -178,7 +181,7 @@ func OpenCollection(client *vkit.Client, projectID, collPath, nameField string) 
 // be used for the document's primary key. It should return the empty string if the
 // document is missing the information to construct a name. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string) (*docstore.Collection, error) {
+func OpenCollectionWithNameFunc(client *vkit.Client, projectID, collPath string, nameFunc func(docstore.Document) string, _ *Options) (*docstore.Collection, error) {
 	c, err := newCollection(client, projectID, collPath, "", nameFunc)
 	if err != nil {
 		return nil, err
