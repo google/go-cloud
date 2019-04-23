@@ -96,19 +96,28 @@ func (q *Query) Limit(n int) *Query {
 //
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
-	if q.err != nil {
-		return &DocumentIterator{err: q.err}
-	}
-	for _, fp := range fps {
-		fp, err := parseFieldPath(fp)
-		if err != nil {
-			q.err = err
-			return &DocumentIterator{err: q.err}
-		}
-		q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
+	if err := q.init(fps); err != nil {
+		return &DocumentIterator{err: err}
 	}
 	it, err := q.coll.driver.RunGetQuery(ctx, q.dq)
 	return &DocumentIterator{iter: it, err: err}
+}
+
+func (q *Query) init(fps []FieldPath) error {
+	if q.err != nil {
+		return q.err
+	}
+	if q.dq.FieldPaths == nil {
+		for _, fp := range fps {
+			fp, err := parseFieldPath(fp)
+			if err != nil {
+				q.err = err
+				return err
+			}
+			q.dq.FieldPaths = append(q.dq.FieldPaths, fp)
+		}
+	}
+	return nil
 }
 
 // DocumentIterator iterates over documents.
@@ -143,4 +152,14 @@ func (it *DocumentIterator) Stop() {
 	}
 	it.err = io.EOF
 	it.iter.Stop()
+}
+
+// Plan describes how the query would be executed if its Get method were called with
+// the given field paths. Plan uses only information available to the client, so it
+// cannot know whether a service uses indexes or scans internally.
+func (q *Query) Plan(fps ...FieldPath) (string, error) {
+	if err := q.init(fps); err != nil {
+		return "", err
+	}
+	return q.coll.driver.QueryPlan(q.dq)
 }

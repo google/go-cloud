@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package httpvar provides a runtimevar implementation with variables
-// backed by http endpoint. Use NewVariable to construct a *runtimevar.Variable.
+// backed by http endpoint. Use OpenVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
@@ -69,7 +69,7 @@ type URLOpener struct {
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
 
-	// Options specifies the options to pass to NewVariable.
+	// Options specifies the options to pass to OpenVariable.
 	Options Options
 }
 
@@ -89,7 +89,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	if rawq := q.Encode(); rawq != u.Query().Encode() {
 		u2.RawQuery = rawq
 	}
-	return NewVariable(o.Client, u2.String(), decoder, &o.Options)
+	return OpenVariable(o.Client, u2.String(), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -112,9 +112,9 @@ func newRequestError(response *http.Response) *RequestError {
 	return &RequestError{Response: response}
 }
 
-// NewVariable constructs a *runtimevar.Variable that uses client
+// OpenVariable constructs a *runtimevar.Variable that uses client
 // to retrieve the variable contents from the URL urlStr.
-func NewVariable(client *http.Client, urlStr string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(client *http.Client, urlStr string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	endpointURL, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("httpvar: failed to parse url %q: %v", urlStr, err)

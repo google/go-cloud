@@ -323,3 +323,7 @@ func isNaN(x interface{}) bool {
 func fieldRef(fp []string) *pb.StructuredQuery_FieldReference {
 	return &pb.StructuredQuery_FieldReference{FieldPath: toServiceFieldPath(fp)}
 }
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	return "unknown", nil
+}

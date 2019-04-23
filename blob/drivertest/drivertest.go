@@ -2018,7 +2018,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.AttributesCheck(&attrs); err != nil {
+	if err := st.AttributesCheck(attrs); err != nil {
 		t.Error(err)
 	}
 

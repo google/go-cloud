@@ -113,7 +113,7 @@ func (verifyAs) ErrorCheck(v *runtimevar.Variable, err error) error {
 
 // Filevar-specific tests.
 
-func TestNew(t *testing.T) {
+func TestOpenVariable(t *testing.T) {
 	dir, err := ioutil.TempDir("", "filevar_test-")
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +165,7 @@ func TestNew(t *testing.T) {
 			}
 
 			// Create portable type.
-			w, err := New(test.path, test.decoder, nil)
+			w, err := OpenVariable(test.path, test.decoder, nil)
 			if (err != nil) != test.wantErr {
 				t.Errorf("got err %v want error %v", err, test.wantErr)
 			}
@@ -176,7 +176,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestOpenVariable(t *testing.T) {
+func TestOpenVariableURL(t *testing.T) {
 	dir, err := ioutil.TempDir("", "gcdk-filevar-example")
 	if err != nil {
 		t.Fatal(err)

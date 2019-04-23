@@ -46,6 +46,9 @@ type Collection interface {
 	// multiple ones, depending on their service offerings.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
+	// QueryPlan returns the plan for the query.
+	QueryPlan(*Query) (string, error)
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode

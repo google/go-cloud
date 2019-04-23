@@ -183,7 +183,7 @@ func TestNoConnectionError(t *testing.T) {
 		Config:    "cfg-name",
 		Variable:  "cfg-variable-name",
 	}
-	v, err := NewVariable(client, name, nil, nil)
+	v, err := OpenVariable(client, name, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

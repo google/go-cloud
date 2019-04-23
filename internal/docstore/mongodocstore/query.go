@@ -99,3 +99,7 @@ func (it *docIterator) Stop() {
 	// Ignore error on Close.
 	_ = it.cursor.Close(it.ctx)
 }
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	return "unknown", nil
+}

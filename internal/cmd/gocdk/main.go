@@ -121,11 +121,6 @@ func (pctx *processContext) resolve(path string) string {
 	return filepath.Join(pctx.workdir, path)
 }
 
-// findBiomeDir returns the path to the named biome.
-func findBiomeDir(moduleRoot, name string) string {
-	return filepath.Join(moduleRoot, "biomes", name)
-}
-
 // findModuleRoot searches the given directory and those above it for the Go
 // module root.
 func findModuleRoot(ctx context.Context, dir string) (string, error) {
