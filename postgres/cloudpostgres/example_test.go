@@ -16,6 +16,7 @@ package cloudpostgres_test
 
 import (
 	"context"
+	"log"
 
 	"gocloud.dev/gcp"
 	"gocloud.dev/gcp/cloudsql"
@@ -28,10 +29,10 @@ func Example() {
 	ctx := context.Background()
 	creds, err := google.FindDefaultCredentials(ctx, "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	authClient := gcp.HTTPClient{Client: *oauth2.NewClient(ctx, creds.TokenSource)}
-	db, err := cloudpostgres.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudpostgres.Params{
+	db, _, err := cloudpostgres.Open(ctx, cloudsql.NewCertSource(&authClient), &cloudpostgres.Params{
 		// Replace these with your actual settings.
 		ProjectID: "example-project",
 		Region:    "us-central1",
@@ -40,7 +41,7 @@ func Example() {
 		Database:  "test",
 	})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// Use database in your program.
