@@ -641,8 +641,6 @@ func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) err
 }
 
 func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks/Nacks
-	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
