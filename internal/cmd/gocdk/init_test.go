@@ -29,7 +29,6 @@ import (
 
 func TestInit(t *testing.T) {
 	// TODO(light): Test cases:
-	// Happy path, verify that files we expect to exist do.
 	// Wrong or missing arguments
 	// Empty directory exists
 	// Non-empty directory exists

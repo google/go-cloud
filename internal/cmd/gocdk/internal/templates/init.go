@@ -21,13 +21,15 @@ var InitTemplates = map[string]string{
 	"README.md": `I'm a readme about using the cli`,
 
 	"Dockerfile": `
-# gocdk-image: 
+# gocdk-image: {{.ProjectName}}
 `,
 
-	"go.mod": `
+	"go.mod": `module {{.ImportPath}}
 `,
 
-	"main.go": `
+	"main.go": `package main
+
+func main() {}
 `,
 
 	"biomes/dev/biome.json": `{
