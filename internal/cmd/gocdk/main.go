@@ -111,6 +111,11 @@ func osProcessContext() (*processContext, error) {
 	}, nil
 }
 
+// overrideEnv returns a copy of pctx.env that has vars appended to the end.
+func (pctx *processContext) overrideEnv(vars ...string) []string {
+	return append(pctx.env[:len(pctx.env):len(pctx.env)], vars...)
+}
+
 // findModuleRoot searches the given directory and those above it for the Go
 // module root.
 func findModuleRoot(ctx context.Context, dir string) (string, error) {
