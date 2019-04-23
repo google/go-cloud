@@ -139,7 +139,7 @@ func TestOpenCollectionURL(t *testing.T) {
 		{"mongo:///mycollection", true},
 		// Missing collection name.
 		{"mongo://mydb/", true},
-		// valid parameter
+		// Passing id_field parameter.
 		{"mongo://mydb/mycollection?id_field=foo", false},
 		// Invalid parameter.
 		{"mongo://mydb/mycollection?param=value", true},

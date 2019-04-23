@@ -137,7 +137,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if collName == "" {
 		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
 	}
-	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField), nil
+	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, nil), nil
 }
 
 type collection struct {
@@ -146,10 +146,12 @@ type collection struct {
 	idFunc  func(docstore.Document) interface{}
 }
 
+type Options struct{}
+
 // OpenCollection opens a MongoDB collection for use with Docstore.
 // The idField argument is the name of the document field to use for the document ID
-// (MongoDB's _id field).
-func OpenCollection(mcoll *mongo.Collection, idField string) *docstore.Collection {
+// (MongoDB's _id field). If it is empty, the field "_id" will be used.
+func OpenCollection(mcoll *mongo.Collection, idField string, _ *Options) *docstore.Collection {
 	return docstore.NewCollection(newCollection(mcoll, idField, nil))
 }
 
@@ -158,7 +160,7 @@ func OpenCollection(mcoll *mongo.Collection, idField string) *docstore.Collectio
 // be used for the document ID (MongoDB's _id field). IDFunc should return nil if the
 // document is missing the information to construct an ID. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}) *docstore.Collection {
+func OpenCollectionFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, _ *Options) *docstore.Collection {
 	return docstore.NewCollection(newCollection(mcoll, "", idFunc))
 }
 
