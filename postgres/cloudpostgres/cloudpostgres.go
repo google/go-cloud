@@ -156,7 +156,7 @@ type Params struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-// Open opens a Cloud SQL database. The second return value is a Wire cleanup
+// Open opens a Cloud SQL database. The second return value is a cleanup
 // function that calls Close on the returned database.
 func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, func(), error) {
 	vals := make(url.Values)
