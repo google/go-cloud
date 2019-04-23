@@ -593,11 +593,12 @@ func (c *collection) commit(ctx context.Context, ws []*pb.Write) ([]*pb.WriteRes
 // docName returns the name of the document. This is either the value of the field
 // called c.nameField, or the result of calling c.nameFunc. It must be a
 // string.
-// docName returns an error if NameField isn't present, or NameFunc returns "".
-// The second return value reports whether c.nameField is set and the field is
+// docName returns an error if:
+// 1. c.nameField is not empty, but the field isn't present in the doc, or
+// 2. c.nameFunc is non-nil, but returns "".
+// The second return value reports whether c.nameField is not-empty and the field is
 // missing. This is to support the Create action, which can create new document
 // names.
-
 func (c *collection) docName(doc driver.Document) (string, bool, error) {
 	if c.nameField != "" {
 		name, err := doc.GetField(c.nameField)
