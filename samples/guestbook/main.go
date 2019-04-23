@@ -32,6 +32,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.opencensus.io/trace"
 	"gocloud.dev/blob"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/health"
 	"gocloud.dev/health/sqlhealth"
 	"gocloud.dev/runtimevar"
@@ -280,10 +281,12 @@ func (app *application) serveBlob(w http.ResponseWriter, r *http.Request) {
 	key := mux.Vars(r)["key"]
 	blobReader, err := app.bucket.NewReader(r.Context(), key, nil)
 	if err != nil {
-		// TODO(light): Distinguish 404.
-		// https://github.com/google/go-cloud/issues/2
 		log.Println("serve blob:", err)
-		http.Error(w, "blob read error", http.StatusInternalServerError)
+		if gcerrors.Code(err) == gcerrors.NotFound {
+			http.Error(w, "blob not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "blob read error", http.StatusInternalServerError)
+		}
 		return
 	}
 	defer blobReader.Close()
