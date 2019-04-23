@@ -105,7 +105,8 @@ func (uo *URLOpener) OpenPostgresURL(ctx context.Context, u *url.URL) (*sql.DB, 
 		return nil, fmt.Errorf("cloudpostgres: open %v: %v", u, err)
 	}
 	params.TraceOpts = uo.TraceOpts
-	return Open(ctx, uo.CertSource, params)
+	db, _, err := Open(ctx, uo.CertSource, params)
+	return db, err
 }
 
 func paramsFromURL(u *url.URL) (*Params, error) {
@@ -155,13 +156,14 @@ type Params struct {
 	TraceOpts []ocsql.TraceOption
 }
 
-// Open opens a Cloud SQL database.
-func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, error) {
+// Open opens a Cloud SQL database. The second return value is a Wire cleanup
+// function that calls Close on the returned database.
+func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sql.DB, func(), error) {
 	vals := make(url.Values)
 	for k, v := range params.Values {
 		// Only permit parameters that do not conflict with other behavior.
 		if k == "user" || k == "password" || k == "dbname" || k == "host" || k == "port" || k == "sslmode" || k == "sslcert" || k == "sslkey" || k == "sslrootcert" {
-			return nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
+			return nil, nil, fmt.Errorf("cloudpostgres: open: extra parameter %s not allowed; use Params fields instead", k)
 		}
 		vals[k] = v
 	}
@@ -182,7 +184,7 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		Path:     "/" + params.Database,
 		RawQuery: vals.Encode(),
 	}
-	return sql.OpenDB(connector{
+	db := sql.OpenDB(connector{
 		client: &proxy.Client{
 			Port:  3307,
 			Certs: certSource,
@@ -190,7 +192,8 @@ func Open(ctx context.Context, certSource proxy.CertSource, params *Params) (*sq
 		instance:  params.ProjectID + ":" + params.Region + ":" + params.Instance,
 		pqConn:    u.String(),
 		traceOpts: append([]ocsql.TraceOption(nil), params.TraceOpts...),
-	}), nil
+	})
+	return db, func() { db.Close() }, nil
 }
 
 type pqDriver struct {

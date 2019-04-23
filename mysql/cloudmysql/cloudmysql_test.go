@@ -26,7 +26,7 @@ import (
 
 func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
 	ctx := context.Background()
-	_, err := Open(ctx, nil, &Params{})
+	_, _, err := Open(ctx, nil, &Params{})
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -34,7 +34,7 @@ func TestOpenWithDefaultParamsGivesNoError(t *testing.T) {
 
 func TestTraceOptionsCanBeGiven(t *testing.T) {
 	ctx := context.Background()
-	_, err := Open(ctx, nil, &Params{TraceOpts: []ocsql.TraceOption{ocsql.WithAllTraceOptions()}})
+	_, _, err := Open(ctx, nil, &Params{TraceOpts: []ocsql.TraceOption{ocsql.WithAllTraceOptions()}})
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -71,7 +71,7 @@ func TestOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	certSource := NewCertSource(client)
-	db, err := Open(ctx, certSource, &Params{
+	db, _, err := Open(ctx, certSource, &Params{
 		ProjectID: project,
 		Region:    region,
 		Instance:  instance,
