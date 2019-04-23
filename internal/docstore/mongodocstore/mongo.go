@@ -158,12 +158,12 @@ func OpenCollection(mcoll *mongo.Collection, idField string, _ *Options) *docsto
 	return docstore.NewCollection(newCollection(mcoll, idField, nil))
 }
 
-// OpenCollectionFunc opens a MongoDB collection for use with Docstore.
+// OpenCollectionWithIDFunc opens a MongoDB collection for use with Docstore.
 // The idFunc argument is function that accepts a document and returns the value to
 // be used for the document ID (MongoDB's _id field). IDFunc should return nil if the
 // document is missing the information to construct an ID. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, _ *Options) *docstore.Collection {
+func OpenCollectionWithIDFunc(mcoll *mongo.Collection, idFunc func(docstore.Document) interface{}, _ *Options) *docstore.Collection {
 	return docstore.NewCollection(newCollection(mcoll, "", idFunc))
 }
 

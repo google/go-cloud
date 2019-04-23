@@ -42,7 +42,7 @@ type harness struct {
 }
 
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName), "_id", nil)
+	coll := newCollection(h.db.Collection(collectionName), "", nil)
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
