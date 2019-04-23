@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/uuid"
 	"gocloud.dev/gcerrors"
+	"gocloud.dev/internal/docstore"
 	ds "gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 )
@@ -102,6 +103,7 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
+	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 }
 
 // Field paths used in test documents.
@@ -133,7 +135,7 @@ var nonexistentDoc = docmap{KindField: "doesNotExist", KeyField: "doesNotExist"}
 func testCreate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	named := docmap{KindField: "create", KeyField: "testCreate1", "b": true}
-	// TODO(shantuo): dynamodb requires the sort key field when it is defined. We
+	// TODO(#1857): dynamodb requires the sort key field when it is defined. We
 	// don't generate random sort key so we need to skip the unnamed test and
 	// figure out what to do in this situation.
 	// unnamed := docmap{"b": false}
@@ -839,4 +841,55 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 		t.Fatal(err)
 	}
 	return ms
+}
+
+func testMultipleActions(t *testing.T, coll *ds.Collection) {
+	actions := coll.Actions()
+	docs := []docmap{
+		{KindField: "multiple_actions", KeyField: "testMultipleActions1", "s": "a"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions2", "s": "b"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions3", "s": "c"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions4", "s": "d"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions5", "s": "e"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions6", "s": "f"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions7", "s": "g"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions8", "s": "h"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions9", "s": "i"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions10", "s": "j"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions11", "s": "k"},
+		{KindField: "multiple_actions", KeyField: "testMultipleActions12", "s": "l"},
+	}
+	// Writes
+	for i := 0; i < 6; i++ {
+		actions.Create(docs[i])
+	}
+	for i := 6; i < len(docs); i++ {
+		actions.Put(docs[i])
+	}
+
+	// Reads
+	gots := make([]docmap, len(docs))
+	for i, doc := range docs {
+		gots[i] = docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+		actions.Get(gots[i], docstore.FieldPath("s"))
+	}
+	ctx := context.Background()
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for i, got := range gots {
+		docs[i][docstore.RevisionField] = got[docstore.RevisionField] // copy the revision
+		if diff := cmp.Diff(got, docs[i]); diff != "" {
+			t.Error(diff)
+		}
+	}
+
+	// Deletes
+	dels := coll.Actions()
+	for _, got := range gots {
+		dels.Delete(docmap{KindField: got[KindField], KeyField: got[KeyField]})
+	}
+	if err := dels.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
 }

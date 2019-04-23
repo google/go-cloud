@@ -20,12 +20,13 @@ package mongodocstore
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 )
@@ -38,26 +39,6 @@ const (
 
 type harness struct {
 	db *mongo.Database
-}
-
-// Return a new mongoDB client that is connected to the server URI.
-func newClient(ctx context.Context, uri string) (*mongo.Client, error) {
-	opts := options.Client().ApplyURI(uri)
-	if err := opts.Validate(); err != nil {
-		return nil, err
-	}
-	client, err := mongo.NewClient(opts)
-	if err != nil {
-		return nil, err
-	}
-	if err := client.Connect(ctx); err != nil {
-		return nil, err
-	}
-	// Connect doesn't seem to actually make a connection, so do an RPC.
-	if err := client.Ping(ctx, nil); err != nil {
-		return nil, err
-	}
-	return client, nil
 }
 
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
@@ -116,11 +97,14 @@ func (codecTester) NativeDecode(value, dest interface{}) error {
 func TestConformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	client, err := newClient(ctx, serverURI)
-	if err == context.DeadlineExceeded {
-		t.Skip("could not connect to local mongoDB server (connection timed out)")
-	}
+	client, err := Dial(ctx, serverURI)
 	if err != nil {
+		t.Fatalf("dialing to %s: %v", serverURI, err)
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		if err == context.DeadlineExceeded {
+			t.Skip("could not connect to local mongoDB server (connection timed out)")
+		}
 		t.Fatalf("connecting to %s: %v", serverURI, err)
 	}
 	defer func() { client.Disconnect(context.Background()) }()
@@ -129,4 +113,41 @@ func TestConformance(t *testing.T) {
 		return &harness{client.Database(dbName)}, nil
 	}
 	drivertest.RunConformanceTests(t, newHarness, codecTester{})
+}
+
+// Mongo-specific tests.
+
+func fakeConnectionStringInEnv() func() {
+	oldURLVal := os.Getenv("MONGO_SERVER_URL")
+	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
+	return func() {
+		os.Setenv("MONGO_SERVER_URL", oldURLVal)
+	}
+}
+
+func TestOpenCollection(t *testing.T) {
+	cleanup := fakeConnectionStringInEnv()
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"mongo://mydb/mycollection", false},
+		// Missing database name.
+		{"mongo:///mycollection", true},
+		// Missing collection name.
+		{"mongo://mydb/", true},
+		// Invalid parameter.
+		{"mongo://mydb/mycollection?param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }
