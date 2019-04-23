@@ -136,6 +136,9 @@ func TestConformance(t *testing.T) {
 
 // TestKafkaKey tests sending/receiving a message with the Kafka message key set.
 func TestKafkaKey(t *testing.T) {
+	if !localKafkaRunning() {
+		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
+	}
 	const keyName = "kafkakey"
 	uniqueID := rand.Int()
 	ctx := context.Background()
