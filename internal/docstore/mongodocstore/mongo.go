@@ -118,6 +118,9 @@ type URLOpener struct {
 	// A Client is a MongoDB client that performs operations on the db, must be
 	// non-nil.
 	Client *mongo.Client
+
+	// Options specifies the options to pass to OpenCollection.
+	Options Options
 }
 
 // OpenCollectionURL opens the Collection URL.
@@ -137,7 +140,7 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	if collName == "" {
 		return nil, fmt.Errorf("open collection %s: URL must have a non-empty Path (collection name)", u)
 	}
-	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, nil), nil
+	return OpenCollection(o.Client.Database(dbName).Collection(collName), idField, &o.Options), nil
 }
 
 type collection struct {
