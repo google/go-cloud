@@ -155,7 +155,7 @@ func (k *Keeper) Close() error {
 	if prev {
 		return errClosed
 	}
-	return k.k.Close()
+	return wrapError(k, k.k.Close())
 }
 
 // ErrorAs converts i to provider-specific types. See
@@ -170,6 +170,9 @@ func (k *Keeper) ErrorAs(err error, i interface{}) bool {
 }
 
 func wrapError(k *Keeper, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}

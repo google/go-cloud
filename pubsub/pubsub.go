@@ -804,6 +804,9 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}
