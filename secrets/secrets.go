@@ -170,6 +170,9 @@ func (k *Keeper) ErrorAs(err error, i interface{}) bool {
 }
 
 func wrapError(k *Keeper, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}
