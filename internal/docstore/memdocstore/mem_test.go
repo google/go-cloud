@@ -78,11 +78,10 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		WantErr bool
 	}{
 		// OK.
-		{"memdocstore://key", false},
-		// Missing host (key).
-		{"memdocstore:/", true},
-		// Invalid parameter.
-		{"memdocstore://key/?param=value", true},
+		{"mem://_id", false},
+		{"mem://foo.bar", false},
+		{"mem://", true},             // missing key
+		{"mem://?param=value", true}, // invalid parameter
 	}
 
 	ctx := context.Background()

@@ -38,7 +38,7 @@ func Example() {
 	}
 
 	// Construct a *secrets.Keeper.
-	keeper := awskms.NewKeeper(
+	keeper := awskms.OpenKeeper(
 		client,
 		// Get the key ID. Here is an example of using an alias. See
 		// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
@@ -46,6 +46,7 @@ func Example() {
 		"alias/test-secrets",
 		nil,
 	)
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	ctx := context.Background()
@@ -65,6 +66,9 @@ func Example_openKeeper() {
 	// The host + path are the key ID; this example uses an alias. See
 	// https://docs.aws.amazon.com/kms/latest/developerguide/viewing-keys.html#find-cmk-id-arn
 	// for more details.
-	k, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
-	_, _ = k, err
+	keeper, err := secrets.OpenKeeper(ctx, "awskms://alias/my-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }

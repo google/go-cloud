@@ -30,7 +30,11 @@ func Example() {
 		fmt.Println(err)
 		return
 	}
-	coll := dynamodocstore.OpenCollection(dynamodb.New(sess), "docstore-test", "_id", "")
+	coll, err := dynamodocstore.OpenCollection(dynamodb.New(sess), "docstore-test", "_id", "")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	errs := coll.Actions().Put(map[string]interface{}{"_id": "Alice", "score": 25}).Do(ctx)
 	fmt.Println(errs)
 }

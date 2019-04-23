@@ -169,10 +169,11 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 
 func TestNoConnectionError(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	k, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
+	k, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer k.Close()
 	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
 		t.Error("Encrypt: got nil, want no connection error")
 	}
@@ -180,8 +181,8 @@ func TestNoConnectionError(t *testing.T) {
 
 func TestAlgorithmNotProvided(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	if _, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
-		t.Error("NewKeeper with no algorithm: got nil, want no algorithm error")
+	if _, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
+		t.Error("OpenKeeper with no algorithm: got nil, want no algorithm error")
 	}
 }
 
@@ -246,9 +247,14 @@ func TestOpenKeeper(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := secrets.OpenKeeper(ctx, test.URL)
+		keeper, err := secrets.OpenKeeper(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err == nil {
+			if err = keeper.Close(); err != nil {
+				t.Errorf("%s: got error during close: %v", test.URL, err)
+			}
 		}
 	}
 }

@@ -34,7 +34,7 @@ func Example() {
 	defer done()
 
 	// Construct a *secrets.Keeper.
-	keeper := gcpkms.NewKeeper(
+	keeper := gcpkms.OpenKeeper(
 		client,
 		// Get the key resource ID.
 		// See https://cloud.google.com/kms/docs/object-hierarchy#key for more
@@ -43,6 +43,7 @@ func Example() {
 		"projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY",
 		nil,
 	)
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")
@@ -61,6 +62,9 @@ func Example_openKeeper() {
 	// The host + path are the key resourceID; see
 	// https://cloud.google.com/kms/docs/object-hierarchy#key
 	// for more information.
-	k, err := secrets.OpenKeeper(ctx, "gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY")
-	_, _ = k, err
+	keeper, err := secrets.OpenKeeper(ctx, "gcpkms://projects/MYPROJECT/locations/MYLOCATION/keyRings/MYKEYRING/cryptoKeys/MYKEY")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }

@@ -766,9 +766,7 @@ To use `-record`:
 
     -   TODO(issue #300): The test will read the Terraform output to find its
         inputs.
-    -   For now, pass the required resources via test-specific flags. In some
-        cases, tests are
-        [hardcoded to specific resource names](https://github.com/google/go-cloud/issues/286).
+    -   For now, pass the required resources via test-specific flags.
 
 3.  The test will save the network interactions for subsequent replays.
 
@@ -805,20 +803,3 @@ not to do this, for several reasons:
 Overall, massive diffs in the replay files are expected and fine. As part of a
 code change, you may want to check for things like the number of RPCs made to
 identify performance regressions.
-
-## Module Boundaries
-
-With the advent of [Go modules], there are mechanisms to release different parts
-of a repository on different schedules. This permits one API to be in alpha/beta
-(pre-1.0), whereas another API can be stable (1.0 or later).
-
-As of 2018-09-13, the Go CDK as a whole still is not stable enough to call any
-part 1.0 yet. Until this milestone is reached, all of the Go CDK libraries will
-be placed under a single module. The exceptions are standalone tools like
-[Contribute Bot][] that are part of the project, but not part of the library.
-After 1.0 is released, it is expected that each interface in the Go CDK will be
-released as one module. Provider implementations will live in separate modules.
-The exact details remain to be determined.
-
-[Go modules]: https://github.com/golang/go/wiki/Modules
-[Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot

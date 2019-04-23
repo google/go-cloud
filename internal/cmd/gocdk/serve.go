@@ -50,8 +50,22 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 		return xerrors.Errorf("gocdk serve: %w", err)
 	}
 
-	// TODO(light): Verify that biome configuration permits serving.
-	// https://github.com/google/go-cloud/issues/1833
+	// Verify that biome configuration permits serving.
+	biomeConfig, err := readBiomeConfig(moduleRoot, *biome)
+	if xerrors.As(err, new(*biomeNotFoundError)) {
+		// TODO(light): Keep err in formatting chain for debugging.
+		return xerrors.Errorf("gocdk serve: biome configuration not found for %s. "+
+			"Make sure that %s exists and has `\"serve_enabled\": true`.",
+			*biome, filepath.Join(findBiomeDir(moduleRoot, *biome), biomeConfigFileName))
+	}
+	if err != nil {
+		return xerrors.Errorf("gocdk serve: %w", err)
+	}
+	if biomeConfig.ServeEnabled == nil || !*biomeConfig.ServeEnabled {
+		return xerrors.Errorf("gocdk serve: biome %s has not enabled serving. "+
+			"Add `\"serve_enabled\": true` to %s and try again.",
+			*biome, filepath.Join(findBiomeDir(moduleRoot, *biome), biomeConfigFileName))
+	}
 
 	// Start main serve loop.
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)

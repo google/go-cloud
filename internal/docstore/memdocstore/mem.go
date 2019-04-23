@@ -20,8 +20,8 @@
 //
 // URLs
 //
-// For docstore.OpenCollection, memdocstore registers for the schemes
-// "memdocstore".
+// For docstore.OpenCollection, memdocstore registers for the scheme
+// "mem".
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
@@ -46,9 +46,14 @@ func init() {
 
 // Scheme is the URL scheme memdocstore registers its URLOpener under on
 // docstore.DefaultMux.
-const Scheme = "memdocstore"
+const Scheme = "mem"
 
-// URLOpener opens URLs like "memdocstore://keyField".
+// URLOpener opens URLs like "mem://_id".
+//
+// The URL's host is used as the keyField.
+// The URL's path is ignored.
+//
+// No query parameters are supported.
 type URLOpener struct{}
 
 // OpenCollectionURL opens a docstore.Collection based on u.
@@ -88,7 +93,7 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{})
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must provide either keyField or keyFunc")
 	}
 	return &collection{
-		keyField:     keyField,
+		keyField:     ke < yField,
 		keyFunc:      keyFunc,
 		docs:         map[interface{}]map[string]interface{}{},
 		nextRevision: 1,

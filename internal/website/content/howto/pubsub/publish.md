@@ -1,7 +1,6 @@
 ---
 title: "Publish Messages to a Topic"
 date: 2019-03-26T09:44:15-07:00
-draft: true
 weight: 1
 ---
 
@@ -9,6 +8,8 @@ Publishing a message to a topic with the Go CDK takes two steps:
 
 1. Open the topic with the Pub/Sub provider of your choice (once per topic).
 2. Send messages on the topic.
+
+<!--more-->
 
 The second step is the same across all providers because the first step
 creates a value of the portable [`*pubsub.Topic`][] type. Publishing looks

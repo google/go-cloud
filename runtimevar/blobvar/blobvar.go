@@ -14,7 +14,7 @@
 
 // Package blobvar provides a runtimevar implementation with
 // variables read from a blob.Bucket.
-// Use NewVariable to construct a *runtimevar.Variable.
+// Use OpenVariable to construct a *runtimevar.Variable.
 //
 // URLs
 //
@@ -95,7 +95,7 @@ type URLOpener struct {
 	// Defaults to runtimevar.BytesDecoder.
 	Decoder *runtimevar.Decoder
 
-	// Options specifies the Options for NewVariable.
+	// Options specifies the Options for OpenVariable.
 	Options Options
 }
 
@@ -118,7 +118,7 @@ func (o *URLOpener) OpenVariableURL(ctx context.Context, u *url.URL) (*runtimeva
 	for param := range q {
 		return nil, fmt.Errorf("open variable %v: invalid query parameter %q", u, param)
 	}
-	return NewVariable(o.Bucket, path.Join(u.Host, u.Path), decoder, &o.Options)
+	return OpenVariable(o.Bucket, path.Join(u.Host, u.Path), decoder, &o.Options)
 }
 
 // Options sets options.
@@ -128,11 +128,11 @@ type Options struct {
 	WaitDuration time.Duration
 }
 
-// NewVariable constructs a *runtimevar.Variable backed by the referenced blob.
+// OpenVariable constructs a *runtimevar.Variable backed by the referenced blob.
 // Reads of the blob return raw bytes; provide a decoder to decode the raw bytes
 // into the appropriate type for runtimevar.Snapshot.Value.
 // See the runtimevar package documentation for examples of decoders.
-func NewVariable(bucket *blob.Bucket, key string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
+func OpenVariable(bucket *blob.Bucket, key string, decoder *runtimevar.Decoder, opts *Options) (*runtimevar.Variable, error) {
 	return runtimevar.New(newWatcher(bucket, key, decoder, nil, opts)), nil
 }
 

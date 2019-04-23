@@ -35,13 +35,6 @@ import (
 type avmap = map[string]*dynamodb.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	if c.description == nil {
-		out, err := c.db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &c.table})
-		if err != nil {
-			return nil, err
-		}
-		c.description = out.Table
-	}
 	qr, err := c.planQuery(q)
 	if err != nil {
 		return nil, err
@@ -384,4 +377,22 @@ func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error
 func (it *documentIterator) Stop() {
 	it.items = nil
 	it.last = nil
+}
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	qr, err := c.planQuery(q)
+	if err != nil {
+		return "", err
+	}
+	return qr.queryPlan(), nil
+}
+
+func (qr *queryRunner) queryPlan() string {
+	if qr.scanIn != nil {
+		return "Scan"
+	}
+	if qr.queryIn.IndexName != nil {
+		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
+	}
+	return ""
 }

@@ -31,6 +31,7 @@ func Example() {
 	// and also crop it to size, if necessary.
 	secretKey := localsecrets.ByteKey("I'm a secret string!")
 	keeper := localsecrets.NewKeeper(secretKey)
+	defer keeper.Close()
 
 	// Now we can use keeper to encrypt or decrypt.
 	plaintext := []byte("Hello, Secrets!")
@@ -51,10 +52,17 @@ func Example_openKeeper() {
 
 	// OpenKeeper creates a *secrets.Keeper from a URL.
 	// Using "stringkey://", the first 32 bytes of the URL hostname is used as the secret.
-	k, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
+	keeper, err := secrets.OpenKeeper(ctx, "stringkey://my-secret-key")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 
 	// Using "base64key://", the URL hostname must be a base64-encoded key.
 	// The first 32 bytes of the decoding are used as the secret key.
-	k, err = secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
-	_, _ = k, err
+	keeper, err = secrets.OpenKeeper(ctx, "base64key://bXktc2VjcmV0LWtleQ==")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer keeper.Close()
 }
