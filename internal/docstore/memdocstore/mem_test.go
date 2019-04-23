@@ -83,7 +83,6 @@ func TestOpenCollectionFromURL(t *testing.T) {
 		{"mem://", true},             // missing key
 		{"mem://?param=value", true}, // invalid parameter
 	}
-
 	ctx := context.Background()
 	for _, test := range tests {
 		_, err := docstore.OpenCollection(ctx, test.URL)

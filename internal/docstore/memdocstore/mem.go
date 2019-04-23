@@ -93,7 +93,7 @@ func newCollection(keyField string, keyFunc func(docstore.Document) interface{})
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must provide either keyField or keyFunc")
 	}
 	return &collection{
-		keyField:     ke < yField,
+		keyField:     keyField,
 		keyFunc:      keyFunc,
 		docs:         map[interface{}]map[string]interface{}{},
 		nextRevision: 1,
