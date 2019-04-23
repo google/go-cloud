@@ -31,7 +31,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(Options{KeyField: drivertest.KeyField})
+	return newCollection(drivertest.KeyField, nil)
 }
 
 func (h *harness) Close() {}
@@ -46,7 +46,7 @@ type docmap = map[string]interface{}
 func TestUpdateAtomic(t *testing.T) {
 	// Check that update is atomic.
 	ctx := context.Background()
-	dc, err := newCollection(Options{KeyField: drivertest.KeyField})
+	dc, err := newCollection(drivertest.KeyField, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
