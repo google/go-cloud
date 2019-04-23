@@ -18,6 +18,13 @@
 // Every document in a memdocstore collection has a unique primary key. The primary
 // key values need not be strings; they may be any comparable Go value.
 //
+//
+// Unordered Action Lists
+//
+// Unordered action lists are executed concurrently. Each action in an unordered
+// action list is executed in a separate goroutine.
+//
+//
 // URLs
 //
 // For docstore.OpenCollection, memdocstore registers for the scheme
@@ -123,7 +130,22 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		errs := make([]error, len(actions))
+		for i, a := range actions {
+			i := i
+			a := a
+			go func() { errs[i] = c.runAction(ctx, a) }()
+		}
+		var alerr driver.ActionListError
+		for i, err := range errs {
+			if err != nil {
+				alerr = append(alerr, struct {
+					Index int
+					Err   error
+				}{i, err})
+			}
+		}
+		return alerr
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
