@@ -801,6 +801,11 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 			if diff != "" {
 				t.Error(diff)
 			}
+			// We can't assume anything about the query plan. Just verify that Plan returns
+			// successfully.
+			if _, err := tc.q.Plan(KeyField); err != nil {
+				t.Fatal(err)
+			}
 		})
 	}
 

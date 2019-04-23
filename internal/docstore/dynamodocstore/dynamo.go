@@ -39,6 +39,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	gcaws "gocloud.dev/aws"
@@ -99,23 +100,31 @@ type URLOpener struct {
 }
 
 // OpenCollectionURL opens the collection at the URL's path. See the package doc for more details.
-func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.Collection, error) {
+func (o *URLOpener) OpenCollectionURL(_ context.Context, u *url.URL) (*docstore.Collection, error) {
+	db, tableName, partitionKey, sortKey, err := o.processURL(u)
+	if err != nil {
+		return nil, err
+	}
+	return OpenCollection(db, tableName, partitionKey, sortKey)
+}
+
+func (o *URLOpener) processURL(u *url.URL) (db *dyn.DynamoDB, tableName, partitionKey, sortKey string, err error) {
 	q := u.Query()
 
-	partitionKey := q.Get("partition_key")
+	partitionKey = q.Get("partition_key")
 	if partitionKey == "" {
-		return nil, fmt.Errorf("open collection %s: partition_key is required to open a table", u)
+		return nil, "", "", "", fmt.Errorf("open collection %s: partition_key is required to open a table", u)
 	}
 	q.Del("partition_key")
-	sortKey := q.Get("sort_key")
+	sortKey = q.Get("sort_key")
 	q.Del("sort_key")
 
-	tableName := u.Host
+	tableName = u.Host
 	if tableName == "" {
-		return nil, fmt.Errorf("open collection %s: URL's host cannot be empty (the table name)", u)
+		return nil, "", "", "", fmt.Errorf("open collection %s: URL's host cannot be empty (the table name)", u)
 	}
 	if u.Path != "" {
-		return nil, fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
+		return nil, "", "", "", fmt.Errorf("open collection %s: URL path must be empty, only the host is needed", u)
 	}
 
 	configProvider := &gcaws.ConfigOverrider{
@@ -123,14 +132,14 @@ func (o *URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstor
 	}
 	overrideCfg, err := gcaws.ConfigFromURLParams(q)
 	if err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", fmt.Errorf("open collection %s: %v", u, err)
 	}
 	configProvider.Configs = append(configProvider.Configs, overrideCfg)
-	db, err := Dial(configProvider)
+	db, err = Dial(configProvider)
 	if err != nil {
-		return nil, fmt.Errorf("open collection %s: %v", u, err)
+		return nil, "", "", "", fmt.Errorf("open collection %s: %v", u, err)
 	}
-	return OpenCollection(db, tableName, partitionKey, sortKey), nil
+	return db, tableName, partitionKey, sortKey, nil
 }
 
 // Dial gets an AWS DynamoDB service client.
@@ -150,18 +159,26 @@ type collection struct {
 }
 
 // OpenCollection creates a *docstore.Collection representing a DynamoDB collection.
-func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *docstore.Collection {
-	return docstore.NewCollection(newCollection(db, tableName, partitionKey, sortKey))
+func OpenCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*docstore.Collection, error) {
+	c, err := newCollection(db, tableName, partitionKey, sortKey)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
 }
 
-func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) *collection {
-	c := &collection{
+func newCollection(db *dyn.DynamoDB, tableName, partitionKey, sortKey string) (*collection, error) {
+	out, err := db.DescribeTable(&dynamodb.DescribeTableInput{TableName: &tableName})
+	if err != nil {
+		return nil, err
+	}
+	return &collection{
 		db:           db,
 		table:        tableName,
 		partitionKey: partitionKey,
 		sortKey:      sortKey,
-	}
-	return c
+		description:  out.Table,
+	}, nil
 }
 
 func (c *collection) KeyFields() []string {

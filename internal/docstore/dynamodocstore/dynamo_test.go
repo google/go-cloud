@@ -16,9 +16,8 @@ package dynamodocstore
 
 import (
 	"context"
+	"net/url"
 	"testing"
-
-	"gocloud.dev/internal/docstore"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -50,7 +49,7 @@ func (h *harness) Close() {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey), nil
+	return newCollection(dyn.New(h.sess), collectionName, partKey, sortKey)
 }
 
 func TestConformance(t *testing.T) {
@@ -104,28 +103,36 @@ func clearTable(t *testing.T) {
 
 // Dynamodocstore-specific tests.
 
-func TestOpenKeeper(t *testing.T) {
+func TestProcessURL(t *testing.T) {
 	tests := []struct {
 		URL     string
 		WantErr bool
 	}{
 		// OK.
-		{"dynamodb://mytable?partition_key=_kind", false},
+		{"dynamodb://docstore-test?partition_key=_kind", false},
 		// OK.
-		{"dynamodb://mytable?partition_key=_kind&sort_key=_id", false},
+		{"dynamodb://docstore-test?partition_key=_kind&sort_key=_id", false},
 		// OK, overriding region.
-		{"dynamodb://mytable?partition_key=_kind&region=us-west1", false},
+		{"dynamodb://docstore-test?partition_key=_kind&region=" + region, false},
 		// Unknown parameter.
-		{"dynamodb://mytable?partition_key=_kind&param=value", true},
+		{"dynamodb://docstore-test?partition_key=_kind&param=value", true},
 		// With path.
-		{"dynamodb://mytable/subcoll?partition_key=_kind", true},
+		{"dynamodb://docstore-test/subcoll?partition_key=_kind", true},
 		// Missing partition_key.
-		{"dynamodb://mytable?sort_key=_id", true},
+		{"dynamodb://docstore-test?sort_key=_id", true},
 	}
 
-	ctx := context.Background()
+	sess, err := session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable})
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := &URLOpener{ConfigProvider: sess}
 	for _, test := range tests {
-		_, err := docstore.OpenCollection(ctx, test.URL)
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, _, _, err = o.processURL(u)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
