@@ -61,14 +61,17 @@ func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}
-	return OpenCollection(u.Host)
+	return OpenCollection(u.Host, nil)
 }
+
+// Options are optional arguments to the OpenCollection functions.
+type Options struct{}
 
 // TODO(jba): make this package thread-safe.
 
 // OpenCollection creates a *docstore.Collection backed by memory. keyField is the
 // document field holding the primary key of the collection.
-func OpenCollection(keyField string) (*docstore.Collection, error) {
+func OpenCollection(keyField string, _ *Options) (*docstore.Collection, error) {
 	c, err := newCollection(keyField, nil)
 	if err != nil {
 		return nil, err
@@ -76,11 +79,11 @@ func OpenCollection(keyField string) (*docstore.Collection, error) {
 	return docstore.NewCollection(c), nil
 }
 
-// OpenCollectionFunc creates a *docstore.Collection backed by memory. keyFunc takes
+// OpenCollectionWithKeyFunc creates a *docstore.Collection backed by memory. keyFunc takes
 // a document and returns the document's primary key. It should return nil if the
 // document is missing the information to construct a key. This will cause all
 // actions, even Create, to fail.
-func OpenCollectionFunc(keyFunc func(docstore.Document) interface{}) (*docstore.Collection, error) {
+func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, _ *Options) (*docstore.Collection, error) {
 	c, err := newCollection("", keyFunc)
 	if err != nil {
 		return nil, err
