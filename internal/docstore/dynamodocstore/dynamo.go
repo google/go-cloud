@@ -35,6 +35,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -338,9 +339,8 @@ func (c *collection) runWrites(ctx context.Context, actions []*driver.Action) er
 	}
 
 	_, err := c.db.TransactWriteItemsWithContext(ctx, &dyn.TransactWriteItemsInput{
-		// TODO(jba): figure out how to use this token with replay
-		//		ClientRequestToken: aws.String(driver.UniqueString()),
-		TransactItems: tws,
+		ClientRequestToken: aws.String(driver.UniqueString()),
+		TransactItems:      tws,
 	})
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190423T103712Z
+      - 20190423T111229Z
       X-Amz-Target:
       - DynamoDB_20120810.DescribeTable
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -29,18 +29,18 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Tue, 23 Apr 2019 10:37:12 GMT
+      - Tue, 23 Apr 2019 11:12:29 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "1294539857"
       X-Amzn-Requestid:
-      - 2PU0EKE5V8JCTFD28G6KSDI5OFVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - FI6E0GGVSHFUE3I3H981SDV513VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"ClientRequestToken":"70B09775-57D8-4E04-BE13-06AC621E97B2","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"172ed857-94bb-458b-8c3b-525da1786f9f"},"_id":{"S":"testGet1"},"_kind":{"S":"get"},"f":{"N":"32.3"},"i":{"N":"95"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"s":{"S":"a
+    body: '{"ClientRequestToken":"b04883e5-6a15-4a8d-a563-afa467d49dec","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"},"_id":{"S":"testGet1"},"_kind":{"S":"get"},"f":{"N":"32.3"},"i":{"N":"95"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"s":{"S":"a
       string"}},"TableName":"docstore-test"}}]}'
     form: {}
     headers:
@@ -53,7 +53,7 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190423T103712Z
+      - 20190423T111229Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactWriteItems
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -68,13 +68,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Tue, 23 Apr 2019 10:37:12 GMT
+      - Tue, 23 Apr 2019 11:12:29 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "2745614147"
       X-Amzn-Requestid:
-      - HM0VGIC22BVMR8INF72LKILTLVVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - 141578OI5F5PE1IL8KMK1F9693VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -91,13 +91,13 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190423T103712Z
+      - 20190423T111229Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactGetItems
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Responses":[{"Item":{"s":{"S":"a string"},"_kind":{"S":"get"},"f":{"N":"32.3"},"i":{"N":"95"},"_id":{"S":"testGet1"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"DocstoreRevision":{"S":"172ed857-94bb-458b-8c3b-525da1786f9f"}}}]}'
+    body: '{"Responses":[{"Item":{"s":{"S":"a string"},"_kind":{"S":"get"},"f":{"N":"32.3"},"i":{"N":"95"},"_id":{"S":"testGet1"},"m":{"M":{"a":{"S":"one"},"b":{"S":"two"}}},"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"}}}]}'
     headers:
       Connection:
       - keep-alive
@@ -106,13 +106,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Tue, 23 Apr 2019 10:37:12 GMT
+      - Tue, 23 Apr 2019 11:12:29 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "1284558679"
+      - "1305920834"
       X-Amzn-Requestid:
-      - JTHLV8727K118BNHAMVJ4BBG0BVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - TTRM14FRE97NR1KK73SED40KMBVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -130,13 +130,13 @@ interactions:
       User-Agent:
       - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190423T103712Z
+      - 20190423T111229Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactGetItems
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Responses":[{"Item":{"m":{"M":{"b":{"S":"two"}}},"DocstoreRevision":{"S":"172ed857-94bb-458b-8c3b-525da1786f9f"},"f":{"N":"32.3"}}}]}'
+    body: '{"Responses":[{"Item":{"m":{"M":{"b":{"S":"two"}}},"DocstoreRevision":{"S":"e8f4a8b0-993e-4df8-883a-0ad8be9c3978"},"f":{"N":"32.3"}}}]}'
     headers:
       Connection:
       - keep-alive
@@ -145,13 +145,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Tue, 23 Apr 2019 10:37:12 GMT
+      - Tue, 23 Apr 2019 11:12:29 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "766048428"
+      - "1340766600"
       X-Amzn-Requestid:
-      - V9JUF35KRTTVV7A1EHMC5CDDCVVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - JVSNMRNE5GLN8UP9RMOMNH02EFVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
