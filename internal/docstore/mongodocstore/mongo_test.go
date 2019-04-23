@@ -116,7 +116,7 @@ func TestConformance(t *testing.T) {
 
 func fakeConnectionStringInEnv() func() {
 	oldURLVal := os.Getenv("MONGO_SERVER_URL")
-	os.Setenv("MONGO_SERVER_URL", oldURLVal)
+	os.Setenv("MONGO_SERVER_URL", "mongodb://localhost")
 	return func() {
 		os.Setenv("MONGO_SERVER_URL", oldURLVal)
 	}
