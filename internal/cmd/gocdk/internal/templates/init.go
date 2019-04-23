@@ -30,7 +30,7 @@ var InitTemplates = map[string]string{
 	"main.go": `
 `,
 
-	"biomes/dev/biome.json": `{,
+	"biomes/dev/biome.json": `{
 		"serve_enabled" : true,
 		"launcher" : "local"
 	}
@@ -51,7 +51,7 @@ var InitTemplates = map[string]string{
 	"biomes/dev/secrets.auto.tfvars": `
 `,
 
-	".dockerignore": `
+	".dockerignore": `*.tfvars
 `,
 
 	".gitignore": `*.tfvars
