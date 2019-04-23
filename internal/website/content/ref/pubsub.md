@@ -31,5 +31,5 @@ delivery](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol#Overvi
 
 ## Usage Samples
 
-* [gcmsg sample](https://github.com/google/go-cloud/tree/master/samples/gcmsg)
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-pubsub)
 * [pubsub package examples](https://godoc.org/gocloud.dev/pubsub#pkg-examples)

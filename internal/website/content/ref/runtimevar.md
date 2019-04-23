@@ -30,6 +30,7 @@ Top-level package documentation: https://godoc.org/gocloud.dev/runtimevar
 
 ## Usage Samples
 
+* [CLI Sample](https://github.com/google/go-cloud/tree/master/samples/gocdk-runtimevar)
 * [Guestbook
   sample](https://github.com/google/go-cloud/tree/master/samples/guestbook)
 * [runtimevar package
