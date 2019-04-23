@@ -131,11 +131,17 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
 		errs := make([]error, len(actions))
+		var wg sync.WaitGroup
 		for i, a := range actions {
 			i := i
 			a := a
-			go func() { errs[i] = c.runAction(ctx, a) }()
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errs[i] = c.runAction(ctx, a)
+			}()
 		}
+		wg.Wait()
 		var alerr driver.ActionListError
 		for i, err := range errs {
 			if err != nil {
