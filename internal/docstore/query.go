@@ -156,7 +156,7 @@ func (it *DocumentIterator) Stop() {
 
 // Plan describes how the query would be executed if its Get method were called with
 // the given field paths. Plan uses only information available to the client, so it
-// cannot know whether whether a service uses indexes or scans internally.
+// cannot know whether a service uses indexes or scans internally.
 func (q *Query) Plan(fps ...FieldPath) (string, error) {
 	if err := q.init(fps); err != nil {
 		return "", err
