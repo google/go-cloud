@@ -326,7 +326,7 @@ func BenchmarkNatsPubSub(b *testing.B) {
 
 	topic := pubsub.NewTopic(dt, nil)
 	defer topic.Shutdown(ctx)
-	sub := pubsub.NewSubscription(ds, nil, nil)
+	sub := pubsub.NewSubscription(ds, recvBatcherOpts, nil)
 	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
