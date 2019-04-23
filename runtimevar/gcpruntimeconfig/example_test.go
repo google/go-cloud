@@ -59,7 +59,7 @@ func Example() {
 	}
 
 	// Construct a *runtimevar.Variable that watches the variable.
-	v, err := gcpruntimeconfig.NewVariable(client, name, decoder, nil)
+	v, err := gcpruntimeconfig.OpenVariable(client, name, decoder, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

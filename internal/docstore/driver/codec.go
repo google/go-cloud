@@ -264,7 +264,7 @@ func stringifyMapKey(k reflect.Value) (string, error) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return strconv.FormatUint(k.Uint(), 10), nil
 	default:
-		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %s of type %s", k, k.Type())
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %v of type %s", k, k.Type())
 	}
 }
 

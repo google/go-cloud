@@ -47,7 +47,7 @@ func TestApply(t *testing.T) {
 		defer cleanup()
 		const biomeName = "dev"
 		const wantGreeting = "HALLO WORLD"
-		if err := newTestBiome(dir, biomeName, wantGreeting); err != nil {
+		if err := newTestBiome(dir, biomeName, wantGreeting, new(biomeConfig)); err != nil {
 			t.Fatal(err)
 		}
 		pctx := &processContext{
@@ -78,7 +78,7 @@ func TestApply(t *testing.T) {
 	})
 }
 
-func newTestBiome(dir, name, tfGreeting string) error {
+func newTestBiome(dir, name, tfGreeting string, cfg *biomeConfig) error {
 	biomeDir := filepath.Join(dir, "biomes", name)
 	if err := os.MkdirAll(biomeDir, 0777); err != nil {
 		return err
@@ -90,6 +90,14 @@ provider "random" {
 }`
 
 	err := ioutil.WriteFile(filepath.Join(biomeDir, "main.tf"), []byte(terraformSource), 0666)
+	if err != nil {
+		return err
+	}
+	cfgData, err := json.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(filepath.Join(biomeDir, "biome.json"), cfgData, 0666)
 	if err != nil {
 		return err
 	}

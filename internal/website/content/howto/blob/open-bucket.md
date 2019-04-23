@@ -1,7 +1,6 @@
 ---
 title: "Open a Bucket"
 date: 2019-03-20T14:51:29-07:00
-draft: true
 weight: 1
 ---
 
@@ -11,6 +10,8 @@ lets you interact with all of them using the [`*blob.Bucket` type][].
 
 [`*blob.Bucket` type]: https://godoc.org/gocloud.dev/blob#Bucket
 
+<!--more-->
+
 ## Constructors versus URL openers
 
 If you know that your program is always going to use a particular storage
@@ -18,10 +19,12 @@ provider or you need fine-grained control over the connection settings, you
 should call the constructor function in the driver package directly (like
 `s3blob.OpenBucket`). However, if you want to change providers based on
 configuration, you can use `blob.OpenBucket`, making sure you ["blank
-import"][] the driver package to link it in. This guide will show how to use
+import"][] the driver package to link it in. See the
+[documentation on URLs][] for more details. This guide will show how to use
 both forms for each storage provider.
 
 ["blank import"]: https://golang.org/doc/effective_go.html#blank_import
+[documentation on URLs]: https://godoc.org/gocloud.dev#hdr-URLs
 
 ## S3
 
@@ -283,7 +286,7 @@ bucket1, err := blob.OpenBucket(ctx, "mem://")
 if err != nil {
     return err
 }
-defer b1.Close()
+defer bucket1.Close()
 
 bucket2, err := blob.OpenBucket(ctx, "file:///path/to/dir")
 if err != nil {

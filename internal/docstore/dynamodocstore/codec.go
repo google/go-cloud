@@ -101,40 +101,34 @@ func encodeDoc(doc driver.Document) (*dyn.AttributeValue, error) {
 	return e.av, nil
 }
 
-// Encode only the key fields of the given document.
+// Encode the key fields of the given document into a map AttributeValue.
 // pkey and skey are the names of the partition key field and the sort key field.
 // pkey must always be non-empty, but skey may be empty if the collection has no sort key.
-//
-// Currently, we do this by encoding the entire document, then removing everything that is
-// not a key field.
-// TODO: improve driver.Encoder to make this efficient.
 func encodeDocKeyFields(doc driver.Document, pkey, skey string) (*dyn.AttributeValue, error) {
-	av, err := encodeDoc(doc)
-	if err != nil {
+	m := map[string]*dyn.AttributeValue{}
+
+	set := func(fieldName string) error {
+		fieldVal, err := doc.GetField(fieldName)
+		if err != nil {
+			return err
+		}
+		attrVal, err := encodeValue(fieldVal)
+		if err != nil {
+			return err
+		}
+		m[fieldName] = attrVal
+		return nil
+	}
+
+	if err := set(pkey); err != nil {
 		return nil, err
 	}
-	// Check that the document has all the key fields.
-	hasP := false
-	hasS := false
-	if skey == "" {
-		// If there is no sort key, assume we found it.
-		hasS = true
-	}
-	for f := range av.M {
-		switch f {
-		case pkey:
-			hasP = true
-		case skey:
-			hasS = true
-		default:
-			// Delete any non-key field from the result.
-			delete(av.M, f)
+	if skey != "" {
+		if err := set(skey); err != nil {
+			return nil, err
 		}
 	}
-	if !hasP || !hasS {
-		return nil, errors.New("missing key field(s)")
-	}
-	return av, nil
+	return new(dyn.AttributeValue).SetM(m), nil
 }
 
 func encodeValue(v interface{}) (*dyn.AttributeValue, error) {

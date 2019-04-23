@@ -103,7 +103,7 @@ func gitHubAppAuthFromConfig(rt http.RoundTripper, cfg flagConfig) (*gitHubAppAu
 		*(val.(**rsa.PrivateKey)) = key
 		return nil
 	})
-	v, err := filevar.New(cfg.keyPath, d, nil)
+	v, err := filevar.OpenVariable(cfg.keyPath, d, nil)
 	if err != nil {
 		return nil, nil, err
 	}

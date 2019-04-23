@@ -2,18 +2,18 @@
 version: 1
 interactions:
 - request:
-    body: "--b22167753b58caa032baa5dd3db54ed78d8a33b986624e694eb9edd1c47d\r\nContent-Type:
+    body: "--b1c460cc33acd0715aeecab1e1dd01a969c6d977acf28ce8b205f1e44f43\r\nContent-Type:
       application/json\r\n\r\n{\"bucket\":\"go-cloud-blob-test-bucket\",\"contentType\":\"text/plain;
-      charset=utf-8\"}\n\r\n--b22167753b58caa032baa5dd3db54ed78d8a33b986624e694eb9edd1c47d\r\nContent-Type:
-      text/plain; charset=utf-8\r\n\r\n\r\n--b22167753b58caa032baa5dd3db54ed78d8a33b986624e694eb9edd1c47d--\r\n"
+      charset=utf-8\"}\n\r\n--b1c460cc33acd0715aeecab1e1dd01a969c6d977acf28ce8b205f1e44f43\r\nContent-Type:
+      text/plain; charset=utf-8\r\n\r\n\r\n--b1c460cc33acd0715aeecab1e1dd01a969c6d977acf28ce8b205f1e44f43--\r\n"
     form: {}
     headers:
       Content-Type:
-      - multipart/related; boundary=b22167753b58caa032baa5dd3db54ed78d8a33b986624e694eb9edd1c47d
+      - multipart/related; boundary=b1c460cc33acd0715aeecab1e1dd01a969c6d977acf28ce8b205f1e44f43
       User-Agent:
       - google-api-go-client/0.5 go-cloud/blob/0.1.0
       X-Goog-Api-Client:
-      - gl-go/1.11.2 gccl/20180226
+      - gl-go/1.12.0 gccl/20180226
     url: https://www.googleapis.com/upload/storage/v1/b/go-cloud-blob-test-bucket/o?alt=json&prettyPrint=false&projection=full&uploadType=multipart
     method: POST
   response:
@@ -25,8 +25,8 @@ interactions:
       location=entity.resource.id.name, message=null, unnamedArguments=[]}, location=entity.resource.id.name,
       message=Required, reason=required, rpcCode=400} Required\n\tat com.google.api.server.core.ErrorCollector.toFault(ErrorCollector.java:54)\n\tat
       com.google.api.server.rest.adapter.rosy.RosyErrorConverter.toFault(RosyErrorConverter.java:67)\n\tat
-      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:258)\n\tat
-      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:238)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:259)\n\tat
+      com.google.api.server.rest.adapter.rosy.RosyHandler$2.call(RosyHandler.java:239)\n\tat
       com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
       com.google.common.util.concurrent.DirectExecutor.execute(DirectExecutor.java:30)\n\tat
       com.google.common.util.concurrent.AbstractFuture.executeListener(AbstractFuture.java:1143)\n\tat
@@ -40,22 +40,22 @@ interactions:
       com.google.api.server.core.util.CallableFuture.run(CallableFuture.java:62)\n\tat
       com.google.api.server.thread.ThreadTrackers$ThreadTrackingRunnable.run(ThreadTrackers.java:126)\n\tat
       com.google.tracing.TraceContext$TraceContextRunnable.runInContext(TraceContext.java:453)\n\tat
-      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:859)\n\tat
+      com.google.api.server.server.CommonModule$ContextCarryingExecutorService$1.runInContext(CommonModule.java:802)\n\tat
       com.google.tracing.TraceContext$TraceContextRunnable$1.run(TraceContext.java:460)\n\tat
-      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:166)\n\tat
+      io.grpc.Context.run(Context.java:565)\n\tat com.google.tracing.CurrentContext.runInContext(CurrentContext.java:204)\n\tat
       com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContextNoUnref(TraceContext.java:319)\n\tat
       com.google.tracing.TraceContext$AbstractTraceContextCallback.runInInheritedContext(TraceContext.java:311)\n\tat
       com.google.tracing.TraceContext$TraceContextRunnable.run(TraceContext.java:457)\n\tat
       com.google.gse.internal.DispatchQueueImpl$WorkerThread.run(DispatchQueueImpl.java:403)\n"}],"code":400,"message":"Required"}}'
     headers:
       Alt-Svc:
-      - quic=":443"; ma=2592000; v="44,43,39,35"
+      - quic=":443"; ma=2592000; v="46,44,43,39"
       Content-Length:
       - "2948"
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 15 Jan 2019 21:57:43 GMT
+      - Thu, 18 Apr 2019 16:57:58 GMT
       Server:
       - UploadServer
       Vary:
@@ -68,7 +68,7 @@ interactions:
       X-Guploader-Upload-Result:
       - agent_rejected
       X-Guploader-Uploadid:
-      - AEnB2UqnXc6ybC5B56etykV8qIHpbUpkTADEnP2-LGaJrnyp2rB0s-U_HLws7twSswb7OOqaB7uxshHqb0a8DKj_dLq315mFIg
+      - AEnB2Ur7AVwvrjww3pSo_ZxCQfySuoAH_WOWtuqqGf3Rd7X_G_LMNPWiRM_D6U2BQkj_0VNBYAhsMyuB25t0oJ4rreLjWYVZag
     status: 400 Bad Request
     code: 400
     duration: ""

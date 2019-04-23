@@ -152,8 +152,10 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 }
 
 func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
-	// TODO(rvangent): Implement this along with Copy, and document the
-	// As type in the package doc.
+	var copier *storage.Copier
+	if !as(&copier) {
+		return errors.New("BeforeCopy.As failed")
+	}
 	return nil
 }
 
@@ -178,7 +180,7 @@ func (verifyContentLanguage) AttributesCheck(attrs *blob.Attributes) error {
 }
 
 func (verifyContentLanguage) ReaderCheck(r *blob.Reader) error {
-	var rr storage.Reader
+	var rr *storage.Reader
 	if !r.As(&rr) {
 		return errors.New("Reader.As returned false")
 	}

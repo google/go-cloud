@@ -76,7 +76,6 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // For example, an AsTest might set a provider-specific field to a custom
 // value in BeforeWrite, and then verify the custom value was returned in
 // AttributesCheck and/or ReaderCheck.
-// TODO(rvangent): Add BeforeCopy.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
@@ -1666,10 +1665,6 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		defer b.Close()
 
 		err = b.Copy(ctx, dstKey, "does-not-exist", nil)
-		// TODO(rvangent): Remove when implemented for all providers.
-		if gcerrors.Code(err) == gcerrors.Unimplemented {
-			t.Skip("Copy not yet implemented")
-		}
 		if err == nil {
 			t.Errorf("got nil want error")
 		} else if gcerrors.Code(err) != gcerrors.NotFound {
@@ -1717,10 +1712,6 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 
 		// Copy the source to the destination.
 		if err := b.Copy(ctx, dstKey, srcKey, nil); err != nil {
-			// TODO(rvangent): Remove when implemented for all providers.
-			if gcerrors.Code(err) == gcerrors.Unimplemented {
-				t.Skip("Copy not yet implemented")
-			}
 			t.Errorf("got unexpected error copying blob: %v", err)
 		}
 		// Read the copy.
@@ -1744,10 +1735,6 @@ func testCopy(t *testing.T, newHarness HarnessMaker) {
 		// Copy the source to the second destination, where there's an existing blob.
 		// It should be overwritten.
 		if err := b.Copy(ctx, dstKeyExists, srcKey, nil); err != nil {
-			// TODO(rvangent): Remove when implemented for all providers.
-			if gcerrors.Code(err) == gcerrors.Unimplemented {
-				t.Skip("Copy not yet implemented")
-			}
 			t.Errorf("got unexpected error copying blob: %v", err)
 		}
 		// Read the copy.
@@ -2031,7 +2018,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.AttributesCheck(&attrs); err != nil {
+	if err := st.AttributesCheck(attrs); err != nil {
 		t.Error(err)
 	}
 
@@ -2094,11 +2081,8 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 
 	// Copy the blob, using the provided callback.
-	// TODO(rvangent): Clean up the unimplemented check once all drivers are implemented.
 	if err := b.Copy(ctx, copyKey, key, &blob.CopyOptions{BeforeCopy: st.BeforeCopy}); err != nil {
-		if gcerrors.Code(err) != gcerrors.Unimplemented {
-			t.Error(err)
-		}
+		t.Error(err)
 	} else {
 		defer func() { _ = b.Delete(ctx, copyKey) }()
 	}
