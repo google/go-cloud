@@ -86,6 +86,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition field (sort key)",
@@ -97,6 +98,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP"),
 				ExpressionAttributeValues: eavs(1),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on other field",
@@ -137,6 +139,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("other", "tableP"),
 				ExpressionAttributeValues: eavs(2),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on partition, filter on sort",
@@ -153,6 +156,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeNames:  eans("tableP", "tableS"),
 				ExpressionAttributeValues: eavs(2),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on local index sort",
@@ -187,6 +191,7 @@ func TestPlanQuery(t *testing.T) {
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("localS", "tableP", "tableS"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on other field with index",
@@ -240,6 +245,7 @@ func TestPlanQuery(t *testing.T) {
 				FilterExpression:         aws.String("#0 <= :0"),
 				ExpressionAttributeNames: eans("globalS", "tableP"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, bad projection 2",
@@ -262,6 +268,7 @@ func TestPlanQuery(t *testing.T) {
 				ExpressionAttributeValues: eavs(2),
 				ProjectionExpression:      aws.String("#2, #3"),
 			},
+			wantPlan: "Table",
 		},
 		{
 			desc: "equality filter on table partition, filter on global index sort, good projection",

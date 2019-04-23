@@ -47,7 +47,7 @@ func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.D
 	if err != nil {
 		return nil, fmt.Errorf("Find: %v", err)
 	}
-	return &docIterator{cursor: cursor, ctx: ctx}, nil
+	return &docIterator{cursor: cursor, idField: c.idField, ctx: ctx}, nil
 }
 
 var mongoQueryOps = map[string]string{
@@ -65,6 +65,10 @@ var mongoQueryOps = map[string]string{
 // where mop is the mongo version of op (see the mongoQueryOps map above).
 func filterToBSON(f driver.Filter) (bson.E, error) {
 	key := strings.Join(f.FieldPath, ".")
+	// Lowercase fields to match BSON lower-casing of struct encoding.
+	// This is INCORRECT. It is a temporary fix for #1899.
+	// TODO(jba): remove when we fix #1899.
+	key = strings.ToLower(key)
 	val, err := encodeValue(f.Value)
 	if err != nil {
 		return bson.E{}, err
@@ -77,8 +81,9 @@ func filterToBSON(f driver.Filter) (bson.E, error) {
 }
 
 type docIterator struct {
-	cursor *mongo.Cursor
-	ctx    context.Context // remember for Stop
+	cursor  *mongo.Cursor
+	idField string
+	ctx     context.Context // remember for Stop
 }
 
 func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
@@ -92,7 +97,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 	if err := it.cursor.Decode(&m); err != nil {
 		return fmt.Errorf("cursor.Decode: %v", err)
 	}
-	return decodeDoc(m, doc)
+	return decodeDoc(m, doc, it.idField)
 }
 
 func (it *docIterator) Stop() {

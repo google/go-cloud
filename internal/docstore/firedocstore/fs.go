@@ -559,6 +559,9 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 	if err != nil { // revision field not present
 		return nil, nil
 	}
+	if v == nil { // revision field is present, but nil
+		return nil, nil
+	}
 	rev, ok := v.(*ts.Timestamp)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,

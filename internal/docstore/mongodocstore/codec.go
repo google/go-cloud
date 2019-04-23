@@ -110,7 +110,15 @@ func (e *mapEncoder) MapKey(k string) {
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes m into ddoc.
-func decodeDoc(m map[string]interface{}, ddoc driver.Document) error {
+func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) error {
+	switch idField {
+	case mongoIDField: // do nothing
+	case "": // user documents have no ID field
+		delete(m, mongoIDField)
+	default: // user documents have a different ID field
+		m[idField] = m[mongoIDField]
+		delete(m, mongoIDField)
+	}
 	return ddoc.Decode(decoder{m})
 }
 
