@@ -52,7 +52,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName, keyName), nil
+	return newCollection(h.client, projectID, collectionName, keyName, nil)
 }
 
 func (h *harness) Close() {
