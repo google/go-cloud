@@ -93,6 +93,7 @@ type CodecTester interface {
 
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
 func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
+	// TODO(jba): add conformance tests for unordered lists after all drivers have them.
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
 	t.Run("Replace", func(t *testing.T) { withCollection(t, newHarness, testReplace) })
