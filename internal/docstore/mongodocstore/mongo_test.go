@@ -98,10 +98,13 @@ func TestConformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	client, err := Dial(ctx, serverURI)
-	if err == context.DeadlineExceeded {
-		t.Skip("could not connect to local mongoDB server (connection timed out)")
-	}
 	if err != nil {
+		t.Fatalf("dialing to %s: %v", serverURI, err)
+	}
+	if err := client.Ping(ctx, nil); err != nil {
+		if err == context.DeadlineExceeded {
+			t.Skip("could not connect to local mongoDB server (connection timed out)")
+		}
 		t.Fatalf("connecting to %s: %v", serverURI, err)
 	}
 	defer func() { client.Disconnect(context.Background()) }()
