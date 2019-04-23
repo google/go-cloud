@@ -28,81 +28,241 @@ import (
 
 // TODO: support parallel scans (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html#Scan.ParallelScan)
 
+// TODO: support an empty item slice returned from an RPC: "A Query operation can
+// return an empty result set and a LastEvaluatedKey if all the items read for the
+// page of results are filtered out."
+
 type avmap = map[string]*dynamodb.AttributeValue
 
 func (c *collection) RunGetQuery(ctx context.Context, q *driver.Query) (driver.DocumentIterator, error) {
-	items, last, err := c.runQueryOrScan(ctx, q, nil)
+	qr, err := c.planQuery(q)
 	if err != nil {
 		return nil, err
 	}
-	return &documentIterator{
-		c:     c,
-		q:     q,
-		items: items,
-		limit: q.Limit, // manually count limit since dynamodb uses "limit" as scan limit before filtering
-		last:  last,
-	}, nil
+	it := &documentIterator{
+		qr:    qr,
+		limit: q.Limit,
+		count: 0, // manually count limit since dynamodb uses "limit" as scan limit before filtering
+	}
+	it.items, it.last, err = it.qr.run(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return it, nil
 }
 
-func (c *collection) runQueryOrScan(ctx context.Context, q *driver.Query, startAfter avmap) (items []avmap, last avmap, err error) {
+func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 	var cb expression.Builder
 	cbUsed := false // It's an error to build an empty Builder.
+	// Set up the projection expression.
 	if len(q.FieldPaths) > 0 {
-		pb := expression.NamesList(expression.Name(docstore.RevisionField))
+		var pb expression.ProjectionBuilder
+		hasRevisionField := false
 		for _, fp := range q.FieldPaths {
+			if fpEqual(fp, docstore.RevisionField) {
+				hasRevisionField = true
+			}
 			pb = pb.AddNames(expression.Name(strings.Join(fp, ".")))
+		}
+		if !hasRevisionField {
+			pb = pb.AddNames(expression.Name(docstore.RevisionField))
+			q.FieldPaths = append(q.FieldPaths, []string{docstore.RevisionField})
 		}
 		cb = cb.WithProjection(pb)
 		cbUsed = true
 	}
-	// If there is an equality filter on the partition key, do a query.
-	// Otherwise, do a scan.
-	doQuery := false
-	for _, f := range q.Filters {
-		if len(f.FieldPath) == 1 && f.FieldPath[0] == c.partitionKey && f.Op == driver.EqualOp {
-			doQuery = true
-			break
+
+	// Find the best thing to query (table or index).
+	indexName, pkey, skey := c.bestQueryable(q)
+	if indexName == nil && pkey == "" {
+		// No query can be done: fall back to scanning.
+		if len(q.Filters) > 0 {
+			cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
+			cbUsed = true
 		}
+		in := &dynamodb.ScanInput{TableName: &c.table}
+		if cbUsed {
+			ce, err := cb.Build()
+			if err != nil {
+				return nil, err
+			}
+			in.ExpressionAttributeNames = ce.Names()
+			in.ExpressionAttributeValues = ce.Values()
+			in.FilterExpression = ce.Filter()
+			in.ProjectionExpression = ce.Projection()
+		}
+		return &queryRunner{c: c, scanIn: in}, nil
 	}
-	if doQuery {
-		cb = processFilters(cb, q.Filters, c.partitionKey, c.sortKey)
-		ce, err := cb.Build()
-		if err != nil {
-			return nil, nil, err
-		}
-		out, err := c.db.QueryWithContext(ctx, &dynamodb.QueryInput{
+
+	// Do a query.
+	cb = processFilters(cb, q.Filters, pkey, skey)
+	ce, err := cb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return &queryRunner{
+		c: c,
+		queryIn: &dynamodb.QueryInput{
 			TableName:                 &c.table,
+			IndexName:                 indexName,
 			ExpressionAttributeNames:  ce.Names(),
 			ExpressionAttributeValues: ce.Values(),
 			KeyConditionExpression:    ce.KeyCondition(),
 			FilterExpression:          ce.Filter(),
 			ProjectionExpression:      ce.Projection(),
-			ExclusiveStartKey:         startAfter,
-		})
+		},
+	}, nil
+}
+
+// Return the best choice of queryable (table or index) for this query.
+// If indexName is nil but pkey is not empty, then use the table.
+// If all return values are zero, no query will work: do a scan.
+func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, skey string) {
+	// If the query has an "=" filter on the table's partition key, look at the table
+	// and local indexes.
+	if hasEqualityFilter(q, c.partitionKey) {
+		// If the table has a sort key that's in the query, use the table.
+		if hasFilter(q, c.sortKey) {
+			return nil, c.partitionKey, c.sortKey
+		}
+		// Look at local indexes. They all have the same partition key as the base table.
+		// If one has a sort key in the query, use it.
+		for _, li := range c.description.LocalSecondaryIndexes {
+			pkey, skey := keyAttributes(li.KeySchema)
+			if hasFilter(q, skey) {
+				return li.IndexName, pkey, skey
+			}
+		}
+	}
+	// Consider the global indexes: if one has a matching partition and sort key, and
+	// the projected fields of the index include those of the query, use it.
+	for _, gi := range c.description.GlobalSecondaryIndexes {
+		pkey, skey := keyAttributes(gi.KeySchema)
+		if skey == "" {
+			continue // We'll visit global indexes without a sort key later.
+		}
+		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.fieldsIncluded(q, gi) {
+			return gi.IndexName, pkey, skey
+		}
+	}
+	// There are no matches for both partition and sort key. Now consider matches on partition key only.
+	// That will still be better than a scan.
+	// First, check the table itself.
+	if hasEqualityFilter(q, c.partitionKey) {
+		return nil, c.partitionKey, c.sortKey
+	}
+	// No point checking local indexes: they have the same partition key as the table.
+	// Check the global indexes.
+	for _, gi := range c.description.GlobalSecondaryIndexes {
+		pkey, skey := keyAttributes(gi.KeySchema)
+		if hasEqualityFilter(q, pkey) && c.fieldsIncluded(q, gi) {
+			return gi.IndexName, pkey, skey
+		}
+	}
+	// We cannot do a query.
+	// TODO: return the reason why we couldn't. At a minimum, distinguish failure due to keys
+	// from failure due to projection (i.e. a global index had the right partition and sort key,
+	// but didn't project the necessary fields).
+	return nil, "", ""
+}
+
+// Reports whether the fields selected by the query are projected into (that is,
+// contained directly in) the global index. We need this check before using the
+// index, because if a global index doesn't have all the desired fields, then a
+// separate RPC for each returned item would be necessary to retrieve those fields,
+// and we'd rather scan than do that.
+func (c *collection) fieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
+	proj := gi.Projection
+	if *proj.ProjectionType == "ALL" {
+		// The index has all the fields of the table: we're good.
+		return true
+	}
+	if len(q.FieldPaths) == 0 {
+		// The query wants all the fields of the table, but we can't be sure that the
+		// index has them.
+		return false
+	}
+	// The table's keys and the index's keys are always in the index.
+	pkey, skey := keyAttributes(gi.KeySchema)
+	indexFields := map[string]bool{c.partitionKey: true, pkey: true}
+	if c.sortKey != "" {
+		indexFields[c.sortKey] = true
+	}
+	if skey != "" {
+		indexFields[skey] = true
+	}
+	for _, nka := range proj.NonKeyAttributes {
+		indexFields[*nka] = true
+	}
+	// Every field path in the query must be in the index.
+	for _, fp := range q.FieldPaths {
+		if !indexFields[strings.Join(fp, ".")] {
+			return false
+		}
+	}
+	return true
+}
+
+// Extract the names of the partition and sort key attributes from the schema of a
+// table or index.
+func keyAttributes(ks []*dynamodb.KeySchemaElement) (pkey, skey string) {
+	for _, k := range ks {
+		switch *k.KeyType {
+		case "HASH":
+			pkey = *k.AttributeName
+		case "RANGE":
+			skey = *k.AttributeName
+		default:
+			panic("bad key type: " + *k.KeyType)
+		}
+	}
+	return pkey, skey
+}
+
+// Reports whether q has a filter that mentions the top-level field.
+func hasFilter(q *driver.Query, field string) bool {
+	if field == "" {
+		return false
+	}
+	for _, f := range q.Filters {
+		if fpEqual(f.FieldPath, field) {
+			return true
+		}
+	}
+	return false
+}
+
+// Reports whether q has a filter that checks if the top-level field is equal to something.
+func hasEqualityFilter(q *driver.Query, field string) bool {
+	for _, f := range q.Filters {
+		if f.Op == driver.EqualOp && fpEqual(f.FieldPath, field) {
+			return true
+		}
+	}
+	return false
+}
+
+func fpEqual(fp []string, s string) bool {
+	return len(fp) == 1 && fp[0] == s
+}
+
+type queryRunner struct {
+	c       *collection
+	scanIn  *dynamodb.ScanInput
+	queryIn *dynamodb.QueryInput
+}
+
+func (qr *queryRunner) run(ctx context.Context, startAfter avmap) (items []avmap, last avmap, err error) {
+	if qr.scanIn != nil {
+		qr.scanIn.ExclusiveStartKey = startAfter
+		out, err := qr.c.db.ScanWithContext(ctx, qr.scanIn)
 		if err != nil {
 			return nil, nil, err
 		}
 		return out.Items, out.LastEvaluatedKey, nil
 	}
-	if len(q.Filters) > 0 {
-		cb = cb.WithFilter(filtersToConditionBuilder(q.Filters))
-		cbUsed = true
-	}
-	in := &dynamodb.ScanInput{
-		TableName:         &c.table,
-		ExclusiveStartKey: startAfter,
-	}
-	if cbUsed {
-		ce, err := cb.Build()
-		if err != nil {
-			return nil, nil, err
-		}
-		in.ExpressionAttributeNames = ce.Names()
-		in.ExpressionAttributeValues = ce.Values()
-		in.FilterExpression = ce.Filter()
-		in.ProjectionExpression = ce.Projection()
-	}
-	out, err := c.db.ScanWithContext(ctx, in)
+	qr.queryIn.ExclusiveStartKey = startAfter
+	out, err := qr.c.db.QueryWithContext(ctx, qr.queryIn)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,7 +281,7 @@ func processFilters(cb expression.Builder, fs []driver.Filter, pkey, skey string
 	}
 	keyBuilder := kbs[0]
 	for i := 1; i < len(kbs); i++ {
-		keyBuilder.And(kbs[i])
+		keyBuilder = keyBuilder.And(kbs[i])
 	}
 	cb = cb.WithKeyCondition(keyBuilder)
 	if len(cfs) > 0 {
@@ -185,39 +345,54 @@ func toFilter(f driver.Filter) expression.ConditionBuilder {
 }
 
 type documentIterator struct {
-	c     *collection
-	q     *driver.Query
+	qr    *queryRunner
 	items []map[string]*dynamodb.AttributeValue
 	curr  int
 	limit int
+	count int // number of items returned
 	last  map[string]*dynamodb.AttributeValue
 }
 
 func (it *documentIterator) Next(ctx context.Context, doc driver.Document) error {
-	if it.limit > 0 && it.curr >= it.limit ||
-		it.curr >= len(it.items) && it.last == nil {
+	if it.limit > 0 && it.count >= it.limit || it.curr >= len(it.items) && it.last == nil {
 		return io.EOF
 	}
-	if it.curr >= len(it.items) && it.last != nil {
+	if it.curr >= len(it.items) {
 		// Make a new query request at the end of this page.
-		items, last, err := it.c.runQueryOrScan(ctx, it.q, it.last)
+		var err error
+		it.items, it.last, err = it.qr.run(ctx, it.last)
 		if err != nil {
 			return err
 		}
-		it.limit -= len(items)
-		it.items = items
 		it.curr = 0
-		it.last = last
-		return it.Next(ctx, doc)
 	}
 	if err := decodeDoc(&dynamodb.AttributeValue{M: it.items[it.curr]}, doc); err != nil {
 		return err
 	}
 	it.curr++
+	it.count++
 	return nil
 }
 
 func (it *documentIterator) Stop() {
-	it.curr = len(it.items)
+	it.items = nil
 	it.last = nil
+}
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	qr, err := c.planQuery(q)
+	if err != nil {
+		return "", err
+	}
+	return qr.queryPlan(), nil
+}
+
+func (qr *queryRunner) queryPlan() string {
+	if qr.scanIn != nil {
+		return "Scan"
+	}
+	if qr.queryIn.IndexName != nil {
+		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
+	}
+	return ""
 }

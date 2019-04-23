@@ -67,7 +67,7 @@ func azureBucket(ctx context.Context, p pipeline.Pipeline, accountName azureblob
 // azureMOTDVar is a Wire provider function that returns the Message of the Day
 // variable read from a blob stored in Azure.
 func azureMOTDVar(ctx context.Context, b *blob.Bucket, flags *cliFlags) (*runtimevar.Variable, error) {
-	return blobvar.NewVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
+	return blobvar.OpenVariable(b, flags.motdVar, runtimevar.StringDecoder, &blobvar.Options{
 		WaitDuration: flags.motdVarWaitTime,
 	})
 }

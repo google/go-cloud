@@ -448,7 +448,7 @@ func ExampleReader_As() {
 	defer r.Close()
 
 	// Access storage.Reader via sr here.
-	var sr storage.Reader
+	var sr *storage.Reader
 	if r.As(&sr) {
 		_ = sr.Attrs
 	}

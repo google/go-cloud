@@ -48,6 +48,7 @@
 //      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
 //  - Attributes: s3.HeadObjectOutput
+//  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
 package s3blob // import "gocloud.dev/blob/s3blob"
 
@@ -210,8 +211,8 @@ func (r *reader) As(i interface{}) bool {
 	return true
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 // writer writes an S3 object, it implements io.WriteCloser.
@@ -463,7 +464,7 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	in := &s3.HeadObjectInput{
 		Bucket: aws.String(b.name),
@@ -471,7 +472,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 	}
 	resp, err := b.client.HeadObjectWithContext(ctx, in)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	md := make(map[string]string, len(resp.Metadata))
@@ -480,7 +481,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(escape.URLUnescape(k))] = escape.URLUnescape(aws.StringValue(v))
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       aws.StringValue(resp.CacheControl),
 		ContentDisposition: aws.StringValue(resp.ContentDisposition),
 		ContentEncoding:    aws.StringValue(resp.ContentEncoding),
@@ -671,6 +672,19 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 		Bucket:     aws.String(b.name),
 		CopySource: aws.String(b.name + "/" + srcKey),
 		Key:        aws.String(dstKey),
+	}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **s3.CopyObjectInput:
+				*v = input
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
 	}
 	_, err := b.client.CopyObjectWithContext(ctx, input)
 	return err

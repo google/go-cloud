@@ -40,8 +40,9 @@
 //  - Error: *googleapi.Error
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
-//  - Reader: storage.Reader
+//  - Reader: *storage.Reader
 //  - Attributes: storage.ObjectAttrs
+//  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
@@ -235,16 +236,16 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*storage.Reader)
+	p, ok := i.(**storage.Reader)
 	if !ok {
 		return false
 	}
-	*p = *r.raw
+	*p = r.raw
 	return true
 }
 
@@ -354,15 +355,15 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       attrs.CacheControl,
 		ContentDisposition: attrs.ContentDisposition,
 		ContentEncoding:    attrs.ContentEncoding,
@@ -460,6 +461,19 @@ func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.C
 	srcKey = escapeKey(srcKey)
 	bkt := b.client.Bucket(b.name)
 	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **storage.Copier:
+				*v = copier
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
 	_, err := copier.Run(ctx)
 	return err
 }

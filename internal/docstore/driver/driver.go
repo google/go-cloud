@@ -46,6 +46,9 @@ type Collection interface {
 	// multiple ones, depending on their service offerings.
 	RunGetQuery(context.Context, *Query) (DocumentIterator, error)
 
+	// QueryPlan returns the plan for the query.
+	QueryPlan(*Query) (string, error)
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode
@@ -119,8 +122,8 @@ type DocumentIterator interface {
 
 	// Next tries to get the next item in the query result and decodes into Document
 	// with the driver's codec.
-	//
 	// When there are no more results, it should return io.EOF.
+	// Once Next returns a non-nil error, it will never be called again.
 	Next(context.Context, Document) error
 
 	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup

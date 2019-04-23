@@ -131,3 +131,7 @@ func (it *docIterator) Next(ctx context.Context, doc driver.Document) error {
 }
 
 func (it *docIterator) Stop() { it.err = io.EOF }
+
+func (c *collection) QueryPlan(q *driver.Query) (string, error) {
+	return "", nil
+}
