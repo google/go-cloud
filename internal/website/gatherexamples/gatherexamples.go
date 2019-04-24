@@ -28,9 +28,13 @@
 //   - A comment line "// Ignore unused variables in example:" will remove any
 //     code until the end of the function. This is intended for
 //     compiler-mandated assignments like `_ = bucket`.
+//   - A comment line "// import _ "example.com/foo"" will add a blank import
+//     to the example's imports.
 //
 // The key of each JSON object entry will be the import path of the package,
-// followed by a dot ("."), followed by the name of the example function.
+// followed by a dot ("."), followed by the name of the example function. The
+// value of each JSON object entry is an object like
+// {"imports": "import (\n\t\"fmt\"\n)", "code": "/* ... */"}.
 package main
 
 import (
@@ -38,10 +42,12 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/printer"
 	"go/types"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -64,7 +70,7 @@ func main() {
 
 	// Load packages in each module named on the command line and find
 	// all examples.
-	allExamples := make(map[string]string)
+	allExamples := make(map[string]example)
 	for _, dir := range flag.Args() {
 		cfg := &packages.Config{
 			Mode:  gatherLoadMode,
@@ -76,8 +82,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "gatherexamples: load %s: %v\n", dir, err)
 			os.Exit(1)
 		}
-		for exampleName, source := range gather(pkgs) {
-			allExamples[exampleName] = source
+		for exampleName, ex := range gather(pkgs) {
+			allExamples[exampleName] = ex
 		}
 	}
 
@@ -104,10 +110,15 @@ const gatherLoadMode packages.LoadMode = packages.NeedName |
 // the example should be included in the output.
 const signifierCommentPrefix = "// This example is used in"
 
+type example struct {
+	Imports string `json:"imports"`
+	Code    string `json:"code"`
+}
+
 // gather extracts the code from the example functions in the given packages
 // and returns a map like the one described in the package documentation.
-func gather(pkgs []*packages.Package) map[string]string {
-	examples := make(map[string]string)
+func gather(pkgs []*packages.Package) map[string]example {
+	examples := make(map[string]example)
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			for _, decl := range file.Decls {
@@ -117,8 +128,27 @@ func gather(pkgs []*packages.Package) map[string]string {
 					continue
 				}
 
+				// Format example into string.
+				sb := new(strings.Builder)
+				err := format.Node(sb, pkg.Fset, &printer.CommentedNode{
+					Node:     fn.Body,
+					Comments: file.Comments,
+				})
+				if err != nil {
+					panic(err) // will only occur for bad invocations of Fprint
+				}
+				original := sb.String()
+				if !strings.Contains(original, "\n\t"+signifierCommentPrefix) {
+					// Does not contain the signifier comment. Skip it.
+					continue
+				}
+				exampleCode, blankImports := rewriteBlock(original)
+
 				// Gather map of imported packages to overridden identifier.
 				usedPackages := make(map[string]string)
+				for _, path := range blankImports {
+					usedPackages[path] = "_"
+				}
 				ast.Inspect(fn.Body, func(node ast.Node) bool {
 					id, ok := node.(*ast.Ident)
 					if !ok {
@@ -135,29 +165,15 @@ func gather(pkgs []*packages.Package) map[string]string {
 					usedPackages[refPkg.Imported().Path()] = overrideName
 					return true
 				})
-
-				// Format example into string.
-				sb := new(strings.Builder)
-				err := printer.Fprint(sb, pkg.Fset, &printer.CommentedNode{
-					Node:     fn.Body,
-					Comments: file.Comments,
-				})
-				if err != nil {
-					panic(err) // will only occur for bad invocations of Fprint
-				}
-				original := sb.String()
-				if !strings.Contains(original, "\n\t"+signifierCommentPrefix) {
-					// Does not contain the signifier comment. Skip it.
-					continue
-				}
-				exampleCode := rewriteBlock(original)
-				if len(usedPackages) > 0 {
-					exampleCode = formatImports(usedPackages) + "\n\n" + exampleCode
-				}
+				// Remove "log" import since it's almost always used for log.Fatal(err).
+				delete(usedPackages, "log")
 
 				pkgPath := strings.TrimSuffix(pkg.PkgPath, "_test")
 				exampleName := pkgPath + "." + fn.Name.Name
-				examples[exampleName] = exampleCode
+				examples[exampleName] = example{
+					Imports: formatImports(usedPackages),
+					Code:    exampleCode,
+				}
 			}
 		}
 	}
@@ -165,7 +181,8 @@ func gather(pkgs []*packages.Package) map[string]string {
 }
 
 // rewriteBlock reformats a Go block statement for display as an example.
-func rewriteBlock(block string) string {
+// It also extracts any blank imports found
+func rewriteBlock(block string) (_ string, blankImports []string) {
 	// Trim block.
 	block = strings.TrimPrefix(block, "{")
 	block = strings.TrimSuffix(block, "}")
@@ -209,14 +226,21 @@ rewrite:
 			sb.WriteString("return err")
 			sb.WriteByte('\n')
 		default:
-			if !strings.HasPrefix(line[start:], signifierCommentPrefix) {
+			const importBlankPrefix = "// import _ "
+			if strings.HasPrefix(line[start:], importBlankPrefix) {
+				// Blank import.
+				path, err := strconv.Unquote(line[start+len(importBlankPrefix):])
+				if err == nil {
+					blankImports = append(blankImports, path)
+				}
+			} else if !strings.HasPrefix(line[start:], signifierCommentPrefix) {
 				// Ordinary line.
 				sb.WriteString(line)
 				sb.WriteByte('\n')
 			}
 		}
 	}
-	return strings.TrimSpace(sb.String())
+	return strings.TrimSpace(sb.String()), blankImports
 }
 
 // nextLine splits the string at the next linefeed.
