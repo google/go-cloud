@@ -50,7 +50,6 @@ func TestFormatting(t *testing.T) {
 				`^message \(code=NotFound\):$`,
 				`\s+gocloud.dev/internal/gcerr.TestFormatting$`,
 				`\s+.*/internal/gcerr/gcerr_test.go:\d+$`,
-				`^\s*$`, // blank line at end
 			},
 		},
 		{
