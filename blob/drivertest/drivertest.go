@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -190,6 +191,9 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, asTests []AsTest
 	})
 	t.Run("TestCanceledWrite", func(t *testing.T) {
 		testCanceledWrite(t, newHarness)
+	})
+	t.Run("TestConcurrentWriteAndRead", func(t *testing.T) {
+		testConcurrentWriteAndRead(t, newHarness)
 	})
 	t.Run("TestMetadata", func(t *testing.T) {
 		testMetadata(t, newHarness)
@@ -1819,6 +1823,75 @@ func testDelete(t *testing.T, newHarness HarnessMaker) {
 			t.Errorf("delete after delete got %v, want NotFound error", err)
 		}
 	})
+}
+
+// testConcurrentWriteAndRead tests that concurrent writing and reading of
+// keys into a blob works.
+func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := blob.NewBucket(drv)
+	defer b.Close()
+
+	// Prepare data. Each blob dataSize bytes equal to its numeric key.
+	const numKeys = 20
+	const dataSize = 8 * 1024
+	keyData := make(map[int][]byte)
+	for k := 0; k < numKeys; k++ {
+		data := make([]byte, dataSize)
+		for i := 0; i < dataSize; i++ {
+			data[i] = byte(k)
+		}
+		keyData[k] = data
+	}
+
+	blobName := func(k int) string {
+		return fmt.Sprintf("key%d", k)
+	}
+
+	var wg sync.WaitGroup
+
+	// Write all blobs concurrently.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
+
+	// Read all blobs concurrently and verify that they contain the expected data.
+	for k := 0; k < numKeys; k++ {
+		wg.Add(1)
+		go func(key int) {
+			buf, err := b.ReadAll(ctx, blobName(key))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(buf) != dataSize {
+				t.Errorf("data size for key %d, got %d want %d", key, len(buf), dataSize)
+			}
+			for i := 0; i < len(buf); i++ {
+				if int(buf[i]) != key {
+					t.Errorf("read data for key %d, got %d want %d at index %d", key, int(buf[i]), key, i)
+					break
+				}
+			}
+			wg.Done()
+		}(k)
+	}
+	wg.Wait()
 }
 
 // testKeys tests a variety of weird keys.
