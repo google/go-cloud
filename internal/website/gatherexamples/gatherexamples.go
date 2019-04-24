@@ -55,7 +55,6 @@ func main() {
 		fmt.Fprintln(out, "Options:")
 		flag.PrintDefaults()
 	}
-	outputPath := flag.String("o", "", "path to output file (default to stdout)")
 	pattern := flag.String("pattern", "./...", "Go package pattern to use at each directory argument")
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -89,23 +88,7 @@ func main() {
 		os.Exit(1)
 	}
 	data = append(data, '\n')
-
-	output := os.Stdout
-	if *outputPath != "" && *outputPath != "-" {
-		var err error
-		output, err = os.Create(*outputPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "gatherexamples: %v\n", err)
-			os.Exit(1)
-		}
-		defer func() {
-			if err := output.Close(); err != nil {
-				fmt.Fprintf(os.Stderr, "gatherexamples: write output: %v\n", err)
-				os.Exit(1)
-			}
-		}()
-	}
-	if _, err := output.Write(data); err != nil {
+	if _, err := os.Stdout.Write(data); err != nil {
 		fmt.Fprintf(os.Stderr, "gatherexamples: write output: %v\n", err)
 		os.Exit(1)
 	}
@@ -130,14 +113,11 @@ func gather(pkgs []*packages.Package) map[string]string {
 			for _, decl := range file.Decls {
 				// Determine whether this declaration is an example function.
 				fn, ok := decl.(*ast.FuncDecl)
-				if !ok {
-					continue
-				}
 				if !ok || !strings.HasPrefix(fn.Name.Name, "Example") || len(fn.Type.Params.List) > 0 || len(fn.Type.Params.List) > 0 {
 					continue
 				}
 
-				// Gather sorted list of imported packages.
+				// Gather map of imported packages to overridden identifier.
 				usedPackages := make(map[string]string)
 				ast.Inspect(fn.Body, func(node ast.Node) bool {
 					id, ok := node.(*ast.Ident)
@@ -202,7 +182,7 @@ rewrite:
 		// this can produce incorrect rewrites.
 		line = strings.TrimPrefix(line, "\t")
 
-		// Check if this is line that needs rewriting.
+		// Check if this line needs rewriting.
 		start := strings.IndexFunc(line, func(r rune) bool { return r != ' ' && r != '\t' })
 		if start == -1 {
 			// Blank.
