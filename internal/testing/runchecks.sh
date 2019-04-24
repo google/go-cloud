@@ -101,6 +101,11 @@ if ! [[ -z "$missing_packages" ]]; then
   result=1
 fi
 
+# Ensure that all examples used in Hugo match what's in source.
+internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null || {
+  echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+}
+
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.
 if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
