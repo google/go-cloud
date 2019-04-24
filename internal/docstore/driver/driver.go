@@ -105,6 +105,11 @@ type Query struct {
 	// Limit sets the maximum number of results returned by running the query. When
 	// Limit <= 0, the driver implementation should return all possible results.
 	Limit int
+
+	// BeforeQuery is a callback that must be called exactly once before the
+	// underlying provider's query is executed. asFunc allows providers to expose
+	// provider-specific types.
+	BeforeQuery func(asFunc func(interface{}) bool) error
 }
 
 // A Filter defines a filter expression used to filter the query result.

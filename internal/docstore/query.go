@@ -91,6 +91,15 @@ func (q *Query) Limit(n int) *Query {
 	return q
 }
 
+// BeforeQuery takes a callback function that will be called before the Query is
+// executed to the underlying provider's query functionality. The callback takes
+// a parameter, asFunc, that converts its argument to provider-specific types.
+// See https://godoc.org/gocloud.dev#hdr-As for background information.
+func (q *Query) BeforeQuery(beforeQuery func(asFunc func(interface{}) bool) error) *Query {
+	q.dq.BeforeQuery = beforeQuery
+	return q
+}
+
 // Get returns an iterator for retrieving the documents specified by the query. If
 // field paths are provided, only those paths are set in the resulting documents.
 //
