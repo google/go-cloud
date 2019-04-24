@@ -23,6 +23,9 @@ import (
 )
 
 func ExampleOpenTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#kafka-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// The set of brokers in the Kafka cluster.
@@ -36,15 +39,12 @@ func ExampleOpenTopic() {
 		log.Fatal(err)
 	}
 	defer topic.Shutdown(ctx)
-
-	// Now we can use topic to send messages.
-	err = topic.Send(ctx, &pubsub.Message{Body: []byte("example message")})
-	if err != nil {
-		log.Fatal(err)
-	}
 }
 
 func ExampleOpenSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#kafka-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// The set of brokers in the Kafka cluster.
@@ -54,22 +54,20 @@ func ExampleOpenSubscription() {
 
 	// Construct a *pubsub.Subscription, joining the consumer group "my-group"
 	// and receiving messages from "my-topic".
-	sub, err := kafkapubsub.OpenSubscription(addrs, config, "my-group", []string{"my-topic"}, nil)
+	subscription, err := kafkapubsub.OpenSubscription(
+		addrs, config, "my-group", []string{"my-topic"}, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
-
-	// Now we can use sub to receive messages.
-	msg, err := sub.Receive(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Handle message....
-	msg.Ack()
+	defer subscription.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#kafka
+
+	// import _ "gocloud.dev/pubsub/kafkapubsub"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenTopic creates a *pubsub.Topic from a URL.
@@ -80,14 +78,24 @@ func Example_openFromURL() {
 		log.Fatal(err)
 	}
 	defer topic.Shutdown(ctx)
+}
+
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#kafka
+
+	// import _ "gocloud.dev/pubsub/kafkapubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
 
 	// OpenSubscription creates a *pubsub.Subscription from a URL.
 	// The host + path are used as the consumer group name.
 	// The "topic" query parameter sets one or more topics to subscribe to.
 	// The set of brokers must be in an environment variable KAFKA_BROKERS.
-	sub, err := pubsub.OpenSubscription(ctx, "kafka://my-group?topic=my-topic")
+	subscription, err := pubsub.OpenSubscription(ctx,
+		"kafka://my-group?topic=my-topic")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer sub.Shutdown(ctx)
+	defer subscription.Shutdown(ctx)
 }
