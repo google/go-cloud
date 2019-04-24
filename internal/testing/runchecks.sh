@@ -113,7 +113,7 @@ wire check ./... || result=1
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
-for path in "./internal/cmd/gocdk" "./internal/contributebot" "./samples/appengine"; do
+for path in "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)
