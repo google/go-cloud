@@ -463,9 +463,9 @@ defer subscription.Shutdown(ctx)
 
 The Go CDK can receive messages from a [Kafka][] cluster.
 A Kafka URL includes the consumer group name, plus at least one instance
-of an URL parameter specifying the topic to subscribe to.
+of a query parameter specifying the topic to subscribe to.
 The brokers in the Kafka cluster are discovered from the
-`KAFKA_BROKERS` environment variable (which is a comma-delimited lists of
+`KAFKA_BROKERS` environment variable (which is a comma-delimited list of
 hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
 ```go

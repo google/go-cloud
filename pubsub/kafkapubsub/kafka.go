@@ -370,8 +370,7 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	// repeatedly as the consumer group is rebalanced.
 	// See https://godoc.org/github.com/Shopify/sarama#ConsumerGroup.
 	go func() {
-		closeErr := consumerGroup.Consume(ctx, topics, ds)
-		ds.closeErr = closeErr
+		ds.closeErr = consumerGroup.Consume(ctx, topics, ds)
 		consumerGroup.Close()
 		close(ds.closeCh)
 	}()
@@ -422,6 +421,9 @@ func (s *subscription) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		case <-sess.Context().Done():
 			// This session is over, we must return. We'll end up dropping msg, but
 			// that's OK.
+			// TODO(rvangent): See if we can avoid that.
+			// TODO(rvangent): Also consider setting ReceiveBatch to maxMessages=1
+			//                 and maxHandlers=1 similar to NATS.
 		}
 	}
 	return nil
@@ -471,9 +473,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		case <-waitForMaxCtx.Done():
 			// We've tried for a while to get maxMessages, but didn't get enough.
 			// Return whatever we have (may be empty).
-			return dms, nil
-		case <-ctx.Done():
-			return nil, ctx.Err()
+			return dms, ctx.Err()
 		}
 	}
 }
@@ -493,9 +493,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 		return nil
 	}
 	// Mark all of the acked messages at the head of the slice. Since Kafka only
-	// stores a single offset, we can'tmark messages that aren't at the head; that
+	// stores a single offset, we can't mark messages that aren't at the head; that
 	// would move the offset past other as-yet-unacked messages.
-	for len(s.unacked) > 0 && s.unacked[0].acked == true {
+	for len(s.unacked) > 0 && s.unacked[0].acked {
 		s.sess.MarkMessage(s.unacked[0].msg, "")
 		s.unacked = s.unacked[1:]
 	}

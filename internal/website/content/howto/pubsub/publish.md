@@ -375,7 +375,7 @@ defer topic.Shutdown(ctx)
 
 The Go CDK can publish to a [Kafka][] cluster. A Kafka URL only includes the
 topic name. The brokers in the Kafka cluster are discovered from the
-`KAFKA_BROKERS` environment variable (which is a comma-delimited lists of
+`KAFKA_BROKERS` environment variable (which is a comma-delimited list of
 hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
 
 ```go
@@ -399,8 +399,7 @@ defer topic.Shutdown(ctx)
 
 The [`kafkapubsub.OpenTopic`][] constructor opens a Kafka topic to publish
 messages to. Depending on your Kafka cluster configuration (see
-`auto.create.topics.enable`), you may or may not need to provision the topic
-beforehand.
+`auto.create.topics.enable`), you may need to provision the topic beforehand.
 
 In addition to the list of brokers, you'll need a [`*sarama.Config`][], which
 exposes many knobs that can affect performance and semantics; review and set
