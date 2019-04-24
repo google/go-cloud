@@ -1,6 +1,7 @@
 module gocloud.dev/samples/appengine/helloworld
 
 require (
-	github.com/gorilla/mux v1.6.2
-	gocloud.dev v0.12.0
+	git.apache.org/thrift.git v0.12.0 // indirect
+	github.com/gorilla/mux v1.7.1
+	gocloud.dev v0.13.0
 )
