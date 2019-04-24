@@ -24,18 +24,21 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
 
 	// Create an in-memory bucket.
-	b := memblob.OpenBucket(nil)
-	defer b.Close()
+	bucket := memblob.OpenBucket(nil)
+	defer bucket.Close()
 
-	// Now we can use b to read or write files to the container.
-	ctx := context.Background()
-	err := b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
+	// Now we can use bucket to read or write files to the bucket.
+	err := bucket.WriteAll(ctx, "my-key", []byte("hello world"), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	data, err := b.ReadAll(ctx, "my-key")
+	data, err := bucket.ReadAll(ctx, "my-key")
 	if err != nil {
 		log.Fatal(err)
 	}

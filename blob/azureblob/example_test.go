@@ -24,12 +24,17 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	const (
-		// Your Azure Storage Acount and Access Key.
-		accountName = azureblob.AccountName("my-account")
-		accountKey  = azureblob.AccountKey("my-account-key")
-		// The storage container to access.
-		containerName = "mycontainer"
+		// Fill in with your Azure Storage Account and Access Key.
+		accountName azureblob.AccountName = "my-account"
+		accountKey  azureblob.AccountKey  = "my-account-key"
+		// Fill in with the storage container to access.
+		containerName = "my-container"
 	)
 
 	// Create a credentials object.
@@ -43,19 +48,12 @@ func Example() {
 
 	// Create a *blob.Bucket.
 	// The credential Option is required if you're going to use blob.SignedURL.
-	ctx := context.Background()
-	b, err := azureblob.OpenBucket(ctx, pipeline, accountName, containerName, &azureblob.Options{Credential: credential})
+	bucket, err := azureblob.OpenBucket(ctx, pipeline, accountName, containerName,
+		&azureblob.Options{Credential: credential})
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
-
-	// Now we can use b to read or write files to the container.
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = data
+	defer bucket.Close()
 }
 
 func Example_sasToken() {
@@ -64,7 +62,7 @@ func Example_sasToken() {
 		accountName = azureblob.AccountName("my-account")
 		sasToken    = azureblob.SASToken("my-SAS-token")
 		// The storage container to access.
-		containerName = "mycontainer"
+		containerName = "my-container"
 	)
 
 	// Since we're using a SASToken, we can use anonymous credentials.
@@ -93,14 +91,21 @@ func Example_sasToken() {
 }
 
 func Example_openBucket() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#azure
+
+	// import _ "gocloud.dev/blob/azureblob"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenBucket creates a *blob.Bucket from a URL.
-	// This URL will open the container "mycontainer" using default
+	// This URL will open the container "my-container" using default
 	// credentials found in the environment variables
 	// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
 	// and AZURE_STORAGE_SAS_TOKEN.
-	b, err := blob.OpenBucket(ctx, "azblob://mycontainer")
-	defer b.Close()
-	_, _ = b, err
+	bucket, err := blob.OpenBucket(ctx, "azblob://my-container")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
 }
