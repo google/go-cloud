@@ -168,8 +168,8 @@ func (m *Message) Ack() {
 
 // Nackable returns true iff Nack can be called without panicking.
 //
-// Some providers do not support nack; for example, nack does not make any
-// sense for at-most-once providers, since the message can't be redelivered.
+// Some providers do not support Nack; for example, at-most-once providers
+// can't redeliver a message.
 func (m *Message) Nackable() bool {
 	return m.nackable
 }
