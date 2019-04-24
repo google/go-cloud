@@ -121,7 +121,7 @@ both forms for each pub/sub provider.
 
 The Go CDK can subscribe to an Amazon [Simple Queueing Service][SQS] (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
-`https://` is replaced with `awssnssqs://`. You can specify the `region`
+`https://` is replaced with `awssqs://`. You can specify the `region`
 query parameter to ensure your application connects to the correct region, but
 otherwise `pubsub.OpenSubscription` will use the region found in the environment
 variables or your AWS CLI configuration.
@@ -135,7 +135,7 @@ import (
 // ...
 
 subscription, err := pubsub.OpenSubscription(ctx,
-    "awssnssqs://sqs.us-east-2.amazonaws.com/123456789012/" +
+    "awssqs://sqs.us-east-2.amazonaws.com/123456789012/" +
     "MyQueue?region=us-east-2")
 if err != nil {
     return err
@@ -160,7 +160,6 @@ first create an [AWS session][] with the same region as your topic:
 import (
     "github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/session"
-    "github.com/aws/aws-sdk-go/service/sqs"
     "gocloud.dev/pubsub/awssnssqs"
 )
 // ...
@@ -175,9 +174,8 @@ if err != nil {
 }
 
 // Create a *pubsub.Subscription.
-client := sqs.New(sess)
-const queueURL = "awssnssqs://sqs.us-east-2.amazonaws.com/123456789012/MyQueue"
-subscription, err := awssnssqs.OpenSubscription(ctx, client, queueURL, nil)
+const queueURL = "awssqs://sqs.us-east-2.amazonaws.com/123456789012/MyQueue"
+subscription, err := awssnssqs.OpenSubscription(ctx, sess, queueURL, nil)
 if err != nil {
     return err
 }
@@ -428,7 +426,7 @@ subscribing to messages coming from a source not using the Go CDK.
 
 ### NATS Constructor {#nats-ctor}
 
-The [`natspubsub.CreateSubscription`][] constructor opens a NATS subject as a
+The [`natspubsub.OpenSubscription`][] constructor opens a NATS subject as a
 topic. You must first create an [`*nats.Conn`][] to your NATS instance.
 
 ```go
@@ -445,7 +443,7 @@ if err != nil {
 }
 defer natsConn.Close()
 
-subscription, err := natspubsub.CreateSubscription(
+subscription, err := natspubsub.OpenSubscription(
     natsConn,
     "example.mysubject",
     func() { panic("nats does not have ack") },
@@ -457,7 +455,7 @@ defer subscription.Shutdown(ctx)
 ```
 
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
-[`natspubsub.CreateSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#CreateSubscription
+[`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
 
 ## Kafka {#kafka}
 

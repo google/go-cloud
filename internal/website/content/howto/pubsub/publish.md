@@ -68,7 +68,7 @@ import (
 
 const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
 topic, err := pubsub.OpenTopic(ctx,
-    "awssnssqs://" + topicARN + "?region=us-east-2")
+    "awssns://" + topicARN + "?region=us-east-2")
 if err != nil {
     return err
 }
@@ -96,7 +96,6 @@ create an [AWS session][] with the same region as your topic:
 import (
     "github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/session"
-    "github.com/aws/aws-sdk-go/service/sns"
     "gocloud.dev/pubsub/awssnssqs"
 )
 // ...
@@ -111,9 +110,8 @@ if err != nil {
 }
 
 // Create a *pubsub.Topic.
-client := sns.New(sess)
 const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
-topic, err := awssnssqs.OpenTopic(ctx, client, topicARN, nil)
+topic, err := awssnssqs.OpenTopic(ctx, sess, topicARN, nil)
 if err != nil {
     return err
 }
@@ -344,7 +342,7 @@ be encoded with [gob][].
 
 ### NATS Constructor {#nats-ctor}
 
-The [`natspubsub.CreateTopic`][] constructor opens a NATS subject as a topic. You
+The [`natspubsub.OpenTopic`][] constructor opens a NATS subject as a topic. You
 must first create an [`*nats.Conn`][] to your NATS instance.
 
 ```go
@@ -361,7 +359,7 @@ if err != nil {
 }
 defer natsConn.Close()
 
-topic, err := natspubsub.CreateTopic(natsConn, "example.mysubject", nil)
+topic, err := natspubsub.OpenTopic(natsConn, "example.mysubject", nil)
 if err != nil {
     return err
 }
@@ -369,7 +367,7 @@ defer topic.Shutdown(ctx)
 ```
 
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
-[`natspubsub.CreateTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#CreateTopic
+[`natspubsub.OpenTopic`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenTopic
 
 ## Kafka {#kafka}
 

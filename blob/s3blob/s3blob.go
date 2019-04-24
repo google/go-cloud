@@ -559,7 +559,10 @@ func eTagToMD5(etag *string) []byte {
 	// Un-hex; we return nil on error. In particular, we'll get an error here
 	// for multi-part uploaded blobs, whose ETag will contain a "-" and so will
 	// never be a legal hex encoding.
-	md5, _ := hex.DecodeString(unquoted)
+	md5, err := hex.DecodeString(unquoted)
+	if err != nil {
+		return nil
+	}
 	return md5
 }
 

@@ -203,12 +203,20 @@ func (b *erroringBucket) NewTypedWriter(ctx context.Context, key string, content
 	return nil, errFake
 }
 
+func (b *erroringBucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	return errFake
+}
+
 func (b *erroringBucket) Delete(ctx context.Context, key string) error {
 	return errFake
 }
 
 func (b *erroringBucket) SignedURL(ctx context.Context, key string, opts *driver.SignedURLOptions) (string, error) {
 	return "", errFake
+}
+
+func (b *erroringBucket) Close() error {
+	return errFake
 }
 
 func (b *erroringBucket) ErrorCode(err error) gcerrors.ErrorCode {
@@ -279,17 +287,69 @@ func TestErrorsAreWrapped(t *testing.T) {
 	err = w.Close()
 	verifyWrap("Writer.Close", err)
 
+	err = b.Copy(ctx, "", "", nil)
+	verifyWrap("Copy", err)
+
 	err = b.Delete(ctx, "")
 	verifyWrap("Delete", err)
 
 	_, err = b.SignedURL(ctx, "", nil)
 	verifyWrap("SignedURL", err)
+
+	err = b.Close()
+	verifyWrap("Close", err)
 }
 
 var (
 	testOpenOnce sync.Once
 	testOpenGot  *url.URL
 )
+
+// TestBucketIsClosed verifies that all Bucket functions return an error
+// if the Bucket is closed.
+func TestBucketIsClosed(t *testing.T) {
+	ctx := context.Background()
+	buf := bytes.Repeat([]byte{'A'}, sniffLen)
+
+	bucket := NewBucket(&erroringBucket{})
+	bucket.Close()
+
+	if _, err := bucket.Attributes(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	iter := bucket.List(nil)
+	if _, err := iter.Next(ctx); err != errClosed {
+		t.Error(err)
+	}
+
+	if _, err := bucket.NewRangeReader(ctx, "", 0, 1, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.ReadAll(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.NewWriter(ctx, "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.WriteAll(ctx, "", buf, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.NewRangeReader(ctx, "work", 0, 1, nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Copy(ctx, "", "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Delete(ctx, ""); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := bucket.SignedURL(ctx, "", nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := bucket.Close(); err != errClosed {
+		t.Error(err)
+	}
+}
 
 func TestURLMux(t *testing.T) {
 	ctx := context.Background()
