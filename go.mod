@@ -28,6 +28,7 @@ require (
 	github.com/Azure/go-autorest/tracing v0.1.0 // indirect
 	github.com/GoogleCloudPlatform/cloudsql-proxy v0.0.0-20190418212003-6ac0b49e7197
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
+	github.com/Shopify/sarama v1.19.0
 	github.com/armon/go-metrics v0.0.0-20190423201044-2801d9688273 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/aws/aws-sdk-go v1.19.16
