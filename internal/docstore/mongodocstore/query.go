@@ -100,6 +100,8 @@ func (it *docIterator) Stop() {
 	_ = it.cursor.Close(it.ctx)
 }
 
+func (it *docIterator) As(i interface{}) bool { return false }
+
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
 }
