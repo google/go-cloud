@@ -134,6 +134,10 @@ type DocumentIterator interface {
 	// Stop terminates the iterator before Next return io.EOF, allowing any cleanup
 	// needed.
 	Stop()
+
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	As(i interface{}) bool
 }
 
 // EqualOp is the name of the equality operator.

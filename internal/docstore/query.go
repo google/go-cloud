@@ -163,6 +163,17 @@ func (it *DocumentIterator) Stop() {
 	it.iter.Stop()
 }
 
+// As converts i to provider-specific types.
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
+func (it *DocumentIterator) As(i interface{}) bool {
+	if i == nil {
+		return false
+	}
+	return it.iter.As(i)
+}
+
 // Plan describes how the query would be executed if its Get method were called with
 // the given field paths. Plan uses only information available to the client, so it
 // cannot know whether a service uses indexes or scans internally.
