@@ -123,7 +123,7 @@ both forms for each pub/sub provider.</p>
 
 <p>The Go CDK can subscribe to an Amazon <a href="https://aws.amazon.com/sqs/">Simple Queueing Service</a> (SQS)
 topic. SQS URLs closely resemble the the queue URL, except the leading
-<code>https://</code> is replaced with <code>awssnssqs://</code>. You can specify the <code>region</code>
+<code>https://</code> is replaced with <code>awssqs://</code>. You can specify the <code>region</code>
 query parameter to ensure your application connects to the correct region, but
 otherwise <code>pubsub.OpenSubscription</code> will use the region found in the environment
 variables or your AWS CLI configuration.</p>
@@ -135,7 +135,7 @@ variables or your AWS CLI configuration.</p>
 <span class="c1">// ...
 </span><span class="c1"></span>
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-    <span class="s">&#34;awssnssqs://sqs.us-east-2.amazonaws.com/123456789012/&#34;</span> <span class="o">+</span>
+    <span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/&#34;</span> <span class="o">+</span>
     <span class="s">&#34;MyQueue?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">err</span>
@@ -152,7 +152,6 @@ first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
     <span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
     <span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
-    <span class="s">&#34;github.com/aws/aws-sdk-go/service/sqs&#34;</span>
     <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
 <span class="p">)</span>
 <span class="c1">// ...
@@ -167,9 +166,8 @@ first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/
 <span class="p">}</span>
 
 <span class="c1">// Create a *pubsub.Subscription.
-</span><span class="c1"></span><span class="nx">client</span> <span class="o">:=</span> <span class="nx">sqs</span><span class="p">.</span><span class="nf">New</span><span class="p">(</span><span class="nx">sess</span><span class="p">)</span>
-<span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;awssnssqs://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;</span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;</span>
+<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
     <span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
@@ -365,7 +363,7 @@ subscribing to messages coming from a source not using the Go CDK.</p>
 
 <h3 id="nats-ctor">NATS Constructor</h3>
 
-<p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#CreateSubscription"><code>natspubsub.CreateSubscription</code></a> constructor opens a NATS subject as a
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription"><code>natspubsub.OpenSubscription</code></a> constructor opens a NATS subject as a
 topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
     <span class="s">&#34;github.com/nats-io/go-nats&#34;</span>
@@ -380,7 +378,7 @@ topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">natsConn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">natspubsub</span><span class="p">.</span><span class="nf">CreateSubscription</span><span class="p">(</span>
+<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">natspubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
     <span class="nx">natsConn</span><span class="p">,</span>
     <span class="s">&#34;example.mysubject&#34;</span><span class="p">,</span>
     <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nats does not have ack&#34;</span><span class="p">)</span> <span class="p">},</span>
