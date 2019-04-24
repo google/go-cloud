@@ -95,8 +95,8 @@ func (q *Query) Limit(n int) *Query {
 // executed to the underlying provider's query functionality. The callback takes
 // a parameter, asFunc, that converts its argument to provider-specific types.
 // See https://godoc.org/gocloud.dev#hdr-As for background information.
-func (q *Query) BeforeQuery(beforeQuery func(asFunc func(interface{}) bool) error) *Query {
-	q.dq.BeforeQuery = beforeQuery
+func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query {
+	q.dq.BeforeQuery = f
 	return q
 }
 
