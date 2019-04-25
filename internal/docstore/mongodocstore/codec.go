@@ -113,7 +113,7 @@ func (e *mapEncoder) MapKey(k string) {
 func decodeDoc(m map[string]interface{}, ddoc driver.Document, idField string) error {
 	switch idField {
 	case mongoIDField: // do nothing
-	case "": // user documents have no ID field
+	case "": // user uses idFunc
 		delete(m, mongoIDField)
 	default: // user documents have a different ID field
 		m[idField] = m[mongoIDField]

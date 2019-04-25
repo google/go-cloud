@@ -14,15 +14,6 @@
 
 package dynamodocstore
 
-// To create the tables and indexes needed for these tests, run create_tables.sh in
-// this directory.
-//
-// The docstore-test-2 table is set up to work with queries on the drivertest.HighScore
-// struct like so:
-//   table:        "Game" partition key, "Player" sort key
-//   local index:  "Game" partition key, "Score" sort key
-//   global index: "Player" partition key, "Time" sort key
-// The conformance test queries should exercise all of these.
 import (
 	"context"
 	"net/url"
@@ -34,6 +25,16 @@ import (
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
 )
+
+// To create the tables and indexes needed for these tests, run create_tables.sh in
+// this directory.
+//
+// The docstore-test-2 table is set up to work with queries on the drivertest.HighScore
+// struct like so:
+//   table:        "Game" partition key, "Player" sort key
+//   local index:  "Game" partition key, "Score" sort key
+//   global index: "Player" partition key, "Time" sort key
+// The conformance test queries should exercise all of these.
 
 const (
 	region          = "us-east-2"
