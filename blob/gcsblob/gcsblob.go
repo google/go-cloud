@@ -253,8 +253,13 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if err == storage.ErrObjectNotExist {
 		return gcerrors.NotFound
 	}
-	if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
-		return gcerrors.NotFound
+	if gerr, ok := err.(*googleapi.Error); ok {
+		switch gerr.Code {
+		case 404:
+			return gcerrors.NotFound
+		case 412:
+			return gcerrors.FailedPrecondition
+		}
 	}
 	return gcerrors.Unknown
 }
@@ -451,7 +456,7 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	var w *storage.Writer
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
-			if p, ok := i.(***storage.ObjectHandle); ok {
+			if p, ok := i.(***storage.ObjectHandle); ok && w == nil {
 				*p = objp
 				return true
 			}
