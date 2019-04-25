@@ -491,6 +491,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	return s.updateMessageDispositions(ctx, ids, dispositionForAck)
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
+
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
 	return s.updateMessageDispositions(ctx, ids, dispositionForNack)

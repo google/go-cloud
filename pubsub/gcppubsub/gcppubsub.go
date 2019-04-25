@@ -391,6 +391,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{Subscription: s.path, AckIds: ids2})
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
+
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
 	ids2 := make([]string, 0, len(ids))

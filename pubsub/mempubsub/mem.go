@@ -318,6 +318,9 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 	return nil
 }
 
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
+
 // SendNacks implements driver.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
 	if s.topic == nil {

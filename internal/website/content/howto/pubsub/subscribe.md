@@ -457,6 +457,65 @@ defer subscription.Shutdown(ctx)
 [`*nats.Conn`]: https://godoc.org/github.com/nats-io/go-nats#Conn
 [`natspubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription
 
+## Kafka {#kafka}
+
+The Go CDK can receive messages from a [Kafka][] cluster.
+A Kafka URL includes the consumer group name, plus at least one instance
+of a query parameter specifying the topic to subscribe to.
+The brokers in the Kafka cluster are discovered from the
+`KAFKA_BROKERS` environment variable (which is a comma-delimited list of
+hosts, something like `1.2.3.4:9092,5.6.7.8:9092`).
+
+```go
+import (
+    "gocloud.dev/pubsub"
+    _ "gocloud.dev/pubsub/kafkapubsub"
+)
+
+// ...
+
+subscription, err := pubsub.OpenSubscription(ctx, "kafka://my-group?topic=my-topic")
+if err != nil {
+    return err
+}
+defer subscription.Shutdown(ctx)
+```
+
+[Kafka]: https://kafka.apache.org/
+
+### Kafka Constructor {#kafka-ctor}
+
+The [`kafkapubsub.OpenSubscription`][] constructor creates a consumer in a
+consumer group, subscribed to one or more topics.
+
+In addition to the list of brokers, you'll need a [`*sarama.Config`][], which
+exposes many knobs that can affect performance and semantics; review and set
+them carefully. [`kafkapubsub.MinimalConfig`][] provides a minimal config to get
+you started.
+
+```go
+import (
+    "gocloud.dev/pubsub/kafkapubsub"
+)
+
+// ...
+
+// The set of brokers in the Kafka cluster.
+addrs := []string{"1.2.3.4:9092"}
+// The Kafka client configuration to use.
+config := kafkapubsub.MinimalConfig()
+
+subscription, err := kafkapubsub.OpenSubscription(addrs, config, "my-group", []string{"my-topic"}, nil)
+if err != nil {
+  return err
+}
+defer subscription.Shutdown(ctx)
+```
+
+[`*sarama.Config`]: https://godoc.org/github.com/Shopify/sarama#Config
+[`kafkapubsub.OpenSubscription`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription
+[`kafkapubsub.MinimalConfig`]: https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig
+
 ## In-Memory {#mem}
 
 The Go CDK includes an in-memory Pub/Sub provider useful for local testing.

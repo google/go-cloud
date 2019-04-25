@@ -53,6 +53,7 @@ func (s *ackingDriverSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) e
 func (*ackingDriverSub) IsRetryable(error) bool             { return false }
 func (*ackingDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 func (*ackingDriverSub) AckFunc() func()                    { return nil }
+func (*ackingDriverSub) CanNack() bool                      { return false }
 func (*ackingDriverSub) Close() error                       { return nil }
 
 func TestAckTriggersDriverSendAcksForOneMessage(t *testing.T) {
@@ -366,6 +367,7 @@ func (s *callbackDriverSub) SendAcks(ctx context.Context, acks []driver.AckID) e
 func (*callbackDriverSub) IsRetryable(error) bool             { return false }
 func (*callbackDriverSub) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 func (*callbackDriverSub) AckFunc() func()                    { return nil }
+func (*callbackDriverSub) CanNack() bool                      { return false }
 func (*callbackDriverSub) Close() error                       { return nil }
 
 // This test detects the root cause of
