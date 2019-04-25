@@ -106,7 +106,7 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, nil)
 }
 
 // Firedocstore-specific tests.

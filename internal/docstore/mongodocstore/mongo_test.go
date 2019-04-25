@@ -112,7 +112,7 @@ func TestConformance(t *testing.T) {
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
 	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{})
+	drivertest.RunConformanceTests(t, newHarness, codecTester{}, nil)
 }
 
 // Mongo-specific tests.

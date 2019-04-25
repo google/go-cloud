@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"errors"
 	"io"
 	"math"
 	"math/rand"
@@ -91,8 +92,40 @@ type CodecTester interface {
 	DocstoreDecode(value, dest interface{}) error
 }
 
+// AsTest represents a test of As functionality.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
+	// the test query.
+	BeforeQuery(as func(interface{}) bool) error
+	// QueryCheck will be called after calling Query. It should call it.As and
+	// verify the results.
+	QueryCheck(it *docstore.DocumentIterator) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Query.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
+	if it.As(nil) {
+		return errors.New("want DocumentIterator.As to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
 	// TODO(jba): add conformance tests for unordered lists after all drivers have them.
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
@@ -105,6 +138,20 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
+
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("As", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				withCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+					testAs(t, coll, st)
+				})
+			})
+		}
+	})
 }
 
 // Field paths used in test documents.
@@ -892,5 +939,39 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	}
 	if err := dels.Do(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	ctx := context.Background()
+	actions := coll.Actions()
+	docs := []docmap{
+		{KindField: "as", KeyField: "testAs1", "s": "a"},
+		{KindField: "as", KeyField: "testAs2", "s": "b"},
+	}
+	// Create docs
+	for _, doc := range docs {
+		actions.Create(doc)
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		dels := coll.Actions()
+		for _, doc := range docs {
+			dels.Delete(docmap{KindField: doc[KindField], KeyField: doc[KeyField]})
+		}
+		_ = dels.Do(ctx)
+	}()
+
+	// Query
+	qs := []*docstore.Query{
+		coll.Query().Where(KindField, "=", "as"),
+		coll.Query().Where("s", "=", "a"),
+	}
+	for _, q := range qs {
+		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+			t.Error(err)
+		}
 	}
 }
