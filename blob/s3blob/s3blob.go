@@ -47,6 +47,7 @@
 //  - ListOptions.BeforeList: *s3.ListObjectsV2Input, or *s3.ListObjectsInput
 //      when Options.UseLegacyList == true.
 //  - Reader: s3.GetObjectOutput
+//  - ReaderOptions.BeforeRead: *s3.GetObjectInput
 //  - Attributes: s3.HeadObjectOutput
 //  - CopyOptions.BeforeCopy: *s3.CopyObjectInput
 //  - WriterOptions.BeforeWrite: *s3manager.UploadInput
@@ -517,6 +518,18 @@ func (b *bucket) NewRangeReader(ctx context.Context, key string, offset, length 
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset))
 	} else if length >= 0 {
 		in.Range = aws.String(fmt.Sprintf("bytes=%d-%d", offset, offset+length-1))
+	}
+	if opts.BeforeRead != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**s3.GetObjectInput); ok {
+				*p = in
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeRead(asFunc); err != nil {
+			return nil, err
+		}
 	}
 	resp, err := b.client.GetObjectWithContext(ctx, in)
 	if err != nil {
