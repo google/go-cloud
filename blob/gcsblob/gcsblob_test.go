@@ -78,7 +78,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 		// Use a dummy signer in replay mode.
 		opts.SignBytes = func(b []byte) ([]byte, error) { return []byte("signed!"), nil }
 	}
-	client, rt, done := setup.NewGCPClient2(ctx, t)
+	client, rt, done := setup.NewGCPClient(ctx, t)
 	return &harness{client: client, opts: opts, rt: rt, closer: done}, nil
 }
 

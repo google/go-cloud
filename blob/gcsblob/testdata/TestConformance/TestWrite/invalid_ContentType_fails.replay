@@ -1,0 +1,96 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^Expires$",
+      "^Signature$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^Expires$",
+      "^Signature$"
+    ],
+    "RemoveParams": null
+  },
+  "Entries": [
+    {
+      "ID": "9b7bf220427e44ef",
+      "Request": {
+        "Method": "GET",
+        "URL": "https://storage.googleapis.com/go-cloud-blob-test-bucket/blob-for-reading",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "go-cloud/blob/0.1.0"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 404,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Alt-Svc": [
+            "quic=\":443\"; ma=2592000; v=\"46,44,43,39\""
+          ],
+          "Cache-Control": [
+            "private, max-age=0"
+          ],
+          "Content-Length": [
+            "204"
+          ],
+          "Content-Type": [
+            "application/xml; charset=UTF-8"
+          ],
+          "Date": [
+            "Thu, 25 Apr 2019 23:22:51 GMT"
+          ],
+          "Expires": [
+            "CLEARED"
+          ],
+          "Server": [
+            "UploadServer"
+          ],
+          "X-Guploader-Customer": [
+            "cloud-storage"
+          ],
+          "X-Guploader-Request-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Upload-Result": [
+            "agent_rejected"
+          ],
+          "X-Guploader-Uploadid": [
+            "AEnB2UpkCk7XvVp-Jczl1mRrQrrj6KX8sTg5NRo-R6JF8gh1RVj-BL1yLWUJcWxuNDYDq8vLCb08WhXzVqRLdUSD5ktg4_wX7A"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0nMS4wJyBlbmNvZGluZz0nVVRGLTgnPz48RXJyb3I+PENvZGU+Tm9TdWNoS2V5PC9Db2RlPjxNZXNzYWdlPlRoZSBzcGVjaWZpZWQga2V5IGRvZXMgbm90IGV4aXN0LjwvTWVzc2FnZT48RGV0YWlscz5ObyBzdWNoIG9iamVjdDogZ28tY2xvdWQtYmxvYi10ZXN0LWJ1Y2tldC9ibG9iLWZvci1yZWFkaW5nPC9EZXRhaWxzPjwvRXJyb3I+"
+      }
+    }
+  ]
+}

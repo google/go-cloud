@@ -151,47 +151,6 @@ func NewAWSSession2(ctx context.Context, t *testing.T, region string) (sess *ses
 // Otherwise, the session reads a replay file and runs the test as a replay,
 // which never makes an outgoing HTTP call and uses fake credentials.
 func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
-	mode := recorder.ModeReplaying
-	if *Record {
-		mode = recorder.ModeRecording
-	}
-
-	// GFEs scrub X-Google- and X-GFE- headers from requests and responses.
-	// Drop them from recordings made by users inside Google.
-	// http://g3doc/gfe/g3doc/gfe3/design/http_filters/google_header_filter
-	// (internal Google documentation).
-	gfeDroppedHeaders := regexp.MustCompile("^X-(Google|GFE)-")
-
-	gcpMatcher := &replay.ProviderMatcher{
-		Headers:             []string{"User-Agent"},
-		DropRequestHeaders:  gfeDroppedHeaders,
-		DropResponseHeaders: gfeDroppedHeaders,
-		URLScrubbers: []*regexp.Regexp{
-			regexp.MustCompile(`Expires=[^?]*`),
-		},
-		BodyScrubbers: []*regexp.Regexp{regexp.MustCompile(`(?m)^\s*--.*$`)},
-	}
-	r, done, err := replay.NewRecorder(t, mode, gcpMatcher, t.Name())
-	if err != nil {
-		t.Fatalf("unable to initialize recorder: %v", err)
-	}
-
-	if *Record {
-		creds, err := gcp.DefaultCredentials(ctx)
-		if err != nil {
-			t.Fatalf("failed to get default credentials: %v", err)
-		}
-		client, err = gcp.NewHTTPClient(r, gcp.CredentialsTokenSource(creds))
-		if err != nil {
-			t.Fatal(err)
-		}
-	} else {
-		client = &gcp.HTTPClient{Client: http.Client{Transport: r}}
-	}
-	return client, r, done
-}
-
-func NewGCPClient2(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
 	httpreplay.DebugHeaders()
 	path := filepath.Join("testdata", t.Name()+".replay")
 
@@ -205,7 +164,9 @@ func NewGCPClient2(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, r
 			t.Fatal(err)
 		}
 		rec.ClearQueryParams("Expires")
+		rec.ClearQueryParams("Signature")
 		rec.ClearHeaders("Expires")
+		rec.ClearHeaders("Signature")
 		creds, err := gcp.DefaultCredentials(ctx)
 		if err != nil {
 			t.Fatalf("failed to get default credentials: %v", err)
