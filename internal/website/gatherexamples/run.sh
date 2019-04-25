@@ -18,4 +18,4 @@
 set -eo pipefail
 cd "$(dirname "$0")"
 # TODO(#1883): Use a consolidated list of all modules.
-go run gatherexamples.go ../..
+go run gatherexamples.go ../../..
