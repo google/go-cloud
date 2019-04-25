@@ -245,7 +245,20 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	var perr error
 	for _, m := range ms {
-		if perr = ch.Publish(t.exchange, toPublishing(m)); perr != nil {
+		pub := toPublishing(m)
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**amqp.Publishing); ok {
+					*p = &pub
+					return true
+				}
+				return false
+			}
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		if perr = ch.Publish(t.exchange, pub); perr != nil {
 			cancel()
 			break
 		}
@@ -641,8 +654,6 @@ func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) err
 }
 
 func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks/Nacks
-	// don't block each other.
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

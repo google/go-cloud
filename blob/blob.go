@@ -897,7 +897,7 @@ func (b *Bucket) Close() error {
 	if prev {
 		return errClosed
 	}
-	return b.b.Close()
+	return wrapError(b.b, b.b.Close())
 }
 
 // DefaultSignedURLExpiry is the default duration for SignedURLOptions.Expiry.

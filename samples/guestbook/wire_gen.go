@@ -179,21 +179,24 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 		return nil, nil, err
 	}
 	params := gcpSQLParams(projectID, flags)
-	db, err := cloudmysql.Open(ctx, remoteCertSource, params)
+	db, cleanup, err := cloudmysql.Open(ctx, remoteCertSource, params)
 	if err != nil {
 		return nil, nil, err
 	}
-	bucket, cleanup, err := gcpBucket(ctx, flags, httpClient)
-	if err != nil {
-		return nil, nil, err
-	}
-	runtimeConfigManagerClient, cleanup2, err := gcpruntimeconfig.Dial(ctx, tokenSource)
+	bucket, cleanup2, err := gcpBucket(ctx, flags, httpClient)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
 	}
-	variable, cleanup3, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	runtimeConfigManagerClient, cleanup3, err := gcpruntimeconfig.Dial(ctx, tokenSource)
 	if err != nil {
+		cleanup2()
+		cleanup()
+		return nil, nil, err
+	}
+	variable, cleanup4, err := gcpMOTDVar(ctx, runtimeConfigManagerClient, projectID, flags)
+	if err != nil {
+		cleanup3()
 		cleanup2()
 		cleanup()
 		return nil, nil, err
@@ -201,10 +204,11 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	mainApplication := newApplication(db, bucket, variable)
 	router := newRouter(mainApplication)
 	stackdriverLogger := sdserver.NewRequestLogger()
-	v, cleanup4 := appHealthChecks(db)
+	v, cleanup5 := appHealthChecks(db)
 	monitoredresourceInterface := monitoredresource.Autodetect()
-	exporter, cleanup5, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
+	exporter, cleanup6, err := sdserver.NewExporter(projectID, tokenSource, monitoredresourceInterface)
 	if err != nil {
+		cleanup5()
 		cleanup4()
 		cleanup3()
 		cleanup2()
@@ -222,6 +226,7 @@ func setupGCP(ctx context.Context, flags *cliFlags) (*server.Server, func(), err
 	}
 	serverServer := server.New(router, options)
 	return serverServer, func() {
+		cleanup6()
 		cleanup5()
 		cleanup4()
 		cleanup3()

@@ -89,9 +89,14 @@ fi;
 # ./internal/testing/alldeps
 #
 # Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
-./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
-  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
-}
+#
+# Run this only on the latest version of Go, since module behavior may differ
+# across versions.
+if [[ $(go version) == *1\.12* ]]; then
+  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+    echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
+  }
+fi
 
 # Ensure that any new packages have the corresponding entries in Hugo.
 missing_packages="$(internal/website/listnewpkgs.sh)"
@@ -113,7 +118,7 @@ wire check ./... || result=1
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
-for path in "./internal/cmd/gocdk" "./internal/contributebot" "./samples/appengine"; do
+for path in "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)

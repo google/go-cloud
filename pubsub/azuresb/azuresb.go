@@ -42,6 +42,7 @@
 // azuresb exposes the following types for As:
 //  - Topic: *servicebus.Topic
 //  - Subscription: *servicebus.Subscription
+//  - Message.BeforeSend: *servicebus.Message
 //  - Message: *servicebus.Message
 //  - Error: common.Retryable
 package azuresb // import "gocloud.dev/pubsub/azuresb"
@@ -268,6 +269,18 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	sbms := servicebus.NewMessage(dm.Body)
 	for k, v := range dm.Metadata {
 		sbms.Set(k, v)
+	}
+	if dm.BeforeSend != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**servicebus.Message); ok {
+				*p = sbms
+				return true
+			}
+			return false
+		}
+		if err := dm.BeforeSend(asFunc); err != nil {
+			return err
+		}
 	}
 	return t.sbTopic.Send(ctx, sbms)
 }

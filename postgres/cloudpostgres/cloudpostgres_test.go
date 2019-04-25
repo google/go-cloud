@@ -59,7 +59,7 @@ func TestOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	certSource := cloudsql.NewCertSource(client)
-	db, err := Open(ctx, certSource, &Params{
+	db, _, err := Open(ctx, certSource, &Params{
 		ProjectID: project,
 		Region:    region,
 		Instance:  instance,
@@ -118,7 +118,7 @@ func TestOpenBadValue(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name+"="+test.value, func(t *testing.T) {
-			db, err := Open(ctx, certSource, &Params{
+			db, _, err := Open(ctx, certSource, &Params{
 				ProjectID: project,
 				Region:    region,
 				Instance:  instance,

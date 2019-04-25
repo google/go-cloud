@@ -15,6 +15,16 @@
 // Package memdocstore provides an in-memory implementation of the docstore
 // API. It is suitable for local development and testing.
 //
+// Every document in a memdocstore collection has a unique primary key. The primary
+// key values need not be strings; they may be any comparable Go value.
+//
+//
+// Unordered Action Lists
+//
+// Unordered action lists are executed concurrently. Each action in an unordered
+// action list is executed in a separate goroutine.
+//
+//
 // URLs
 //
 // For docstore.OpenCollection, memdocstore registers for the scheme
@@ -30,6 +40,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
@@ -58,34 +69,52 @@ func (*URLOpener) OpenCollectionURL(ctx context.Context, u *url.URL) (*docstore.
 	for param := range u.Query() {
 		return nil, fmt.Errorf("open collection %v: invalid query parameter %q", u, param)
 	}
-	return OpenCollection(u.Host, nil), nil
+	return OpenCollection(u.Host, nil)
 }
+
+// Options are optional arguments to the OpenCollection functions.
+type Options struct{}
 
 // TODO(jba): make this package thread-safe.
 
-// Options sets options for constructing a *docstore.Collection backed by memory.
-type Options struct{}
-
-// OpenCollection creates a *docstore.Collection backed by memory.
-// memdocstore requires that a single field be designated the primary
-// key. Its values must be unique over all documents in the collection,
-// and the primary key must be provided to retrieve a document.
-// The values need not be strings; they may be any comparable Go value.
-// keyField is the name of the primary key field.
-func OpenCollection(keyField string, opts *Options) *docstore.Collection {
-	return docstore.NewCollection(newCollection(keyField))
+// OpenCollection creates a *docstore.Collection backed by memory. keyField is the
+// document field holding the primary key of the collection.
+func OpenCollection(keyField string, _ *Options) (*docstore.Collection, error) {
+	c, err := newCollection(keyField, nil)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
 }
 
-func newCollection(keyField string) driver.Collection {
+// OpenCollectionWithKeyFunc creates a *docstore.Collection backed by memory. keyFunc takes
+// a document and returns the document's primary key. It should return nil if the
+// document is missing the information to construct a key. This will cause all
+// actions, even Create, to fail.
+func OpenCollectionWithKeyFunc(keyFunc func(docstore.Document) interface{}, _ *Options) (*docstore.Collection, error) {
+	c, err := newCollection("", keyFunc)
+	if err != nil {
+		return nil, err
+	}
+	return docstore.NewCollection(c), nil
+}
+
+func newCollection(keyField string, keyFunc func(docstore.Document) interface{}) (driver.Collection, error) {
+	if keyField == "" && keyFunc == nil {
+		return nil, gcerr.Newf(gcerr.InvalidArgument, nil, "must provide either keyField or keyFunc")
+	}
 	return &collection{
 		keyField:     keyField,
+		keyFunc:      keyFunc,
 		docs:         map[interface{}]map[string]interface{}{},
 		nextRevision: 1,
-	}
+	}, nil
 }
 
 type collection struct {
 	keyField string
+	keyFunc  func(docstore.Document) interface{}
+	mu       sync.Mutex
 	// map from keys to documents. Documents are represented as map[string]interface{},
 	// regardless of what their original representation is. Even if the user is using
 	// map[string]interface{}, we make our own copy.
@@ -101,7 +130,28 @@ func (c *collection) ErrorCode(err error) gcerr.ErrorCode {
 // RunActions implements driver.RunActions.
 func (c *collection) RunActions(ctx context.Context, actions []*driver.Action, unordered bool) driver.ActionListError {
 	if unordered {
-		panic("unordered unimplemented")
+		errs := make([]error, len(actions))
+		var wg sync.WaitGroup
+		for i, a := range actions {
+			i := i
+			a := a
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errs[i] = c.runAction(ctx, a)
+			}()
+		}
+		wg.Wait()
+		var alerr driver.ActionListError
+		for i, err := range errs {
+			if err != nil {
+				alerr = append(alerr, struct {
+					Index int
+					Err   error
+				}{i, err})
+			}
+		}
+		return alerr
 	}
 	// Run each action in order, stopping at the first error.
 	for i, a := range actions {
@@ -119,17 +169,18 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 		return ctx.Err()
 	}
 	// Get the key from the doc so we can look it up in the map.
-	key, err := a.Doc.GetField(c.keyField)
-	// The only acceptable error case is NotFound during a Create.
-	if err != nil && !(gcerrors.Code(err) == gcerr.NotFound && a.Kind == driver.Create) {
-		return err
+	key := c.key(a.Doc)
+	if key == nil && (a.Kind != driver.Create || c.keyField == "") {
+		return gcerr.Newf(gcerr.InvalidArgument, nil, "missing key field")
 	}
-	// If there is a key, get the current document.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// If there is a key, get the current document with that key.
 	var (
 		current map[string]interface{}
 		exists  bool
 	)
-	if err == nil {
+	if key != nil {
 		current, exists = c.docs[key]
 	}
 	// Check for a NotFound error.
@@ -143,7 +194,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 			return gcerr.Newf(gcerr.AlreadyExists, nil, "Create: document with key %v exists", key)
 		}
 		// If the user didn't supply a value for the key field, create a new one.
-		if key == nil {
+		if key == nil && c.keyField != "" {
 			key = driver.UniqueString()
 			// Set the new key in the document.
 			if err := a.Doc.SetField(c.keyField, key); err != nil {
@@ -189,6 +240,7 @@ func (c *collection) runAction(ctx context.Context, a *driver.Action) error {
 	return nil
 }
 
+// Must be called with the lock held.
 func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error {
 	// Apply each modification. Fail if any mod would fail.
 	// Sort mods by first field path element so tests are deterministic.
@@ -216,6 +268,15 @@ func (c *collection) update(doc map[string]interface{}, mods []driver.Mod) error
 	return nil
 }
 
+func (c *collection) key(doc driver.Document) interface{} {
+	if c.keyField != "" {
+		key, _ := doc.GetField(c.keyField) // ignore error because key will be nil
+		return key
+	}
+	return c.keyFunc(doc.Origin)
+}
+
+// Must be called with the lock held.
 func (c *collection) changeRevision(doc map[string]interface{}) {
 	c.nextRevision++
 	doc[docstore.RevisionField] = c.nextRevision

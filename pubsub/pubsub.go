@@ -135,6 +135,15 @@ type Message struct {
 	// message has no associated metadata.
 	Metadata map[string]string
 
+	// BeforeSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
+
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
@@ -162,9 +171,15 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
-// Nack tells the server that this Message was not processed and should be
-// redelivered. It returns immediately, but the actual nack is sent in the
-// background, and is not guaranteed to succeed.
+// Nack (short for negative acknowledgment) tells the server that this Message
+// was not processed and should be redelivered. It returns immediately, but the
+// actual nack is sent in the background, and is not guaranteed to succeed.
+//
+// Nack is a performance optimization for retrying transient failures. Nack
+// must not be used for message parse errors or other messages that the
+// application will never be able to process: calling Nack will cause them to
+// be redelivered and overload the server. Instead, an application should call
+// Ack and log the failure in some monitored way.
 //
 // Nack panics for at-most-once providers, as Nack is meaningless when
 // messages can't be redelivered.
@@ -233,8 +248,9 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 		}
 	}
 	dm := &driver.Message{
-		Body:     m.Body,
-		Metadata: m.Metadata,
+		Body:       m.Body,
+		Metadata:   m.Metadata,
+		BeforeSend: m.BeforeSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }
@@ -798,6 +814,9 @@ type errorCoder interface {
 }
 
 func wrapError(ec errorCoder, err error) error {
+	if err == nil {
+		return nil
+	}
 	if gcerr.DoNotWrap(err) {
 		return err
 	}

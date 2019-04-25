@@ -43,13 +43,12 @@ func (k *erroringKeeper) Encrypt(ctx context.Context, b []byte) ([]byte, error) 
 	return nil, errFake
 }
 
-func (k *erroringKeeper) Close() error                       { return nil }
+func (k *erroringKeeper) Close() error                       { return errFake }
 func (k *erroringKeeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestErrorsAreWrapped(t *testing.T) {
 	ctx := context.Background()
 	k := NewKeeper(&erroringKeeper{})
-	defer k.Close()
 
 	// verifyWrap ensures that err is wrapped exactly once.
 	verifyWrap := func(description string, err error) {
@@ -70,6 +69,27 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	_, err = k.Encrypt(ctx, nil)
 	verifyWrap("Encrypt", err)
+
+	err = k.Close()
+	verifyWrap("Close", err)
+}
+
+// TestKeeperIsClosed tests that Keeper functions return an error when the
+// Keeper is closed.
+func TestKeeperIsClosed(t *testing.T) {
+	ctx := context.Background()
+	k := NewKeeper(&erroringKeeper{})
+	k.Close()
+
+	if _, err := k.Decrypt(ctx, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := k.Encrypt(ctx, nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := k.Close(); err != errClosed {
+		t.Error(err)
+	}
 }
 
 func TestOpenCensus(t *testing.T) {

@@ -379,6 +379,8 @@ func (it *documentIterator) Stop() {
 	it.last = nil
 }
 
+func (it *documentIterator) As(i interface{}) bool { return false }
+
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	qr, err := c.planQuery(q)
 	if err != nil {

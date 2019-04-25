@@ -42,7 +42,7 @@ type harness struct {
 }
 
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName), Options{IDField: "_id"})
+	coll := newCollection(h.db.Collection(collectionName), "", nil)
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -125,7 +125,7 @@ func fakeConnectionStringInEnv() func() {
 	}
 }
 
-func TestOpenCollection(t *testing.T) {
+func TestOpenCollectionURL(t *testing.T) {
 	cleanup := fakeConnectionStringInEnv()
 	defer cleanup()
 
@@ -139,6 +139,8 @@ func TestOpenCollection(t *testing.T) {
 		{"mongo:///mycollection", true},
 		// Missing collection name.
 		{"mongo://mydb/", true},
+		// Passing id_field parameter.
+		{"mongo://mydb/mycollection?id_field=foo", false},
 		// Invalid parameter.
 		{"mongo://mydb/mycollection?param=value", true},
 	}
