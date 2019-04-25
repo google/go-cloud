@@ -27,7 +27,7 @@ func TestGather(t *testing.T) {
 	tests := []struct {
 		name   string
 		module packagestest.Module
-		want   map[string]string
+		want   map[string]example
 	}{
 		{
 			name: "NoExamples",
@@ -37,7 +37,7 @@ func TestGather(t *testing.T) {
 					"foo.go": "package foo\nfunc main() {}\n",
 				},
 			},
-			want: map[string]string{},
+			want: map[string]example{},
 		},
 		{
 			name: "EmptyExample",
@@ -50,7 +50,7 @@ func TestGather(t *testing.T) {
 func Example() {}`,
 				},
 			},
-			want: map[string]string{},
+			want: map[string]example{},
 		},
 		{
 			name: "EmptyExampleFoo",
@@ -64,7 +64,7 @@ func ExampleFoo() {
 }`,
 				},
 			},
-			want: map[string]string{},
+			want: map[string]example{},
 		},
 		{
 			name: "EmptyExampleWithComment",
@@ -79,8 +79,8 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "",
+			want: map[string]example{
+				"example.com/foo.Example": {Code: ""},
 			},
 		},
 		{
@@ -96,8 +96,8 @@ func ExampleFoo() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.ExampleFoo": "",
+			want: map[string]example{
+				"example.com/foo.ExampleFoo": {Code: ""},
 			},
 		},
 		{
@@ -122,12 +122,12 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "// Unattached comment.\n\n" +
+			want: map[string]example{
+				"example.com/foo.Example": {Code: "// Unattached comment.\n\n" +
 					"// Outside inner block comment.\n" +
 					"panic(\"ohai\")\n" +
 					"if false {\n\t// something\n}\n" +
-					"return",
+					"return"},
 			},
 		},
 		{
@@ -146,8 +146,11 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "import \"fmt\"\n\nfmt.Println(42)",
+			want: map[string]example{
+				"example.com/foo.Example": {
+					Imports: "import \"fmt\"",
+					Code:    "fmt.Println(42)",
+				},
 			},
 		},
 		{
@@ -167,9 +170,11 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "import (\n\t\"fmt\"\n\t\"math\"\n)\n\n" +
-					"fmt.Println(math.Pi)",
+			want: map[string]example{
+				"example.com/foo.Example": {
+					Imports: "import (\n\t\"fmt\"\n\t\"math\"\n)",
+					Code:    "fmt.Println(math.Pi)",
+				},
 			},
 		},
 		{
@@ -191,10 +196,9 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "import \"log\"\n\n" +
-					"var err error\n" +
-					"if err != nil {\n\treturn err\n}",
+			want: map[string]example{
+				"example.com/foo.Example": {Code: "var err error\n" +
+					"if err != nil {\n\treturn err\n}"},
 			},
 		},
 		{
@@ -220,8 +224,34 @@ func Example() {
 }`,
 				},
 			},
-			want: map[string]string{
-				"example.com/foo.Example": "import \"context\"\n\n// do something",
+			want: map[string]example{
+				"example.com/foo.Example": {
+					Imports: "import \"context\"",
+					Code:    "// do something",
+				},
+			},
+		},
+		{
+			name: "BlankImports",
+			module: packagestest.Module{
+				Name: "example.com/foo",
+				Files: map[string]interface{}{
+					"foo.go": "package foo\n",
+					"example_test.go": `package foo_test
+
+func Example() {
+	// This example is used in http://www.example.com/docs
+
+	// import _ "example.com/bar"
+	_ = 42
+}`,
+				},
+			},
+			want: map[string]example{
+				"example.com/foo.Example": {
+					Imports: "import _ \"example.com/bar\"",
+					Code:    "_ = 42",
+				},
 			},
 		},
 	}
