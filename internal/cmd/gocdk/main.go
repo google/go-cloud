@@ -114,6 +114,8 @@ func osProcessContext() (*processContext, error) {
 // overrideEnv returns a copy of pctx.env that has vars appended to the end.
 // This method is safe to call from multiple goroutines.
 func (pctx *processContext) overrideEnv(vars ...string) []string {
+	// Setting the slice's capacity to length ensures that a new backing array
+	// is allocated if len(vars) > 0.
 	return append(pctx.env[:len(pctx.env):len(pctx.env)], vars...)
 }
 
