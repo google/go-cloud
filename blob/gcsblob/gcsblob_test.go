@@ -143,9 +143,17 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 }
 
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+	var objp **storage.ObjectHandle
+	if !as(&objp) {
+		return errors.New("Writer.As failed to get ObjectHandle")
+	}
+	// Replace the ObjectHandle with a new one that adds Conditions
+	// (this condition will always be true).
+	*objp = (*objp).If(storage.Conditions{DoesNotExist: true})
+
 	var sw *storage.Writer
 	if !as(&sw) {
-		return errors.New("Writer.As failed")
+		return errors.New("Writer.As failed to get Writer")
 	}
 	sw.ContentLanguage = language
 	return nil

@@ -43,7 +43,7 @@
 //  - Reader: *storage.Reader
 //  - Attributes: storage.ObjectAttrs
 //  - CopyOptions.BeforeCopy: *storage.Copier
-//  - WriterOptions.BeforeWrite: *storage.Writer
+//  - WriterOptions.BeforeWrite: **storage.ObjectHandle, *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
 import (
@@ -430,27 +430,46 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
-	w := obj.NewWriter(ctx)
-	w.CacheControl = opts.CacheControl
-	w.ContentDisposition = opts.ContentDisposition
-	w.ContentEncoding = opts.ContentEncoding
-	w.ContentLanguage = opts.ContentLanguage
-	w.ContentType = contentType
-	w.ChunkSize = bufferSize(opts.BufferSize)
-	w.Metadata = opts.Metadata
-	w.MD5 = opts.ContentMD5
+
+	// Add an extra level of indirection so that BeforeWrite can replace obj
+	// if needed. For example, ObjectHandle.If returns a new ObjectHandle.
+	// Also, make the Writer lazily in case this replacement happens.
+	objp := &obj
+	makeWriter := func() *storage.Writer {
+		w := (*objp).NewWriter(ctx)
+		w.CacheControl = opts.CacheControl
+		w.ContentDisposition = opts.ContentDisposition
+		w.ContentEncoding = opts.ContentEncoding
+		w.ContentLanguage = opts.ContentLanguage
+		w.ContentType = contentType
+		w.ChunkSize = bufferSize(opts.BufferSize)
+		w.Metadata = opts.Metadata
+		w.MD5 = opts.ContentMD5
+		return w
+	}
+
+	var w *storage.Writer
 	if opts.BeforeWrite != nil {
 		asFunc := func(i interface{}) bool {
-			p, ok := i.(**storage.Writer)
-			if !ok {
-				return false
+			if p, ok := i.(***storage.ObjectHandle); ok {
+				*p = objp
+				return true
 			}
-			*p = w
-			return true
+			if p, ok := i.(**storage.Writer); ok {
+				if w == nil {
+					w = makeWriter()
+				}
+				*p = w
+				return true
+			}
+			return false
 		}
 		if err := opts.BeforeWrite(asFunc); err != nil {
 			return nil, err
 		}
+	}
+	if w == nil {
+		w = makeWriter()
 	}
 	return w, nil
 }
