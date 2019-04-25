@@ -316,6 +316,51 @@ must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"
     <span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<h2 id="kafka">Kafka</h2>
+
+<p>The Go CDK can publish to a <a href="https://kafka.apache.org/">Kafka</a> cluster. A Kafka URL only includes the
+topic name. The brokers in the Kafka cluster are discovered from the
+<code>KAFKA_BROKERS</code> environment variable (which is a comma-delimited list of
+hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// ...
+</span><span class="c1"></span>
+<span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;kafka://mytopic&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<h3 id="kafka-ctor">Kafka Constructor</h3>
+
+<p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenTopic"><code>kafkapubsub.OpenTopic</code></a> constructor opens a Kafka topic to publish
+messages to. Depending on your Kafka cluster configuration (see
+<code>auto.create.topics.enable</code>), you may need to provision the topic beforehand.</p>
+
+<p>In addition to the list of brokers, you&rsquo;ll need a <a href="https://godoc.org/github.com/Shopify/sarama#Config"><code>*sarama.Config</code></a>, which
+exposes many knobs that can affect performance and semantics; review and set
+them carefully. <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig"><code>kafkapubsub.MinimalConfig</code></a> provides a minimal config to get
+you started.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+    <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// ...
+</span><span class="c1"></span>
+<span class="c1">// The set of brokers in the Kafka cluster.
+</span><span class="c1"></span><span class="nx">addrs</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;1.2.3.4:9092&#34;</span><span class="p">}</span>
+<span class="c1">// The Kafka client configuration to use.
+</span><span class="c1"></span><span class="nx">config</span> <span class="o">:=</span> <span class="nx">kafkapubsub</span><span class="p">.</span><span class="nf">MinimalConfig</span><span class="p">()</span>
+
+<span class="c1">// Construct a *pubsub.Topic to send messages to &#34;my-topic&#34;.
+</span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kafkapubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">addrs</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="s">&#34;my-topic&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+  <span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
 <h2 id="mem">In-Memory</h2>
 
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
