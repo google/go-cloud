@@ -191,6 +191,52 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	return client, r, done
 }
 
+func NewGCPClient2(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt http.RoundTripper, done func()) {
+	httpreplay.DebugHeaders()
+	path := filepath.Join("testdata", t.Name()+".replay")
+
+	if *Record {
+		t.Logf("Recording into golden file %s", path)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		rec, err := httpreplay.NewRecorder(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rec.ClearQueryParams("Expires")
+		rec.ClearHeaders("Expires")
+		creds, err := gcp.DefaultCredentials(ctx)
+		if err != nil {
+			t.Fatalf("failed to get default credentials: %v", err)
+		}
+		client, err := rec.Client(ctx, option.WithTokenSource(gcp.CredentialsTokenSource(creds)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		cleanup := func() {
+			if err := rec.Close(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
+	} else {
+		t.Logf("Replaying from golden file %s", path)
+		replay, err := httpreplay.NewReplayer(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err := replay.Client(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cleanup := func() {
+			_ = replay.Close()
+		}
+		return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
+	}
+}
+
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
 // If the test is in --record mode, the client will call out to GCP, and the
 // results are recorded in a replay file.
