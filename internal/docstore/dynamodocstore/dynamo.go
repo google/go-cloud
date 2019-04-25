@@ -491,7 +491,10 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 // stored document's revision matches the revision of doc.
 func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, error) {
 	v, err := doc.GetField(docstore.RevisionField)
-	if err != nil {
+	if err != nil { // field not present
+		return nil, nil
+	}
+	if v == nil { // field is present, but nil
 		return nil, nil
 	}
 	rev, ok := v.(string)

@@ -235,7 +235,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 	if err := res.Decode(&m); err != nil {
 		return err
 	}
-	return decodeDoc(m, a.Doc)
+	return decodeDoc(m, a.Doc, c.idField)
 }
 
 // Construct a mongo "projection document" from field paths.
