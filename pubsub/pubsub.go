@@ -175,12 +175,12 @@ func (m *Message) Ack() {
 	m.isAcked = true
 }
 
+/*
+// TODO(rvangent): Decide whether to expose this.
 // Nackable returns true iff Nack can be called without panicking.
 //
 // Some providers do not support Nack; for example, at-most-once providers
 // can't redeliver a message.
-/*
-TODO(rvangent): Decide whether to expose this.
 func (m *Message) Nackable() bool {
 	return m.nackable
 }
@@ -197,7 +197,7 @@ func (m *Message) Nackable() bool {
 // Ack and log the failure in some monitored way.
 //
 // Nack panics for some providers, as Nack is meaningless when messages can't be
-// redelivered. You can use Nackable to determine if Nack is available.
+// redelivered.
 func (m *Message) Nack() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
