@@ -1,6 +1,5 @@
 language: go
 go_import_path: gocloud.dev
-go: "1.11.x"
 
 before_install:
   - "df -k"
@@ -26,15 +25,25 @@ env:
   global:
   - GO111MODULE=on
 
+# When updating Go versions:
+# In addition to changing the "go:" versions below, edit the version
+# test in runchecks.sh.
+
 jobs:
   include:
-    - os: linux
-    - os: osx
+    - go: "1.11.x"
+      os: linux
+      if: branch = master AND type = push
+    - go: "1.12.x"
+      os: linux
+    - go: "1.12.x" 
+      os: osx
     # TODO(#1075): Uncomment the lines below to re-enable the Windows build on
     # master once it passes; currently it always fails due to a Travis bug
     # regarding secrets.
     # # Only run Windows build job on master; it's very slow.
-    # - os: windows
+    # - go: "1.12.x"
+    #   os: windows
     #   if: branch = master AND type = push
     # Deploy to GitHub Pages.
     - stage: website
