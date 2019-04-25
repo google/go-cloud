@@ -179,9 +179,12 @@ func (m *Message) Ack() {
 //
 // Some providers do not support Nack; for example, at-most-once providers
 // can't redeliver a message.
+/*
+TODO(rvangent): Decide whether to expose this.
 func (m *Message) Nackable() bool {
 	return m.nackable
 }
+*/
 
 // Nack (short for negative acknowledgment) tells the server that this Message
 // was not processed and should be redelivered. It returns immediately, but the
