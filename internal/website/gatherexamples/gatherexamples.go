@@ -34,7 +34,8 @@
 // The key of each JSON object entry will be the import path of the package,
 // followed by a dot ("."), followed by the name of the example function. The
 // value of each JSON object entry is an object like
-// {"imports": "import (\n\t\"fmt\"\n)", "code": "/* ... */"}.
+// {"imports": "import (\n\t\"fmt\"\n)", "code": "/* ... */"}. These are
+// separated so that templating can format or show them separately.
 package main
 
 import (
@@ -199,7 +200,7 @@ rewrite:
 		// this can produce incorrect rewrites.
 		line = strings.TrimPrefix(line, "\t")
 
-		// Check if this line needs rewriting.
+		// Write the line to sb, performing textual substitutions as needed.
 		start := strings.IndexFunc(line, func(r rune) bool { return r != ' ' && r != '\t' })
 		if start == -1 {
 			// Blank.
@@ -207,9 +208,10 @@ rewrite:
 			sb.WriteByte('\n')
 			continue
 		}
-		indent := line[:start]
-		switch line[start:] {
-		case "// Variables set up elsewhere:":
+		const importBlankPrefix = "// import _ "
+		indent, lineContent := line[:start], line[start:]
+		switch {
+		case lineContent == "// Variables set up elsewhere:":
 			// Skip lines until we hit a blank line.
 			for len(block) > 0 {
 				var next string
@@ -218,26 +220,25 @@ rewrite:
 					break
 				}
 			}
-		case "// Ignore unused variables in example:":
+		case lineContent == "// Ignore unused variables in example:":
 			// Ignore remaining lines.
 			break rewrite
-		case "log.Fatal(err)":
+		case lineContent == "log.Fatal(err)":
 			sb.WriteString(indent)
 			sb.WriteString("return err")
 			sb.WriteByte('\n')
-		default:
-			const importBlankPrefix = "// import _ "
-			if strings.HasPrefix(line[start:], importBlankPrefix) {
-				// Blank import.
-				path, err := strconv.Unquote(line[start+len(importBlankPrefix):])
-				if err == nil {
-					blankImports = append(blankImports, path)
-				}
-			} else if !strings.HasPrefix(line[start:], signifierCommentPrefix) {
-				// Ordinary line.
-				sb.WriteString(line)
-				sb.WriteByte('\n')
+		case strings.HasPrefix(lineContent, importBlankPrefix):
+			// Blank import.
+			path, err := strconv.Unquote(lineContent[len(importBlankPrefix):])
+			if err == nil {
+				blankImports = append(blankImports, path)
 			}
+		case strings.HasPrefix(lineContent, signifierCommentPrefix):
+			// "This example is used in" comment. Skip it.
+		default:
+			// Ordinary line, write as-is.
+			sb.WriteString(line)
+			sb.WriteByte('\n')
 		}
 	}
 	return strings.TrimSpace(sb.String()), blankImports
