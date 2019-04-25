@@ -143,7 +143,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 		exePath: filepath.Join(buildDir, "serverB"),
 		port:    opts.actualAddress.Port + 2,
 	}
-	buildAlloc, otherAlloc := allocA, allocB
+	spareAlloc, liveAlloc := allocA, allocB
 	var process *exec.Cmd
 loop:
 	for first := true; ; first = false {
@@ -160,14 +160,14 @@ loop:
 
 		// Build and run the server.
 		logger.Println("Building server...")
-		if err := buildForServe(ctx, pctx, opts.moduleRoot, buildAlloc.exePath); err != nil {
+		if err := buildForServe(ctx, pctx, opts.moduleRoot, spareAlloc.exePath); err != nil {
 			logger.Printf("Build: %v", err)
 			if process == nil {
 				myProxy.setBuildError(err)
 			}
 			continue
 		}
-		newProcess, err := buildAlloc.start(ctx, pctx, logger, opts.moduleRoot)
+		newProcess, err := spareAlloc.start(ctx, pctx, logger, opts.moduleRoot)
 		if err != nil {
 			logger.Printf("Starting server: %v", err)
 			if process == nil {
@@ -177,7 +177,7 @@ loop:
 		}
 
 		// Server started successfully. Cut traffic over.
-		myProxy.setBackend(buildAlloc.url(""))
+		myProxy.setBackend(spareAlloc.url(""))
 		if process == nil {
 			// First time server came up healthy: log greeting message to user.
 			proxyURL := "http://" + formatTCPAddr(opts.actualAddress) + "/"
@@ -188,7 +188,7 @@ loop:
 			endServerProcess(process)
 		}
 		process = newProcess
-		buildAlloc, otherAlloc = otherAlloc, buildAlloc
+		spareAlloc, liveAlloc = liveAlloc, spareAlloc
 	}
 	logger.Println("Shutting down...")
 	endServerProcess(process)
