@@ -38,7 +38,7 @@ import (
 func serve(ctx context.Context, pctx *processContext, args []string) error {
 	f := newFlagSet(pctx, "serve")
 	opts := new(serveOptions)
-	f.StringVar(&opts.address, "address", "localhost:8080", "`host:port` to address to serve on")
+	f.StringVar(&opts.address, "address", "localhost:8080", "`host:port` address to serve on")
 	f.StringVar(&opts.biome, "biome", "dev", "`name` of biome to apply and use configuration from")
 	f.IntVar(&opts.basePort, "base-port", 9090, "use `port` and port+1 for the built servers to listen on")
 	if err := f.Parse(args); xerrors.Is(err, flag.ErrHelp) {
@@ -84,12 +84,12 @@ func serve(ctx context.Context, pctx *processContext, args []string) error {
 	group.Go(func() error {
 		return runHTTPServer(groupCtx, proxyListener, myProxy)
 	})
-	proxyListener.Addr().String()
 
 	// Start main build loop.
 	logger := log.New(pctx.stderr, "gocdk: ", log.Ldate|log.Ltime)
+	proxyURL := "http://" + formatTCPAddr(proxyListener.Addr().(*net.TCPAddr)) + "/"
 	group.Go(func() error {
-		return serveBuildLoop(groupCtx, pctx, logger, myProxy, proxyListener.Addr().(*net.TCPAddr), opts)
+		return serveBuildLoop(groupCtx, pctx, logger, myProxy, proxyURL, opts)
 	})
 	if err := group.Wait(); err != nil {
 		return xerrors.Errorf("gocdk serve: %w", err)
@@ -108,7 +108,7 @@ type serveOptions struct {
 // backend whenever a new built server becomes healthy. This loop will continue
 // until ctx's Done channel is closed. serveBuildLoop returns an error only
 // if it was unable to start the main build loop.
-func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logger, myProxy *serveProxy, proxyAddr *net.TCPAddr, opts *serveOptions) error {
+func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logger, myProxy *serveProxy, proxyURL string, opts *serveOptions) error {
 	// Listen for SIGUSR1 to trigger rebuild.
 	reload, reloadDone := notifyUserSignal1()
 	defer reloadDone()
@@ -141,7 +141,7 @@ func serveBuildLoop(ctx context.Context, pctx *processContext, logger *log.Logge
 		exePath: filepath.Join(buildDir, "serverB"),
 		port:    opts.basePort + 1,
 	}
-	currAlloc, nextAlloc := allocA, allocB
+	buildAlloc, otherAlloc := allocA, allocB
 	var process *exec.Cmd
 loop:
 	for first := true; ; first = false {
@@ -158,14 +158,14 @@ loop:
 
 		// Build and run the server.
 		logger.Println("Building server...")
-		if err := buildForServe(ctx, pctx, opts.moduleRoot, currAlloc.exePath); err != nil {
+		if err := buildForServe(ctx, pctx, opts.moduleRoot, buildAlloc.exePath); err != nil {
 			logger.Printf("Build: %v", err)
 			if process == nil {
 				myProxy.setBuildError(err)
 			}
 			continue
 		}
-		newProcess, err := currAlloc.start(ctx, pctx, logger, opts.moduleRoot)
+		newProcess, err := buildAlloc.start(ctx, pctx, logger, opts.moduleRoot)
 		if err != nil {
 			logger.Printf("Starting server: %v", err)
 			if process == nil {
@@ -175,17 +175,17 @@ loop:
 		}
 
 		// Server started successfully. Cut traffic over.
-		myProxy.setBackend(currAlloc.url(""))
+		myProxy.setBackend(buildAlloc.url(""))
 		if process == nil {
 			// First time server came up healthy: log greeting message to user.
-			logger.Printf("Serving at http://%s/\nUse Ctrl-C to stop", formatTCPAddr(proxyAddr))
+			logger.Printf("Serving at %s\nUse Ctrl-C to stop", proxyURL)
 		} else {
 			// Iterative build complete, kill old server.
 			logger.Print("Reload complete.")
 			endServerProcess(process)
 		}
 		process = newProcess
-		currAlloc, nextAlloc = nextAlloc, currAlloc
+		buildAlloc, otherAlloc = otherAlloc, buildAlloc
 	}
 	logger.Println("Shutting down...")
 	endServerProcess(process)
