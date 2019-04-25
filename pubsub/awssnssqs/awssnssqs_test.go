@@ -246,6 +246,14 @@ func (awsAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
+func (awsAsTest) BeforeSend(as func(interface{}) bool) error {
+	var pub *sns.PublishInput
+	if !as(&pub) {
+		return fmt.Errorf("cast failed for %T", &pub)
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }
