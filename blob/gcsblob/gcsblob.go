@@ -52,6 +52,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -255,9 +256,9 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	}
 	if gerr, ok := err.(*googleapi.Error); ok {
 		switch gerr.Code {
-		case 404:
+		case http.StatusNotFound:
 			return gcerrors.NotFound
-		case 412:
+		case http.StatusPreconditionFailed:
 			return gcerrors.FailedPrecondition
 		}
 	}
