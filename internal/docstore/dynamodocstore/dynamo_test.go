@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
@@ -99,11 +100,36 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 func TestConformance(t *testing.T) {
 	// Note: when running -record repeatedly in a short time period, change the argument
 	// in the call below to generate unique transaction tokens.
-	drivertest.MakeUniqueStringDeterministicForTesting(2)
+	drivertest.MakeUniqueStringDeterministicForTesting(4)
 	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
 // Dynamodocstore-specific tests.
+
+func TestQueryErrors(t *testing.T) {
+	// Verify that bad queries return the right errors.
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	dc, err := h.MakeTwoKeyCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+
+	// Here we are comparing a key field with the wrong type. DynamoDB cares about this
+	// because even though it's a document store and hence schemaless, the key fields
+	// do have a schema (that is, they have known, fixed types).
+	iter := coll.Query().Where("Game", "=", 1).Get(ctx)
+	defer iter.Stop()
+	err = iter.Next(ctx, &h)
+	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+		t.Errorf("got %v (code %s, type %T), want InvalidArgument", err, c, err)
+	}
+}
 
 func TestProcessURL(t *testing.T) {
 	tests := []struct {

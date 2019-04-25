@@ -906,6 +906,14 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	if len(got) != 2 {
 		t.Errorf("got %v, wanted two documents", got)
 	}
+
+	// Errors are returned from the iterator's Next method.
+	iter := coll.Query().Where("Game", "!=", "").Get(ctx) // != is disallowed
+	var h HighScore
+	err := iter.Next(ctx, &h)
+	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", err)
+	}
 }
 
 // cleanUpTable delete all documents from this collection after test.
@@ -961,7 +969,7 @@ func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentI
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	actions := coll.Actions()
+	ctx := context.Background()
 	docs := []docmap{
 		{KeyField: "testMultipleActions1", "s": "a"},
 		{KeyField: "testMultipleActions2", "s": "b"},
@@ -976,6 +984,16 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 		{KeyField: "testMultipleActions11", "s": "k"},
 		{KeyField: "testMultipleActions12", "s": "l"},
 	}
+
+	actions := coll.Actions()
+	for i := 0; i < 6; i++ {
+		actions.Delete(docs[i])
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	actions = coll.Actions()
 	// Writes
 	for i := 0; i < 6; i++ {
 		actions.Create(docs[i])
@@ -990,7 +1008,6 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 		gots[i] = docmap{KeyField: doc[KeyField]}
 		actions.Get(gots[i], docstore.FieldPath("s"))
 	}
-	ctx := context.Background()
 	if err := actions.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
