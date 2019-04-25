@@ -245,7 +245,20 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	var perr error
 	for _, m := range ms {
-		if perr = ch.Publish(t.exchange, toPublishing(m)); perr != nil {
+		pub := toPublishing(m)
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**amqp.Publishing); ok {
+					*p = &pub
+					return true
+				}
+				return false
+			}
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		if perr = ch.Publish(t.exchange, pub); perr != nil {
 			cancel()
 			break
 		}

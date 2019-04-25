@@ -231,6 +231,14 @@ func (gcpAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
+func (gcpAsTest) BeforeSend(as func(interface{}) bool) error {
+	var ppm *pubsubpb.PubsubMessage
+	if !as(&ppm) {
+		return fmt.Errorf("cast failed for %T", &ppm)
+	}
+	return nil
+}
+
 func sanitize(testName string) string {
 	return strings.Replace(testName, "/", "_", -1)
 }

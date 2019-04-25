@@ -136,6 +136,15 @@ type Message struct {
 	// message has no associated metadata.
 	Metadata map[string]string
 
+	// BeforeSend is a callback used when sending a message. It will always be
+	// set to nil for received messages.
+	//
+	// The callback will be called exactly once, before the message is sent.
+	//
+	// asFunc converts its argument to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	BeforeSend func(asFunc func(interface{}) bool) error
+
 	// asFunc invokes driver.Message.AsFunc.
 	asFunc func(interface{}) bool
 
@@ -254,8 +263,9 @@ func (t *Topic) Send(ctx context.Context, m *Message) (err error) {
 		}
 	}
 	dm := &driver.Message{
-		Body:     m.Body,
-		Metadata: m.Metadata,
+		Body:       m.Body,
+		Metadata:   m.Metadata,
+		BeforeSend: m.BeforeSend,
 	}
 	return t.batcher.Add(ctx, dm)
 }

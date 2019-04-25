@@ -39,6 +39,7 @@
 // natspubsub exposes the following types for As:
 //  - Topic: *nats.Conn
 //  - Subscription: *nats.Subscription
+//  - Message.BeforeSend: None.
 //  - Message: *nats.Msg
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
@@ -237,6 +238,12 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		payload, err := encodeMessage(m)
 		if err != nil {
 			return err
+		}
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
 		}
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err

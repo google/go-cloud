@@ -461,6 +461,14 @@ func (r rabbitAsTest) MessageCheck(m *pubsub.Message) error {
 	return nil
 }
 
+func (rabbitAsTest) BeforeSend(as func(interface{}) bool) error {
+	var pub *amqp.Publishing
+	if !as(&pub) {
+		return fmt.Errorf("cast failed for %T", &pub)
+	}
+	return nil
+}
+
 func fakeConnectionStringInEnv() func() {
 	oldEnvVal := os.Getenv("RABBIT_SERVER_URL")
 	os.Setenv("RABBIT_SERVER_URL", "amqp://localhost:10000/vhost")
