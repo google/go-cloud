@@ -151,6 +151,12 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 	// but that would require copying all the messages.
 	for i, m := range ms {
 		m.AckID = t.nextAckID + i
+
+		if m.BeforeSend != nil {
+			if err := m.BeforeSend(func(interface{}) bool { return false }); err != nil {
+				return err
+			}
+		}
 	}
 	t.nextAckID += len(ms)
 	for _, s := range t.subs {

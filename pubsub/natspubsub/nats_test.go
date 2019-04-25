@@ -138,7 +138,7 @@ func (natsAsTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) erro
 	return nil
 }
 
-func (r natsAsTest) MessageCheck(m *pubsub.Message) error {
+func (natsAsTest) MessageCheck(m *pubsub.Message) error {
 	var pm nats.Msg
 	if m.As(&pm) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &pm)
@@ -147,6 +147,10 @@ func (r natsAsTest) MessageCheck(m *pubsub.Message) error {
 	if !m.As(&ppm) {
 		return fmt.Errorf("cast failed for %T", &ppm)
 	}
+	return nil
+}
+
+func (natsAsTest) BeforeSend(as func(interface{}) bool) error {
 	return nil
 }
 
