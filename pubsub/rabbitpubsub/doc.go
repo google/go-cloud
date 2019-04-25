@@ -47,6 +47,7 @@
 // rabbitpubsub exposes the following types for As:
 //  - Topic: *amqp.Connection
 //  - Subscription: *amqp.Connection
+//  - Message.BeforeSend: *amqp.Publishing
 //  - Message: amqp.Delivery
 //  - Error: *amqp.Error and MultiError
 package rabbitpubsub // import "gocloud.dev/pubsub/rabbitpubsub"

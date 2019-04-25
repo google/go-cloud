@@ -269,6 +269,18 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	for k, v := range dm.Metadata {
 		sbms.Set(k, v)
 	}
+	if dm.BeforeSend != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**servicebus.Message); ok {
+				*p = sbms
+				return true
+			}
+			return false
+		}
+		if err := dm.BeforeSend(asFunc); err != nil {
+			return err
+		}
+	}
 	return t.sbTopic.Send(ctx, sbms)
 }
 
