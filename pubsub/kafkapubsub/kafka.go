@@ -47,6 +47,7 @@
 //  - Topic: TODO(rvangent)
 //  - Subscription: TODO(rvangent)
 //  - Message: TODO(rvangent)
+//  - Message.BeforeSend: TODO(rvangent)
 //  - Error: TODO(rvangent)
 package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
