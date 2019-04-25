@@ -59,8 +59,8 @@ language while focusing on their respective areas of expertise.
 ## Portable Types and Drivers
 
 The portable APIs that the Go CDK exports (like [`blob.Bucket`][] or
-[`runtimevar.Variable`][]) are concrete types, not interfaces. To understand why,
-imagine if we used a plain interface:
+[`runtimevar.Variable`][]) are concrete types, not interfaces. To understand
+why, imagine if we used a plain interface:
 
 ![Diagram showing user code depending on blob.Bucket, which is implemented by
 awsblob.Bucket.](img/user-facing-type-no-driver.png)
@@ -74,10 +74,9 @@ makes the interfaces hard to implement, which runs counter to the goals of the
 project.
 
 Instead, we follow the example of [`database/sql`][] and separate out the
-implementation-agnostic logic from the interface. The implementation-agnostic 
-logic-containing concrete type is the **portable type**. We call the interface the
-**driver**. Visually, it looks
-like this:
+implementation-agnostic logic from the interface. The implementation-agnostic
+logic-containing concrete type is the **portable type**. We call the interface
+the **driver**. Visually, it looks like this:
 
 ![Diagram showing user code depending on blob.Bucket, which holds a
 driver.Bucket implemented by awsblob.Bucket.](img/user-facing-type.png)
@@ -93,10 +92,10 @@ This has a number of benefits:
 -   As new operations on the driver are added as new optional interfaces, the
     portable type can hide the need for type-assertions from the user.
 
-As a rule, if a method `Foo` has the same inputs and semantics in the
-portable type and the driver type, then the driver method may be called
-`Foo`, even though the return signatures may differ. Otherwise, the driver
-method name should be different to reduce confusion.
+As a rule, if a method `Foo` has the same inputs and semantics in the portable
+type and the driver type, then the driver method may be called `Foo`, even
+though the return signatures may differ. Otherwise, the driver method name
+should be different to reduce confusion.
 
 New Go CDK APIs should always follow this portable type and driver pattern.
 
@@ -128,8 +127,22 @@ cloud provider may provide a unique offering for a particular API, they may not
 always provide only one, so distinguishing them in this way keeps the API
 symbols stable over time.
 
-The exception to this rule is if the name is not unique across providers. The
-canonical example is `gcpkms` and `awskms`.
+The naming convention is `<provider><product><api>`, where:
+
+*   `<provider>` is the provider name, like `aws` or `gcp` or `azure`.
+    *   Omit for 3rd party/open source/local packages.
+    *   May also be omitted in cases where the product name is sufficient (e.g.,
+        `s3blob` not `awss3blob` since S3 is well-known, `gcsblob` not
+        `gcpgcsblob` since GCS already references Google).
+    *   Required if the product name is not unique across providers (e.g.,
+        `gcpkms` and `awskms`).
+*   `<product>`is the product/service name.
+*   `<api>` is the portable API name.
+    *   Include for local/test packages like (e.g., `fileblob`, `mempubsub`).
+    *   May be omitted when it makes the package name too long (e.g. `awssnssqs`
+        is long enough, don't add `pubsub`).
+    *   Encouraged when it helps distinguish the package from the provider's own
+        package name (e.g., `s3blob` not `s3`).
 
 ## Portable Type Constructors
 
@@ -177,8 +190,8 @@ breaking backward compatibility.
     aliasing or embedding it, and copy the struct fields explicitly where
     needed. This allows the godoc for each type to be tailored to the
     appropriate audience (e.g. end-users for the portable type, provider
-    implementors for the driver interface), and also allows the
-    structs to diverge over time if appropriate.
+    implementors for the driver interface), and also allows the structs to
+    diverge over time if appropriate.
 -   Required arguments must not be in an `Options` struct, and all fields of the
     `Options` struct must have reasonable defaults. Exception: struct arguments
     that don't have `Options` in the name can contain required arguments (e.g.,
@@ -416,6 +429,40 @@ Portable types should:
 
 [cascading failure]:
 https://landing.google.com/sre/book/chapters/addressing-cascading-failures.html
+
+## Escape Hatches using As
+
+The Go CDK allows users to escape the abstraction as needed using `As`
+functions, described in more detail in the
+[top-level godoc](https://godoc.org/gocloud.dev#hdr-As). `As` functions take an
+`interface{}` and return a `bool`; they return `true` if the underlying concrete
+type could be converted into the type provided as the `interface{}`.
+
+An alternative approach would have been something like
+[`os.ProcessState.Sys`](https://golang.org/pkg/os/#ProcessState.Sys), which
+returns an `interface{}` that the user can then type cast/assert to
+provider-specific types.
+
+We ended up going with `As` because:
+
+1.  Most portable types have an `As` function for errors; choosing `As` results
+    in an easy and natural implementation for chained errors once the
+    [Go 2 proposal for errors](https://go.googlesource.com/proposal/+/master/design/29934-error-values.md)
+    arrives. It is currently implemented in
+    [xerrors](https://godoc.org/golang.org/x/xerrors#As), and we're already
+    using that in some drivers.
+2.  `As` adds more flexibility for drivers to support conversions to multiple
+    types. Specifically, not the case where there are multiple possible
+    underlying types, but rather that a single underlying type can be converted
+    to multiple types.
+    *   Chained errors is one example of this, where the top-level error may
+        always be the same type, but may also represent a chain of other errors
+        with different types.
+    *   Another example is that a driver might choose to support `As`-level
+        compatibility with another driver; e.g., driver `foo` could support all
+        of the `As` types defined by `s3blob`, converting them internally, and
+        then any code that runs with driver `s3blob` would also work with driver
+        `foo` (even if it uses the `As` escape hatches).
 
 ## Enforcing Portability
 
@@ -719,9 +766,7 @@ To use `-record`:
 
     -   TODO(issue #300): The test will read the Terraform output to find its
         inputs.
-    -   For now, pass the required resources via test-specific flags. In some
-        cases, tests are
-        [hardcoded to specific resource names](https://github.com/google/go-cloud/issues/286).
+    -   For now, pass the required resources via test-specific flags.
 
 3.  The test will save the network interactions for subsequent replays.
 
@@ -758,20 +803,3 @@ not to do this, for several reasons:
 Overall, massive diffs in the replay files are expected and fine. As part of a
 code change, you may want to check for things like the number of RPCs made to
 identify performance regressions.
-
-## Module Boundaries
-
-With the advent of [Go modules], there are mechanisms to release different parts
-of a repository on different schedules. This permits one API to be in alpha/beta
-(pre-1.0), whereas another API can be stable (1.0 or later).
-
-As of 2018-09-13, the Go CDK as a whole still is not stable enough to call any
-part 1.0 yet. Until this milestone is reached, all of the Go CDK libraries will
-be placed under a single module. The exceptions are standalone tools like
-[Contribute Bot][] that are part of the project, but not part of the library.
-After 1.0 is released, it is expected that each interface in the Go CDK will be
-released as one module. Provider implementations will live in separate modules.
-The exact details remain to be determined.
-
-[Go modules]: https://github.com/golang/go/wiki/Modules
-[Contribute Bot]: https://github.com/google/go-cloud/tree/master/internal/contributebot

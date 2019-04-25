@@ -117,6 +117,13 @@ resource "github_issue_label" "code_health" {
   description = "Code health task, either refactoring or testing"
 }
 
+resource "github_issue_label" "documentation" {
+  repository  = "${github_repository.repo.name}"
+  name        = "documentation"
+  color       = "edd782"
+  description = "Documentation change"
+}
+
 resource "github_issue_label" "duplicate" {
   repository  = "${github_repository.repo.name}"
   name        = "duplicate"
@@ -129,6 +136,15 @@ resource "github_issue_label" "enhancement" {
   name        = "enhancement"
   color       = "a2eeef"
   description = "New feature or request"
+}
+
+# The "good first issue" label is treated specially by GitHub:
+# https://help.github.com/en/articles/helping-new-contributors-find-your-project-with-labels
+resource "github_issue_label" "good_first_issue" {
+  repository  = "${github_repository.repo.name}"
+  name        = "good first issue"
+  color       = "7057ff"
+  description = "Good for newcomers"
 }
 
 resource "github_issue_label" "process" {

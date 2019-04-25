@@ -18,11 +18,21 @@
 //
 // URLs
 //
-// For pubsub.OpenTopic/Subscription URLs, gcppubsub registers for the scheme
-// "gcppubsub". pubsub.OpenTopic/Subscription will use Application
-// Default Credentials, as described in https://cloud.google.com/docs/authentication/production.
-// If you want to use different credentials or find details on the format of the
-// URL, see URLOpener.
+// For pubsub.OpenTopic and pubsub.OpenSubscription, gcppubsub registers
+// for the scheme "gcppubsub".
+// The default URL opener will creating a connection using use default
+// credentials from the environment, as described in
+// https://cloud.google.com/docs/authentication/production.
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// Message Delivery Semantics
+//
+// GCP Pub/Sub supports at-least-once semantics; applications must
+// call Message.Ack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
 //
 // As
 //
@@ -39,10 +49,13 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	raw "cloud.google.com/go/pubsub/apiv1"
+	"github.com/google/wire"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
+	"gocloud.dev/internal/batcher"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/useragent"
 	"gocloud.dev/pubsub"
@@ -57,11 +70,39 @@ import (
 
 const endPoint = "pubsub.googleapis.com:443"
 
+var sendBatcherOpts = &batcher.Options{
+	MaxBatchSize: 1000, // The PubSub service limits the number of messages in a single Publish RPC
+	MaxHandlers:  2,
+}
+
+var recvBatcherOpts = &batcher.Options{
+	// GCP Pub/Sub returns at most 1000 messages per RPC.
+	MaxBatchSize: 1000,
+	MaxHandlers:  10,
+}
+
+var ackBatcherOpts = &batcher.Options{
+	// The PubSub service limits the size of Acknowledge/ModifyAckDeadline RPCs.
+	// (E.g., "Request payload size exceeds the limit: 524288 bytes.").
+	MaxBatchSize: 1000,
+	MaxHandlers:  2,
+}
+
 func init() {
 	o := new(lazyCredsOpener)
 	pubsub.DefaultURLMux().RegisterTopic(Scheme, o)
 	pubsub.DefaultURLMux().RegisterSubscription(Scheme, o)
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Dial,
+	PublisherClient,
+	SubscriberClient,
+	SubscriptionOptions{},
+	TopicOptions{},
+	URLOpener{},
+)
 
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenTopicURL/OpenSubscriptionURL.
@@ -108,9 +149,11 @@ func (o *lazyCredsOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (
 const Scheme = "gcppubsub"
 
 // URLOpener opens GCP Pub/Sub URLs like "gcppubsub://myproject/mytopic" for
-// topics or "gcppubsub://myprojects/mysub" for subscriptions.
-// The URL's host is used as the projectID, and the path is used as the topic
-// or subscription name.
+// topics or "gcppubsub://myproject/mysub" for subscriptions.
+//
+// The URL's host is used as the projectID, and the URL's path (with the
+// leading "/" trimmed) is used as the topic or subscription name.
+//
 // No URL parameters are supported.
 type URLOpener struct {
 	// Conn must be set to a non-nil ClientConn authenticated with
@@ -123,10 +166,10 @@ type URLOpener struct {
 	SubscriptionOptions SubscriptionOptions
 }
 
-// OpenTopicURL opens the GCP Pub/Sub topic with the same name as the URL's host.
+// OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	pc, err := PublisherClient(ctx, o.Conn)
 	if err != nil {
@@ -136,10 +179,10 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 	return OpenTopic(pc, gcp.ProjectID(u.Host), topicName, &o.TopicOptions), nil
 }
 
-// OpenSubscriptionURL opens the GCS bucket with the same name as the URL's host.
+// OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %q: invalid query parameter %q", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	sc, err := SubscriberClient(ctx, o.Conn)
 	if err != nil {
@@ -187,8 +230,7 @@ type TopicOptions struct{}
 // topicName in the given projectID. See the package documentation for an
 // example.
 func OpenTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string, opts *TopicOptions) *pubsub.Topic {
-	dt := openTopic(client, proj, topicName)
-	return pubsub.NewTopic(dt, nil)
+	return pubsub.NewTopic(openTopic(client, proj, topicName), sendBatcherOpts)
 }
 
 // openTopic returns the driver for OpenTopic. This function exists so the test
@@ -200,29 +242,13 @@ func openTopic(client *raw.PublisherClient, proj gcp.ProjectID, topicName string
 
 // SendBatch implements driver.Topic.SendBatch.
 func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
-	// The PubSub service limits the number of messages in a single Publish RPC.
-	const maxPublishCount = 1000
-	for len(dms) > 0 {
-		n := len(dms)
-		if n > maxPublishCount {
-			n = maxPublishCount
-		}
-		batch := dms[:n]
-		dms = dms[n:]
-		var ms []*pb.PubsubMessage
-		for _, dm := range batch {
-			ms = append(ms, &pb.PubsubMessage{
-				Data:       dm.Body,
-				Attributes: dm.Metadata,
-			})
-		}
-		req := &pb.PublishRequest{
-			Topic:    t.path,
-			Messages: ms,
-		}
-		if _, err := t.client.Publish(ctx, req); err != nil {
-			return err
-		}
+	var ms []*pb.PubsubMessage
+	for _, dm := range dms {
+		ms = append(ms, &pb.PubsubMessage{Data: dm.Body, Attributes: dm.Metadata})
+	}
+	req := &pb.PublishRequest{Topic: t.path, Messages: ms}
+	if _, err := t.client.Publish(ctx, req); err != nil {
+		return err
 	}
 	return nil
 }
@@ -265,6 +291,9 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 	return gcerr.GRPCCode(err)
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 type subscription struct {
 	client *raw.SubscriberClient
 	path   string
@@ -278,7 +307,7 @@ type SubscriptionOptions struct{}
 // documentation for an example.
 func OpenSubscription(client *raw.SubscriberClient, proj gcp.ProjectID, subscriptionName string, opts *SubscriptionOptions) *pubsub.Subscription {
 	ds := openSubscription(client, proj, subscriptionName)
-	return pubsub.NewSubscription(ds, nil)
+	return pubsub.NewSubscription(ds, nil, ackBatcherOpts)
 }
 
 // openSubscription returns a driver.Subscription.
@@ -289,16 +318,32 @@ func openSubscription(client *raw.SubscriberClient, projectID gcp.ProjectID, sub
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
+	// Whether to ask Pull to return immediately, or wait for some messages to
+	// arrive. If we're making multiple RPCs, we don't want any of them to wait;
+	// we might have gotten messages from one of the other RPCs.
+	// maxMessages will only be high enough to set this to true in high-throughput
+	// situations, so the likelihood of getting 0 messages is small anyway.
+	returnImmediately := maxMessages == recvBatcherOpts.MaxBatchSize
+
 	req := &pb.PullRequest{
 		Subscription:      s.path,
-		ReturnImmediately: false,
+		ReturnImmediately: returnImmediately,
 		MaxMessages:       int32(maxMessages),
 	}
 	resp, err := s.client.Pull(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	var ms []*driver.Message
+	if len(resp.ReceivedMessages) == 0 {
+		// If we did happen to get 0 messages, and we didn't ask the server to wait
+		// for messages, sleep a bit to avoid spinning.
+		if returnImmediately {
+			time.Sleep(100 * time.Millisecond)
+		}
+		return nil, nil
+	}
+
+	ms := make([]*driver.Message, 0, len(resp.ReceivedMessages))
 	for _, rm := range resp.ReceivedMessages {
 		rmm := rm.Message
 		m := &driver.Message{
@@ -325,13 +370,23 @@ func messageAsFunc(pm *pb.PubsubMessage) func(interface{}) bool {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
-	var ids2 []string
+	ids2 := make([]string, 0, len(ids))
 	for _, id := range ids {
 		ids2 = append(ids2, id.(string))
 	}
-	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{
-		Subscription: s.path,
-		AckIds:       ids2,
+	return s.client.Acknowledge(ctx, &pb.AcknowledgeRequest{Subscription: s.path, AckIds: ids2})
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {
+	ids2 := make([]string, 0, len(ids))
+	for _, id := range ids {
+		ids2 = append(ids2, id.(string))
+	}
+	return s.client.ModifyAckDeadline(ctx, &pb.ModifyAckDeadlineRequest{
+		Subscription:       s.path,
+		AckIds:             ids2,
+		AckDeadlineSeconds: 0,
 	})
 }
 
@@ -362,3 +417,6 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

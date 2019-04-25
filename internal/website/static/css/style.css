@@ -1,0 +1,275 @@
+/*
+Copyright 2019 The Go Cloud Development Kit Authors
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/* Basic layout {{{1 */
+html {
+  font: 16px/1.5 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+@media (min-width: 768px) {
+  html {
+    font-size: 20px;
+  }
+}
+body {
+  background: #fff;
+  color: #000;
+  margin: 0;
+  padding: 0;
+}
+.PageLayout {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  grid-template-rows: minmax(4rem, auto) 1fr minmax(4rem, auto);
+  grid-template-areas:
+    'hd hd'
+    'sd main'
+    'ft ft';
+  margin: 0;
+  min-height: 100vh;
+  padding: 0;
+  width: 100vw;
+}
+@media (max-width: 768px) {
+  .PageLayout {
+    grid-template-columns: 100%;
+    grid-template-areas: 'hd' 'main' 'sd' 'ft';
+  }
+}
+.PageHeader {
+  background: #00add8;
+  grid-area: hd;
+  margin: 0;
+  padding: 0;
+}
+.PageLogo {
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+  width: 20rem;
+}
+.PageLogo-image {
+  height: 9rem;
+}
+.MainContent {
+  box-sizing: border-box;
+  grid-area: main;
+  margin: 0;
+  overflow-x: hidden;  /* creates a new block formatting context for children overflows */
+  padding: 2rem 2rem 3rem;
+}
+.MainContent-bounds {
+  box-sizing: border-box;
+  grid-area: main;
+  margin: 0;
+  padding: 0;
+  max-width: 50rem;
+}
+.Sidenav {
+  background: #dbd9d6;
+  box-sizing: border-box;
+  font-size: 0.8rem;
+  grid-area: sd;
+  margin: 0;
+  padding: 1rem 2rem 2rem 1rem;
+}
+.Sidenav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.Sidenav-pageList {
+  margin: 0 0 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+.Sidenav-section {
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.Sidenav-sectionLink {
+  color: #000;
+  font-family: 'Work Sans', 'Roboto', sans-serif;
+  font-weight: bold;
+  text-decoration: none;
+}
+.Sidenav-page {
+  margin: 0.3rem 0 0;
+  padding: 0;
+}
+.Sidenav-pageLink {
+  color: #000;
+  font-family: 'Work Sans', 'Roboto', sans-serif;
+  font-weight: normal;
+  text-decoration: none;
+}
+.Sidenav-sectionLink:hover,
+.Sidenav-sectionLink:active,
+.Sidenav-pageLink:hover,
+.Sidenav-pageLink:active {
+  text-decoration: underline;
+}
+.PageFooter {
+  background: #555759;
+  box-sizing: border-box;
+  color: #ffffff;
+  font-size: 0.95rem;
+  grid-area: ft;
+  line-height: 1;
+  margin: 0;
+  padding: 2rem 2rem 1rem;
+}
+.PageFooter-paragraph {
+  margin: 1em auto;
+  max-width: 40rem;
+  text-align: justify;
+}
+.PageFooter-link {
+  color: #ffffff;
+  text-decoration: underline;
+}
+.FooterLinks {
+  box-sizing: border-box;
+  font-size: 1rem;
+  line-height: 1.5;
+  list-style: none;
+  margin: 0 auto 2rem;
+  padding: 0;
+  max-width: 40rem;
+}
+.FooterLinks-item {
+  margin: 0;
+  padding: 0;
+  text-align: justify;
+}
+.FooterLinks-link {
+  color: #9eecff;
+  text-decoration: none;
+}
+.FooterLinks-link:hover,
+.FooterLinks-link:active {
+  text-decoration: underline;
+}
+.PageList {
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-rows: fit-content(5rem);
+  grid-template-columns: repeat(2, minmax(15rem, 1fr));
+  margin: 0;
+  padding: 0;
+}
+@media (max-width: 768px) {
+  .PageList {
+    grid-template-columns: minmax(15rem, 1fr);
+  }
+}
+.PageList-item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin: 0 0.5rem;
+  padding: 0 1rem;
+  place-content: start;
+}
+.PageList-itemTitle {
+  color: #000;
+}
+.PageList-summary {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+}
+.PageList-readMore {
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.HowtoList {
+  font: 300 1.5rem/1.25 'Roboto', sans-serif;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.HowtoList-item {
+  margin: 0.5rem 0 0.5rem 2rem;
+  padding: 0;
+}
+
+/* Content styling {{{1 */
+/* Headings */
+.MainContent h1 {
+  font: 700 2rem/1.25 'Work Sans', 'Roboto', sans-serif;
+  margin: 0 0 0.5rem;
+  text-rendering: optimizeLegibility;
+}
+.MainContent h2 {
+  font: 700 1.5rem/1.25 'Work Sans', 'Roboto', sans-serif;
+  margin: 2rem 0 0.5rem;
+  text-rendering: optimizeLegibility;
+}
+.MainContent h3 {
+  font: 700 1.25rem/1.25 'Work Sans', 'Roboto', sans-serif;
+  margin: 3rem 0 0.5rem;
+  text-rendering: optimizeLegibility;
+}
+.MainContent h4,
+.MainContent h5,
+.MainContent h6 {
+  font: 700 1rem/1.25 'Work Sans', 'Roboto', sans-serif;
+  margin: 2rem 0 0.5rem;
+  text-rendering: optimizeLegibility;
+}
+/* Code */
+.MainContent code {
+  font-size: 85%;
+  font-family: 'Source Code Pro', monospace;
+}
+.MainContent pre {
+  box-sizing: border-box;
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: block;
+  font: 0.8rem/1.4 'Source Code Pro', monospace;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  padding: 1rem;
+  white-space: pre;
+  width: 100%;
+}
+.MainContent pre code {
+  font-size: 100%;
+}
+.highlight {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+/* Links */
+.MainContent :link {
+  color: #00758d;
+  text-decoration: none;
+}
+.MainContent :visited {
+  color: #00758d;
+  text-decoration: none;
+}
+.MainContent :link:hover,
+.MainContent :link:focus,
+.MainContent :visited:hover,
+.MainContent :visited:focus {
+  text-decoration: underline;
+}

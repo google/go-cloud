@@ -33,7 +33,8 @@ type Reader interface {
 	io.ReadCloser
 
 	// Attributes returns a subset of attributes about the blob.
-	Attributes() ReaderAttributes
+	// The portable type will not modify the returned ReaderAttributes.
+	Attributes() *ReaderAttributes
 
 	// As allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
@@ -81,6 +82,14 @@ type WriterOptions struct {
 	// asFunc allows providers to expose provider-specific types;
 	// see Bucket.As for more details.
 	BeforeWrite func(asFunc func(interface{}) bool) error
+}
+
+// CopyOptions controls options for Copy.
+type CopyOptions struct {
+	// BeforeCopy is a callback that must be called before initiating the Copy.
+	// asFunc allows providers to expose provider-specific types;
+	// see Bucket.As for more details.
+	BeforeCopy func(asFunc func(interface{}) bool) error
 }
 
 // ReaderAttributes contains a subset of attributes about a blob that are
@@ -218,9 +227,10 @@ type Bucket interface {
 	ErrorAs(error, interface{}) bool
 
 	// Attributes returns attributes for the blob. If the specified object does
-	// not exist, Attributes must return an error for which IsNotExist returns
-	// true.
-	Attributes(ctx context.Context, key string) (Attributes, error)
+	// not exist, Attributes must return an error for which ErrorCode returns
+	// gcerrors.NotFound.
+	// The portable type will not modify the returned Attributes.
+	Attributes(ctx context.Context, key string) (*Attributes, error)
 
 	// ListPaged lists objects in the bucket, in lexicographical order by
 	// UTF-8-encoded key, returning pages of objects at a time.
@@ -234,8 +244,8 @@ type Bucket interface {
 	// NewRangeReader returns a Reader that reads part of an object, reading at
 	// most length bytes starting at the given offset. If length is negative, it
 	// will read until the end of the object. If the specified object does not
-	// exist, NewRangeReader must return an error for which IsNotExist returns
-	// true.
+	// exist, NewRangeReader must return an error for which ErrorCode returns
+	// gcerrors.NotFound.
 	// opts is guaranteed to be non-nil.
 	NewRangeReader(ctx context.Context, key string, offset, length int64, opts *ReaderOptions) (Reader, error)
 
@@ -253,17 +263,27 @@ type Bucket interface {
 	//
 	// Implementations should abort an ongoing write if ctx is later canceled,
 	// and do any necessary cleanup in Close. Close should then return ctx.Err().
-	NewTypedWriter(ctx context.Context, key string, contentType string, opts *WriterOptions) (Writer, error)
+	NewTypedWriter(ctx context.Context, key, contentType string, opts *WriterOptions) (Writer, error)
+
+	// Copy copies the object associated with srcKey to dstKey.
+	//
+	// If the source object does not exist, Copy must return an error for which
+	// ErrorCode returns gcerrors.NotFound.
+	//
+	// If the destination object already exists, it should be overwritten.
+	//
+	// opts is guaranteed to be non-nil.
+	Copy(ctx context.Context, dstKey, srcKey string, opts *CopyOptions) error
 
 	// Delete deletes the object associated with key. If the specified object does
-	// not exist, NewRangeReader must return an error for which IsNotExist returns
-	// true.
+	// not exist, Delete must return an error for which ErrorCode returns
+	// gcerrors.NotFound.
 	Delete(ctx context.Context, key string) error
 
 	// SignedURL returns a URL that can be used to GET the blob for the duration
 	// specified in opts.Expiry. opts is guaranteed to be non-nil.
-	// If not supported, return an error for which IsNotImplemented returns
-	// true.
+	// If not supported, return an error for which ErrorCode returns
+	// gcerrors.Unimplemented.
 	SignedURL(ctx context.Context, key string, opts *SignedURLOptions) (string, error)
 
 	// Close cleans up any resources used by the Bucket. Once Close is called,

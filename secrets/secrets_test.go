@@ -22,6 +22,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 	"gocloud.dev/internal/testing/octest"
@@ -42,6 +43,7 @@ func (k *erroringKeeper) Encrypt(ctx context.Context, b []byte) ([]byte, error) 
 	return nil, errFake
 }
 
+func (k *erroringKeeper) Close() error                       { return errFake }
 func (k *erroringKeeper) ErrorCode(error) gcerrors.ErrorCode { return gcerrors.Internal }
 
 func TestErrorsAreWrapped(t *testing.T) {
@@ -67,6 +69,27 @@ func TestErrorsAreWrapped(t *testing.T) {
 
 	_, err = k.Encrypt(ctx, nil)
 	verifyWrap("Encrypt", err)
+
+	err = k.Close()
+	verifyWrap("Close", err)
+}
+
+// TestKeeperIsClosed tests that Keeper functions return an error when the
+// Keeper is closed.
+func TestKeeperIsClosed(t *testing.T) {
+	ctx := context.Background()
+	k := NewKeeper(&erroringKeeper{})
+	k.Close()
+
+	if _, err := k.Decrypt(ctx, nil); err != errClosed {
+		t.Error(err)
+	}
+	if _, err := k.Encrypt(ctx, nil); err != errClosed {
+		t.Error(err)
+	}
+	if err := k.Close(); err != errClosed {
+		t.Error(err)
+	}
 }
 
 func TestOpenCensus(t *testing.T) {
@@ -75,11 +98,12 @@ func TestOpenCensus(t *testing.T) {
 	defer te.Unregister()
 
 	k := NewKeeper(&erroringKeeper{})
+	defer k.Close()
 	k.Encrypt(ctx, nil)
 	k.Decrypt(ctx, nil)
 	diff := octest.Diff(te.Spans(), te.Counts(), "gocloud.dev/secrets", "gocloud.dev/secrets", []octest.Call{
-		{"Encrypt", gcerrors.Internal},
-		{"Decrypt", gcerrors.Internal},
+		{Method: "Encrypt", Code: gcerrors.Internal},
+		{Method: "Decrypt", Code: gcerrors.Internal},
 	})
 	if diff != "" {
 		t.Error(diff)
@@ -98,6 +122,16 @@ func TestURLMux(t *testing.T) {
 	fake := &fakeOpener{}
 	mux.RegisterKeeper("foo", fake)
 	mux.RegisterKeeper("err", fake)
+
+	if diff := cmp.Diff(mux.KeeperSchemes(), []string{"err", "foo"}); diff != "" {
+		t.Errorf("Schemes: %s", diff)
+	}
+	if !mux.ValidKeeperScheme("foo") || !mux.ValidKeeperScheme("err") {
+		t.Errorf("ValidKeeperScheme didn't return true for valid scheme")
+	}
+	if mux.ValidKeeperScheme("foo2") || mux.ValidKeeperScheme("http") {
+		t.Errorf("ValidKeeperScheme didn't return false for invalid scheme")
+	}
 
 	for _, tc := range []struct {
 		name    string
@@ -158,13 +192,14 @@ func TestURLMux(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, gotErr := mux.OpenKeeper(ctx, tc.url)
+			keeper, gotErr := mux.OpenKeeper(ctx, tc.url)
 			if (gotErr != nil) != tc.wantErr {
 				t.Fatalf("got err %v, want error %v", gotErr, tc.wantErr)
 			}
 			if gotErr != nil {
 				return
 			}
+			defer keeper.Close()
 			if got := fake.u.String(); got != tc.url {
 				t.Errorf("got %q want %q", got, tc.url)
 			}
@@ -173,10 +208,11 @@ func TestURLMux(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, gotErr = mux.OpenKeeperURL(ctx, parsed)
+			keeper, gotErr = mux.OpenKeeperURL(ctx, parsed)
 			if gotErr != nil {
 				t.Fatalf("got err %v, want nil", gotErr)
 			}
+			defer keeper.Close()
 			if got := fake.u.String(); got != tc.url {
 				t.Errorf("got %q want %q", got, tc.url)
 			}
@@ -193,5 +229,5 @@ func (o *fakeOpener) OpenKeeperURL(ctx context.Context, u *url.URL) (*Keeper, er
 		return nil, errors.New("fail")
 	}
 	o.u = u
-	return nil, nil
+	return NewKeeper(&erroringKeeper{}), nil
 }

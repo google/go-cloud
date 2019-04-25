@@ -71,10 +71,11 @@ type Encoder interface {
 	EncodeList(n int) Encoder
 	ListIndex(i int)
 
-	// EncodeMap is called when a map is encountered. Its argument is the number of
-	// fields in the map. The encoding algorithm will call the returned Encoder that
-	// many times to encode the successive values of the map. After each such call,
-	// MapKey will be called with the key of the element just encoded.
+	// EncodeMap is called when a map is encountered. Its first argument is the
+	// number of fields in the map; the second argument is false. The encoding
+	// algorithm will call the returned Encoder that many times to encode the
+	// successive values of the map. After each such call, MapKey will be called with
+	// the key of the element just encoded.
 	//
 	// For example, map[string}int{"A": 1, "B": 2} will result in these calls:
 	//     enc2 := enc.EncodeMap(2)
@@ -83,11 +84,11 @@ type Encoder interface {
 	//     enc2.EncodeInt(2)
 	//     enc2.MapKey("B")
 	//
-	// EncodeMap is also called for structs if EncodeStruct (see below) returns false; the map
-	// then consists of the exported fields of the struct.
-	// For struct{A, B int}{1, 2}, if EncodeStruct returns false, the same sequence
-	// of calls as above will occur.
-	EncodeMap(n int) Encoder
+	// EncodeMap is also called for structs, with a second argument of true. The map
+	// then consists of the exported fields of the struct. For struct{A, B int}{1,
+	// 2}, if EncodeStruct returns false, the same sequence of calls as above will
+	// occur.
+	EncodeMap(n int, isStruct bool) Encoder
 	MapKey(string)
 
 	// If the encoder wants to encode a value in a special way it should do so here
@@ -228,7 +229,7 @@ func encodeMap(v reflect.Value, enc Encoder) error {
 		return nil
 	}
 	keys := v.MapKeys()
-	enc2 := enc.EncodeMap(len(keys))
+	enc2 := enc.EncodeMap(len(keys), false)
 	for _, k := range keys {
 		sk, err := stringifyMapKey(k)
 		if err != nil {
@@ -263,12 +264,12 @@ func stringifyMapKey(k reflect.Value) (string, error) {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return strconv.FormatUint(k.Uint(), 10), nil
 	default:
-		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %s of type %s", k, k.Type())
+		return "", gcerr.Newf(gcerr.InvalidArgument, nil, "cannot encode key %v of type %s", k, k.Type())
 	}
 }
 
 func encodeStructWithFields(v reflect.Value, fields fields.List, e Encoder) error {
-	e2 := e.EncodeMap(len(fields))
+	e2 := e.EncodeMap(len(fields), true)
 	for _, f := range fields {
 		fv, ok := fieldByIndex(v, f.Index)
 		if ok {
@@ -369,6 +370,9 @@ func Decode(v reflect.Value, d Decoder) error {
 }
 
 func decode(v reflect.Value, d Decoder) error {
+	if !v.CanSet() {
+		return fmt.Errorf("while decoding: cannot set %+v", v)
+	}
 	// A Null value sets anything nullable to nil.
 	// If the value isn't nullable, we keep going.
 	// TODO(jba): should we treat decoding a null into a non-nullable as an error, or
@@ -382,8 +386,11 @@ func decode(v reflect.Value, d Decoder) error {
 	}
 
 	if done, val, err := d.AsSpecial(v); done {
+		if err != nil {
+			return err
+		}
 		v.Set(reflect.ValueOf(val))
-		return err
+		return nil
 	}
 
 	// Handle implemented interfaces first.
@@ -429,11 +436,13 @@ func decode(v reflect.Value, d Decoder) error {
 		i, ok := d.AsInt()
 		if !ok {
 			// Accept a floating-point number with integral value.
-			if f, ok := d.AsFloat(); ok {
-				i = int64(f)
-				if float64(i) != f {
-					return fmt.Errorf("docstore: float %f does not fit into %s", f, v.Type())
-				}
+			f, ok := d.AsFloat()
+			if !ok {
+				return decodingError(v, d)
+			}
+			i = int64(f)
+			if float64(i) != f {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "float %f does not fit into %s", f, v.Type())
 			}
 		}
 		if v.OverflowInt(i) {
@@ -446,11 +455,13 @@ func decode(v reflect.Value, d Decoder) error {
 		u, ok := d.AsUint()
 		if !ok {
 			// Accept a floating-point number with integral value.
-			if f, ok := d.AsFloat(); ok {
-				u = uint64(f)
-				if float64(u) != f {
-					return fmt.Errorf("docstore: float %f does not fit into %s", f, v.Type())
-				}
+			f, ok := d.AsFloat()
+			if !ok {
+				return decodingError(v, d)
+			}
+			u = uint64(f)
+			if float64(u) != f {
+				return gcerr.Newf(gcerr.InvalidArgument, nil, "float %f does not fit into %s", f, v.Type())
 			}
 		}
 		if v.OverflowUint(u) {

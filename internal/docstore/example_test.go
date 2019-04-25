@@ -20,7 +20,7 @@ import (
 	"gocloud.dev/internal/docstore"
 )
 
-func ExampleActions() {
+func Example_actions() {
 	ctx := context.Background()
 
 	type Player struct {
@@ -31,9 +31,9 @@ func ExampleActions() {
 	fred := &Player{Name: "Fred", Score: 18}
 	got := &Player{Name: "Fred"}
 	coll := docstore.NewCollection(nil)
-	_, err := coll.Actions().
+	errs := coll.Actions().
 		Put(fred).
 		Get(got).
 		Do(ctx)
-	_ = err
+	_ = errs
 }

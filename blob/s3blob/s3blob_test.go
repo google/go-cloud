@@ -133,6 +133,14 @@ func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
 	return nil
 }
 
+func (verifyContentLanguage) BeforeCopy(as func(interface{}) bool) error {
+	var in *s3.CopyObjectInput
+	if !as(&in) {
+		return errors.New("BeforeCopy.As failed")
+	}
+	return nil
+}
+
 func (v verifyContentLanguage) BeforeList(as func(interface{}) bool) error {
 	if v.usingLegacyList {
 		var req *s3.ListObjectsInput

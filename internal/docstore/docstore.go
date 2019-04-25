@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package docstore provides a portable implementation of a document store.
-// TODO(jba): link to an explanation of document stores (https://en.wikipedia.org/wiki/Document-oriented_database?)
-// TODO(jba): expand package doc to batch other Go CDK APIs.
-package docstore // import "gocloud.dev/internal/docstore"
+package docstore
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/gcerr"
+	"gocloud.dev/internal/openurl"
 )
 
 // A Document is a set of field-value pairs. One or more fields, called the key
@@ -50,6 +50,11 @@ func newCollection(d driver.Collection) *Collection {
 	return &Collection{driver: d}
 }
 
+// RevisionField is the name of the document field used for document revision
+// information, to implement optimistic locking.
+// See the Revisions section of the package documentation.
+const RevisionField = "DocstoreRevision"
+
 // A FieldPath is a dot-separated sequence of UTF-8 field names. Examples:
 //   room
 //   room.size
@@ -65,12 +70,21 @@ func (c *Collection) Actions() *ActionList {
 	return &ActionList{coll: c}
 }
 
-// An ActionList is a sequence of actions that affect a single collection. The
-// actions are performed in order. If an action fails, the ones following it are not
-// executed.
+// An ActionList is a group of actions that affect a single collection.
+//
+// By default, the actions in the list are performed in order from the point of view
+// of the client. However, the actions may not be performed atomically, and there is
+// no guarantee that a Get following a write will see the value just written (for
+// example, if the provider is eventually consistent). Execution stops with the first
+// failed action.
+//
+// If the Unordered method is called on an ActionList, then the actions may be
+// executed in any order, perhaps concurrently. All actions will be executed, even if
+// some fail.
 type ActionList struct {
-	coll    *Collection
-	actions []*Action
+	coll      *Collection
+	actions   []*Action
+	unordered bool
 }
 
 // An Action is a read or write on a single document.
@@ -100,6 +114,8 @@ func (l *ActionList) Create(doc Document) *ActionList {
 // The key fields must be set.
 // The document must already exist; an error for which gcerrors.Code returns NotFound
 // is returned if it does not.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
 func (l *ActionList) Replace(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Replace, doc: doc})
 }
@@ -107,13 +123,18 @@ func (l *ActionList) Replace(doc Document) *ActionList {
 // Put adds an action that adds or replaces a document.
 // The key fields must be set.
 // The document may or may not already exist.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
 func (l *ActionList) Put(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Put, doc: doc})
 }
 
 // Delete adds an action that deletes a document.
 // Only the key fields and RevisionField of doc are used.
-// If the document doesn't exist, nothing happens and no error is returned.
+// See the Revisions section of the package documentation for how revisions are
+// handled.
+// If doc has no revision and the document doesn't exist, nothing happens and no
+// error is returned.
 func (l *ActionList) Delete(doc Document) *ActionList {
 	// Rationale for not returning an error if the document does not exist:
 	// Returning an error might be informative and could be ignored, but if the
@@ -123,11 +144,12 @@ func (l *ActionList) Delete(doc Document) *ActionList {
 	return l.add(&Action{kind: driver.Delete, doc: doc})
 }
 
-// Get adds an action that retrieves a document.
-// Only the key fields of doc are used.
-// If fps is omitted, all the fields of doc are set to those of the
-// retrieved document. If fps is present, only the given field paths are
-// set. In both cases, other fields of doc are not touched.
+// Get adds an action that retrieves a document. Only the key fields of doc are used.
+// If fps is omitted, doc will contain all the fields of the retrieved document. If
+// fps is present, only the given field paths are retrieved, in addition to the
+// revision field. It is undefined whether other fields of doc at the time of the
+// call are removed, unchanged, or zeroed, so for portable behavior doc should
+// contain only the key fields.
 func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 	return l.add(&Action{
 		kind:       driver.Get,
@@ -144,6 +166,9 @@ func (l *ActionList) Get(doc Document, fps ...FieldPath) *ActionList {
 // No field path in mods can be a prefix of another. (It makes no sense
 // to, say, set foo but increment foo.bar.)
 //
+// See the Revisions section of the package documentation for how revisions are
+// handled.
+//
 // It is undefined whether updating a sub-field of a non-map field will succeed.
 // For instance, if the current document is {a: 1} and Update is called with the
 // mod "a.b": 2, then either Update will fail, or it will succeed with the result
@@ -159,6 +184,13 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 	})
 }
 
+// After Unordered is called, Do may execute the actions in any order.
+// All actions will be executed, even if some fail.
+func (l *ActionList) Unordered() *ActionList {
+	l.unordered = true
+	return l
+}
+
 // Mods is a map from field paths to modifications.
 // At present, a modification is one of:
 // - nil, to delete the field
@@ -167,21 +199,72 @@ func (l *ActionList) Update(doc Document, mods Mods) *ActionList {
 // See ActionList.Update.
 type Mods map[FieldPath]interface{}
 
-// Do executes the action list. If all the actions executed successfully, Do returns
-// (number of actions, nil). If any failed, Do returns the number of successful
-// actions and an error. In general there is no way to know which actions succeeded,
-// but the error will contain as much information as possible about the failures.
-func (l *ActionList) Do(ctx context.Context) (int, error) {
+// An ActionListError is returned by ActionList.Do. It contains all the errors
+// encountered while executing the ActionList, and the positions of the corresponding
+// actions.
+type ActionListError []struct {
+	Index int
+	Err   error
+}
+
+// TODO(jba): use xerrors formatting.
+
+func (e ActionListError) Error() string {
+	var s []string
+	for _, x := range e {
+		s = append(s, fmt.Sprintf("at %d: %v", x.Index, x.Err))
+	}
+	return strings.Join(s, "; ")
+}
+
+// Unwrap returns the error in e, if there is exactly one. If there is more than one
+// error, Unwrap returns nil, since there is no way to determine which should be
+// returned.
+func (e ActionListError) Unwrap() error {
+	if len(e) == 1 {
+		return e[0].Err
+	}
+	// Return nil when e is nil, or has more than one error.
+	// When there are multiple errors, it doesn't make sense to return any of them.
+	return nil
+}
+
+// Do executes the action list.
+//
+// If Do returns a non-nil error, it will be of type ActionListError. If any action
+// fails, the returned error will contain the position in the ActionList of each
+// failed action. As a special case, none of the actions will be executed if any is
+// invalid (for example, a Put whose document is missing its key field).
+//
+// In ordered mode (when the Unordered method was not called on the list), execution
+// will stop after the first action that fails.
+//
+// In unordered mode, all the actions will be executed.
+func (l *ActionList) Do(ctx context.Context) error {
 	var das []*driver.Action
-	for _, a := range l.actions {
+	var alerr ActionListError
+	for i, a := range l.actions {
 		d, err := a.toDriverAction()
 		if err != nil {
-			return 0, wrapError(l.coll.driver, err)
+			alerr = append(alerr, struct {
+				Index int
+				Err   error
+			}{i, wrapError(l.coll.driver, err)})
+		} else {
+			das = append(das, d)
 		}
-		das = append(das, d)
 	}
-	n, err := l.coll.driver.RunActions(ctx, das)
-	return n, wrapError(l.coll.driver, err)
+	if len(alerr) > 0 {
+		return alerr
+	}
+	alerr = ActionListError(l.coll.driver.RunActions(ctx, das, l.unordered))
+	if len(alerr) == 0 {
+		return nil // Explicitly return nil, because alerr is not of type error.
+	}
+	for i := range alerr {
+		alerr[i].Err = wrapError(l.coll.driver, alerr[i].Err)
+	}
+	return alerr
 }
 
 func (a *Action) toDriverAction() (*driver.Action, error) {
@@ -218,7 +301,7 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 			if err != nil {
 				return nil, err
 			}
-			d.Mods = append(d.Mods, driver.Mod{fp, v})
+			d.Mods = append(d.Mods, driver.Mod{FieldPath: fp, Value: v})
 		}
 	}
 	return d, nil
@@ -227,43 +310,55 @@ func (a *Action) toDriverAction() (*driver.Action, error) {
 // Create is a convenience for building and running a single-element action list.
 // See ActionList.Create.
 func (c *Collection) Create(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Create(doc).Do(ctx)
-	return err
+	if err := c.Actions().Create(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Replace is a convenience for building and running a single-element action list.
 // See ActionList.Replace.
 func (c *Collection) Replace(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Replace(doc).Do(ctx)
-	return err
+	if err := c.Actions().Replace(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Put is a convenience for building and running a single-element action list.
 // See ActionList.Put.
 func (c *Collection) Put(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Put(doc).Do(ctx)
-	return err
+	if err := c.Actions().Put(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Delete is a convenience for building and running a single-element action list.
 // See ActionList.Delete.
 func (c *Collection) Delete(ctx context.Context, doc Document) error {
-	_, err := c.Actions().Delete(doc).Do(ctx)
-	return err
+	if err := c.Actions().Delete(doc).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Get is a convenience for building and running a single-element action list.
 // See ActionList.Get.
 func (c *Collection) Get(ctx context.Context, doc Document, fps ...FieldPath) error {
-	_, err := c.Actions().Get(doc, fps...).Do(ctx)
-	return err
+	if err := c.Actions().Get(doc, fps...).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 // Update is a convenience for building and running a single-element action list.
 // See ActionList.Update.
 func (c *Collection) Update(ctx context.Context, doc Document, mods Mods) error {
-	_, err := c.Actions().Update(doc, mods).Do(ctx)
-	return err
+	if err := c.Actions().Update(doc, mods).Do(ctx); err != nil {
+		return err.(ActionListError).Unwrap()
+	}
+	return nil
 }
 
 func parseFieldPath(fp FieldPath) ([]string, error) {
@@ -280,6 +375,73 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 		}
 	}
 	return parts, nil
+}
+
+// CollectionURLOpener opens a collection of documents based on a URL.
+// The opener must not modify the URL argument. It must be safe to call from
+// multiple goroutines.
+//
+// This interface is generally implemented by types in driver packages.
+type CollectionURLOpener interface {
+	OpenCollectionURL(ctx context.Context, u *url.URL) (*Collection, error)
+}
+
+// URLMux is a URL opener multiplexer. It matches the scheme of the URLs against
+// a set of registered schemes and calls the opener that matches the URL's
+// scheme. See https://godoc.org/gocloud.dev#hdr-URLs for more information.
+//
+// The zero value is a multiplexer with no registered scheme.
+type URLMux struct {
+	schemes openurl.SchemeMap
+}
+
+// CollectionSchemes returns a sorted slice of the registered Collection schemes.
+func (mux *URLMux) CollectionSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidCollectionScheme returns true iff scheme has been registered for Collections.
+func (mux *URLMux) ValidCollectionScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
+// RegisterCollection registers the opener with the given scheme. If an opener
+// already exists for the scheme, RegisterCollection panics.
+func (mux *URLMux) RegisterCollection(scheme string, opener CollectionURLOpener) {
+	mux.schemes.Register("docstore", "Collection", scheme, opener)
+}
+
+// OpenCollection calls OpenCollectionURL with the URL parsed from urlstr.
+// OpenCollection is safe to call from multiple goroutines.
+func (mux *URLMux) OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
+	opener, u, err := mux.schemes.FromString("Collection", urlstr)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(CollectionURLOpener).OpenCollectionURL(ctx, u)
+}
+
+// OpenCollectionURL dispatches the URL to the opener that is registered with
+// the URL's scheme. OpenCollectionURL is safe to call from multiple goroutines.
+func (mux *URLMux) OpenCollectionURL(ctx context.Context, u *url.URL) (*Collection, error) {
+	opener, err := mux.schemes.FromURL("Collection", u)
+	if err != nil {
+		return nil, err
+	}
+	return opener.(CollectionURLOpener).OpenCollectionURL(ctx, u)
+}
+
+var defaultURLMux = new(URLMux)
+
+// DefaultURLMux returns the URLMux used by OpenCollection.
+//
+// Driver packages can use this to register their CollectionURLOpener on the mux.
+func DefaultURLMux() *URLMux {
+	return defaultURLMux
+}
+
+// OpenCollection opens the collection identified by the URL given.
+// See the URLOpener documentation in provider-specific subpackages for details
+// on supported URL formats, and https://godoc.org/gocloud.dev#hdr-URLs for more
+// information.
+func OpenCollection(ctx context.Context, urlstr string) (*Collection, error) {
+	return defaultURLMux.OpenCollection(ctx, urlstr)
 }
 
 func wrapError(c driver.Collection, err error) error {

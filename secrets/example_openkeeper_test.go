@@ -23,7 +23,7 @@ import (
 	_ "gocloud.dev/secrets/localsecrets"
 )
 
-func ExampleOpenKeeper() {
+func Example_openKeeper() {
 	ctx := context.Background()
 
 	// Create a Keeper using a URL.
@@ -39,6 +39,7 @@ func ExampleOpenKeeper() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer k.Close()
 
 	// Now we can use k to encrypt/decrypt.
 	plaintext := []byte("Go CDK Secrets")

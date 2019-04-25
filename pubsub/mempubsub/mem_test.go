@@ -25,9 +25,9 @@ import (
 
 func TestReceive(t *testing.T) {
 	ctx := context.Background()
-	top := &topic{}
-	sub := newSubscription(top, 3*time.Second)
-	if err := top.SendBatch(ctx, []*driver.Message{
+	topic := &topic{}
+	sub := newSubscription(topic, 3*time.Second)
+	if err := topic.SendBatch(ctx, []*driver.Message{
 		{Body: []byte("a")},
 		{Body: []byte("b")},
 		{Body: []byte("c")},
@@ -89,9 +89,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -116,9 +119,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 	ctx := context.Background()
 	pubsub.OpenTopic(ctx, "mem://mytopic")
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

@@ -76,8 +76,7 @@ func createTopic(ctx context.Context, pubClient *raw.PublisherClient, topicName,
 }
 
 func (h *harness) MakeNonexistentTopic(ctx context.Context) (driver.Topic, error) {
-	dt := openTopic(h.pubClient, projectID, "nonexistent-topic")
-	return dt, nil
+	return openTopic(h.pubClient, projectID, "nonexistent-topic"), nil
 }
 
 func (h *harness) CreateSubscription(ctx context.Context, dt driver.Topic, testName string) (ds driver.Subscription, cleanup func(), err error) {
@@ -103,15 +102,17 @@ func createSubscription(ctx context.Context, subClient *raw.SubscriberClient, dt
 }
 
 func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subscription, error) {
-	ds := openSubscription(h.subClient, projectID, "nonexistent-subscription")
-	return ds, nil
-
+	return openSubscription(h.subClient, projectID, "nonexistent-subscription"), nil
 }
 
 func (h *harness) Close() {
 	h.pubClient.Close()
 	h.subClient.Close()
 	h.closer()
+}
+
+func (h *harness) MaxBatchSizes() (int, int) {
+	return sendBatcherOpts.MaxBatchSize, ackBatcherOpts.MaxBatchSize
 }
 
 func TestConformance(t *testing.T) {
@@ -160,7 +161,7 @@ func BenchmarkGcpPubSub(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer cleanup2()
-	sub := pubsub.NewSubscription(ds, nil)
+	sub := pubsub.NewSubscription(ds, recvBatcherOpts, ackBatcherOpts)
 	defer sub.Shutdown(ctx)
 
 	drivertest.RunBenchmarks(b, topic, sub)
@@ -172,13 +173,13 @@ func (gcpAsTest) Name() string {
 	return "gcp test"
 }
 
-func (gcpAsTest) TopicCheck(top *pubsub.Topic) error {
+func (gcpAsTest) TopicCheck(topic *pubsub.Topic) error {
 	var c2 raw.PublisherClient
-	if top.As(&c2) {
+	if topic.As(&c2) {
 		return fmt.Errorf("cast succeeded for %T, want failure", &c2)
 	}
 	var c3 *raw.PublisherClient
-	if !top.As(&c3) {
+	if !topic.As(&c3) {
 		return fmt.Errorf("cast failed for %T", &c3)
 	}
 	return nil
@@ -254,6 +255,7 @@ func TestOpenTopic(t *testing.T) {
 		t.Fatal(err)
 	}
 	topic := OpenTopic(pc, projID, "my-topic", nil)
+	defer topic.Shutdown(ctx)
 	err = topic.Send(ctx, &pubsub.Message{Body: []byte("hello world")})
 	if err == nil {
 		t.Error("got nil, want error")
@@ -280,6 +282,7 @@ func TestOpenSubscription(t *testing.T) {
 		t.Fatal(err)
 	}
 	sub := OpenSubscription(sc, projID, "my-subscription", nil)
+	defer sub.Shutdown(ctx)
 	_, err = sub.Receive(ctx)
 	if err == nil {
 		t.Error("got nil, want error")
@@ -302,9 +305,12 @@ func TestOpenTopicFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenTopic(ctx, test.URL)
+		topic, err := pubsub.OpenTopic(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if topic != nil {
+			topic.Shutdown(ctx)
 		}
 	}
 }
@@ -325,9 +331,12 @@ func TestOpenSubscriptionFromURL(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := pubsub.OpenSubscription(ctx, test.URL)
+		sub, err := pubsub.OpenSubscription(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if sub != nil {
+			sub.Shutdown(ctx)
 		}
 	}
 }

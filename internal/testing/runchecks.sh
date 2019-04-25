@@ -37,6 +37,10 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   trap cleanup EXIT
 
   mergebase="$(git merge-base -- "$TRAVIS_BRANCH" "$TRAVIS_PULL_REQUEST_SHA")"
+  if [[ -z $mergebase ]]; then
+    echo "merge-base empty. Please ensure that the PR is mergeable."
+    exit 1
+  fi
   git diff --name-only "$mergebase" "$TRAVIS_PULL_REQUEST_SHA" -- > $tmpfile
 
   # Find out if the diff has any files that are neither:
@@ -68,9 +72,17 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   fi
 else
   go test -mod=readonly -race ./... || result=1
-  # No need to run wire checks or other module tests on OSs other than linux.
+  # No need to run other checks on OSs other than linux.
   exit $result
 fi
+
+# Ensure .go files are formatted with "gofmt -s".
+DIFF=$(gofmt -s -d `find . -name '*.go' -type f`)
+if [ -n "$DIFF" ]; then
+  echo "Please run gofmt -s and commit the result"
+  echo "$DIFF";
+  exit 1;
+fi;
 
 # Ensure that the code has no extra dependencies (including transitive
 # dependencies) that we're not already aware of by comparing with
@@ -86,13 +98,27 @@ if [[ $(go version) == *1\.12* ]]; then
   }
 fi
 
+# Ensure that any new packages have the corresponding entries in Hugo.
+missing_packages="$(internal/website/listnewpkgs.sh)"
+if ! [[ -z "$missing_packages" ]]; then
+  echo "FAIL: missing package meta tags for:" 1>&2
+  echo "$missing_packages" 1>&2
+  result=1
+fi
+
+# For pull requests, check if there are undeclared incompatible API changes.
+# Skip this if we're already going to fail since it is expensive.
+if [[ ${result} -eq 0 ]] && [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
+  ./internal/testing/check_api_change.sh || result=1;
+fi
+
 go install -mod=readonly github.com/google/wire/cmd/wire
 wire check ./... || result=1
 # "wire diff" fails with exit code 1 if any diffs are detected.
 wire diff ./... || { echo "FAIL: wire diff found diffs!" && result=1; }
 
 # Run Go tests for each additional module, without coverage.
-for path in "./internal/contributebot" "./samples/appengine"; do
+for path in "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
   ( cd "$path" && exec go test -mod=readonly ./... ) || result=1
   ( cd "$path" && exec wire check ./... ) || result=1
   ( cd "$path" && exec wire diff ./... ) || (echo "FAIL: wire diff found diffs!" && result=1)

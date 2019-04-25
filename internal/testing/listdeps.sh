@@ -24,7 +24,7 @@ set -euo pipefail
 # (see .travis.yml) when updating the alldeps file.
 tmpfile=$(mktemp)
 
-for path in "." "./internal/contributebot" "./samples/appengine"; do
+for path in "." "./internal/cmd/gocdk" "./internal/contributebot" "./internal/website" "./samples/appengine"; do
   ( cd "$path" && go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./... >> $tmpfile)
 done
 
@@ -33,5 +33,5 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-# Sort usnig the native byte values to keep results from different environment consistent.
+# Sort using the native byte values to keep results from different environment consistent.
 LC_ALL=C sort "$tmpfile" | uniq

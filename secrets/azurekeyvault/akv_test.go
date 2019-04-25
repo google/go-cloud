@@ -43,13 +43,20 @@ import (
 //
 // 4. Set your environment variables depending on the auth model selection. Modify helper initEnv() as needed.
 // For Service Principal, please set the following, see https://docs.microsoft.com/en-us/go/azure/azure-sdk-go-authorization.
-// - AZURE_TENANT_ID (The ID for the Active Directory tenant that the service principal belongs to.)
-// - AZURE_CLIENT_ID (The name or ID of the service principal.)
-// - AZURE_CLIENT_SECRET (The secret associated with the service principal.)
-// - AZURE_ENVIRONMENT
-// - AZURE_AD_RESOURCE to https://vault.azure.net
 //
-// 5. Create/Import a Key. This can be done in the Azure Portal or by code.
+// - AZURE_TENANT_ID: Go to "Azure Active Directory", then "Properties". The
+//     "Directory ID" property is your AZURE_TENANT_ID.
+// - AZURE_CLIENT_ID: Go to "Azure Active Directory", then "App Registrations",
+//     then "View all applications". The "Application ID" column shows your
+//     AZURE_CLIENT_ID.
+// - AZURE_CLIENT_SECRET: Click on the application from the previous step,
+//     then "Settings" and then "Keys". Create a key and use it as your
+//     AZURE_CLIENT_SECRET. Make sure to save the value as it's hidden after
+//     the initial creation.
+// - AZURE_ENVIRONMENT: (optional).
+// - AZURE_AD_RESOURCE: (optional).
+//
+// 5. Create/Import a Key. This can be done in the Azure Portal under "Key vaults".
 //
 // 6. Update constants below to match your Azure KeyVault settings.
 
@@ -162,10 +169,11 @@ func (v verifyAs) ErrorCheck(k *secrets.Keeper, err error) error {
 
 func TestNoConnectionError(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	k, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
+	k, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, &KeeperOptions{Algorithm: algorithm})
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer k.Close()
 	if _, err := k.Encrypt(context.Background(), []byte("secrets")); err == nil {
 		t.Error("Encrypt: got nil, want no connection error")
 	}
@@ -173,8 +181,8 @@ func TestNoConnectionError(t *testing.T) {
 
 func TestAlgorithmNotProvided(t *testing.T) {
 	client := keyvault.NewWithoutDefaults()
-	if _, err := NewKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
-		t.Error("NewKeeper with no algorithm: got nil, want no algorithm error")
+	if _, err := OpenKeeper(&client, keyVaultName, keyID1, keyVersion, nil); err == nil {
+		t.Error("OpenKeeper with no algorithm: got nil, want no algorithm error")
 	}
 }
 
@@ -239,9 +247,14 @@ func TestOpenKeeper(t *testing.T) {
 
 	ctx := context.Background()
 	for _, test := range tests {
-		_, err := secrets.OpenKeeper(ctx, test.URL)
+		keeper, err := secrets.OpenKeeper(ctx, test.URL)
 		if (err != nil) != test.WantErr {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+		if err == nil {
+			if err = keeper.Close(); err != nil {
+				t.Errorf("%s: got error during close: %v", test.URL, err)
+			}
 		}
 	}
 }

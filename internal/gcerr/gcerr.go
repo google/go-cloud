@@ -128,7 +128,7 @@ func New(c ErrorCode, err error, callDepth int, msg string) *Error {
 
 // Newf uses format and args to format a message, then calls New.
 func Newf(c ErrorCode, err error, format string, args ...interface{}) *Error {
-	return New(c, err, 1, fmt.Sprintf(format, args...))
+	return New(c, err, 2, fmt.Sprintf(format, args...))
 }
 
 // DoNotWrap reports whether an error should not be wrapped in the Error
@@ -166,6 +166,8 @@ func GRPCCode(err error) ErrorCode {
 		return Internal
 	case codes.Unimplemented:
 		return Unimplemented
+	case codes.FailedPrecondition:
+		return FailedPrecondition
 	case codes.PermissionDenied:
 		return PermissionDenied
 	case codes.ResourceExhausted:

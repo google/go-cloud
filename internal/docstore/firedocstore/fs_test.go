@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,13 +16,16 @@ package firedocstore
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	vkit "cloud.google.com/go/firestore/apiv1"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/option"
+	pb "google.golang.org/genproto/googleapis/firestore/v1"
 )
 
 const (
@@ -49,7 +52,7 @@ func newHarness(ctx context.Context, t *testing.T) (drivertest.Harness, error) {
 }
 
 func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
-	return newCollection(h.client, projectID, collectionName, keyName), nil
+	return newCollection(h.client, projectID, collectionName, keyName, nil)
 }
 
 func (h *harness) Close() {
@@ -57,10 +60,112 @@ func (h *harness) Close() {
 	h.done()
 }
 
+// codecTester implements drivertest.CodecTester.
+type codecTester struct {
+	nc *nativeCodec
+}
+
+func (*codecTester) UnsupportedTypes() []drivertest.UnsupportedType {
+	return []drivertest.UnsupportedType{drivertest.Uint, drivertest.Complex, drivertest.Arrays}
+}
+
+func (c *codecTester) NativeEncode(x interface{}) (interface{}, error) {
+	return c.nc.Encode(x)
+}
+
+func (c *codecTester) NativeDecode(value, dest interface{}) error {
+	return c.nc.Decode(value.(*pb.Document), dest)
+}
+
+func (c *codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
+	doc, err := driver.NewDocument(x)
+	if err != nil {
+		return nil, err
+	}
+	var e encoder
+	if err := doc.Encode(&e); err != nil {
+		return nil, err
+	}
+	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
+}
+
+func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
+	doc, err := driver.NewDocument(dest)
+	if err != nil {
+		return err
+	}
+	mv := &pb.Value{ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{
+		Fields: value.(*pb.Document).Fields,
+	}}}
+	return doc.Decode(decoder{mv})
+}
+
 func TestConformance(t *testing.T) {
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
-	// TODO(jba): implement a CodecTester. This isn't easy, because the Firestore client
-	// (cloud.google.com/go/firestore) doesn't export its codec. We'll have to write a
-	// fake gRPC server to capture the protos.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	nc, err := newNativeCodec()
+	if err != nil {
+		t.Fatal(err)
+	}
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
+}
+
+// Firedocstore-specific tests.
+
+func TestCollectionNameFromURL(t *testing.T) {
+	tests := []struct {
+		URL          string
+		WantErr      bool
+		WantProject  string
+		WantCollPath string
+	}{
+		{"firestore://proj/coll", false, "proj", "coll"},
+		{"firestore://proj/coll/doc/subcoll", false, "proj", "coll/doc/subcoll"},
+		{"firestore://proj/", true, "", ""},
+		{"firestore:///coll", true, "", ""},
+	}
+	for _, test := range tests {
+		u, err := url.Parse(test.URL)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotProj, gotCollPath, gotErr := collectionNameFromURL(u)
+		if (gotErr != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, gotErr, test.WantErr)
+		}
+		if gotProj != test.WantProject || gotCollPath != test.WantCollPath {
+			t.Errorf("%s: got project ID %s, collection path %s want project ID %s, collection path %s",
+				test.URL, gotProj, gotCollPath, test.WantProject, test.WantCollPath)
+		}
+	}
+}
+
+func TestOpenCollection(t *testing.T) {
+	cleanup := setup.FakeGCPDefaultCredentials(t)
+	defer cleanup()
+
+	tests := []struct {
+		URL     string
+		WantErr bool
+	}{
+		// OK.
+		{"firestore://myproject/mycoll?name_field=_id", false},
+		// OK, hierarchical collection.
+		{"firestore://myproject/mycoll/mydoc/subcoll?name_field=_id", false},
+		// Missing project ID.
+		{"firestore:///mycoll?name_field=_id", true},
+		// Empty collection.
+		{"firestore://myproject/", true},
+		// Missing name field.
+		{"firestore://myproject/mycoll", true},
+		// Invalid param.
+		{"firestore://myproject/mycoll?name_field=_id&param=value", true},
+	}
+
+	ctx := context.Background()
+	for _, test := range tests {
+		_, err := docstore.OpenCollection(ctx, test.URL)
+		if (err != nil) != test.WantErr {
+			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
+		}
+	}
 }

@@ -49,6 +49,7 @@
 //  - ListOptions.BeforeList: *azblob.ListBlobsSegmentOptions
 //  - Reader: azblob.DownloadResponse
 //  - Attributes: azblob.BlobGetPropertiesResponse
+//  - CopyOptions.BeforeCopy: azblob.Metadata, *azblob.ModifiedAccessConditions, *azblob.BlobAccessConditions
 //  - WriterOptions.BeforeWrite: *azblob.UploadStreamToBlockBlobOptions
 package azureblob
 
@@ -100,6 +101,13 @@ const (
 func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
+
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	NewPipeline,
+	Options{},
+	URLOpener{},
+)
 
 // lazyCredsOpener obtains credentials from the environment on the first call
 // to OpenBucketURL.
@@ -289,10 +297,12 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	if err != nil {
 		return nil, err
 	}
-	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	if opts.SASToken != "" {
-		blobURL.RawQuery = string(opts.SASToken)
+		// The Azure portal includes a leading "?" for the SASToken, which we
+		// don't want here.
+		blobURL.RawQuery = strings.TrimPrefix(string(opts.SASToken), "?")
 	}
+	serviceURL := azblob.NewServiceURL(*blobURL, pipeline)
 	return &bucket{
 		name:         containerName,
 		pageMarkers:  map[string]azblob.Marker{},
@@ -302,7 +312,62 @@ func openBucket(ctx context.Context, pipeline pipeline.Pipeline, accountName Acc
 	}, nil
 }
 
+// Close implements driver.Close.
 func (b *bucket) Close() error {
+	return nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey, false)
+	dstBlobURL := b.containerURL.NewBlobURL(dstKey)
+	srcKey = escapeKey(srcKey, false)
+	srcURL := b.containerURL.NewBlobURL(srcKey).URL()
+	md := azblob.Metadata{}
+	mac := azblob.ModifiedAccessConditions{}
+	bac := azblob.BlobAccessConditions{}
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case *azblob.Metadata:
+				*v = md
+				return true
+			case **azblob.ModifiedAccessConditions:
+				*v = &mac
+				return true
+			case **azblob.BlobAccessConditions:
+				*v = &bac
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	resp, err := dstBlobURL.StartCopyFromURL(ctx, srcURL, md, mac, bac)
+	if err != nil {
+		return err
+	}
+	copyStatus := resp.CopyStatus()
+	nErrors := 0
+	for copyStatus == azblob.CopyStatusPending {
+		// Poll until the copy is complete.
+		time.Sleep(500 * time.Millisecond)
+		propertiesResp, err := dstBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+		if err != nil {
+			// A GetProperties failure may be transient, so allow a couple
+			// of them before giving up.
+			nErrors++
+			if ctx.Err() != nil || nErrors == 3 {
+				return err
+			}
+		}
+		copyStatus = propertiesResp.CopyStatus()
+	}
+	if copyStatus != azblob.CopyStatusSuccess {
+		return fmt.Errorf("Copy failed with status: %s", copyStatus)
+	}
 	return nil
 }
 
@@ -327,8 +392,8 @@ func (r *reader) Read(p []byte) (int, error) {
 func (r *reader) Close() error {
 	return r.body.Close()
 }
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 func (r *reader) As(i interface{}) bool {
 	p, ok := i.(*azblob.DownloadResponse)
@@ -424,12 +489,12 @@ func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key, false)
 	blockBlobURL := b.containerURL.NewBlockBlobURL(key)
 	blobPropertiesResponse, err := blockBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
 
 	azureMD := blobPropertiesResponse.NewMetadata()
@@ -439,7 +504,7 @@ func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes,
 		// keys & values.
 		md[escape.HexUnescape(k)] = escape.URLUnescape(v)
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       blobPropertiesResponse.CacheControl(),
 		ContentDisposition: blobPropertiesResponse.ContentDisposition(),
 		ContentEncoding:    blobPropertiesResponse.ContentEncoding(),

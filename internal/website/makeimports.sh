@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script generates html files that contain go-import meta tags,
-# suitable for "go get"'s import path redirection feature (see
-# https://golang.org/cmd/go/#hdr-Remote_import_paths).
-# It also adds go-source tags so godoc.org can link to the proper source files.
-#
-# This script must be run at the repo root.
+# This script generates Markdown files that will include <meta> suitable for
+# "go get"'s import path redirection feature (see
+# https://golang.org/cmd/go/#hdr-Remote_import_paths) in the final Hugo output.
 
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
@@ -29,24 +26,14 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 OUTDIR=internal/website/content
 
-shopt -s nullglob  # glob patterns that don't match turn into the empty string, instead of themselves
-
-function files_exist() {  # assumes nullglob
-  [[ ${1:-""} != "" ]]
-}
-
-# Find all directories that do not begin with '.' or contain 'testdata'. Use the %P printf
-# directive to remove the initial './'.
-for pkg in $(find . -type d \( -name '.?*' -prune -o -name testdata -prune -o -printf '%P ' \)); do
+for pkg in $(internal/website/listnewpkgs.sh); do
   # Only consider directories that contain Go source files.
   outfile="$OUTDIR/$pkg/_index.md"
-  if files_exist $pkg/*.go && [[ ! -e "$outfile" ]]; then
-    mkdir -p "$OUTDIR/$pkg"
-    echo "Generating gocloud.dev/$pkg"
-    echo "---" >> "$outfile"
-    echo "title: gocloud.dev/$pkg" >> "$outfile"
-    echo "type: pkg" >> "$outfile"
-    echo "---" >> "$outfile"
-  fi
+  mkdir -p "$OUTDIR/$pkg"
+  echo "Generating gocloud.dev/$pkg"
+  echo "---" >> "$outfile"
+  echo "title: gocloud.dev/$pkg" >> "$outfile"
+  echo "type: pkg" >> "$outfile"
+  echo "---" >> "$outfile"
 done
 

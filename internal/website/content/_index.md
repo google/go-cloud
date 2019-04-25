@@ -33,9 +33,10 @@ To start using the Go CDK, install it using `go get`:
 go get gocloud.dev
 ```
 
-Then follow the [Go CDK
-tutorial](https://github.com/google/go-cloud/tree/master/samples/tutorial).
-Links to additional documentation and samples are available below.
+Then follow the [Go CDK tutorial][]. Links to additional documentation and
+samples are available below and in the site navigation bar.
+
+[Go CDK tutorial]: {{< ref "/tutorials/cli-uploader.md" >}}
 
 ## Portable Cloud APIs in Go
 
@@ -50,19 +51,20 @@ with only minimal setup-time changes.
 Please check out the linked pages for a detailed description of each API and
 examples of how to use it:
 
-* Unstructured binary storage ([blob]({{< ref "blob.md" >}}))
-* Publisher/Subscriber ([pubsub]({{< ref "pubsub.md" >}}))
-* Variables that change at runtime ([runtimevar]({{< ref "runtimevar.md" >}}))
+* Unstructured binary storage ([blob]({{< ref "/ref/blob.md" >}}))
+* Publisher/Subscriber ([pubsub]({{< ref "/ref/pubsub.md" >}}))
+* Variables that change at runtime ([runtimevar]({{< ref "/ref/runtimevar.md" >}}))
 * HTTP server with request logging, tracing and health checking
-  ([server]({{< ref "server.md" >}}))
-* Secret management, encryption and decryption ([secrets]({{< ref "secrets.md" >}}))
+  ([server]({{< ref "/ref/server.md" >}}))
+* Secret management, encryption and decryption ([secrets]({{< ref "/ref/secrets.md" >}}))
+* Connecting to hosted SQL services ([mysql/postgres]({{< ref "/ref/sql.md" >}}))
 
 ## Project status
 
 We're looking for early adopters to help us validate the APIs before releasing
 a beta version. Please try it and provide feedback!
 
-* File a [Github issue](https://github.com/google/go-cloud/issues)
+* File a [GitHub issue](https://github.com/google/go-cloud/issues)
 * Post questions to the
 [project's mailing list](https://groups.google.com/forum/#!forum/go-cloud)
 * Send us private feedback at <go-cdk-feedback@google.com>

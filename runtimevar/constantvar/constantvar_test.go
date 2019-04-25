@@ -41,7 +41,7 @@ func (h *harness) MakeWatcher(ctx context.Context, name string, decoder *runtime
 		// The variable isn't set. Create a Variable that always returns an error.
 		return &watcher{err: errNotExist}, nil
 	}
-	val, err := decoder.Decode(rawVal)
+	val, err := decoder.Decode(ctx, rawVal)
 	if err != nil {
 		// The variable didn't decode.
 		return &watcher{err: err}, nil
@@ -180,5 +180,11 @@ func TestOpenVariable(t *testing.T) {
 		if !cmp.Equal(snapshot.Value, test.Want) {
 			t.Errorf("%s: got snapshot value\n%v\n  want\n%v", test.URL, snapshot.Value, test.Want)
 		}
+	}
+}
+
+func TestDecryptWithNoURLEnv(t *testing.T) {
+	if _, err := runtimevar.OpenVariable(context.Background(), "constant://?decoder=decrypt"); err == nil {
+		t.Error("got nil error, want environment vairable not set")
 	}
 }

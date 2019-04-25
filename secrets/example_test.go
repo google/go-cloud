@@ -31,6 +31,7 @@ func Example() {
 	// Construct a *secrets.Keeper from one of the secrets subpackages.
 	// This example uses localsecrets.
 	keeper := localsecrets.NewKeeper(localsecrets.ByteKey("secret key"))
+	defer keeper.Close()
 
 	// Now we can use keeper to Encrypt.
 	plaintext := []byte("Go CDK Secrets")
@@ -50,7 +51,7 @@ func Example() {
 	// Go CDK Secrets
 }
 
-func ExampleKeeper_ErrorAs() {
+func Example_errorAs() {
 	// This example is specific to the gcpkms implementation; it
 	// demonstrates access to the underlying google.golang.org/grpc/status.Status
 	// type.
@@ -59,16 +60,17 @@ func ExampleKeeper_ErrorAs() {
 	ctx := context.Background()
 
 	const url = "gcpkms://projects/proj/locations/global/keyRings/test/ring/wrongkey"
-	k, err := secrets.OpenKeeper(ctx, url)
+	keeper, err := secrets.OpenKeeper(ctx, url)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer keeper.Close()
 
 	plaintext := []byte("Go CDK secrets")
-	_, err = k.Encrypt(ctx, plaintext)
+	_, err = keeper.Encrypt(ctx, plaintext)
 	if err != nil {
 		var s *status.Status
-		if k.ErrorAs(err, &s) {
+		if keeper.ErrorAs(err, &s) {
 			fmt.Println(s.Code())
 		}
 	}

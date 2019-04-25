@@ -79,7 +79,7 @@ type Options struct{}
 
 type blobEntry struct {
 	Content    []byte
-	Attributes driver.Attributes
+	Attributes *driver.Attributes
 }
 
 type bucket struct {
@@ -201,13 +201,13 @@ func (b *bucket) As(i interface{}) bool { return false }
 func (b *bucket) ErrorAs(err error, i interface{}) bool { return false }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	entry, found := b.blobs[key]
 	if !found {
-		return driver.Attributes{}, errNotFound
+		return nil, errNotFound
 	}
 	return entry.Attributes, nil
 }
@@ -255,8 +255,8 @@ func (r *reader) Close() error {
 	return nil
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool { return false }
@@ -319,7 +319,7 @@ func (w *writer) Close() error {
 	content := w.buf.Bytes()
 	entry := &blobEntry{
 		Content: content,
-		Attributes: driver.Attributes{
+		Attributes: &driver.Attributes{
 			CacheControl:       w.opts.CacheControl,
 			ContentDisposition: w.opts.ContentDisposition,
 			ContentEncoding:    w.opts.ContentEncoding,
@@ -334,6 +334,22 @@ func (w *writer) Close() error {
 	w.b.mu.Lock()
 	defer w.b.mu.Unlock()
 	w.b.blobs[w.key] = entry
+	return nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if opts.BeforeCopy != nil {
+		return opts.BeforeCopy(func(interface{}) bool { return false })
+	}
+	v := b.blobs[srcKey]
+	if v == nil {
+		return errNotFound
+	}
+	b.blobs[dstKey] = v
 	return nil
 }
 

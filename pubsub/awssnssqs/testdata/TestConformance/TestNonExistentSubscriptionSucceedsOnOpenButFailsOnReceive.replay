@@ -1,0 +1,86 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": null,
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "d8cffa48e5ff18c2",
+      "Request": {
+        "Method": "POST",
+        "URL": "https://sqs.us-east-2.amazonaws.com/",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "151"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "application/x-www-form-urlencoded",
+        "BodyParts": [
+          "QWN0aW9uPVJlY2VpdmVNZXNzYWdlJk1heE51bWJlck9mTWVzc2FnZXM9MSZRdWV1ZVVybD1odHRwcyUzQSUyRiUyRnVzLWVhc3QtMi5hbWF6b25hd3MuY29tJTJGNDYyMzgwMjI1NzIyJTJGbm9uZXhpc3RlbnQtc3Vic2NyaXB0aW9uJlZlcnNpb249MjAxMi0xMS0wNQ=="
+        ]
+      },
+      "Response": {
+        "StatusCode": 400,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "333"
+          ],
+          "Content-Type": [
+            "text/xml"
+          ],
+          "Date": [
+            "Wed, 10 Apr 2019 18:20:24 GMT"
+          ],
+          "X-Amzn-Requestid": [
+            "a5dfbbce-170a-5097-9aaa-eee62122db56"
+          ]
+        },
+        "Body": "PD94bWwgdmVyc2lvbj0iMS4wIj8+PEVycm9yUmVzcG9uc2UgeG1sbnM9Imh0dHA6Ly9xdWV1ZS5hbWF6b25hd3MuY29tL2RvYy8yMDEyLTExLTA1LyI+PEVycm9yPjxUeXBlPlNlbmRlcjwvVHlwZT48Q29kZT5BV1MuU2ltcGxlUXVldWVTZXJ2aWNlLk5vbkV4aXN0ZW50UXVldWU8L0NvZGU+PE1lc3NhZ2U+VGhlIHNwZWNpZmllZCBxdWV1ZSBkb2VzIG5vdCBleGlzdCBmb3IgdGhpcyB3c2RsIHZlcnNpb24uPC9NZXNzYWdlPjxEZXRhaWwvPjwvRXJyb3I+PFJlcXVlc3RJZD5hNWRmYmJjZS0xNzBhLTUwOTctOWFhYS1lZWU2MjEyMmRiNTY8L1JlcXVlc3RJZD48L0Vycm9yUmVzcG9uc2U+"
+      }
+    }
+  ]
+}

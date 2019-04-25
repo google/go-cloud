@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package firedocstore implements the docstore API for Cloud Firestore.
-//
-// Docstore types not supported by Firestore:
-// - complex64/128: encoded as an array of two float32/64s.
-//
-// Docstore types handled specially by Firestore:
-// TODO(jba): implement these
-// - time.Time: encoded as a ts.Timestamp [ts = "github.com/golang/protobuf/ptypes/timestamp"]
-// - *ts.Timestamp: encoded as itself
-// - *latlng.LatLng: encoded as itself [latlng = "google.golang.org/genproto/googleapis/type/latlng"]
-//
-// Firestore types not supported by Docstore:
-// - Document reference (a pointer to another Firestore document)
-// TODO(jba): figure out how to support this
 package firedocstore
 
 // Encoding and decoding between supported docstore types and Firestore protos.
@@ -33,25 +19,32 @@ package firedocstore
 import (
 	"errors"
 	"fmt"
+	"path"
 	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	ts "github.com/golang/protobuf/ptypes/timestamp"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	pb "google.golang.org/genproto/googleapis/firestore/v1"
+	"google.golang.org/genproto/googleapis/type/latlng"
 )
 
 // encodeDoc encodes a driver.Document into Firestore's representation.
 // A Firestore document (*pb.Document) is just a Go map from strings to *pb.Values.
-func encodeDoc(doc driver.Document) (*pb.Document, error) {
+func encodeDoc(doc driver.Document, nameField string) (*pb.Document, error) {
 	var e encoder
 	if err := doc.Encode(&e); err != nil {
 		return nil, err
 	}
-	return &pb.Document{Fields: e.pv.GetMapValue().Fields}, nil
+	fields := e.pv.GetMapValue().Fields
+	// Do not put the name field in the document itself.
+	if nameField != "" {
+		delete(fields, nameField)
+	}
+	return &pb.Document{Fields: fields}, nil
 }
-
-// TODO(jba): support encoding and decoding time.Time and latlng.LatLng specially, since Firestore has
-// special cases for those.
 
 // encodeValue encodes a Go value as a Firestore Value.
 // The Firestore proto definition for Value is a oneof of various types,
@@ -93,15 +86,46 @@ func (e *encoder) EncodeList(n int) driver.Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *encoder) EncodeMap(n int) driver.Encoder {
+func (e *encoder) EncodeMap(n int, _ bool) driver.Encoder {
 	m := make(map[string]*pb.Value, n)
 	e.pv = &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: m}}}
 	return &mapEncoder{m: m}
 }
 
-// TODO(jba): make this work for time.Time, latlng.LatLng, and ts.Timestamp.
-func (e *encoder) EncodeSpecial(reflect.Value) (bool, error) {
-	return false, nil
+var (
+	typeOfGoTime         = reflect.TypeOf(time.Time{})
+	typeOfProtoTimestamp = reflect.TypeOf((*ts.Timestamp)(nil))
+	typeOfLatLng         = reflect.TypeOf((*latlng.LatLng)(nil))
+)
+
+// Encode time.Time, latlng.LatLng, and ts.Timestamp specially, because the Go Firestore
+// client does.
+func (e *encoder) EncodeSpecial(v reflect.Value) (bool, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		ts, err := ptypes.TimestampProto(v.Interface().(time.Time))
+		if err != nil {
+			return false, err
+		}
+		e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{ts}}
+		return true, nil
+	case typeOfProtoTimestamp:
+		if v.IsNil() {
+			e.pv = nullValue
+		} else {
+			e.pv = &pb.Value{ValueType: &pb.Value_TimestampValue{v.Interface().(*ts.Timestamp)}}
+		}
+		return true, nil
+	case typeOfLatLng:
+		if v.IsNil() {
+			e.pv = nullValue
+		} else {
+			e.pv = &pb.Value{ValueType: &pb.Value_GeoPointValue{v.Interface().(*latlng.LatLng)}}
+		}
+		return true, nil
+	default:
+		return false, nil
+	}
 }
 
 type listEncoder struct {
@@ -123,9 +147,22 @@ func floatval(x float64) *pb.Value { return &pb.Value{ValueType: &pb.Value_Doubl
 ////////////////////////////////////////////////////////////////
 
 // decodeDoc decodes a Firestore document into a driver.Document.
-func decodeDoc(pdoc *pb.Document, ddoc driver.Document) error {
+func decodeDoc(pdoc *pb.Document, ddoc driver.Document, nameField string) error {
+	if pdoc.Fields == nil {
+		pdoc.Fields = map[string]*pb.Value{}
+	}
+	if nameField != "" {
+		pdoc.Fields[nameField] = &pb.Value{ValueType: &pb.Value_StringValue{StringValue: path.Base(pdoc.Name)}}
+	}
 	mv := &pb.Value{ValueType: &pb.Value_MapValue{&pb.MapValue{Fields: pdoc.Fields}}}
-	return ddoc.Decode(decoder{mv})
+	if err := ddoc.Decode(decoder{mv}); err != nil {
+		return err
+	}
+	// Set the revision field in the document, if it exists, to the update time.
+	if pdoc.UpdateTime != nil {
+		_ = ddoc.SetField(docstore.RevisionField, pdoc.UpdateTime)
+	}
+	return nil
 }
 
 type decoder struct {
@@ -220,6 +257,7 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 	case *pb.Value_BytesValue:
 		return v.BytesValue, nil
 	case *pb.Value_TimestampValue:
+		// Return TimestampValue as time.Time.
 		t, err := ptypes.Timestamp(v.TimestampValue)
 		if err != nil {
 			return nil, err
@@ -229,8 +267,8 @@ func decodeValue(v *pb.Value) (interface{}, error) {
 		// TODO(jba): support references
 		return nil, errors.New("references are not currently supported")
 	case *pb.Value_GeoPointValue:
-		// TODO(jba): support geopoints
-		return nil, errors.New("GeoPoints are not currently supported")
+		// Return GeoPointValue as *latlng.LatLng.
+		return v.GeoPointValue, nil
 	case *pb.Value_ArrayValue:
 		s := make([]interface{}, len(v.ArrayValue.Values))
 		for i, pv := range v.ArrayValue.Values {
@@ -285,7 +323,30 @@ func (d decoder) DecodeMap(f func(string, driver.Decoder) bool) {
 	}
 }
 
-// TODO(jba): see above TODO for EncodeSpecial.
-func (c decoder) AsSpecial(reflect.Value) (bool, interface{}, error) {
-	return false, nil, nil
+func (d decoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
+	switch v.Type() {
+	case typeOfGoTime:
+		if ts, ok := d.pv.ValueType.(*pb.Value_TimestampValue); ok {
+			if ts.TimestampValue == nil {
+				return true, time.Time{}, nil
+			}
+			t, err := ptypes.Timestamp(ts.TimestampValue)
+			return true, t, err
+		}
+		return true, nil, fmt.Errorf("expected TimestampValue for time.Time, got %+v", d.pv.ValueType)
+	case typeOfProtoTimestamp:
+		if ts, ok := d.pv.ValueType.(*pb.Value_TimestampValue); ok {
+			return true, ts.TimestampValue, nil
+		}
+		return true, nil, fmt.Errorf("expected TimestampValue for *ts.Timestamp, got %+v", d.pv.ValueType)
+
+	case typeOfLatLng:
+		if ll, ok := d.pv.ValueType.(*pb.Value_GeoPointValue); ok {
+			return true, ll.GeoPointValue, nil
+		}
+		return true, nil, fmt.Errorf("expected GeoPointValue for *latlng.LatLng, got %+v", d.pv.ValueType)
+
+	default:
+		return false, nil, nil
+	}
 }

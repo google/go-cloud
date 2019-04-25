@@ -51,12 +51,18 @@ func (h *harness) MakeNonexistentSubscription(ctx context.Context) (driver.Subsc
 
 func (h *harness) Close() {}
 
+func (h *harness) MaxBatchSizes() (int, int) { return 0, 0 }
+
 func TestConformance(t *testing.T) {
 	drivertest.RunConformanceTests(t, newHarness, nil)
 }
 
 func BenchmarkMemPubSub(b *testing.B) {
+	ctx := context.Background()
 	topic := NewTopic()
+	defer topic.Shutdown(ctx)
 	sub := NewSubscription(topic, time.Second)
+	defer sub.Shutdown(ctx)
+
 	drivertest.RunBenchmarks(b, topic, sub)
 }

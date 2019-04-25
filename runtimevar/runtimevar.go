@@ -62,7 +62,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -73,6 +75,7 @@ import (
 	"gocloud.dev/internal/oc"
 	"gocloud.dev/internal/openurl"
 	"gocloud.dev/runtimevar/driver"
+	"gocloud.dev/secrets"
 )
 
 // Snapshot contains a snapshot of a variable's value and metadata about it.
@@ -135,7 +138,7 @@ type Variable struct {
 	// supposed to be called from multiple goroutines.
 	lastWatch <-chan struct{}
 
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	changed  chan struct{} // closed when changing any of the other variables and replaced with a new channel
 	last     Snapshot
 	lastErr  error
@@ -157,14 +160,14 @@ func newVar(w driver.Watcher) *Variable {
 		haveGood:         make(chan struct{}),
 		changed:          changed,
 		lastWatch:        changed,
-		lastErr:          errors.New("no value yet"),
+		lastErr:          gcerr.Newf(gcerr.FailedPrecondition, nil, "no value yet"),
 	}
 	go v.background(ctx)
 	return v
 }
 
 // ErrClosed is returned from Watch when the Variable has been Closed.
-var ErrClosed = errors.New("Variable has been closed")
+var ErrClosed = gcerr.Newf(gcerr.FailedPrecondition, nil, "Variable has been Closed")
 
 // Watch returns when there is a new Snapshot of the current value of the
 // variable.
@@ -277,8 +280,8 @@ func (c *Variable) Latest(ctx context.Context) (Snapshot, error) {
 	case <-ctx.Done():
 		// We don't return ctx.Err().
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if haveGood && c.lastErr != ErrClosed {
 		return c.lastGood, nil
 	}
@@ -294,8 +297,8 @@ func (c *Variable) CheckHealth() error {
 		haveGood = true
 	default:
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if haveGood && c.lastErr != ErrClosed {
 		return nil
 	}
@@ -369,6 +372,12 @@ type URLMux struct {
 	schemes openurl.SchemeMap
 }
 
+// VariableSchemes returns a sorted slice of the registered Variable schemes.
+func (mux *URLMux) VariableSchemes() []string { return mux.schemes.Schemes() }
+
+// ValidVariableScheme returns true iff scheme has been registered for Variables.
+func (mux *URLMux) ValidVariableScheme(scheme string) bool { return mux.schemes.ValidScheme(scheme) }
+
 // RegisterVariable registers the opener with the given scheme. If an opener
 // already exists for the scheme, RegisterVariable panics.
 func (mux *URLMux) RegisterVariable(scheme string, opener VariableURLOpener) {
@@ -416,7 +425,7 @@ func OpenVariable(ctx context.Context, urlstr string) (*Variable, error) {
 // an arbitrary type. Decode functions are used when creating a Decoder via
 // NewDecoder. This package provides common Decode functions including
 // GobDecode and JSONDecode.
-type Decode func([]byte, interface{}) error
+type Decode func(context.Context, []byte, interface{}) error
 
 // Decoder decodes a slice of bytes into a particular Go object.
 //
@@ -442,9 +451,9 @@ func NewDecoder(obj interface{}, fn Decode) *Decoder {
 }
 
 // Decode decodes b into a new instance of the target type.
-func (d *Decoder) Decode(b []byte) (interface{}, error) {
+func (d *Decoder) Decode(ctx context.Context, b []byte) (interface{}, error) {
 	nv := reflect.New(d.typ).Interface()
-	if err := d.fn(b, nv); err != nil {
+	if err := d.fn(ctx, b, nv); err != nil {
 		return nil, err
 	}
 	ptr := reflect.ValueOf(nv)
@@ -453,34 +462,58 @@ func (d *Decoder) Decode(b []byte) (interface{}, error) {
 
 var (
 	// StringDecoder decodes into strings.
-	StringDecoder = NewDecoder("", stringDecode)
+	StringDecoder = NewDecoder("", StringDecode)
 
 	// BytesDecoder copies the slice of bytes.
-	BytesDecoder = NewDecoder([]byte{}, bytesDecode)
-
-	// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
-	JSONDecode = json.Unmarshal
+	BytesDecoder = NewDecoder([]byte{}, BytesDecode)
 )
 
+// JSONDecode can be passed to NewDecoder when decoding JSON (https://golang.org/pkg/encoding/json/).
+func JSONDecode(ctx context.Context, data []byte, obj interface{}) error {
+	return json.Unmarshal(data, obj)
+}
+
 // GobDecode can be passed to NewDecoder when decoding gobs (https://golang.org/pkg/encoding/gob/).
-func GobDecode(data []byte, obj interface{}) error {
+func GobDecode(ctx context.Context, data []byte, obj interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(obj)
 }
 
-func stringDecode(b []byte, obj interface{}) error {
+// StringDecode decodes raw bytes b into a string.
+func StringDecode(ctx context.Context, b []byte, obj interface{}) error {
 	v := obj.(*string)
 	*v = string(b)
 	return nil
 }
 
-func bytesDecode(b []byte, obj interface{}) error {
+// BytesDecode copies the slice of bytes b into obj.
+func BytesDecode(ctx context.Context, b []byte, obj interface{}) error {
 	v := obj.(*[]byte)
 	*v = b[:]
 	return nil
 }
 
+// DecryptDecode returns a decode function that can be passed to NewDecoder when
+// decoding an encrypted message (https://godoc.org/gocloud.dev/secrets).
+//
+// post defaults to BytesDecode. An optional decoder can be passed in to do
+// further decode operation based on the decrypted message.
+func DecryptDecode(k *secrets.Keeper, post Decode) Decode {
+	return func(ctx context.Context, b []byte, obj interface{}) error {
+		decrypted, err := k.Decrypt(ctx, b)
+		if err != nil {
+			return err
+		}
+		if post == nil {
+			return BytesDecode(ctx, decrypted, obj)
+		}
+		return post(ctx, decrypted, obj)
+	}
+}
+
 // DecoderByName returns a *Decoder based on decoderName.
-// It is intended to be used by VariableURLOpeners in driver packages.
+//
+// It is intended to be used by URL openers in driver packages.
+//
 // Supported values include:
 //   - empty string: Returns the default from the URLOpener.Decoder, or
 //       BytesDecoder if URLOpener.Decoder is nil (which is true if you're
@@ -489,20 +522,63 @@ func bytesDecode(b []byte, obj interface{}) error {
 //   - "jsonmap": Returns a JSON decoder for a map[string]interface{};
 //       Snapshot.Value will be of type *map[string]interface{}.
 //   - "string": Returns StringDecoder; Snapshot.Value will be of type string.
-func DecoderByName(decoderName string, dflt *Decoder) (*Decoder, error) {
+// It also supports using "decrypt+<decoderName>" (or "decrypt" for default
+// decoder) to decrypt the data before decoding. It uses the secrets package to
+// open a keeper by the URL string stored in a envrionment variable
+// "RUNTIMEVAR_KEEPER_URL". See https://godoc.org/gocloud.dev/secrets#OpenKeeper
+// for more details.
+func DecoderByName(ctx context.Context, decoderName string, dflt *Decoder) (*Decoder, error) {
+	// Open a *secrets.Keeper if the decoderName contains "decrypt".
+	k, decoderName, err := decryptByName(ctx, decoderName)
+	if err != nil {
+		return nil, err
+	}
+
 	if dflt == nil {
 		dflt = BytesDecoder
 	}
 	switch decoderName {
 	case "":
-		return dflt, nil
+		return maybeDecrypt(ctx, k, dflt), nil
 	case "bytes":
-		return BytesDecoder, nil
+		return maybeDecrypt(ctx, k, BytesDecoder), nil
 	case "jsonmap":
 		var m map[string]interface{}
-		return NewDecoder(&m, JSONDecode), nil
+		return maybeDecrypt(ctx, k, NewDecoder(&m, JSONDecode)), nil
 	case "string":
-		return StringDecoder, nil
+		return maybeDecrypt(ctx, k, StringDecoder), nil
+	default:
+		return nil, fmt.Errorf("unsupported decoder %q", decoderName)
 	}
-	return nil, fmt.Errorf("unsupported decoder %q", decoderName)
+}
+
+// decryptByName returns a *secrets.Keeper for decryption when decoderName
+// contains "decrypt".
+func decryptByName(ctx context.Context, decoderName string) (*secrets.Keeper, string, error) {
+	if !strings.HasPrefix(decoderName, "decrypt") {
+		return nil, decoderName, nil
+	}
+	keeperURL := os.Getenv("RUNTIMEVAR_KEEPER_URL")
+	if keeperURL == "" {
+		return nil, "", errors.New("environment variable RUNTIMEVAR_KEEPER_URL needed to open a *secrets.Keeper for decryption")
+	}
+	k, err := secrets.OpenKeeper(ctx, keeperURL)
+	if err != nil {
+		return nil, "", err
+	}
+	decoderName = strings.TrimPrefix(decoderName, "decrypt")
+	if decoderName != "" {
+		decoderName = strings.TrimLeftFunc(decoderName, func(r rune) bool {
+			return r == ' ' || r == '+'
+		})
+	}
+	// The parsed value is "decrypt <decoderName>".
+	return k, decoderName, nil
+}
+
+func maybeDecrypt(ctx context.Context, k *secrets.Keeper, dec *Decoder) *Decoder {
+	if k == nil {
+		return dec
+	}
+	return NewDecoder(reflect.New(dec.typ).Elem().Interface(), DecryptDecode(k, dec.fn))
 }

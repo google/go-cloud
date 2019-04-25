@@ -39,7 +39,7 @@ func init() {
 }
 
 // defaultDialer dials a default Rabbit server based on the environment
-// variable "RABBIT_SERVER".
+// variable "RABBIT_SERVER_URL".
 type defaultDialer struct {
 	init   sync.Once
 	opener *URLOpener
@@ -58,9 +58,7 @@ func (o *defaultDialer) defaultConn(ctx context.Context) (*URLOpener, error) {
 			o.err = fmt.Errorf("failed to dial RABBIT_SERVER_URL %q: %v", serverURL, err)
 			return
 		}
-		o.opener = &URLOpener{
-			Connection: conn,
-		}
+		o.opener = &URLOpener{Connection: conn}
 	})
 	return o.opener, o.err
 }
@@ -86,9 +84,16 @@ const Scheme = "rabbit"
 
 // URLOpener opens RabbitMQ URLs like "rabbit://myexchange" for
 // topics or "rabbit://myqueue" for subscriptions.
+//
+// For topics, the URL's host+path is used as the exchange name.
+//
+// For subscriptions, the URL's host+path is used as the queue name.
+//
+// No query parameters are supported.
 type URLOpener struct {
 	// Connection to use for communication with the server.
 	Connection *amqp.Connection
+
 	// TopicOptions specifies the options to pass to OpenTopic.
 	TopicOptions TopicOptions
 	// SubscriptionOptions specifies the options to pass to OpenSubscription.
@@ -98,7 +103,7 @@ type URLOpener struct {
 // OpenTopicURL opens a pubsub.Topic based on u.
 func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open topic %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open topic %v: invalid query parameter %q", u, param)
 	}
 	exchangeName := path.Join(u.Host, u.Path)
 	return OpenTopic(o.Connection, exchangeName, &o.TopicOptions), nil
@@ -107,7 +112,7 @@ func (o *URLOpener) OpenTopicURL(ctx context.Context, u *url.URL) (*pubsub.Topic
 // OpenSubscriptionURL opens a pubsub.Subscription based on u.
 func (o *URLOpener) OpenSubscriptionURL(ctx context.Context, u *url.URL) (*pubsub.Subscription, error) {
 	for param := range u.Query() {
-		return nil, fmt.Errorf("open subscription %v: unknown query parameter %s", u, param)
+		return nil, fmt.Errorf("open subscription %v: invalid query parameter %q", u, param)
 	}
 	queueName := path.Join(u.Host, u.Path)
 	return OpenSubscription(o.Connection, queueName, &o.SubscriptionOptions), nil
@@ -384,7 +389,7 @@ func (*topic) ErrorCode(err error) gcerrors.ErrorCode {
 var errorCodes = map[int]gcerrors.ErrorCode{
 	amqp.NotFound:           gcerrors.NotFound,
 	amqp.PreconditionFailed: gcerrors.FailedPrecondition,
-	// These next indicate  a bug in our driver, not the user's code.
+	// These next indicate a bug in our driver, not the user's code.
 	amqp.SyntaxError:    gcerrors.Internal,
 	amqp.CommandInvalid: gcerrors.Internal,
 	amqp.InternalError:  gcerrors.Internal,
@@ -470,6 +475,9 @@ func errorAs(err error, i interface{}) bool {
 	return false
 }
 
+// Close implements driver.Topic.Close.
+func (*topic) Close() error { return nil }
+
 // OpenSubscription returns a *pubsub.Subscription corresponding to the named queue.
 // See the package documentation for an example.
 //
@@ -484,7 +492,7 @@ func errorAs(err error, i interface{}) bool {
 // The documentation of the amqp package recommends using separate connections for
 // publishing and subscribing.
 func OpenSubscription(conn *amqp.Connection, name string, opts *SubscriptionOptions) *pubsub.Subscription {
-	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil)
+	return pubsub.NewSubscription(newSubscription(&connection{conn}, name), nil, nil)
 }
 
 type subscription struct {
@@ -558,7 +566,7 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 
 	// Get up to maxMessages waiting messages, but don't take too long.
 	var ms []*driver.Message
-	maxTime := time.After(50 * time.Millisecond)
+	maxTime := time.Tick(50 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -575,6 +583,11 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 				}
 				// s.closec must be closed too. See if it has an error.
 				if err := closeErr(s.closec); err != nil {
+					// PreconditionFailed can happen if we send an Ack or Nack for a
+					// message that has already been acked/nacked. Ignore those errors.
+					if aerr, ok := err.(*amqp.Error); ok && aerr.Code == amqp.PreconditionFailed {
+						return nil, nil
+					}
 					return nil, err
 				}
 				// We shouldn't be here, but if we are, we still want to return an
@@ -587,7 +600,8 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			}
 
 		case <-maxTime:
-			// Timed out. Return whatever we have.
+			// Timed out. Return whatever we have. If we have nothing, we'll get
+			// called again soon, but returning allows us to give up the lock.
 			return ms, nil
 		}
 	}
@@ -618,8 +632,15 @@ func toMessage(d amqp.Delivery) *driver.Message {
 
 // SendAcks implements driver.Subscription.SendAcks.
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
-	// TODO(#853): consider a separate channel for acks, so ReceiveBatch and SendAcks
-	// don't block each other.
+	return s.sendAcksOrNacks(ctx, ackIDs, true)
+}
+
+// SendNacks implements driver.Subscription.SendNacks.
+func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {
+	return s.sendAcksOrNacks(ctx, ackIDs, false)
+}
+
+func (s *subscription) sendAcksOrNacks(ctx context.Context, ackIDs []driver.AckID, ack bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -627,16 +648,21 @@ func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) erro
 		return err
 	}
 
-	// The Ack call doesn't wait for a response, so this loop should execute relatively
+	// Ack/Nack calls don't wait for a response, so this loop should execute relatively
 	// quickly.
-	// It wouldn't help to make it concurrent, because Channel.Ack grabs a
+	// It wouldn't help to make it concurrent, because Channel.Ack/Nack grabs a
 	// channel-wide mutex. (We could consider using multiple channels if performance
 	// becomes an issue.)
 	for _, id := range ackIDs {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		err := s.ch.Ack(id.(uint64))
+		var err error
+		if ack {
+			err = s.ch.Ack(id.(uint64))
+		} else {
+			err = s.ch.Nack(id.(uint64))
+		}
 		if err != nil {
 			s.ch = nil // re-establish channel after an error
 			return err
@@ -675,3 +701,6 @@ func (*subscription) ErrorAs(err error, i interface{}) bool {
 
 // AckFunc implements driver.Subscription.AckFunc.
 func (*subscription) AckFunc() func() { return nil }
+
+// Close implements driver.Subscription.Close.
+func (*subscription) Close() error { return nil }

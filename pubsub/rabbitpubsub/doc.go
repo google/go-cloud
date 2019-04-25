@@ -27,10 +27,20 @@
 //
 // URLs
 //
-// For pubsub.OpenTopic/Subscription URLs, rabbitpubsub registers for the scheme
-// "rabbit". pubsub.OpenTopic/Subscription will connect to a default server
-// based on the environment variable RABBIT_SERVER_URL. To connect to multiple
-// server, or for details on the URL format, see URLOpener.
+// For pubsub.OpenTopic and pubsub.OpenSubscription, rabbitpubsub registers
+// for the scheme "rabbit".
+// The default URL opener will connect to a default server based on the
+// environment variable "RABBIT_SERVER_URL".
+// To customize the URL opener, or for more details on the URL format,
+// see URLOpener.
+// See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// Message Delivery Semantics
+//
+// RabbitMQ supports at-least-once semantics; applications must
+// call Message.Ack after processing a message, or it will be redelivered.
+// See https://godoc.org/gocloud.dev/pubsub#hdr-At_most_once_and_At_least_once_Delivery
+// for more background.
 //
 // As
 //

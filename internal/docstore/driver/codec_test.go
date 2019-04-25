@@ -1,4 +1,4 @@
-// Copyright 2019 The Go Cloud Authors
+// Copyright 2019 The Go Cloud Development Kit Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	tspb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/google/go-cmp/cmp"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/internal/gcerr"
 )
 
@@ -47,6 +48,8 @@ type special int
 
 func (special) MarshalBinary() ([]byte, error) { panic("should never be called") }
 func (*special) UnmarshalBinary([]byte) error  { panic("should never be called") }
+
+type badSpecial int
 
 type Embed1 struct {
 	E1 string
@@ -103,6 +106,7 @@ func TestEncode(t *testing.T) {
 		{seven, int64(seven)},
 		{&seven, int64(seven)},
 		{3 + 4i, 3 + 4i},
+		{[]byte{1, 2}, []byte{1, 2}},
 		{[]int(nil), nil},
 		{[]int{}, []interface{}{}},
 		{[]int{1, 2}, []interface{}{int64(1), int64(2)}},
@@ -133,14 +137,18 @@ func TestEncode(t *testing.T) {
 			map[string]interface{}{"17": true},
 		},
 		{
-			map[te]bool{te{'B'}: true},
+			map[uint]bool{18: true},
+			map[string]interface{}{"18": true},
+		},
+		{
+			map[te]bool{{'B'}: true},
 			map[string]interface{}{"B": true},
 		},
 		{
 			MyStruct{
 				A:      1,
 				B:      &tru,
-				C:      []*te{&te{'T'}},
+				C:      []*te{{'T'}},
 				D:      []time.Time{tm},
 				T:      ts,
 				Embed1: Embed1{E1: "E1"},
@@ -184,6 +192,39 @@ func TestEncode(t *testing.T) {
 	}
 }
 
+type badBinaryMarshaler struct{}
+
+func (badBinaryMarshaler) MarshalBinary() ([]byte, error) { return nil, errors.New("bad") }
+func (*badBinaryMarshaler) UnmarshalBinary([]byte) error  { return errors.New("bad") }
+
+type badTextMarshaler struct{}
+
+func (badTextMarshaler) MarshalText() ([]byte, error) { return nil, errors.New("bad") }
+func (*badTextMarshaler) UnmarshalText([]byte) error  { return errors.New("bad") }
+
+func TestEncodeErrors(t *testing.T) {
+	for _, test := range []struct {
+		desc string
+		val  interface{}
+	}{
+		{"MarshalBinary fails", badBinaryMarshaler{}},
+		{"MarshalText fails", badTextMarshaler{}},
+		{"bad type", make(chan int)},
+		{"bad type in list", []interface{}{func() {}}},
+		{"bad type in map", map[string]interface{}{"a": func() {}}},
+		{"bad type in struct", &struct{ C chan int }{}},
+		{"bad map key type", map[float32]int{1: 1}},
+		{"MarshalText for map key fails", map[badTextMarshaler]int{{}: 1}},
+	} {
+		enc := &testEncoder{}
+		if err := Encode(reflect.ValueOf(test.val), enc); err == nil {
+			t.Errorf("%s: got nil, want error", test.desc)
+		} else if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+			t.Errorf("%s: got code %s, want InvalidArgument", test.desc, c)
+		}
+	}
+}
+
 type testEncoder struct {
 	val interface{}
 }
@@ -197,7 +238,10 @@ func (e *testEncoder) EncodeFloat(x float64)      { e.val = x }
 func (e *testEncoder) EncodeComplex(x complex128) { e.val = x }
 func (e *testEncoder) EncodeBytes(x []byte)       { e.val = x }
 
-var typeOfSpecial = reflect.TypeOf(special(0))
+var (
+	typeOfSpecial    = reflect.TypeOf(special(0))
+	typeOfBadSpecial = reflect.TypeOf(badSpecial(0))
+)
 
 func (e *testEncoder) EncodeSpecial(v reflect.Value) (bool, error) {
 	// special would normally encode as a []byte, because it implements BinaryMarshaler.
@@ -218,7 +262,7 @@ func (e *testEncoder) EncodeList(n int) Encoder {
 	return &listEncoder{s: s}
 }
 
-func (e *testEncoder) EncodeMap(n int) Encoder {
+func (e *testEncoder) EncodeMap(n int, _ bool) Encoder {
 	m := make(map[string]interface{}, n)
 	e.val = m
 	return &mapEncoder{m: m}
@@ -272,7 +316,15 @@ func TestDecode(t *testing.T) {
 		{new([]byte), []byte("foo"), []byte("foo")},
 		{new([]string), []interface{}{"a", "b"}, []string{"a", "b"}},
 		{new([]**bool), []interface{}{true, false}, []**bool{&ptru, &pfa}},
-		{new(special), 17, special(17)},
+		{&[1]int{1}, []interface{}{2}, [1]int{2}},
+		{&[2]int{1, 2}, []interface{}{3}, [2]int{3, 0}}, // zero extra elements
+		{&[]int{1, 2}, []interface{}{3}, []int{3}},      // truncate slice
+		{
+			// extend slice
+			func() *[]int { s := make([]int, 1, 2); return &s }(),
+			[]interface{}{5, 6},
+			[]int{5, 6},
+		},
 		{
 			new(map[string]string),
 			map[string]interface{}{"a": "b"},
@@ -286,7 +338,7 @@ func TestDecode(t *testing.T) {
 		{
 			new(map[te]bool),
 			map[string]interface{}{"B": true},
-			map[te]bool{te{'B'}: true},
+			map[te]bool{{'B'}: true},
 		},
 		{
 			new(map[interface{}]bool),
@@ -300,10 +352,11 @@ func TestDecode(t *testing.T) {
 				"b": []interface{}{false, true},
 			},
 			map[string][]bool{
-				"a": []bool{true, false},
-				"b": []bool{false, true},
+				"a": {true, false},
+				"b": {false, true},
 			},
 		},
+		{new(special), 17, special(17)},
 		{new(myString), "x", myString("x")},
 		{new([]myString), []interface{}{"x"}, []myString{"x"}},
 		{new(time.Time), tmb, tm},
@@ -342,7 +395,7 @@ func TestDecode(t *testing.T) {
 				"E3": "E3",
 				"E4": "E4",
 			},
-			MyStruct{A: 1, B: &tru, C: []*te{&te{'T'}}, D: []time.Time{tm}, T: ts,
+			MyStruct{A: 1, B: &tru, C: []*te{{'T'}}, D: []time.Time{tm}, T: ts,
 				Embed1: Embed1{E1: "E1"},
 				Embed2: &Embed2{E2: "E2"},
 				embed3: embed3{E3: "E3"},
@@ -368,9 +421,19 @@ func TestDecodeErrors(t *testing.T) {
 		in, val interface{}
 	}{
 		{
+			"bad type",
+			new(int),
+			"foo",
+		},
+		{
+			"bad type in list",
+			new([]int),
+			[]interface{}{1, "foo"},
+		},
+		{
 			"array too short",
 			new([1]bool),
-			[]bool{true, false},
+			[]interface{}{true, false},
 		},
 		{
 			"bad map key type",
@@ -387,12 +450,95 @@ func TestDecodeErrors(t *testing.T) {
 			new(MyStruct),
 			map[string]interface{}{"E4": "E4"},
 		},
+		{
+			"int overflow",
+			new(int8),
+			257,
+		},
+		{
+			"uint overflow",
+			new(uint8),
+			uint(257),
+		},
+		{
+			"non-integral float (int)",
+			new(int),
+			1.5,
+		},
+		{
+			"non-integral float (uint)",
+			new(uint),
+			1.5,
+		},
+		{
+			"bad special",
+			new(badSpecial),
+			badSpecial(0),
+		},
+		{
+			"bad binary unmarshal",
+			new(badBinaryMarshaler),
+			[]byte{1},
+		},
+		{
+			"binary unmarshal with non-byte slice",
+			new(time.Time),
+			1,
+		},
+		{
+			"bad text unmarshal",
+			new(badTextMarshaler),
+			"foo",
+		},
+		{
+			"text unmarshal with non-string",
+			new(badTextMarshaler),
+			1,
+		},
+		{
+			"bad text unmarshal in map key",
+			new(map[badTextMarshaler]int),
+			map[string]interface{}{"a": 1},
+		},
+		{
+			"bad int map key",
+			new(map[int]int),
+			map[string]interface{}{"a": 1},
+		},
+		{
+			"overflow in int map key",
+			new(map[int8]int),
+			map[string]interface{}{"256": 1},
+		},
+		{
+			"bad uint map key",
+			new(map[uint]int),
+			map[string]interface{}{"a": 1},
+		},
+		{
+			"overflow in uint map key",
+			new(map[uint8]int),
+			map[string]interface{}{"256": 1},
+		},
 	} {
 		dec := &testDecoder{test.val}
 		err := Decode(reflect.ValueOf(test.in).Elem(), dec)
 		if e, ok := err.(*gcerr.Error); !ok || err == nil || e.Code != gcerr.InvalidArgument {
 			t.Errorf("%s: got %v, want InvalidArgument Error", test.desc, err)
-			fmt.Printf("%+v\n", test.in)
+		}
+	}
+}
+
+func TestDecodeFail(t *testing.T) {
+	// Verify that failure to decode a value results in an error.
+	for _, in := range []interface{}{
+		new(interface{}), new(bool), new(string), new(int), new(uint), new(float32), new(complex64),
+		new([]byte), new([]int), new(map[string]interface{}),
+	} {
+		dec := &failDecoder{}
+		err := Decode(reflect.ValueOf(in).Elem(), dec)
+		if e, ok := err.(*gcerr.Error); !ok || err == nil || e.Code != gcerr.InvalidArgument {
+			t.Errorf("%T: got %v, want InvalidArgument Error", in, err)
 		}
 	}
 }
@@ -402,17 +548,38 @@ type testDecoder struct {
 }
 
 func (d testDecoder) String() string {
-	return fmt.Sprint(d.val)
+	return fmt.Sprintf("%+v of type %T", d.val, d.val)
 }
 
 func (d testDecoder) AsNull() bool {
 	return d.val == nil
 }
 
-func (d testDecoder) AsBool() (bool, bool)          { x, ok := d.val.(bool); return x, ok }
-func (d testDecoder) AsString() (string, bool)      { x, ok := d.val.(string); return x, ok }
-func (d testDecoder) AsInt() (int64, bool)          { x, ok := d.val.(int64); return x, ok }
-func (d testDecoder) AsUint() (uint64, bool)        { x, ok := d.val.(uint64); return x, ok }
+func (d testDecoder) AsBool() (bool, bool)     { x, ok := d.val.(bool); return x, ok }
+func (d testDecoder) AsString() (string, bool) { x, ok := d.val.(string); return x, ok }
+
+func (d testDecoder) AsInt() (int64, bool) {
+	switch v := d.val.(type) {
+	case int64:
+		return v, true
+	case int:
+		return int64(v), true
+	default:
+		return 0, false
+	}
+}
+
+func (d testDecoder) AsUint() (uint64, bool) {
+	switch v := d.val.(type) {
+	case uint64:
+		return v, true
+	case uint:
+		return uint64(v), true
+	default:
+		return 0, false
+	}
+}
+
 func (d testDecoder) AsFloat() (float64, bool)      { x, ok := d.val.(float64); return x, ok }
 func (d testDecoder) AsComplex() (complex128, bool) { x, ok := d.val.(complex128); return x, ok }
 func (d testDecoder) AsBytes() ([]byte, bool)       { x, ok := d.val.([]byte); return x, ok }
@@ -451,8 +618,31 @@ func (d testDecoder) AsInterface() (interface{}, error) {
 }
 
 func (d testDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) {
-	if v.Type() == typeOfSpecial {
+	switch v.Type() {
+	case typeOfSpecial:
 		return true, special(d.val.(int)), nil
+	case typeOfBadSpecial:
+		return true, nil, errors.New("bad special")
+	default:
+		return false, nil, nil
 	}
-	return false, nil, nil
 }
+
+// All of failDecoder's methods return failure.
+type failDecoder struct{}
+
+func (failDecoder) String() string                                       { return "failDecoder" }
+func (failDecoder) AsNull() bool                                         { return false }
+func (failDecoder) AsBool() (bool, bool)                                 { return false, false }
+func (failDecoder) AsString() (string, bool)                             { return "", false }
+func (failDecoder) AsInt() (int64, bool)                                 { return 0, false }
+func (failDecoder) AsUint() (uint64, bool)                               { return 0, false }
+func (failDecoder) AsFloat() (float64, bool)                             { return 0, false }
+func (failDecoder) AsComplex() (complex128, bool)                        { return 0, false }
+func (failDecoder) AsBytes() ([]byte, bool)                              { return nil, false }
+func (failDecoder) ListLen() (int, bool)                                 { return 0, false }
+func (failDecoder) DecodeList(func(i int, vd Decoder) bool)              { panic("impossible") }
+func (failDecoder) MapLen() (int, bool)                                  { return 0, false }
+func (failDecoder) DecodeMap(func(key string, vd Decoder) bool)          { panic("impossible") }
+func (failDecoder) AsSpecial(v reflect.Value) (bool, interface{}, error) { return false, nil, nil }
+func (failDecoder) AsInterface() (interface{}, error)                    { return nil, errors.New("fail") }

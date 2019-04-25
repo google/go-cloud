@@ -40,8 +40,9 @@
 //  - Error: *googleapi.Error
 //  - ListObject: storage.ObjectAttrs
 //  - ListOptions.BeforeList: *storage.Query
-//  - Reader: storage.Reader
+//  - Reader: *storage.Reader
 //  - Attributes: storage.ObjectAttrs
+//  - CopyOptions.BeforeCopy: *storage.Copier
 //  - WriterOptions.BeforeWrite: *storage.Writer
 package gcsblob // import "gocloud.dev/blob/gcsblob"
 
@@ -57,14 +58,14 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/storage"
+	"github.com/google/wire"
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/escape"
 	"gocloud.dev/internal/useragent"
-
-	"cloud.google.com/go/storage"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -76,6 +77,13 @@ func init() {
 	blob.DefaultURLMux().RegisterBucket(Scheme, new(lazyCredsOpener))
 }
 
+// Set holds Wire providers for this package.
+var Set = wire.NewSet(
+	Options{},
+	URLOpener{},
+)
+
+// lazyCredsOpener obtains Application Default Credentials on the first call
 // lazyCredsOpener obtains Application Default Credentials on the first call
 // to OpenBucketURL.
 type lazyCredsOpener struct {
@@ -228,21 +236,24 @@ func (r *reader) Close() error {
 	return r.body.Close()
 }
 
-func (r *reader) Attributes() driver.ReaderAttributes {
-	return r.attrs
+func (r *reader) Attributes() *driver.ReaderAttributes {
+	return &r.attrs
 }
 
 func (r *reader) As(i interface{}) bool {
-	p, ok := i.(*storage.Reader)
+	p, ok := i.(**storage.Reader)
 	if !ok {
 		return false
 	}
-	*p = *r.raw
+	*p = r.raw
 	return true
 }
 
 func (b *bucket) ErrorCode(err error) gcerrors.ErrorCode {
 	if err == storage.ErrObjectNotExist {
+		return gcerrors.NotFound
+	}
+	if gerr, ok := err.(*googleapi.Error); ok && gerr.Code == 404 {
 		return gcerrors.NotFound
 	}
 	return gcerrors.Unknown
@@ -344,15 +355,15 @@ func (b *bucket) ErrorAs(err error, i interface{}) bool {
 }
 
 // Attributes implements driver.Attributes.
-func (b *bucket) Attributes(ctx context.Context, key string) (driver.Attributes, error) {
+func (b *bucket) Attributes(ctx context.Context, key string) (*driver.Attributes, error) {
 	key = escapeKey(key)
 	bkt := b.client.Bucket(b.name)
 	obj := bkt.Object(key)
 	attrs, err := obj.Attrs(ctx)
 	if err != nil {
-		return driver.Attributes{}, err
+		return nil, err
 	}
-	return driver.Attributes{
+	return &driver.Attributes{
 		CacheControl:       attrs.CacheControl,
 		ContentDisposition: attrs.ContentDisposition,
 		ContentEncoding:    attrs.ContentEncoding,
@@ -442,6 +453,29 @@ func (b *bucket) NewTypedWriter(ctx context.Context, key string, contentType str
 		}
 	}
 	return w, nil
+}
+
+// Copy implements driver.Copy.
+func (b *bucket) Copy(ctx context.Context, dstKey, srcKey string, opts *driver.CopyOptions) error {
+	dstKey = escapeKey(dstKey)
+	srcKey = escapeKey(srcKey)
+	bkt := b.client.Bucket(b.name)
+	copier := bkt.Object(dstKey).CopierFrom(bkt.Object(srcKey))
+	if opts.BeforeCopy != nil {
+		asFunc := func(i interface{}) bool {
+			switch v := i.(type) {
+			case **storage.Copier:
+				*v = copier
+				return true
+			}
+			return false
+		}
+		if err := opts.BeforeCopy(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := copier.Run(ctx)
+	return err
 }
 
 // Delete implements driver.Delete.
