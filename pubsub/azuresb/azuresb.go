@@ -42,6 +42,7 @@
 // azuresb exposes the following types for As:
 //  - Topic: *servicebus.Topic
 //  - Subscription: *servicebus.Subscription
+//  - Message.BeforeSend: *servicebus.Message
 //  - Message: *servicebus.Message
 //  - Error: common.Retryable
 package azuresb // import "gocloud.dev/pubsub/azuresb"

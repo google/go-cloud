@@ -56,7 +56,7 @@ type Message struct {
 	// BeforeSend is a callback used when sending a message. It should remain
 	// nil on messages returned from ReceiveBatch.
 	//
-	// The callback must called exactly once, before the message is sent.
+	// The callback must be called exactly once, before the message is sent.
 	//
 	// asFunc converts its argument to provider-specific types.
 	// See https://godoc.org/gocloud.dev#hdr-As for background information.
