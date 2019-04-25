@@ -89,9 +89,14 @@ fi;
 # ./internal/testing/alldeps
 #
 # Whenever project dependencies change, rerun ./internal/testing/listdeps.sh
-./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
-  echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
-}
+#
+# Run this only on the latest version of Go, since module behavior may differ
+# across versions.
+if [[ $(go version) == *1\.12* ]]; then
+  ./internal/testing/listdeps.sh | diff ./internal/testing/alldeps - || {
+    echo "FAIL: dependencies changed; compare listdeps.sh output with alldeps" && result=1
+  }
+fi
 
 # Ensure that any new packages have the corresponding entries in Hugo.
 missing_packages="$(internal/website/listnewpkgs.sh)"
@@ -100,6 +105,11 @@ if ! [[ -z "$missing_packages" ]]; then
   echo "$missing_packages" 1>&2
   result=1
 fi
+
+# Ensure that all examples used in Hugo match what's in source.
+internal/website/gatherexamples/run.sh | diff internal/website/data/examples.json - > /dev/null || {
+  echo "FAIL: examples changed; run: internal/website/gatherexamples/run.sh > internal/website/data/examples.json"
+}
 
 # For pull requests, check if there are undeclared incompatible API changes.
 # Skip this if we're already going to fail since it is expensive.

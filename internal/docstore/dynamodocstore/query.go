@@ -443,5 +443,5 @@ func (qr *queryRunner) queryPlan() string {
 	if qr.queryIn.IndexName != nil {
 		return fmt.Sprintf("Index: %q", *qr.queryIn.IndexName)
 	}
-	return ""
+	return "Table"
 }

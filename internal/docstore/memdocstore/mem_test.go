@@ -34,6 +34,10 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 	return newCollection(drivertest.KeyField, nil)
 }
 
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection("", drivertest.HighScoreKey)
+}
+
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
