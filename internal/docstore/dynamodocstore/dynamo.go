@@ -25,6 +25,12 @@
 // To customize the URL opener, or for more details on the URL format, see
 // URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// As
+//
+// dynamodocstore exposes the following types for As:
+//  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
+//  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 package dynamodocstore
 
 import (
