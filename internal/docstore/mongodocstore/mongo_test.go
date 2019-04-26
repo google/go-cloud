@@ -20,6 +20,7 @@ package mongodocstore
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -100,6 +101,24 @@ func (codecTester) NativeDecode(value, dest interface{}) error {
 	return bson.Unmarshal(value.([]byte), dest)
 }
 
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var c *mongo.Cursor
+	if !it.As(&c) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
+}
+
 func TestConformance(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
@@ -118,7 +137,7 @@ func TestConformance(t *testing.T) {
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
 	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{}, nil)
+	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
 // Mongo-specific tests.

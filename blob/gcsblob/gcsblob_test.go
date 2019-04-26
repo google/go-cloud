@@ -331,12 +331,13 @@ func TestPreconditions(t *testing.T) {
 				return errors.New("Writer.As failed to get ObjectHandle")
 			}
 			// Replace the ObjectHandle with a new one that adds Conditions.
-			*objp = (*objp).If(storage.Conditions{GenerationNotMatch: -999})
+			*objp = (*objp).If(storage.Conditions{DoesNotExist: true})
 			return nil
 		},
 	}); err != nil {
 		t.Errorf("got error %v, wanted nil", err)
 	}
+	defer bucket.Delete(ctx, key)
 }
 
 func TestURLOpenerForParams(t *testing.T) {
