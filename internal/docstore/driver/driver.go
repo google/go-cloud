@@ -49,6 +49,10 @@ type Collection interface {
 	// QueryPlan returns the plan for the query.
 	QueryPlan(*Query) (string, error)
 
+	// As converts i to provider-specific types.
+	// See https://godoc.org/gocloud.dev#hdr-As for background information.
+	As(i interface{}) bool
+
 	// ErrorCode should return a code that describes the error, which was returned by
 	// one of the other methods in this interface.
 	ErrorCode(error) gcerr.ErrorCode

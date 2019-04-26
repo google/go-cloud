@@ -106,6 +106,14 @@ func (verifyAs) Name() string {
 	return "verify As"
 }
 
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var mc *mongo.Collection
+	if !coll.As(&mc) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
 	return nil
 }

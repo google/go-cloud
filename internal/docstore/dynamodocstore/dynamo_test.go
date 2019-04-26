@@ -73,6 +73,14 @@ func (verifyAs) Name() string {
 	return "verify As"
 }
 
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var db *dyn.DynamoDB
+	if !coll.As(&db) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
 func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
 	var si *dyn.ScanInput
 	var qi *dyn.QueryInput

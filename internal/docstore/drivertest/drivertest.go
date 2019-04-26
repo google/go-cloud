@@ -105,6 +105,8 @@ type CodecTester interface {
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
+	// CollectionCheck will be called to allow verification of Collection.As.
+	CollectionCheck(coll *docstore.Collection) error
 	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
 	// the test query.
 	BeforeQuery(as func(interface{}) bool) error
@@ -117,6 +119,13 @@ type verifyAsFailsOnNil struct{}
 
 func (verifyAsFailsOnNil) Name() string {
 	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
+	if coll.As(nil) {
+		return errors.New("want Collection.As to return false when passed nil")
+	}
+	return nil
 }
 
 func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
@@ -1016,6 +1025,12 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 		{game3, "steph", 24, date(4, 25), nil},
 		{game3, "mia", 99, date(4, 26), nil},
 	}
+
+	// Verify Collection.As
+	if err := st.CollectionCheck(coll); err != nil {
+		t.Error(err)
+	}
+
 	ctx := context.Background()
 	actions := coll.Actions()
 	// Create docs

@@ -58,6 +58,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -76,8 +77,8 @@ var sendBatcherOpts = &batcher.Options{
 }
 
 var recvBatcherOpts = &batcher.Options{
-	MaxBatchSize: 100,
-	MaxHandlers:  2,
+	MaxBatchSize: 1,
+	MaxHandlers:  1,
 }
 
 func init() {
@@ -308,16 +309,16 @@ func errorCode(err error) gcerrors.ErrorCode {
 
 type subscription struct {
 	opts          SubscriptionOptions
-	ch            chan *sarama.ConsumerMessage // for received messages
-	closeCh       chan struct{}                // closed when we've shut down
-	joinCh        chan struct{}                // closed when we join for the first time
-	cancel        func()                       // cancels the background consumer
-	closeErr      error                        // fatal error detected by the background consumer
+	closeCh       chan struct{} // closed when we've shut down
+	joinCh        chan struct{} // closed when we join for the first time
+	cancel        func()        // cancels the background consumer
+	closeErr      error         // fatal error detected by the background consumer
 	consumerGroup sarama.ConsumerGroup
 
 	mu      sync.Mutex
 	unacked []*ackInfo
 	sess    sarama.ConsumerGroupSession // current session, if any, used for marking offset updates
+	claims  []sarama.ConsumerGroupClaim // claims in the current session
 }
 
 // ackInfo stores info about a message and whether it has been acked.
@@ -375,7 +376,6 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	ds := &subscription{
 		opts:          *opts,
 		consumerGroup: consumerGroup,
-		ch:            make(chan *sarama.ConsumerMessage),
 		closeCh:       make(chan struct{}),
 		joinCh:        joinCh,
 		cancel:        cancel,
@@ -423,78 +423,108 @@ func (s *subscription) Cleanup(sarama.ConsumerGroupSession) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.sess = nil
+	s.claims = nil
 	return nil
 }
 
 // ConsumeClaim implements sarama.ConsumerGroupHandler.ConsumeClaim.
 // This is where messages are actually delivered, via a channel.
 func (s *subscription) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	for msg := range claim.Messages() {
-		// We've received a message. Send it over the channel to ReceiveBatch.
-		// s.ch has no buffer, so the send blocks until ReceiveBatch is
-		// ready to receive them.
-		select {
-		case s.ch <- msg:
-		case <-sess.Context().Done():
-			// This session is over, we must return. We'll end up dropping msg, but
-			// that's OK.
-			// TODO(rvangent): See if we can avoid that.
-			// TODO(rvangent): Also consider setting ReceiveBatch to maxMessages=1
-			//                 and maxHandlers=1 similar to NATS.
-		}
-	}
+	s.mu.Lock()
+	s.claims = append(s.claims, claim)
+	s.mu.Unlock()
+	<-sess.Context().Done()
 	return nil
 }
 
 // ReceiveBatch implements driver.Subscription.ReceiveBatch.
 func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*driver.Message, error) {
 	// Try to read maxMessages for up to 100ms before giving up.
-	waitForMaxCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	maxWaitCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
 
-	var dms []*driver.Message
 	for {
-		select {
-		case msg := <-s.ch:
-			// Read the metadata from msg.Headers.
-			md := map[string]string{}
-			for _, h := range msg.Headers {
-				md[string(h.Key)] = string(h.Value)
-			}
-			// Add a metadata entry for the message key if appropriate.
-			if len(msg.Key) > 0 && s.opts.KeyName != "" {
-				md[s.opts.KeyName] = string(msg.Key)
-			}
-			ack := &ackInfo{msg: msg}
-			dm := &driver.Message{
-				Body:     msg.Value,
-				Metadata: md,
-				AckID:    ack,
-				AsFunc: func(i interface{}) bool {
-					if p, ok := i.(**sarama.ConsumerMessage); ok {
-						*p = msg
-						return true
-					}
-					return false
-				},
-			}
-			dms = append(dms, dm)
-
-			s.mu.Lock()
-			s.unacked = append(s.unacked, ack)
-			s.mu.Unlock()
-
-			if len(dms) == maxMessages {
-				return dms, nil
-			}
-		case <-s.closeCh:
-			// Fatal error, probably the topic doesn't exist.
-			return nil, s.closeErr
-		case <-waitForMaxCtx.Done():
-			// We've tried for a while to get maxMessages, but didn't get enough.
-			// Return whatever we have (may be empty).
-			return dms, ctx.Err()
+		// We'll give up after maxWaitCtx is Done, or if s.closeCh is closed.
+		// Otherwise, we want to pull a message from one of the channels in the
+		// claim(s) we've been given.
+		//
+		// Note: we could multiplex this by ranging over each claim.Messages(),
+		// writing the messages to a single ch, and then reading from that ch
+		// here. However, this results in us reading messages from Kafka and
+		// essentially queueing them here; when the session is closed for whatever
+		// reason, those messages are lost, which may or may not be an issue
+		// depending on the Kafka configuration being used.
+		//
+		// It seems safer to use reflect.Select to explicitly only get a single
+		// message at a time, and hand it directly to the user.
+		//
+		// reflect.Select is essentially a "select" statement, but allows us to
+		// build the cases dynamically. We need that because we need a case for
+		// each of the claims in s.claims.
+		s.mu.Lock()
+		cases := make([]reflect.SelectCase, 0, len(s.claims)+2)
+		// Add a case for s.closeCh being closed, at index = 0.
+		cases = append(cases, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(s.closeCh),
+		})
+		// Add a case for maxWaitCtx being Done, at index = 1.
+		cases = append(cases, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(maxWaitCtx.Done()),
+		})
+		// Add a case per claim, reading from the claim's Messages channel.
+		for _, claim := range s.claims {
+			cases = append(cases, reflect.SelectCase{
+				Dir:  reflect.SelectRecv,
+				Chan: reflect.ValueOf(claim.Messages()),
+			})
 		}
+		s.mu.Unlock()
+		i, v, ok := reflect.Select(cases)
+		if !ok {
+			// The i'th channel was closed.
+			switch i {
+			case 0: // s.closeCh
+				return nil, s.closeErr
+			case 1: // maxWaitCtx
+				// We've tried for a while to get a message, but didn't get any.
+				// Return an empty slice; the portable type will call us back.
+				return nil, ctx.Err()
+			}
+			// Otherwise, if one of the claim channels closed, we're probably ending
+			// a session. Just keep trying.
+			continue
+		}
+		msg := v.Interface().(*sarama.ConsumerMessage)
+
+		// We've got a message! It should not be nil.
+		// Read the metadata from msg.Headers.
+		md := map[string]string{}
+		for _, h := range msg.Headers {
+			md[string(h.Key)] = string(h.Value)
+		}
+		// Add a metadata entry for the message key if appropriate.
+		if len(msg.Key) > 0 && s.opts.KeyName != "" {
+			md[s.opts.KeyName] = string(msg.Key)
+		}
+		ack := &ackInfo{msg: msg}
+		dm := &driver.Message{
+			Body:     msg.Value,
+			Metadata: md,
+			AckID:    ack,
+			AsFunc: func(i interface{}) bool {
+				if p, ok := i.(**sarama.ConsumerMessage); ok {
+					*p = msg
+					return true
+				}
+				return false
+			},
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.unacked = append(s.unacked, ack)
+		return []*driver.Message{dm}, nil
 	}
 }
 
