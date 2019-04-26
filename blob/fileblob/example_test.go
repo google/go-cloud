@@ -28,35 +28,20 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#local-ctor
 
-	// Create a temporary directory.
-	dir, err := ioutil.TempDir("", "go-cloud-fileblob-example")
-	if err != nil {
+	// The directory you pass to fileblob.OpenBucket must exist first.
+	const myDir = "path/to/local/directory"
+	if err := os.MkdirAll(myDir, 0777); err != nil {
 		log.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
 
 	// Create a file-based bucket.
-	b, err := fileblob.OpenBucket(dir, nil)
+	bucket, err := fileblob.OpenBucket(myDir, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
-
-	// Now we can use b to read or write files to the container.
-	ctx := context.Background()
-	err = b.WriteAll(ctx, "my-key", []byte("hello world"), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(data))
-
-	// Output:
-	// hello world
+	defer bucket.Close()
 }
 
 func Example_openBucket() {

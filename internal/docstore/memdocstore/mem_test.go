@@ -34,11 +34,15 @@ func (h *harness) MakeCollection(context.Context) (driver.Collection, error) {
 	return newCollection(drivertest.KeyField, nil)
 }
 
+func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, error) {
+	return newCollection("", drivertest.HighScoreKey)
+}
+
 func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	// CodecTester is nil because memdocstore has no native representation.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, nil, nil)
 }
 
 type docmap = map[string]interface{}

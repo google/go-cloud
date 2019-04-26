@@ -25,35 +25,41 @@ import (
 )
 
 func Example() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region for "my_bucket".
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
+	// The region must match the region for "my-bucket".
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-west-1"),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create a *blob.Bucket.
-	ctx := context.Background()
-	b, err := s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
+	bucket, err := s3blob.OpenBucket(ctx, sess, "my-bucket", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer b.Close()
-
-	// Now we can use b to read or write files to the container.
-	data, err := b.ReadAll(ctx, "my-key")
-	if err != nil {
-		log.Fatal(err)
-	}
-	_ = data
+	defer bucket.Close()
 }
 
 func Example_openBucket() {
+	// This example is used in https://gocloud.dev/howto/blob/open-bucket/#s3
+
+	// import _ "gocloud.dev/blob/s3blob"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenBucket creates a *blob.Bucket from a URL.
-	b, err := blob.OpenBucket(ctx, "s3://my-bucket")
-	defer b.Close()
-	_, _ = b, err
+	bucket, err := blob.OpenBucket(ctx, "s3://my-bucket?region=us-west-1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer bucket.Close()
 }

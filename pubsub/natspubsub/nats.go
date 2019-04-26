@@ -39,6 +39,7 @@
 // natspubsub exposes the following types for As:
 //  - Topic: *nats.Conn
 //  - Subscription: *nats.Subscription
+//  - Message.BeforeSend: None.
 //  - Message: *nats.Msg
 package natspubsub // import "gocloud.dev/pubsub/natspubsub"
 
@@ -238,6 +239,12 @@ func (t *topic) SendBatch(ctx context.Context, msgs []*driver.Message) error {
 		if err != nil {
 			return err
 		}
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool { return false }
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
 		if err := t.nc.Publish(t.subj, payload); err != nil {
 			return err
 		}
@@ -387,6 +394,9 @@ func messageAsFunc(msg *nats.Msg) func(interface{}) bool {
 func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	panic("unreachable")
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return false }
 
 // SendNacks implements driver.Subscription.SendNacks. It should never be called
 // because we provide a non-nil AckFunc.

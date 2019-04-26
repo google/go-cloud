@@ -377,6 +377,17 @@ func parseFieldPath(fp FieldPath) ([]string, error) {
 	return parts, nil
 }
 
+// As converts i to provider-specific types.
+// See https://godoc.org/gocloud.dev#hdr-As for background information, the "As"
+// examples in this package for examples, and the provider-specific package
+// documentation for the specific types supported for that provider.
+func (c *Collection) As(i interface{}) bool {
+	if i == nil {
+		return false
+	}
+	return c.driver.As(i)
+}
+
 // CollectionURLOpener opens a collection of documents based on a URL.
 // The opener must not modify the URL argument. It must be safe to call from
 // multiple goroutines.

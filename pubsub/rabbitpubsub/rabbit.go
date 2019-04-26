@@ -245,7 +245,20 @@ func (t *topic) SendBatch(ctx context.Context, ms []*driver.Message) error {
 
 	var perr error
 	for _, m := range ms {
-		if perr = ch.Publish(t.exchange, toPublishing(m)); perr != nil {
+		pub := toPublishing(m)
+		if m.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**amqp.Publishing); ok {
+					*p = &pub
+					return true
+				}
+				return false
+			}
+			if err := m.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		if perr = ch.Publish(t.exchange, pub); perr != nil {
 			cancel()
 			break
 		}
@@ -634,6 +647,9 @@ func toMessage(d amqp.Delivery) *driver.Message {
 func (s *subscription) SendAcks(ctx context.Context, ackIDs []driver.AckID) error {
 	return s.sendAcksOrNacks(ctx, ackIDs, true)
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ackIDs []driver.AckID) error {

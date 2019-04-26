@@ -30,6 +30,7 @@ import (
 	"gocloud.dev/blob"
 	"gocloud.dev/blob/driver"
 	"gocloud.dev/blob/drivertest"
+	"gocloud.dev/gcerrors"
 	"gocloud.dev/gcp"
 	"gocloud.dev/internal/testing/setup"
 	"google.golang.org/api/googleapi"
@@ -143,9 +144,13 @@ func (verifyContentLanguage) ErrorCheck(b *blob.Bucket, err error) error {
 }
 
 func (verifyContentLanguage) BeforeWrite(as func(interface{}) bool) error {
+	var objp **storage.ObjectHandle
+	if !as(&objp) {
+		return errors.New("Writer.As failed to get ObjectHandle")
+	}
 	var sw *storage.Writer
 	if !as(&sw) {
-		return errors.New("Writer.As failed")
+		return errors.New("Writer.As failed to get Writer")
 	}
 	sw.ContentLanguage = language
 	return nil
@@ -280,6 +285,59 @@ func TestOpenBucket(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPreconditions tests setting of ObjectHandle preconditions via As.
+func TestPreconditions(t *testing.T) {
+	const (
+		key     = "precondition-key"
+		content = "hello world"
+	)
+
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	drv, err := h.MakeDriver(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bucket := blob.NewBucket(drv)
+	defer bucket.Close()
+
+	// Try writing with a failing precondition.
+	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
+		BeforeWrite: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Writer.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one that adds Conditions.
+			*objp = (*objp).If(storage.Conditions{GenerationMatch: -999})
+			return nil
+		},
+	}); err == nil || gcerrors.Code(err) != gcerrors.FailedPrecondition {
+		t.Errorf("got error %v, wanted FailedPrecondition for Write", err)
+	}
+
+	// Repeat with a precondition that will pass.
+	if err := bucket.WriteAll(ctx, key, []byte(content), &blob.WriterOptions{
+		BeforeWrite: func(asFunc func(interface{}) bool) error {
+			var objp **storage.ObjectHandle
+			if !asFunc(&objp) {
+				return errors.New("Writer.As failed to get ObjectHandle")
+			}
+			// Replace the ObjectHandle with a new one that adds Conditions.
+			*objp = (*objp).If(storage.Conditions{DoesNotExist: true})
+			return nil
+		},
+	}); err != nil {
+		t.Errorf("got error %v, wanted nil", err)
+	}
+	defer bucket.Delete(ctx, key)
 }
 
 func TestURLOpenerForParams(t *testing.T) {

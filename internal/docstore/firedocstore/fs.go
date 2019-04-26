@@ -26,6 +26,13 @@
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// As
+//
+// firedocstore exposes the following types for As:
+// - Collection.As: *firestore.Client
+// - Query.BeforeQuery: *firestore.RunQueryRequest
+// - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
 
 import (
@@ -559,6 +566,9 @@ func revisionPrecondition(doc driver.Document) (*pb.Precondition, error) {
 	if err != nil { // revision field not present
 		return nil, nil
 	}
+	if v == nil { // revision field is present, but nil
+		return nil, nil
+	}
 	rev, ok := v.(*ts.Timestamp)
 	if !ok {
 		return nil, gcerr.Newf(gcerr.InvalidArgument, nil,
@@ -663,4 +673,13 @@ func withResourceHeader(ctx context.Context, resource string) context.Context {
 	md = md.Copy()
 	md[resourcePrefixHeader] = []string{resource}
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**vkit.Client)
+	if !ok {
+		return false
+	}
+	*p = c.client
+	return true
 }

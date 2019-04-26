@@ -18,6 +18,8 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -48,7 +50,15 @@ import (
 // conformance tests.
 type Harness interface {
 	// MakeCollection makes a driver.Collection for testing.
+	// The collection should have a single primary key field of type string named
+	// drivertest.KeyField.
 	MakeCollection(context.Context) (driver.Collection, error)
+
+	// MakeTwoKeyCollection makes a driver.Collection for testing.
+	// The collection will consist entirely of HighScore structs (see below), whose
+	// two primary key fields are "Game" and "Player", both strings. Use
+	// drivertest.HighScoreKey as the key function.
+	MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error)
 
 	// Close closes resources used by the harness.
 	Close()
@@ -91,8 +101,49 @@ type CodecTester interface {
 	DocstoreDecode(value, dest interface{}) error
 }
 
+// AsTest represents a test of As functionality.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// CollectionCheck will be called to allow verification of Collection.As.
+	CollectionCheck(coll *docstore.Collection) error
+	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
+	// the test query.
+	BeforeQuery(as func(interface{}) bool) error
+	// QueryCheck will be called after calling Query. It should call it.As and
+	// verify the results.
+	QueryCheck(it *docstore.DocumentIterator) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) CollectionCheck(coll *docstore.Collection) error {
+	if coll.As(nil) {
+		return errors.New("want Collection.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Query.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
+	if it.As(nil) {
+		return errors.New("want DocumentIterator.As to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
 	// TODO(jba): add conformance tests for unordered lists after all drivers have them.
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
@@ -103,15 +154,24 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("Data", func(t *testing.T) { withCollection(t, newHarness, testData) })
 	t.Run("TypeDrivenCodec", func(t *testing.T) { testTypeDrivenDecode(t, ct) })
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
-	t.Run("Query", func(t *testing.T) { withCollection(t, newHarness, testQuery) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
-}
 
-// Field paths used in test documents.
-const (
-	KindField = "_kind"
-	KeyField  = "_id"
-)
+	t.Run("Query", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testQuery) })
+
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("As", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+					testAs(t, coll, st)
+				})
+			})
+		}
+	})
+}
 
 func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
 	ctx := context.Background()
@@ -129,13 +189,32 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 	f(t, coll)
 }
 
+func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	dc, err := h.MakeTwoKeyCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := ds.NewCollection(dc)
+	f(t, coll)
+}
+
+// KeyField is the primary key field for the main test collection.
+const KeyField = "name"
+
 type docmap = map[string]interface{}
 
-var nonexistentDoc = docmap{KindField: "doesNotExist", KeyField: "doesNotExist"}
+var nonexistentDoc = docmap{KeyField: "doesNotExist"}
 
 func testCreate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	named := docmap{KindField: "create", KeyField: "testCreate1", "b": true}
+	named := docmap{KeyField: "testCreate1", "b": true}
 	// TODO(#1857): dynamodb requires the sort key field when it is defined. We
 	// don't generate random sort key so we need to skip the unnamed test and
 	// figure out what to do in this situation.
@@ -152,7 +231,7 @@ func testCreate(t *testing.T, coll *ds.Collection) {
 		if err := coll.Create(ctx, doc); err != nil {
 			t.Fatalf("Create: %v", err)
 		}
-		got := docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+		got := docmap{KeyField: doc[KeyField]}
 		if err := coll.Get(ctx, got); err != nil {
 			t.Fatalf("Get: %v", err)
 		}
@@ -181,10 +260,10 @@ func testPut(t *testing.T, coll *ds.Collection) {
 		}
 	}
 
-	named := docmap{KindField: "put", KeyField: "testPut1", "b": true}
+	named := docmap{KeyField: "testPut1", "b": true}
 	// Create a new doc.
 	must(coll.Put(ctx, named))
-	got := docmap{KindField: named[KindField], KeyField: named[KeyField]}
+	got := docmap{KeyField: named[KeyField]}
 	must(coll.Get(ctx, got))
 	named[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, named); diff != "" {
@@ -216,11 +295,11 @@ func testReplace(t *testing.T, coll *ds.Collection) {
 		}
 	}
 
-	doc1 := docmap{KindField: "replace", KeyField: "testReplace", "s": "a"}
+	doc1 := docmap{KeyField: "testReplace", "s": "a"}
 	must(coll.Put(ctx, doc1))
 	doc1["s"] = "b"
 	must(coll.Replace(ctx, doc1))
-	got := docmap{KindField: doc1[KindField], KeyField: doc1[KeyField]}
+	got := docmap{KeyField: doc1[KeyField]}
 	must(coll.Get(ctx, got))
 	doc1[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc1); diff != "" {
@@ -249,16 +328,15 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	}
 
 	doc := docmap{
-		KindField: "get",
-		KeyField:  "testGet1",
-		"s":       "a string",
-		"i":       int64(95),
-		"f":       32.3,
-		"m":       map[string]interface{}{"a": "one", "b": "two"},
+		KeyField: "testGet1",
+		"s":      "a string",
+		"i":      int64(95),
+		"f":      32.3,
+		"m":      map[string]interface{}{"a": "one", "b": "two"},
 	}
 	must(coll.Put(ctx, doc))
 	// If Get is called with no field paths, the full document is populated.
-	got := docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+	got := docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got))
 	doc[ds.RevisionField] = got[ds.RevisionField] // copy returned revision field
 	if diff := cmp.Diff(got, doc); diff != "" {
@@ -266,10 +344,9 @@ func testGet(t *testing.T, coll *ds.Collection) {
 	}
 
 	// If Get is called with field paths, the resulting document has only those fields.
-	got = docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+	got = docmap{KeyField: doc[KeyField]}
 	must(coll.Get(ctx, got, "f", "m.b"))
 	want := docmap{
-		KindField:        doc[KindField],
 		KeyField:         doc[KeyField],
 		ds.RevisionField: got[ds.RevisionField], // copy returned revision field
 		"f":              32.3,
@@ -282,7 +359,7 @@ func testGet(t *testing.T, coll *ds.Collection) {
 
 func testDelete(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	doc := docmap{KindField: "delete", KeyField: "testDelete"}
+	doc := docmap{KeyField: "testDelete"}
 	if errs := coll.Actions().Put(doc).Delete(doc).Do(ctx); errs != nil {
 		t.Fatal(errs)
 	}
@@ -296,7 +373,7 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 	}
 
 	// Delete will fail if the revision field is mismatched.
-	got := docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+	got := docmap{KeyField: doc[KeyField]}
 	if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
 		t.Fatal(errs)
 	}
@@ -311,12 +388,12 @@ func testDelete(t *testing.T, coll *ds.Collection) {
 
 func testUpdate(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
-	doc := docmap{KindField: "update", KeyField: "testUpdate", "a": "A", "b": "B"}
+	doc := docmap{KeyField: "testUpdate", "a": "A", "b": "B"}
 	if err := coll.Put(ctx, doc); err != nil {
 		t.Fatal(err)
 	}
 
-	got := docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+	got := docmap{KeyField: doc[KeyField]}
 	errs := coll.Actions().Update(doc, ds.Mods{
 		"a": "X",
 		"b": nil,
@@ -326,7 +403,6 @@ func testUpdate(t *testing.T, coll *ds.Collection) {
 		t.Fatal(errs)
 	}
 	want := docmap{
-		KindField:        doc[KindField],
 		KeyField:         doc[KeyField],
 		ds.RevisionField: got[ds.RevisionField],
 		"a":              "X",
@@ -358,9 +434,9 @@ func testRevisionField(t *testing.T, coll *ds.Collection, write func(docmap) err
 			t.Fatal(err)
 		}
 	}
-	doc1 := docmap{KindField: "revisionField", KeyField: "testRevisionField", "s": "a"}
+	doc1 := docmap{KeyField: "testRevisionField", "s": "a"}
 	must(coll.Put(ctx, doc1))
-	got := docmap{KindField: doc1[KindField], KeyField: doc1[KeyField]}
+	got := docmap{KeyField: doc1[KeyField]}
 	must(coll.Get(ctx, got))
 	rev, ok := got[ds.RevisionField]
 	if !ok || rev == nil {
@@ -397,14 +473,13 @@ func testData(t *testing.T, coll *ds.Collection) {
 		{float32(3.5), float64(3.5)},
 		{[]byte{0, 1, 2}, []byte{0, 1, 2}},
 	} {
-		doc := docmap{KindField: "data", KeyField: "testData", "val": test.in}
-		got := docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+		doc := docmap{KeyField: "testData", "val": test.in}
+		got := docmap{KeyField: doc[KeyField]}
 		if errs := coll.Actions().Put(doc).Get(got).Do(ctx); errs != nil {
 			t.Fatal(errs)
 		}
 		want := docmap{
 			"val":            test.want,
-			KindField:        doc[KindField],
 			KeyField:         doc[KeyField],
 			ds.RevisionField: got[ds.RevisionField],
 		}
@@ -692,44 +767,67 @@ func (r *randReader) Read(buf []byte) (int, error) {
 	return r.r.Read(buf)
 }
 
+// The following is the schema for the collection used for query testing.
+// It is loosely borrowed from the DynamoDB documentation.
+// It is rich enough to require indexes for some providers.
+
+// A HighScore records one user's high score in a particular game.
+// The primary key fields are Game and Player.
+type HighScore struct {
+	Game             string
+	Player           string
+	Score            int
+	Time             time.Time
+	DocstoreRevision interface{}
+}
+
+// HighScoreKey constructs a single primary key from a HighScore struct
+// by concatenating the Game and Player fields.
+func HighScoreKey(doc docstore.Document) interface{} {
+	h := doc.(*HighScore)
+	return h.Game + "|" + h.Player
+}
+
+func (h *HighScore) String() string {
+	return fmt.Sprintf("%s|%s=%d@%s", h.Game, h.Player, h.Score, h.Time.Format("01/02"))
+}
+
+func date(month, day int) time.Time {
+	return time.Date(2019, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+}
+
+const (
+	game1 = "Praise All Monsters"
+	game2 = "Zombie DMV"
+	game3 = "Days Gone"
+)
+
+var queryDocuments = []*HighScore{
+	{game1, "pat", 49, date(3, 13), nil},
+	{game1, "mel", 60, date(4, 10), nil},
+	{game1, "andy", 81, date(2, 1), nil},
+	{game1, "fran", 33, date(3, 19), nil},
+	{game2, "pat", 120, date(4, 1), nil},
+	{game2, "billie", 111, date(4, 10), nil},
+	{game2, "mel", 190, date(4, 18), nil},
+	{game2, "fran", 33, date(3, 20), nil},
+}
+
 func testQuery(t *testing.T, coll *ds.Collection) {
 	ctx := context.Background()
 	// (Temporary) skip if the driver does not implement queries.
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("queries not yet implemented")
 	}
+	defer cleanUpTable(t, coll)
 
-	// Delete existing documents.
-	err := forEach(ctx, coll.Query().Get(ctx), func(m docmap) error { return coll.Delete(ctx, m) })
-	if err != nil {
+	// Add the query docs.
+	alist := coll.Actions()
+	for _, doc := range queryDocuments {
+		alist.Put(doc)
+	}
+	if err := alist.Do(ctx); err != nil {
 		t.Fatalf("%+v", err)
-	}
-
-	// Add a few documents.
-	docs := []docmap{
-		{
-			KindField: "query",
-			KeyField:  "testQuery1",
-			"n":       -4,
-			"s":       "foe",
-		},
-		{
-			KindField: "query",
-			KeyField:  "testQuery2",
-			"n":       1,
-			"s":       "foo",
-		},
-		{
-			KindField: "query",
-			KeyField:  "testQuery3",
-			"n":       2.5,
-			"s":       "fog",
-		},
-	}
-	for _, doc := range docs {
-		if err := coll.Put(ctx, doc); err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	// Query filters should have the same behavior when doing string and number
@@ -737,67 +835,68 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	tests := []struct {
 		name string
 		q    *ds.Query
-		want []docmap
+		want func(*HighScore) bool // filters queryDocuments
 	}{
 		{
-			name: "LessThanNum",
-			q:    coll.Query().Where("n", "<", 1),
-			want: []docmap{{KeyField: "testQuery1"}},
+			name: "All",
+			q:    coll.Query(),
+			want: func(*HighScore) bool { return true },
 		},
 		{
-			name: "LessThanString",
-			q:    coll.Query().Where("s", "<", "fog"),
-			want: []docmap{{KeyField: "testQuery1"}},
+			name: "Game",
+			q:    coll.Query().Where("Game", "=", game2),
+			want: func(h *HighScore) bool { return h.Game == game2 },
 		},
 		{
-			name: "LessThanEqualNum",
-			q:    coll.Query().Where("n", "<=", 1),
-			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery2"}},
+			name: "Score",
+			q:    coll.Query().Where("Score", ">", 100),
+			want: func(h *HighScore) bool { return h.Score > 100 },
 		},
 		{
-			name: "LessThanEqualString",
-			q:    coll.Query().Where("s", "<=", "fog"),
-			want: []docmap{{KeyField: "testQuery1"}, {KeyField: "testQuery3"}},
+			name: "Player",
+			q:    coll.Query().Where("Player", "=", "billie"),
+			want: func(h *HighScore) bool { return h.Player == "billie" },
 		},
 		{
-			name: "EqualNum",
-			q:    coll.Query().Where("n", "=", 1),
-			want: []docmap{{KeyField: "testQuery2"}},
+			name: "GamePlayer",
+			q:    coll.Query().Where("Player", "=", "andy").Where("Game", "=", game1),
+			want: func(h *HighScore) bool { return h.Player == "andy" && h.Game == game1 },
 		},
 		{
-			name: "EqualString",
-			q:    coll.Query().Where("s", "=", "foo"),
-			want: []docmap{{KeyField: "testQuery2"}},
+			name: "PlayerScore",
+			q:    coll.Query().Where("Player", "=", "pat").Where("Score", "<", 100),
+			want: func(h *HighScore) bool { return h.Player == "pat" && h.Score < 100 },
 		},
 		{
-			name: "GreaterThanEqualNum",
-			q:    coll.Query().Where("n", ">=", 1),
-			want: []docmap{{KeyField: "testQuery2"}, {KeyField: "testQuery3"}},
+			name: "GameScore",
+			q:    coll.Query().Where("Game", "=", game1).Where("Score", ">=", 50),
+			want: func(h *HighScore) bool { return h.Game == game1 && h.Score >= 50 },
 		},
-		{
-			name: "GreaterThanEqualString",
-			q:    coll.Query().Where("s", ">=", "fog"),
-			want: []docmap{{KeyField: "testQuery3"}, {KeyField: "testQuery2"}},
-		},
-		{
-			name: "GreaterThanNum",
-			q:    coll.Query().Where("n", ">", 1),
-			want: []docmap{{KeyField: "testQuery3"}},
-		},
-		{
-			name: "GreaterThanString",
-			q:    coll.Query().Where("s", ">", "fog"),
-			want: []docmap{{KeyField: "testQuery2"}},
-		},
+		// TODO(jba): add this test after adding support for times as filter values (#1906).
+		// {
+		// 	name: "PlayerTime",
+		// 	q:    coll.Query().Where("Player", "=", "mel").Where("Time", ">", date(4, 1)),
+		// 	want: func(h *HighScore) bool { return h.Player == "mel" && h.Time.After(date(4, 1)) },
+		// },
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := mustCollect(ctx, t, tc.q.Get(ctx, KeyField))
+			got := mustCollectHighScores(ctx, t, tc.q.Get(ctx))
 			for _, g := range got {
-				delete(g, ds.RevisionField)
+				g.DocstoreRevision = nil
 			}
-			diff := cmp.Diff(got, tc.want, cmpopts.SortSlices(func(d1, d2 docmap) bool {
-				return d1[KeyField].(string) < d2[KeyField].(string)
+			var want []*HighScore
+			for _, d := range queryDocuments {
+				if tc.want(d) {
+					want = append(want, d)
+				}
+			}
+			_, err := tc.q.Plan()
+			if err != nil {
+				t.Fatal(err)
+			}
+			diff := cmp.Diff(got, want, cmpopts.SortSlices(func(h1, h2 *HighScore) bool {
+				return h1.Game+"|"+h1.Player < h2.Game+"|"+h2.Player
 			}))
 			if diff != "" {
 				t.Error(diff)
@@ -811,24 +910,41 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	}
 
 	// For limit, we can't be sure which documents will be returned, only their count.
-	limitQ := coll.Query().Where("n", ">=", -4).Limit(2)
-	got := mustCollect(ctx, t, limitQ.Get(ctx, KeyField))
+	limitQ := coll.Query().Limit(2)
+	got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
 	if len(got) != 2 {
 		t.Errorf("got %v, wanted two documents", got)
 	}
 }
 
-func forEach(ctx context.Context, iter *ds.DocumentIterator, f func(docmap) error) error {
+// cleanUpTable delete all documents from this collection after test.
+func cleanUpTable(t *testing.T, coll *docstore.Collection) {
+	ctx := context.Background()
+	dels := coll.Actions()
+	delFunc := func(doc interface{}) error {
+		dels.Delete(doc)
+		return nil
+	}
+	err := forEach(ctx, coll.Query().Get(ctx), func() interface{} { return &HighScore{} }, delFunc)
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+	if err := dels.Do(ctx); err != nil {
+		t.Fatalf("%+v", err)
+	}
+}
+
+func forEach(ctx context.Context, iter *ds.DocumentIterator, create func() interface{}, handle func(interface{}) error) error {
 	for {
-		m := docmap{}
-		err := iter.Next(ctx, m)
+		doc := create()
+		err := iter.Next(ctx, doc)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return err
 		}
-		if err := f(m); err != nil {
+		if err := handle(doc); err != nil {
 			return err
 		}
 	}
@@ -837,28 +953,37 @@ func forEach(ctx context.Context, iter *ds.DocumentIterator, f func(docmap) erro
 
 func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []docmap {
 	var ms []docmap
-	collect := func(m docmap) error { ms = append(ms, m); return nil }
-	if err := forEach(ctx, iter, collect); err != nil {
+	collect := func(m interface{}) error { ms = append(ms, m.(docmap)); return nil }
+	if err := forEach(ctx, iter, func() interface{} { return docmap{} }, collect); err != nil {
 		t.Fatal(err)
 	}
 	return ms
 }
 
+func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []*HighScore {
+	var hs []*HighScore
+	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
+	if err := forEach(ctx, iter, func() interface{} { return &HighScore{} }, collect); err != nil {
+		t.Fatal(err)
+	}
+	return hs
+}
+
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	actions := coll.Actions()
 	docs := []docmap{
-		{KindField: "multiple_actions", KeyField: "testMultipleActions1", "s": "a"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions2", "s": "b"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions3", "s": "c"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions4", "s": "d"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions5", "s": "e"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions6", "s": "f"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions7", "s": "g"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions8", "s": "h"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions9", "s": "i"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions10", "s": "j"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions11", "s": "k"},
-		{KindField: "multiple_actions", KeyField: "testMultipleActions12", "s": "l"},
+		{KeyField: "testMultipleActions1", "s": "a"},
+		{KeyField: "testMultipleActions2", "s": "b"},
+		{KeyField: "testMultipleActions3", "s": "c"},
+		{KeyField: "testMultipleActions4", "s": "d"},
+		{KeyField: "testMultipleActions5", "s": "e"},
+		{KeyField: "testMultipleActions6", "s": "f"},
+		{KeyField: "testMultipleActions7", "s": "g"},
+		{KeyField: "testMultipleActions8", "s": "h"},
+		{KeyField: "testMultipleActions9", "s": "i"},
+		{KeyField: "testMultipleActions10", "s": "j"},
+		{KeyField: "testMultipleActions11", "s": "k"},
+		{KeyField: "testMultipleActions12", "s": "l"},
 	}
 	// Writes
 	for i := 0; i < 6; i++ {
@@ -871,7 +996,7 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	// Reads
 	gots := make([]docmap, len(docs))
 	for i, doc := range docs {
-		gots[i] = docmap{KindField: doc[KindField], KeyField: doc[KeyField]}
+		gots[i] = docmap{KeyField: doc[KeyField]}
 		actions.Get(gots[i], docstore.FieldPath("s"))
 	}
 	ctx := context.Background()
@@ -888,9 +1013,47 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	// Deletes
 	dels := coll.Actions()
 	for _, got := range gots {
-		dels.Delete(docmap{KindField: got[KindField], KeyField: got[KeyField]})
+		dels.Delete(docmap{KeyField: got[KeyField]})
 	}
 	if err := dels.Do(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	docs := []*HighScore{
+		{game3, "steph", 24, date(4, 25), nil},
+		{game3, "mia", 99, date(4, 26), nil},
+	}
+
+	// Verify Collection.As
+	if err := st.CollectionCheck(coll); err != nil {
+		t.Error(err)
+	}
+
+	ctx := context.Background()
+	actions := coll.Actions()
+	// Create docs
+	for _, doc := range docs {
+		actions.Put(doc)
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer cleanUpTable(t, coll)
+
+	// Query
+	qs := []*docstore.Query{
+		coll.Query().Where("Game", "=", game3),
+		// Note: don't use filter on Player, the test table has Player as the
+		// partition key of a Global Secondary Index, which doesn't support
+		// ConsistentRead mode, which is what the As test does in its BeforeQuery
+		// function.
+		coll.Query().Where("Score", ">", 50),
+	}
+	for _, q := range qs {
+		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+			t.Error(err)
+		}
 	}
 }

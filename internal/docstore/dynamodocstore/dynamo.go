@@ -25,6 +25,13 @@
 // To customize the URL opener, or for more details on the URL format, see
 // URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// As
+//
+// dynamodocstore exposes the following types for As:
+//  - Collection.As: *dynamodb.DynamoDB
+//  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
+//  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 package dynamodocstore
 
 import (
@@ -491,7 +498,10 @@ func (c *collection) toTransactUpdate(ctx context.Context, doc driver.Document, 
 // stored document's revision matches the revision of doc.
 func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, error) {
 	v, err := doc.GetField(docstore.RevisionField)
-	if err != nil {
+	if err != nil { // field not present
+		return nil, nil
+	}
+	if v == nil { // field is present, but nil
 		return nil, nil
 	}
 	rev, ok := v.(string)
@@ -506,6 +516,15 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 	// Value encodes rev to an attribute value.
 	cb := expression.Name(docstore.RevisionField).Equal(expression.Value(rev))
 	return &cb, nil
+}
+
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**dyn.DynamoDB)
+	if !ok {
+		return false
+	}
+	*p = c.db
+	return true
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

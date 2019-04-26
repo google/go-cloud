@@ -20,6 +20,7 @@ package mongodocstore
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -32,9 +33,10 @@ import (
 )
 
 const (
-	serverURI      = "mongodb://localhost"
-	dbName         = "docstore-test"
-	collectionName = "docstore-test"
+	serverURI       = "mongodb://localhost"
+	dbName          = "docstore-test"
+	collectionName1 = "docstore-test-1"
+	collectionName2 = "docstore-test-2"
 )
 
 type harness struct {
@@ -42,7 +44,7 @@ type harness struct {
 }
 
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName), "", nil)
+	coll := newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil)
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -50,6 +52,11 @@ func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error)
 	if err := coll.coll.Drop(tctx); err != nil {
 		return nil, err
 	}
+	return coll, nil
+}
+
+func (h *harness) MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error) {
+	coll := newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey)
 	return coll, nil
 }
 
@@ -83,7 +90,7 @@ func (codecTester) DocstoreDecode(value, dest interface{}) error {
 	if err := bson.Unmarshal(value.([]byte), &m); err != nil {
 		return err
 	}
-	return decodeDoc(m, doc)
+	return decodeDoc(m, doc, mongoIDField)
 }
 
 func (codecTester) NativeEncode(x interface{}) (interface{}, error) {
@@ -92,6 +99,32 @@ func (codecTester) NativeEncode(x interface{}) (interface{}, error) {
 
 func (codecTester) NativeDecode(value, dest interface{}) error {
 	return bson.Unmarshal(value.([]byte), dest)
+}
+
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) CollectionCheck(coll *docstore.Collection) error {
+	var mc *mongo.Collection
+	if !coll.As(&mc) {
+		return errors.New("Collection.As failed")
+	}
+	return nil
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var c *mongo.Cursor
+	if !it.As(&c) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
 }
 
 func TestConformance(t *testing.T) {
@@ -112,7 +145,7 @@ func TestConformance(t *testing.T) {
 	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
 		return &harness{client.Database(dbName)}, nil
 	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{})
+	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
 // Mongo-specific tests.

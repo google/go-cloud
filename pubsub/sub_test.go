@@ -47,6 +47,7 @@ func (s *scriptedSub) SendAcks(ctx context.Context, ackIDs []driver.AckID) error
 }
 
 func (*scriptedSub) AckFunc() func() { return nil }
+func (*scriptedSub) CanNack() bool   { return false }
 func (s *scriptedSub) Close() error {
 	s.closed = true
 	return nil

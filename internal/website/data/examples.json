@@ -1,0 +1,54 @@
+{
+	"gocloud.dev/blob.ExampleBucket_Delete": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "if err := bucket.Delete(ctx, \"foo.txt\"); err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/blob.ExampleBucket_NewRangeReader": {
+		"imports": "import (\n\t\"context\"\n\t\"io\"\n\t\"os\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Open the key \"foo.txt\" for reading at offset 1024 and read up to 4096 bytes.\nr, err := bucket.NewRangeReader(ctx, \"foo.txt\", 1024, 4096, nil)\nif err != nil {\n\treturn err\n}\ndefer r.Close()\n// Copy from the read range to stdout.\nif _, err := io.Copy(os.Stdout, r); err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/blob.ExampleBucket_NewReader": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\t\"io\"\n\t\"os\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Open the key \"foo.txt\" for reading with the default options.\nr, err := bucket.NewReader(ctx, \"foo.txt\", nil)\nif err != nil {\n\treturn err\n}\ndefer r.Close()\n// Readers also have a limited view of the blob's metadata.\nfmt.Println(\"Content-Type:\", r.ContentType())\nfmt.Println()\n// Copy from the reader to stdout.\nif _, err := io.Copy(os.Stdout, r); err != nil {\n\treturn err\n}"
+	},
+	"gocloud.dev/blob.ExampleBucket_NewWriter": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Open the key \"foo.txt\" for writing with the default options.\nw, err := bucket.NewWriter(ctx, \"foo.txt\", nil)\nif err != nil {\n\treturn err\n}\n_, writeErr := fmt.Fprintln(w, \"Hello, World!\")\n// Always check the return value of Close when writing.\ncloseErr := w.Close()\nif writeErr != nil {\n\tlog.Fatal(writeErr)\n}\nif closeErr != nil {\n\tlog.Fatal(closeErr)\n}"
+	},
+	"gocloud.dev/blob.ExampleBucket_NewWriter_cancel": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n)",
+		"code": "// Create a cancelable context from the existing context.\nwriteCtx, cancelWrite := context.WithCancel(ctx)\ndefer cancelWrite()\n\n// Open the key \"foo.txt\" for writing with the default options.\nw, err := bucket.NewWriter(writeCtx, \"foo.txt\", nil)\nif err != nil {\n\treturn err\n}\n\n// Assume some writes happened and we encountered an error.\n// Now we want to abort the write.\n\nif err != nil {\n\t// First cancel the context.\n\tcancelWrite()\n\t// You must still close the writer to avoid leaking resources.\n\tw.Close()\n}"
+	},
+	"gocloud.dev/blob/azureblob.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/Azure/azure-storage-blob-go/azblob\"\n\t\"gocloud.dev/blob/azureblob\"\n)",
+		"code": "const (\n\t// Fill in with your Azure Storage Account and Access Key.\n\taccountName azureblob.AccountName = \"my-account\"\n\taccountKey  azureblob.AccountKey  = \"my-account-key\"\n\t// Fill in with the storage container to access.\n\tcontainerName = \"my-container\"\n)\n\n// Create a credentials object.\ncredential, err := azureblob.NewCredential(accountName, accountKey)\nif err != nil {\n\treturn err\n}\n\n// Create a Pipeline, using whatever PipelineOptions you need.\npipeline := azureblob.NewPipeline(credential, azblob.PipelineOptions{})\n\n// Create a *blob.Bucket.\n// The credential Option is required if you're going to use blob.SignedURL.\nbucket, err := azureblob.OpenBucket(ctx, pipeline, accountName, containerName,\n\t\u0026azureblob.Options{Credential: credential})\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/azureblob.Example_openBucket": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/azureblob\"\n)",
+		"code": "// OpenBucket creates a *blob.Bucket from a URL.\n// This URL will open the container \"my-container\" using default\n// credentials found in the environment variables\n// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY\n// and AZURE_STORAGE_SAS_TOKEN.\nbucket, err := blob.OpenBucket(ctx, \"azblob://my-container\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/fileblob.Example": {
+		"imports": "import (\n\t\"os\"\n\n\t\"gocloud.dev/blob/fileblob\"\n)",
+		"code": "// The directory you pass to fileblob.OpenBucket must exist first.\nconst myDir = \"path/to/local/directory\"\nif err := os.MkdirAll(myDir, 0777); err != nil {\n\treturn err\n}\n\n// Create a file-based bucket.\nbucket, err := fileblob.OpenBucket(myDir, nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/gcsblob.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob/gcsblob\"\n\t\"gocloud.dev/gcp\"\n)",
+		"code": "// Your GCP credentials.\n// See https://cloud.google.com/docs/authentication/production\n// for more info on alternatives.\ncreds, err := gcp.DefaultCredentials(ctx)\nif err != nil {\n\treturn err\n}\n\n// Create an HTTP client.\n// This example uses the default HTTP transport and the credentials\n// created above.\nclient, err := gcp.NewHTTPClient(\n\tgcp.DefaultTransport(),\n\tgcp.CredentialsTokenSource(creds))\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nbucket, err := gcsblob.OpenBucket(ctx, client, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/gcsblob.Example_openBucket": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/gcsblob\"\n)",
+		"code": "// OpenBucket creates a *blob.Bucket from a URL.\n// This URL will open the bucket \"my-bucket\" using default credentials.\nbucket, err := blob.OpenBucket(ctx, \"gs://my-bucket\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/memblob.Example": {
+		"imports": "import (\n\t\"context\"\n\t\"fmt\"\n\n\t\"gocloud.dev/blob/memblob\"\n)",
+		"code": "// Create an in-memory bucket.\nbucket := memblob.OpenBucket(nil)\ndefer bucket.Close()\n\n// Now we can use bucket to read or write files to the bucket.\nerr := bucket.WriteAll(ctx, \"my-key\", []byte(\"hello world\"), nil)\nif err != nil {\n\treturn err\n}\ndata, err := bucket.ReadAll(ctx, \"my-key\")\nif err != nil {\n\treturn err\n}\nfmt.Println(string(data))\n\n// Output:\n// hello world"
+	},
+	"gocloud.dev/blob/s3blob.Example": {
+		"imports": "import (\n\t\"context\"\n\n\t\"github.com/aws/aws-sdk-go/aws\"\n\t\"github.com/aws/aws-sdk-go/aws/session\"\n\t\"gocloud.dev/blob/s3blob\"\n)",
+		"code": "// Establish an AWS session.\n// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.\n// The region must match the region for \"my-bucket\".\nsess, err := session.NewSession(\u0026aws.Config{\n\tRegion: aws.String(\"us-west-1\"),\n})\nif err != nil {\n\treturn err\n}\n\n// Create a *blob.Bucket.\nbucket, err := s3blob.OpenBucket(ctx, sess, \"my-bucket\", nil)\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	},
+	"gocloud.dev/blob/s3blob.Example_openBucket": {
+		"imports": "import (\n\t\"context\"\n\n\t\"gocloud.dev/blob\"\n\t_ \"gocloud.dev/blob/s3blob\"\n)",
+		"code": "// OpenBucket creates a *blob.Bucket from a URL.\nbucket, err := blob.OpenBucket(ctx, \"s3://my-bucket?region=us-west-1\")\nif err != nil {\n\treturn err\n}\ndefer bucket.Close()"
+	}
+}

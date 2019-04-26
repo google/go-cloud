@@ -54,6 +54,7 @@
 //  - Topic: *sns.SNS
 //  - Subscription: *sqs.SQS
 //  - Message: *sqs.Message
+//  - Message.BeforeSend: *sns.PublishInput
 //  - Error: awserror.Error
 package awssnssqs // import "gocloud.dev/pubsub/awssnssqs"
 
@@ -325,11 +326,24 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 	} else {
 		body = string(dm.Body)
 	}
-	_, err := t.client.PublishWithContext(ctx, &sns.PublishInput{
+	input := &sns.PublishInput{
 		Message:           aws.String(body),
 		MessageAttributes: attrs,
 		TopicArn:          &t.arn,
-	})
+	}
+	if dm.BeforeSend != nil {
+		asFunc := func(i interface{}) bool {
+			if p, ok := i.(**sns.PublishInput); ok {
+				*p = input
+				return true
+			}
+			return false
+		}
+		if err := dm.BeforeSend(asFunc); err != nil {
+			return err
+		}
+	}
+	_, err := t.client.PublishWithContext(ctx, input)
 	return err
 }
 
@@ -521,6 +535,9 @@ func (s *subscription) SendAcks(ctx context.Context, ids []driver.AckID) error {
 	}
 	return nil
 }
+
+// CanNack implements driver.CanNack.
+func (s *subscription) CanNack() bool { return true }
 
 // SendNacks implements driver.Subscription.SendNacks.
 func (s *subscription) SendNacks(ctx context.Context, ids []driver.AckID) error {

@@ -74,9 +74,10 @@ type HarnessMaker func(ctx context.Context, t *testing.T) (Harness, error)
 // The conformance test:
 // 1. Calls TopicCheck.
 // 2. Calls SubscriptionCheck.
-// 3. Calls TopicErrorCheck.
-// 4. Calls SubscriptionErrorCheck.
-// 5. Calls MessageCheck.
+// 3. Sends a message, setting Message.BeforeSend to BeforeSend.
+// 4. Receives the message and calls MessageCheck.
+// 5. Calls TopicErrorCheck.
+// 6. Calls SubscriptionErrorCheck.
 type AsTest interface {
 	// Name should return a descriptive name for the test.
 	Name() string
@@ -95,6 +96,9 @@ type AsTest interface {
 	SubscriptionErrorCheck(s *pubsub.Subscription, err error) error
 	// MessageCheck will be called to allow verification of Message.As.
 	MessageCheck(m *pubsub.Message) error
+	// BeforeSend will be used as Message.BeforeSend as part of sending a test
+	// message.
+	BeforeSend(as func(interface{}) bool) error
 }
 
 // Many tests set the maximum batch size to 1 to make record/replay stable.
@@ -143,6 +147,13 @@ func (verifyAsFailsOnNil) SubscriptionErrorCheck(s *pubsub.Subscription, err err
 func (verifyAsFailsOnNil) MessageCheck(m *pubsub.Message) error {
 	if m.As(nil) {
 		return errors.New("want Message.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) BeforeSend(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Message.BeforeSend's As function to return false when passed nil")
 	}
 	return nil
 }
@@ -336,7 +347,7 @@ func testNack(t *testing.T, newHarness HarnessMaker) {
 		t.Fatal(err)
 	}
 	defer subCleanup()
-	if ds.AckFunc() != nil {
+	if !ds.CanNack() {
 		t.Skip("Nack not supported")
 	}
 	topic := pubsub.NewTopic(dt, batchSizeOne)
@@ -519,6 +530,10 @@ func testDoubleAck(t *testing.T, newHarness HarnessMaker) {
 	err = ds.SendAcks(ctx, []driver.AckID{dms[0].AckID, dms[1].AckID})
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !ds.CanNack() {
+		return
 	}
 
 	// Nack all 3 messages. This should also succeed, and the nack of the third
@@ -824,17 +839,20 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		t.Fatal(err)
 	}
 	defer cleanup()
+
 	if err := st.TopicCheck(topic); err != nil {
 		t.Error(err)
 	}
+
 	if err := st.SubscriptionCheck(sub); err != nil {
 		t.Error(err)
 	}
-	dt, err := h.MakeNonexistentTopic(ctx)
-	if err != nil {
-		t.Fatal(err)
+
+	msg := &pubsub.Message{
+		Body:       []byte("x"),
+		BeforeSend: st.BeforeSend,
 	}
-	if err := topic.Send(ctx, &pubsub.Message{Body: []byte("x")}); err != nil {
+	if err := topic.Send(ctx, msg); err != nil {
 		t.Fatal(err)
 	}
 	m, err := sub.Receive(ctx)
@@ -846,19 +864,27 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 	}
 	m.Ack()
 
-	topic = pubsub.NewTopic(dt, batchSizeOne)
+	// Make a nonexistent topic and try to to send on it, to get an error we can
+	// use to call TopicErrorCheck.
+	dt, err := h.MakeNonexistentTopic(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nonexistentTopic := pubsub.NewTopic(dt, batchSizeOne)
 	defer func() {
-		if err := topic.Shutdown(ctx); err != nil {
+		if err := nonexistentTopic.Shutdown(ctx); err != nil {
 			t.Error(err)
 		}
 	}()
-	topicErr := topic.Send(ctx, &pubsub.Message{})
+	topicErr := nonexistentTopic.Send(ctx, &pubsub.Message{})
 	if topicErr == nil || gcerrors.Code(topicErr) != gcerrors.NotFound {
 		t.Errorf("got error %v sending to nonexistent topic, want Code=NotFound", topicErr)
 	} else if err := st.TopicErrorCheck(topic, topicErr); err != nil {
 		t.Error(err)
 	}
 
+	// Make a nonexistent subscription and try to receive from it, to get an error
+	// we can use to call SubscriptionErrorCheck.
 	ds, err := h.MakeNonexistentSubscription(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -870,7 +896,7 @@ func testAs(t *testing.T, newHarness HarnessMaker, st AsTest) {
 		}
 	}()
 
-	// The test will hang here if the message isn't available, so use a shorter timeout.
+	// The test will hang here if Receive doesn't fail quickly, so set a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	_, subErr := nonExistentSub.Receive(ctx2)

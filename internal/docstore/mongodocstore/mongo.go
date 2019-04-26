@@ -23,6 +23,12 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// As
+//
+// mongodocstore exposes the following types for As:
+// - Collection: *mongo.Collection
+// - DocumentIterator: *mongo.Cursor
+//
 // Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
 // TODO(jba): write
 //
@@ -235,7 +241,7 @@ func (c *collection) get(ctx context.Context, a *driver.Action) error {
 	if err := res.Decode(&m); err != nil {
 		return err
 	}
-	return decodeDoc(m, a.Doc)
+	return decodeDoc(m, a.Doc, c.idField)
 }
 
 // Construct a mongo "projection document" from field paths.
@@ -402,6 +408,16 @@ func (c *collection) docID(doc driver.Document) (interface{}, error) {
 		return nil, gcerr.New(gcerr.InvalidArgument, nil, 2, "document missing ID")
 	}
 	return id, nil
+}
+
+// As implements driver.As.
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**mongo.Collection)
+	if !ok {
+		return false
+	}
+	*p = c.coll
+	return true
 }
 
 // Error code for a write error when no documents match a filter.
