@@ -26,6 +26,7 @@
 // As
 //
 // mongodocstore exposes the following types for As:
+// - Collection: *mongo.Collection
 // - DocumentIterator: *mongo.Cursor
 //
 // Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
@@ -407,6 +408,16 @@ func (c *collection) docID(doc driver.Document) (interface{}, error) {
 		return nil, gcerr.New(gcerr.InvalidArgument, nil, 2, "document missing ID")
 	}
 	return id, nil
+}
+
+// As implements driver.As.
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**mongo.Collection)
+	if !ok {
+		return false
+	}
+	*p = c.coll
+	return true
 }
 
 // Error code for a write error when no documents match a filter.
