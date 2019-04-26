@@ -42,7 +42,7 @@ func (h *harness) Close() {}
 
 func TestConformance(t *testing.T) {
 	// CodecTester is nil because memdocstore has no native representation.
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	drivertest.RunConformanceTests(t, newHarness, nil, nil)
 }
 
 type docmap = map[string]interface{}
