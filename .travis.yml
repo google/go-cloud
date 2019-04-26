@@ -22,7 +22,12 @@ install:
   - "git checkout -- ."
 
 script:
-  - 'internal/testing/start_local_deps.sh'
+  # Requires that docker is installed (via services: docker above), which is
+  # only supported on Linux.
+  # Without the dependencies running, tests that depend on them are skipped.
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      internal/testing/start_local_deps.sh'
+    fi
   - 'internal/testing/runchecks.sh'
 
 env:
