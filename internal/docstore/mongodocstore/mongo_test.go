@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"gocloud.dev/internal/docstore"
@@ -44,7 +45,10 @@ type harness struct {
 }
 
 func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil)
+	coll, err := newCollection(h.db.Collection(collectionName1), drivertest.KeyField, nil, nil)
+	if err != nil {
+		return nil, err
+	}
 	// It seems that the client doesn't actually connect until the first RPC, which will
 	// be this one. So time out quickly if there's a problem.
 	tctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -56,8 +60,7 @@ func (h *harness) MakeCollection(ctx context.Context) (driver.Collection, error)
 }
 
 func (h *harness) MakeTwoKeyCollection(ctx context.Context) (driver.Collection, error) {
-	coll := newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey)
-	return coll, nil
+	return newCollection(h.db.Collection(collectionName2), "", drivertest.HighScoreKey, nil)
 }
 
 func (h *harness) Close() {}
@@ -74,7 +77,7 @@ func (codecTester) DocstoreEncode(x interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := encodeDoc(doc)
+	m, err := encodeDoc(doc, true)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +131,16 @@ func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
 }
 
 func TestConformance(t *testing.T) {
+	client := newTestClient(t)
+	defer func() { client.Disconnect(context.Background()) }()
+
+	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
+		return &harness{client.Database(dbName)}, nil
+	}
+	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
+}
+
+func newTestClient(t *testing.T) *mongo.Client {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	client, err := Dial(ctx, serverURI)
@@ -140,12 +153,7 @@ func TestConformance(t *testing.T) {
 		}
 		t.Fatalf("connecting to %s: %v", serverURI, err)
 	}
-	defer func() { client.Disconnect(context.Background()) }()
-
-	newHarness := func(context.Context, *testing.T) (drivertest.Harness, error) {
-		return &harness{client.Database(dbName)}, nil
-	}
-	drivertest.RunConformanceTests(t, newHarness, codecTester{}, []drivertest.AsTest{verifyAs{}})
+	return client
 }
 
 // Mongo-specific tests.
@@ -185,4 +193,113 @@ func TestOpenCollectionURL(t *testing.T) {
 			t.Errorf("%s: got error %v, want error %v", test.URL, err, test.WantErr)
 		}
 	}
+}
+
+func TestIDFieldNodup(t *testing.T) {
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ctx := context.Background()
+	client := newTestClient(t)
+	defer func() { client.Disconnect(ctx) }()
+	db := client.Database(dbName)
+	dc, err := newCollection(db.Collection("idfield"), "Name", nil, &Options{LowercaseFields: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+
+	must(coll.Put(ctx, map[string]interface{}{"name": 1}))
+	type S struct {
+		Name int
+		Val  string
+	}
+	must(coll.Put(ctx, &S{Name: 2, Val: "X"}))
+
+}
+
+func TestLowercaseFields(t *testing.T) {
+	// Verify that the LowercaseFields option works in all cases.
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	ctx := context.Background()
+	client := newTestClient(t)
+	defer func() { client.Disconnect(ctx) }()
+	db := client.Database(dbName)
+	dc, err := newCollection(db.Collection("lowercase-fields"), "id", nil, &Options{LowercaseFields: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := docstore.NewCollection(dc)
+
+	type S struct {
+		ID, F, G         int
+		DocstoreRevision interface{}
+	}
+
+	// driver.Document.GetField is case-insensitive on structs.
+	doc, err := driver.NewDocument(&S{ID: 1, DocstoreRevision: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"ID", "Id", "id", "DocstoreRevision", "docstorerevision"} {
+		got, err := doc.GetField(f)
+		if err != nil {
+			t.Errorf("%s: %v", f, err)
+		}
+		if got != 1 {
+			t.Errorf("got %q, want 1", got)
+		}
+	}
+
+	check := func(got, want interface{}) {
+		t.Helper()
+		switch w := want.(type) {
+		case S:
+			w.DocstoreRevision = got.(S).DocstoreRevision
+			want = w
+		case map[string]interface{}:
+			w["docstorerevision"] = got.(map[string]interface{})["docstorerevision"]
+			want = w
+		}
+		if !cmp.Equal(got, want) {
+			t.Errorf("\ngot  %+v\nwant %+v", got, want)
+		}
+	}
+
+	must(coll.Put(ctx, &S{ID: 1, F: 2, G: 3}))
+
+	// Get with a struct.
+	got := S{ID: 1}
+	must(coll.Get(ctx, &got))
+	check(got, S{ID: 1, F: 2, G: 3})
+
+	// Get with map.
+	got2 := map[string]interface{}{"id": 1}
+	must(coll.Get(ctx, got2))
+	check(got2, map[string]interface{}{"id": int32(1), "f": int64(2), "g": int64(3)})
+
+	// Field paths in Get.
+	got3 := S{ID: 1}
+	must(coll.Get(ctx, &got3, "G"))
+	check(got3, S{ID: 1, F: 0, G: 3})
+
+	// Field paths in Update.
+	got4 := map[string]interface{}{"id": 1}
+	must(coll.Actions().Update(&S{ID: 1}, docstore.Mods{"F": 4}).Get(got4).Do(ctx))
+	check(got4, map[string]interface{}{"id": int32(1), "f": int64(4), "g": int64(3)})
+
+	// // Query filters.
+	var got5 S
+	must(coll.Query().Where("ID", "=", 1).Where("G", ">", 2).Get(ctx).Next(ctx, &got5))
+	check(got5, S{ID: 1, F: 4, G: 3})
 }
