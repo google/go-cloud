@@ -25,61 +25,82 @@ import (
 )
 
 func ExampleOpenTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region where your topic is provisioned.
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
+	// The region must match the region for "MyTopic".
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-2"),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Construct a *pubsub.Topic.
-	// https://docs.aws.amazon.com/gettingstarted/latest/deploy/creating-an-sns-topic.html
-	topicARN := "arn:aws:service:region:accountid:resourceType/resourcePath"
-	t := awssnssqs.OpenTopic(ctx, sess, topicARN, nil)
-	defer t.Shutdown(ctx)
+	// Create a *pubsub.Topic.
+	const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
+	topic := awssnssqs.OpenTopic(ctx, sess, topicARN, nil)
+	defer topic.Shutdown(ctx)
+}
 
-	// Now we can use t to send messages.
-	err = t.Send(ctx, &pubsub.Message{Body: []byte("example message")})
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#sns
+
+	// import _ "gocloud.dev/pubsub/awssnssqs"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	const topicARN = "arn:aws:sns:us-east-2:123456789012:MyTopic"
+	topic, err := pubsub.OpenTopic(ctx, "awssns://"+topicARN+"?region=us-east-2")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
 }
 
 func ExampleOpenSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#sns-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// Establish an AWS session.
 	// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
-	// The region must match the region where your topic is provisioned.
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-west-1")})
+	// The region must match the region for "MyQueue".
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("us-east-2"),
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Construct a *pubsub.Subscription.
 	// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
-	queueURL := "https://region-endpoint/queue/account-number/queue-name"
-	s := awssnssqs.OpenSubscription(ctx, sess, queueURL, nil)
-	defer s.Shutdown(ctx)
-
-	// Now we can use s to receive messages.
-	msg, err := s.Receive(ctx)
-	if err != nil {
-		// Handle error....
-	}
-	// Handle message....
-	msg.Ack()
+	const queueURL = "https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue"
+	subscription := awssnssqs.OpenSubscription(ctx, sess, queueURL, nil)
+	defer subscription.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#sns
+
+	// import _ "gocloud.dev/pubsub/awssnssqs"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
-	// This URL will open the topic with the topic ARN "arn:aws:service:region:accountid:resourceType/resourcePath".
-	t, err := pubsub.OpenTopic(ctx, "awssns://arn:aws:service:region:accountid:resourceType/resourcePath")
-
-	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will open the subscription with the URL "https://awssnssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription".
-	s, err := pubsub.OpenSubscription(ctx, "awssqs://sqs.us-east-2.amazonaws.com/99999/my-subscription")
-	_, _, _ = t, s, err
+	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will open the subscription with the URL
+	// "https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue".
+	subscription, err := pubsub.OpenSubscription(ctx,
+		"awssqs://sqs.us-east-2.amazonaws.com/123456789012/"+
+			"MyQueue?region=us-east-2")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
 }
