@@ -308,11 +308,11 @@ func errorCode(err error) gcerrors.ErrorCode {
 }
 
 type subscription struct {
-	opts     SubscriptionOptions
-	closeCh  chan struct{} // closed when we've shut down
-	joinCh   chan struct{} // closed when we join for the first time
-	cancel   func()        // cancels the background consumer
-	closeErr error         // fatal error detected by the background consumer
+	opts          SubscriptionOptions
+	closeCh       chan struct{} // closed when we've shut down
+	joinCh        chan struct{} // closed when we join for the first time
+	cancel        func()        // cancels the background consumer
+	closeErr      error         // fatal error detected by the background consumer
 	consumerGroup sarama.ConsumerGroup
 
 	mu      sync.Mutex
@@ -374,11 +374,11 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	ctx, cancel := context.WithCancel(context.Background())
 	joinCh := make(chan struct{})
 	ds := &subscription{
-		opts:    *opts,
+		opts:          *opts,
 		consumerGroup: consumerGroup,
-		closeCh: make(chan struct{}),
-		joinCh:  joinCh,
-		cancel:  cancel,
+		closeCh:       make(chan struct{}),
+		joinCh:        joinCh,
+		cancel:        cancel,
 	}
 	// Start a background consumer. It should run until ctx is cancelled
 	// by Close, or until there's a fatal error (e.g., topic doesn't exist).
@@ -457,19 +457,23 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		//
 		// It seems safer to use reflect.Select to explicitly only get a single
 		// message at a time, and hand it directly to the user.
+		//
+		// reflect.Select is essentially a "select" statement, but allows us to
+		// build the cases dynamically. We need that because we need a case for
+		// each of the claims in s.claims.
 		s.mu.Lock()
 		cases := make([]reflect.SelectCase, 0, len(s.claims)+2)
-		// A case for s.closeCh being closed, at index = 0.
+		// Add a case for s.closeCh being closed, at index = 0.
 		cases = append(cases, reflect.SelectCase{
 			Dir:  reflect.SelectRecv,
 			Chan: reflect.ValueOf(s.closeCh),
 		})
-		// A case for maxWaitCtx being Done, at index = 1.
+		// Add a case for maxWaitCtx being Done, at index = 1.
 		cases = append(cases, reflect.SelectCase{
 			Dir:  reflect.SelectRecv,
 			Chan: reflect.ValueOf(maxWaitCtx.Done()),
 		})
-		// A case per claim.
+		// Add a case per claim, reading from the claim's Messages channel.
 		for _, claim := range s.claims {
 			cases = append(cases, reflect.SelectCase{
 				Dir:  reflect.SelectRecv,
@@ -479,27 +483,20 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 		s.mu.Unlock()
 		i, v, ok := reflect.Select(cases)
 		if !ok {
+			// The i'th channel was closed.
 			switch i {
 			case 0: // s.closeCh
 				return nil, s.closeErr
 			case 1: // maxWaitCtx
-				// We've tried for a while to get maxMessages, but didn't get enough.
-				// Return whatever we have (may be empty).
+				// We've tried for a while to get a message, but didn't get any.
+				// Return an empty slice; the portable type will call us back.
 				return nil, ctx.Err()
 			}
 			// Otherwise, if one of the claim channels closed, we're probably ending
 			// a session. Just keep trying.
 			continue
 		}
-		if v.IsNil() {
-			// Don't think this should happen, but avoid panicking.
-			continue
-		}
-		msg, ok := v.Interface().(*sarama.ConsumerMessage)
-		if !ok {
-			// Don't think this should happen, but avoid panicking.
-			continue
-		}
+		msg := v.Interface().(*sarama.ConsumerMessage)
 
 		// We've got a message! It should not be nil.
 		// Read the metadata from msg.Headers.
