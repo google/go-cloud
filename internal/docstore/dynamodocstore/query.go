@@ -116,8 +116,9 @@ func (c *collection) planQuery(q *driver.Query) (*queryRunner, error) {
 }
 
 // Return the best choice of queryable (table or index) for this query.
-// If indexName is nil but pkey is not empty, then use the table.
-// If all return values are zero, no query will work: do a scan.
+// How to interpret the return values:
+// - If indexName is nil but pkey is not empty, then use the table.
+// - If all return values are zero, no query will work: do a scan.
 func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, skey string) {
 	// If the query has an "=" filter on the table's partition key, look at the table
 	// and local indexes.
@@ -130,7 +131,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 		// If one has a sort key in the query, use it.
 		for _, li := range c.description.LocalSecondaryIndexes {
 			pkey, skey := keyAttributes(li.KeySchema)
-			if hasFilter(q, skey) {
+			if hasFilter(q, skey) && localFieldsIncluded(q, li) {
 				return li.IndexName, pkey, skey
 			}
 		}
@@ -142,7 +143,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 		if skey == "" {
 			continue // We'll visit global indexes without a sort key later.
 		}
-		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.fieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && hasFilter(q, skey) && c.globalFieldsIncluded(q, gi) {
 			return gi.IndexName, pkey, skey
 		}
 	}
@@ -156,7 +157,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	// Check the global indexes.
 	for _, gi := range c.description.GlobalSecondaryIndexes {
 		pkey, skey := keyAttributes(gi.KeySchema)
-		if hasEqualityFilter(q, pkey) && c.fieldsIncluded(q, gi) {
+		if hasEqualityFilter(q, pkey) && c.globalFieldsIncluded(q, gi) {
 			return gi.IndexName, pkey, skey
 		}
 	}
@@ -167,12 +168,21 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 	return nil, "", ""
 }
 
-// Reports whether the fields selected by the query are projected into (that is,
-// contained directly in) the global index. We need this check before using the
-// index, because if a global index doesn't have all the desired fields, then a
-// separate RPC for each returned item would be necessary to retrieve those fields,
-// and we'd rather scan than do that.
-func (c *collection) fieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
+// localFieldsIncluded reports whether a local index supports all the selected fields
+// of a query. Since DynamoDB will read explicitly provided fields from the table if
+// they are not projected into the index, the only case where a local index cannot
+// be used is when the query wants all the fields, and the index projection is not ALL.
+// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
+func localFieldsIncluded(q *driver.Query, li *dynamodb.LocalSecondaryIndexDescription) bool {
+	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
+}
+
+// globalFieldsIncluded reports whether the fields selected by the query are
+// projected into (that is, contained directly in) the global index. We need this
+// check before using the index, because if a global index doesn't have all the
+// desired fields, then a separate RPC for each returned item would be necessary to
+// retrieve those fields, and we'd rather scan than do that.
+func (c *collection) globalFieldsIncluded(q *driver.Query, gi *dynamodb.GlobalSecondaryIndexDescription) bool {
 	proj := gi.Projection
 	if *proj.ProjectionType == "ALL" {
 		// The index has all the fields of the table: we're good.
