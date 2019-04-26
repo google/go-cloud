@@ -22,12 +22,6 @@ install:
   - "git checkout -- ."
 
 script:
-  # Requires that docker is installed (via services: docker above), which is
-  # only supported on Linux.
-  # Without the dependencies running, tests that depend on them are skipped.
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      internal/testing/start_local_deps.sh'
-    fi
   - 'internal/testing/runchecks.sh'
 
 env:
@@ -45,7 +39,7 @@ jobs:
       if: branch = master AND type = push
     - go: "1.12.x"
       os: linux
-    - go: "1.12.x" 
+    - go: "1.12.x"
       os: osx
     # TODO(#1075): Uncomment the lines below to re-enable the Windows build on
     # master once it passes; currently it always fails due to a Travis bug
