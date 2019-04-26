@@ -106,11 +106,12 @@ func (q *Query) BeforeQuery(f func(asFunc func(interface{}) bool) error) *Query 
 // Call Stop on the iterator when finished.
 func (q *Query) Get(ctx context.Context, fps ...FieldPath) *DocumentIterator {
 	dcoll := q.coll.driver
+	wrapErr := func(err error) error { return wrapError(dcoll, err) }
 	if err := q.init(fps); err != nil {
-		return &DocumentIterator{err: wrapError(dcoll, err)}
+		return &DocumentIterator{err: wrapErr(err)}
 	}
 	it, err := dcoll.RunGetQuery(ctx, q.dq)
-	return &DocumentIterator{iter: it, coll: dcoll, err: wrapError(dcoll, err)}
+	return &DocumentIterator{iter: it, wrapError: wrapErr, err: wrapErr(err)}
 }
 
 func (q *Query) init(fps []FieldPath) error {
@@ -134,9 +135,9 @@ func (q *Query) init(fps []FieldPath) error {
 //
 // Always call Stop on the iterator.
 type DocumentIterator struct {
-	iter driver.DocumentIterator
-	coll driver.Collection
-	err  error // already wrapped
+	iter      driver.DocumentIterator
+	wrapError func(error) error
+	err       error // already wrapped
 }
 
 // Next stores the next document in dst. It returns io.EOF if there are no more
@@ -148,10 +149,10 @@ func (it *DocumentIterator) Next(ctx context.Context, dst Document) error {
 	}
 	ddoc, err := driver.NewDocument(dst)
 	if err != nil {
-		it.err = wrapError(it.coll, err)
+		it.err = it.wrapError(err)
 		return it.err
 	}
-	it.err = wrapError(it.coll, it.iter.Next(ctx, ddoc))
+	it.err = it.wrapError(it.iter.Next(ctx, ddoc))
 	return it.err
 }
 
