@@ -781,6 +781,8 @@ type HighScore struct {
 	DocstoreRevision interface{}
 }
 
+func newHighScore() interface{} { return &HighScore{} }
+
 // HighScoreKey constructs a single primary key from a HighScore struct
 // by concatenating the Game and Player fields.
 func HighScoreKey(doc docstore.Document) interface{} {
@@ -819,7 +821,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("queries not yet implemented")
 	}
-	defer cleanUpTable(t, coll)
+	defer cleanUpTable(t, newHighScore, coll)
 
 	// Add the query docs.
 	alist := coll.Actions()
@@ -915,17 +917,25 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	if len(got) != 2 {
 		t.Errorf("got %v, wanted two documents", got)
 	}
+
+	// Errors are returned from the iterator's Next method.
+	iter := coll.Query().Where("Game", "!=", "").Get(ctx) // != is disallowed
+	var h HighScore
+	err := iter.Next(ctx, &h)
+	if c := gcerrors.Code(err); c != gcerrors.InvalidArgument {
+		t.Errorf("got %v, want InvalidArgument", err)
+	}
 }
 
 // cleanUpTable delete all documents from this collection after test.
-func cleanUpTable(t *testing.T, coll *docstore.Collection) {
+func cleanUpTable(t *testing.T, create func() interface{}, coll *docstore.Collection) {
 	ctx := context.Background()
 	dels := coll.Actions()
 	delFunc := func(doc interface{}) error {
 		dels.Delete(doc)
 		return nil
 	}
-	err := forEach(ctx, coll.Query().Get(ctx), func() interface{} { return &HighScore{} }, delFunc)
+	err := forEach(ctx, coll.Query().Get(ctx), create, delFunc)
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
@@ -951,10 +961,12 @@ func forEach(ctx context.Context, iter *ds.DocumentIterator, create func() inter
 	return nil
 }
 
+func newDocmap() interface{} { return docmap{} }
+
 func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []docmap {
 	var ms []docmap
 	collect := func(m interface{}) error { ms = append(ms, m.(docmap)); return nil }
-	if err := forEach(ctx, iter, func() interface{} { return docmap{} }, collect); err != nil {
+	if err := forEach(ctx, iter, newDocmap, collect); err != nil {
 		t.Fatal(err)
 	}
 	return ms
@@ -963,14 +975,16 @@ func mustCollect(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) [
 func mustCollectHighScores(ctx context.Context, t *testing.T, iter *ds.DocumentIterator) []*HighScore {
 	var hs []*HighScore
 	collect := func(h interface{}) error { hs = append(hs, h.(*HighScore)); return nil }
-	if err := forEach(ctx, iter, func() interface{} { return &HighScore{} }, collect); err != nil {
+	if err := forEach(ctx, iter, newHighScore, collect); err != nil {
 		t.Fatal(err)
 	}
 	return hs
 }
 
 func testMultipleActions(t *testing.T, coll *ds.Collection) {
-	actions := coll.Actions()
+	defer cleanUpTable(t, newDocmap, coll)
+	ctx := context.Background()
+
 	docs := []docmap{
 		{KeyField: "testMultipleActions1", "s": "a"},
 		{KeyField: "testMultipleActions2", "s": "b"},
@@ -985,6 +999,8 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 		{KeyField: "testMultipleActions11", "s": "k"},
 		{KeyField: "testMultipleActions12", "s": "l"},
 	}
+
+	actions := coll.Actions()
 	// Writes
 	for i := 0; i < 6; i++ {
 		actions.Create(docs[i])
@@ -999,7 +1015,6 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 		gots[i] = docmap{KeyField: doc[KeyField]}
 		actions.Get(gots[i], docstore.FieldPath("s"))
 	}
-	ctx := context.Background()
 	if err := actions.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -1040,7 +1055,7 @@ func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
 	if err := actions.Do(ctx); err != nil {
 		t.Fatal(err)
 	}
-	defer cleanUpTable(t, coll)
+	defer cleanUpTable(t, newHighScore, coll)
 
 	// Query
 	qs := []*docstore.Query{

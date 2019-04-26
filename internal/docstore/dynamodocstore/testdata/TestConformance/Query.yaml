@@ -12,30 +12,30 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.DescribeTable
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
-    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"Game","AttributeType":"S"},{"AttributeName":"Player","AttributeType":"S"},{"AttributeName":"Score","AttributeType":"N"},{"AttributeName":"Time","AttributeType":"S"}],"CreationDateTime":1.556147916461E9,"GlobalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/global","IndexName":"global","IndexSizeBytes":893,"IndexStatus":"ACTIVE","ItemCount":8,"KeySchema":[{"AttributeName":"Player","KeyType":"HASH"},{"AttributeName":"Time","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"},"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5}}],"ItemCount":8,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Player","KeyType":"RANGE"}],"LocalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/local","IndexName":"local","IndexSizeBytes":893,"ItemCount":8,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Score","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2","TableId":"5c4c6014-7e6a-4db7-93de-a174552cf78d","TableName":"docstore-test-2","TableSizeBytes":1109,"TableStatus":"ACTIVE"}}'
+    body: '{"Table":{"AttributeDefinitions":[{"AttributeName":"Game","AttributeType":"S"},{"AttributeName":"Player","AttributeType":"S"},{"AttributeName":"Score","AttributeType":"N"},{"AttributeName":"Time","AttributeType":"S"}],"CreationDateTime":1.556147916461E9,"GlobalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/global","IndexName":"global","IndexSizeBytes":0,"IndexStatus":"ACTIVE","ItemCount":0,"KeySchema":[{"AttributeName":"Player","KeyType":"HASH"},{"AttributeName":"Time","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"},"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5}}],"ItemCount":0,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Player","KeyType":"RANGE"}],"LocalSecondaryIndexes":[{"IndexArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2/index/local","IndexName":"local","IndexSizeBytes":0,"ItemCount":0,"KeySchema":[{"AttributeName":"Game","KeyType":"HASH"},{"AttributeName":"Score","KeyType":"RANGE"}],"Projection":{"ProjectionType":"ALL"}}],"ProvisionedThroughput":{"NumberOfDecreasesToday":0,"ReadCapacityUnits":5,"WriteCapacityUnits":5},"TableArn":"arn:aws:dynamodb:us-east-2:462380225722:table/docstore-test-2","TableId":"5c4c6014-7e6a-4db7-93de-a174552cf78d","TableName":"docstore-test-2","TableSizeBytes":0,"TableStatus":"ACTIVE"}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - "1408"
+      - "1401"
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:57 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "682539300"
+      - "1345340988"
       X-Amzn-Requestid:
-      - 3D5QD6QRNV6CK836RUQ6CSMUNJVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - CVIB0SGT3KCCA585D7MR9BJCC3VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -50,9 +50,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Scan
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -67,25 +67,25 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "3413411624"
       X-Amzn-Requestid:
-      - 0851MKH2N238NN8JE3UTEAPMDRVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - I9SPIM7F9GUDT3653K5Q0BFLUFVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"ClientRequestToken":"9fe183e2-0952-4610-822e-71949bd968b1","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"},"Game":{"S":"Praise
-      All Monsters"},"Player":{"S":"pat"},"Score":{"N":"49"},"Time":{"S":"2019-03-13T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"},"Game":{"S":"Praise
-      All Monsters"},"Player":{"S":"mel"},"Score":{"N":"60"},"Time":{"S":"2019-04-10T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"},"Game":{"S":"Praise
-      All Monsters"},"Player":{"S":"andy"},"Score":{"N":"81"},"Time":{"S":"2019-02-01T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"34f641d4-6c46-4a30-bb11-aabd9104bf76"},"Game":{"S":"Praise
-      All Monsters"},"Player":{"S":"fran"},"Score":{"N":"33"},"Time":{"S":"2019-03-19T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"},"Game":{"S":"Zombie
-      DMV"},"Player":{"S":"pat"},"Score":{"N":"120"},"Time":{"S":"2019-04-01T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"},"Game":{"S":"Zombie
-      DMV"},"Player":{"S":"billie"},"Score":{"N":"111"},"Time":{"S":"2019-04-10T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"},"Game":{"S":"Zombie
-      DMV"},"Player":{"S":"mel"},"Score":{"N":"190"},"Time":{"S":"2019-04-18T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"15cb7b89-5462-45be-b820-b20d11362050"},"Game":{"S":"Zombie
+    body: '{"ClientRequestToken":"a68406e8-7707-4ff0-8834-e197a4034aa4","TransactItems":[{"Put":{"Item":{"DocstoreRevision":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"},"Game":{"S":"Praise
+      All Monsters"},"Player":{"S":"pat"},"Score":{"N":"49"},"Time":{"S":"2019-03-13T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"},"Game":{"S":"Praise
+      All Monsters"},"Player":{"S":"mel"},"Score":{"N":"60"},"Time":{"S":"2019-04-10T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"},"Game":{"S":"Praise
+      All Monsters"},"Player":{"S":"andy"},"Score":{"N":"81"},"Time":{"S":"2019-02-01T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"5d8857b7-99ac-418e-8aff-abe3037ffe7f"},"Game":{"S":"Praise
+      All Monsters"},"Player":{"S":"fran"},"Score":{"N":"33"},"Time":{"S":"2019-03-19T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"},"Game":{"S":"Zombie
+      DMV"},"Player":{"S":"pat"},"Score":{"N":"120"},"Time":{"S":"2019-04-01T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"},"Game":{"S":"Zombie
+      DMV"},"Player":{"S":"billie"},"Score":{"N":"111"},"Time":{"S":"2019-04-10T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"},"Game":{"S":"Zombie
+      DMV"},"Player":{"S":"mel"},"Score":{"N":"190"},"Time":{"S":"2019-04-18T00:00:00Z"}},"TableName":"docstore-test-2"}},{"Put":{"Item":{"DocstoreRevision":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"},"Game":{"S":"Zombie
       DMV"},"Player":{"S":"fran"},"Score":{"N":"33"},"Time":{"S":"2019-03-20T00:00:00Z"}},"TableName":"docstore-test-2"}}]}'
     form: {}
     headers:
@@ -96,9 +96,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactWriteItems
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -113,13 +113,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "2745614147"
       X-Amzn-Requestid:
-      - 4HI8LL2AR427LMNTK0N0N2QQD3VV4KQNSO5AEMVJF66Q9ASUAAJG
+      - PR2HTDPTE0C5MB5T00M4IJUQKJVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -134,23 +134,23 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Scan
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":8,"Items":[{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"billie"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"15cb7b89-5462-45be-b820-b20d11362050"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"34f641d4-6c46-4a30-bb11-aabd9104bf76"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"}}],"ScannedCount":8}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"5d8857b7-99ac-418e-8aff-abe3037ffe7f"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"}}],"ScannedCount":8}'
     headers:
       Connection:
       - keep-alive
@@ -159,13 +159,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "2781236023"
+      - "139004090"
       X-Amzn-Requestid:
-      - TM0KB8A08VVQAPTKV7F9VK60IJVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - 5KUFQP5HQQO9MA3IT0KOBM6UKVVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -181,19 +181,19 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":4,"Items":[{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"billie"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"15cb7b89-5462-45be-b820-b20d11362050"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}}],"ScannedCount":4}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}}],"ScannedCount":4}'
     headers:
       Connection:
       - keep-alive
@@ -202,13 +202,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "1572118757"
+      - "838709138"
       X-Amzn-Requestid:
-      - G45HQ5ELPVFJ7A4HLPPCAARIUVVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - 2RVKU4P4JDOVM9H5P3EF285Q2FVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -224,18 +224,18 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Scan
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":3,"Items":[{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"billie"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}}],"ScannedCount":8}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}}],"ScannedCount":8}'
     headers:
       Connection:
       - keep-alive
@@ -244,13 +244,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "875167809"
+      - "3563990186"
       X-Amzn-Requestid:
-      - 9I51RC5VNMI3N4FGTMFCKSHSU3VV4KQNSO5AEMVJF66Q9ASUAAJG
+      - 4APSVFBBUJ60D1343P8MLHBPQVVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -266,16 +266,16 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":1,"Items":[{"Player":{"S":"billie"},"Time":{"S":"2019-04-10T00:00:00Z"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}}],"ScannedCount":1}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}}],"ScannedCount":1}'
     headers:
       Connection:
       - keep-alive
@@ -284,13 +284,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "579280409"
+      - "3860305162"
       X-Amzn-Requestid:
-      - KFQTDASIHN4JNMCMIG61LHSVUNVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - ECR5P32L7EBA88GS56D46HG3RVVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -306,16 +306,16 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":1,"Items":[{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}}],"ScannedCount":1}'
+      All Monsters"},"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}}],"ScannedCount":1}'
     headers:
       Connection:
       - keep-alive
@@ -324,13 +324,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "1646793550"
+      - "2713656748"
       X-Amzn-Requestid:
-      - 1KLF7GQ9DV6GNRKV4QUHS6HB77VV4KQNSO5AEMVJF66Q9ASUAAJG
+      - QIT65HL38NVDO5ILT6NH6C694NVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -346,16 +346,16 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":1,"Items":[{"Player":{"S":"pat"},"Time":{"S":"2019-03-13T00:00:00Z"},"Score":{"N":"49"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"}}],"ScannedCount":2}'
+      All Monsters"},"DocstoreRevision":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"}}],"ScannedCount":2}'
     headers:
       Connection:
       - keep-alive
@@ -364,13 +364,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:00 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "4196453675"
+      - "3998009614"
       X-Amzn-Requestid:
-      - RMAMQBEUK84RMIOODTI42P6QHNVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - LN0J12D61KBR21878JE3BRH02JVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -387,17 +387,17 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185900Z
       X-Amz-Target:
       - DynamoDB_20120810.Query
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":2,"Items":[{"Player":{"S":"mel"},"Time":{"S":"2019-04-10T00:00:00Z"},"Game":{"S":"Praise
-      All Monsters"},"Score":{"N":"60"},"DocstoreRevision":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"}},{"Player":{"S":"andy"},"Time":{"S":"2019-02-01T00:00:00Z"},"Game":{"S":"Praise
-      All Monsters"},"Score":{"N":"81"},"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}}],"ScannedCount":2}'
+      All Monsters"},"Score":{"N":"60"},"DocstoreRevision":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"}},{"Player":{"S":"andy"},"Time":{"S":"2019-02-01T00:00:00Z"},"Game":{"S":"Praise
+      All Monsters"},"Score":{"N":"81"},"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}}],"ScannedCount":2}'
     headers:
       Connection:
       - keep-alive
@@ -406,13 +406,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:01 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "3082115543"
+      - "2186620559"
       X-Amzn-Requestid:
-      - HMRO5PH79HFNUSPLED223P9CG3VV4KQNSO5AEMVJF66Q9ASUAAJG
+      - IFN5T3V0ISQFJCNIRCQ6261IJFVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -427,23 +427,23 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004958Z
+      - 20190426T185901Z
       X-Amz-Target:
       - DynamoDB_20120810.Scan
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":8,"Items":[{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"billie"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"15cb7b89-5462-45be-b820-b20d11362050"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"34f641d4-6c46-4a30-bb11-aabd9104bf76"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"}}],"ScannedCount":8}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"5d8857b7-99ac-418e-8aff-abe3037ffe7f"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"}}],"ScannedCount":8}'
     headers:
       Connection:
       - keep-alive
@@ -452,13 +452,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:01 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "2781236023"
+      - "139004090"
       X-Amzn-Requestid:
-      - LMC01E5KM2OB71E6FAEJJN6G2NVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - CBP41FQII0Q17M8401E8780EBRVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
@@ -473,23 +473,23 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004959Z
+      - 20190426T185901Z
       X-Amz-Target:
       - DynamoDB_20120810.Scan
     url: https://dynamodb.us-east-2.amazonaws.com/
     method: POST
   response:
     body: '{"Count":8,"Items":[{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"billie"},"Score":{"N":"111"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"15cb7b89-5462-45be-b820-b20d11362050"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
-      DMV"},"DocstoreRevision":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"34f641d4-6c46-4a30-bb11-aabd9104bf76"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
-      All Monsters"},"DocstoreRevision":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"}}],"ScannedCount":8}'
+      DMV"},"DocstoreRevision":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},{"Time":{"S":"2019-03-20T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"}},{"Time":{"S":"2019-04-18T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"190"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},{"Time":{"S":"2019-04-01T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"120"},"Game":{"S":"Zombie
+      DMV"},"DocstoreRevision":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}},{"Time":{"S":"2019-02-01T00:00:00Z"},"Player":{"S":"andy"},"Score":{"N":"81"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}},{"Time":{"S":"2019-03-19T00:00:00Z"},"Player":{"S":"fran"},"Score":{"N":"33"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"5d8857b7-99ac-418e-8aff-abe3037ffe7f"}},{"Time":{"S":"2019-04-10T00:00:00Z"},"Player":{"S":"mel"},"Score":{"N":"60"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"}},{"Time":{"S":"2019-03-13T00:00:00Z"},"Player":{"S":"pat"},"Score":{"N":"49"},"Game":{"S":"Praise
+      All Monsters"},"DocstoreRevision":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"}}],"ScannedCount":8}'
     headers:
       Connection:
       - keep-alive
@@ -498,33 +498,33 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:01 GMT
       Server:
       - Server
       X-Amz-Crc32:
-      - "2781236023"
+      - "139004090"
       X-Amzn-Requestid:
-      - 8GOD6US5O2VTASKOEMT97G6C1VVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - BCHFH7R315IBS806N7BG0V6B73VV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""
 - request:
-    body: '{"ClientRequestToken":"9a5732cf-67a6-4072-8f37-4e651c3300d7","TransactItems":[{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"8e4375dd-5c61-419e-84b0-dd9cd6dbd50f"}},"Key":{"Game":{"S":"Zombie
+    body: '{"ClientRequestToken":"8afa3f85-b8a6-4708-8aeb-bac880b5b89b","TransactItems":[{"Delete":{"ConditionExpression":"#0
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"9cdcc595-bcce-4c7b-93d8-df93fab7e125"}},"Key":{"Game":{"S":"Zombie
       DMV"},"Player":{"S":"billie"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"15cb7b89-5462-45be-b820-b20d11362050"}},"Key":{"Game":{"S":"Zombie
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"2f0fea19-31a2-4022-8777-a93143dfdcbf"}},"Key":{"Game":{"S":"Zombie
       DMV"},"Player":{"S":"fran"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"55587c5f-40d9-4f5b-959a-a28c66b1c3e8"}},"Key":{"Game":{"S":"Zombie
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"ddebafe6-5a31-4d5d-81e2-d2ce9c2b1789"}},"Key":{"Game":{"S":"Zombie
       DMV"},"Player":{"S":"mel"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"121fffe6-864f-4efa-90e3-ec87b1ba147d"}},"Key":{"Game":{"S":"Zombie
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"a68aa8af-5e39-4c41-ae73-4d373c5ebebc"}},"Key":{"Game":{"S":"Zombie
       DMV"},"Player":{"S":"pat"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"eb8f43fa-9e28-49e1-8c8d-387b18bb542b"}},"Key":{"Game":{"S":"Praise
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"8fddeb21-91d9-45c0-8767-af847afd0edb"}},"Key":{"Game":{"S":"Praise
       All Monsters"},"Player":{"S":"andy"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"34f641d4-6c46-4a30-bb11-aabd9104bf76"}},"Key":{"Game":{"S":"Praise
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"5d8857b7-99ac-418e-8aff-abe3037ffe7f"}},"Key":{"Game":{"S":"Praise
       All Monsters"},"Player":{"S":"fran"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"d6708c45-a5f1-44d7-ae92-9e0919504ba2"}},"Key":{"Game":{"S":"Praise
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"27b03072-e641-4a76-9f03-abaa40abc944"}},"Key":{"Game":{"S":"Praise
       All Monsters"},"Player":{"S":"mel"}},"TableName":"docstore-test-2"}},{"Delete":{"ConditionExpression":"#0
-      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"269e2f5d-8af5-4c51-955b-7d1828f68d88"}},"Key":{"Game":{"S":"Praise
+      = :0","ExpressionAttributeNames":{"#0":"DocstoreRevision"},"ExpressionAttributeValues":{":0":{"S":"c37f4192-779e-41d9-ab3b-1c5424fce0b7"}},"Key":{"Game":{"S":"Praise
       All Monsters"},"Player":{"S":"pat"}},"TableName":"docstore-test-2"}}]}'
     form: {}
     headers:
@@ -535,9 +535,9 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       User-Agent:
-      - aws-sdk-go/1.19.16 (go1.12.4; darwin; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Date:
-      - 20190426T004959Z
+      - 20190426T185901Z
       X-Amz-Target:
       - DynamoDB_20120810.TransactWriteItems
     url: https://dynamodb.us-east-2.amazonaws.com/
@@ -552,13 +552,13 @@ interactions:
       Content-Type:
       - application/x-amz-json-1.0
       Date:
-      - Fri, 26 Apr 2019 00:49:58 GMT
+      - Fri, 26 Apr 2019 18:59:01 GMT
       Server:
       - Server
       X-Amz-Crc32:
       - "2745614147"
       X-Amzn-Requestid:
-      - SDLHUT6P77R211KGHEPRB2QQRFVV4KQNSO5AEMVJF66Q9ASUAAJG
+      - A3L5PTNP15FTHMA8AR6LFC77UBVV4KQNSO5AEMVJF66Q9ASUAAJG
     status: 200 OK
     code: 200
     duration: ""

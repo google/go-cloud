@@ -24,53 +24,67 @@ import (
 )
 
 func ExampleOpenTopic() {
-	// Connect to RabbitMQ.
-	conn, err := amqp.Dial("your-rabbit-url")
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#rabbitmq-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
-
-	// Construct a *pubsub.Topic.
-	ctx := context.Background()
-	t := rabbitpubsub.OpenTopic(conn, "exchange-name", nil)
-	defer t.Shutdown(ctx)
-
-	// Now we can use t to send messages.
-	err = t.Send(ctx, &pubsub.Message{Body: []byte("hello")})
+	defer rabbitConn.Close()
+	topic := rabbitpubsub.OpenTopic(rabbitConn, "myexchange", nil)
+	defer topic.Shutdown(ctx)
 }
 
 func ExampleOpenSubscription() {
-	// Connect to RabbitMQ.
-	conn, err := amqp.Dial("your-rabbit-url")
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#rabbitmq-ctor
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	rabbitConn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
-
-	// Construct a *pubsub.Subscription..
-	ctx := context.Background()
-	s := rabbitpubsub.OpenSubscription(conn, "queue-name", nil)
-	defer s.Shutdown(ctx)
-
-	// Now we can use s to receive messages.
-	msg, err := s.Receive(ctx)
-	if err != nil {
-		log.Fatalf("opening subscription: %v", err)
-	}
-	msg.Ack()
+	defer rabbitConn.Close()
+	subscription := rabbitpubsub.OpenSubscription(rabbitConn, "myqueue", nil)
+	defer subscription.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#rabbitmq
+
+	// import _ "gocloud.dev/pubsub/rabbitpubsub"
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
 	// OpenTopic creates a *pubsub.Topic from a URL.
 	// This URL will Dial the RabbitMQ server at the URL in the environment
 	// variable RABBIT_SERVER_URL and open the exchange "myexchange".
-	t, err := pubsub.OpenTopic(ctx, "rabbit://myexchange")
+	topic, err := pubsub.OpenTopic(ctx, "rabbit://myexchange")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+}
 
-	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will use the same connection and open the queue "myqueue".
-	s, err := pubsub.OpenSubscription(ctx, "rabbit://myqueue")
-	_, _, _ = t, s, err
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#rabbitmq
+
+	// import _ "gocloud.dev/pubsub/rabbitpubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// OpenSubscription creates a *pubsub.Subscription from a URL.
+	// This URL will Dial the RabbitMQ server at the URL in the environment
+	// variable RABBIT_SERVER_URL and open the queue "myqueue".
+	subscription, err := pubsub.OpenSubscription(ctx, "rabbit://myqueue")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
 }

@@ -16,7 +16,6 @@ package mempubsub_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -24,43 +23,65 @@ import (
 	"gocloud.dev/pubsub/mempubsub"
 )
 
-func Example() {
-	// Construct a *pubsub.Topic.
+func ExampleNewSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#mem-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	t := mempubsub.NewTopic()
-	defer t.Shutdown(ctx)
+
+	// Construct a *pubsub.Topic.
+	topic := mempubsub.NewTopic()
+	defer topic.Shutdown(ctx)
 
 	// Construct a *pubsub.Subscription for the topic.
-	s := mempubsub.NewSubscription(t, 1*time.Minute /* ack deadline */)
-	defer s.Shutdown(ctx)
-
-	// Now we can use t to send messages and s will receive them.
-	err := t.Send(ctx, &pubsub.Message{Body: []byte("Hello World")})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	msg, err := s.Receive(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(msg.Body))
-	msg.Ack()
-
-	// Output:
-	// Hello World
+	subscription := mempubsub.NewSubscription(topic, 1*time.Minute /* ack deadline */)
+	defer subscription.Shutdown(ctx)
 }
 
-func Example_openFromURL() {
+func ExampleNewTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#mem-ctor
+
+	// Variables set up elsewhere:
 	ctx := context.Background()
 
-	// OpenTopic creates a *pubsub.Topic from a URL.
-	// This URL will open the topic "mytopic".
-	t, err := pubsub.OpenTopic(ctx, "mem://mytopic")
+	topic := mempubsub.NewTopic()
+	defer topic.Shutdown(ctx)
+}
 
-	// Similarly, OpenSubscription creates a *pubsub.Subscription from a URL.
-	// This URL will open a subscription to the topic "mytopic", which must
-	// have been previously opened using OpenTopic.
-	s, err := pubsub.OpenSubscription(ctx, "mem://mytopic")
-	_, _, _ = t, s, err
+func Example_openSubscription() {
+	// This example is used in https://gocloud.dev/howto/pubsub/subscribe/#mem
+
+	// import _ "gocloud.dev/pubsub/mempubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	// Create a topic.
+	topic, err := pubsub.OpenTopic(ctx, "mem://topicA")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
+
+	// Create a subscription connected to that topic.
+	subscription, err := pubsub.OpenSubscription(ctx, "mem://topicA")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer subscription.Shutdown(ctx)
+}
+
+func Example_openTopic() {
+	// This example is used in https://gocloud.dev/howto/pubsub/publish/#mem
+
+	// import _ "gocloud.dev/pubsub/mempubsub"
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+
+	topic, err := pubsub.OpenTopic(ctx, "mem://topicA")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer topic.Shutdown(ctx)
 }
