@@ -1863,11 +1863,9 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 	for k := 0; k < numKeys; k++ {
 		wg.Add(1)
 		go func(key int) {
-			fmt.Println("Starting write for key", key)
 			if err := b.WriteAll(ctx, blobName(key), keyData[key], nil); err != nil {
 				t.Fatal(err)
 			}
-			fmt.Println("Write done for key", key)
 			wg.Done()
 		}(k)
 	}
@@ -1879,9 +1877,7 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 		// TODO: should be a "go func..." here, removed it for now to see how it
 		// works w/o concurrency in reading
 		func(key int) {
-			fmt.Println("Starting read for key", key)
 			buf, err := b.ReadAll(ctx, blobName(key))
-			fmt.Println("Finished ReadAll for key", key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1894,7 +1890,6 @@ func testConcurrentWriteAndRead(t *testing.T, newHarness HarnessMaker) {
 					break
 				}
 			}
-			fmt.Println("Read done for key", key)
 			wg.Done()
 		}(k)
 	}
