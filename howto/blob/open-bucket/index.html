@@ -52,49 +52,57 @@ both forms for each storage provider.</p>
 You can specify the <code>region</code> query parameter to ensure your application connects
 to the correct region, but otherwise <code>blob.OpenBucket</code> will use the region found
 in the environment variables or your AWS CLI configuration.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/blob&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&#34;</span><span class="p">)</span>
+<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;s3://my-bucket?region=us-west-1&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/s3blob#URLOpener"><code>s3blob.URLOpener</code></a>.</p>
 
-<h3 id="s3-constructor">S3 Constructor</h3>
+<h3 id="s3-ctor">S3 Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/s3blob"><code>s3blob.OpenBucket</code></a> constructor opens an <a href="https://aws.amazon.com/s3/">S3</a> bucket. You must first
 create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your bucket:</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
-    <span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
-    <span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/blob/s3blob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 </span><span class="c1">// The region must match the region for &#34;my-bucket&#34;.
 </span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-    <span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-west-1&#34;</span><span class="p">),</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-west-1&#34;</span><span class="p">),</span>
 <span class="p">})</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Create a *blob.Bucket.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">s3blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h3 id="s3-compatible-storage-servers">S3-compatible storage servers</h3>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="s3-compatible">S3-compatible storage servers</h3>
 
 <p>The Go CDK can also interact with <a href="https://en.wikipedia.org/wiki/Amazon_S3#S3_API_and_competing_services">S3-compatible storage servers</a> that
 recognize the same REST HTTP endpoints as S3, like <a href="https://www.minio.io/">Minio</a>, <a href="https://ceph.com/">Ceph</a>, or
@@ -108,126 +116,144 @@ parameters like so:</p>
     <span class="s">&#34;s3ForcePathStyle=true&#34;</span><span class="p">)</span></code></pre></div>
 <p>See <a href="https://godoc.org/gocloud.dev/aws#ConfigFromURLParams"><code>aws.ConfigFromURLParams</code></a> for more details on supported URL options for S3.</p>
 
-<h2 id="google-cloud-storage">Google Cloud Storage</h2>
+<h2 id="gcs">Google Cloud Storage</h2>
 
 <p><a href="https://cloud.google.com/storage/">Google Cloud Storage</a> (GCS) URLs in the Go CDK closely resemble the URLs
 you would see in the <code>gsutil</code> CLI. <code>blob.OpenBucket</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application
 Default Credentials</a>.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/blob&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gs://my-bucket&#34;</span><span class="p">)</span>
+<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1">// This URL will open the bucket &#34;my-bucket&#34; using default credentials.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;gs://my-bucket&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/gcsblob#URLOpener"><code>gcsblob.URLOpener</code></a>.</p>
 
-<h3 id="google-cloud-storage-constructor">Google Cloud Storage Constructor</h3>
+<h3 id="gcs-ctor">Google Cloud Storage Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/gcsblob#OpenBucket"><code>gcsblob.OpenBucket</code></a> constructor opens a GCS bucket. You must first
 create a <code>*net/http.Client</code> that sends requests authorized by <a href="https://cloud.google.com/docs/authentication/production">Google Cloud
 Platform credentials</a>. (You can reuse the same client for any
 other API that takes in a <code>*gcp.HTTPClient</code>.) You can find functions in the
 <a href="https://godoc.org/gocloud.dev/gcp"><code>gocloud.dev/gcp</code></a> package to set this up for you.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
-    <span class="s">&#34;gocloud.dev/gcp&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/gcsblob&#34;</span>
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// Your GCP credentials.
 </span><span class="c1">// See https://cloud.google.com/docs/authentication/production
 </span><span class="c1">// for more info on alternatives.
 </span><span class="c1"></span><span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Create an HTTP client.
-</span><span class="c1">// This example uses the default HTTP transport and the credentials created
-</span><span class="c1">// above.
+</span><span class="c1">// This example uses the default HTTP transport and the credentials
+</span><span class="c1">// created above.
 </span><span class="c1"></span><span class="nx">client</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">NewHTTPClient</span><span class="p">(</span>
-    <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultTransport</span><span class="p">(),</span>
-    <span class="nx">gcp</span><span class="p">.</span><span class="nf">CredentialsTokenSource</span><span class="p">(</span><span class="nx">creds</span><span class="p">))</span>
+	<span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultTransport</span><span class="p">(),</span>
+	<span class="nx">gcp</span><span class="p">.</span><span class="nf">CredentialsTokenSource</span><span class="p">(</span><span class="nx">creds</span><span class="p">))</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Create a *blob.Bucket.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcsblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">client</span><span class="p">,</span> <span class="s">&#34;my-bucket&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h2 id="azure-storage">Azure Storage</h2>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="azure">Azure Storage</h2>
 
 <p>Azure Storage URLs in the Go CDK allow you to identify <a href="https://azure.microsoft.com/en-us/services/storage/">Azure Storage</a> containers
 when opening a bucket with <code>blob.OpenBucket</code>. Go CDK uses the environment
 variables <code>AZURE_STORAGE_ACCOUNT</code>, <code>AZURE_STORAGE_KEY</code>, and
 <code>AZURE_STORAGE_SAS_TOKEN</code> to configure the credentials. <code>AZURE_STORAGE_ACCOUNT</code>
 is required, along with one of the other two.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/blob&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azblob://my-container&#34;</span><span class="p">)</span>
+<span class="c1">// OpenBucket creates a *blob.Bucket from a URL.
+</span><span class="c1">// This URL will open the container &#34;my-container&#34; using default
+</span><span class="c1">// credentials found in the environment variables
+</span><span class="c1">// AZURE_STORAGE_ACCOUNT plus at least one of AZURE_STORAGE_KEY
+</span><span class="c1">// and AZURE_STORAGE_SAS_TOKEN.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">blob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;azblob://my-container&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
 <p>Full details about acceptable URLs can be found under the API reference for
 <a href="https://godoc.org/gocloud.dev/blob/azureblob#URLOpener"><code>azureblob.URLOpener</code></a>.</p>
 
-<h3 id="azure-storage-constructor">Azure Storage Constructor</h3>
+<h3 id="azure-ctor">Azure Storage Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/blob/azureblob#OpenBucket"><code>azureblob.OpenBucket</code></a> constructor opens an Azure Storage container.
 <code>azureblob</code> operates on <a href="https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs">Azure Storage Block Blobs</a>. You must first create
 Azure Storage credentials and then create an Azure Storage pipeline before
 you can open a container.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;github.com/Azure/azure-storage-blob-go/azblob&#34;</span>
-    <span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/Azure/azure-storage-blob-go/azblob&#34;</span>
+	<span class="s">&#34;gocloud.dev/blob/azureblob&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="kd">const</span> <span class="p">(</span>
-    <span class="c1">// Fill in with your Azure Storage Acount and Access Key.
-</span><span class="c1"></span>    <span class="nx">accountName</span> <span class="p">=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">AccountName</span><span class="p">(</span><span class="s">&#34;my-account&#34;</span><span class="p">)</span>
-    <span class="nx">accountKey</span>  <span class="p">=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">AccountKey</span><span class="p">(</span><span class="s">&#34;my-account-key&#34;</span><span class="p">)</span>
-    <span class="c1">// Fill in with the storage container to access.
-</span><span class="c1"></span>    <span class="nx">containerName</span> <span class="p">=</span> <span class="s">&#34;mycontainer&#34;</span>
+	<span class="c1">// Fill in with your Azure Storage Account and Access Key.
+</span><span class="c1"></span>	<span class="nx">accountName</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountName</span> <span class="p">=</span> <span class="s">&#34;my-account&#34;</span>
+	<span class="nx">accountKey</span>  <span class="nx">azureblob</span><span class="p">.</span><span class="nx">AccountKey</span>  <span class="p">=</span> <span class="s">&#34;my-account-key&#34;</span>
+	<span class="c1">// Fill in with the storage container to access.
+</span><span class="c1"></span>	<span class="nx">containerName</span> <span class="p">=</span> <span class="s">&#34;my-container&#34;</span>
 <span class="p">)</span>
 
 <span class="c1">// Create a credentials object.
 </span><span class="c1"></span><span class="nx">credential</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewCredential</span><span class="p">(</span><span class="nx">accountName</span><span class="p">,</span> <span class="nx">accountKey</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Create a Pipeline, using whatever PipelineOptions you need.
 </span><span class="c1"></span><span class="nx">pipeline</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">NewPipeline</span><span class="p">(</span><span class="nx">credential</span><span class="p">,</span> <span class="nx">azblob</span><span class="p">.</span><span class="nx">PipelineOptions</span><span class="p">{})</span>
 
 <span class="c1">// Create a *blob.Bucket.
-</span><span class="c1">// The credential option is required if you&#39;re going to use blob.SignedURL.
-</span><span class="c1"></span><span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
-<span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pipeline</span><span class="p">,</span> <span class="nx">accountName</span><span class="p">,</span> <span class="nx">containerName</span><span class="p">,</span>
-    <span class="o">&amp;</span><span class="nx">azureblob</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span><span class="nx">Credential</span><span class="p">:</span> <span class="nx">credential</span><span class="p">})</span>
+</span><span class="c1">// The credential Option is required if you&#39;re going to use blob.SignedURL.
+</span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azureblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">pipeline</span><span class="p">,</span> <span class="nx">accountName</span><span class="p">,</span> <span class="nx">containerName</span><span class="p">,</span>
+	<span class="o">&amp;</span><span class="nx">azureblob</span><span class="p">.</span><span class="nx">Options</span><span class="p">{</span><span class="nx">Credential</span><span class="p">:</span> <span class="nx">credential</span><span class="p">})</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h2 id="local-storage">Local Storage</h2>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
+<h2 id="local">Local Storage</h2>
 
 <p>The Go CDK provides blob drivers for storing data in memory and on the local
 filesystem. These are primarily intended for testing and local development,
@@ -257,32 +283,58 @@ separator, so on Windows, <code>C:\foo\bar</code> would be written as
     <span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">bucket2</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h3 id="local-storage-constructors">Local Storage Constructors</h3>
+<h3 id="local-ctor">Local Storage Constructors</h3>
 
 <p>You can create an in-memory bucket with <a href="https://godoc.org/gocloud.dev/blob/memblob#OpenBucket"><code>memblob.OpenBucket</code></a>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob/memblob&#34;</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">bucket</span> <span class="o">:=</span> <span class="nx">memblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;fmt&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/memblob&#34;</span>
+<span class="p">)</span>
+
+<span class="c1">// Create an in-memory bucket.
+</span><span class="c1"></span><span class="nx">bucket</span> <span class="o">:=</span> <span class="nx">memblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+
+<span class="c1">// Now we can use bucket to read or write files to the bucket.
+</span><span class="c1"></span><span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">WriteAll</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;my-key&#34;</span><span class="p">,</span> <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&#34;hello world&#34;</span><span class="p">),</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">data</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">ReadAll</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;my-key&#34;</span><span class="p">)</span>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+<span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="nx">data</span><span class="p">))</span>
+
+<span class="c1">// Output:
+</span><span class="c1">// hello world
+</span></code></pre></div>
+
 <p>You can use a local filesystem directory with <a href="https://godoc.org/gocloud.dev/blob/fileblob#OpenBucket"><code>fileblob.OpenBucket</code></a>:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="s">&#34;gocloud.dev/blob/fileblob&#34;</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;os&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/blob/fileblob&#34;</span>
+<span class="p">)</span>
+
 <span class="c1">// The directory you pass to fileblob.OpenBucket must exist first.
 </span><span class="c1"></span><span class="kd">const</span> <span class="nx">myDir</span> <span class="p">=</span> <span class="s">&#34;path/to/local/directory&#34;</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">MkdirAll</span><span class="p">(</span><span class="nx">myDir</span><span class="p">,</span> <span class="mo">0777</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
-<span class="c1">// Open the directory bucket.
+<span class="c1">// Create a file-based bucket.
 </span><span class="c1"></span><span class="nx">bucket</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">fileblob</span><span class="p">.</span><span class="nf">OpenBucket</span><span class="p">(</span><span class="nx">myDir</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+</code></pre></div>
+
 <h2 id="what-s-next">What&rsquo;s Next</h2>
 
 <p>Now that you have opened a bucket, you can <a href="https://gocloud.dev/howto/blob/data/">store data in and access data

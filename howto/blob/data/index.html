@@ -34,7 +34,7 @@ if (!doNotTrack) {
 <p>Once you have <a href="https://gocloud.dev/howto/blob/open-bucket/">opened a bucket</a> for the storage provider you want, you can
 store and access data from it using the standard Go I/O patterns.</p>
 
-<h2 id="writing-data-to-a-bucket">Writing data to a bucket</h2>
+<h2 id="writing">Writing data to a bucket</h2>
 
 <p>To write data to a bucket, you create a writer, write data to it, and then
 close the writer. Closing the writer commits the write to the provider,
@@ -43,53 +43,62 @@ must always check the error of <code>Close</code>.</p>
 
 <p>The writer implements <a href="https://golang.org/pkg/io/#Writer"><code>io.Writer</code></a>, so you can use any functions that take
 an <code>io.Writer</code> like <code>io.Copy</code> or <code>fmt.Fprintln</code>.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
 </span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">w</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="nx">_</span><span class="p">,</span> <span class="nx">writeErr</span> <span class="o">:=</span> <span class="nx">fmt</span><span class="p">.</span><span class="nf">Fprintln</span><span class="p">(</span><span class="nx">w</span><span class="p">,</span> <span class="s">&#34;Hello, World!&#34;</span><span class="p">)</span>
 <span class="c1">// Always check the return value of Close when writing.
 </span><span class="c1"></span><span class="nx">closeErr</span> <span class="o">:=</span> <span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 <span class="k">if</span> <span class="nx">writeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">writeErr</span>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">writeErr</span><span class="p">)</span>
 <span class="p">}</span>
 <span class="k">if</span> <span class="nx">closeErr</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">closeErr</span>
-<span class="p">}</span></code></pre></div>
+	<span class="nx">log</span><span class="p">.</span><span class="nf">Fatal</span><span class="p">(</span><span class="nx">closeErr</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <p>In some cases, you may want to cancel an in-progress write to avoid the blob
 being created or overwritten. A typical reason for wanting to cancel a write
 is encountering an error in the stream your program is copying from. To abort
 a write, you cancel the <code>Context</code> you pass to the writer. Again, you must
 always <code>Close</code> the writer to release the resources, but in this case you can
 ignore the error because the write&rsquo;s failure is expected.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Create a cancelable context from the existing context.
 </span><span class="c1"></span><span class="nx">writeCtx</span><span class="p">,</span> <span class="nx">cancelWrite</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">WithCancel</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="k">defer</span> <span class="nf">cancelWrite</span><span class="p">()</span>
 
 <span class="c1">// Open the key &#34;foo.txt&#34; for writing with the default options.
-</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">w</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewWriter</span><span class="p">(</span><span class="nx">writeCtx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Assume some writes happened and we encountered an error.
 </span><span class="c1">// Now we want to abort the write.
 </span><span class="c1"></span>
-<span class="c1">// First cancel the context.
-</span><span class="c1"></span><span class="nf">cancelWrite</span><span class="p">()</span>
-<span class="c1">// You must still close the writer to avoid leaking resources.
-</span><span class="c1"></span><span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span></code></pre></div>
-<h2 id="reading-data-from-a-bucket">Reading data from a bucket</h2>
+<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+	<span class="c1">// First cancel the context.
+</span><span class="c1"></span>	<span class="nf">cancelWrite</span><span class="p">()</span>
+	<span class="c1">// You must still close the writer to avoid leaking resources.
+</span><span class="c1"></span>	<span class="nx">w</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="reading">Reading data from a bucket</h2>
 
 <p>Once you have written data to a bucket, you can read it back by creating a
 reader. The reader implements <a href="https://golang.org/pkg/io/#Reader"><code>io.Reader</code></a>, so you can use any functions
 that take an <code>io.Reader</code> like <code>io.Copy</code> or <code>io/ioutil.ReadAll</code>. You must
 always close a reader after using it to avoid leaking resources.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading with the default options.
 </span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 <span class="c1">// Readers also have a limited view of the blob&#39;s metadata.
@@ -97,26 +106,34 @@ always close a reader after using it to avoid leaking resources.</p>
 <span class="nx">fmt</span><span class="p">.</span><span class="nf">Println</span><span class="p">()</span>
 <span class="c1">// Copy from the reader to stdout.
 </span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span></code></pre></div>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <p>Many storage providers provide efficient random-access to data in buckets. To
 start reading from an arbitrary offset in the blob, use <code>NewRangeReader</code>.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Open the key &#34;foo.txt&#34; for reading at offset 1024 and read up to 4096 bytes.
 </span><span class="c1"></span><span class="nx">r</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">NewRangeReader</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">,</span> <span class="mi">1024</span><span class="p">,</span> <span class="mi">4096</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">r</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 <span class="c1">// Copy from the read range to stdout.
 </span><span class="c1"></span><span class="k">if</span> <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">io</span><span class="p">.</span><span class="nf">Copy</span><span class="p">(</span><span class="nx">os</span><span class="p">.</span><span class="nx">Stdout</span><span class="p">,</span> <span class="nx">r</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span></code></pre></div>
-<h2 id="deleting-blobs">Deleting blobs</h2>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<h2 id="deleting">Deleting blobs</h2>
 
 <p>You can delete blobs using the <code>Bucket.Delete</code> method.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="k">if</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">bucket</span><span class="p">.</span><span class="nf">Delete</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;foo.txt&#34;</span><span class="p">);</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span></code></pre></div>
+	<span class="k">return</span> <span class="nx">err</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <h2 id="wrapping-up">Wrapping up</h2>
 
 <p>These are the most common operations you will need to use with a bucket.
