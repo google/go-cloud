@@ -1,6 +1,9 @@
 language: go
 go_import_path: gocloud.dev
 
+services:
+  - docker
+
 before_install:
   - "df -k"
   # The Bash that comes with OS X is ancient.
@@ -19,6 +22,7 @@ install:
   - "git checkout -- ."
 
 script:
+  - 'internal/testing/all_local.sh'
   - 'internal/testing/runchecks.sh'
 
 env:
