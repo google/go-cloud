@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -32,117 +31,107 @@ import (
 )
 
 func ExampleBucket_NewReader() {
-	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
-	dir, cleanup := newTempDir()
-	defer cleanup()
-	// Write a file to read using the bucket.
-	err := ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte("Hello, World!\n"), 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bucket.Close()
+	// This example is used in https://gocloud.dev/howto/blob/data/#reading
 
-	// Open a reader using the blob's key.
+	// Variables set up elsewhere:
 	ctx := context.Background()
+	var bucket *blob.Bucket
+
+	// Open the key "foo.txt" for reading with the default options.
 	r, err := bucket.NewReader(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer r.Close()
-	// The blob reader implements io.Reader, so we can use any function that
-	// accepts an io.Reader.
+	// Readers also have a limited view of the blob's metadata.
+	fmt.Println("Content-Type:", r.ContentType())
+	fmt.Println()
+	// Copy from the reader to stdout.
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// Hello, World!
 }
 
 func ExampleBucket_NewRangeReader() {
-	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
-	dir, cleanup := newTempDir()
-	defer cleanup()
-	// Write a file to read using the bucket.
-	err := ioutil.WriteFile(filepath.Join(dir, "foo.txt"), []byte("Hello, World!\n"), 0666)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// Create the file-based bucket.
-	bucket, err := fileblob.OpenBucket(dir, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bucket.Close()
+	// This example is used in https://gocloud.dev/howto/blob/data/#reading
 
-	// Open a reader using the blob's key at a specific offset at length.
+	// Variables set up elsewhere:
 	ctx := context.Background()
-	r, err := bucket.NewRangeReader(ctx, "foo.txt", 1, 4, nil)
+	var bucket *blob.Bucket
+
+	// Open the key "foo.txt" for reading at offset 1024 and read up to 4096 bytes.
+	r, err := bucket.NewRangeReader(ctx, "foo.txt", 1024, 4096, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer r.Close()
-	// The blob reader implements io.Reader, so we can use any function that
-	// accepts an io.Reader.
+	// Copy from the read range to stdout.
 	if _, err := io.Copy(os.Stdout, r); err != nil {
 		log.Fatal(err)
 	}
-
-	// Output:
-	// ello
 }
 
 func ExampleBucket_NewWriter() {
-	// Connect to a bucket when your program starts up.
-	// This example uses the file-based implementation.
-	dir, cleanup := newTempDir()
-	defer cleanup()
-	bucket, err := fileblob.OpenBucket(dir, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer bucket.Close()
+	// This example is used in https://gocloud.dev/howto/blob/data/#writing
 
-	// Open a writer using the key "foo.txt" and the default options.
+	// Variables set up elsewhere:
 	ctx := context.Background()
+	var bucket *blob.Bucket
+
+	// Open the key "foo.txt" for writing with the default options.
 	w, err := bucket.NewWriter(ctx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// The blob writer implements io.Writer, so we can use any function that
-	// accepts an io.Writer. A writer must always be closed.
-	_, printErr := fmt.Fprintln(w, "Hello, World!")
+	_, writeErr := fmt.Fprintln(w, "Hello, World!")
+	// Always check the return value of Close when writing.
 	closeErr := w.Close()
-	if printErr != nil {
-		log.Fatal(printErr)
+	if writeErr != nil {
+		log.Fatal(writeErr)
 	}
 	if closeErr != nil {
 		log.Fatal(closeErr)
 	}
-	// Copy the written blob to stdout.
-	r, err := bucket.NewReader(ctx, "foo.txt", nil)
+}
+
+func ExampleBucket_NewWriter_cancel() {
+	// This example is used in https://gocloud.dev/howto/blob/data/#writing
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var bucket *blob.Bucket
+
+	// Create a cancelable context from the existing context.
+	writeCtx, cancelWrite := context.WithCancel(ctx)
+	defer cancelWrite()
+
+	// Open the key "foo.txt" for writing with the default options.
+	w, err := bucket.NewWriter(writeCtx, "foo.txt", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
-	if _, err := io.Copy(os.Stdout, r); err != nil {
+
+	// Assume some writes happened and we encountered an error.
+	// Now we want to abort the write.
+
+	if err != nil {
+		// First cancel the context.
+		cancelWrite()
+		// You must still close the writer to avoid leaking resources.
+		w.Close()
+	}
+}
+
+func ExampleBucket_Delete() {
+	// This example is used in https://gocloud.dev/howto/blob/data/#deleting
+
+	// Variables set up elsewhere:
+	ctx := context.Background()
+	var bucket *blob.Bucket
+
+	if err := bucket.Delete(ctx, "foo.txt"); err != nil {
 		log.Fatal(err)
 	}
-	// Since we didn't specify a WriterOptions.ContentType for NewWriter, blob
-	// auto-determined one using http.DetectContentType.
-	fmt.Println(r.ContentType())
-
-	// Output:
-	// Hello, World!
-	// text/plain; charset=utf-8
 }
 
 func Example() {
