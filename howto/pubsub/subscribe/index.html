@@ -44,79 +44,65 @@ message from being redelivered.</li>
 <p>The last two steps are the same across all providers because the first step
 creates a value of the portable <a href="https://godoc.org/gocloud.dev/pubsub#Subscription"><code>*pubsub.Subscription</code></a> type. A simple
 subscriber that operates on messages serially looks like this:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// Parse configuration and open subscription (shutdown deferred).
-</span><span class="c1"></span>    <span class="c1">// ...
-</span><span class="c1"></span>
-    <span class="c1">// ... and then loop on received messages.
-</span><span class="c1"></span>    <span class="k">for</span> <span class="p">{</span>
-        <span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Receive</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-            <span class="c1">// Errors from Receive indicate that Receive will no longer succeed.
-</span><span class="c1"></span>            <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Receiving message: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
-        <span class="nf">handle</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">Data</span><span class="p">)</span>
-        <span class="nx">msg</span><span class="p">.</span><span class="nf">Ack</span><span class="p">()</span>
-    <span class="p">}</span>
-<span class="p">}</span>
 
-<span class="kd">func</span> <span class="nf">handle</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Do work based on the message.
-</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Got message: %q\n&#34;</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span>
-<span class="p">}</span></code></pre></div>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages.
+</span><span class="c1"></span><span class="k">for</span> <span class="p">{</span>
+	<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Receive</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="c1">// Errors from Receive indicate that Receive will no longer succeed.
+</span><span class="c1"></span>		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Receiving message: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="k">break</span>
+	<span class="p">}</span>
+	<span class="c1">// Do work based on the message, for example:
+</span><span class="c1"></span>	<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Got message: %q\n&#34;</span><span class="p">,</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">Body</span><span class="p">)</span>
+	<span class="c1">// Messages must always be acknowledged with Ack.
+</span><span class="c1"></span>	<span class="nx">msg</span><span class="p">.</span><span class="nf">Ack</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <p>If you want your subscriber to operate on the incoming messages concurrently,
 you can start multiple goroutines:</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kd">func</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c1">// Create context. If you want to implement graceful shutdown, cancel the
-</span><span class="c1"></span>    <span class="c1">// context (perhaps after an operating system signal).
-</span><span class="c1"></span>    <span class="nx">ctx</span> <span class="o">:=</span> <span class="nx">context</span><span class="p">.</span><span class="nf">Background</span><span class="p">()</span>
 
-    <span class="c1">// Parse configuration and open subscription (shutdown deferred).
-</span><span class="c1"></span>    <span class="c1">// ...
-</span><span class="c1"></span>
-    <span class="c1">// ... and then loop on received messages. We can use a channel as a
-</span><span class="c1"></span>    <span class="c1">// semaphore to limit how many goroutines we have active at a time as well
-</span><span class="c1"></span>    <span class="c1">// as wait on the goroutines to finish before exiting.
-</span><span class="c1"></span>    <span class="kd">const</span> <span class="nx">maxHandlers</span> <span class="p">=</span> <span class="mi">10</span>
-    <span class="nx">sem</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span> <span class="nx">maxHandlers</span><span class="p">)</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="c1">// Loop on received messages. We can use a channel as a semaphore to limit how
+</span><span class="c1">// many goroutines we have active at a time as well as wait on the goroutines
+</span><span class="c1">// to finish before exiting.
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">maxHandlers</span> <span class="p">=</span> <span class="mi">10</span>
+<span class="nx">sem</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">(</span><span class="kd">chan</span> <span class="kd">struct</span><span class="p">{},</span> <span class="nx">maxHandlers</span><span class="p">)</span>
 <span class="nx">recvLoop</span><span class="p">:</span>
-    <span class="k">for</span> <span class="p">{</span>
-        <span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Receive</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-            <span class="c1">// Errors from Receive indicate that Receive will no longer succeed.
-</span><span class="c1"></span>            <span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Receiving message: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
-            <span class="k">break</span>
-        <span class="p">}</span>
+<span class="k">for</span> <span class="p">{</span>
+	<span class="nx">msg</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Receive</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+	<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
+		<span class="c1">// Errors from Receive indicate that Receive will no longer succeed.
+</span><span class="c1"></span>		<span class="nx">log</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Receiving message: %v&#34;</span><span class="p">,</span> <span class="nx">err</span><span class="p">)</span>
+		<span class="k">break</span>
+	<span class="p">}</span>
 
-        <span class="c1">// Wait if there are too many active handle goroutines and acquire the
-</span><span class="c1"></span>        <span class="c1">// semaphore. If the context is canceled, stop waiting and start
-</span><span class="c1"></span>        <span class="c1">// shutting down.
-</span><span class="c1"></span>        <span class="k">select</span> <span class="p">{</span>
-        <span class="k">case</span> <span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}:</span>
-        <span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
-            <span class="k">break</span> <span class="nx">recvLoop</span>
-        <span class="p">}</span>
+	<span class="c1">// Wait if there are too many active handle goroutines and acquire the
+</span><span class="c1"></span>	<span class="c1">// semaphore. If the context is canceled, stop waiting and start shutting
+</span><span class="c1"></span>	<span class="c1">// down.
+</span><span class="c1"></span>	<span class="k">select</span> <span class="p">{</span>
+	<span class="k">case</span> <span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}:</span>
+	<span class="k">case</span> <span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nf">Done</span><span class="p">():</span>
+		<span class="k">break</span> <span class="nx">recvLoop</span>
+	<span class="p">}</span>
 
-        <span class="c1">// Handle the message in a new goroutine.
-</span><span class="c1"></span>        <span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
-            <span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="o">&lt;-</span><span class="nx">sem</span> <span class="p">}()</span> <span class="c1">// Release the semaphore.
-</span><span class="c1"></span>            <span class="nf">handle</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">Data</span><span class="p">)</span>
-            <span class="nx">msg</span><span class="p">.</span><span class="nf">Ack</span><span class="p">()</span>
-        <span class="p">}()</span>
-    <span class="p">}</span>
-
-    <span class="c1">// We&#39;re no longer receiving messages. Wait to finish handling any
-</span><span class="c1"></span>    <span class="c1">// unacknowledged messages by totally acquiring the semaphore.
-</span><span class="c1"></span>    <span class="k">for</span> <span class="nx">n</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="nx">maxHandlers</span><span class="p">;</span> <span class="nx">n</span><span class="o">--</span> <span class="p">{</span>
-        <span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
-    <span class="p">}</span>
+	<span class="c1">// Handle the message in a new goroutine.
+</span><span class="c1"></span>	<span class="k">go</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span>
+		<span class="k">defer</span> <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="o">&lt;-</span><span class="nx">sem</span> <span class="p">}()</span> <span class="c1">// Release the semaphore.
+</span><span class="c1"></span>		<span class="k">defer</span> <span class="nx">msg</span><span class="p">.</span><span class="nf">Ack</span><span class="p">()</span>          <span class="c1">// Messages must always be acknowledged with Ack.
+</span><span class="c1"></span>
+		<span class="c1">// Do work based on the message, for example:
+</span><span class="c1"></span>		<span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Got message: %q\n&#34;</span><span class="p">,</span> <span class="nx">msg</span><span class="p">.</span><span class="nx">Body</span><span class="p">)</span>
+	<span class="p">}()</span>
 <span class="p">}</span>
 
-<span class="kd">func</span> <span class="nf">handle</span><span class="p">(</span><span class="nx">ctx</span> <span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span> <span class="nx">data</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c1">// Do work based on the message.
-</span><span class="c1"></span>    <span class="nx">fmt</span><span class="p">.</span><span class="nf">Printf</span><span class="p">(</span><span class="s">&#34;Got message: %q\n&#34;</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span>
-<span class="p">}</span></code></pre></div>
+<span class="c1">// We&#39;re no longer receiving messages. Wait to finish handling any
+</span><span class="c1">// unacknowledged messages by totally acquiring the semaphore.
+</span><span class="c1"></span><span class="k">for</span> <span class="nx">n</span> <span class="o">:=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">n</span> <span class="p">&lt;</span> <span class="nx">maxHandlers</span><span class="p">;</span> <span class="nx">n</span><span class="o">--</span> <span class="p">{</span>
+	<span class="nx">sem</span> <span class="o">&lt;-</span> <span class="kd">struct</span><span class="p">{}{}</span>
+<span class="p">}</span>
+</code></pre></div>
+
 <p>The rest of this guide will discuss how to accomplish the first step: opening
 a subscription for your chosen Pub/Sub provider.</p>
 
@@ -139,20 +125,26 @@ topic. SQS URLs closely resemble the the queue URL, except the leading
 query parameter to ensure your application connects to the correct region, but
 otherwise <code>pubsub.OpenSubscription</code> will use the region found in the environment
 variables or your AWS CLI configuration.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-    <span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/&#34;</span> <span class="o">+</span>
-    <span class="s">&#34;MyQueue?region=us-east-2&#34;</span><span class="p">)</span>
+<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+</span><span class="c1">// This URL will open the subscription with the URL
+</span><span class="c1">// &#34;https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/&#34;</span><span class="o">+</span>
+		<span class="s">&#34;MyQueue?region=us-east-2&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <p>Messages with a <code>base64encoded</code> message attribute will be automatically
 <a href="https://en.wikipedia.org/wiki/Base64">Base64</a> decoded before being returned. See the <a href="https://gocloud.dev/howto/pubsub/publish/#sns">SNS publishing guide</a>
 for more details.</p>
@@ -161,91 +153,100 @@ for more details.</p>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/awssnssqs#OpenSubscription"><code>awssnssqs.OpenSubscription</code></a> constructor opens an SQS queue. You must
 first create an <a href="https://docs.aws.amazon.com/sdk-for-go/api/aws/session/">AWS session</a> with the same region as your topic:</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
-    <span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
-    <span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws&#34;</span>
+	<span class="s">&#34;github.com/aws/aws-sdk-go/aws/session&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/awssnssqs&#34;</span>
 <span class="p">)</span>
-<span class="c1">// ...
-</span><span class="c1"></span>
+
 <span class="c1">// Establish an AWS session.
+</span><span class="c1">// See https://docs.aws.amazon.com/sdk-for-go/api/aws/session/ for more info.
 </span><span class="c1">// The region must match the region for &#34;MyQueue&#34;.
 </span><span class="c1"></span><span class="nx">sess</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">session</span><span class="p">.</span><span class="nf">NewSession</span><span class="p">(</span><span class="o">&amp;</span><span class="nx">aws</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
-    <span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
+	<span class="nx">Region</span><span class="p">:</span> <span class="nx">aws</span><span class="p">.</span><span class="nf">String</span><span class="p">(</span><span class="s">&#34;us-east-2&#34;</span><span class="p">),</span>
 <span class="p">})</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
-<span class="c1">// Create a *pubsub.Subscription.
-</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;awssqs://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;</span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="c1">// Construct a *pubsub.Subscription.
+</span><span class="c1">// https://docs.aws.amazon.com/sdk-for-net/v2/developer-guide/QueueURL.html
+</span><span class="c1"></span><span class="kd">const</span> <span class="nx">queueURL</span> <span class="p">=</span> <span class="s">&#34;https://sqs.us-east-2.amazonaws.com/123456789012/MyQueue&#34;</span>
+<span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">awssnssqs</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">sess</span><span class="p">,</span> <span class="nx">queueURL</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="gcp">Google Cloud Pub/Sub</h2>
 
 <p>The Go CDK can receive messages from a Google <a href="https://cloud.google.com/pubsub/docs/">Cloud Pub/Sub</a> subscription.
 The URLs use the project ID and the subscription ID.
 <code>pubsub.OpenSubscription</code> will use <a href="https://cloud.google.com/docs/authentication/production">Application Default Credentials</a>.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/gcppubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/gcppubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-    <span class="s">&#34;gcppubsub://my-project/my-subscription&#34;</span><span class="p">)</span>
+	<span class="s">&#34;gcppubsub://my-project/my-subscription&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h3 id="gcp-ctor">Google Cloud Pub/Sub Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/gcppubsub#OpenSubscription"><code>gcppubsub.OpenSubscription</code></a> constructor opens a Cloud Pub/Sub
 subscription. You must first obtain <a href="https://cloud.google.com/docs/authentication/production">GCP credentials</a> and then
 create a gRPC connection to Cloud Pub/Sub. (This gRPC connection can be
 reused among subscriptions.)</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/gcp&#34;</span>
-    <span class="s">&#34;gocloud.dev/pubsub/gcppubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/gcp&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/gcppubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// Your GCP credentials.
 </span><span class="c1">// See https://cloud.google.com/docs/authentication/production
 </span><span class="c1">// for more info on alternatives.
 </span><span class="c1"></span><span class="nx">creds</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultCredentials</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="c1">// Get the project ID from the credentials (required by OpenSubscription).
 </span><span class="c1"></span><span class="nx">projectID</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcp</span><span class="p">.</span><span class="nf">DefaultProjectID</span><span class="p">(</span><span class="nx">creds</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 
 <span class="c1">// Open a gRPC connection to the GCP Pub/Sub API.
 </span><span class="c1"></span><span class="nx">conn</span><span class="p">,</span> <span class="nx">cleanup</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">creds</span><span class="p">.</span><span class="nx">TokenSource</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nf">cleanup</span><span class="p">()</span>
 
 <span class="c1">// Construct a SubscriberClient using the connection.
 </span><span class="c1"></span><span class="nx">subClient</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">SubscriberClient</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">conn</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">subClient</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
 <span class="c1">// Construct a *pubsub.Subscription.
 </span><span class="c1"></span><span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">gcppubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
-    <span class="nx">subClient</span><span class="p">,</span> <span class="nx">projectID</span><span class="p">,</span> <span class="s">&#34;example-subscription&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+	<span class="nx">subClient</span><span class="p">,</span> <span class="nx">projectID</span><span class="p">,</span> <span class="s">&#34;example-subscription&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="azure">Azure Service Bus</h2>
 
 <p>The Go CDK can recieve messages from an <a href="https://azure.microsoft.com/en-us/services/service-bus/">Azure Service Bus</a> subscription
@@ -254,19 +255,22 @@ subscription name in the <code>subscription</code> query parameter.
 <code>pubsub.OpenSubscription</code> will use the environment variable
 <code>SERVICEBUS_CONNECTION_STRING</code> to obtain the Service Bus Connection String
 you need to copy <a href="https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dotnet-how-to-use-topics-subscriptions#get-the-connection-string">from the Azure portal</a>.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-    <span class="s">&#34;azuresb://mytopic?subscription=mysubscription&#34;</span><span class="p">)</span>
+	<span class="s">&#34;azuresb://mytopic?subscription=mysubscription&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h3 id="azure-ctor">Azure Service Bus Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/azuresb#OpenSubscription"><code>azuresb.OpenSubscription</code></a> constructor opens an Azure Service Bus
@@ -274,14 +278,14 @@ subscription. You must first connect to the topic and subscription using the
 <a href="https://github.com/Azure/azure-service-bus-go">Azure Service Bus library</a> and then pass the subscription to
 <code>azuresb.OpenSubscription</code>. There are also helper functions in the <code>azuresb</code>
 package to make this easier.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;os&#34;</span>
 
-    <span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;os&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub/azuresb&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// Change these as needed for your application.
 </span><span class="c1"></span><span class="nx">serviceBusConnString</span> <span class="o">:=</span> <span class="nx">os</span><span class="p">.</span><span class="nf">Getenv</span><span class="p">(</span><span class="s">&#34;SERVICEBUS_CONNECTION_STRING&#34;</span><span class="p">)</span>
 <span class="kd">const</span> <span class="nx">topicName</span> <span class="p">=</span> <span class="s">&#34;test-topic&#34;</span>
@@ -290,60 +294,73 @@ package to make this easier.</p>
 <span class="c1">// Connect to Azure Service Bus for the given subscription.
 </span><span class="c1"></span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewNamespaceFromConnectionString</span><span class="p">(</span><span class="nx">serviceBusConnString</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="nx">busTopic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewTopic</span><span class="p">(</span><span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">topicName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">busTopic</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 <span class="nx">busSub</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">NewSubscription</span><span class="p">(</span><span class="nx">busTopic</span><span class="p">,</span> <span class="nx">subscriptionName</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">busSub</span><span class="p">.</span><span class="nf">Close</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 
 <span class="c1">// Construct a *pubsub.Subscription.
-</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="nx">busSub</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">azuresb</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="nx">busNamespace</span><span class="p">,</span> <span class="nx">busTopic</span><span class="p">,</span> <span class="nx">busSub</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="rabbitmq">RabbitMQ</h2>
 
 <p>The Go CDK can receive messages from an <a href="https://www.rabbitmq.com/protocol.html">AMQP 0.9.1</a> queue, the dialect of
 AMQP spoken by <a href="https://www.rabbitmq.com">RabbitMQ</a>. A RabbitMQ URL only includes the queue name.
 The RabbitMQ&rsquo;s server is discovered from the <code>RABBIT_SERVER_URL</code> environment
 variable (which is something like <code>amqp://guest:guest@localhost:5672/</code>).</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rabbit://myqueue&#34;</span><span class="p">)</span>
+<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+</span><span class="c1">// This URL will Dial the RabbitMQ server at the URL in the environment
+</span><span class="c1">// variable RABBIT_SERVER_URL and open the queue &#34;myqueue&#34;.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;rabbit://myqueue&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h3 id="rabbitmq-ctor">RabbitMQ Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/rabbitpubsub#OpenSubscription"><code>rabbitpubsub.OpenSubscription</code></a> constructor opens a RabbitMQ queue.
 You must first create an <a href="https://godoc.org/github.com/streadway/amqp#Connection"><code>*amqp.Connection</code></a> to your RabbitMQ instance.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;github.com/streadway/amqp&#34;</span>
-    <span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/streadway/amqp&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/rabbitpubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="nx">rabbitConn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">amqp</span><span class="p">.</span><span class="nf">Dial</span><span class="p">(</span><span class="s">&#34;amqp://guest:guest@localhost:5672/&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
+<span class="k">defer</span> <span class="nx">rabbitConn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 <span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">rabbitpubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">rabbitConn</span><span class="p">,</span> <span class="s">&#34;myqueue&#34;</span><span class="p">,</span> <span class="kc">nil</span><span class="p">)</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="nats">NATS</h2>
 
 <p>The Go CDK can publish to a <a href="https://nats.io/">NATS</a> subject. A NATS URL only includes the
@@ -355,19 +372,25 @@ If your application only uses NATS and no other implementations (including
 in-memory), you can skip calling <code>Ack</code> and add <code>?ackfunc=panic</code> to the end of
 the URL you use to open a subscription. Otherwise, you should add
 <code>?ackfunc=noop</code> to the end of your URL.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
-    <span class="s">&#34;nats://example.mysubject?ackfunc=panic&#34;</span><span class="p">)</span>
+<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+</span><span class="c1">// This URL will Dial the NATS server at the URL in the environment variable
+</span><span class="c1">// NATS_SERVER_URL and receive messages with subject &#34;example.mysubject&#34;.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;nats://example.mysubject?ackfunc=panic&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <p>To parse messages <a href="https://gocloud.dev/howto/pubsub/publish/#nats">published via the Go CDK</a>, the NATS driver
 will first attempt to decode the payload using <a href="https://golang.org/pkg/encoding/gob/">gob</a>. Failing that, it will
 return the message payload as the <code>Data</code> with no metadata to accomodate
@@ -377,28 +400,31 @@ subscribing to messages coming from a source not using the Go CDK.</p>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/natspubsub#OpenSubscription"><code>natspubsub.OpenSubscription</code></a> constructor opens a NATS subject as a
 topic. You must first create an <a href="https://godoc.org/github.com/nats-io/go-nats#Conn"><code>*nats.Conn</code></a> to your NATS instance.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;github.com/nats-io/go-nats&#34;</span>
-    <span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;github.com/nats-io/go-nats&#34;</span>
+	<span class="s">&#34;gocloud.dev/pubsub/natspubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="nx">natsConn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">nats</span><span class="p">.</span><span class="nf">Connect</span><span class="p">(</span><span class="s">&#34;nats://nats.example.com&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">natsConn</span><span class="p">.</span><span class="nf">Close</span><span class="p">()</span>
 
 <span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">natspubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
-    <span class="nx">natsConn</span><span class="p">,</span>
-    <span class="s">&#34;example.mysubject&#34;</span><span class="p">,</span>
-    <span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nats does not have ack&#34;</span><span class="p">)</span> <span class="p">},</span>
-    <span class="kc">nil</span><span class="p">)</span>
+	<span class="nx">natsConn</span><span class="p">,</span>
+	<span class="s">&#34;example.mysubject&#34;</span><span class="p">,</span>
+	<span class="kd">func</span><span class="p">()</span> <span class="p">{</span> <span class="nb">panic</span><span class="p">(</span><span class="s">&#34;nats does not have ack&#34;</span><span class="p">)</span> <span class="p">},</span>
+	<span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="kafka">Kafka</h2>
 
 <p>The Go CDK can receive messages from a <a href="https://kafka.apache.org/">Kafka</a> cluster.
@@ -407,18 +433,26 @@ of a query parameter specifying the topic to subscribe to.
 The brokers in the Kafka cluster are discovered from the
 <code>KAFKA_BROKERS</code> environment variable (which is a comma-delimited list of
 hosts, something like <code>1.2.3.4:9092,5.6.7.8:9092</code>).</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;kafka://my-group?topic=my-topic&#34;</span><span class="p">)</span>
+<span class="c1">// OpenSubscription creates a *pubsub.Subscription from a URL.
+</span><span class="c1">// The host + path are used as the consumer group name.
+</span><span class="c1">// The &#34;topic&#34; query parameter sets one or more topics to subscribe to.
+</span><span class="c1">// The set of brokers must be in an environment variable KAFKA_BROKERS.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span>
+	<span class="s">&#34;kafka://my-group?topic=my-topic&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h3 id="kafka-ctor">Kafka Constructor</h3>
 
 <p>The <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#OpenSubscription"><code>kafkapubsub.OpenSubscription</code></a> constructor creates a consumer in a
@@ -428,22 +462,28 @@ consumer group, subscribed to one or more topics.</p>
 exposes many knobs that can affect performance and semantics; review and set
 them carefully. <a href="https://godoc.org/gocloud.dev/pubsub/kafkapubsub#MinimalConfig"><code>kafkapubsub.MinimalConfig</code></a> provides a minimal config to get
 you started.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub/kafkapubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// The set of brokers in the Kafka cluster.
 </span><span class="c1"></span><span class="nx">addrs</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;1.2.3.4:9092&#34;</span><span class="p">}</span>
 <span class="c1">// The Kafka client configuration to use.
 </span><span class="c1"></span><span class="nx">config</span> <span class="o">:=</span> <span class="nx">kafkapubsub</span><span class="p">.</span><span class="nf">MinimalConfig</span><span class="p">()</span>
 
-<span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kafkapubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">addrs</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="s">&#34;my-group&#34;</span><span class="p">,</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;my-topic&#34;</span><span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
+<span class="c1">// Construct a *pubsub.Subscription, joining the consumer group &#34;my-group&#34;
+</span><span class="c1">// and receiving messages from &#34;my-topic&#34;.
+</span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">kafkapubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span>
+	<span class="nx">addrs</span><span class="p">,</span> <span class="nx">config</span><span class="p">,</span> <span class="s">&#34;my-group&#34;</span><span class="p">,</span> <span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&#34;my-topic&#34;</span><span class="p">},</span> <span class="kc">nil</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-  <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h2 id="mem">In-Memory</h2>
 
 <p>The Go CDK includes an in-memory Pub/Sub provider useful for local testing.
@@ -451,26 +491,29 @@ The names in <code>mem://</code> URLs are a process-wide namespace, so subscript
 the same name will receive messages posted to that topic. For instance, if
 you open a topic <code>mem://topicA</code> and open two subscriptions with
 <code>mem://topicA</code>, you will have two subscriptions to the same topic.</p>
+
 <div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;gocloud.dev/pubsub&#34;</span>
-    <span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/mempubsub&#34;</span>
+	<span class="s">&#34;context&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub&#34;</span>
+	<span class="nx">_</span> <span class="s">&#34;gocloud.dev/pubsub/mempubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
 <span class="c1">// Create a topic.
 </span><span class="c1"></span><span class="nx">topic</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenTopic</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://topicA&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
 
 <span class="c1">// Create a subscription connected to that topic.
 </span><span class="c1"></span><span class="nx">subscription</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pubsub</span><span class="p">.</span><span class="nf">OpenSubscription</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span> <span class="s">&#34;mem://topicA&#34;</span><span class="p">)</span>
 <span class="k">if</span> <span class="nx">err</span> <span class="o">!=</span> <span class="kc">nil</span> <span class="p">{</span>
-    <span class="k">return</span> <span class="nx">err</span>
+	<span class="k">return</span> <span class="nx">err</span>
 <span class="p">}</span>
-<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span></code></pre></div>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+
 <h3 id="mem-ctor">In-Memory Constructor</h3>
 
 <p>To create a subscription to an in-memory Pub/Sub topic, pass the <a href="https://gocloud.dev/howto/pubsub/publish/#mem-ctor">topic you
@@ -478,17 +521,22 @@ created</a> into the <a href="https://godoc.org/gocloud.dev/pubsub/mempubsub#New
 You will also need to pass an acknowledgement deadline: once a message is
 received, if it is not acknowledged after the deadline elapses, then it will be
 redelivered.</p>
-<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
-    <span class="s">&#34;time&#34;</span>
 
-    <span class="s">&#34;gocloud.dev/pubsub/mempubsub&#34;</span>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="kn">import</span> <span class="p">(</span>
+	<span class="s">&#34;context&#34;</span>
+	<span class="s">&#34;time&#34;</span>
+
+	<span class="s">&#34;gocloud.dev/pubsub/mempubsub&#34;</span>
 <span class="p">)</span>
 
-<span class="c1">// ...
-</span><span class="c1"></span>
-<span class="nx">topic</span> <span class="o">:=</span> <span class="nx">mempubsub</span><span class="p">.</span><span class="nf">NewTopic</span><span class="p">()</span>
+<span class="c1">// Construct a *pubsub.Topic.
+</span><span class="c1"></span><span class="nx">topic</span> <span class="o">:=</span> <span class="nx">mempubsub</span><span class="p">.</span><span class="nf">NewTopic</span><span class="p">()</span>
 <span class="k">defer</span> <span class="nx">topic</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
-<span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">mempubsub</span><span class="p">.</span><span class="nf">NewSubscription</span><span class="p">(</span><span class="nx">topic</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span><span class="p">)</span></code></pre></div></div>
+
+<span class="c1">// Construct a *pubsub.Subscription for the topic.
+</span><span class="c1"></span><span class="nx">subscription</span> <span class="o">:=</span> <span class="nx">mempubsub</span><span class="p">.</span><span class="nf">NewSubscription</span><span class="p">(</span><span class="nx">topic</span><span class="p">,</span> <span class="mi">1</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span> <span class="cm">/* ack deadline */</span><span class="p">)</span>
+<span class="k">defer</span> <span class="nx">subscription</span><span class="p">.</span><span class="nf">Shutdown</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div></div>
     </main>
     <nav class="Sidenav">
       <ul class="Sidenav-list">
