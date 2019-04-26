@@ -22,7 +22,7 @@ install:
   - "git checkout -- ."
 
 script:
-  - 'internal/testing/all_local.sh'
+  - 'internal/testing/start_local_deps.sh'
   - 'internal/testing/runchecks.sh'
 
 env:
