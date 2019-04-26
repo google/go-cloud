@@ -13,6 +13,8 @@ goexample src="gocloud.dev/foo.ExampleBar" imports="0"
     {{ else -}}
       {{ highlight (printf "%s\n" .code) "go" "" -}}
     {{ end -}}
+  {{ else -}}
+    {{ errorf "%s: Example %q does not exist" ($.Page.File.Path) (.Get "src") -}}
   {{end -}}
 {{ else -}}
   {{ with index .Site.Data.examples (.Get 0) -}}
@@ -21,5 +23,7 @@ goexample src="gocloud.dev/foo.ExampleBar" imports="0"
     {{ else -}}
       {{ highlight (printf "%s\n" .code) "go" "" -}}
     {{ end -}}
+  {{ else -}}
+    {{ errorf "%s: Example %q does not exist" ($.Page.File.Path) (.Get 0) -}}
   {{end -}}
 {{ end -}}

@@ -1,0 +1,419 @@
+{
+  "Initial": null,
+  "Version": "0.2",
+  "Converter": {
+    "ClearHeaders": [
+      "^X-Goog-.*Encryption-Key$",
+      "^X-Amz-Date$",
+      "^User-Agent$"
+    ],
+    "RemoveRequestHeaders": [
+      "^Authorization$",
+      "^Proxy-Authorization$",
+      "^Connection$",
+      "^Content-Type$",
+      "^Date$",
+      "^Host$",
+      "^Transfer-Encoding$",
+      "^Via$",
+      "^X-Forwarded-.*$",
+      "^X-Cloud-Trace-Context$",
+      "^X-Goog-Api-Client$",
+      "^X-Google-.*$",
+      "^X-Gfe-.*$",
+      "^Authorization$",
+      "^Duration$",
+      "^X-Amz-Security-Token$"
+    ],
+    "RemoveResponseHeaders": [
+      "^X-Google-.*$",
+      "^X-Gfe-.*$"
+    ],
+    "ClearParams": [
+      "^X-Amz-Date$"
+    ],
+    "RemoveParams": [
+      "^X-Amz-Credential$",
+      "^X-Amz-Signature$",
+      "^X-Amz-Security-Token$"
+    ]
+  },
+  "Entries": [
+    {
+      "ID": "48457aad39c79d46",
+      "Request": {
+        "Method": "PUT",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Md5": [
+            "XUFAKrxLKna5cZ2REBfFkg=="
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ]
+        },
+        "MediaType": "text/plain",
+        "BodyParts": [
+          "aGVsbG8="
+        ]
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Content-Length": [
+            "0"
+          ],
+          "Date": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "tGRSNgHwEjnPSY7ouwM7fPEi87DLfsU3kv/CyWxo17ayEiiCTgo1To6bcgm3Nt0cxg50kH0lIPY="
+          ],
+          "X-Amz-Request-Id": [
+            "1F4177BBFFB204CC"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "774f41b539968d3c",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "kT+yv6CUMsRtRqIykBU3u5Bi3KSK6S+t9l0SuD+c5//XHTiXDu6jTJBC8dRJlOgsFDJwO9g0nuc="
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Amz-Request-Id": [
+            "0DA65D155DE6B72E"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "9669b164a05beec8",
+      "Request": {
+        "Method": "HEAD",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 200,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Accept-Ranges": [
+            "bytes"
+          ],
+          "Content-Length": [
+            "5"
+          ],
+          "Content-Type": [
+            "text/plain; charset=utf-8"
+          ],
+          "Date": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Etag": [
+            "\"5d41402abc4b2a76b9719d911017c592\""
+          ],
+          "Last-Modified": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "o5N2A4v73GOvP6RdBSRagW4MityxcbkM4kiKRqd3gcxWeyhDB35BZt1QnLVa0Wqw7qDk3/iS+rs="
+          ],
+          "X-Amz-Meta-%00%01%02%03%04%05%06%07%08%09%0a%0b%0c%0d%0e%0f": [
+            "%00%01%02%03%04%05%06%07%08%09%0A%0B%0C%0D%0E%0F"
+          ],
+          "X-Amz-Meta-%10%11%12%13%14%15%16%17%18%19%1a%1b%1c%1d%1e%1f": [
+            "%10%11%12%13%14%15%16%17%18%19%1A%1B%1C%1D%1E%1F"
+          ],
+          "X-Amz-Meta-%20%21%22%23$%25\u0026%27%28%29%2a+%2c-.%2f": [
+            "%20%21%22%23$%25\u0026%27%28%29%2A+%2C-.%2F"
+          ],
+          "X-Amz-Meta-%5b%5c%5d%5e_": [
+            "%5B%5C%5D%5E_"
+          ],
+          "X-Amz-Meta-%60": [
+            "%60"
+          ],
+          "X-Amz-Meta-%7b%7c%7d~%7f": [
+            "%7B%7C%7D~%7F"
+          ],
+          "X-Amz-Meta-%e2%98%ba%e2%98%ba%e2%98%ba": [
+            "%E2%98%BA%E2%98%BA%E2%98%BA"
+          ],
+          "X-Amz-Meta-..%2ffoo%2f..%2fbar%2f..%2f..%2fbaz..%2f": [
+            "..%2Ffoo%2F..%2Fbar%2F..%2F..%2Fbaz..%2F"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c%5cbar%5c%5c%5cbaz": [
+            "..%5Cfoo%5C%5Cbar%5C%5C%5Cbaz"
+          ],
+          "X-Amz-Meta-..%5cfoo%5c..%5cbar%5c..%5c..%5cbaz..%5c": [
+            "..%5Cfoo%5C..%5Cbar%5C..%5C..%5Cbaz..%5C"
+          ],
+          "X-Amz-Meta-12345": [
+            "12345"
+          ],
+          "X-Amz-Meta-Foo%20bar%20baz": [
+            "foo%20bar%20baz"
+          ],
+          "X-Amz-Meta-Foo%22bar%22baz": [
+            "foo%22bar%22baz"
+          ],
+          "X-Amz-Meta-Foo%2f%2fbar%2f%2f%2fbaz": [
+            "foo%2F%2Fbar%2F%2F%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%2fbar%2fbaz": [
+            "foo%2Fbar%2Fbaz"
+          ],
+          "X-Amz-Meta-Foo%5cbar%5cbaz": [
+            "foo%5Cbar%5Cbaz"
+          ],
+          "X-Amz-Meta-__0x3a__%3b%3c__0x3d__%3e%3f": [
+            ":%3B%3C=%3E%3F"
+          ],
+          "X-Amz-Meta-__0x40__": [
+            "@"
+          ],
+          "X-Amz-Request-Id": [
+            "8287A84D31BDEC28"
+          ]
+        },
+        "Body": ""
+      }
+    },
+    {
+      "ID": "21d5193a06b7154a",
+      "Request": {
+        "Method": "DELETE",
+        "URL": "https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-metadata",
+        "Header": {
+          "Accept-Encoding": [
+            "gzip"
+          ],
+          "User-Agent": [
+            "CLEARED"
+          ],
+          "X-Amz-Content-Sha256": [
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          ],
+          "X-Amz-Date": [
+            "CLEARED"
+          ]
+        },
+        "MediaType": "",
+        "BodyParts": null
+      },
+      "Response": {
+        "StatusCode": 204,
+        "Proto": "HTTP/1.1",
+        "ProtoMajor": 1,
+        "ProtoMinor": 1,
+        "Header": {
+          "Date": [
+            "Fri, 26 Apr 2019 22:16:25 GMT"
+          ],
+          "Server": [
+            "AmazonS3"
+          ],
+          "X-Amz-Id-2": [
+            "XGFyP296D6gPfS0EHawxogp3hDzTueIE5tK0g9pqw0iKwvv6bLXZZGqAnAHkIaSIdauuoBLTI4o="
+          ],
+          "X-Amz-Request-Id": [
+            "700918974D5F5C97"
+          ]
+        },
+        "Body": ""
+      }
+    }
+  ]
+}

@@ -550,4 +550,5 @@ var errorCodeMap = map[string]gcerrors.ErrorCode{
 	dyn.ErrCodeTransactionCanceledException:             gcerr.FailedPrecondition,
 	dyn.ErrCodeTransactionInProgressException:           gcerr.InvalidArgument,
 	dyn.ErrCodeIdempotentParameterMismatchException:     gcerr.InvalidArgument,
+	"ValidationException":                               gcerr.InvalidArgument,
 }
