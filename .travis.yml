@@ -1,6 +1,9 @@
 language: go
 go_import_path: gocloud.dev
 
+services:
+  - docker
+
 before_install:
   - "df -k"
   # The Bash that comes with OS X is ancient.
@@ -36,7 +39,7 @@ jobs:
       if: branch = master AND type = push
     - go: "1.12.x"
       os: linux
-    - go: "1.12.x" 
+    - go: "1.12.x"
       os: osx
     # TODO(#1075): Uncomment the lines below to re-enable the Windows build on
     # master once it passes; currently it always fails due to a Travis bug

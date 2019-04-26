@@ -57,6 +57,13 @@ if [[ ! -z "$TRAVIS_BRANCH" ]] && [[ ! -z "$TRAVIS_PULL_REQUEST_SHA" ]]; then
   fi
 fi
 
+# start_local_deps.sh requires that Docker is installed, via Travis services,
+# which are only supported on Linux.
+# Without the dependencies running, tests that depend on them are skipped.
+if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+  ./internal/testing/start_local_deps.sh
+fi
+
 # Run Go tests for the root. Only do coverage for the Linux build
 # because it is slow, and codecov will only save the last one anyway.
 result=0
