@@ -189,14 +189,14 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 	if err != nil {
 		t.Fatal(err)
 	}
-	client, err := replay.Client(ctx)
+	c, err := replay.Client(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	cleanup := func() {
 		_ = replay.Close()
 	}
-	return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
+	return &gcp.HTTPClient{Client: *c}, c.Transport, cleanup
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
