@@ -27,3 +27,9 @@ func signalGracefulShutdown(p *os.Process) error {
 func interruptSignals() []os.Signal {
 	return []os.Signal{os.Interrupt}
 }
+
+// notifyUserSignal1 returns a channel that receives SIGUSR1 on Unix systems.
+// On Windows, it returns a nil channel.
+func notifyUserSignal1() (_ <-chan os.Signal, stop func()) {
+	return nil, func() {}
+}
