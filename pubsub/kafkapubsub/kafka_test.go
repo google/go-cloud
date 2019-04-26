@@ -20,6 +20,7 @@ package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -131,7 +132,66 @@ func (h *harness) Close() {}
 func (h *harness) MaxBatchSizes() (int, int) { return sendBatcherOpts.MaxBatchSize, 0 }
 
 func TestConformance(t *testing.T) {
-	drivertest.RunConformanceTests(t, newHarness, nil)
+	asTests := []drivertest.AsTest{asTest{}}
+	drivertest.RunConformanceTests(t, newHarness, asTests)
+}
+
+type asTest struct{}
+
+func (asTest) Name() string {
+	return "kafka"
+}
+
+func (asTest) TopicCheck(topic *pubsub.Topic) error {
+	var sp sarama.SyncProducer
+	if !topic.As(&sp) {
+		return fmt.Errorf("cast failed for %T", sp)
+	}
+	return nil
+}
+
+func (asTest) SubscriptionCheck(sub *pubsub.Subscription) error {
+	var cg sarama.ConsumerGroup
+	if !sub.As(&cg) {
+		return fmt.Errorf("cast failed for %T", cg)
+	}
+	var cgs sarama.ConsumerGroupSession
+	if !sub.As(&cgs) {
+		return fmt.Errorf("cast failed for %T", cgs)
+	}
+	return nil
+}
+
+func (asTest) TopicErrorCheck(t *pubsub.Topic, err error) error {
+	var pe sarama.ProducerErrors
+	if !t.ErrorAs(err, &pe) {
+		return fmt.Errorf("failed to convert %v (%T)", err, err)
+	}
+	return nil
+}
+
+func (asTest) SubscriptionErrorCheck(s *pubsub.Subscription, err error) error {
+	var ke sarama.KError
+	if !s.ErrorAs(err, &ke) {
+		return fmt.Errorf("failed to convert %v (%T)", err, err)
+	}
+	return nil
+}
+
+func (asTest) MessageCheck(m *pubsub.Message) error {
+	var cm *sarama.ConsumerMessage
+	if !m.As(&cm) {
+		return fmt.Errorf("cast failed for %T", cm)
+	}
+	return nil
+}
+
+func (asTest) BeforeSend(as func(interface{}) bool) error {
+	var pm *sarama.ProducerMessage
+	if !as(&pm) {
+		return fmt.Errorf("cast failed for %T", &pm)
+	}
+	return nil
 }
 
 // TestKafkaKey tests sending/receiving a message with the Kafka message key set.
@@ -139,7 +199,10 @@ func TestKafkaKey(t *testing.T) {
 	if !localKafkaRunning() {
 		t.Skip("No local Kafka running, see pubsub/kafkapubsub/localkafka.sh")
 	}
-	const keyName = "kafkakey"
+	const (
+		keyName  = "kafkakey"
+		keyValue = "kafkakeyvalue"
+	)
 	uniqueID := rand.Int()
 	ctx := context.Background()
 
@@ -175,15 +238,30 @@ func TestKafkaKey(t *testing.T) {
 	m := &pubsub.Message{
 		Metadata: map[string]string{
 			"foo":   "bar",
-			keyName: "keyValue",
+			keyName: keyValue,
 		},
 		Body: []byte("hello world"),
+		BeforeSend: func(as func(interface{}) bool) error {
+			// Verify that the Key field was set correctly on the outgoing Kafka
+			// message.
+			var pm *sarama.ProducerMessage
+			if !as(&pm) {
+				return errors.New("failed to convert to ProducerMessage")
+			}
+			gotKeyBytes, err := pm.Key.Encode()
+			if err != nil {
+				return fmt.Errorf("failed to Encode Kafka Key: %v", err)
+			}
+			if gotKey := string(gotKeyBytes); gotKey != keyValue {
+				return errors.New("Kafka key wasn't set appropriately")
+			}
+			return nil
+		},
 	}
 	err = topic.Send(ctx, m)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TODO(rvangent): Verify that Key is set in the sent Kafka message via As.
 
 	// The test will hang here if the message isn't available, so use a shorter timeout.
 	ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -194,9 +272,18 @@ func TestKafkaKey(t *testing.T) {
 	}
 	got.Ack()
 
-	// TODO(rvangent): Verify that Key is set in the received Kafka message via As.
+	m.BeforeSend = nil // don't expect this in the received message
 	if diff := cmp.Diff(got, m, cmpopts.IgnoreUnexported(pubsub.Message{})); diff != "" {
-		t.Errorf("got %v want %v diff %v", got, m, diff)
+		t.Errorf("got\n%v\nwant\n%v\ndiff\n%v", got, m, diff)
+	}
+
+	// Verify that Key was set in the received Kafka message via As.
+	var cm *sarama.ConsumerMessage
+	if !got.As(&cm) {
+		t.Fatal("failed to get message As ConsumerMessage")
+	}
+	if gotKey := string(cm.Key); gotKey != keyValue {
+		t.Errorf("got key %q want %q", gotKey, keyValue)
 	}
 }
 

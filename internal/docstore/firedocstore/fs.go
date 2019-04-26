@@ -26,6 +26,12 @@
 // To customize the URL opener, or for more details on the URL format,
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
+//
+// As
+//
+// firedocstore exposes the following types for As:
+// - Query.BeforeQuery: *firestore.RunQueryRequest
+// - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
 
 import (

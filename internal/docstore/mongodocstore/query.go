@@ -105,7 +105,14 @@ func (it *docIterator) Stop() {
 	_ = it.cursor.Close(it.ctx)
 }
 
-func (it *docIterator) As(i interface{}) bool { return false }
+func (it *docIterator) As(i interface{}) bool {
+	p, ok := i.(**mongo.Cursor)
+	if !ok {
+		return false
+	}
+	*p = it.cursor
+	return true
+}
 
 func (c *collection) QueryPlan(q *driver.Query) (string, error) {
 	return "unknown", nil
