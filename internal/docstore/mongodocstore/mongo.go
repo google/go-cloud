@@ -23,6 +23,11 @@
 // see URLOpener.
 // See https://godoc.org/gocloud.dev#hdr-URLs for background information.
 //
+// As
+//
+// mongodocstore exposes the following types for As:
+// - DocumentIterator: *mongo.Cursor
+//
 // Docstore types not supported by the Go mongo client, go.mongodb.org/mongo-driver/mongo:
 // TODO(jba): write
 //
