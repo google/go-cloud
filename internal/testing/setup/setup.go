@@ -181,21 +181,22 @@ func NewGCPClient(ctx context.Context, t *testing.T) (client *gcp.HTTPClient, rt
 			}
 		}
 		return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
-	} else {
-		t.Logf("Replaying from golden file %s", path)
-		replay, err := httpreplay.NewReplayer(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		client, err := replay.Client(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cleanup := func() {
-			_ = replay.Close()
-		}
-		return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
 	}
+
+	// Replay.
+	t.Logf("Replaying from golden file %s", path)
+	replay, err := httpreplay.NewReplayer(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client, err := replay.Client(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cleanup := func() {
+		_ = replay.Close()
+	}
+	return &gcp.HTTPClient{Client: *client}, client.Transport, cleanup
 }
 
 // NewGCPgRPCConn creates a new connection for testing against GCP via gRPC.
