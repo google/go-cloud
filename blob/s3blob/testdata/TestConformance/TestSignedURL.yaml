@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212647Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - VTSabKHgpWiQuvpK/t6h0Jxb3niwQ6RevvjvZqGMwMTANrxHb4AXBaiK4VY31UPhuUT1P5yI70s=
+      - GxZ6YcO4uCU3GOGomZ8/SlOk29a7DoAEgnvA/J0yKe18w8fW1rmnts5GPH2qgnlXXsfIg5wiKkI=
       X-Amz-Request-Id:
-      - F712ACE876084831
+      - 6132B7672F1B2B81
     status: 200 OK
     code: 200
     duration: ""
@@ -41,7 +41,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJUGP3DMJYQAR6PDA%2F20190209%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190209T000353Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=ae8e38963831f653220e93b342b21d312e77f02cd787acdb4219c02bcad6aafc
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIFP4ZBSWPYQQERJA%2F20190426%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190426T212647Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=16ea2210a18234e78e8f2c89eb1457bdfdb96ff7524018269d724bedd239be81
     method: GET
   response:
     body: hello world
@@ -53,17 +53,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - cv4rxKbVPoAgDCRVcf3WDqRW6Qhbeu5ZMHn7OpHEzutCJgNii8JWBuVadLwXVmnJLNuHaXiD/MA=
+      - lBIKp3v6nIC/O0l28u8z3ULRf8rkryySz8Ttm9pywXTBeJ8WlxSBCGKHi44U58JSdUdjbC2iiHs=
       X-Amz-Request-Id:
-      - 060F990E4894A1A0
+      - F1E521028714F763
     status: 200 OK
     code: 200
     duration: ""
@@ -72,11 +72,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212647Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing
     method: HEAD
   response:
@@ -89,17 +89,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Etag:
       - '"5eb63bbbe01eeed093cb22bb8f5acdc3"'
       Last-Modified:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 0jHkngijNqEFRzoGJWE15tdYqvs6KYYGLub6Ez7ggpnQlMgL3AZxYgG2fhxhWs4MXTujDh7x72E=
+      - gSUUV14v08UG7B2FIF/pmub+C5QZzr9QpeoXB6csQNPhaU/MenNjssMmLyGvWK4YKUzLexFlMD0=
       X-Amz-Request-Id:
-      - C0933944A792519A
+      - C9BFCB507931886F
     status: 200 OK
     code: 200
     duration: ""
@@ -108,24 +108,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212647Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-signing
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - /+lMiRdnxxg3063aKtV1GEWjiL8GZnc9wRX2QNmVZpCoX0QjnS35x4LznHFnMXpoz8p7hSml0IU=
+      - tnTfPQntMQdFbmJrCVFupSdBTsaJCXZnPBagfCR0LIxNAzYBeRt2hQwZ/C3BIKXvdmgg9jHgrnM=
       X-Amz-Request-Id:
-      - C747089BB6F08A63
+      - 374F5FBEB91DEDB1
     status: 204 No Content
     code: 204
     duration: ""

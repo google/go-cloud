@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 64ec88ca00b268e5ba1a35678a1b5316d212f4f366b2477232534a8aeca37f3c
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212645Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:46 GMT
       Etag:
       - '"3e25960a79dbc69b674cd4ec67a72c62"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - tjFskjesyHsKmihyCU7A34WT5j2YEzHVRpaNmzwYX19LA6KBihfAj48njt1wvzGkhzBYJEnIE+k=
+      - eRVwwcavRbcJSdKBLhbI15fu48zcQhmdo9QAVGTCbJ+d+s1QKCfOfMPnGLlURQj5CLGl5v06dEw=
       X-Amz-Request-Id:
-      - E42C49233E8FADFF
+      - DE6BF7659FEF9006
     status: 200 OK
     code: 200
     duration: ""
@@ -42,11 +42,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212645Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
     method: HEAD
   response:
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:46 GMT
       Etag:
       - '"3e25960a79dbc69b674cd4ec67a72c62"'
       Last-Modified:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:46 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 33vhdE/5VmSXOWEA9mF16taw0JIVPavaKw2calZ5pgXOV0ZgJfwTPNPrwowe9u1pod5iahpRH/4=
+      - bakc7eEkTz745xA7k156rso99xYZXic1CJkxsA4yXl9xBnhhhN7wFUVzfiNcWj8o6mXmgcdS9F0=
       X-Amz-Request-Id:
-      - "3205250226014876"
+      - 249AE8BCFFBD2745
     status: 200 OK
     code: 200
     duration: ""
@@ -78,24 +78,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212645Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Sat, 09 Feb 2019 00:03:54 GMT
+      - Fri, 26 Apr 2019 21:26:46 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - /WsvzcSxAF+YcAs5bh+AvyhKP0RfxWbXPHjrzoJde4hd8nDyGebnKIDF4h3eRDJ1tu4yKf7by48=
+      - lVMkIkRZj5tRjP0Bcbwa0Qmwc+7mt+DavlEHp3WsuY7BQBO5LB2mAAoJlZkr17/P43U0/Vm2igg=
       X-Amz-Request-Id:
-      - F8E870F6753F8405
+      - 7984487F2B90F2F6
     status: 204 No Content
     code: 204
     duration: ""
@@ -104,28 +104,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212645Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>9CD1767F6DFAF258</RequestId><HostId>9Ke8SG7RPGBzw2h8KrIrA/dqwDAxYpW+ADNlxmqzHjvRPdC51/MTXmqXfbEeHBxW8bOHQK/nAGc=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-deleting</Key><RequestId>546DE312E45852FF</RequestId><HostId>ytYyfeC67E00cuRfkFPsPM5BB2K5yFYhgWzMgQFkuqvPhQM9vmF9jB98BOmeaSadWHcYvg/+ZEs=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:45 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 9Ke8SG7RPGBzw2h8KrIrA/dqwDAxYpW+ADNlxmqzHjvRPdC51/MTXmqXfbEeHBxW8bOHQK/nAGc=
+      - ytYyfeC67E00cuRfkFPsPM5BB2K5yFYhgWzMgQFkuqvPhQM9vmF9jB98BOmeaSadWHcYvg/+ZEs=
       X-Amz-Request-Id:
-      - 9CD1767F6DFAF258
+      - 546DE312E45852FF
     status: 404 Not Found
     code: 404
     duration: ""
@@ -134,11 +134,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000353Z
+      - 20190426T212645Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-deleting
     method: HEAD
   response:
@@ -147,13 +147,13 @@ interactions:
       Content-Type:
       - application/xml
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:45 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - o38bDwhvCsHMAPEitb9Z5aP4w9JQQY3U5HNNjkUkmWaMTTNbQGohoE5eUGwTOV3No4Ogil3fZQ8=
+      - gMJ/J/4eFGPG67+p4jesoTHlMklzcv2Z3Pa8Z1hDQTqaQdEKyIu+Si9upOJq2Dxx0+WbKxVZctA=
       X-Amz-Request-Id:
-      - CE2CE18E3918CFC5
+      - AF869142FC3B99A1
     status: 404 Not Found
     code: 404
     duration: ""

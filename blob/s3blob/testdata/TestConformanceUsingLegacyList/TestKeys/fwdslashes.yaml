@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
       X-Amz-Date:
-      - 20190307T170111Z
+      - 20190426T212651Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - AFG6zzqBG+NIX2Zoloamd7JaCgIFxeREHI8w+CYRStlFQXe92FBMNLQqHB1yzHS1GrOguth1f7A=
+      - sAoGKGx+gmA8t1uEufe8frON/0wqCY1aWoHCeErtwYEkY+uF1zAUAxrhjn92w1PSQ9ahaB/GrD0=
       X-Amz-Request-Id:
-      - 7B310D53AF15958D
+      - BB8CC504C15EB864
     status: 200 OK
     code: 200
     duration: ""
@@ -42,11 +42,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170111Z
+      - 20190426T212651Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: GET
   response:
@@ -59,17 +59,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 0gZP5FL/qaSIRFuI3ycxMT/SfPn9c0ck11CLTU7ar2YkyDKKKbOE8pc5zryzylbuzfaKVo+Z3Ow=
+      - WKTgO/ly6t3dpLud7CVqQLT9ao5QIKpQPGa2/RG4qqun9XoCO4ezpuk7c0ZJmn1nuLkbK6yDWnY=
       X-Amz-Request-Id:
-      - 50FADA92FCAE1CB5
+      - BAAE6C3C8F578431
     status: 200 OK
     code: 200
     duration: ""
@@ -78,11 +78,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170111Z
+      - 20190426T212651Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: HEAD
   response:
@@ -95,17 +95,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - SzNuM05dMtcbh9zrtFdMfpOpM2EwZoj99e/Qfcol5gjORjO2bXLQb1ogsbBnqCzeeI7t0HevHZo=
+      - WqeTXAPNixOkH8rUb7aGy4at3YaDVPazZcsbBLeXTgBX8WPmdGs8hP0X9r4F5IVCMjxj40z+Dls=
       X-Amz-Request-Id:
-      - 79D30844B06BA6EE
+      - B0FE0CFD37136AD9
     status: 200 OK
     code: 200
     duration: ""
@@ -113,7 +113,7 @@ interactions:
     body: ""
     form: {}
     headers: {}
-    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJUGP3DMJYQAR6PDA%2F20190307%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190307T170111Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=79f61a2105bb1656702483d33813097804f5e89deeaa161aed055972f961ff96
+    url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIFP4ZBSWPYQQERJA%2F20190426%2Fus-west-1%2Fs3%2Faws4_request&X-Amz-Date=20190426T212651Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=eb1d767d262e86a89d6fdc199a66244dc9e4c59a1d8bc8ab8a2e08ca14219950
     method: GET
   response:
     body: hello
@@ -125,17 +125,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - w7cVidiE4ZE7XxXwWWXn/Ba2t3/k71af6o1N2P0Q4rQeJZZOnnlqUyJ+z/z3icX+vhRF1RwkEEk=
+      - VeFTWGTIUuKVoXPL5DEuzfn5uhYSY5zVnS0M3JrUxxPbqz0dLxqALEi3mtqkqJ2s1AGwmG7Qf/Q=
       X-Amz-Request-Id:
-      - 23F73D8F9F4F5959
+      - A0376535BE9D8BE7
     status: 200 OK
     code: 200
     duration: ""
@@ -144,11 +144,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170111Z
+      - 20190426T212651Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: HEAD
   response:
@@ -161,17 +161,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Etag:
       - '"5d41402abc4b2a76b9719d911017c592"'
       Last-Modified:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - ZljJEavkPdHVBURlpuPVMNH+9kncSOudCE9IflMOk84YQK7WyiwGtPWqlAZUP1ehZbO9rIeHOrA=
+      - yJpthGK6uXxOqobPTcXieLvtNPFINejNxJmoCMOeSqwjWgwgVnewDXxj/pLjyKNFyo34xKFsrv0=
       X-Amz-Request-Id:
-      - 7E5BFDD029FD54CD
+      - 8AA1E54A1948E08B
     status: 200 OK
     code: 200
     duration: ""
@@ -180,24 +180,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170111Z
+      - 20190426T212651Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/weird-keysfoo/bar/baz
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 07 Mar 2019 17:01:12 GMT
+      - Fri, 26 Apr 2019 21:26:52 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - ST6gquq1o8ciShtdgaqjDnMfVW1TRL3EyOlNBOs6gJlqsdhkU8x5FqLBj6bfP2G5cczsTPQl7RE=
+      - J2YSCC7wS1BJT647VuCaBKdyhQOyZ9wtK3K5dchQWYGG8qdY3d3I81gMcw0UE1iwWA0rz9lmD9E=
       X-Amz-Request-Id:
-      - 9E1DD72BE23EE029
+      - F16FA7D609B7419B
     status: 204 No Content
     code: 204
     duration: ""

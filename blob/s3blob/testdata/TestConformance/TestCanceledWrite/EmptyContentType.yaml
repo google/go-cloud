@@ -6,28 +6,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000352Z
+      - 20190426T212644Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>0B3C68B62D700EB6</RequestId><HostId>TNj5QHy5ptRsLtF39Qb7bDaAYkYXfzazrVcXAXM1wCHhNmny/SuhvqWTzP9i8E+q+AOWmC1Aq6Y=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>65699E1B417954D9</RequestId><HostId>FOm+mLVeTXCEdIRis7gKQxuRmiW9BWpg1yI53euTNV/VLglQ1ldKovCg7NefKIRpwZNX5OmDgUk=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Sat, 09 Feb 2019 00:03:51 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - TNj5QHy5ptRsLtF39Qb7bDaAYkYXfzazrVcXAXM1wCHhNmny/SuhvqWTzP9i8E+q+AOWmC1Aq6Y=
+      - FOm+mLVeTXCEdIRis7gKQxuRmiW9BWpg1yI53euTNV/VLglQ1ldKovCg7NefKIRpwZNX5OmDgUk=
       X-Amz-Request-Id:
-      - 0B3C68B62D700EB6
+      - 65699E1B417954D9
     status: 404 Not Found
     code: 404
     duration: ""
@@ -36,28 +36,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000352Z
+      - 20190426T212644Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-canceled-write
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>F77EA2A7ADCD53E3</RequestId><HostId>4Zdh2BrD2vNrlZ+GSwCmDuxV28x8bn5G5Jw8I3r1pt2x/iPKe6+VvqHDLX5OdzNmJAUp2C/Mdr0=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>blob-for-canceled-write</Key><RequestId>0E6B15BE3E041CA5</RequestId><HostId>npoESFAHMkl49tzt9hMd24PaKXRDN8gL/j9lAB7Eks+M0srNJOmdJKfdLJ7MZVUixMkpftMYibc=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Sat, 09 Feb 2019 00:03:51 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - 4Zdh2BrD2vNrlZ+GSwCmDuxV28x8bn5G5Jw8I3r1pt2x/iPKe6+VvqHDLX5OdzNmJAUp2C/Mdr0=
+      - npoESFAHMkl49tzt9hMd24PaKXRDN8gL/j9lAB7Eks+M0srNJOmdJKfdLJ7MZVUixMkpftMYibc=
       X-Amz-Request-Id:
-      - F77EA2A7ADCD53E3
+      - 0E6B15BE3E041CA5
     status: 404 Not Found
     code: 404
     duration: ""

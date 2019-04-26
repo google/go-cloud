@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64) S3Manager
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 355c18667d5796dc2b15043b99f68331b6af560f4f9facb5c4719ba9d09147c6
       X-Amz-Date:
-      - 20190307T170108Z
+      - 20190426T212649Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Thu, 07 Mar 2019 17:01:09 GMT
+      - Fri, 26 Apr 2019 21:26:50 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - ApSvNKR5eVRurD/wGEMUMkzdKGuS9LndK55WEA6Tn3erKdrlJdTq5Q0J8u/fI/Fgy2r04V4Z6R0=
+      - JHgptmxCbVx7k9hGWrtdA/YRgzZG6vn07sqTEc7mqGUc6WnrwqKf1z+M/9U5Zbgowqj8USvi/mk=
       X-Amz-Request-Id:
-      - E60719C8F75465D7
+      - 39286F046C825819
     status: 200 OK
     code: 200
     duration: ""
@@ -42,28 +42,28 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170108Z
+      - 20190426T212649Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/key-does-not-exist
     method: GET
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>key-does-not-exist</Key><RequestId>2B38F47861116FFB</RequestId><HostId>iHD8DOQnOAf1RZTmxsIarVg0/uokzoDRCKfo9cNk448S5BBu3yGgei9NnK1TLySCiyxXT22soVc=</HostId></Error>
+      <Error><Code>NoSuchKey</Code><Message>The specified key does not exist.</Message><Key>key-does-not-exist</Key><RequestId>356EFF5A2043E1FC</RequestId><HostId>JiIm/QZz++nr5mohC4tDZXcEzl8CMqmf9RmlGM3HdWQFMtN/+L2z31WPZlRWH+ifZgUt7ha53dU=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Thu, 07 Mar 2019 17:01:07 GMT
+      - Fri, 26 Apr 2019 21:26:48 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - iHD8DOQnOAf1RZTmxsIarVg0/uokzoDRCKfo9cNk448S5BBu3yGgei9NnK1TLySCiyxXT22soVc=
+      - JiIm/QZz++nr5mohC4tDZXcEzl8CMqmf9RmlGM3HdWQFMtN/+L2z31WPZlRWH+ifZgUt7ha53dU=
       X-Amz-Request-Id:
-      - 2B38F47861116FFB
+      - 356EFF5A2043E1FC
     status: 404 Not Found
     code: 404
     duration: ""
@@ -72,11 +72,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170108Z
+      - 20190426T212649Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: HEAD
   response:
@@ -89,17 +89,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Thu, 07 Mar 2019 17:01:09 GMT
+      - Fri, 26 Apr 2019 21:26:50 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Thu, 07 Mar 2019 17:01:09 GMT
+      - Fri, 26 Apr 2019 21:26:50 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - A/mvD7iLe5JTVwH3EXbD4vMkRwS8MfmgfBquNROk/p4xcdNzcKOXY/mlC/8nJNLT9VtIhd0U/iY=
+      - 7UvSal7chKuW+XnOovNZit4WsXLVSBfF8nrk5+nqyuka0wwiY2OVJlM+emfec8G0oJQ9puUq0co=
       X-Amz-Request-Id:
-      - AFA9010487CB6164
+      - 69166B0992D7B931
     status: 200 OK
     code: 200
     duration: ""
@@ -108,24 +108,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (go1.12; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190307T170108Z
+      - 20190426T212649Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Thu, 07 Mar 2019 17:01:09 GMT
+      - Fri, 26 Apr 2019 21:26:50 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - r93ZFQoWhUB2JfjlSDrjUxwCgwU740VevV5HutgT8hkDHX4yoDcbNitZXZ4aCtxtsEAPAfCK98g=
+      - tmBVoYwMSsLMBWRdiUEZtVo7Tvnbw0cCpNZfWrt9TbofAYrS4TduuSEjtikMwIJgwaxw6O/n+k4=
       X-Amz-Request-Id:
-      - 44031FAED6F7E2A4
+      - 5A8C6E1F022ECC4B
     status: 204 No Content
     code: 204
     duration: ""

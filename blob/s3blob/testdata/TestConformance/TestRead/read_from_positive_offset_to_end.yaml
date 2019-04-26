@@ -12,11 +12,11 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64) S3Manager
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64) S3Manager
       X-Amz-Content-Sha256:
       - 355c18667d5796dc2b15043b99f68331b6af560f4f9facb5c4719ba9d09147c6
       X-Amz-Date:
-      - 20190209T000351Z
+      - 20190426T212643Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: PUT
   response:
@@ -25,15 +25,15 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - jBiE/6gXtj7R74omeL7m1d/2AvboHl4xnoTK8/yNf9haISpJ0GHVANK+BNoDABUi/HKgbAtn1bw=
+      - 2sovu/vYdKo1RekHZoimKoxDkTCQwmsVE7SLgb2O3+bJaMgn4pUoEyCHAF0zhk4Czq2Jl88xOnA=
       X-Amz-Request-Id:
-      - 5929AA92043DCB25
+      - 14A39638BE843303
     status: 200 OK
     code: 200
     duration: ""
@@ -44,11 +44,11 @@ interactions:
       Range:
       - bytes=10-
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000351Z
+      - 20190426T212643Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: GET
   response:
@@ -63,17 +63,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - X4oUUorR+H6nkoiOHyGNabi/9sOfOAAp79DNng4hSlkm+oJmzMdCJLRYQbQve16lbV40Nnh7q30=
+      - 20qn3SAOTYDaSGC+reuNU4e0byovr5fXyKVc/EnbK802NlLqaHwXVVqUQ6P+atl5eGnFTbB5y3M=
       X-Amz-Request-Id:
-      - E21B45094377438D
+      - A661F5FFB916C50C
     status: 206 Partial Content
     code: 206
     duration: ""
@@ -82,11 +82,11 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000351Z
+      - 20190426T212643Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: HEAD
   response:
@@ -99,17 +99,17 @@ interactions:
       Content-Type:
       - text/plain; charset=utf-8
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Etag:
       - '"3df96c5abe97f2967d38010870030a5f"'
       Last-Modified:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - ZNPxT28fPPf36Iyc1OfcP5pu989HTx7+AVzIB99W9y+j0tGKy7X53Ai6Djqfmu8G/COBfx2cFR4=
+      - NMRVd3YKmY0uB0lFw4ey9mi11ACLfG2w/ak80geXB4L3HZKlNL/Z5lxtyASjFPG+vnsdfFvBe7w=
       X-Amz-Request-Id:
-      - D70741E38ED13120
+      - D2E92AFB13343BF8
     status: 200 OK
     code: 200
     duration: ""
@@ -118,24 +118,24 @@ interactions:
     form: {}
     headers:
       User-Agent:
-      - aws-sdk-go/1.16.23 (devel +56c9f8e8cf; linux; amd64)
+      - aws-sdk-go/1.19.16 (go1.12; linux; amd64)
       X-Amz-Content-Sha256:
       - e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
       X-Amz-Date:
-      - 20190209T000351Z
+      - 20190426T212643Z
     url: https://go-cloud-testing.s3.us-west-1.amazonaws.com/blob-for-reading
     method: DELETE
   response:
     body: ""
     headers:
       Date:
-      - Sat, 09 Feb 2019 00:03:52 GMT
+      - Fri, 26 Apr 2019 21:26:44 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - R43r7d2o/cHvs3Oew278B6Jo+ldor+YIWaj4fEMHryV6KNq4okWPguCbTwZ4yReEXfpiz6gEI5k=
+      - 1qQ3R3ymJAk6JknYKlCr2CyQv2mHT8wZa7F/QN5NAYjigb9NW+e1GyFrdji1Ppuo73d70QXR7Rg=
       X-Amz-Request-Id:
-      - 76B9508BA2B04C96
+      - 5E8F201A4C8ECBC1
     status: 204 No Content
     code: 204
     duration: ""
