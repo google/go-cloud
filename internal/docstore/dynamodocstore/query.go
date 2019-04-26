@@ -171,6 +171,7 @@ func (c *collection) bestQueryable(q *driver.Query) (indexName *string, pkey, sk
 // of a query. Since DynamoDB will read explicitly provided fields from the table if
 // they are not projected into the index, the only case where a local index cannot
 // be used is when the query wants all the fields, and the index projection is not ALL.
+// See https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html#LSI.Projections.
 func localFieldsIncluded(q *driver.Query, li *dynamodb.LocalSecondaryIndexDescription) bool {
 	return len(q.FieldPaths) > 0 || *li.Projection.ProjectionType == "ALL"
 }
