@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Starts all local test instances for Go CDK tests.
+# Starts all local instances needed for Go CDK tests.
 # You must have Docker installed.
 # Run this script from the top level of the tree, e.g.:
 #   ./internal/testing/all_local.sh
