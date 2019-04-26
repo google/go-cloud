@@ -30,8 +30,8 @@
 // As
 //
 // firedocstore exposes the following types for As:
-// - Query.BeforeQuery: "google.golang.org/genproto/googleapis/firestore/v1".RunQueryRequest
-// - DocumentIterator: "google.golang.org/genproto/googleapis/firestore/v1".Firestore_RunQueryClient
+// - Query.BeforeQuery: *firestore.RunQueryRequest
+// - DocumentIterator: firestore.Firestore_RunQueryClient
 package firedocstore
 
 import (
