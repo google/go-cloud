@@ -44,11 +44,11 @@
 // As
 //
 // kafkapubsub exposes the following types for As:
-//  - Topic: TODO(rvangent)
-//  - Subscription: TODO(rvangent)
-//  - Message: TODO(rvangent)
-//  - Message.BeforeSend: TODO(rvangent)
-//  - Error: TODO(rvangent)
+//  - Topic: sarama.SyncProducer
+//  - Subscription: sarama.ConsumerGroup, sarama.ConsumerGroupSession (may be nil during session renegotiation, and session may go stale at any time)
+//  - Message: *sarama.ConsumerMessage
+//  - Message.BeforeSend: *sarama.ProducerMessage
+//  - Error: sarama.ConsumerError, sarama.ConsumerErrors, sarama.ProducerError, sarama.ProducerErrors, sarama.ConfigurationError, sarama.PacketDecodingError, sarama.PacketEncodingError, sarama.KError
 package kafkapubsub // import "gocloud.dev/pubsub/kafkapubsub"
 
 import (
@@ -241,13 +241,26 @@ func (t *topic) SendBatch(ctx context.Context, dms []*driver.Message) error {
 				headers = append(headers, sarama.RecordHeader{Key: []byte(k), Value: []byte(v)})
 			}
 		}
-		ms = append(ms, &sarama.ProducerMessage{
+		pm := &sarama.ProducerMessage{
 			Topic:   t.topicName,
 			Key:     sarama.ByteEncoder(kafkaKey),
 			Value:   sarama.ByteEncoder(dm.Body),
 			Headers: headers,
-		})
-		// TODO(rvangent): Call dm.AsFunc.
+		}
+		if dm.BeforeSend != nil {
+			asFunc := func(i interface{}) bool {
+				if p, ok := i.(**sarama.ProducerMessage); ok {
+					*p = pm
+					return true
+				}
+				return false
+			}
+			if err := dm.BeforeSend(asFunc); err != nil {
+				return err
+			}
+		}
+		ms = append(ms, pm)
+
 	}
 	return t.producer.SendMessages(ms)
 }
@@ -259,13 +272,15 @@ func (t *topic) Close() error {
 
 // IsRetryable implements driver.Topic.IsRetryable.
 func (t *topic) IsRetryable(error) bool {
-	// TODO(rvangent): Investigate.
 	return false
 }
 
 // As implements driver.Topic.As.
 func (t *topic) As(i interface{}) bool {
-	// TODO(rvangent): Implement.
+	if p, ok := i.(*sarama.SyncProducer); ok {
+		*p = t.producer
+		return true
+	}
 	return false
 }
 
@@ -280,7 +295,6 @@ func (t *topic) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 func errorCode(err error) gcerrors.ErrorCode {
-	// TODO(rvangent): I suspect it will be easier to use errorAs here.
 	if pes, ok := err.(sarama.ProducerErrors); ok && len(pes) == 1 {
 		return errorCode(pes[0])
 	}
@@ -299,6 +313,7 @@ type subscription struct {
 	joinCh   chan struct{} // closed when we join for the first time
 	cancel   func()        // cancels the background consumer
 	closeErr error         // fatal error detected by the background consumer
+	consumerGroup sarama.ConsumerGroup
 
 	mu      sync.Mutex
 	unacked []*ackInfo
@@ -360,6 +375,7 @@ func openSubscription(brokers []string, config *sarama.Config, group string, top
 	joinCh := make(chan struct{})
 	ds := &subscription{
 		opts:    *opts,
+		consumerGroup: consumerGroup,
 		closeCh: make(chan struct{}),
 		joinCh:  joinCh,
 		cancel:  cancel,
@@ -501,11 +517,13 @@ func (s *subscription) ReceiveBatch(ctx context.Context, maxMessages int) ([]*dr
 			Metadata: md,
 			AckID:    ack,
 			AsFunc: func(i interface{}) bool {
-				// TODO(rvangent): Implement.
+				if p, ok := i.(**sarama.ConsumerMessage); ok {
+					*p = msg
+					return true
+				}
 				return false
 			},
 		}
-
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		s.unacked = append(s.unacked, ack)
@@ -559,13 +577,21 @@ func (s *subscription) Close() error {
 
 // IsRetryable implements driver.Subscription.IsRetryable.
 func (*subscription) IsRetryable(error) bool {
-	// TODO(rvangent): Investigate.
 	return false
 }
 
 // As implements driver.Subscription.As.
 func (s *subscription) As(i interface{}) bool {
-	// TODO(rvangent): Implement.
+	if p, ok := i.(*sarama.ConsumerGroup); ok {
+		*p = s.consumerGroup
+		return true
+	}
+	if p, ok := i.(*sarama.ConsumerGroupSession); ok {
+		s.mu.Lock()
+		s.mu.Unlock()
+		*p = s.sess
+		return true
+	}
 	return false
 }
 
@@ -580,7 +606,48 @@ func (*subscription) ErrorCode(err error) gcerrors.ErrorCode {
 }
 
 func errorAs(err error, i interface{}) bool {
-	// TODO(rvangent): Implement.
+	switch terr := err.(type) {
+	case sarama.ConsumerError:
+		if p, ok := i.(*sarama.ConsumerError); ok {
+			*p = terr
+			return true
+		}
+	case sarama.ConsumerErrors:
+		if p, ok := i.(*sarama.ConsumerErrors); ok {
+			*p = terr
+			return true
+		}
+	case sarama.ProducerError:
+		if p, ok := i.(*sarama.ProducerError); ok {
+			*p = terr
+			return true
+		}
+	case sarama.ProducerErrors:
+		if p, ok := i.(*sarama.ProducerErrors); ok {
+			*p = terr
+			return true
+		}
+	case sarama.ConfigurationError:
+		if p, ok := i.(*sarama.ConfigurationError); ok {
+			*p = terr
+			return true
+		}
+	case sarama.PacketDecodingError:
+		if p, ok := i.(*sarama.PacketDecodingError); ok {
+			*p = terr
+			return true
+		}
+	case sarama.PacketEncodingError:
+		if p, ok := i.(*sarama.PacketEncodingError); ok {
+			*p = terr
+			return true
+		}
+	case sarama.KError:
+		if p, ok := i.(*sarama.KError); ok {
+			*p = terr
+			return true
+		}
+	}
 	return false
 }
 

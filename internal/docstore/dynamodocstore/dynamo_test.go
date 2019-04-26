@@ -16,11 +16,14 @@ package dynamodocstore
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	dyn "github.com/aws/aws-sdk-go/service/dynamodb"
+	"gocloud.dev/internal/docstore"
 	"gocloud.dev/internal/docstore/driver"
 	"gocloud.dev/internal/docstore/drivertest"
 	"gocloud.dev/internal/testing/setup"
@@ -64,11 +67,40 @@ func (h *harness) MakeTwoKeyCollection(context.Context) (driver.Collection, erro
 	return newCollection(dyn.New(h.sess), collectionName2, "Game", "Player")
 }
 
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	var si *dyn.ScanInput
+	var qi *dyn.QueryInput
+	switch {
+	case as(&si):
+		si.ConsistentRead = aws.Bool(true)
+	case as(&qi):
+		qi.ConsistentRead = aws.Bool(true)
+	default:
+		return errors.New("Query.BeforeQuery failed")
+	}
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var so *dyn.ScanOutput
+	var qo *dyn.QueryOutput
+	if !it.As(&so) && !it.As(&qo) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	return nil
+}
+
 func TestConformance(t *testing.T) {
 	// Note: when running -record repeatedly in a short time period, change the argument
 	// in the call below to generate unique transaction tokens.
 	drivertest.MakeUniqueStringDeterministicForTesting(2)
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{}, []drivertest.AsTest{verifyAs{}})
 }
 
 // Dynamodocstore-specific tests.

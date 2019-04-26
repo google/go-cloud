@@ -16,6 +16,7 @@ package firedocstore
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"testing"
 
@@ -106,13 +107,37 @@ func (c *codecTester) DocstoreDecode(value, dest interface{}) error {
 	return doc.Decode(decoder{mv})
 }
 
+type verifyAs struct{}
+
+func (verifyAs) Name() string {
+	return "verify As"
+}
+
+func (verifyAs) BeforeQuery(as func(i interface{}) bool) error {
+	var req *pb.RunQueryRequest
+	if !as(&req) {
+		return errors.New("Query.BeforeQuery failed")
+	}
+	_ = req.GetStructuredQuery()
+	return nil
+}
+
+func (verifyAs) QueryCheck(it *docstore.DocumentIterator) error {
+	var c pb.Firestore_RunQueryClient
+	if !it.As(&c) {
+		return errors.New("DocumentIterator.As failed")
+	}
+	_, err := c.Header()
+	return err
+}
+
 func TestConformance(t *testing.T) {
 	drivertest.MakeUniqueStringDeterministicForTesting(1)
 	nc, err := newNativeCodec()
 	if err != nil {
 		t.Fatal(err)
 	}
-	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc})
+	drivertest.RunConformanceTests(t, newHarness, &codecTester{nc}, nil)
 }
 
 // Firedocstore-specific tests.

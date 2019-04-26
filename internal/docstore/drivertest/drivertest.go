@@ -18,6 +18,7 @@ package drivertest // import "gocloud.dev/internal/docstore/drivertest"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -100,8 +101,40 @@ type CodecTester interface {
 	DocstoreDecode(value, dest interface{}) error
 }
 
+// AsTest represents a test of As functionality.
+type AsTest interface {
+	// Name should return a descriptive name for the test.
+	Name() string
+	// BeforeQuery will be passed directly to Query.BeforeQuery as part of doing
+	// the test query.
+	BeforeQuery(as func(interface{}) bool) error
+	// QueryCheck will be called after calling Query. It should call it.As and
+	// verify the results.
+	QueryCheck(it *docstore.DocumentIterator) error
+}
+
+type verifyAsFailsOnNil struct{}
+
+func (verifyAsFailsOnNil) Name() string {
+	return "verify As returns false when passed nil"
+}
+
+func (verifyAsFailsOnNil) BeforeQuery(as func(interface{}) bool) error {
+	if as(nil) {
+		return errors.New("want Query.As to return false when passed nil")
+	}
+	return nil
+}
+
+func (verifyAsFailsOnNil) QueryCheck(it *docstore.DocumentIterator) error {
+	if it.As(nil) {
+		return errors.New("want DocumentIterator.As to return false when passed nil")
+	}
+	return nil
+}
+
 // RunConformanceTests runs conformance tests for provider implementations of docstore.
-func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) {
+func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester, asTests []AsTest) {
 	// TODO(jba): add conformance tests for unordered lists after all drivers have them.
 	t.Run("Create", func(t *testing.T) { withCollection(t, newHarness, testCreate) })
 	t.Run("Put", func(t *testing.T) { withCollection(t, newHarness, testPut) })
@@ -114,19 +147,20 @@ func RunConformanceTests(t *testing.T, newHarness HarnessMaker, ct CodecTester) 
 	t.Run("BlindCodec", func(t *testing.T) { testBlindDecode(t, ct) })
 	t.Run("MultipleActions", func(t *testing.T) { withCollection(t, newHarness, testMultipleActions) })
 
-	t.Run("Query", func(t *testing.T) {
-		ctx := context.Background()
-		h, err := newHarness(ctx, t)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer h.Close()
+	t.Run("Query", func(t *testing.T) { withTwoKeyCollection(t, newHarness, testQuery) })
 
-		dc, err := h.MakeTwoKeyCollection(ctx)
-		if err != nil {
-			t.Fatal(err)
+	asTests = append(asTests, verifyAsFailsOnNil{})
+	t.Run("As", func(t *testing.T) {
+		for _, st := range asTests {
+			if st.Name() == "" {
+				t.Fatalf("AsTest.Name is required")
+			}
+			t.Run(st.Name(), func(t *testing.T) {
+				withTwoKeyCollection(t, newHarness, func(t *testing.T, coll *docstore.Collection) {
+					testAs(t, coll, st)
+				})
+			})
 		}
-		testQuery(t, ds.NewCollection(dc))
 	})
 }
 
@@ -146,7 +180,23 @@ func withCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *d
 	f(t, coll)
 }
 
-// Primary key field for the main test collection.
+func withTwoKeyCollection(t *testing.T, newHarness HarnessMaker, f func(*testing.T, *ds.Collection)) {
+	ctx := context.Background()
+	h, err := newHarness(ctx, t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+
+	dc, err := h.MakeTwoKeyCollection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coll := ds.NewCollection(dc)
+	f(t, coll)
+}
+
+// KeyField is the primary key field for the main test collection.
 const KeyField = "name"
 
 type docmap = map[string]interface{}
@@ -738,19 +788,20 @@ func date(month, day int) time.Time {
 }
 
 const (
-	Game1 = "Praise All Monsters"
-	Game2 = "Zombie DMV"
+	game1 = "Praise All Monsters"
+	game2 = "Zombie DMV"
+	game3 = "Days Gone"
 )
 
 var queryDocuments = []*HighScore{
-	{Game1, "pat", 49, date(3, 13), nil},
-	{Game1, "mel", 60, date(4, 10), nil},
-	{Game1, "andy", 81, date(2, 1), nil},
-	{Game1, "fran", 33, date(3, 19), nil},
-	{Game2, "pat", 120, date(4, 1), nil},
-	{Game2, "billie", 111, date(4, 10), nil},
-	{Game2, "mel", 190, date(4, 18), nil},
-	{Game2, "fran", 33, date(3, 20), nil},
+	{game1, "pat", 49, date(3, 13), nil},
+	{game1, "mel", 60, date(4, 10), nil},
+	{game1, "andy", 81, date(2, 1), nil},
+	{game1, "fran", 33, date(3, 19), nil},
+	{game2, "pat", 120, date(4, 1), nil},
+	{game2, "billie", 111, date(4, 10), nil},
+	{game2, "mel", 190, date(4, 18), nil},
+	{game2, "fran", 33, date(3, 20), nil},
 }
 
 func testQuery(t *testing.T, coll *ds.Collection) {
@@ -759,14 +810,7 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	if err := coll.Query().Get(ctx).Next(ctx, &docmap{}); gcerrors.Code(err) == gcerrors.Unimplemented {
 		t.Skip("queries not yet implemented")
 	}
-
-	// Delete all existing documents from this collection.
-	err := forEach(ctx, coll.Query().Get(ctx),
-		func() interface{} { return &HighScore{} },
-		func(doc interface{}) error { return coll.Delete(ctx, doc) })
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
+	defer cleanUpTable(t, coll)
 
 	// Add the query docs.
 	alist := coll.Actions()
@@ -791,8 +835,8 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		},
 		{
 			name: "Game",
-			q:    coll.Query().Where("Game", "=", Game2),
-			want: func(h *HighScore) bool { return h.Game == Game2 },
+			q:    coll.Query().Where("Game", "=", game2),
+			want: func(h *HighScore) bool { return h.Game == game2 },
 		},
 		{
 			name: "Score",
@@ -806,8 +850,8 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		},
 		{
 			name: "GamePlayer",
-			q:    coll.Query().Where("Player", "=", "andy").Where("Game", "=", Game1),
-			want: func(h *HighScore) bool { return h.Player == "andy" && h.Game == Game1 },
+			q:    coll.Query().Where("Player", "=", "andy").Where("Game", "=", game1),
+			want: func(h *HighScore) bool { return h.Player == "andy" && h.Game == game1 },
 		},
 		{
 			name: "PlayerScore",
@@ -816,8 +860,8 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 		},
 		{
 			name: "GameScore",
-			q:    coll.Query().Where("Game", "=", Game1).Where("Score", ">=", 50),
-			want: func(h *HighScore) bool { return h.Game == Game1 && h.Score >= 50 },
+			q:    coll.Query().Where("Game", "=", game1).Where("Score", ">=", 50),
+			want: func(h *HighScore) bool { return h.Game == game1 && h.Score >= 50 },
 		},
 		// TODO(jba): add this test after adding support for times as filter values (#1906).
 		// {
@@ -861,6 +905,23 @@ func testQuery(t *testing.T, coll *ds.Collection) {
 	got := mustCollectHighScores(ctx, t, limitQ.Get(ctx))
 	if len(got) != 2 {
 		t.Errorf("got %v, wanted two documents", got)
+	}
+}
+
+// cleanUpTable delete all documents from this collection after test.
+func cleanUpTable(t *testing.T, coll *docstore.Collection) {
+	ctx := context.Background()
+	dels := coll.Actions()
+	delFunc := func(doc interface{}) error {
+		dels.Delete(doc)
+		return nil
+	}
+	err := forEach(ctx, coll.Query().Get(ctx), func() interface{} { return &HighScore{} }, delFunc)
+	if err != nil {
+		t.Fatalf("%+v", err)
+	}
+	if err := dels.Do(ctx); err != nil {
+		t.Fatalf("%+v", err)
 	}
 }
 
@@ -947,5 +1008,37 @@ func testMultipleActions(t *testing.T, coll *ds.Collection) {
 	}
 	if err := dels.Do(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func testAs(t *testing.T, coll *ds.Collection, st AsTest) {
+	docs := []*HighScore{
+		{game3, "steph", 24, date(4, 25), nil},
+		{game3, "mia", 99, date(4, 26), nil},
+	}
+	ctx := context.Background()
+	actions := coll.Actions()
+	// Create docs
+	for _, doc := range docs {
+		actions.Put(doc)
+	}
+	if err := actions.Do(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer cleanUpTable(t, coll)
+
+	// Query
+	qs := []*docstore.Query{
+		coll.Query().Where("Game", "=", game3),
+		// Note: don't use filter on Player, the test table has Player as the
+		// partition key of a Global Secondary Index, which doesn't support
+		// ConsistentRead mode, which is what the As test does in its BeforeQuery
+		// function.
+		coll.Query().Where("Score", ">", 50),
+	}
+	for _, q := range qs {
+		if err := st.QueryCheck(q.BeforeQuery(st.BeforeQuery).Get(ctx)); err != nil {
+			t.Error(err)
+		}
 	}
 }
