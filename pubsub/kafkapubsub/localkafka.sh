@@ -13,10 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Runs only tests relevant to the current pull request.
-# At the moment, this only gates running the Wire test suite.
-# See https://github.com/google/go-cloud/issues/28 for solving the
-# general case.
+# Starts a local Kafka instance (plus supporting Zookeeper) via Docker.
 
 # https://coderwall.com/p/fkfaqq/safer-bash-scripts-with-set-euxo-pipefail
 set -euo pipefail
