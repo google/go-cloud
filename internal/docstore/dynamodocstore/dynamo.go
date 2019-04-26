@@ -29,6 +29,7 @@
 // As
 //
 // dynamodocstore exposes the following types for As:
+//  - Collection.As: *dynamodb.DynamoDB
 //  - Query.BeforeQuery: *dynamodb.QueryInput or *dynamodb.ScanInput
 //  - DocumentIterator: *dynamodb.QueryOutput or *dynamodb.ScanOutput
 package dynamodocstore
@@ -515,6 +516,15 @@ func revisionPrecondition(doc driver.Document) (*expression.ConditionBuilder, er
 	// Value encodes rev to an attribute value.
 	cb := expression.Name(docstore.RevisionField).Equal(expression.Value(rev))
 	return &cb, nil
+}
+
+func (c *collection) As(i interface{}) bool {
+	p, ok := i.(**dyn.DynamoDB)
+	if !ok {
+		return false
+	}
+	*p = c.db
+	return true
 }
 
 func (c *collection) ErrorCode(err error) gcerr.ErrorCode {

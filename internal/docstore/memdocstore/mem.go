@@ -351,3 +351,6 @@ func getParentMap(m map[string]interface{}, fp []string, create bool) (map[strin
 	}
 	return m, nil
 }
+
+// As implements driver.As.
+func (c *collection) As(i interface{}) bool { return false }
