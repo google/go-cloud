@@ -16,7 +16,6 @@ package mempubsub_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 

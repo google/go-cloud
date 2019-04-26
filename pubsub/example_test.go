@@ -18,12 +18,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
-	"sync"
-	"time"
 
 	"gocloud.dev/pubsub"
-	"gocloud.dev/pubsub/mempubsub"
 
 	pbraw "cloud.google.com/go/pubsub/apiv1"
 	pbapi "google.golang.org/genproto/googleapis/pubsub/v1"
